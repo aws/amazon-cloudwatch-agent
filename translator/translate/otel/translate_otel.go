@@ -50,10 +50,17 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	translators, err := host.NewTranslators(conf, os)
+	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+	hostTranslators, err := host.NewTranslators(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey), os)
 	if err != nil {
 		return nil, err
 	}
+	translators.Merge(hostTranslators)
+	hostEmfTranslators, err := host.NewTranslators(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey), os)
+	if err != nil {
+		return nil, err
+	}
+	translators.Merge(hostEmfTranslators)
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
 	translators.Set(containerinsights.NewTranslator())

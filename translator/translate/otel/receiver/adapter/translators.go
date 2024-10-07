@@ -22,8 +22,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (
@@ -69,11 +67,10 @@ var (
 		statsd.SectionKey: 10 * time.Second,
 	}
 
-	// otelReceivers is used for receivers that need to be in the same pipeline that
-	// exports to Cloudwatch while not having to follow the adapter rules
-	otelReceivers = map[string]common.Translator[component.Config]{
-		common.OtlpKey: otlp.NewTranslator(otlp.WithDataType(component.DataTypeMetrics)),
-		common.JmxKey:  jmx.NewTranslator(),
+	// otelReceivers are the ones that do not flow through the adapter
+	otelReceivers = map[string]struct{}{
+		common.OtlpKey: {},
+		common.JmxKey:  {},
 	}
 )
 

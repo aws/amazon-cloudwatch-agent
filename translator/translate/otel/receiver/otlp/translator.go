@@ -25,18 +25,12 @@ const (
 	defaultJMXHttpEndpoint        = "0.0.0.0:4314"
 )
 
-var (
-	configKeys = map[component.DataType]string{
-		component.DataTypeTraces:  common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
-		component.DataTypeMetrics: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey),
-	}
-)
-
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	dataType component.DataType
-	factory  receiver.Factory
+	configKey string
+	dataType  component.DataType
+	factory   receiver.Factory
 }
 
 // WithDataType determines where the translator should look to find
@@ -45,6 +39,14 @@ func WithDataType(dataType component.DataType) common.TranslatorOption {
 	return func(target any) {
 		if t, ok := target.(*translator); ok {
 			t.dataType = dataType
+		}
+	}
+}
+
+func WithConfigKey(configKey string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.configKey = configKey
 		}
 	}
 }
@@ -72,16 +74,15 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
+
 	if t.Name() == common.PipelineNameJmx {
 		cfg.GRPC = nil
 		cfg.HTTP.Endpoint = defaultJMXHttpEndpoint
 		return cfg, nil
 	}
+
 	// init default configuration
-	configKey, ok := configKeys[t.dataType]
-	if !ok {
-		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
-	}
+	configKey := t.configKey
 	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
 	cfg.HTTP.Endpoint = defaultHttpEndpoint
 

@@ -16,6 +16,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 )
 
 type testTranslator struct {
@@ -41,9 +43,11 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testExporters := common.NewTranslatorMap(awscloudwatch.NewTranslator())
+	testExtensions := common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
 	testCases := map[string]struct {
 		input        map[string]interface{}
 		exporters    common.TranslatorMap[component.Config]
+		extensions   common.TranslatorMap[component.Config]
 		pipelineName string
 		want         *want
 		wantErr      error
@@ -53,7 +57,7 @@ func TestTranslator(t *testing.T) {
 			pipelineName: common.PipelineNameHost,
 			wantErr: &common.MissingKeyError{
 				ID:      component.NewIDWithName(component.DataTypeMetrics, common.PipelineNameHost),
-				JsonKey: common.MetricsKey,
+				JsonKey: fmt.Sprint(common.MetricsKey, " or ", common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)),
 			},
 		},
 		"WithoutExporters": {
@@ -161,11 +165,14 @@ func TestTranslator(t *testing.T) {
 			exporters: common.NewTranslatorMap[component.Config](
 				prometheusremotewrite.NewTranslator(),
 			),
+			extensions: common.NewTranslatorMap[component.Config](
+				sigv4auth.NewTranslator(),
+			),
 			pipelineName: common.PipelineNameHost,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"rollup", "batch/host"},
+				processors: []string{},
 				exporters:  []string{"prometheusremotewrite"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -177,11 +184,14 @@ func TestTranslator(t *testing.T) {
 			exporters: common.NewTranslatorMap[component.Config](
 				prometheusremotewrite.NewTranslator(),
 			),
+			extensions: common.NewTranslatorMap[component.Config](
+				sigv4auth.NewTranslator(),
+			),
 			pipelineName: common.PipelineNameHost,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"batch/host"},
+				processors: []string{},
 				exporters:  []string{"prometheusremotewrite"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -193,13 +203,19 @@ func TestTranslator(t *testing.T) {
 			if exporters == nil {
 				exporters = testExporters
 			}
+			extensions := testCase.extensions
+			if extensions == nil {
+				extensions = testExtensions
+			}
 			ht := NewTranslator(
 				testCase.pipelineName,
 				common.NewTranslatorMap[component.Config](
 					&testTranslator{id: component.NewID(component.MustNewType("nop"))},
 					&testTranslator{id: component.NewID(component.MustNewType("other"))},
 				),
+				common.NewTranslatorMap[component.Config](),
 				exporters,
+				extensions,
 			)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := ht.Translate(conf)

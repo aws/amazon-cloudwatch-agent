@@ -4,6 +4,7 @@
 package host
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -11,19 +12,17 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 )
 
 type translator struct {
-	name      string
-	receivers common.TranslatorMap[component.Config]
-	exporters common.TranslatorMap[component.Config]
+	name       string
+	receivers  common.TranslatorMap[component.Config]
+	processors common.TranslatorMap[component.Config]
+	exporters  common.TranslatorMap[component.Config]
+	extensions common.TranslatorMap[component.Config]
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
@@ -34,9 +33,11 @@ var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 func NewTranslator(
 	name string,
 	receivers common.TranslatorMap[component.Config],
+	processors common.TranslatorMap[component.Config],
 	exporters common.TranslatorMap[component.Config],
+	extensions common.TranslatorMap[component.Config],
 ) common.Translator[*common.ComponentTranslators] {
-	return &translator{name, receivers, exporters}
+	return &translator{name, receivers, processors, exporters, extensions}
 }
 
 func (t translator) ID() component.ID {
@@ -45,8 +46,11 @@ func (t translator) ID() component.ID {
 
 // Translate creates a pipeline if metrics section exists.
 func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(common.MetricsKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.MetricsKey}
+	if conf == nil || (!conf.IsSet(common.MetricsKey) && !conf.IsSet(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey))) {
+		return nil, &common.MissingKeyError{
+			ID:      t.ID(),
+			JsonKey: fmt.Sprint(common.MetricsKey, " or ", common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)),
+		}
 	} else if t.receivers.Len() == 0 || t.exporters.Len() == 0 {
 		log.Printf("D! pipeline %s has no receivers/exporters", t.name)
 		return nil, nil
@@ -54,12 +58,11 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
-		Processors: common.NewTranslatorMap[component.Config](),
+		Processors: t.processors,
 		Exporters:  t.exporters,
-		Extensions: common.NewTranslatorMap[component.Config](),
+		Extensions: t.extensions,
 	}
 
-	// we need to add delta processor because (only) diskio and net input plugins report delta metric
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
@@ -74,24 +77,6 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if mdt.IsSet(conf) {
 		log.Printf("D! metric decorator required because measurement fields are set")
 		translators.Processors.Set(mdt)
-	}
-
-	_, ok1 := t.exporters.Get(component.NewID(component.MustNewType("prometheusremotewrite")))
-	_, ok2 := t.exporters.Get(component.MustNewIDWithName("prometheusremotewrite", "amp"))
-
-	if ok1 || ok2 {
-		translators.Extensions.Set(sigv4auth.NewTranslator())
-	}
-
-	if (ok1 || ok2) && conf.IsSet(common.MetricsAggregationDimensionsKey) {
-		translators.Processors.Set(rollupprocessor.NewTranslator())
-	}
-
-	if _, ok := t.exporters.Get(component.NewID(component.MustNewType("awscloudwatch"))); !ok {
-		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
-	} else {
-		// only add agenthealth for the cloudwatch exporter
-		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
 	}
 	return &translators, nil
 }

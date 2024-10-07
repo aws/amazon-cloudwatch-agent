@@ -25,6 +25,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
+//go:embed awsemf_default_generic.yaml
+var defaultGenericConfig string
+
 //go:embed awsemf_default_ecs.yaml
 var defaultEcsConfig string
 
@@ -76,7 +79,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
-	var defaultConfig string
+	defaultConfig := defaultGenericConfig
 	if t.isAppSignals(c) {
 		defaultConfig = getAppSignalsConfig()
 	} else if isEcs(c) {
@@ -85,9 +88,8 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultKubernetesConfig
 	} else if isPrometheus(c) {
 		defaultConfig = defaultPrometheusConfig
-	} else {
-		return cfg, nil
 	}
+
 	if defaultConfig != "" {
 		var rawConf map[string]interface{}
 		if err := yaml.Unmarshal([]byte(defaultConfig), &rawConf); err != nil {
