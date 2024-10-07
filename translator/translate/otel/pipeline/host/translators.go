@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
+	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, error) {
@@ -32,6 +33,18 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 			hostReceivers.Set(translator)
 		}
 	})
+
+	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)).(type) {
+	case []interface{}:
+		for index := range v {
+			deltaReceivers.Set(otlpreceiver.NewTranslator(
+				otlpreceiver.WithDataType(component.DataTypeMetrics),
+				otlpreceiver.WithIndex(index),
+			))
+		}
+	case map[string]interface{}:
+		deltaReceivers.Set(otlpreceiver.NewTranslator(otlpreceiver.WithDataType(component.DataTypeMetrics)))
+	}
 
 	hasHostPipeline := hostReceivers.Len() != 0
 	hasDeltaPipeline := deltaReceivers.Len() != 0

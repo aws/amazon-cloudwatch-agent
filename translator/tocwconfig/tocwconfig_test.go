@@ -218,6 +218,25 @@ func TestLogsAndKubernetesConfig(t *testing.T) {
 	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")
 }
 
+func TestOtlpMetricsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
+}
+
+func TestProcstatMemorySwapConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	checkTranslation(t, "procstat_memory_swap_config", "linux", nil, "")
+	checkTranslation(t, "procstat_memory_swap_config", "darwin", nil, "")
+
+}
+
 func TestWindowsEventOnlyConfig(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

@@ -15,7 +15,7 @@ const (
 
 var (
 	JsonConfigPath       string
-	JsonDirPath          string
+	ConfigDirPath        string
 	EnvConfigPath        string
 	TomlConfigPath       string
 	CommonConfigPath     string

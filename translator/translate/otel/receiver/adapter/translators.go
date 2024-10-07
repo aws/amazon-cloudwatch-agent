@@ -33,7 +33,7 @@ const (
 var (
 	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet     = collections.NewSet[string](common.JmxKey, files.SectionKey, windows_events.SectionKey)
+	skipInputSet     = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
 	multipleInputSet = collections.NewSet[string](
 		procstat.SectionKey,
 	)
@@ -159,7 +159,9 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				continue
 			}
 			if validInputs != nil {
-				if _, ok := validInputs[inputName]; !ok {
+				if _, ok := OtelReceivers[inputName]; ok {
+					continue
+				} else if _, ok := validInputs[inputName]; !ok {
 					log.Printf("W! Ignoring unrecognized input %s", inputName)
 					continue
 				}
