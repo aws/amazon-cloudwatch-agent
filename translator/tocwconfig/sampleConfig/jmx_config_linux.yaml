@@ -70,7 +70,7 @@ extensions:
             sts_region: us-west-2
         region: us-west-2
 processors:
-    batch/host_other:
+    batch/host/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -169,12 +169,12 @@ service:
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
-        metrics/host_other:
+        metrics/host/amp:
             exporters:
                 - prometheusremotewrite/amp
             processors:
                 - transform
-                - batch/host_other
+                - batch/host/amp
             receivers:
                 - telegraf_cpu
                 - telegraf_disk

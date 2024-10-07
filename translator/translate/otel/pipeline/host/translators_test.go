@@ -23,18 +23,18 @@ func TestTranslators(t *testing.T) {
 		exporters []string
 	}
 	testCases := map[string]struct {
-		input map[string]interface{}
+		input map[string]any
 		want  map[string]want
 	}{
 		"WithEmpty": {
-			input: map[string]interface{}{},
+			input: map[string]any{},
 			want:  map[string]want{},
 		},
 		"WithMinimal": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"cpu": map[string]interface{}{},
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
 					},
 				},
 			},
@@ -46,36 +46,36 @@ func TestTranslators(t *testing.T) {
 			},
 		},
 		"WithAMPDestination": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_destinations": map[string]interface{}{
-						"amp": map[string]interface{}{
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
 							"workspace_id": "ws-12345",
 						},
 					},
-					"metrics_collected": map[string]interface{}{
-						"cpu": map[string]interface{}{},
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
 					},
 				},
 			},
 			want: map[string]want{
-				"metrics/host_other": {
+				"metrics/host/amp": {
 					receivers: []string{"telegraf_cpu"},
 					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
 		"WithAMPAndCloudWatchDestinations": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_destinations": map[string]interface{}{
-						"amp": map[string]interface{}{
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
 							"workspace_id": "ws-12345",
 						},
-						"cloudwatch": map[string]interface{}{},
+						"cloudwatch": map[string]any{},
 					},
-					"metrics_collected": map[string]interface{}{
-						"cpu": map[string]interface{}{},
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
 					},
 				},
 			},
@@ -84,23 +84,23 @@ func TestTranslators(t *testing.T) {
 					receivers: []string{"telegraf_cpu"},
 					exporters: []string{"awscloudwatch"},
 				},
-				"metrics/host_other": {
+				"metrics/host/amp": {
 					receivers: []string{"telegraf_cpu"},
 					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
 		"WithDeltaMetrics": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_destinations": map[string]interface{}{
-						"amp": map[string]interface{}{
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
 							"workspace_id": "ws-12345",
 						},
-						"cloudwatch": map[string]interface{}{},
+						"cloudwatch": map[string]any{},
 					},
-					"metrics_collected": map[string]interface{}{
-						"net": map[string]interface{}{},
+					"metrics_collected": map[string]any{
+						"net": map[string]any{},
 					},
 				},
 			},
@@ -109,17 +109,17 @@ func TestTranslators(t *testing.T) {
 					receivers: []string{"telegraf_net"},
 					exporters: []string{"awscloudwatch"},
 				},
-				"metrics/host_other": {
+				"metrics/host/amp": {
 					receivers: []string{"telegraf_net"},
 					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
 		"WithOtlpMetrics": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"otlp": map[string]interface{}{},
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"otlp": map[string]any{},
 					},
 				},
 			},

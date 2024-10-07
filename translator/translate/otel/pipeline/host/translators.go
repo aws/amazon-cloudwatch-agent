@@ -41,25 +41,21 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 	})
 
 	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)).(type) {
-	case []interface{}:
+	case []any:
 		for index := range v {
 			deltaReceivers.Set(otlpreceiver.NewTranslator(
 				otlpreceiver.WithDataType(component.DataTypeMetrics),
 				otlpreceiver.WithIndex(index),
 			))
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		deltaReceivers.Set(otlpreceiver.NewTranslator(otlpreceiver.WithDataType(component.DataTypeMetrics)))
 	}
 
 	hasHostPipeline := hostReceivers.Len() != 0
 	hasDeltaPipeline := deltaReceivers.Len() != 0
 
-	otherExporters := map[string]common.Translator[component.Config]{
-		common.AMPKey: prometheusremotewrite.NewTranslatorWithName(common.AMPKey),
-	}
-
-	if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, "cloudwatch")) {
+	if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.CloudWatchKey)) {
 		exporters := common.NewTranslatorMap(awscloudwatch.NewTranslator())
 		if hasHostPipeline {
 			translators.Set(NewTranslator(common.PipelineNameHost, hostReceivers, exporters))
@@ -68,20 +64,13 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 			translators.Set(NewTranslator(common.PipelineNameHostDeltaMetrics, deltaReceivers, exporters))
 		}
 	}
-	if conf.IsSet(metricsDestinationsKey) {
-		exporters := common.NewTranslatorMap[component.Config]()
-		for key := range otherExporters {
-			if _, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey, key)); ok {
-				exporters.Set(otherExporters[key])
-			}
-		}
-		if exporters.Len() != 0 {
-			// PRW exporter does not need the delta conversion.
-			receivers := common.NewTranslatorMap[component.Config]()
-			receivers.Merge(hostReceivers)
-			receivers.Merge(deltaReceivers)
-			translators.Set(NewTranslator(fmt.Sprintf("%s_other", common.PipelineNameHost), receivers, exporters))
-		}
+	if conf.IsSet(metricsDestinationsKey) && conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) {
+		exporters := common.NewTranslatorMap[component.Config](prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		// PRW exporter does not need the delta conversion.
+		receivers := common.NewTranslatorMap[component.Config]()
+		receivers.Merge(hostReceivers)
+		receivers.Merge(deltaReceivers)
+		translators.Set(NewTranslator(fmt.Sprintf("%s/amp", common.PipelineNameHost), receivers, exporters))
 	}
 
 	return translators, nil

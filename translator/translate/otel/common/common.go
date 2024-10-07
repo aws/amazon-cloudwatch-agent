@@ -28,6 +28,7 @@ const (
 	MetricsDestinationsKey             = "metrics_destinations"
 	ECSKey                             = "ecs"
 	KubernetesKey                      = "kubernetes"
+	CloudWatchKey                      = "cloudwatch"
 	PrometheusKey                      = "prometheus"
 	AMPKey                             = "amp"
 	WorkspaceIDKey                     = "workspace_id"
