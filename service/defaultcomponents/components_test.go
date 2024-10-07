@@ -53,6 +53,7 @@ func TestComponents(t *testing.T) {
 		"metricstransform",
 		"resourcedetection",
 		"resource",
+		"rollup",
 		"probabilistic_sampler",
 		"span",
 		"tail_sampling",
@@ -70,6 +71,7 @@ func TestComponents(t *testing.T) {
 		"awscloudwatch",
 		"awsxray",
 		"debug",
+		"prometheusremotewrite",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
 	assert.Equal(t, len(wantExporters), len(gotExporters))
