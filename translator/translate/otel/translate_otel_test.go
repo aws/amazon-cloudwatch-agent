@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -20,6 +21,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
@@ -162,6 +164,20 @@ func TestTranslator(t *testing.T) {
 			},
 			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAMPDestinationConfig": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{},
+					},
+				},
+			},
 		},
 	}
 	for name, testCase := range testCases {

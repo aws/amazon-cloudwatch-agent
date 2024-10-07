@@ -81,9 +81,37 @@ func (s Set[K]) Contains(key K) bool {
 	return ok
 }
 
+// ContainsAll whether the other set is a subset.
+func (s Set[K]) ContainsAll(other Set[K]) bool {
+	for key := range other {
+		if !s.Contains(key) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equal whether the two sets are the same.
+func (s Set[K]) Equal(other Set[K]) bool {
+	if len(s) != len(other) {
+		return false
+	}
+	return s.ContainsAll(other)
+}
+
 // NewSet creates a new Set with the keys provided.
 func NewSet[K comparable](keys ...K) Set[K] {
 	s := make(Set[K], len(keys))
 	s.Add(keys...)
 	return s
+}
+
+// Range evaluates a function against each element in the slice.
+func Range[T any](values []T, fn func(T) bool) bool {
+	for _, value := range values {
+		if !fn(value) {
+			return false
+		}
+	}
+	return true
 }

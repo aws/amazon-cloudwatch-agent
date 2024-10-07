@@ -1,0 +1,64 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "ws-12345"
+      },
+      "cloudwatch": {
+      }
+    },
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "drop_original_metrics": [
+          "cpu_usage_idle",
+          "time_active"
+        ],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "cpu_usage_guest",
+          "time_active",
+          "usage_active"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      [
+        "ImageId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      [
+        "d1"
+      ],
+      []
+    ]
+  }
+}

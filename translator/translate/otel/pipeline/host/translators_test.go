@@ -20,54 +20,113 @@ import (
 func TestTranslators(t *testing.T) {
 	type want struct {
 		receivers []string
+		exporters []string
 	}
 	testCases := map[string]struct {
-		input map[string]interface{}
+		input map[string]any
 		want  map[string]want
 	}{
 		"WithEmpty": {
-			input: map[string]interface{}{},
+			input: map[string]any{},
 			want:  map[string]want{},
 		},
 		"WithMinimal": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"cpu": map[string]interface{}{},
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
 					},
 				},
 			},
 			want: map[string]want{
 				"metrics/host": {
 					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
+				},
+			},
+		},
+		"WithAMPDestination": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithAMPAndCloudWatchDestinations": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/host": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
 		"WithDeltaMetrics": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"net": map[string]interface{}{},
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"net": map[string]any{},
 					},
 				},
 			},
 			want: map[string]want{
 				"metrics/hostDeltaMetrics": {
 					receivers: []string{"telegraf_net"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_net"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
 		"WithOtlpMetrics": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"otlp": map[string]interface{}{},
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"otlp": map[string]any{},
 					},
 				},
 			},
 			want: map[string]want{
 				"metrics/hostDeltaMetrics": {
 					receivers: []string{"otlp/metrics"},
+					exporters: []string{"awscloudwatch"},
 				},
 			},
 		},
@@ -87,6 +146,7 @@ func TestTranslators(t *testing.T) {
 					w, ok := testCase.want[tr.ID().String()]
 					require.True(t, ok)
 					assert.Equal(t, w.receivers, collections.MapSlice(tr.(*translator).receivers.Keys(), component.ID.String))
+					assert.Equal(t, w.exporters, collections.MapSlice(tr.(*translator).exporters.Keys(), component.ID.String))
 				})
 			}
 		})
