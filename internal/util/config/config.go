@@ -32,7 +32,7 @@ func GetOTELConfigArgs(dir string) []string {
 func getSortedYAMLs(dir string) []string {
 	var configs []string
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
+		if d == nil || d.IsDir() {
 			return nil
 		}
 		if filepath.Ext(path) == constants.FileSuffixYAML {

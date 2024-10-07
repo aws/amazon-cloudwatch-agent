@@ -15,6 +15,12 @@ import (
 )
 
 func TestGetOTELConfigArgs(t *testing.T) {
+	got := GetOTELConfigArgs("/not/valid/path")
+	assert.Len(t, got, 2)
+	assert.Equal(t, []string{
+		"-otelconfig", paths.YamlConfigPath,
+	}, got)
+
 	dir := t.TempDir()
 	// skipped
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "bunchofyaml"), 0644))
@@ -32,7 +38,7 @@ func TestGetOTELConfigArgs(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, f.Close())
 	}
-	got := GetOTELConfigArgs(dir)
+	got = GetOTELConfigArgs(dir)
 	assert.Len(t, got, 14)
 	assert.Equal(t, []string{
 		"-otelconfig", filepath.Join(dir, "1.yaml"),
