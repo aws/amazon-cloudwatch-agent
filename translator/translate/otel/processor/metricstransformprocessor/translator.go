@@ -74,10 +74,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		},
 	}
 
-	fmt.Printf("I! The t.name is %s.", t.name)
 	if t.name == common.JmxKey {
-		fmt.Print("I! t.name is equal to common.JmxKey.")
-		fmt.Print("I! Aggregating context in tomcat.sessions.")
 		transformRules = append(transformRules, map[string]interface{}{
 			"include": "tomcat.sessions",
 			"action":  "update",
