@@ -113,14 +113,14 @@ jobs:
       - name: Cache binaries
         id: cached_binaries
         if: needs.changes.outputs.build == 'true'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached-binaries-${{ matrix.os }}-${{ github.sha }}"
           path: go.mod
 
       - name: Cache build output
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ matrix.cache-path }}
           key: v1-go-pkg-mod-${{ matrix.os }}-${{ hashFiles('**/go.sum') }}

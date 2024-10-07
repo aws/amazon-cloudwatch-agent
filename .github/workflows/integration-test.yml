@@ -156,7 +156,7 @@ jobs:
 
       - name: Cache if success
         id: cf-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: "cf-integration-${{ github.sha }}-test"
@@ -246,7 +246,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-linux-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ec2-nvidia-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -464,7 +464,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-win-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -546,7 +546,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-mac-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -678,7 +678,7 @@ jobs:
 
       - name: Cache if success
         id: ecs-ec2-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ecs-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -761,7 +761,7 @@ jobs:
 
       - name: Cache if success
         id: ecs-fargate-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -839,7 +839,7 @@ jobs:
 
       - name: Cache if success
         id: eks-ec2-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8s_version }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -921,7 +921,7 @@ jobs:
 
       - name: Cache if success
         id: eks-ec2-integration-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -1001,7 +1001,7 @@ jobs:
 
       - name: Cache if success
         id: performance-tracking
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -1069,7 +1069,7 @@ jobs:
 
       - name: Cache if success
         id: performance-tracking
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -1137,7 +1137,7 @@ jobs:
 
       - name: Cache if success
         id: stress-tracking
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -1207,7 +1207,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-win-stress-tracking-test
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ec2-win-stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
