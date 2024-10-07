@@ -90,6 +90,7 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 		resourceAttributes.PutStr(resourceAttrKey, attrKey+"-value")
 	}
 	resourceAttributes.PutStr("host.id", "i-01ef7d37f42caa168")
+	resourceAttributes.PutStr("aws.local.service", "PetClinic")
 
 	// Create a pcommon.Map for attributes
 	attributes := pcommon.NewMap()
@@ -106,6 +107,10 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 
 	if value, ok := attributes.Get("K8s.Node"); !ok || value.AsString() != "i-01ef7d37f42caa168" {
 		t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), "i-01ef7d37f42caa168")
+	}
+
+	if value, ok := attributes.Get("aws.local.service"); !ok || value.AsString() != "PetClinic" {
+		t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), "PetClinic")
 	}
 }
 

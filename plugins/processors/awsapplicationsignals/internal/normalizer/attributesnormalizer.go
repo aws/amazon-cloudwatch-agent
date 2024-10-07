@@ -126,6 +126,10 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			}
 		}
 	}
+	// Runtime metrics do not have service attribute, so need to manually add
+	if serviceAttribute, ok := resourceAttributes.Get(attr.AWSLocalService); ok {
+		attributes.PutStr(attr.AWSLocalService, serviceAttribute.AsString())
+	}
 }
 
 func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {
