@@ -20,38 +20,21 @@ const (
 )
 
 type translator struct {
-	name    string
-	index   int
+	common.NameProvider
+	common.IndexProvider
 	factory processor.Factory
-}
-
-type Option func(any)
-
-func WithName(name string) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.name = name
-		}
-	}
-}
-
-func WithIndex(index int) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.index = index
-		}
-	}
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	t := &translator{index: -1, factory: filterprocessor.NewFactory()}
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+	t := &translator{factory: filterprocessor.NewFactory()}
+	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.index != -1 {
-		t.name += "/" + strconv.Itoa(t.index)
+	if t.Index() != -1 {
+		t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
 	}
 	return t
 }
@@ -59,7 +42,7 @@ func NewTranslator(opts ...Option) common.Translator[component.Config] {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
 // Translate creates a processor config based on the fields in the
@@ -71,7 +54,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.index)
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
 
 	var includeMetricNames []string
 	for _, jmxTarget := range common.JmxTargets {

@@ -10,15 +10,34 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 )
 
+const (
+	// defaultDestination if not defined
+	defaultDestination = ""
+)
+
 func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+	var destinations []string
+	if conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.CloudWatchKey)) {
+		destinations = append(destinations, common.CloudWatchKey)
+	}
+	if conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) {
+		destinations = append(destinations, common.AMPKey)
+	}
+	if len(destinations) == 0 {
+		destinations = append(destinations, defaultDestination)
+	}
 	switch v := conf.Get(common.JmxConfigKey).(type) {
 	case []any:
 		for index := range v {
-			translators.Set(NewTranslator(WithIndex(index)))
+			for _, destination := range destinations {
+				translators.Set(NewTranslator(common.WithIndex(index), WithDestination(destination)))
+			}
 		}
 	case map[string]any:
-		translators.Set(NewTranslator())
+		for _, destination := range destinations {
+			translators.Set(NewTranslator(WithDestination(destination)))
+		}
 	}
 	return translators
 }

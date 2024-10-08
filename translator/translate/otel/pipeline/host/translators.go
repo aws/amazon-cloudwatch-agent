@@ -45,7 +45,7 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 		for index := range v {
 			deltaReceivers.Set(otlpreceiver.NewTranslator(
 				otlpreceiver.WithDataType(component.DataTypeMetrics),
-				otlpreceiver.WithIndex(index),
+				common.WithIndex(index),
 			))
 		}
 	case map[string]any:
