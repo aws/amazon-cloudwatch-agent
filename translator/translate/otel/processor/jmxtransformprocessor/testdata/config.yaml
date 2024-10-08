@@ -1,0 +1,28 @@
+metric_statements:
+  - context: resource
+    statements:
+      - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
+  - context: metric
+    statements:
+      - set(unit, "Bytes") where name == "jvm.memory.heap.used"
+      - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
+      - set(unit, "Bytes") where name == "jvm.memory.pool.used"
+      - set(unit, "Bytes") where name == "tomcat.traffic.received"
+      - set(unit, "Bytes") where name == "tomcat.traffic.sent"
+      - set(unit, "Bytes") where name == "jvm.operating.system.total.swap.space.size"
+      - set(unit, "Bytes") where name == "jvm.operating.system.free.swap.space.size"
+      - set(unit, "Bytes") where name == "jvm.operating.system.total.physical.memory.size"
+      - set(unit, "Bytes") where name == "jvm.operating.system.free.physical.memory.size"
+      - set(unit, "Count") where name == "tomcat.sessions"
+      - set(unit, "Count") where name == "tomcat.rejected_sessions"
+      - set(unit, "Count") where name == "jvm.threads.count"
+      - set(unit, "Count") where name == "jvm.threads.daemon"
+      - set(unit, "Count") where name == "jvm.operating.system.open.file.descriptor.count"
+      - set(unit, "Count") where name == "jvm.operating.system.available.processors"
+      - set(unit, "Count") where name == "tomcat.request_count"
+      - set(unit, "Count") where name == "tomcat.errors"
+      - set(unit, "Count") where name == "jvm.classes.loaded"
+      - set(unit, "Count") where name == "jvm.operating.system.system.cpu.load"
+      - set(unit, "Count") where name == "jvm.operating.system.process.cpu.load"
+      - set(unit, "Milliseconds") where name == "tomcat.processing_time"
+

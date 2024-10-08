@@ -187,6 +187,12 @@ func TestMetricsDestinationsConfig(t *testing.T) {
 	expectedErrorMap["required"] = 1
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsDestinations.json", false, expectedErrorMap)
 }
+func TestJmxConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validContainerInsightsJmx.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	//checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidContainerInsightsJmx.json", false, expectedErrorMap)
+}
 
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
