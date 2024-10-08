@@ -1,0 +1,134 @@
+transforms:
+  - include: jvm.classes.loaded
+    match_type: strict
+    action: update
+    new_name: jvm_classes_loaded
+
+
+  - include: jvm.memory.heap.used
+    match_type: strict
+    action: update
+    new_name: jvm_memory_bytes_used
+    operations:
+      - action: add_label
+        new_label: area
+        new_value: "heap"
+
+  - include: jvm.memory.nonheap.used
+    match_type: strict
+    action: update
+    new_name: jvm_memory_bytes_used
+    operations:
+      - action: add_label
+        new_label: area
+        new_value: "nonheap"
+
+  - include: jvm.memory.pool.used
+    match_type: strict
+    action: update
+    new_name: jvm_memory_pool_bytes_used
+    operations:
+      - action: update_label
+        label: name
+        new_label: pool
+
+  - include: jvm.operating.system.total.swap.space.size
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_totalswapspacesize
+
+
+  - include: jvm.operating.system.system.cpu.load
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_systemcpuload
+
+  - include: jvm.operating.system.process.cpu.load
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_processcpuload
+
+
+  - include: jvm.operating.system.free.swap.space.size
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_freeswapspacesize
+
+
+  - include: jvm.operating.system.total.physical.memory.size
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_totalphysicalmemorysize
+
+
+  - include: jvm.operating.system.free.physical.memory.size
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_freephysicalmemorysize
+
+
+  - include: jvm.operating.system.open.file.descriptor.count
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_openfiledescriptorcount
+
+
+  - include: jvm.operating.system.available.processors
+    match_type: strict
+    action: update
+    new_name: java_lang_operatingsystem_availableprocessors
+
+
+  - include: jvm.threads.count
+    match_type: strict
+    action: update
+    new_name: jvm_threads_current
+
+
+  - include: jvm.threads.daemon
+    match_type: strict
+    action: update
+    new_name: jvm_threads_daemon
+
+
+  - include: tomcat.sessions
+    match_type: strict
+    action: update
+    new_name: catalina_manager_activesessions
+
+
+  - include: tomcat.rejected_sessions
+    match_type: strict
+    action: update
+    new_name: catalina_manager_rejectedsessions
+
+
+  - include: tomcat.traffic.received
+    match_type: strict
+    action: update
+    new_name: catalina_globalrequestprocessor_bytesreceived
+
+
+  - include: tomcat.traffic.sent
+    match_type: strict
+    action: update
+    new_name: catalina_globalrequestprocessor_bytessent
+
+  - include: tomcat.request_count
+    match_type: strict
+    action: update
+    new_name: catalina_globalrequestprocessor_requestcount
+
+
+  - include: tomcat.errors
+    match_type: strict
+    action: update
+    new_name: catalina_globalrequestprocessor_errorcount
+
+
+  - include: tomcat.processing_time
+    match_type: strict
+    action: update
+    new_name: catalina_globalrequestprocessor_processingtime
+
+

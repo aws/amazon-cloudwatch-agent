@@ -43,6 +43,9 @@ var appSignalsConfigK8s string
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
 
+//go:embed awsemfjmx_config.yaml
+var awsEmfJmxDefaultConfig string
+
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
 	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
@@ -79,6 +82,8 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	var defaultConfig string
 	if t.isAppSignals(c) {
 		defaultConfig = getAppSignalsConfig()
+	} else if t.isCiJMX(c) {
+		defaultConfig = awsEmfJmxDefaultConfig
 	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
 	} else if isKubernetes(c) {
@@ -126,7 +131,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if isKubernetes(c) {
+	} else if isKubernetes(c) && !t.isCiJMX(c) {
 		if err := setKubernetesFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -165,6 +170,9 @@ func getAppSignalsConfig() string {
 
 func (t *translator) isAppSignals(conf *confmap.Conf) bool {
 	return (t.name == common.AppSignals || t.name == common.AppSignalsFallback) && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsMetricsFallback) || conf.IsSet(common.AppSignalsTracesFallback))
+}
+func (t *translator) isCiJMX(conf *confmap.Conf) bool {
+	return (t.name == "containerinsightsjmx") && (conf.IsSet(common.ContainerInsightsConfigKey))
 }
 
 func isEcs(conf *confmap.Conf) bool {

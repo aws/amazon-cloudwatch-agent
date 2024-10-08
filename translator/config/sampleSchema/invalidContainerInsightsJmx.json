@@ -1,0 +1,14 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {
+      },
+      "kubernete": {
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

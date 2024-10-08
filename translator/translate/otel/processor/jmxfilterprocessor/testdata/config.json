@@ -1,0 +1,20 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {
+      },
+      "kubernetes": {
+        "cluster_name": "TestCluster",
+        "metrics_collection_interval": 30,
+        "disable_metric_extraction": true,
+        "prefer_full_pod_name": true,
+        "accelerated_compute_metrics": false
+      }
+    },
+    "force_flush_interval": 5,
+    "endpoint_override":"https://fake_endpoint"
+  }
+}
