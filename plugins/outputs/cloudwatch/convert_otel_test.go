@@ -242,7 +242,7 @@ func TestConvertOtelMetrics_Entity(t *testing.T) {
 
 }
 
-func TestProcessEntityAttributes(t *testing.T) {
+func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 	testCases := []struct {
 		name               string
 		entityMap          []map[string]string
@@ -325,6 +325,28 @@ func TestProcessEntityAttributes(t *testing.T) {
 				"extra_attribute": "extra_value",
 			},
 		},
+		{
+			name:      "key_and_non_key_attributes_plus_unsupported_entity_field",
+			entityMap: []map[string]string{entityattributes.KeyAttributeEntityToShortNameMap, entityattributes.AttributeEntityToShortNameMap},
+			resourceAttributes: map[string]any{
+				entityattributes.AWSEntityPrefix + "not.real.values":  "unsupported",
+				entityattributes.AttributeEntityServiceName:           "my-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "my-environment",
+				entityattributes.AttributeEntityCluster:               "my-cluster",
+				entityattributes.AttributeEntityNamespace:             "my-namespace",
+				entityattributes.AttributeEntityNode:                  "my-node",
+				entityattributes.AttributeEntityWorkload:              "my-workload",
+			},
+			wantedAttributes: map[string]*string{
+				entityattributes.ServiceName:           aws.String("my-service"),
+				entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+				entityattributes.Cluster:               aws.String("my-cluster"),
+				entityattributes.Namespace:             aws.String("my-namespace"),
+				entityattributes.Node:                  aws.String("my-node"),
+				entityattributes.Workload:              aws.String("my-workload"),
+			},
+			leftoverAttributes: map[string]any{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -336,6 +358,7 @@ func TestProcessEntityAttributes(t *testing.T) {
 			for _, entityMap := range tc.entityMap {
 				processEntityAttributes(entityMap, targetMap, attrs)
 			}
+			removeEntityFields(attrs)
 			assert.Equal(t, tc.leftoverAttributes, attrs.AsRaw())
 			assert.Equal(t, tc.wantedAttributes, targetMap)
 		})

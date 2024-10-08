@@ -24,19 +24,13 @@ func ConvertOtelDimensions(attributes pcommon.Map) []*cloudwatch.Dimension {
 	mTags := make(map[string]string, attributes.Len())
 	attributes.Range(func(k string, v pcommon.Value) bool {
 		// we don't want to export entity related attributes as dimensions, so we skip these
-		if isEntityAttribute(k) {
+		if strings.HasPrefix(k, entityattributes.AWSEntityPrefix) {
 			return true
 		}
 		mTags[k] = v.AsString()
 		return true
 	})
 	return BuildDimensions(mTags)
-}
-
-func isEntityAttribute(k string) bool {
-	_, ok := entityattributes.KeyAttributeEntityToShortNameMap[k]
-	_, ok2 := entityattributes.AttributeEntityToShortNameMap[k]
-	return ok || ok2
 }
 
 // NumberDataPointValue converts to float64 since that is what AWS SDK will use.
@@ -197,6 +191,7 @@ func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
 
 	processEntityAttributes(entityattributes.KeyAttributeEntityToShortNameMap, keyAttributesMap, resourceAttributes)
 	processEntityAttributes(entityattributes.AttributeEntityToShortNameMap, attributeMap, resourceAttributes)
+	removeEntityFields(resourceAttributes)
 
 	return cloudwatch.Entity{
 		KeyAttributes: keyAttributesMap,
@@ -204,15 +199,20 @@ func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
 	}
 }
 
-// processEntityAttributes fetches the aws.entity fields and creates an entity to be sent at the PutMetricData call. It also
-// removes the entity attributes so that it is not tagged as a dimension, and reduces the size of the PMD payload.
+// processEntityAttributes fetches the fields with entity prefix and creates an entity to be sent at the PutMetricData call.
 func processEntityAttributes(entityMap map[string]string, targetMap map[string]*string, mutableResourceAttributes pcommon.Map) {
 	for entityField, shortName := range entityMap {
 		if val, ok := mutableResourceAttributes.Get(entityField); ok {
 			if strVal := val.Str(); strVal != "" {
 				targetMap[shortName] = aws.String(strVal)
 			}
-			mutableResourceAttributes.Remove(entityField)
 		}
 	}
+}
+
+// removeEntityFields so that it is not tagged as a dimension, and reduces the size of the PMD payload.
+func removeEntityFields(mutableResourceAttributes pcommon.Map) {
+	mutableResourceAttributes.RemoveIf(func(s string, _ pcommon.Value) bool {
+		return strings.HasPrefix(s, entityattributes.AWSEntityPrefix)
+	})
 }
