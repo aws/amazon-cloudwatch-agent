@@ -321,7 +321,7 @@ func TestTranslator(t *testing.T) {
 			if testCase.isContainer {
 				t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
 			}
-			tt := NewTranslator(WithIndex(testCase.index), WithDestination(testCase.destination))
+			tt := NewTranslator(common.WithIndex(testCase.index), WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

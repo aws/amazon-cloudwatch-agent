@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -37,22 +36,12 @@ var (
 )
 
 type translator struct {
-	name        string
-	index       int
+	name string
+	common.IndexProvider
 	destination string
 }
 
-type Option func(any)
-
-func WithIndex(index int) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.index = index
-		}
-	}
-}
-
-func WithDestination(destination string) Option {
+func WithDestination(destination string) common.TranslatorOption {
 	return func(a any) {
 		if t, ok := a.(*translator); ok {
 			t.destination = destination
@@ -62,16 +51,17 @@ func WithDestination(destination string) Option {
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[*common.ComponentTranslators] {
-	t := &translator{name: common.PipelineNameJmx, index: -1}
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.ComponentTranslators] {
+	t := &translator{name: common.PipelineNameJmx}
+	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
 	if t.destination != "" {
 		t.name += "/" + t.destination
 	}
-	if t.index != -1 {
-		t.name += "/" + strconv.Itoa(t.index)
+	if t.Index() != -1 {
+		t.name += "/" + strconv.Itoa(t.Index())
 	}
 	return t
 }
@@ -87,10 +77,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
-	if !hasMeasurements(conf, t.index) {
+	if !hasMeasurements(conf, t.Index()) {
 		baseKey := common.JmxConfigKey
-		if t.index != -1 {
-			baseKey = fmt.Sprintf("%s[%d]", baseKey, t.index)
+		if t.Index() != -1 {
+			baseKey = fmt.Sprintf("%s[%d]", baseKey, t.Index())
 		}
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.ConfigKey(baseKey, placeholderTarget, common.MeasurementKey)}
 	}
@@ -98,7 +88,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators := common.ComponentTranslators{
 		Receivers: common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(
-			filterprocessor.NewTranslator(filterprocessor.WithName(common.PipelineNameJmx), filterprocessor.WithIndex(t.index)),
+			filterprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())),
 			resourceprocessor.NewTranslator(resourceprocessor.WithName(common.PipelineNameJmx)),
 		),
 		Exporters:  common.NewTranslatorMap[component.Config](),
@@ -108,12 +98,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if envconfig.IsRunningInContainer() {
 		translators.Receivers.Set(otlp.NewTranslatorWithName(common.JmxKey))
 	} else {
-		translators.Receivers.Set(jmx.NewTranslator(jmx.WithIndex(t.index)))
+		translators.Receivers.Set(jmx.NewTranslator(jmx.WithIndex(t.Index())))
 	}
 
 	mdt := metricsdecorator.NewTranslator(
 		metricsdecorator.WithName(common.PipelineNameJmx),
-		metricsdecorator.WithIndex(t.index),
+		metricsdecorator.WithIndex(t.Index()),
 		metricsdecorator.WithConfigKey(common.JmxConfigKey),
 	)
 	if mdt.IsSet(conf) {
@@ -125,7 +115,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	switch t.destination {
-	case "", common.CloudWatchKey:
+	case defaultDestination, common.CloudWatchKey:
 		if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.CloudWatchKey)) {
 			translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)))
 			translators.Exporters.Set(awscloudwatch.NewTranslator())
@@ -146,10 +136,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		}
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.destination)
-	}
-
-	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
-		translators.Exporters.Set(debug.NewTranslatorWithName(common.JmxKey))
 	}
 
 	return &translators, nil
