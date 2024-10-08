@@ -1,0 +1,43 @@
+{
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "ws-12345"
+      },
+      "cloudwatch": {}
+    },
+    "metrics_collected": {
+      "jmx": [
+        {
+          "jvm": {
+            "measurement": [
+              "jvm.memory.heap.init",
+              {
+                "name": "jvm.memory.heap.used",
+                "rename": "JVM_MEM_HEAP_USED",
+                "unit": "unit"
+              },
+              "jvm.memory.nonheap.init"
+            ]
+          },
+          "append_dimensions": {
+            "k1": "v1"
+          }
+        },
+        {
+          "kafka-consumer": {
+            "measurement": [
+              {
+                "name": "kafka.consumer.fetch-rate",
+                "rename": "kafka.fetch-rate"
+              }
+            ]
+          },
+          "append_dimensions": {
+            "k2": "v2"
+          }
+        }
+      ]
+    }
+  }
+}

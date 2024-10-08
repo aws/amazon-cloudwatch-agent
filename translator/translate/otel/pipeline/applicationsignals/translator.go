@@ -46,7 +46,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(common.AppSignals, otlp.WithDataType(t.dataType))),
+		Receivers:  common.NewTranslatorMap(otlp.NewTranslator(common.WithName(common.AppSignals), otlp.WithDataType(t.dataType))),
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
@@ -56,7 +56,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithDataType(t.dataType)))
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
-		translators.Exporters.Set(debug.NewTranslatorWithName(common.AppSignals))
+		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
 	}
 
 	if t.dataType == component.DataTypeTraces {

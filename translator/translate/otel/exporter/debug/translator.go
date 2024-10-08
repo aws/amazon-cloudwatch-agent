@@ -16,22 +16,22 @@ import (
 const defaultSamplingThereafter = 500
 
 type translator struct {
-	name    string
+	common.NameProvider
 	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
-	return NewTranslatorWithName("")
-}
-
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
-	return &translator{name: name, factory: debugexporter.NewFactory()}
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+	t := &translator{factory: debugexporter.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {

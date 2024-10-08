@@ -22,7 +22,6 @@ const (
 	defaultHttpEndpoint           = "127.0.0.1:4318"
 	defaultAppSignalsGrpcEndpoint = "0.0.0.0:4315"
 	defaultAppSignalsHttpEndpoint = "0.0.0.0:4316"
-	defaultJMXGrpcEndpoint        = "0.0.0.0:4313"
 	defaultJMXHttpEndpoint        = "0.0.0.0:4314"
 )
 
@@ -34,63 +33,47 @@ var (
 )
 
 type translator struct {
-	name     string
+	common.NameProvider
+	common.IndexProvider
 	dataType component.DataType
-	index    int
 	factory  receiver.Factory
-}
-
-type Option interface {
-	apply(t *translator)
-}
-
-type optionFunc func(t *translator)
-
-func (o optionFunc) apply(t *translator) {
-	o(t)
 }
 
 // WithDataType determines where the translator should look to find
 // the configuration.
-func WithDataType(dataType component.DataType) Option {
-	return optionFunc(func(t *translator) {
-		t.dataType = dataType
-	})
-}
-func WithIndex(index int) Option {
-	return optionFunc(func(t *translator) {
-		t.index = index
-	})
+func WithDataType(dataType component.DataType) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.dataType = dataType
+		}
+	}
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	return NewTranslatorWithName("", opts...)
-}
-
-func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
-	t := &translator{name: name, index: -1, factory: otlpreceiver.NewFactory()}
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+	t := &translator{factory: otlpreceiver.NewFactory()}
+	t.SetIndex(-1)
 	for _, opt := range opts {
-		opt.apply(t)
+		opt(t)
 	}
-	if name == "" && t.dataType.String() != "" {
-		t.name = t.dataType.String()
-		if t.index != -1 {
-			t.name += strconv.Itoa(t.index)
+	if t.Name() == "" && t.dataType.String() != "" {
+		t.SetName(t.dataType.String())
+		if t.Index() != -1 {
+			t.SetName(t.Name() + strconv.Itoa(t.Index()))
 		}
 	}
 	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
-	if t.name == common.JmxKey {
-		cfg.GRPC.NetAddr.Endpoint = defaultJMXGrpcEndpoint
+	if t.Name() == common.PipelineNameJmx {
+		cfg.GRPC = nil
 		cfg.HTTP.Endpoint = defaultJMXHttpEndpoint
 		return cfg, nil
 	}
@@ -102,7 +85,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
 	cfg.HTTP.Endpoint = defaultHttpEndpoint
 
-	if t.name == common.AppSignals {
+	if t.Name() == common.AppSignals {
 		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.dataType]
 		if !ok {
 			return nil, fmt.Errorf("no application_signals config key defined for data type: %s", t.dataType)
@@ -121,8 +104,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	var otlpKeyMap map[string]interface{}
-	if otlpSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(otlpSlice) > t.index {
-		otlpKeyMap = otlpSlice[t.index].(map[string]interface{})
+	if otlpSlice := common.GetArray[any](conf, configKey); t.Index() != -1 && len(otlpSlice) > t.Index() {
+		otlpKeyMap = otlpSlice[t.Index()].(map[string]interface{})
 	} else {
 		otlpKeyMap = conf.Get(configKey).(map[string]interface{})
 	}

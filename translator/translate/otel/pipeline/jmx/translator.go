@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
@@ -89,16 +89,19 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Receivers: common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(
 			filterprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())),
-			resourceprocessor.NewTranslator(resourceprocessor.WithName(common.PipelineNameJmx)),
 		),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
-	if envconfig.IsRunningInContainer() {
-		translators.Receivers.Set(otlp.NewTranslatorWithName(common.JmxKey))
+	if context.CurrentContext().RunInContainer() {
+		translators.Receivers.Set(otlp.NewTranslator(common.WithName(common.PipelineNameJmx)))
+		if hasAppendDimensions(conf, t.Index()) {
+			translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())))
+		}
 	} else {
 		translators.Receivers.Set(jmx.NewTranslator(jmx.WithIndex(t.Index())))
+		translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName(common.PipelineNameJmx)))
 	}
 
 	mdt := metricsdecorator.NewTranslator(
@@ -156,4 +159,16 @@ func hasMeasurements(conf *confmap.Conf, index int) bool {
 		}
 	}
 	return result
+}
+
+func hasAppendDimensions(conf *confmap.Conf, index int) bool {
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, index)
+	if len(jmxMap) == 0 {
+		return false
+	}
+	appendDimensions, ok := jmxMap[common.AppendDimensionsKey].(map[string]any)
+	if !ok {
+		return false
+	}
+	return len(appendDimensions) > 0
 }
