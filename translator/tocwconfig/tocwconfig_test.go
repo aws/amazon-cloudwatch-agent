@@ -226,6 +226,14 @@ func TestOtlpMetricsConfig(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
 }
 
+func TestOtlpMetricsEmfConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "windows", nil, "")
+}
+
 func TestProcstatMemorySwapConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
@@ -234,7 +242,6 @@ func TestProcstatMemorySwapConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	checkTranslation(t, "procstat_memory_swap_config", "linux", nil, "")
 	checkTranslation(t, "procstat_memory_swap_config", "darwin", nil, "")
-
 }
 
 func TestWindowsEventOnlyConfig(t *testing.T) {

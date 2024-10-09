@@ -24,9 +24,10 @@ const (
 )
 
 var (
-	netKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.NetKey)
-	diskioKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskIOKey)
-	otlpKey   = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)
+	netKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.NetKey)
+	diskioKey  = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskIOKey)
+	otlpKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)
+	otlpEmfKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)
 
 	exclusions = map[string][]string{
 		// DiskIO and Net Metrics are cumulative metrics
@@ -38,7 +39,7 @@ var (
 )
 
 func WithDefaultKeys() common.TranslatorOption {
-	return WithConfigKeys(diskioKey, netKey, otlpKey)
+	return WithConfigKeys(diskioKey, netKey, otlpKey, otlpEmfKey)
 }
 
 func WithConfigKeys(keys ...string) common.TranslatorOption {

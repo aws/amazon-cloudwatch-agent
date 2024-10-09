@@ -161,7 +161,7 @@ service:
         - agenthealth/metrics
         - sigv4auth
     pipelines:
-        metrics/host:
+        metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
@@ -184,8 +184,8 @@ service:
             processors:
                 - filter/jmx
                 - resource/jmx
-                - batch/jmx/amp
                 - transform/jmx
+                - batch/jmx/amp
             receivers:
                 - jmx
         metrics/jmx/cloudwatch:

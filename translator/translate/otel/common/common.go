@@ -29,6 +29,7 @@ const (
 	ECSKey                             = "ecs"
 	KubernetesKey                      = "kubernetes"
 	CloudWatchKey                      = "cloudwatch"
+	CloudWatchLogsKey                  = "cloudwatchlogs"
 	PrometheusKey                      = "prometheus"
 	AMPKey                             = "amp"
 	WorkspaceIDKey                     = "workspace_id"

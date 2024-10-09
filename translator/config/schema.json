@@ -802,6 +802,9 @@
                 }
               },
               "additionalProperties": false
+            },
+            "otlp": {
+              "$ref": "#/definitions/otlpDefinitions"
             }
           },
           "additionalProperties": true

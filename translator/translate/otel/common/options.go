@@ -52,3 +52,27 @@ func (p *IndexProvider) Index() int {
 func (p *IndexProvider) SetIndex(index int) {
 	p.index = index
 }
+
+type DestinationSetter interface {
+	SetDestination(string)
+}
+
+func WithDestination(name string) TranslatorOption {
+	return func(target any) {
+		if setter, ok := target.(DestinationSetter); ok {
+			setter.SetDestination(name)
+		}
+	}
+}
+
+type DestinationProvider struct {
+	destination string
+}
+
+func (p *DestinationProvider) Destination() string {
+	return p.destination
+}
+
+func (p *DestinationProvider) SetDestination(destination string) {
+	p.destination = destination
+}
