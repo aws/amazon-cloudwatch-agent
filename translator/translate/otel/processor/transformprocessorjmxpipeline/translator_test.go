@@ -1,17 +1,21 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package transformprocessorjmxpipeline
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"path/filepath"
+	"sort"
+	"testing"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-	"path/filepath"
-	"sort"
 
-	"testing"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func TestTranslate(t *testing.T) {

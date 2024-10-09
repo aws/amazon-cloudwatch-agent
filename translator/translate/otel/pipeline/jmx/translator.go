@@ -5,7 +5,6 @@ package jmx
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessorjmxpipeline"
 	"strconv"
 
 	"go.opentelemetry.io/collector/component"
@@ -24,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessorjmxpipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )

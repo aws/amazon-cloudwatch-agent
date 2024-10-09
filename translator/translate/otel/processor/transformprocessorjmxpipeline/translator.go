@@ -5,8 +5,8 @@ package transformprocessorjmxpipeline
 
 import (
 	_ "embed"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
@@ -25,20 +25,6 @@ type translator struct {
 
 type Option interface {
 	apply(t *translator)
-}
-
-type optionFunc func(t *translator)
-
-func (o optionFunc) apply(t *translator) {
-	o(t)
-}
-
-// WithDataType determines where the translator should look to find
-// the configuration.
-func WithDataType(dataType component.DataType) Option {
-	return optionFunc(func(t *translator) {
-		t.dataType = dataType
-	})
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
