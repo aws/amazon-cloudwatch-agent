@@ -47,13 +47,6 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"transforms": []map[string]interface{}{
 					{
-						"include":                   "apiserver_request_total",
-						"match_type":                "regexp",
-						"experimental_match_labels": map[string]string{"code": "^5.*"},
-						"action":                    "insert",
-						"new_name":                  "apiserver_request_total_5xx",
-					},
-					{
 						"include": "tomcat.sessions",
 						"action":  "update",
 						"operations": []map[string]interface{}{
@@ -79,19 +72,20 @@ func TestTranslator(t *testing.T) {
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*metricstransformprocessor.Config)
-				require.True(t, ok)
-				require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["include"], gotCfg.Transforms[0].MetricIncludeFilter.Include)
-				require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["match_type"], fmt.Sprint(gotCfg.Transforms[0].MetricIncludeFilter.MatchType))
-				require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["experimental_match_labels"], gotCfg.Transforms[0].MetricIncludeFilter.MatchLabels)
-				require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Action))
-				require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["new_name"], gotCfg.Transforms[0].NewName)
-				if name == "JMXMetricsSection" {
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[1]["include"], gotCfg.Transforms[1].MetricIncludeFilter.Include)
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[1]["action"], fmt.Sprint(gotCfg.Transforms[1].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[1]["operations"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[1].Operations[0].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[1]["operations"].([]map[string]interface{})[0]["aggregation_type"], fmt.Sprint(gotCfg.Transforms[1].Operations[0].AggregationType))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[1]["operations"].([]map[string]interface{})[1]["action"], fmt.Sprint(gotCfg.Transforms[1].Operations[1].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[1]["operations"].([]map[string]interface{})[1]["label"], fmt.Sprint(gotCfg.Transforms[1].Operations[1].Label))
+				if name != "JMXMetricsSection" {
+					require.True(t, ok)
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["include"], gotCfg.Transforms[0].MetricIncludeFilter.Include)
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["match_type"], fmt.Sprint(gotCfg.Transforms[0].MetricIncludeFilter.MatchType))
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["experimental_match_labels"], gotCfg.Transforms[0].MetricIncludeFilter.MatchLabels)
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Action))
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["new_name"], gotCfg.Transforms[0].NewName)
+				} else {
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["include"], gotCfg.Transforms[0].MetricIncludeFilter.Include)
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Action))
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Operations[0].Action))
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[0]["aggregation_type"], fmt.Sprint(gotCfg.Transforms[0].Operations[0].AggregationType))
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[1]["action"], fmt.Sprint(gotCfg.Transforms[0].Operations[1].Action))
+					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[1]["label"], fmt.Sprint(gotCfg.Transforms[0].Operations[1].Label))
 				}
 			}
 		})
