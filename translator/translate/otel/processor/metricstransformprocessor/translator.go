@@ -139,20 +139,22 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	if t.name == common.JmxKey {
-		transformRules = []map[string]interface{}{{
-			"include": "tomcat.sessions",
-			"action":  "update",
-			"operations": []map[string]interface{}{
-				{
-					"action":           "aggregate_labels",
-					"aggregation_type": "sum",
-				},
-				{
-					"action": "delete_label_value",
-					"label":  "context",
+		transformRules = []map[string]interface{}{
+			{
+				"include": "tomcat.sessions",
+				"action":  "update",
+				"operations": []map[string]interface{}{
+					{
+						"action":           "aggregate_labels",
+						"aggregation_type": "sum",
+					},
+					{
+						"action": "delete_label_value",
+						"label":  "context",
+					},
 				},
 			},
-		}}
+		}
 	}
 
 	c := confmap.NewFromStringMap(map[string]interface{}{
