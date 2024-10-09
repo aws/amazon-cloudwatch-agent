@@ -4,10 +4,12 @@
 package metricstransformprocessor
 
 import (
-	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -19,15 +21,21 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		translator common.Translator[component.Config]
 		input      map[string]interface{}
-		want       map[string]interface{}
+		want       *confmap.Conf
 		wantErr    error
 	}{
 		"DefaultMetricsSection": {
-			translator: NewTranslatorWithName("test"),
+			translator: NewTranslatorWithName("containerinsights"),
 			input: map[string]interface{}{
-				"metrics": map[string]interface{}{},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"accelerated_compute_metrics": false,
+						},
+					},
+				},
 			},
-			want: map[string]interface{}{
+			want: confmap.NewFromStringMap(map[string]interface{}{
 				"transforms": []map[string]interface{}{
 					{
 						"include":                   "apiserver_request_total",
@@ -35,16 +43,21 @@ func TestTranslator(t *testing.T) {
 						"experimental_match_labels": map[string]string{"code": "^5.*"},
 						"action":                    "insert",
 						"new_name":                  "apiserver_request_total_5xx",
-					},
-				},
+					}}}),
+		},
+		"GPUSection": {
+			translator: NewTranslatorWithName("containerinsights"),
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{},
 			},
+			want: testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
 		"JMXMetricsSection": {
 			translator: NewTranslatorWithName("jmx"),
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
 			},
-			want: map[string]interface{}{
+			want: confmap.NewFromStringMap(map[string]interface{}{
 				"transforms": []map[string]interface{}{
 					{
 						"include": "tomcat.sessions",
@@ -61,9 +74,10 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 				},
-			},
+			}),
 		},
 	}
+	factory := metricstransformprocessor.NewFactory()
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(tc.input)
@@ -72,21 +86,10 @@ func TestTranslator(t *testing.T) {
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*metricstransformprocessor.Config)
-				if name != "JMXMetricsSection" {
-					require.True(t, ok)
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["include"], gotCfg.Transforms[0].MetricIncludeFilter.Include)
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["match_type"], fmt.Sprint(gotCfg.Transforms[0].MetricIncludeFilter.MatchType))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["experimental_match_labels"], gotCfg.Transforms[0].MetricIncludeFilter.MatchLabels)
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["new_name"], gotCfg.Transforms[0].NewName)
-				} else {
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["include"], gotCfg.Transforms[0].MetricIncludeFilter.Include)
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[0]["action"], fmt.Sprint(gotCfg.Transforms[0].Operations[0].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[0]["aggregation_type"], fmt.Sprint(gotCfg.Transforms[0].Operations[0].AggregationType))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[1]["action"], fmt.Sprint(gotCfg.Transforms[0].Operations[1].Action))
-					require.Equal(t, tc.want["transforms"].([]map[string]interface{})[0]["operations"].([]map[string]interface{})[1]["label"], fmt.Sprint(gotCfg.Transforms[0].Operations[1].Label))
-				}
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, tc.want.Unmarshal(&wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
 	}
