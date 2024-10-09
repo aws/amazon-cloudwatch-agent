@@ -72,7 +72,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 	}
 
-	if t.Destination() != common.Emf {
+	if t.Destination() != common.CloudWatchLogsKey {
 		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 			log.Printf("D! ec2tagger processor required because append_dimensions is set")
 			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
@@ -96,7 +96,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
-	case common.Emf:
+	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
 		translators.Exporters.Set(awsemf.NewTranslator())
 		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))

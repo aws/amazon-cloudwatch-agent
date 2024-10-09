@@ -38,12 +38,12 @@ extensions:
         mode: EC2
         region_type: ACJ
 processors:
-  batch/hostDeltaMetrics/emf:
+  batch/hostDeltaMetrics/cloudwatchlogs:
     metadata_cardinality_limit: 1000
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 30s
-  cumulativetodelta/hostDeltaMetrics/emf:
+  cumulativetodelta/hostDeltaMetrics/cloudwatchlogs:
     exclude:
       match_type: ""
     include:
@@ -94,12 +94,12 @@ service:
   extensions:
     - agenthealth/logs
   pipelines:
-    metrics/hostDeltaMetrics/emf:
+    metrics/hostDeltaMetrics/cloudwatchlogs:
       exporters:
         - awsemf
       processors:
-        - batch/hostDeltaMetrics/emf
-        - cumulativetodelta/hostDeltaMetrics/emf
+        - batch/hostDeltaMetrics/cloudwatchlogs
+        - cumulativetodelta/hostDeltaMetrics/cloudwatchlogs
       receivers:
         - otlp/metrics
   telemetry:
