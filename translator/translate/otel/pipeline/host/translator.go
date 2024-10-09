@@ -97,6 +97,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
 	case common.Emf:
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
 		translators.Exporters.Set(awsemf.NewTranslator())
 		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
 	default:
