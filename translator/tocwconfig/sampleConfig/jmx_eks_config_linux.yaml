@@ -124,6 +124,20 @@ processors:
               key: k2
               pattern: ""
               value: v2
+    transform/jmx:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              statements:
+                  - delete_matching_keys(attributes, "^cloud.*")
+                  - delete_matching_keys(attributes, "^host.*")
+                  - delete_matching_keys(attributes, "^os.*")
+                  - delete_matching_keys(attributes, "^process.*")
+                  - delete_matching_keys(attributes, "^service.*")
+                  - delete_matching_keys(attributes, "^telemetry.*")
+        trace_statements: []
     transform/jmx/0:
         error_mode: propagate
         flatten_data: false
@@ -131,8 +145,8 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "jvm.memory.heap.used"
-                - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                  - set(unit, "unit") where name == "jvm.memory.heap.used"
+                  - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -141,7 +155,7 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+                  - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
 receivers:
     otlp/jmx:
@@ -165,6 +179,7 @@ service:
                 - filter/jmx/0
                 - resource/jmx/0
                 - transform/jmx/0
+                - transform/jmx
                 - batch/jmx/amp/0
             receivers:
                 - otlp/jmx
@@ -175,6 +190,7 @@ service:
                 - filter/jmx/1
                 - resource/jmx/1
                 - transform/jmx/1
+                - transform/jmx
                 - batch/jmx/amp/1
             receivers:
                 - otlp/jmx
@@ -185,6 +201,7 @@ service:
                 - filter/jmx/0
                 - resource/jmx/0
                 - transform/jmx/0
+                - transform/jmx
                 - cumulativetodelta/jmx
             receivers:
                 - otlp/jmx
@@ -195,6 +212,7 @@ service:
                 - filter/jmx/1
                 - resource/jmx/1
                 - transform/jmx/1
+                - transform/jmx
                 - cumulativetodelta/jmx
             receivers:
                 - otlp/jmx
