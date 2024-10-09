@@ -25,9 +25,9 @@ WIN_BUILD = GOOS=windows GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BU
 DARWIN_BUILD_AMD64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
 DARWIN_BUILD_ARM64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_arm64
 
-IMAGE_REGISTRY = amazon
+IMAGE_REGISTRY = 506463145083.dkr.ecr.us-west-2.amazonaws.com
 IMAGE_REPO = cloudwatch-agent
-IMAGE_TAG = $(VERSION)
+IMAGE_TAG = latest
 IMAGE = $(IMAGE_REGISTRY)/$(IMAGE_REPO):$(IMAGE_TAG)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
 DOCKER_WINDOWS_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile.Windows

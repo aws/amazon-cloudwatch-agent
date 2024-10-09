@@ -5,7 +5,7 @@ package jmx
 
 import (
 	"fmt"
-	attributesprocessorjmx "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributeprocessorjmx"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessorjmxpipeline"
 	"strconv"
 
 	"go.opentelemetry.io/collector/component"
@@ -117,7 +117,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
-	translators.Processors.Set(attributesprocessorjmx.NewTranslator())
+	translators.Processors.Set(transformprocessorjmxpipeline.NewTranslator())
 
 	switch t.destination {
 	case defaultDestination, common.CloudWatchKey:

@@ -1,21 +1,21 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package attributesprocessorjmx
+package transformprocessorjmxpipeline
 
 import (
 	_ "embed"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor"
 )
 
 //go:embed testdata/config.yaml
-var attributeProcessorConfig string
+var transformProcessorConfig string
 
 type translator struct {
 	name     string
@@ -44,7 +44,7 @@ func WithDataType(dataType component.DataType) Option {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	t := &translator{factory: attributesprocessor.NewFactory()}
+	t := &translator{factory: transformprocessor.NewFactory()}
 	for _, opt := range opts {
 		opt.apply(t)
 	}
@@ -60,8 +60,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
-	cfg := t.factory.CreateDefaultConfig().(*attributesprocessor.Config)
+	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 
-	return common.GetYamlFileToYamlConfig(cfg, attributeProcessorConfig)
+	return common.GetYamlFileToYamlConfig(cfg, transformProcessorConfig)
 
 }
