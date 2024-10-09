@@ -388,7 +388,7 @@ service:
             receivers:
                 - telegraf_net
                 - telegraf_diskio
-        metrics/jmx/0:
+        metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch
             processors:
@@ -399,15 +399,15 @@ service:
                 - ec2tagger
             receivers:
                 - jmx/0
-        metrics/jmx/1:
+        metrics/jmx/cloudwatch/1:
             exporters:
                 - awscloudwatch
             processors:
                 - filter/jmx/1
                 - resource/jmx
-                - cumulativetodelta/jmx
                 - transform/jmx/1
                 - ec2tagger
+                - cumulativetodelta/jmx
             receivers:
                 - jmx/1
         traces/xray:

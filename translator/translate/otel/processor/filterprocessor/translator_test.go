@@ -119,7 +119,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tt := NewTranslator(WithName("jmx"), WithIndex(testCase.index))
+			tt := NewTranslator(common.WithName("jmx"), common.WithIndex(testCase.index))
 			require.EqualValues(t, testCase.wantID, tt.ID().String())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)

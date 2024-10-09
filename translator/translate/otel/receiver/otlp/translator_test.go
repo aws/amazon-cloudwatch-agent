@@ -175,7 +175,7 @@ func TestMetricsTranslator(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			tt := NewTranslator(WithDataType(component.DataTypeMetrics))
 			if testCase.index != -1 {
-				tt = NewTranslator(WithDataType(component.DataTypeMetrics), WithIndex(testCase.index))
+				tt = NewTranslator(WithDataType(component.DataTypeMetrics), common.WithIndex(testCase.index))
 			}
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -192,7 +192,7 @@ func TestMetricsTranslator(t *testing.T) {
 }
 
 func TestTranslateAppSignals(t *testing.T) {
-	tt := NewTranslatorWithName(common.AppSignals, WithDataType(component.DataTypeTraces))
+	tt := NewTranslator(common.WithName(common.AppSignals), WithDataType(component.DataTypeTraces))
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
@@ -313,4 +313,16 @@ func TestTranslateAppSignals(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTranslateJMX(t *testing.T) {
+	tt := NewTranslator(common.WithName(common.PipelineNameJmx))
+	got, err := tt.Translate(nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	gotCfg, ok := got.(*otlpreceiver.Config)
+	require.True(t, ok)
+	assert.Nil(t, gotCfg.GRPC)
+	assert.NotNil(t, gotCfg.HTTP)
+	assert.Equal(t, "0.0.0.0:4314", gotCfg.HTTP.Endpoint)
 }
