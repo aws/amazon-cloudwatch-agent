@@ -11,46 +11,23 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 var (
-	metricsDestinationsKey = common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey)
-	pipelineSuffix         = map[string]string{
-		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey): "",
-		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey):    "/emf",
-	}
-	pipelineExtensions = map[string]common.TranslatorMap[component.Config]{
-		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey): common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
-		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey):    common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
-	}
-	pipelineProcessors = map[string]common.TranslatorMap[component.Config]{
-		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey): common.NewTranslatorMap[component.Config](),
-		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey):    common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameHostDeltaMetrics+"/emf", common.LogsKey)),
-	}
-	pipelineExporters = map[string]common.TranslatorMap[component.Config]{
-		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey): common.NewTranslatorMap(awscloudwatch.NewTranslator()),
-		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey):    common.NewTranslatorMap(awsemf.NewTranslator()),
-	}
+	MetricsKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+	LogsKey    = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 )
 
 func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.TranslatorMap, error) {
-
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
 	hostReceivers := common.NewTranslatorMap[component.Config]()
 	deltaReceivers := common.NewTranslatorMap[component.Config]()
 
 	// Gather adapter receivers
-	if configSection == common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey) {
+	if configSection == MetricsKey {
 		adapterReceivers, err := adaptertranslator.FindReceiversInConfig(conf, os)
 		if err != nil {
 			return nil, fmt.Errorf("error finding receivers in config: %w", err)
@@ -81,50 +58,45 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 		))
 	}
 
-	// Publishing to CloudWatch
-	if !conf.IsSet(metricsDestinationsKey) ||
-		conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.CloudWatchKey)) ||
-		configSection == common.ConfigKey(common.LogsKey, common.MetricsCollectedKey) {
-		if hostReceivers.Len() != 0 {
-			translators.Set(NewTranslator(
-				common.PipelineNameHost+pipelineSuffix[configSection],
-				hostReceivers,
-				pipelineProcessors[configSection],
-				pipelineExporters[configSection],
-				pipelineExtensions[configSection],
-			))
-		}
-		if deltaReceivers.Len() != 0 {
-			translators.Set(NewTranslator(
-				common.PipelineNameHostDeltaMetrics+pipelineSuffix[configSection],
-				deltaReceivers,
-				pipelineProcessors[configSection],
-				pipelineExporters[configSection],
-				pipelineExtensions[configSection],
-			))
-		}
+	hasHostPipeline := hostReceivers.Len() != 0
+	hasDeltaPipeline := deltaReceivers.Len() != 0
+
+	var destinations []string
+	switch configSection {
+	case LogsKey:
+		destinations = []string{common.Emf}
+	case MetricsKey:
+		destinations = common.GetMetricsDestinations(conf)
 	}
 
-	// Publishing to AMP
-	if conf.IsSet(metricsDestinationsKey) &&
-		conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) &&
-		configSection == common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey) {
-		exporters := common.NewTranslatorMap[component.Config](prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
-		// PRW exporter does not need the delta conversion.
-		receivers := common.NewTranslatorMap[component.Config]()
-		receivers.Merge(hostReceivers)
-		receivers.Merge(deltaReceivers)
-		processors := common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameHost+"/amp", common.MetricsKey))
-		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
-			processors.Set(rollupprocessor.NewTranslator())
+	for _, destination := range destinations {
+		switch destination {
+		case common.AMPKey:
+			// PRW exporter does not need the delta conversion.
+			receivers := common.NewTranslatorMap[component.Config]()
+			receivers.Merge(hostReceivers)
+			receivers.Merge(deltaReceivers)
+			translators.Set(NewTranslator(
+				common.PipelineNameHost,
+				receivers,
+				common.WithDestination(destination),
+			))
+		default:
+			if hasHostPipeline {
+				translators.Set(NewTranslator(
+					common.PipelineNameHost,
+					hostReceivers,
+					common.WithDestination(destination),
+				))
+			}
+			if hasDeltaPipeline {
+				translators.Set(NewTranslator(
+					common.PipelineNameHostDeltaMetrics,
+					deltaReceivers,
+					common.WithDestination(destination),
+				))
+			}
 		}
-		translators.Set(NewTranslator(
-			common.PipelineNameHost+"/amp",
-			receivers,
-			processors,
-			exporters,
-			common.NewTranslatorMap(sigv4auth.NewTranslator()),
-		))
 	}
 
 	return translators, nil

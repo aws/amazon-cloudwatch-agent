@@ -19,10 +19,8 @@ import (
 
 func TestTranslators(t *testing.T) {
 	type want struct {
-		receivers  []string
-		processors []string
-		exporters  []string
-		extensions []string
+		receivers []string
+		exporters []string
 	}
 	testCases := map[string]struct {
 		input         map[string]any
@@ -31,7 +29,7 @@ func TestTranslators(t *testing.T) {
 	}{
 		"WithEmpty": {
 			input:         map[string]any{},
-			configSection: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+			configSection: MetricsKey,
 			want:          map[string]want{},
 		},
 		"WithMinimal": {
@@ -42,13 +40,11 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			configSection: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+			configSection: MetricsKey,
 			want: map[string]want{
 				"metrics/host": {
-					receivers:  []string{"telegraf_cpu"},
-					processors: []string{},
-					exporters:  []string{"awscloudwatch"},
-					extensions: []string{"agenthealth/metrics"},
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
 				},
 			},
 		},
@@ -65,13 +61,11 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			configSection: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+			configSection: MetricsKey,
 			want: map[string]want{
 				"metrics/host/amp": {
-					receivers:  []string{"telegraf_cpu"},
-					processors: []string{"batch/host/amp"},
-					exporters:  []string{"prometheusremotewrite/amp"},
-					extensions: []string{"sigv4auth"},
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
@@ -89,19 +83,15 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			configSection: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+			configSection: MetricsKey,
 			want: map[string]want{
-				"metrics/host": {
-					receivers:  []string{"telegraf_cpu"},
-					processors: []string{},
-					exporters:  []string{"awscloudwatch"},
-					extensions: []string{"agenthealth/metrics"},
+				"metrics/host/cloudwatch": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
 				},
 				"metrics/host/amp": {
-					receivers:  []string{"telegraf_cpu"},
-					processors: []string{"batch/host/amp"},
-					exporters:  []string{"prometheusremotewrite/amp"},
-					extensions: []string{"sigv4auth"},
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
@@ -119,19 +109,15 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			configSection: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+			configSection: MetricsKey,
 			want: map[string]want{
-				"metrics/hostDeltaMetrics": {
-					receivers:  []string{"telegraf_net"},
-					processors: []string{},
-					exporters:  []string{"awscloudwatch"},
-					extensions: []string{"agenthealth/metrics"},
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"telegraf_net"},
+					exporters: []string{"awscloudwatch"},
 				},
 				"metrics/host/amp": {
-					receivers:  []string{"telegraf_net"},
-					processors: []string{"batch/host/amp"},
-					exporters:  []string{"prometheusremotewrite/amp"},
-					extensions: []string{"sigv4auth"},
+					receivers: []string{"telegraf_net"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
@@ -143,13 +129,11 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			configSection: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+			configSection: MetricsKey,
 			want: map[string]want{
 				"metrics/hostDeltaMetrics": {
-					receivers:  []string{"otlp/metrics"},
-					processors: []string{},
-					exporters:  []string{"awscloudwatch"},
-					extensions: []string{"agenthealth/metrics"},
+					receivers: []string{"otlp/metrics"},
+					exporters: []string{"awscloudwatch"},
 				},
 			},
 		},
@@ -161,13 +145,11 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			configSection: common.ConfigKey(common.LogsKey, common.MetricsCollectedKey),
+			configSection: LogsKey,
 			want: map[string]want{
 				"metrics/hostDeltaMetrics/emf": {
-					receivers:  []string{"otlp/metrics"},
-					processors: []string{"batch/hostDeltaMetrics/emf"},
-					exporters:  []string{"awsemf"},
-					extensions: []string{"agenthealth/logs"},
+					receivers: []string{"otlp/metrics"},
+					exporters: []string{"awsemf"},
 				},
 			},
 		},
@@ -186,10 +168,10 @@ func TestTranslators(t *testing.T) {
 				got.Range(func(tr common.Translator[*common.ComponentTranslators]) {
 					w, ok := testCase.want[tr.ID().String()]
 					require.True(t, ok)
-					assert.Equal(t, w.receivers, collections.MapSlice(tr.(*translator).receivers.Keys(), component.ID.String))
-					assert.Equal(t, w.processors, collections.MapSlice(tr.(*translator).processors.Keys(), component.ID.String))
-					assert.Equal(t, w.exporters, collections.MapSlice(tr.(*translator).exporters.Keys(), component.ID.String))
-					assert.Equal(t, w.extensions, collections.MapSlice(tr.(*translator).extensions.Keys(), component.ID.String))
+					g, err := tr.Translate(conf)
+					assert.NoError(t, err)
+					assert.Equal(t, w.receivers, collections.MapSlice(g.Receivers.Keys(), component.ID.String))
+					assert.Equal(t, w.exporters, collections.MapSlice(g.Exporters.Keys(), component.ID.String))
 				})
 			}
 		})
@@ -197,7 +179,7 @@ func TestTranslators(t *testing.T) {
 }
 
 func TestTranslatorsError(t *testing.T) {
-	got, err := NewTranslators(confmap.New(), common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey), "invalid")
+	got, err := NewTranslators(confmap.New(), MetricsKey, "invalid")
 	assert.Error(t, err)
 	assert.Nil(t, got)
 }

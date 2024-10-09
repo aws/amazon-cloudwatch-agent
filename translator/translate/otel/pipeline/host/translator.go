@@ -12,17 +12,22 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 )
 
 type translator struct {
-	name       string
-	receivers  common.TranslatorMap[component.Config]
-	processors common.TranslatorMap[component.Config]
-	exporters  common.TranslatorMap[component.Config]
-	extensions common.TranslatorMap[component.Config]
+	name string
+	common.DestinationProvider
+	receivers common.TranslatorMap[component.Config]
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
@@ -33,11 +38,16 @@ var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 func NewTranslator(
 	name string,
 	receivers common.TranslatorMap[component.Config],
-	processors common.TranslatorMap[component.Config],
-	exporters common.TranslatorMap[component.Config],
-	extensions common.TranslatorMap[component.Config],
+	opts ...common.TranslatorOption,
 ) common.Translator[*common.ComponentTranslators] {
-	return &translator{name, receivers, processors, exporters, extensions}
+	t := &translator{name: name, receivers: receivers}
+	for _, opt := range opts {
+		opt(t)
+	}
+	if t.Destination() != "" {
+		t.name += "/" + t.Destination()
+	}
+	return t
 }
 
 func (t translator) ID() component.ID {
@@ -46,21 +56,15 @@ func (t translator) ID() component.ID {
 
 // Translate creates a pipeline if metrics section exists.
 func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || (!conf.IsSet(common.MetricsKey) && !conf.IsSet(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey))) {
-		return nil, &common.MissingKeyError{
-			ID:      t.ID(),
-			JsonKey: fmt.Sprint(common.MetricsKey, " or ", common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)),
-		}
-	} else if t.receivers.Len() == 0 || t.exporters.Len() == 0 {
-		log.Printf("D! pipeline %s has no receivers/exporters", t.name)
-		return nil, nil
+	if conf == nil || t.receivers.Len() == 0 {
+		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
-		Processors: t.processors,
-		Exporters:  t.exporters,
-		Extensions: t.extensions,
+		Processors: common.NewTranslatorMap[component.Config](),
+		Exporters:  common.NewTranslatorMap[component.Config](),
+		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
@@ -68,15 +72,36 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 	}
 
-	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
-		log.Printf("D! ec2tagger processor required because append_dimensions is set")
-		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+	if t.Destination() != common.Emf {
+		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
+			log.Printf("D! ec2tagger processor required because append_dimensions is set")
+			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+		}
+
+		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
+		if mdt.IsSet(conf) {
+			log.Printf("D! metric decorator required because measurement fields are set")
+			translators.Processors.Set(mdt)
+		}
 	}
 
-	mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
-	if mdt.IsSet(conf) {
-		log.Printf("D! metric decorator required because measurement fields are set")
-		translators.Processors.Set(mdt)
+	switch t.Destination() {
+	case common.DefaultDestination, common.CloudWatchKey:
+		translators.Exporters.Set(awscloudwatch.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
+	case common.AMPKey:
+		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
+			translators.Processors.Set(rollupprocessor.NewTranslator())
+		}
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		translators.Extensions.Set(sigv4auth.NewTranslator())
+	case common.Emf:
+		translators.Exporters.Set(awsemf.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
+	default:
+		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
+
 	return &translators, nil
 }

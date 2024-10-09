@@ -270,10 +270,11 @@ func TestMetricsEmfTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(WithDataType(component.DataTypeMetrics), WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)))
-			if testCase.index != -1 {
-				tt = NewTranslator(WithDataType(component.DataTypeMetrics), WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)), common.WithIndex(testCase.index))
-			}
+			tt := NewTranslator(
+				WithDataType(component.DataTypeMetrics),
+				WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)),
+				common.WithIndex(testCase.index),
+			)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {

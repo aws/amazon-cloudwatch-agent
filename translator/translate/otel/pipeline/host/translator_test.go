@@ -14,10 +14,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 )
 
 type testTranslator struct {
@@ -42,30 +38,13 @@ func TestTranslator(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	testExporters := common.NewTranslatorMap(awscloudwatch.NewTranslator())
-	testExtensions := common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
 	testCases := map[string]struct {
 		input        map[string]interface{}
-		exporters    common.TranslatorMap[component.Config]
-		extensions   common.TranslatorMap[component.Config]
 		pipelineName string
+		destination  string
 		want         *want
 		wantErr      error
 	}{
-		"WithoutMetricsSection": {
-			input:        map[string]interface{}{},
-			pipelineName: common.PipelineNameHost,
-			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, common.PipelineNameHost),
-				JsonKey: fmt.Sprint(common.MetricsKey, " or ", common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)),
-			},
-		},
-		"WithoutExporters": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{},
-			},
-			exporters: common.NewTranslatorMap[component.Config](),
-		},
 		"WithMetricsSection": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
@@ -162,18 +141,13 @@ func TestTranslator(t *testing.T) {
 					"aggregation_dimensions": []interface{}{[]interface{}{"d1", "d2"}},
 				},
 			},
-			exporters: common.NewTranslatorMap[component.Config](
-				prometheusremotewrite.NewTranslator(),
-			),
-			extensions: common.NewTranslatorMap[component.Config](
-				sigv4auth.NewTranslator(),
-			),
 			pipelineName: common.PipelineNameHost,
+			destination:  common.AMPKey,
 			want: &want{
-				pipelineID: "metrics/host",
+				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
-				processors: []string{},
-				exporters:  []string{"prometheusremotewrite"},
+				processors: []string{"rollup", "batch/host/amp"},
+				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},
@@ -181,41 +155,26 @@ func TestTranslator(t *testing.T) {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
 			},
-			exporters: common.NewTranslatorMap[component.Config](
-				prometheusremotewrite.NewTranslator(),
-			),
-			extensions: common.NewTranslatorMap[component.Config](
-				sigv4auth.NewTranslator(),
-			),
 			pipelineName: common.PipelineNameHost,
+			destination:  common.AMPKey,
 			want: &want{
-				pipelineID: "metrics/host",
+				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
-				processors: []string{},
-				exporters:  []string{"prometheusremotewrite"},
+				processors: []string{"batch/host/amp"},
+				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			exporters := testCase.exporters
-			if exporters == nil {
-				exporters = testExporters
-			}
-			extensions := testCase.extensions
-			if extensions == nil {
-				extensions = testExtensions
-			}
 			ht := NewTranslator(
 				testCase.pipelineName,
 				common.NewTranslatorMap[component.Config](
 					&testTranslator{id: component.NewID(component.MustNewType("nop"))},
 					&testTranslator{id: component.NewID(component.MustNewType("other"))},
 				),
-				common.NewTranslatorMap[component.Config](),
-				exporters,
-				extensions,
+				common.WithDestination(testCase.destination),
 			)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := ht.Translate(conf)
