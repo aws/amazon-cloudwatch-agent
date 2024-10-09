@@ -117,7 +117,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
-	translators.Processors.Set(transformprocessorjmxpipeline.NewTranslator())
+	translators.Processors.Set(transformprocessorjmxpipeline.NewTranslatorWithName(common.JmxKey))
 
 	switch t.destination {
 	case defaultDestination, common.CloudWatchKey:

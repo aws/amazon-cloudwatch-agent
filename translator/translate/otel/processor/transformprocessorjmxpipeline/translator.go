@@ -5,7 +5,6 @@ package transformprocessorjmxpipeline
 
 import (
 	_ "embed"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -18,23 +17,18 @@ import (
 var transformProcessorConfig string
 
 type translator struct {
-	name     string
-	dataType component.DataType
-	factory  processor.Factory
-}
-
-type Option interface {
-	apply(t *translator)
+	name    string
+	factory processor.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	t := &translator{factory: transformprocessor.NewFactory()}
-	for _, opt := range opts {
-		opt.apply(t)
-	}
-	return t
+func NewTranslator() common.Translator[component.Config] {
+	return NewTranslatorWithName("")
+}
+
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, transformprocessor.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {
