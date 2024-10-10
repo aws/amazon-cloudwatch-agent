@@ -34,7 +34,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		conf, err := confmaptest.LoadConf(filepath.Join("testdata", "config.yaml"))
+		conf, err := confmaptest.LoadConf(filepath.Join("testdata", "ContainerInsightsJmxConfig.yaml"))
 		require.NoError(t, err)
 		cfg := NewFactory().CreateDefaultConfig()
 		sub, err := conf.Sub(testCase.id.String())

@@ -174,7 +174,7 @@ func (t *translator) isAppSignals(conf *confmap.Conf) bool {
 	return (t.name == common.AppSignals || t.name == common.AppSignalsFallback) && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsMetricsFallback) || conf.IsSet(common.AppSignalsTracesFallback))
 }
 func (t *translator) isCiJMX(conf *confmap.Conf) bool {
-	return (t.name == "containerinsightsjmx") && (conf.IsSet(common.ContainerInsightsConfigKey))
+	return (t.name == common.PipelineNameContainerInsightsJmx) && (conf.IsSet(common.ContainerInsightsConfigKey))
 }
 
 func isEcs(conf *confmap.Conf) bool {

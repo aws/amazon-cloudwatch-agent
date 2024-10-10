@@ -114,7 +114,7 @@ func TestTranslator(t *testing.T) {
 			input:  testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			index:  -1,
 			wantID: "filter/jmx",
-			want:   testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+			want:   testutil.GetConf(t, filepath.Join("testdata", "ContainerInsightsJmxConfig.yaml")),
 		},
 	}
 	for name, testCase := range testCases {

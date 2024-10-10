@@ -37,7 +37,7 @@ func TestTranslator(t *testing.T) {
 		},
 		"WithAMPDestination": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "ContainerInsightsJmxConfig.yaml")),
 		},
 	}
 	for name, testCase := range testCases {

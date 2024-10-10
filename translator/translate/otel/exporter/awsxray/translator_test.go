@@ -59,7 +59,7 @@ func TestTranslator(t *testing.T) {
 		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "ContainerInsightsJmxConfig.yaml")),
 			mode:  config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledEKS": {

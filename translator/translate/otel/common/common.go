@@ -76,13 +76,14 @@ const (
 )
 
 const (
-	PipelineNameHost             = "host"
-	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
-	PipelineNameJmx              = "jmx"
-	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "application_signals"
-	AppSignalsFallback           = "app_signals"
-	AppSignalsRules              = "rules"
+	PipelineNameHost                 = "host"
+	PipelineNameHostDeltaMetrics     = "hostDeltaMetrics"
+	PipelineNameJmx                  = "jmx"
+	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
+	PipelineNameEmfLogs              = "emf_logs"
+	AppSignals                       = "application_signals"
+	AppSignalsFallback               = "app_signals"
+	AppSignalsRules                  = "rules"
 )
 
 var (
