@@ -9,15 +9,16 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/jmxtransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -43,9 +44,13 @@ func (t *translator) ID() component.ID {
 // Translate creates a pipeline for container insights jmx if the logs.metrics_collected.kubernetes
 // section is present.
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || (!conf.IsSet(jmxKey)) {
+	if conf == nil || !conf.IsSet(jmxKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(jmxKey)}
 	}
+	if !context.CurrentContext().RunInContainer() {
+		return nil, nil
+	}
+
 	if val, _ := common.GetBool(conf, jmxKey); !val {
 		return nil, nil
 	}
@@ -57,7 +62,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			filterprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)),   // Filter metrics
 			resourcedetection.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),          // Adds k8s cluster/nodename name
 			resourceprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)), // Change resource attribute names
-			jmxtransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),      // Removes attributes that are not of [ClusterName, Namespace]
+			transformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),         // Removes attributes that are not of [ClusterName, Namespace]
 			metricstransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),  // Renames metrics and adds pool and area dimensions
 			cumulativetodeltaprocessor.NewTranslator(
 				common.WithName(common.PipelineNameContainerInsightsJmx),

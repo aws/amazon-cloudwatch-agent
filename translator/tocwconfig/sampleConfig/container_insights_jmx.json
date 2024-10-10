@@ -4,38 +4,10 @@
   },
   "logs": {
     "metrics_collected": {
-      "emf": { },
       "kubernetes": {
         "cluster_name": "TestCluster",
         "jmx_container_insights": true
       }
-    }
-  },
-  "metrics": {
-    "metrics_collected": {
-      "jmx": {
-        "jvm": {
-          "measurement": [
-            "jvm.classes.loaded",
-            "jvm.memory.pool.used",
-            "jvm.system.swap.space.total",
-            "jvm.system.cpu.utilization",
-            "jvm.cpu.recent_utilization",
-            "jvm.system.swap.space.free",
-            "jvm.system.physical.memory.total",
-            "jvm.system.physical.memory.free",
-            "jvm.open_file_descriptor.count",
-            "jvm.system.available.processors",
-            "jvm.threads.count",
-            "jvm.memory.heap.used",
-            "jvm.memory.nonheap.init",
-            "jvm.threads.daemon"
-          ]
-        }
-      }
-    },
-    "metrics_destinations": {
-      "cloudwatch": { }
     }
   }
 }

@@ -5,9 +5,10 @@
   "logs": {
     "metrics_collected": {
       "kubernetes": {
-        "cluster_name": "TestCluster",
+        "cluster_name": "TestCluster23",
         "metrics_collection_interval": 30
       }
     }
   }
+
 }

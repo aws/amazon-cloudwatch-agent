@@ -56,23 +56,32 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
 	var attributes []any
-
 	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
 		attributes = t.getJMXAttributes(conf)
-	}
-
-	if len(attributes) == 0 && t.Name() != common.PipelineNameContainerInsightsJmx {
-		baseKey := common.JmxConfigKey
-		if t.Index() != -1 {
-			baseKey = fmt.Sprintf("%s[%d]", baseKey, t.Index())
-		}
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.ConfigKey(baseKey, common.AppendDimensionsKey)}
-	}
-
-	if t.Name() == common.PipelineNameContainerInsightsJmx {
+	} else if t.Name() == common.PipelineNameContainerInsightsJmx {
 		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
 
 		if ok {
+			attributes = []any{
+				map[string]any{
+					"key":            "Namespace",
+					"from_attribute": "k8s.namespace.name",
+					"action":         "insert",
+				},
+				map[string]any{
+					"key":    "ClusterName",
+					"value":  clusterName, // Ensure 'clusterName' is defined earlier
+					"action": "upsert",
+				},
+				map[string]any{
+					"key":            "NodeName",
+					"from_attribute": "host.name",
+					"action":         "insert",
+				},
+			}
+
+		} else {
+
 			attributes = []any{
 				map[string]any{
 					"key":            "Namespace",
@@ -90,7 +99,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					"action":         "insert",
 				},
 			}
-		} else {
 			attributes = []any{
 				map[string]any{
 					"key":            "ClusterName",
@@ -109,8 +117,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				},
 			}
 		}
-	}
 
+	}
+	if len(attributes) == 0 {
+		baseKey := common.JmxConfigKey
+		if t.Index() != -1 {
+			baseKey = fmt.Sprintf("%s[%d]", baseKey, t.Index())
+		}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.ConfigKey(baseKey, common.AppendDimensionsKey)}
+	}
 	c := confmap.NewFromStringMap(map[string]any{
 		"attributes": attributes,
 	})
@@ -120,7 +135,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
-
 }
 
 func (t *translator) getJMXAttributes(conf *confmap.Conf) []any {

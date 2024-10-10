@@ -1,932 +1,796 @@
 exporters:
-  awscloudwatch:
-    force_flush_interval: 1m0s
-    max_datums_per_call: 1000
-    max_values_per_datum: 150
-    middleware: agenthealth/metrics
-    namespace: CWAgent
-    profile: AmazonCloudWatchAgent
-    region: us-west-2
-    resource_to_telemetry_conversion:
-      enabled: true
-    shared_credential_file: fake-path
-  awscloudwatchlogs/emf_logs:
-    certificate_file_path: ""
-    emf_only: true
-    endpoint: ""
-    imds_retries: 1
-    local_mode: true
-    log_group_name: emf/logs/default
-    log_retention: 0
-    log_stream_name: host_name_from_env
-    max_retries: 2
-    middleware: agenthealth/logs
-    no_verify_ssl: false
-    num_workers: 8
-    profile: AmazonCloudWatchAgent
-    proxy_address: ""
-    raw_log: true
-    region: us-west-2
-    request_timeout_seconds: 30
-    resource_arn: ""
-    retry_on_failure:
-      enabled: true
-      initial_interval: 5s
-      max_elapsed_time: 5m0s
-      max_interval: 30s
-      multiplier: 1.5
-      randomization_factor: 0.5
-    role_arn: ""
-    sending_queue:
-      enabled: true
-      num_consumers: 1
-      queue_size: 1000
-    shared_credentials_file:
-      - fake-path
-  awsemf/containerinsights:
-    certificate_file_path: ""
-    detailed_metrics: false
-    dimension_rollup_option: NoDimensionRollup
-    disable_metric_extraction: false
-    eks_fargate_container_insights_enabled: false
-    endpoint: ""
-    enhanced_container_insights: false
-    imds_retries: 1
-    local_mode: true
-    log_group_name: /aws/containerinsights/{ClusterName}/performance
-    log_retention: 0
-    log_stream_name: '{NodeName}'
-    max_retries: 2
-    metric_declarations:
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - PodName
-          - - ClusterName
-          - - ClusterName
-            - Namespace
-            - Service
-          - - ClusterName
-            - Namespace
-        metric_name_selectors:
-          - pod_cpu_utilization
-          - pod_memory_utilization
-          - pod_network_rx_bytes
-          - pod_network_tx_bytes
-          - pod_cpu_utilization_over_pod_limit
-          - pod_memory_utilization_over_pod_limit
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - PodName
-        metric_name_selectors:
-          - pod_number_of_container_restarts
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - PodName
-          - - ClusterName
-        metric_name_selectors:
-          - pod_cpu_reserved_capacity
-          - pod_memory_reserved_capacity
-      - dimensions:
-          - - ClusterName
-            - InstanceId
-            - NodeName
-          - - ClusterName
-        metric_name_selectors:
-          - node_cpu_utilization
-          - node_memory_utilization
-          - node_network_total_bytes
-          - node_cpu_reserved_capacity
-          - node_memory_reserved_capacity
-          - node_number_of_running_pods
-          - node_number_of_running_containers
-      - dimensions:
-          - - ClusterName
-        metric_name_selectors:
-          - node_cpu_usage_total
-          - node_cpu_limit
-          - node_memory_working_set
-          - node_memory_limit
-      - dimensions:
-          - - ClusterName
-            - InstanceId
-            - NodeName
-          - - ClusterName
-        metric_name_selectors:
-          - node_filesystem_utilization
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - Service
-          - - ClusterName
-        metric_name_selectors:
-          - service_number_of_running_pods
-      - dimensions:
-          - - ClusterName
-            - Namespace
-          - - ClusterName
-        metric_name_selectors:
-          - namespace_number_of_running_pods
-      - dimensions:
-          - - ClusterName
-        metric_name_selectors:
-          - cluster_node_count
-          - cluster_failed_node_count
-    middleware: agenthealth/logs
-    namespace: ContainerInsights
-    no_verify_ssl: false
-    num_workers: 8
-    output_destination: cloudwatch
-    parse_json_encoded_attr_values:
-      - Sources
-      - kubernetes
-    profile: AmazonCloudWatchAgent
-    proxy_address: ""
-    region: us-west-2
-    request_timeout_seconds: 30
-    resource_arn: ""
-    resource_to_telemetry_conversion:
-      enabled: true
-    retain_initial_value_of_delta_metric: false
-    role_arn: ""
-    shared_credentials_file:
-      - fake-path
-    version: "0"
-  awsemf/containerinsightsjmx:
-    certificate_file_path: ""
-    detailed_metrics: false
-    dimension_rollup_option: NoDimensionRollup
-    disable_metric_extraction: false
-    eks_fargate_container_insights_enabled: false
-    endpoint: ""
-    enhanced_container_insights: false
-    imds_retries: 1
-    local_mode: true
-    log_group_name: /aws/containerinsights/{ClusterName}/jmx
-    log_retention: 0
-    log_stream_name: '{NodeName}'
-    max_retries: 2
-    metric_declarations:
-      - dimensions:
-          - - ClusterName
-            - Namespace
-        metric_name_selectors:
-          - java_lang_operatingsystem_freeswapspacesize
-          - java_lang_operatingsystem_availableprocessors
-          - catalina_manager_rejectedsessions
-          - catalina_globalrequestprocessor_bytesreceived
-          - catalina_globalrequestprocessor_processingtime
-          - jvm_memory_pool_bytes_used
-          - java_lang_operatingsystem_systemcpuload
-          - java_lang_operatingsystem_totalphysicalmemorysize
-          - java_lang_operatingsystem_freephysicalmemorysize
-          - java_lang_operatingsystem_openfiledescriptorcount
-          - catalina_manager_activesessions
-          - java_lang_operatingsystem_totalswapspacesize
-          - java_lang_operatingsystem_processcpuload
-          - catalina_globalrequestprocessor_requestcount
-          - catalina_globalrequestprocessor_errorcount
-          - jvm_threads_daemon
-          - catalina_globalrequestprocessor_bytessent
-          - jvm_classes_loaded
-          - jvm_threads_current
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - area
-        metric_name_selectors:
-          - jvm_memory_bytes_used
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - pool
-        metric_name_selectors:
-          - jvm_memory_pool_bytes_used
-    middleware: agenthealth/logs
-    namespace: ContainerInsights/Prometheus
-    no_verify_ssl: false
-    num_workers: 8
-    output_destination: cloudwatch
-    profile: AmazonCloudWatchAgent
-    proxy_address: ""
-    region: us-west-2
-    request_timeout_seconds: 30
-    resource_arn: ""
-    resource_to_telemetry_conversion:
-      enabled: true
-    retain_initial_value_of_delta_metric: false
-    role_arn: ""
-    shared_credentials_file:
-      - fake-path
-    version: "0"
+    awsemf/containerinsights:
+        certificate_file_path: ""
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/containerinsights/{ClusterName}/performance
+        log_retention: 0
+        log_stream_name: '{NodeName}'
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                  - Service
+                - - ClusterName
+                  - Namespace
+              metric_name_selectors:
+                - pod_cpu_utilization
+                - pod_memory_utilization
+                - pod_network_rx_bytes
+                - pod_network_tx_bytes
+                - pod_cpu_utilization_over_pod_limit
+                - pod_memory_utilization_over_pod_limit
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+              metric_name_selectors:
+                - pod_number_of_container_restarts
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+              metric_name_selectors:
+                - pod_cpu_reserved_capacity
+                - pod_memory_reserved_capacity
+            - dimensions:
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+              metric_name_selectors:
+                - node_cpu_utilization
+                - node_memory_utilization
+                - node_network_total_bytes
+                - node_cpu_reserved_capacity
+                - node_memory_reserved_capacity
+                - node_number_of_running_pods
+                - node_number_of_running_containers
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - node_cpu_usage_total
+                - node_cpu_limit
+                - node_memory_working_set
+                - node_memory_limit
+            - dimensions:
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+              metric_name_selectors:
+                - node_filesystem_utilization
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - Service
+                - - ClusterName
+              metric_name_selectors:
+                - service_number_of_running_pods
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                - - ClusterName
+              metric_name_selectors:
+                - namespace_number_of_running_pods
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - cluster_node_count
+                - cluster_failed_node_count
+        middleware: agenthealth/logs
+        namespace: ContainerInsights
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        parse_json_encoded_attr_values:
+            - Sources
+            - kubernetes
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
+    awsemf/containerinsightsjmx:
+        certificate_file_path: ""
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/containerinsights/{ClusterName}/jmx
+        log_retention: 0
+        log_stream_name: '{NodeName}'
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+              metric_name_selectors:
+                - java_lang_operatingsystem_freeswapspacesize
+                - java_lang_operatingsystem_availableprocessors
+                - catalina_manager_rejectedsessions
+                - catalina_globalrequestprocessor_bytesreceived
+                - catalina_globalrequestprocessor_processingtime
+                - jvm_memory_pool_bytes_used
+                - java_lang_operatingsystem_systemcpuload
+                - java_lang_operatingsystem_totalphysicalmemorysize
+                - java_lang_operatingsystem_freephysicalmemorysize
+                - java_lang_operatingsystem_openfiledescriptorcount
+                - catalina_manager_activesessions
+                - java_lang_operatingsystem_totalswapspacesize
+                - java_lang_operatingsystem_processcpuload
+                - catalina_globalrequestprocessor_requestcount
+                - catalina_globalrequestprocessor_errorcount
+                - jvm_threads_daemon
+                - catalina_globalrequestprocessor_bytessent
+                - jvm_classes_loaded
+                - jvm_threads_current
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - area
+              metric_name_selectors:
+                - jvm_memory_bytes_used
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - pool
+              metric_name_selectors:
+                - jvm_memory_pool_bytes_used
+        middleware: agenthealth/logs
+        namespace: ContainerInsights/Prometheus
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
 extensions:
-  agenthealth/logs:
-    is_usage_data_enabled: true
-    stats:
-      operations:
-        - PutLogEvents
-      usage_flags:
-        mode: OP
-        region_type: ACJ
-  agenthealth/metrics:
-    is_usage_data_enabled: true
-    stats:
-      operations:
-        - PutMetricData
-      usage_flags:
-        mode: OP
-        region_type: ACJ
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
-  batch/containerinsights:
-    metadata_cardinality_limit: 1000
-    send_batch_max_size: 0
-    send_batch_size: 8192
-    timeout: 5s
-  batch/emf_logs:
-    metadata_cardinality_limit: 1000
-    send_batch_max_size: 0
-    send_batch_size: 8192
-    timeout: 5s
-  cumulativetodelta/containerinsightsjmx:
-    exclude:
-      match_type: ""
-    include:
-      match_type: ""
-    initial_value: 2
-    max_staleness: 0s
-  cumulativetodelta/jmx:
-    exclude:
-      match_type: ""
-    include:
-      match_type: ""
-    initial_value: 2
-    max_staleness: 0s
-  filter/containerinsightsjmx:
-    error_mode: propagate
-    logs: {}
-    metrics:
-      include:
-        match_type: strict
-        metric_names:
-          - jvm.classes.loaded
-          - jvm.memory.heap.used
-          - jvm.memory.nonheap.used
-          - jvm.memory.pool.used
-          - jvm.system.swap.space.total
-          - jvm.system.cpu.utilization
-          - jvm.cpu.recent_utilization
-          - jvm.system.swap.space.free
-          - jvm.system.physical.memory.total
-          - jvm.system.physical.memory.free
-          - jvm.open_file_descriptor.count
-          - jvm.system.available.processors
-          - jvm.threads.count
-          - jvm.threads.daemon
-          - tomcat.sessions
-          - tomcat.rejected_sessions
-          - tomcat.traffic.received
-          - tomcat.traffic.sent
-          - tomcat.request_count
-          - tomcat.errors
-          - tomcat.processing_time
-    spans: {}
-    traces: {}
-  filter/jmx:
-    error_mode: propagate
-    logs: {}
-    metrics:
-      include:
-        match_type: strict
-        metric_names:
-          - jvm.classes.loaded
-          - jvm.memory.pool.used
-          - jvm.system.swap.space.total
-          - jvm.system.cpu.utilization
-          - jvm.cpu.recent_utilization
-          - jvm.system.swap.space.free
-          - jvm.system.physical.memory.total
-          - jvm.system.physical.memory.free
-          - jvm.open_file_descriptor.count
-          - jvm.system.available.processors
-          - jvm.threads.count
-          - jvm.memory.heap.used
-          - jvm.memory.nonheap.init
-          - jvm.threads.daemon
-    spans: {}
-    traces: {}
-  metricstransform/containerinsightsjmx:
-    transforms:
-      - action: update
-        aggregation_type: ""
-        include: jvm.classes.loaded
-        match_type: strict
-        new_name: jvm_classes_loaded
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.memory.heap.used
-        match_type: strict
-        new_name: jvm_memory_bytes_used
-        operations:
-          - action: add_label
-            aggregation_type: ""
-            experimental_scale: 0
-            label: ""
-            label_value: ""
-            new_label: area
-            new_value: heap
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.memory.nonheap.used
-        match_type: strict
-        new_name: jvm_memory_bytes_used
-        operations:
-          - action: add_label
-            aggregation_type: ""
-            experimental_scale: 0
-            label: ""
-            label_value: ""
-            new_label: area
-            new_value: nonheap
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.memory.pool.used
-        match_type: strict
-        new_name: jvm_memory_pool_bytes_used
-        operations:
-          - action: update_label
-            aggregation_type: ""
-            experimental_scale: 0
-            label: name
-            label_value: ""
-            new_label: pool
-            new_value: ""
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.system.swap.space.total
-        match_type: strict
-        new_name: java_lang_operatingsystem_totalswapspacesize
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.system.cpu.utilization
-        match_type: strict
-        new_name: java_lang_operatingsystem_systemcpuload
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.cpu.recent_utilization
-        match_type: strict
-        new_name: java_lang_operatingsystem_processcpuload
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.system.swap.space.free
-        match_type: strict
-        new_name: java_lang_operatingsystem_freeswapspacesize
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.system.physical.memory.total
-        match_type: strict
-        new_name: java_lang_operatingsystem_totalphysicalmemorysize
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.system.physical.memory.free
-        match_type: strict
-        new_name: java_lang_operatingsystem_freephysicalmemorysize
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.open_file_descriptor.count
-        match_type: strict
-        new_name: java_lang_operatingsystem_openfiledescriptorcount
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.system.available.processors
-        match_type: strict
-        new_name: java_lang_operatingsystem_availableprocessors
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.threads.count
-        match_type: strict
-        new_name: jvm_threads_current
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: jvm.threads.daemon
-        match_type: strict
-        new_name: jvm_threads_daemon
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.sessions
-        match_type: strict
-        new_name: catalina_manager_activesessions
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.rejected_sessions
-        match_type: strict
-        new_name: catalina_manager_rejectedsessions
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.traffic.received
-        match_type: strict
-        new_name: catalina_globalrequestprocessor_bytesreceived
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.traffic.sent
-        match_type: strict
-        new_name: catalina_globalrequestprocessor_bytessent
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.request_count
-        match_type: strict
-        new_name: catalina_globalrequestprocessor_requestcount
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.errors
-        match_type: strict
-        new_name: catalina_globalrequestprocessor_errorcount
-        submatch_case: ""
-      - action: update
-        aggregation_type: ""
-        include: tomcat.processing_time
-        match_type: strict
-        new_name: catalina_globalrequestprocessor_processingtime
-        submatch_case: ""
-  resource/containerinsightsjmx:
-    attributes:
-      - action: insert
-        converted_type: ""
-        from_attribute: k8s.namespace.name
-        from_context: ""
-        key: Namespace
-        pattern: ""
-      - action: upsert
-        converted_type: ""
-        from_attribute: ""
-        from_context: ""
-        key: ClusterName
-        pattern: ""
-        value: TestCluster
-      - action: insert
-        converted_type: ""
-        from_attribute: host.name
-        from_context: ""
-        key: NodeName
-        pattern: ""
-  resourcedetection/containerinsightsjmx:
-    aks:
-      resource_attributes:
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        k8s.cluster.name:
-          enabled: false
-    azure:
-      resource_attributes:
-        azure.resourcegroup.name:
-          enabled: true
-        azure.vm.name:
-          enabled: true
-        azure.vm.scaleset.name:
-          enabled: true
-        azure.vm.size:
-          enabled: true
-        cloud.account.id:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        host.id:
-          enabled: true
-        host.name:
-          enabled: true
-      tags: []
-    compression: ""
-    consul:
-      address: ""
-      datacenter: ""
-      namespace: ""
-      resource_attributes:
-        cloud.region:
-          enabled: true
-        host.id:
-          enabled: true
-        host.name:
-          enabled: true
-      token_file: ""
-    detectors:
-      - env
-      - eks
-      - system
-    disable_keep_alives: false
-    docker:
-      resource_attributes:
-        host.name:
-          enabled: true
-        os.type:
-          enabled: true
-    ec2:
-      resource_attributes:
-        cloud.account.id:
-          enabled: true
-        cloud.availability_zone:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        host.id:
-          enabled: true
-        host.image.id:
-          enabled: true
-        host.name:
-          enabled: true
-        host.type:
-          enabled: true
-      tags: []
-    ecs:
-      resource_attributes:
-        aws.ecs.cluster.arn:
-          enabled: true
-        aws.ecs.launchtype:
-          enabled: true
-        aws.ecs.task.arn:
-          enabled: true
-        aws.ecs.task.family:
-          enabled: true
-        aws.ecs.task.id:
-          enabled: true
-        aws.ecs.task.revision:
-          enabled: true
-        aws.log.group.arns:
-          enabled: true
-        aws.log.group.names:
-          enabled: true
-        aws.log.stream.arns:
-          enabled: true
-        aws.log.stream.names:
-          enabled: true
-        cloud.account.id:
-          enabled: true
-        cloud.availability_zone:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-    eks:
-      resource_attributes:
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        k8s.cluster.name:
-          enabled: true
-    elasticbeanstalk:
-      resource_attributes:
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        deployment.environment:
-          enabled: true
-        service.instance.id:
-          enabled: true
-        service.version:
-          enabled: true
-    endpoint: ""
-    gcp:
-      resource_attributes:
-        cloud.account.id:
-          enabled: true
-        cloud.availability_zone:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        faas.id:
-          enabled: true
-        faas.instance:
-          enabled: true
-        faas.name:
-          enabled: true
-        faas.version:
-          enabled: true
-        gcp.cloud_run.job.execution:
-          enabled: true
-        gcp.cloud_run.job.task_index:
-          enabled: true
-        gcp.gce.instance.hostname:
-          enabled: false
-        gcp.gce.instance.name:
-          enabled: false
-        host.id:
-          enabled: true
-        host.name:
-          enabled: true
-        host.type:
-          enabled: true
-        k8s.cluster.name:
-          enabled: true
-    heroku:
-      resource_attributes:
-        cloud.provider:
-          enabled: true
-        heroku.app.id:
-          enabled: true
-        heroku.dyno.id:
-          enabled: true
-        heroku.release.commit:
-          enabled: true
-        heroku.release.creation_timestamp:
-          enabled: true
-        service.instance.id:
-          enabled: true
-        service.name:
-          enabled: true
-        service.version:
-          enabled: true
-    http2_ping_timeout: 0s
-    http2_read_idle_timeout: 0s
-    idle_conn_timeout: 1m30s
-    k8snode:
-      auth_type: serviceAccount
-      context: ""
-      kube_config_path: ""
-      node_from_env_var: ""
-      resource_attributes:
-        k8s.node.name:
-          enabled: true
-        k8s.node.uid:
-          enabled: true
-    lambda:
-      resource_attributes:
-        aws.log.group.names:
-          enabled: true
-        aws.log.stream.names:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        faas.instance:
-          enabled: true
-        faas.max_memory:
-          enabled: true
-        faas.name:
-          enabled: true
-        faas.version:
-          enabled: true
-    max_idle_conns: 100
-    openshift:
-      address: ""
-      resource_attributes:
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        k8s.cluster.name:
-          enabled: true
-      tls:
-        ca_file: ""
-        cert_file: ""
-        include_system_ca_certs_pool: false
-        insecure: false
-        insecure_skip_verify: false
-        key_file: ""
-        max_version: ""
-        min_version: ""
-        reload_interval: 0s
-        server_name_override: ""
-      token: ""
-    override: false
-    proxy_url: ""
-    read_buffer_size: 0
-    system:
-      hostname_sources:
-        - os
-      resource_attributes:
-        host.arch:
-          enabled: false
-        host.cpu.cache.l2.size:
-          enabled: false
-        host.cpu.family:
-          enabled: false
-        host.cpu.model.id:
-          enabled: false
-        host.cpu.model.name:
-          enabled: false
-        host.cpu.stepping:
-          enabled: false
-        host.cpu.vendor.id:
-          enabled: false
-        host.id:
-          enabled: false
-        host.ip:
-          enabled: false
-        host.mac:
-          enabled: false
-        host.name:
-          enabled: true
-        os.description:
-          enabled: false
-        os.type:
-          enabled: true
-    timeout: 15s
-    tls:
-      ca_file: ""
-      cert_file: ""
-      include_system_ca_certs_pool: false
-      insecure: false
-      insecure_skip_verify: false
-      key_file: ""
-      max_version: ""
-      min_version: ""
-      reload_interval: 0s
-      server_name_override: ""
-    write_buffer_size: 0
-  transform/containerinsightsjmx:
-    error_mode: propagate
-    flatten_data: false
-    log_statements: []
-    metric_statements:
-      - context: resource
-        statements:
-          - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
-      - context: metric
-        statements:
-          - set(unit, "Bytes") where name == "jvm.memory.heap.used"
-          - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
-          - set(unit, "Bytes") where name == "jvm.memory.pool.used"
-          - set(unit, "Bytes") where name == "tomcat.traffic.received"
-          - set(unit, "Bytes") where name == "tomcat.traffic.sent"
-          - set(unit, "Bytes") where name == "jvm.system.swap.space.total"
-          - set(unit, "Bytes") where name == "jvm.system.swap.space.free"
-          - set(unit, "Bytes") where name == "jvm.system.physical.memory.total"
-          - set(unit, "Bytes") where name == "jvm.system.physical.memory.free"
-          - set(unit, "Count") where name == "tomcat.sessions"
-          - set(unit, "Count") where name == "tomcat.rejected_sessions"
-          - set(unit, "Count") where name == "jvm.threads.count"
-          - set(unit, "Count") where name == "jvm.threads.daemon"
-          - set(unit, "Count") where name == "jvm.open_file_descriptor.count"
-          - set(unit, "Count") where name == "jvm.system.available.processors"
-          - set(unit, "Count") where name == "tomcat.request_count"
-          - set(unit, "Count") where name == "tomcat.errors"
-          - set(unit, "Count") where name == "jvm.classes.loaded"
-          - set(unit, "Count") where name == "jvm.system.cpu.utilization"
-          - set(unit, "Count") where name == "jvm.cpu.recent_utilization"
-          - set(unit, "Milliseconds") where name == "tomcat.processing_time"
-    trace_statements: []
+    batch/containerinsights:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    cumulativetodelta/containerinsightsjmx:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    filter/containerinsightsjmx:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - jvm.classes.loaded
+                    - jvm.memory.heap.used
+                    - jvm.memory.nonheap.used
+                    - jvm.memory.pool.used
+                    - jvm.system.swap.space.total
+                    - jvm.system.cpu.utilization
+                    - jvm.cpu.recent_utilization
+                    - jvm.system.swap.space.free
+                    - jvm.system.physical.memory.total
+                    - jvm.system.physical.memory.free
+                    - jvm.open_file_descriptor.count
+                    - jvm.system.available.processors
+                    - jvm.threads.count
+                    - jvm.threads.daemon
+                    - tomcat.sessions
+                    - tomcat.rejected_sessions
+                    - tomcat.traffic.received
+                    - tomcat.traffic.sent
+                    - tomcat.request_count
+                    - tomcat.errors
+                    - tomcat.processing_time
+        spans: {}
+        traces: {}
+    metricstransform/containerinsightsjmx:
+        transforms:
+            - action: update
+              aggregation_type: ""
+              include: jvm.classes.loaded
+              match_type: strict
+              new_name: jvm_classes_loaded
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.memory.heap.used
+              match_type: strict
+              new_name: jvm_memory_bytes_used
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: area
+                  new_value: heap
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.memory.nonheap.used
+              match_type: strict
+              new_name: jvm_memory_bytes_used
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: area
+                  new_value: nonheap
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.memory.pool.used
+              match_type: strict
+              new_name: jvm_memory_pool_bytes_used
+              operations:
+                - action: update_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: name
+                  label_value: ""
+                  new_label: pool
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.system.swap.space.total
+              match_type: strict
+              new_name: java_lang_operatingsystem_totalswapspacesize
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.system.cpu.utilization
+              match_type: strict
+              new_name: java_lang_operatingsystem_systemcpuload
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.cpu.recent_utilization
+              match_type: strict
+              new_name: java_lang_operatingsystem_processcpuload
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.system.swap.space.free
+              match_type: strict
+              new_name: java_lang_operatingsystem_freeswapspacesize
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.system.physical.memory.total
+              match_type: strict
+              new_name: java_lang_operatingsystem_totalphysicalmemorysize
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.system.physical.memory.free
+              match_type: strict
+              new_name: java_lang_operatingsystem_freephysicalmemorysize
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.open_file_descriptor.count
+              match_type: strict
+              new_name: java_lang_operatingsystem_openfiledescriptorcount
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.system.available.processors
+              match_type: strict
+              new_name: java_lang_operatingsystem_availableprocessors
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.threads.count
+              match_type: strict
+              new_name: jvm_threads_current
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.threads.daemon
+              match_type: strict
+              new_name: jvm_threads_daemon
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.sessions
+              match_type: strict
+              new_name: catalina_manager_activesessions
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.rejected_sessions
+              match_type: strict
+              new_name: catalina_manager_rejectedsessions
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.traffic.received
+              match_type: strict
+              new_name: catalina_globalrequestprocessor_bytesreceived
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.traffic.sent
+              match_type: strict
+              new_name: catalina_globalrequestprocessor_bytessent
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.request_count
+              match_type: strict
+              new_name: catalina_globalrequestprocessor_requestcount
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.errors
+              match_type: strict
+              new_name: catalina_globalrequestprocessor_errorcount
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.processing_time
+              match_type: strict
+              new_name: catalina_globalrequestprocessor_processingtime
+              submatch_case: ""
+    resource/containerinsightsjmx:
+        attributes:
+            - action: insert
+              converted_type: ""
+              from_attribute: k8s.namespace.name
+              from_context: ""
+              key: Namespace
+              pattern: ""
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: ClusterName
+              pattern: ""
+              value: TestCluster
+            - action: insert
+              converted_type: ""
+              from_attribute: host.name
+              from_context: ""
+              key: NodeName
+              pattern: ""
+    resourcedetection/containerinsightsjmx:
+        aks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        azure:
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            tags: []
+        compression: ""
+        consul:
+            address: ""
+            datacenter: ""
+            namespace: ""
+            resource_attributes:
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            token_file: ""
+        detectors:
+            - env
+            - eks
+            - system
+        disable_keep_alives: false
+        docker:
+            resource_attributes:
+                host.name:
+                    enabled: true
+                os.type:
+                    enabled: true
+        ec2:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+            tags: []
+        ecs:
+            resource_attributes:
+                aws.ecs.cluster.arn:
+                    enabled: true
+                aws.ecs.launchtype:
+                    enabled: true
+                aws.ecs.task.arn:
+                    enabled: true
+                aws.ecs.task.family:
+                    enabled: true
+                aws.ecs.task.id:
+                    enabled: true
+                aws.ecs.task.revision:
+                    enabled: true
+                aws.log.group.arns:
+                    enabled: true
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.arns:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+        eks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        elasticbeanstalk:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                deployment.environment:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.version:
+                    enabled: true
+        endpoint: ""
+        gcp:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.id:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+                gcp.cloud_run.job.execution:
+                    enabled: true
+                gcp.cloud_run.job.task_index:
+                    enabled: true
+                gcp.gce.instance.hostname:
+                    enabled: false
+                gcp.gce.instance.name:
+                    enabled: false
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        heroku:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                heroku.app.id:
+                    enabled: true
+                heroku.dyno.id:
+                    enabled: true
+                heroku.release.commit:
+                    enabled: true
+                heroku.release.creation_timestamp:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.name:
+                    enabled: true
+                service.version:
+                    enabled: true
+        http2_ping_timeout: 0s
+        http2_read_idle_timeout: 0s
+        idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
+        lambda:
+            resource_attributes:
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.max_memory:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+        max_idle_conns: 100
+        openshift:
+            address: ""
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+            tls:
+                ca_file: ""
+                cert_file: ""
+                include_system_ca_certs_pool: false
+                insecure: false
+                insecure_skip_verify: false
+                key_file: ""
+                max_version: ""
+                min_version: ""
+                reload_interval: 0s
+                server_name_override: ""
+            token: ""
+        override: false
+        proxy_url: ""
+        read_buffer_size: 0
+        system:
+            hostname_sources:
+                - os
+            resource_attributes:
+                host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.ip:
+                    enabled: false
+                host.mac:
+                    enabled: false
+                host.name:
+                    enabled: true
+                os.description:
+                    enabled: false
+                os.type:
+                    enabled: true
+        timeout: 15s
+        tls:
+            ca_file: ""
+            cert_file: ""
+            include_system_ca_certs_pool: false
+            insecure: false
+            insecure_skip_verify: false
+            key_file: ""
+            max_version: ""
+            min_version: ""
+            reload_interval: 0s
+            server_name_override: ""
+        write_buffer_size: 0
+    transform/containerinsightsjmx:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              statements:
+                - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
+            - context: metric
+              statements:
+                - set(unit, "Bytes") where name == "jvm.memory.heap.used"
+                - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
+                - set(unit, "Bytes") where name == "jvm.memory.pool.used"
+                - set(unit, "Bytes") where name == "tomcat.traffic.received"
+                - set(unit, "Bytes") where name == "tomcat.traffic.sent"
+                - set(unit, "Bytes") where name == "jvm.system.swap.space.total"
+                - set(unit, "Bytes") where name == "jvm.system.swap.space.free"
+                - set(unit, "Bytes") where name == "jvm.system.physical.memory.total"
+                - set(unit, "Bytes") where name == "jvm.system.physical.memory.free"
+                - set(unit, "Count") where name == "tomcat.sessions"
+                - set(unit, "Count") where name == "tomcat.rejected_sessions"
+                - set(unit, "Count") where name == "jvm.threads.count"
+                - set(unit, "Count") where name == "jvm.threads.daemon"
+                - set(unit, "Count") where name == "jvm.open_file_descriptor.count"
+                - set(unit, "Count") where name == "jvm.system.available.processors"
+                - set(unit, "Count") where name == "tomcat.request_count"
+                - set(unit, "Count") where name == "tomcat.errors"
+                - set(unit, "Count") where name == "jvm.classes.loaded"
+                - set(unit, "Count") where name == "jvm.system.cpu.utilization"
+                - set(unit, "Count") where name == "jvm.cpu.recent_utilization"
+                - set(unit, "Milliseconds") where name == "tomcat.processing_time"
+        trace_statements: []
 receivers:
-  awscontainerinsightreceiver:
-    accelerated_compute_metrics: true
-    add_container_name_metric_label: false
-    add_full_pod_name_metric_label: false
-    add_service_as_attribute: true
-    certificate_file_path: ""
-    cluster_name: TestCluster
-    collection_interval: 1m0s
-    container_orchestrator: eks
-    enable_control_plane_metrics: false
-    endpoint: ""
-    host_ip: ""
-    host_name: ""
-    imds_retries: 1
-    kube_config_path: ""
-    leader_lock_name: cwagent-clusterleader
-    leader_lock_using_config_map_only: true
-    local_mode: true
-    max_retries: 0
-    no_verify_ssl: false
-    num_workers: 0
-    prefer_full_pod_name: false
-    profile: AmazonCloudWatchAgent
-    proxy_address: ""
-    region: us-west-2
-    request_timeout_seconds: 0
-    resource_arn: ""
-    role_arn: ""
-    shared_credentials_file:
-      - fake-path
-  otlp/jmx:
-    protocols:
-      http:
-        endpoint: 0.0.0.0:4314
-        include_metadata: false
-        logs_url_path: /v1/logs
-        max_request_body_size: 0
-        metrics_url_path: /v1/metrics
-        traces_url_path: /v1/traces
-  tcplog/emf_logs:
-    encoding: utf-8
-    id: tcp_input
-    listen_address: 0.0.0.0:25888
-    operators: []
-    retry_on_failure:
-      enabled: false
-      initial_interval: 0s
-      max_elapsed_time: 0s
-      max_interval: 0s
-    type: tcp_input
-  udplog/emf_logs:
-    encoding: utf-8
-    id: udp_input
-    listen_address: 0.0.0.0:25888
-    multiline:
-      line_end_pattern: .^
-      line_start_pattern: ""
-      omit_pattern: false
-    operators: []
-    retry_on_failure:
-      enabled: false
-      initial_interval: 0s
-      max_elapsed_time: 0s
-      max_interval: 0s
-    type: udp_input
+    awscontainerinsightreceiver:
+        accelerated_compute_metrics: true
+        add_container_name_metric_label: false
+        add_full_pod_name_metric_label: false
+        add_service_as_attribute: true
+        certificate_file_path: ""
+        cluster_name: TestCluster
+        collection_interval: 1m0s
+        container_orchestrator: eks
+        enable_control_plane_metrics: false
+        endpoint: ""
+        host_ip: ""
+        host_name: ""
+        imds_retries: 1
+        kube_config_path: ""
+        leader_lock_name: cwagent-clusterleader
+        leader_lock_using_config_map_only: true
+        local_mode: false
+        max_retries: 0
+        no_verify_ssl: false
+        num_workers: 0
+        prefer_full_pod_name: false
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 0
+        resource_arn: ""
+        role_arn: ""
+    otlp/jmx:
+        protocols:
+            http:
+                endpoint: 0.0.0.0:4314
+                include_metadata: false
+                logs_url_path: /v1/logs
+                max_request_body_size: 0
+                metrics_url_path: /v1/metrics
+                traces_url_path: /v1/traces
 service:
-  extensions:
-    - agenthealth/logs
-    - agenthealth/metrics
-  pipelines:
-    logs/emf_logs:
-      exporters:
-        - awscloudwatchlogs/emf_logs
-      processors:
-        - batch/emf_logs
-      receivers:
-        - tcplog/emf_logs
-        - udplog/emf_logs
-    metrics/containerinsights:
-      exporters:
-        - awsemf/containerinsights
-      processors:
-        - batch/containerinsights
-      receivers:
-        - awscontainerinsightreceiver
-    metrics/containerinsightsjmx:
-      exporters:
-        - awsemf/containerinsightsjmx
-      processors:
-        - filter/containerinsightsjmx
-        - resourcedetection/containerinsightsjmx
-        - resource/containerinsightsjmx
-        - transform/containerinsightsjmx
-        - metricstransform/containerinsightsjmx
-        - cumulativetodelta/containerinsightsjmx
-      receivers:
-        - otlp/jmx
-    metrics/jmx/cloudwatch:
-      exporters:
-        - awscloudwatch
-      processors:
-        - filter/jmx
-        - cumulativetodelta/jmx
-      receivers:
-        - otlp/jmx
-  telemetry:
-    logs:
-      development: false
-      disable_caller: false
-      disable_stacktrace: false
-      encoding: console
-      level: debug
-      sampling:
-        enabled: true
-        initial: 2
-        thereafter: 500
-        tick: 10s
-    metrics:
-      address: ""
-      level: None
-    traces: {}
+    extensions:
+        - agenthealth/logs
+    pipelines:
+        metrics/containerinsights:
+            exporters:
+                - awsemf/containerinsights
+            processors:
+                - batch/containerinsights
+            receivers:
+                - awscontainerinsightreceiver
+        metrics/containerinsightsjmx:
+            exporters:
+                - awsemf/containerinsightsjmx
+            processors:
+                - filter/containerinsightsjmx
+                - resourcedetection/containerinsightsjmx
+                - resource/containerinsightsjmx
+                - transform/containerinsightsjmx
+                - metricstransform/containerinsightsjmx
+                - cumulativetodelta/containerinsightsjmx
+            receivers:
+                - otlp/jmx
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            level: debug
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            address: ""
+            level: None
+        traces: {}

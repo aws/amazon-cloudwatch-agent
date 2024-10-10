@@ -13,10 +13,12 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
+	context.CurrentContext().SetRunInContainer(true)
 	type want struct {
 		pipelineType string
 		receivers    []string

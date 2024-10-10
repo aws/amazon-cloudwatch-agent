@@ -46,7 +46,7 @@ var appSignalsConfigK8s string
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
 
-//go:embed awsemfjmx_config.yaml
+//go:embed awsemf_jmx_config.yaml
 var awsEmfJmxDefaultConfig string
 
 var (
