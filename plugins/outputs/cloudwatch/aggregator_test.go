@@ -131,7 +131,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	assertNoMetricsInChan(t, metricChan)
 }
 
-// TestDurationAggregator_aggregating verifies the metric's timetstamp is used to aggregate.
+// TestDurationAggregator_aggregating verifies the metric's timestamp is used to aggregate.
 // If the same metric appears multiple times in a single aggregation interval then just expect 1 aggregated metric.
 // If the same metric appears multiple times in different aggregation intervals then expect multiple aggregated metrics.
 func TestDurationAggregator_aggregating(t *testing.T) {
