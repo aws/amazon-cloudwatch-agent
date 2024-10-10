@@ -1,0 +1,9 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "./testdata/config.yaml"
+      }
+    }
+  }
+}

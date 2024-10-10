@@ -190,6 +190,23 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
+		"WithOtelPrometheusAMPDestinationConfig": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"prometheus_config": "empty.yaml",
+						},
+					},
+				},
+			},
+			wantErrContains: "invalid otel confi",
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
