@@ -4,8 +4,7 @@
 package metricstransformprocessor
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	"path/filepath"
+	"fmt"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
@@ -43,14 +42,9 @@ func TestTranslator(t *testing.T) {
 						"experimental_match_labels": map[string]string{"code": "^5.*"},
 						"action":                    "insert",
 						"new_name":                  "apiserver_request_total_5xx",
-					}}}),
-		},
-		"GPUSection": {
-			translator: NewTranslatorWithName("containerinsights"),
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{},
-			},
-			want: testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+					},
+				},
+			}),
 		},
 		"JMXMetricsSection": {
 			translator: NewTranslatorWithName("jmx"),
@@ -75,6 +69,13 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			}),
+		},
+		"UnknownProcessorName": {
+			translator: NewTranslatorWithName("unknown"),
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{},
+			},
+			wantErr: fmt.Errorf("no transform rules for unknown"),
 		},
 	}
 	factory := metricstransformprocessor.NewFactory()
