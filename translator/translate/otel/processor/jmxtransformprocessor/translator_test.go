@@ -36,12 +36,6 @@ func TestTranslator(t *testing.T) {
 				JsonKey: common.ContainerInsightsConfigKey,
 			},
 		},
-		"WithContainerInsights": {
-			input:  testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			index:  0,
-			wantID: "filter/jmx",
-			want:   filepath.Join("testdata", "config.json"),
-		},
 	}
 
 	for name, testCase := range testCases {
