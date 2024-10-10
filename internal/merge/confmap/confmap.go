@@ -35,6 +35,9 @@ func NewFromStringMap(data map[string]any) *Conf {
 }
 
 func (c *Conf) Merge(in *Conf) error {
+	if in == nil {
+		return nil
+	}
 	return c.mergeFromStringMap(in.ToStringMap())
 }
 
@@ -46,17 +49,19 @@ func (c *Conf) ToStringMap() map[string]any {
 	return maps.Unflatten(c.k.All(), KeyDelimiter)
 }
 
-func LoadConf(path string) (*Conf, error) {
+func LoadFromFile(path string) (*Conf, error) {
 	// Clean the path before using it.
 	content, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("unable to read the file %v: %w", path, err)
 	}
+	return LoadFromBytes(content)
+}
 
+func LoadFromBytes(content []byte) (*Conf, error) {
 	var rawConf map[string]any
-	if err = yaml.Unmarshal(content, &rawConf); err != nil {
+	if err := yaml.Unmarshal(content, &rawConf); err != nil {
 		return nil, err
 	}
-
 	return NewFromStringMap(rawConf), nil
 }
