@@ -4,6 +4,8 @@
 package otel
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +20,8 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
