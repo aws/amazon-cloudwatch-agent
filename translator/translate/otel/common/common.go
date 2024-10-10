@@ -82,6 +82,7 @@ const (
 	PipelineNameJmx                  = "jmx"
 	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
 	PipelineNameEmfLogs              = "emf_logs"
+	PipelineNamePrometheus           = "prometheus"
 	AppSignals                       = "application_signals"
 	AppSignalsFallback               = "app_signals"
 	AppSignalsRules                  = "rules"
@@ -104,6 +105,9 @@ var (
 
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
+
+	MetricsDestinations = ConfigKey(MetricsKey, MetricsDestinationsKey)
+	MetricsPrometheus   = ConfigKey(MetricsKey, MetricsCollectedKey, PrometheusKey)
 )
 
 // Translator is used to translate the JSON config into an
