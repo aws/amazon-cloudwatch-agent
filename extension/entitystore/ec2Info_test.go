@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -310,13 +309,8 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a buffer to capture the logger output
 			var buf bytes.Buffer
-			writer := zapcore.AddSync(&buf)
 
-			// Create a custom zapcore.Core that writes to the buffer
-			encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
-			core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
-
-			logger := zap.New(core)
+			logger := CreateTestLogger(&buf)
 			done := make(chan struct{})
 
 			ei := &EC2Info{

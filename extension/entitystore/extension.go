@@ -235,12 +235,12 @@ func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 	return serviceKeyAttr
 }
 
-func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
+var getMetaDataProvider = func() ec2metadataprovider.MetadataProvider {
 	mdCredentialConfig := &configaws.CredentialConfig{}
 	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
 }
 
-func getEC2Provider(region string, ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
+var getEC2Provider = func(region string, ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 	ec2CredentialConfig.Region = region
 	return ec2.New(
 		ec2CredentialConfig.Credentials(),

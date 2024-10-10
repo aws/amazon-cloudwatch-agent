@@ -4,8 +4,10 @@
 package entitystore
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
 	"reflect"
 	"testing"
 	"time"
@@ -19,13 +21,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 type mockServiceProvider struct {
 	mock.Mock
+}
+
+// This helper function creates a test logger
+// so that it can send the log messages into a
+// temporary buffer for pattern matching
+func CreateTestLogger(buf *bytes.Buffer) *zap.Logger {
+	writer := zapcore.AddSync(buf)
+
+	// Create a custom zapcore.Core that writes to the buffer
+	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
+	logger := zap.New(core)
+	return logger
 }
 
 func (s *mockServiceProvider) startServiceProvider() {}
@@ -61,6 +78,16 @@ type mockMetadataProvider struct {
 	Tags                     string
 	TagValue                 string
 	InstanceTagError         bool
+}
+
+func mockMetadataProviderFunc() ec2metadataprovider.MetadataProvider {
+	return &mockMetadataProvider{
+		Tags:     "aws:autoscaling:groupName",
+		TagValue: "ASG-1",
+		InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+			InstanceID: "i-123456789",
+		},
+	}
 }
 
 func mockMetadataProviderWithAccountId(accountId string) *mockMetadataProvider {
@@ -498,4 +525,65 @@ func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
 
 	assert.Equal(t, "test-service-name", serviceName)
 	assert.Equal(t, "UserConfiguration", serviceNameSource)
+}
+
+func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
+	type args struct {
+		metadataProvider ec2metadataprovider.MetadataProvider
+		mode             string
+		kubernetesMode   string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "AutoScalingGroupWithInstanceTagsEC2",
+			args: args{
+				mode: config.ModeEC2,
+			},
+		},
+		{
+			name: "AutoScalingGroupWithInstanceTagsEKS",
+			args: args{
+				kubernetesMode: config.ModeEKS,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a buffer to capture the logger output
+			var buf bytes.Buffer
+
+			logger := CreateTestLogger(&buf)
+			done := make(chan struct{})
+			config := &Config{
+				Mode:           tt.args.mode,
+				KubernetesMode: tt.args.kubernetesMode,
+			}
+			getEC2Provider = mockEC2Provider
+			getMetaDataProvider = mockMetadataProviderFunc
+			es := &EntityStore{
+				logger:           logger,
+				done:             done,
+				metadataprovider: tt.args.metadataProvider,
+				config:           config,
+			}
+			go es.Start(nil, nil)
+			time.Sleep(2 * time.Second)
+
+			logOutput := buf.String()
+			log.Println(logOutput)
+			assertIfNonEmpty(t, logOutput, es.ec2Info.InstanceID)
+			assertIfNonEmpty(t, logOutput, es.ec2Info.AutoScalingGroup)
+			assertIfNonEmpty(t, logOutput, es.ec2Info.AccountID)
+
+		})
+	}
+}
+
+func assertIfNonEmpty(t *testing.T, message string, pattern string) {
+	if pattern != "" {
+		assert.NotContains(t, message, pattern)
+	}
 }
