@@ -1,0 +1,10 @@
+attributes:
+  - key: "Namespace"
+    from_attribute: "k8s.namespace.name"
+    action: "insert"
+  - key: "ClusterName"
+    value:  "TestCluster"
+    action: "upsert"
+  - key: "NodeName"
+    from_attribute: "host.name"
+    action: "insert"

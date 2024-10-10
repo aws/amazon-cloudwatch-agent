@@ -4,13 +4,16 @@
 package resourceprocessor
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -186,4 +189,19 @@ func TestTranslator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestContainerInsightsJmx(t *testing.T) {
+	transl := NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*resourceprocessor.Config)
+	c := testutil.GetConf(t, filepath.Join("testdata", "config.yaml"))
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*resourceprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(actualCfg.AttributesActions), len(expectedCfg.AttributesActions))
+
 }

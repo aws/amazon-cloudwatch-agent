@@ -28,9 +28,20 @@ func TestTranslator(t *testing.T) {
 		detector        func() (eksdetector.Detector, error)
 		isEKSDataStore  func() eksdetector.IsEKSCache
 	}{
-		"WithInvalidConfig": {
-			input:           "",
-			wantErrContains: "invalid json config",
+		"WithValidConfig": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"debug": true,
+				},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name":           "TestCluster",
+							"jmx_container_insights": true,
+						},
+					},
+				},
+			},
 		},
 		"WithEmptyConfig": {
 			input:           map[string]interface{}{},

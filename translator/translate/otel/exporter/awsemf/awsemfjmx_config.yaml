@@ -1,0 +1,37 @@
+namespace: ContainerInsights/Prometheus
+log_group_name: '/aws/containerinsights/{ClusterName}/jmx'
+log_stream_name: '{NodeName}'
+detailed_metrics: false
+dimension_rollup_option: NoDimensionRollup
+version: "0"
+retain_initial_value_of_delta_metric: false
+resource_to_telemetry_conversion:
+  enabled: true
+metric_declarations:
+  - dimensions: [[ClusterName,Namespace]]
+    metric_name_selectors:
+      - java_lang_operatingsystem_freeswapspacesize
+      - java_lang_operatingsystem_availableprocessors
+      - catalina_manager_rejectedsessions
+      - catalina_globalrequestprocessor_bytesreceived
+      - catalina_globalrequestprocessor_processingtime
+      - jvm_memory_pool_bytes_used
+      - java_lang_operatingsystem_systemcpuload
+      - java_lang_operatingsystem_totalphysicalmemorysize
+      - java_lang_operatingsystem_freephysicalmemorysize
+      - java_lang_operatingsystem_openfiledescriptorcount
+      - catalina_manager_activesessions
+      - java_lang_operatingsystem_totalswapspacesize
+      - java_lang_operatingsystem_processcpuload
+      - catalina_globalrequestprocessor_requestcount
+      - catalina_globalrequestprocessor_errorcount
+      - jvm_threads_daemon
+      - catalina_globalrequestprocessor_bytessent
+      - jvm_classes_loaded
+      - jvm_threads_current
+  - dimensions: [[ClusterName, Namespace, area]]
+    metric_name_selectors:
+      - jvm_memory_bytes_used
+  - dimensions: [[ClusterName,Namespace, pool]]
+    metric_name_selectors:
+      - jvm_memory_pool_bytes_used

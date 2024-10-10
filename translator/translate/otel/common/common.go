@@ -76,13 +76,14 @@ const (
 )
 
 const (
-	PipelineNameHost             = "host"
-	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
-	PipelineNameJmx              = "jmx"
-	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "application_signals"
-	AppSignalsFallback           = "app_signals"
-	AppSignalsRules              = "rules"
+	PipelineNameHost                 = "host"
+	PipelineNameHostDeltaMetrics     = "hostDeltaMetrics"
+	PipelineNameJmx                  = "jmx"
+	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
+	PipelineNameEmfLogs              = "emf_logs"
+	AppSignals                       = "application_signals"
+	AppSignalsFallback               = "app_signals"
+	AppSignalsRules                  = "rules"
 )
 
 var (
@@ -95,8 +96,10 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
-	JmxConfigKey = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
-	JmxTargets   = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
+
+	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)

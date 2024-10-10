@@ -24,6 +24,12 @@ func EnhancedContainerInsightsEnabled(conf *confmap.Conf) bool {
 	return isSet
 }
 
+func JmxEnabled(conf *confmap.Conf) bool {
+	isEnabled, _ := common.GetBool(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey))
+	return isEnabled
+
+}
+
 func AcceleratedComputeMetricsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableAcceleratedComputeMetric), true)
 }
