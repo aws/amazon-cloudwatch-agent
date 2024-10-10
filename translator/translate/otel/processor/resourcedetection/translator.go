@@ -23,9 +23,6 @@ var appSignalsDefaultResourceDetectionConfig string
 //go:embed configs/ecs_config.yaml
 var appSignalsECSResourceDetectionConfig string
 
-//go:embed configs/jmx_config.yaml
-var resourceDetectionJMX string
-
 type translator struct {
 	name     string
 	dataType component.DataType
@@ -52,14 +49,6 @@ func WithDataType(dataType component.DataType) Option {
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
-	t := &translator{name: name, factory: resourcedetectionprocessor.NewFactory()}
-	for _, opt := range opts {
-		opt.apply(t)
-	}
-	return t
-}
-
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
 	t := &translator{factory: resourcedetectionprocessor.NewFactory()}
 	for _, opt := range opts {
@@ -75,9 +64,6 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
 
-	if t.name == common.PipelineNameContainerInsightsJmx {
-		return common.GetYamlFileToYamlConfig(cfg, resourceDetectionJMX)
-	}
 	mode := context.CurrentContext().KubernetesMode()
 	if mode == "" {
 		mode = context.CurrentContext().Mode()

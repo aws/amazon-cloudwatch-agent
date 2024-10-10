@@ -50,7 +50,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "metrics/containerinsightsjmx",
 				receivers:    []string{"otlp/jmx"},
-				processors:   []string{"filter/containerinsightsjmx", "resourcedetection/containerinsightsjmx", "resource/containerinsightsjmx", "transform/containerinsightsjmx", "metricstransform/containerinsightsjmx", "cumulativetodelta/containerinsightsjmx"},
+				processors:   []string{"filter/containerinsightsjmx", "resource/containerinsightsjmx", "transform/containerinsightsjmx", "metricstransform/containerinsightsjmx", "cumulativetodelta/containerinsightsjmx"},
 				exporters:    []string{"awsemf/containerinsightsjmx"},
 				extensions:   []string{"agenthealth/logs"},
 			},

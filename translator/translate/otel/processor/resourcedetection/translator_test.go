@@ -4,7 +4,6 @@
 package resourcedetection
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
@@ -13,10 +12,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -144,19 +141,4 @@ func TestTranslate(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestContainerInsightsJmx(t *testing.T) {
-	transl := NewTranslatorWithName(common.PipelineNameContainerInsightsJmx).(*translator)
-	expectedCfg := transl.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-	c := testutil.GetConf(t, filepath.Join("configs", "jmx_config.yaml"))
-	require.NoError(t, c.Unmarshal(&expectedCfg))
-
-	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("configs", "config.json")))
-	translatedCfg, err := transl.Translate(conf)
-	assert.NoError(t, err)
-	actualCfg, ok := translatedCfg.(*resourcedetectionprocessor.Config)
-	assert.True(t, ok)
-	assert.Equal(t, len(actualCfg.Detectors), len(expectedCfg.Detectors))
-
 }

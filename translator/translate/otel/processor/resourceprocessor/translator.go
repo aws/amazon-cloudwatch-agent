@@ -5,8 +5,12 @@ package resourceprocessor
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -61,61 +65,26 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	} else if t.Name() == common.PipelineNameContainerInsightsJmx {
 		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
 
-		if ok {
-			attributes = []any{
-				map[string]any{
-					"key":            "Namespace",
-					"from_attribute": "k8s.namespace.name",
-					"action":         "insert",
-				},
-				map[string]any{
-					"key":    "ClusterName",
-					"value":  clusterName, // Ensure 'clusterName' is defined earlier
-					"action": "upsert",
-				},
-				map[string]any{
-					"key":            "NodeName",
-					"from_attribute": "host.name",
-					"action":         "insert",
-				},
-			}
-
-		} else {
-
-			attributes = []any{
-				map[string]any{
-					"key":            "Namespace",
-					"from_attribute": "k8s.namespace.name",
-					"action":         "insert",
-				},
-				map[string]any{
-					"key":    "ClusterName",
-					"value":  clusterName,
-					"action": "upsert",
-				},
-				map[string]any{
-					"key":            "NodeName",
-					"from_attribute": "host.name",
-					"action":         "insert",
-				},
-			}
-			attributes = []any{
-				map[string]any{
-					"key":            "ClusterName",
-					"from_attribute": "k8s.cluster.name",
-					"action":         "insert",
-				},
-				map[string]any{
-					"key":            "Namespace",
-					"from_attribute": "k8s.namespace.name",
-					"action":         "insert",
-				},
-				map[string]any{
-					"key":            "NodeName",
-					"from_attribute": "host.name",
-					"action":         "insert",
-				},
-			}
+		if !ok {
+			clusterName = util.GetClusterNameFromEc2Tagger()
+		}
+		nodeName := os.Getenv(config.HOST_NAME)
+		attributes = []any{
+			map[string]any{
+				"key":            "Namespace",
+				"from_attribute": "k8s.namespace.name",
+				"action":         "insert",
+			},
+			map[string]any{
+				"key":    "ClusterName",
+				"value":  clusterName, // Ensure 'clusterName' is defined earlier
+				"action": "upsert",
+			},
+			map[string]any{
+				"key":    "NodeName",
+				"value":  nodeName,
+				"action": "insert",
+			},
 		}
 
 	}

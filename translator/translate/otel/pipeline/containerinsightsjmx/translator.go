@@ -16,7 +16,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
@@ -60,7 +59,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		),
 		Processors: common.NewTranslatorMap(
 			filterprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)),   // Filter metrics
-			resourcedetection.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),          // Adds k8s cluster/nodename name
 			resourceprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)), // Change resource attribute names
 			transformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),         // Removes attributes that are not of [ClusterName, Namespace]
 			metricstransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),  // Renames metrics and adds pool and area dimensions
