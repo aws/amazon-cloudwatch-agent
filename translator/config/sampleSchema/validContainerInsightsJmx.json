@@ -7,8 +7,8 @@
       "emf": {
       },
       "kubernetes": {
-        "cluster_name": "jvmCluster",
-        "namespace":"siprmp-jmx"
+        "cluster_name": "TestCluster",
+        "jmx_container_insights": true
       }
     },
     "force_flush_interval": 5

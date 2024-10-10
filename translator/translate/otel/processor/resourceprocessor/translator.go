@@ -69,7 +69,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	c := confmap.NewFromStringMap(map[string]any{
 		"attributes": attributes,
 	})
-	if t.Name() == common.PipelineNameContainerInsightsJmx {
+
+	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
+		attributes = t.getJMXAttributes(conf)
+	} else if t.Name() == common.PipelineNameContainerInsightsJmx {
 		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
 
 		if ok {

@@ -6,14 +6,14 @@ metrics:
       - jvm.memory.heap.used
       - jvm.memory.nonheap.used
       - jvm.memory.pool.used
-      - jvm.operating.system.total.swap.space.size
-      - jvm.operating.system.system.cpu.load
-      - jvm.operating.system.process.cpu.load
-      - jvm.operating.system.free.swap.space.size
-      - jvm.operating.system.total.physical.memory.size
-      - jvm.operating.system.free.physical.memory.size
-      - jvm.operating.system.open.file.descriptor.count
-      - jvm.operating.system.available.processors
+      - jvm.system.swap.space.total
+      - jvm.system.cpu.utilization
+      - jvm.cpu.recent_utilization
+      - jvm.system.swap.space.free
+      - jvm.system.physical.memory.total
+      - jvm.system.physical.memory.free
+      - jvm.open_file_descriptor.count
+      - jvm.system.available.processors
       - jvm.threads.count
       - jvm.threads.daemon
       - tomcat.sessions

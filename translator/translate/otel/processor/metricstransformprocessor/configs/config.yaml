@@ -32,48 +32,48 @@ transforms:
         label: name
         new_label: pool
 
-  - include: jvm.operating.system.total.swap.space.size
+  - include: jvm.system.swap.space.total
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_totalswapspacesize
 
 
-  - include: jvm.operating.system.system.cpu.load
+  - include: jvm.system.cpu.utilization
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_systemcpuload
 
-  - include: jvm.operating.system.process.cpu.load
+  - include: jvm.cpu.recent_utilization
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_processcpuload
 
 
-  - include: jvm.operating.system.free.swap.space.size
+  - include: jvm.system.swap.space.free
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_freeswapspacesize
 
 
-  - include: jvm.operating.system.total.physical.memory.size
+  - include: jvm.system.physical.memory.total
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_totalphysicalmemorysize
 
 
-  - include: jvm.operating.system.free.physical.memory.size
+  - include: jvm.system.physical.memory.free
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_freephysicalmemorysize
 
 
-  - include: jvm.operating.system.open.file.descriptor.count
+  - include: jvm.open_file_descriptor.count
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_openfiledescriptorcount
 
 
-  - include: jvm.operating.system.available.processors
+  - include: jvm.system.available.processors
     match_type: strict
     action: update
     new_name: java_lang_operatingsystem_availableprocessors

@@ -131,8 +131,8 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "jvm.memory.heap.used"
-                  - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(unit, "unit") where name == "jvm.memory.heap.used"
+                - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -141,7 +141,7 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
 receivers:
     otlp/jmx:

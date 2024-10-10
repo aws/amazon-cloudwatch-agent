@@ -3,10 +3,10 @@
     "region": "us-west-2"
   },
   "logs": {
-    "metrics_collected": {
+    "metrics": {
       "emf": {
       },
-      "kubernete": {
+      "kubernetes": {
       }
     },
     "force_flush_interval": 5
