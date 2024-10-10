@@ -129,11 +129,15 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setAppSignalsFields(c, cfg); err != nil {
 			return nil, err
 		}
+	} else if t.isCiJMX(c) {
+		if err := setCiJmx(); err != nil {
+			return nil, err
+		}
 	} else if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if isKubernetes(c) && !t.isCiJMX(c) {
+	} else if isKubernetes(c) {
 		if err := setKubernetesFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -212,6 +216,9 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	return nil
 }
 
+func setCiJmx() error {
+	return nil
+}
 func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	setDisableMetricExtraction(prometheusBasePathKey, conf, cfg)
 
