@@ -4,6 +4,7 @@
 package filterprocessor
 
 import (
+	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
 
@@ -134,4 +135,18 @@ func TestTranslator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestContainerInsightsJmx(t *testing.T) {
+	transl := NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*filterprocessor.Config)
+	c := testutil.GetConf(t, filepath.Join("testdata", "ContainerInsightsJmxConfig.yaml"))
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*filterprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.Metrics.Include.MetricNames), len(actualCfg.Metrics.Include.MetricNames))
 }

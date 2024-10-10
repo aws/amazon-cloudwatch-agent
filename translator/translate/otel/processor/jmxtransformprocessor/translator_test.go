@@ -64,3 +64,17 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
+
+func TestContainerInsightsJmx(t *testing.T) {
+	transl := NewTranslatorWithName(common.PipelineNameContainerInsightsJmx).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
+	c := testutil.GetConf(t, filepath.Join("testdata", "config.yaml"))
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*transformprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.MetricStatements), len(actualCfg.MetricStatements))
+}

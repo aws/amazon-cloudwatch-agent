@@ -58,11 +58,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators.Receivers.Set(otlp.NewTranslator(common.WithName(common.PipelineNameJmx)))
-	translators.Processors.Set(filterprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)))  //Filter metrics
-	translators.Processors.Set(resourcedetection.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx))         //Adds k8s cluster/nodename name
-	translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName("jmxResource")))                          //Change resource attribute names
-	translators.Processors.Set(jmxtransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx))     //Removes attributes that are not of [ClusterName, Namespace]
-	translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx)) //Renames metrics and adds pool and area dimensions
+	translators.Processors.Set(filterprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)))   //Filter metrics
+	translators.Processors.Set(resourcedetection.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx))          //Adds k8s cluster/nodename name
+	translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx))) //Change resource attribute names
+	translators.Processors.Set(jmxtransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx))      //Removes attributes that are not of [ClusterName, Namespace]
+	translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx))  //Renames metrics and adds pool and area dimensions
 	translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx), cumulativetodeltaprocessor.WithConfigKeys(jmxKey)))
 	translators.Exporters.Set(debug.NewTranslator())                                                 //Provides debug info for metrics
 	translators.Exporters.Set(awsemf.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx)) //Sends metrics to cloudwatch console (also adds resource attributes to metrics)

@@ -5,6 +5,9 @@ package metricstransformprocessor
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/stretchr/testify/assert"
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
@@ -55,4 +58,19 @@ func TestTranslator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestContainerInsightsJmx(t *testing.T) {
+	transl := NewTranslatorWithName(common.PipelineNameContainerInsightsJmx).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
+	c := testutil.GetConf(t, filepath.Join("configs", "config.yaml"))
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("configs", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*metricstransformprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.Transforms), len(actualCfg.Transforms))
+
 }
