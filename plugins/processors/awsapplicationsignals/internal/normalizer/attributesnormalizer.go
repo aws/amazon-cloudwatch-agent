@@ -126,6 +126,11 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			}
 		}
 	}
+	// If a metric doesn't `aws.local.service` attribute, copy it from resource attributes. This is now only used in
+	// processing runtime metrics.
+	if serviceAttribute, ok := resourceAttributes.Get(attr.AWSLocalService); ok {
+		attributes.PutStr(attr.AWSLocalService, serviceAttribute.AsString())
+	}
 }
 
 func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {

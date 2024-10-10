@@ -39,9 +39,7 @@ func TestRenameAttributes_for_metric(t *testing.T) {
 
 	// Check that the new key has the correct value
 	for _, replacementKey := range attributesRenamingForMetric {
-		if value, ok := attributes.Get(replacementKey); !ok || value.AsString() != replacementKey+"-value" {
-			t.Errorf("replacementKey has incorrect value: got %v, want %v", value.AsString(), replacementKey+"-value")
-		}
+		assertStringAttributeEqual(t, attributes, replacementKey, replacementKey+"-value")
 	}
 }
 
@@ -70,9 +68,7 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 
 	// Check that the new key has the correct value
 	for _, replacementKey := range resourceAttributesRenamingForTrace {
-		if value, ok := resourceAttributes.Get(replacementKey); !ok || value.AsString() != replacementKey+"-value" {
-			t.Errorf("replacementKey has incorrect value: got %v, want %v", value.AsString(), replacementKey+"-value")
-		}
+		assertStringAttributeEqual(t, resourceAttributes, replacementKey, replacementKey+"-value")
 	}
 
 	if value, ok := resourceAttributes.Get("K8s.Node"); !ok || value.AsString() != "i-01ef7d37f42caa168" {
@@ -90,6 +86,7 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 		resourceAttributes.PutStr(resourceAttrKey, attrKey+"-value")
 	}
 	resourceAttributes.PutStr("host.id", "i-01ef7d37f42caa168")
+	resourceAttributes.PutStr("aws.local.service", "test-app")
 
 	// Create a pcommon.Map for attributes
 	attributes := pcommon.NewMap()
@@ -99,14 +96,11 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 
 	// Check that the attribute has been copied correctly
 	for _, attrKey := range resourceToMetricAttributes {
-		if value, ok := attributes.Get(attrKey); !ok || value.AsString() != attrKey+"-value" {
-			t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), attrKey+"-value")
-		}
+		assertStringAttributeEqual(t, attributes, attrKey, attrKey+"-value")
 	}
 
-	if value, ok := attributes.Get("K8s.Node"); !ok || value.AsString() != "i-01ef7d37f42caa168" {
-		t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), "i-01ef7d37f42caa168")
-	}
+	assertStringAttributeEqual(t, attributes, "K8s.Node", "i-01ef7d37f42caa168")
+	assertStringAttributeEqual(t, attributes, "aws.local.service", "test-app")
 }
 
 func TestTruncateAttributes(t *testing.T) {
@@ -256,5 +250,15 @@ func TestRenameAttributes_AWSRemoteResourceCfnIdentifier_for_metric(t *testing.T
 
 	if value, ok := attributes.Get("RemoteResourceCfnPrimaryIdentifier"); !ok || value.AsString() != "arn:123:abc-value" {
 		t.Errorf("RemoteResourceCfnPrimaryIdentifier has incorrect value: got %v, want %v", value.AsString(), "arn:123:abc-value")
+	}
+}
+
+func assertStringAttributeEqual(t *testing.T, attributes pcommon.Map, attrKey, attrVal string) {
+	if val, ok := attributes.Get(attrKey); ok {
+		if val.AsString() != attrVal {
+			t.Errorf("Attribute was not copied correctly: got %v, want %v", val.AsString(), attrVal)
+		}
+	} else {
+		t.Errorf("Attribute %s is not found", attrKey)
 	}
 }
