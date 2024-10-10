@@ -1,43 +1,42 @@
 {
-  "metrics": {
-    "metrics_destinations": {
-      "amp": {
-        "workspace_id": "ws-12345"
-      },
-      "cloudwatch": {}
-    },
+  "agent": {
+    "debug": true
+  },
+  "logs": {
     "metrics_collected": {
-      "jmx": [
-        {
-          "jvm": {
-            "measurement": [
-              "jvm.memory.heap.init",
-              {
-                "name": "jvm.memory.heap.used",
-                "rename": "JVM_MEM_HEAP_USED",
-                "unit": "unit"
-              },
-              "jvm.memory.nonheap.init"
-            ]
-          },
-          "append_dimensions": {
-            "k1": "v1"
-          }
-        },
-        {
-          "kafka-consumer": {
-            "measurement": [
-              {
-                "name": "kafka.consumer.fetch-rate",
-                "rename": "kafka.fetch-rate"
-              }
-            ]
-          },
-          "append_dimensions": {
-            "k2": "v2"
-          }
-        }
-      ]
+      "emf": { },
+      "kubernetes": {
+        "cluster_name": "TestCluster",
+        "jmx_container_insights": true
+      }
     }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "jmx": {
+        "jvm": {
+          "measurement": [
+            "jvm.classes.loaded",
+            "jvm.memory.pool.used",
+            "jvm.operating.system.total.swap.space.size",
+            "jvm.operating.system.system.cpu.load",
+            "jvm.operating.system.process.cpu.load",
+            "jvm.operating.system.free.swap.space.size",
+            "jvm.operating.system.total.physical.memory.size",
+            "jvm.operating.system.free.physical.memory.size",
+            "jvm.operating.system.open.file.descriptor.count",
+            "jvm.operating.system.available.processors",
+            "jvm.threads.count",
+            "jvm.memory.heap.used",
+            "jvm.memory.nonheap.init",
+            "jvm.threads.daemon"
+          ]
+        }
+      }
+    },
+    "metrics_destinations": {
+      "cloudwatch": { }
+    },
+    "namespace": "jmx-test-141"
   }
 }

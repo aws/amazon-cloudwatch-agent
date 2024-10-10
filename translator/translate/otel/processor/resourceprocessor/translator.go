@@ -23,7 +23,11 @@ type translator struct {
 	factory processor.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var (
+	baseKey                                     = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
+	eksKey                                      = common.ConfigKey(baseKey, common.KubernetesKey)
+	_       common.Translator[component.Config] = (*translator)(nil)
+)
 
 func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
 	t := &translator{factory: resourceprocessor.NewFactory()}
@@ -46,7 +50,7 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(common.JmxConfigKey) {
+	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != "jmxResource") {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
@@ -55,7 +59,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
 		attributes = t.getJMXAttributes(conf)
 	}
-	if len(attributes) == 0 {
+	if len(attributes) == 0 && t.Name() != "jmxResource" {
 		baseKey := common.JmxConfigKey
 		if t.Index() != -1 {
 			baseKey = fmt.Sprintf("%s[%d]", baseKey, t.Index())
@@ -65,7 +69,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	c := confmap.NewFromStringMap(map[string]any{
 		"attributes": attributes,
 	})
-	if t.name == "jmxResource" {
+	if t.Name() == "jmxResource" {
 		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
 
 		if ok {

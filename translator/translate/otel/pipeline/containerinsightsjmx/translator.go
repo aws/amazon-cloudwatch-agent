@@ -62,12 +62,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
-	translators.Receivers.Set(otlp.NewTranslatorWithName(common.JmxKey))
-	translators.Processors.Set(jmxfilterprocessor.NewTranslatorWithName(pipelineName))                     //Filter metrics
-	translators.Processors.Set(resourcedetectionjmx.NewTranslator())                                       //Adds k8s cluster/nodename name
-	translators.Processors.Set(resourceprocessor.NewTranslator(resourceprocessor.WithName("jmxResource"))) //Change resource attribute names
-	translators.Processors.Set(jmxtransformprocessor.NewTranslatorWithName(pipelineName))                  //Removes attributes that are not of [ClusterName, Namespace]
-	translators.Processors.Set(metricstransformprocessorjmx.NewTranslatorWithName(pipelineName))           //Renames metrics and adds pool and area dimensions
+	translators.Receivers.Set(otlp.NewTranslator(common.WithName(common.PipelineNameJmx)))
+	translators.Processors.Set(jmxfilterprocessor.NewTranslatorWithName(pipelineName))           //Filter metrics
+	translators.Processors.Set(resourcedetectionjmx.NewTranslator())                             //Adds k8s cluster/nodename name
+	translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName("jmxResource")))  //Change resource attribute names
+	translators.Processors.Set(jmxtransformprocessor.NewTranslatorWithName(pipelineName))        //Removes attributes that are not of [ClusterName, Namespace]
+	translators.Processors.Set(metricstransformprocessorjmx.NewTranslatorWithName(pipelineName)) //Renames metrics and adds pool and area dimensions
 	translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(pipelineName), cumulativetodeltaprocessor.WithConfigKeys(jmxKey)))
 	translators.Exporters.Set(debug.NewTranslator())                      //Provides debug info for metrics
 	translators.Exporters.Set(awsemf.NewTranslatorWithName(pipelineName)) //Sends metrics to cloudwatch console (also adds resource attributes to metrics)

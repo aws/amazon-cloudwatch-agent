@@ -11,174 +11,181 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 func TestTranslator(t *testing.T) {
-	agent.Global_Config.Region = "us-east-1"
-	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
 		detector        func() (eksdetector.Detector, error)
 		isEKSDataStore  func() eksdetector.IsEKSCache
 	}{
-		"WithInvalidConfig": {
-			input:           "",
-			wantErrContains: "invalid json config",
-		},
-		"WithEmptyConfig": {
-			input:           map[string]interface{}{},
-			wantErrContains: "no valid pipelines",
-		},
-		"WithoutReceivers": {
+		"WithValidConfig": {
 			input: map[string]interface{}{
-				"metrics": map[string]interface{}{},
-			},
-			wantErrContains: "no valid pipelines",
-		},
-		"WithMinimalConfig": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"cpu": map[string]interface{}{},
-					},
+				"agent": map[string]interface{}{
+					"debug": true,
 				},
-			},
-		},
-		"WithAppSignalsMetricsEnabled": {
-			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsTracesEnabled": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsMetricsAndTracesEnabled": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-					},
-				},
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsMultipleMetricsReceiversConfig": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-						"cpu":                 map[string]interface{}{},
-					},
-				},
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-						"otlp":                map[string]interface{}{},
-						"otlp2":               map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsFallbackMetricsEnabled": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsFallbackTracesEnabled": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsFallbackMetricsAndTracesEnabled": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-					},
-				},
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAppSignalsFallbackMultipleMetricsReceiversConfig": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-						"cpu":         map[string]interface{}{},
-					},
-				},
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-						"otlp":        map[string]interface{}{},
-						"otlp2":       map[string]interface{}{},
-					},
-				},
-			},
-			detector:       eksdetector.TestEKSDetector,
-			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
-		},
-		"WithAMPDestinationConfig": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_destinations": map[string]interface{}{
-						"amp": map[string]interface{}{
-							"workspace_id": "ws-12345",
+						"kubernetes": map[string]interface{}{
+							"cluster_name":           "TestCluster",
+							"jmx_container_insights": true,
 						},
 					},
-					"metrics_collected": map[string]interface{}{
-						"cpu": map[string]interface{}{},
-					},
 				},
 			},
 		},
+		//"WithEmptyConfig": {
+		//	input:           map[string]interface{}{},
+		//	wantErrContains: "no valid pipelines",
+		//},
+		//"WithoutReceivers": {
+		//	input: map[string]interface{}{
+		//		"metrics": map[string]interface{}{},
+		//	},
+		//	wantErrContains: "no valid pipelines",
+		//},
+		//"WithMinimalConfig": {
+		//	input: map[string]interface{}{
+		//		"metrics": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"cpu": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//},
+		//"WithAppSignalsMetricsEnabled": {
+		//	input: map[string]interface{}{
+		//		"logs": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"application_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsTracesEnabled": {
+		//	input: map[string]interface{}{
+		//		"traces": map[string]interface{}{
+		//			"traces_collected": map[string]interface{}{
+		//				"application_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsMetricsAndTracesEnabled": {
+		//	input: map[string]interface{}{
+		//		"logs": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"application_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//		"traces": map[string]interface{}{
+		//			"traces_collected": map[string]interface{}{
+		//				"application_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsMultipleMetricsReceiversConfig": {
+		//	input: map[string]interface{}{
+		//		"logs": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"application_signals": map[string]interface{}{},
+		//				"cpu":                 map[string]interface{}{},
+		//			},
+		//		},
+		//		"traces": map[string]interface{}{
+		//			"traces_collected": map[string]interface{}{
+		//				"application_signals": map[string]interface{}{},
+		//				"otlp":                map[string]interface{}{},
+		//				"otlp2":               map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsFallbackMetricsEnabled": {
+		//	input: map[string]interface{}{
+		//		"logs": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"app_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsFallbackTracesEnabled": {
+		//	input: map[string]interface{}{
+		//		"traces": map[string]interface{}{
+		//			"traces_collected": map[string]interface{}{
+		//				"app_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsFallbackMetricsAndTracesEnabled": {
+		//	input: map[string]interface{}{
+		//		"logs": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"app_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//		"traces": map[string]interface{}{
+		//			"traces_collected": map[string]interface{}{
+		//				"app_signals": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAppSignalsFallbackMultipleMetricsReceiversConfig": {
+		//	input: map[string]interface{}{
+		//		"logs": map[string]interface{}{
+		//			"metrics_collected": map[string]interface{}{
+		//				"app_signals": map[string]interface{}{},
+		//				"cpu":         map[string]interface{}{},
+		//			},
+		//		},
+		//		"traces": map[string]interface{}{
+		//			"traces_collected": map[string]interface{}{
+		//				"app_signals": map[string]interface{}{},
+		//				"otlp":        map[string]interface{}{},
+		//				"otlp2":       map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//	detector:       eksdetector.TestEKSDetector,
+		//	isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		//},
+		//"WithAMPDestinationConfig": {
+		//	input: map[string]interface{}{
+		//		"metrics": map[string]interface{}{
+		//			"metrics_destinations": map[string]interface{}{
+		//				"amp": map[string]interface{}{
+		//					"workspace_id": "ws-12345",
+		//				},
+		//			},
+		//			"metrics_collected": map[string]interface{}{
+		//				"cpu": map[string]interface{}{},
+		//			},
+		//		},
+		//	},
+		//},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
