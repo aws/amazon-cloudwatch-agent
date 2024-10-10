@@ -1,16 +1,41 @@
 {
   "agent": {
-    "region": "us-west-2"
+    "debug": true
   },
   "logs": {
     "metrics_collected": {
-      "emf": {
-      },
+      "emf": { },
       "kubernetes": {
-        "cluster_name": "jvmCluster",
-        "namespace":"siprmp-jmx"
+        "cluster_name": "TestCluster",
+        "jmx_container_insights": true
+      }
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "jmx": {
+        "jvm": {
+          "measurement": [
+            "jvm.classes.loaded",
+            "jvm.memory.pool.used",
+            "jvm.operating.system.total.swap.space.size",
+            "jvm.operating.system.system.cpu.load",
+            "jvm.operating.system.process.cpu.load",
+            "jvm.operating.system.free.swap.space.size",
+            "jvm.operating.system.total.physical.memory.size",
+            "jvm.operating.system.free.physical.memory.size",
+            "jvm.operating.system.open.file.descriptor.count",
+            "jvm.operating.system.available.processors",
+            "jvm.threads.count",
+            "jvm.memory.heap.used",
+            "jvm.memory.nonheap.init",
+            "jvm.threads.daemon"
+          ]
+        }
       }
     },
-    "force_flush_interval": 5
+    "metrics_destinations": {
+      "cloudwatch": { }
+    }
   }
 }
