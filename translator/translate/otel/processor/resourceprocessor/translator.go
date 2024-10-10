@@ -56,9 +56,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
 	var attributes []any
+
 	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
 		attributes = t.getJMXAttributes(conf)
 	}
+
 	if len(attributes) == 0 && t.Name() != common.PipelineNameContainerInsightsJmx {
 		baseKey := common.JmxConfigKey
 		if t.Index() != -1 {
@@ -66,65 +68,59 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.ConfigKey(baseKey, common.AppendDimensionsKey)}
 	}
+
+	if t.Name() == common.PipelineNameContainerInsightsJmx {
+		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
+
+		if ok {
+			attributes = []any{
+				map[string]any{
+					"key":            "Namespace",
+					"from_attribute": "k8s.namespace.name",
+					"action":         "insert",
+				},
+				map[string]any{
+					"key":    "ClusterName",
+					"value":  clusterName,
+					"action": "upsert",
+				},
+				map[string]any{
+					"key":            "NodeName",
+					"from_attribute": "host.name",
+					"action":         "insert",
+				},
+			}
+		} else {
+			attributes = []any{
+				map[string]any{
+					"key":            "ClusterName",
+					"from_attribute": "k8s.cluster.name",
+					"action":         "insert",
+				},
+				map[string]any{
+					"key":            "Namespace",
+					"from_attribute": "k8s.namespace.name",
+					"action":         "insert",
+				},
+				map[string]any{
+					"key":            "NodeName",
+					"from_attribute": "host.name",
+					"action":         "insert",
+				},
+			}
+		}
+	}
+
 	c := confmap.NewFromStringMap(map[string]any{
 		"attributes": attributes,
 	})
 
-	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
-		attributes = t.getJMXAttributes(conf)
-	} else if t.Name() == common.PipelineNameContainerInsightsJmx {
-		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
-
-		if ok {
-			c = confmap.NewFromStringMap(map[string]any{
-				//from config
-				"attributes": []any{
-					map[string]any{
-						"key":            "Namespace",
-						"from_attribute": "k8s.namespace.name",
-						"action":         "insert",
-					},
-					map[string]any{
-						"key":    "ClusterName",
-						"value":  clusterName,
-						"action": "upsert",
-					},
-					map[string]any{
-						"key":            "NodeName",
-						"from_attribute": "host.name",
-						"action":         "insert",
-					},
-				},
-			})
-		} else {
-			c = confmap.NewFromStringMap(map[string]any{
-				//from resource detection processor
-				"attributes": []any{
-					map[string]any{
-						"key":            "ClusterName",
-						"from_attribute": "k8s.cluster.name",
-						"action":         "insert",
-					},
-					map[string]any{
-						"key":            "Namespace",
-						"from_attribute": "k8s.namespace.name",
-						"action":         "insert",
-					},
-					map[string]any{
-						"key":            "NodeName",
-						"from_attribute": "host.name",
-						"action":         "insert",
-					},
-				},
-			})
-		}
-
-	}
 	if err := c.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal resource processor: %w", err)
 	}
 
 	return cfg, nil
+
 }
 
 func (t *translator) getJMXAttributes(conf *confmap.Conf) []any {
