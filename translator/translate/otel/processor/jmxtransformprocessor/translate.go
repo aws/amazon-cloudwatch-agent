@@ -5,8 +5,8 @@ package jmxtransformprocessor
 
 import (
 	_ "embed"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"

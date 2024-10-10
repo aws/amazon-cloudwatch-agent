@@ -4,8 +4,6 @@
 package resourcedetection
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"path/filepath"
 	"testing"
 
@@ -15,8 +13,10 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 

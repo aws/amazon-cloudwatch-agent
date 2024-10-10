@@ -4,8 +4,6 @@
 package otel
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,8 +11,10 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
