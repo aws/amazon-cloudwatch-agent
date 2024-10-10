@@ -30,7 +30,7 @@ func TestTranslate(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
-	c := testutil.GetConf(t, filepath.Join("testdata", "unix", "ContainerInsightsJmxConfig.yaml"))
+	c := testutil.GetConf(t, filepath.Join("testdata", "unix", "config.yaml"))
 	require.NoError(t, c.Unmarshal(&expectedCfg))
 
 	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "unix", "config.json")))
@@ -53,7 +53,7 @@ func TestMetricDecoration(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
-	conf := testutil.GetConf(t, filepath.Join("testdata", "unix", "ContainerInsightsJmxConfig.yaml"))
+	conf := testutil.GetConf(t, filepath.Join("testdata", "unix", "config.yaml"))
 	require.NoError(t, conf.Unmarshal(&cfg))
 	sink := new(consumertest.MetricsSink)
 

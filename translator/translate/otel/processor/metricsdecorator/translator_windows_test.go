@@ -31,7 +31,7 @@ func TestTranslate(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
-	c := testutil.GetConf(t, filepath.Join("testdata", "windows", "ContainerInsightsJmxConfig.yaml"))
+	c := testutil.GetConf(t, filepath.Join("testdata", "windows", "config.yaml"))
 	err := c.Unmarshal(&expectedCfg)
 	assert.NoError(t, err)
 
@@ -54,7 +54,7 @@ func TestMetricDecoration(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
-	conf := testutil.GetConf(t, filepath.Join("testdata", "windows", "ContainerInsightsJmxConfig.yaml"))
+	conf := testutil.GetConf(t, filepath.Join("testdata", "windows", "config.yaml"))
 	err := conf.Unmarshal(&cfg)
 	assert.NoError(t, err)
 	sink := new(consumertest.MetricsSink)

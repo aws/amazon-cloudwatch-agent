@@ -73,7 +73,7 @@ func TestTracesTranslator(t *testing.T) {
 		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "traces", "config.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "traces", "ContainerInsightsJmxConfig.yaml")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "traces", "config.yaml")),
 		},
 	}
 	factory := otlpreceiver.NewFactory()
@@ -166,7 +166,7 @@ func TestMetricsTranslator(t *testing.T) {
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "metrics", "config.json")),
 			index: -1,
-			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics", "ContainerInsightsJmxConfig.yaml")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics", "config.yaml")),
 		},
 	}
 	factory := otlpreceiver.NewFactory()
@@ -263,7 +263,7 @@ func TestMetricsEmfTranslator(t *testing.T) {
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "metrics_emf", "config.json")),
 			index: -1,
-			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics_emf", "ContainerInsightsJmxConfig.yaml")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics_emf", "config.yaml")),
 		},
 	}
 	factory := otlpreceiver.NewFactory()
