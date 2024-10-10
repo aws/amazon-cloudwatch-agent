@@ -5,23 +5,25 @@ exporters:
     max_values_per_datum: 150
     middleware: agenthealth/metrics
     namespace: CWAgent
+    profile: AmazonCloudWatchAgent
     region: us-west-2
     resource_to_telemetry_conversion:
       enabled: true
+    shared_credential_file: fake-path
   awscloudwatchlogs/emf_logs:
     certificate_file_path: ""
     emf_only: true
     endpoint: ""
     imds_retries: 1
-    local_mode: false
+    local_mode: true
     log_group_name: emf/logs/default
     log_retention: 0
-    log_stream_name: bcd0745edc19
+    log_stream_name: host_name_from_env
     max_retries: 2
     middleware: agenthealth/logs
     no_verify_ssl: false
     num_workers: 8
-    profile: ""
+    profile: AmazonCloudWatchAgent
     proxy_address: ""
     raw_log: true
     region: us-west-2
@@ -39,6 +41,8 @@ exporters:
       enabled: true
       num_consumers: 1
       queue_size: 1000
+    shared_credentials_file:
+      - fake-path
   awsemf/containerinsights:
     certificate_file_path: ""
     detailed_metrics: false
@@ -48,7 +52,7 @@ exporters:
     endpoint: ""
     enhanced_container_insights: false
     imds_retries: 1
-    local_mode: false
+    local_mode: true
     log_group_name: /aws/containerinsights/{ClusterName}/performance
     log_retention: 0
     log_stream_name: '{NodeName}'
@@ -138,7 +142,7 @@ exporters:
     parse_json_encoded_attr_values:
       - Sources
       - kubernetes
-    profile: ""
+    profile: AmazonCloudWatchAgent
     proxy_address: ""
     region: us-west-2
     request_timeout_seconds: 30
@@ -147,6 +151,8 @@ exporters:
       enabled: true
     retain_initial_value_of_delta_metric: false
     role_arn: ""
+    shared_credentials_file:
+      - fake-path
     version: "0"
   awsemf/containerinsightsjmx:
     certificate_file_path: ""
@@ -157,7 +163,7 @@ exporters:
     endpoint: ""
     enhanced_container_insights: false
     imds_retries: 1
-    local_mode: false
+    local_mode: true
     log_group_name: /aws/containerinsights/{ClusterName}/jmx
     log_retention: 0
     log_stream_name: '{NodeName}'
@@ -203,7 +209,7 @@ exporters:
     no_verify_ssl: false
     num_workers: 8
     output_destination: cloudwatch
-    profile: ""
+    profile: AmazonCloudWatchAgent
     proxy_address: ""
     region: us-west-2
     request_timeout_seconds: 30
@@ -212,6 +218,8 @@ exporters:
       enabled: true
     retain_initial_value_of_delta_metric: false
     role_arn: ""
+    shared_credentials_file:
+      - fake-path
     version: "0"
   debug:
     sampling_initial: 2
@@ -224,7 +232,7 @@ extensions:
       operations:
         - PutLogEvents
       usage_flags:
-        mode: EC2
+        mode: OP
         region_type: ACJ
   agenthealth/metrics:
     is_usage_data_enabled: true
@@ -232,7 +240,7 @@ extensions:
       operations:
         - PutMetricData
       usage_flags:
-        mode: EC2
+        mode: OP
         region_type: ACJ
 processors:
   batch/containerinsights:
@@ -822,17 +830,19 @@ receivers:
     kube_config_path: ""
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
-    local_mode: false
+    local_mode: true
     max_retries: 0
     no_verify_ssl: false
     num_workers: 0
     prefer_full_pod_name: false
-    profile: ""
+    profile: AmazonCloudWatchAgent
     proxy_address: ""
     region: us-west-2
     request_timeout_seconds: 0
     resource_arn: ""
     role_arn: ""
+    shared_credentials_file:
+      - fake-path
   otlp/jmx:
     protocols:
       http:

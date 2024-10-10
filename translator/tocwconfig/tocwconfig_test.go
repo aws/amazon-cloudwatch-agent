@@ -27,7 +27,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -84,12 +83,18 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 }
 func TestContainerInsightsJMX(t *testing.T) {
 	resetContext(t)
-	testutil.SetPrometheusRemoteWriteTestingEnv(t)
-	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetRunInContainer(true)
-	expectedEnvVars := map[string]string{"CWAGENT_LOG_LEVEL": "DEBUG"}
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+
+	expectedEnvVars := map[string]string{
+		"CWAGENT_LOG_LEVEL": "DEBUG"}
+
 	checkTranslation(t, "container_insights_jmx", "linux", expectedEnvVars, "")
+
 }
+
 func TestGenericAppSignalsFallbackConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
