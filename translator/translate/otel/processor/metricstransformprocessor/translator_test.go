@@ -66,7 +66,7 @@ func TestContainerInsightsJmx(t *testing.T) {
 	c := testutil.GetConf(t, filepath.Join("configs", "config.yaml"))
 	require.NoError(t, c.Unmarshal(&expectedCfg))
 
-	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("configs", "config.json")))
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
 	translatedCfg, err := transl.Translate(conf)
 	assert.NoError(t, err)
 	actualCfg, ok := translatedCfg.(*metricstransformprocessor.Config)

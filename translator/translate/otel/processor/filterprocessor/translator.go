@@ -20,7 +20,7 @@ const (
 	matchTypeStrict = "strict"
 )
 
-//go:embed testdata/ContainerInsightsJmxConfig.yaml
+//go:embed ContainerInsightsJmxConfig.yaml
 var ContainerInsightsJmxConfig string
 
 type translator struct {

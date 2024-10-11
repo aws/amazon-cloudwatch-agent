@@ -14,16 +14,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-//go:embed testdata/config.yaml
+//go:embed config.yaml
 var transformJmxConfig string
 
 type translator struct {
 	name    string
 	factory processor.Factory
-}
-type Context struct {
-	name       string
-	statements []string
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
