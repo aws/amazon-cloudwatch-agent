@@ -107,7 +107,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
-    cumulativetodelta/hostDeltaMetrics:
+    cumulativetodelta/hostDeltaMetrics/cloudwatch:
         exclude:
             match_type: strict
             metrics:
@@ -362,7 +362,7 @@ service:
                 - batch/emf_logs
             receivers:
                 - udplog/emf_logs
-        metrics/host:
+        metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
@@ -378,11 +378,11 @@ service:
                 - telegraf_netstat
                 - telegraf_processes
                 - telegraf_mem
-        metrics/hostDeltaMetrics:
+        metrics/hostDeltaMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostDeltaMetrics
+                - cumulativetodelta/hostDeltaMetrics/cloudwatch
                 - ec2tagger
                 - transform
             receivers:
@@ -394,9 +394,9 @@ service:
             processors:
                 - filter/jmx/0
                 - resource/jmx
-                - cumulativetodelta/jmx
                 - transform/jmx/0
                 - ec2tagger
+                - cumulativetodelta/jmx
             receivers:
                 - jmx/0
         metrics/jmx/cloudwatch/1:

@@ -32,22 +32,10 @@ const (
 	placeholderTarget = "<target-system>"
 )
 
-var (
-	metricsDestinationsKey = common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey)
-)
-
 type translator struct {
 	name string
 	common.IndexProvider
-	destination string
-}
-
-func WithDestination(destination string) common.TranslatorOption {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.destination = destination
-		}
-	}
+	common.DestinationProvider
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
@@ -58,8 +46,8 @@ func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.Co
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.destination != "" {
-		t.name += "/" + t.destination
+	if t.Destination() != "" {
+		t.name += "/" + t.Destination()
 	}
 	if t.Index() != -1 {
 		t.name += "/" + strconv.Itoa(t.Index())
@@ -119,28 +107,20 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
 
-	switch t.destination {
-	case defaultDestination, common.CloudWatchKey:
-		if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.CloudWatchKey)) {
-			translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)))
-			translators.Exporters.Set(awscloudwatch.NewTranslator())
-			translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
-		} else {
-			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.destination)
-		}
+	switch t.Destination() {
+	case common.DefaultDestination, common.CloudWatchKey:
+		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)))
+		translators.Exporters.Set(awscloudwatch.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
 	case common.AMPKey:
-		if conf.IsSet(metricsDestinationsKey) && conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) {
-			translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
-			translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
-			if conf.IsSet(common.MetricsAggregationDimensionsKey) {
-				translators.Processors.Set(rollupprocessor.NewTranslator())
-			}
-			translators.Extensions.Set(sigv4auth.NewTranslator())
-		} else {
-			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.destination)
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
+			translators.Processors.Set(rollupprocessor.NewTranslator())
 		}
+		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		translators.Extensions.Set(sigv4auth.NewTranslator())
 	default:
-		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.destination)
+		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
 
 	return &translators, nil

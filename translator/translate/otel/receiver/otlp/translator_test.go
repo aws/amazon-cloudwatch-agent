@@ -26,7 +26,7 @@ func TestTranslatorWithoutDataType(t *testing.T) {
 }
 
 func TestTracesTranslator(t *testing.T) {
-	tt := NewTranslator(WithDataType(component.DataTypeTraces))
+	tt := NewTranslator(WithDataType(component.DataTypeTraces), WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)))
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
@@ -173,10 +173,108 @@ func TestMetricsTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(WithDataType(component.DataTypeMetrics))
+			tt := NewTranslator(WithDataType(component.DataTypeMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)))
 			if testCase.index != -1 {
-				tt = NewTranslator(WithDataType(component.DataTypeMetrics), common.WithIndex(testCase.index))
+				tt = NewTranslator(WithDataType(component.DataTypeMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)), common.WithIndex(testCase.index))
 			}
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*otlpreceiver.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}
+
+func TestMetricsEmfTranslator(t *testing.T) {
+	multiConfig := map[string]interface{}{"logs": map[string]interface{}{
+		"metrics_collected": map[string]interface{}{
+			"otlp": []any{
+				map[string]interface{}{},
+				map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:1234",
+					"http_endpoint": "127.0.0.1:2345",
+				},
+			},
+		},
+	}}
+
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		index   int
+		want    *confmap.Conf
+		wantErr error
+	}{
+		"WithMissingKey": {
+			input: map[string]interface{}{"logs": map[string]interface{}{}},
+			index: -1,
+			wantErr: &common.MissingKeyError{
+				ID:      NewTranslator(WithDataType(component.DataTypeMetrics)).ID(),
+				JsonKey: common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey),
+			},
+		},
+		"WithDefault": {
+			input: map[string]interface{}{"logs": map[string]interface{}{"metrics_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
+			index: -1,
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
+				},
+			}),
+		},
+		"WithMultiple_0": {
+			input: multiConfig,
+			index: 0,
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
+				},
+			}),
+		},
+		"WithMultiple_1": {
+			input: multiConfig,
+			index: 1,
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:1234",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:2345",
+					},
+				},
+			}),
+		},
+		"WithCompleteConfig": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "metrics_emf", "config.json")),
+			index: -1,
+			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics_emf", "config.yaml")),
+		},
+	}
+	factory := otlpreceiver.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			tt := NewTranslator(
+				WithDataType(component.DataTypeMetrics),
+				WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)),
+				common.WithIndex(testCase.index),
+			)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
