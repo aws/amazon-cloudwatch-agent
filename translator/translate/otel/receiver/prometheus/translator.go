@@ -4,7 +4,6 @@
 package prometheus
 
 import (
-	"crypto/tls"
 	"fmt"
 	"os"
 	"time"
@@ -20,12 +19,12 @@ import (
 )
 
 var (
-	configPathKey = common.ConfigKey(common.MetricsPrometheus, "prometheus_config_path")
+	configPathKey = common.ConfigKey(common.PrometheusConfigKeys[component.DataTypeMetrics], common.PrometheusConfigPathKey)
 )
 
 type prometheusConfig struct {
 	promconfig.Config
-	//TargetAllocator targetAllocator `yaml:"target_allocator"`
+	TargetAllocator targetAllocator `yaml:"target_allocator"`
 }
 
 type targetAllocator struct {
@@ -36,8 +35,9 @@ type targetAllocator struct {
 }
 
 type translator struct {
-	name    string
-	factory receiver.Factory
+	name     string
+	dataType component.DataType
+	factory  receiver.Factory
 }
 
 type Option func(any)
@@ -71,24 +71,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			return nil, fmt.Errorf("unable to unmarshall prometheus config yaml: %w", err)
 		}
 
-		//fmt.Printf("unmarshalled prom config: %+v\n", promCfg)
 		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
 		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
-		for _, scfg := range cfg.PrometheusConfig.ScrapeConfigs {
-			if scfg.HTTPClientConfig.TLSConfig.MaxVersion == 0 {
-				scfg.HTTPClientConfig.TLSConfig.MaxVersion = tls.VersionTLS13
-			}
-			if scfg.HTTPClientConfig.TLSConfig.MinVersion == 0 {
-				scfg.HTTPClientConfig.TLSConfig.MinVersion = tls.VersionTLS10
-			}
-		}
-		// force update TLS min/max versions since they default to 0 as uint16 type and fails validations during marshalling
-		if cfg.PrometheusConfig.TracingConfig.TLSConfig.MaxVersion == 0 {
-			cfg.PrometheusConfig.TracingConfig.TLSConfig.MaxVersion = tls.VersionTLS13
-		}
-		if cfg.PrometheusConfig.TracingConfig.TLSConfig.MinVersion == 0 {
-			cfg.PrometheusConfig.TracingConfig.TLSConfig.MinVersion = tls.VersionTLS10
-		}
 		//cfg.TargetAllocator = &promCfg.TargetAllocator
 	}
 

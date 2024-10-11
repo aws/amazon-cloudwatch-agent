@@ -31,6 +31,7 @@ const (
 	CloudWatchKey                      = "cloudwatch"
 	CloudWatchLogsKey                  = "cloudwatchlogs"
 	PrometheusKey                      = "prometheus"
+	PrometheusConfigPathKey            = "prometheus_config_path"
 	AMPKey                             = "amp"
 	WorkspaceIDKey                     = "workspace_id"
 	EMFProcessorKey                    = "emf_processor"
@@ -106,8 +107,11 @@ var (
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
 
-	MetricsDestinations = ConfigKey(MetricsKey, MetricsDestinationsKey)
-	MetricsPrometheus   = ConfigKey(MetricsKey, MetricsCollectedKey, PrometheusKey)
+	MetricsDestinations  = ConfigKey(MetricsKey, MetricsDestinationsKey)
+	PrometheusConfigKeys = map[component.DataType]string{
+		component.DataTypeLogs:    ConfigKey(LogsKey, MetricsCollectedKey, PrometheusKey),
+		component.DataTypeMetrics: ConfigKey(MetricsKey, MetricsCollectedKey, PrometheusKey),
+	}
 )
 
 // Translator is used to translate the JSON config into an
