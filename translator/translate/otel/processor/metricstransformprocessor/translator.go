@@ -4,6 +4,7 @@
 package metricstransformprocessor
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
@@ -15,6 +16,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
+
+//go:embed metricstransform_jmx_config.yaml
+var metricTransformJmxConfig string
 
 var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeGpuContainer,
@@ -64,6 +68,10 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
+	if t.name == common.PipelineNameContainerInsightsJmx {
+		return common.GetYamlFileToYamlConfig(cfg, metricTransformJmxConfig)
+	}
+
 	transformRules := []map[string]interface{}{
 		{
 			"include":                   "apiserver_request_total",

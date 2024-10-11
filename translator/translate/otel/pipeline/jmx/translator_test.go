@@ -346,7 +346,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			context.CurrentContext().SetRunInContainer(testCase.isContainer)
-			tt := NewTranslator(common.WithIndex(testCase.index), WithDestination(testCase.destination))
+			tt := NewTranslator(common.WithIndex(testCase.index), common.WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

@@ -165,7 +165,7 @@ service:
         - agenthealth/metrics
         - sigv4auth
     pipelines:
-        metrics/host:
+        metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:

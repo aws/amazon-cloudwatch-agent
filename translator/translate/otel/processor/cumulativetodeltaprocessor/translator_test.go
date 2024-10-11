@@ -31,7 +31,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey, " or ", otlpKey)},
+			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey, " or ", otlpKey, " or ", otlpEmfKey)},
 		},
 		"GenerateDeltaProcessorConfigWithNet": {
 			input: map[string]any{
