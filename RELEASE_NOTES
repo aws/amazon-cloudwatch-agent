@@ -1,4 +1,21 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300048.0 (2024-10-11)
+========================================================================
+Features:
+* Support OTLP receiver for metrics
+* Support AMP as a metrics destination
+* Support for supplemental configuration
+* Support JMX metric collection for JVM, Tomcat, and Kafka on EKS
+* Support JMX Container Insights
+
+Enhancements:
+* [Traces] Support OTLP format in transit
+* [ApplicationSignals] Update metric processing
+
+Bug Fixes:
+* [Metrics/Procstat] Fix memory_swap metrics on Linux
+
+========================================================================
 Amazon CloudWatch Agent 1.300047.0 (2024-10-03)
 ========================================================================
 Enhancements:
