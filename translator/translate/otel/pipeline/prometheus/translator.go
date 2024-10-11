@@ -5,10 +5,11 @@ package prometheus
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -77,6 +78,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	// return pipeline based on destination to keep source/destination combinations clearly separated
 	// telegraf_prometheus - cloudwatch
 	// otel_prometheus - AMP
+	// this could change in future releases to support different source/destination combinations
 	switch t.destination {
 	case "", common.CloudWatchKey:
 		if !conf.IsSet(common.MetricsDestinations) || conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.CloudWatchKey)) {
