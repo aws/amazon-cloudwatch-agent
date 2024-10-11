@@ -9,12 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
@@ -38,9 +34,6 @@ type EC2Info struct {
 	Region string
 
 	metadataProvider ec2metadataprovider.MetadataProvider
-	ec2API           ec2iface.EC2API
-	ec2Provider      ec2ProviderType
-	ec2Credential    *configaws.CredentialConfig
 	logger           *zap.Logger
 	done             chan struct{}
 }
@@ -50,7 +43,6 @@ func (ei *EC2Info) initEc2Info() {
 	if err := ei.setInstanceIDAccountID(); err != nil {
 		return
 	}
-	ei.ec2API = ei.ec2Provider(ei.Region, ei.ec2Credential)
 	if err := ei.setAutoScalingGroup(); err != nil {
 		return
 	}
@@ -101,8 +93,8 @@ func (ei *EC2Info) setAutoScalingGroup() error {
 			ei.logger.Debug("Initial retrieval of tags and volumes", zap.Int("retry", retry))
 		}
 
-		if err := ei.retrieveAsgName(ei.ec2API); err != nil {
-			ei.logger.Warn("Unable to describe ec2 tags", zap.Int("retry", retry), zap.Error(err))
+		if err := ei.retrieveAsgName(); err != nil {
+			ei.logger.Warn("Unable to fetch instance tags with imds", zap.Int("retry", retry), zap.Error(err))
 		} else {
 			ei.logger.Debug("Retrieval of auto-scaling group tags succeeded")
 			return nil
@@ -113,15 +105,11 @@ func (ei *EC2Info) setAutoScalingGroup() error {
 
 }
 
-/*
-This can also be implemented by just calling the InstanceTagValue and then DescribeTags on failure. But preferred the current implementation
-as we need to distinguish the tags not being fetchable at all, from the ASG tag in particular not existing.
-*/
-func (ei *EC2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
+func (ei *EC2Info) retrieveAsgName() error {
 	tags, err := ei.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
 		ei.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
-		return ei.retrieveAsgNameWithDescribeTags(ec2API)
+		return err
 	} else if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
 		asg, err := ei.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
 		if err != nil {
@@ -134,50 +122,9 @@ func (ei *EC2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
 	return nil
 }
 
-func (ei *EC2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error {
-	tagFilters := []*ec2.Filter{
-		{
-			Name:   aws.String("resource-type"),
-			Values: aws.StringSlice([]string{"instance"}),
-		},
-		{
-			Name:   aws.String("resource-id"),
-			Values: aws.StringSlice([]string{ei.InstanceID}),
-		},
-		{
-			Name:   aws.String("key"),
-			Values: aws.StringSlice([]string{ec2tagger.Ec2InstanceTagKeyASG}),
-		},
-	}
-	input := &ec2.DescribeTagsInput{
-		Filters: tagFilters,
-	}
-	for {
-		result, err := ec2API.DescribeTags(input)
-		if err != nil {
-			ei.logger.Error("Unable to retrieve EC2 AutoScalingGroup. This feature must only be used on an EC2 instance.")
-			return err
-		}
-		for _, tag := range result.Tags {
-			key := *tag.Key
-			if ec2tagger.Ec2InstanceTagKeyASG == key {
-				ei.AutoScalingGroup = *tag.Value
-				return nil
-			}
-		}
-		if result.NextToken == nil {
-			break
-		}
-		input.SetNextToken(*result.NextToken)
-	}
-	return nil
-}
-
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, region string, logger *zap.Logger) *EC2Info {
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, done chan struct{}, region string, logger *zap.Logger) *EC2Info {
 	return &EC2Info{
 		metadataProvider: metadataProvider,
-		ec2Provider:      providerType,
-		ec2Credential:    ec2Credential,
 		done:             done,
 		Region:           region,
 		logger:           logger,

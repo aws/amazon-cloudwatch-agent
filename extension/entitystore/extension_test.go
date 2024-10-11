@@ -75,8 +75,7 @@ func (ms *mockSTSClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.Ge
 
 type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
-	Tags                     string
-	TagValue                 string
+	Tags                     map[string]string
 	InstanceTagError         bool
 }
 
@@ -121,11 +120,19 @@ func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error)
 	if m.InstanceTagError {
 		return "", errors.New("an error occurred for instance tag retrieval")
 	}
-	return m.Tags, nil
+	var tagsString string
+	for key, val := range m.Tags {
+		tagsString += key + "=" + val + ","
+	}
+	return tagsString, nil
 }
 
 func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
-	return m.TagValue, nil
+	tag, ok := m.Tags[tagKey]
+	if !ok {
+		return "", errors.New("tag not found")
+	}
+	return tag, nil
 }
 
 func TestEntityStore_EC2Info(t *testing.T) {

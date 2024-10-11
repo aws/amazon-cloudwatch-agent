@@ -5,14 +5,10 @@ package entitystore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -46,11 +42,8 @@ const (
 )
 
 var (
-	priorityMap = map[string]int{
-		SERVICE:     2,
-		APPLICATION: 1,
-		APP:         0,
-	}
+	//priorityMap is ranking in how we prioritize which IMDS tag determines the service name
+	priorityMap = []string{SERVICE, APPLICATION, APP}
 )
 
 type ServiceAttribute struct {
@@ -63,17 +56,14 @@ type LogGroupName string
 type LogFileGlob string
 
 type serviceprovider struct {
-	mode              string
-	ec2Info           *EC2Info
-	metadataProvider  ec2metadataprovider.MetadataProvider
-	ec2API            ec2iface.EC2API
-	ec2Provider       ec2ProviderType
-	ec2Credential     *configaws.CredentialConfig
-	iamRole           string
-	ec2TagServiceName string
-	region            string
-	done              chan struct{}
-	logger            *zap.Logger
+	mode             string
+	ec2Info          *EC2Info
+	metadataProvider ec2metadataprovider.MetadataProvider
+	iamRole          string
+	imdsServiceName  string
+	region           string
+	done             chan struct{}
+	logger           *zap.Logger
 	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
 	// Example:
 	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "cloudwatch-agent"}
@@ -86,15 +76,10 @@ type serviceprovider struct {
 }
 
 func (s *serviceprovider) startServiceProvider() {
-	oneTimeRetryer := NewRetryer(true, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	limitedRetryer := NewRetryer(false, false, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
-	err := s.getEC2Client()
-	if err != nil {
-		go oneTimeRetryer.refreshLoop(s.getEC2Client)
-	}
 	go unlimitedRetryer.refreshLoop(s.getIAMRole)
-	go limitedRetryer.refreshLoop(s.getEC2TagServiceName)
+	go limitedRetryer.refreshLoop(s.getImdsServiceName)
 }
 
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
@@ -146,7 +131,7 @@ func (s *serviceprovider) logFileServiceAttribute(logFile LogFileGlob, logGroup 
 	return mergeServiceAttributes([]serviceAttributeProvider{
 		func() ServiceAttribute { return s.serviceAttributeForLogGroup(logGroup) },
 		func() ServiceAttribute { return s.serviceAttributeForLogFile(logFile) },
-		s.serviceAttributeFromEc2Tags,
+		s.serviceAttributeFromImdsTags,
 		s.serviceAttributeFromIamRole,
 		s.serviceAttributeFromAsg,
 		s.serviceAttributeFallback,
@@ -155,7 +140,7 @@ func (s *serviceprovider) logFileServiceAttribute(logFile LogFileGlob, logGroup 
 
 func (s *serviceprovider) getServiceNameAndSource() (string, string) {
 	sa := mergeServiceAttributes([]serviceAttributeProvider{
-		s.serviceAttributeFromEc2Tags,
+		s.serviceAttributeFromImdsTags,
 		s.serviceAttributeFromIamRole,
 		s.serviceAttributeFallback,
 	})
@@ -178,13 +163,13 @@ func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) Servic
 	return s.logFiles[logFile]
 }
 
-func (s *serviceprovider) serviceAttributeFromEc2Tags() ServiceAttribute {
-	if s.ec2TagServiceName == "" {
+func (s *serviceprovider) serviceAttributeFromImdsTags() ServiceAttribute {
+	if s.imdsServiceName == "" {
 		return ServiceAttribute{}
 	}
 
 	return ServiceAttribute{
-		ServiceName:       s.ec2TagServiceName,
+		ServiceName:       s.imdsServiceName,
 		ServiceNameSource: ServiceNameSourceResourceTags,
 	}
 }
@@ -240,71 +225,28 @@ func (s *serviceprovider) getIAMRole() error {
 	}
 	return nil
 }
-
-func (s *serviceprovider) getEC2TagServiceName() error {
-	if s.ec2API == nil {
-		return fmt.Errorf("can't get EC2 tag since client is not set up yet ")
-	}
-	serviceTagFilters, err := s.getEC2TagFilters()
+func (s *serviceprovider) getImdsServiceName() error {
+	tags, err := s.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to get service name from EC2 tag: %s", err)
+		s.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
+		return err
 	}
-	currentTagPriority := -1
-	for {
-		input := &ec2.DescribeTagsInput{
-			Filters: serviceTagFilters,
-		}
-		result, err := s.ec2API.DescribeTags(input)
-		if err != nil {
-			return err
-		}
-		for _, tag := range result.Tags {
-			key := *tag.Key
-			value := *tag.Value
-			if priority, found := priorityMap[key]; found {
-				if priority > currentTagPriority {
-					s.ec2TagServiceName = value
-					currentTagPriority = priority
-				}
+	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order.
+	for _, value := range priorityMap {
+		if strings.Contains(tags, value) {
+			serviceName, err := s.metadataProvider.InstanceTagValue(context.Background(), value)
+			if err != nil {
+				continue
+			} else {
+				s.imdsServiceName = serviceName
 			}
-		}
-		if result.NextToken == nil {
 			break
 		}
-		input.SetNextToken(*result.NextToken)
+	}
+	if s.imdsServiceName == "" {
+		s.logger.Debug("Service name not found through IMDS")
 	}
 	return nil
-}
-
-func (s *serviceprovider) getEC2Client() error {
-	if s.ec2API != nil {
-		return nil
-	}
-	s.ec2API = s.ec2Provider(s.region, s.ec2Credential)
-	return nil
-}
-
-func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
-	instanceDocument, err := s.metadataProvider.Get(context.Background())
-	if err != nil {
-		return nil, errors.New("failed to get instance document")
-	}
-	instanceID := instanceDocument.InstanceID
-	tagFilters := []*ec2.Filter{
-		{
-			Name:   aws.String("resource-type"),
-			Values: aws.StringSlice([]string{"instance"}),
-		},
-		{
-			Name:   aws.String("resource-id"),
-			Values: aws.StringSlice([]string{instanceID}),
-		},
-		{
-			Name:   aws.String("key"),
-			Values: aws.StringSlice([]string{SERVICE, APPLICATION, APP}),
-		},
-	}
-	return tagFilters, nil
 }
 
 func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, logger *zap.Logger) serviceProviderInterface {
@@ -313,8 +255,6 @@ func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataPr
 		region:           region,
 		ec2Info:          ec2Info,
 		metadataProvider: metadataProvider,
-		ec2Provider:      providerType,
-		ec2Credential:    ec2Credential,
 		done:             done,
 		logger:           logger,
 		logFiles:         make(map[LogFileGlob]ServiceAttribute),

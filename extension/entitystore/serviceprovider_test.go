@@ -7,65 +7,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
-type mockServiceNameEC2Client struct {
-	ec2iface.EC2API
-	throttleError bool
-	authError     bool
-}
-
-// construct the return results for the mocked DescribeTags api
-var (
-	tagKeyService = "service"
-	tagValService = "test-service"
-	tagDesService = ec2.TagDescription{Key: &tagKeyService, Value: &tagValService}
-)
-
-func (m *mockServiceNameEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
-	if m.throttleError {
-		return nil, awserr.New(RequestLimitExceeded, "throttle limit exceeded", nil)
-	}
-	if m.authError {
-		return nil, awserr.New("UnauthorizedOperation", "UnauthorizedOperation occurred", nil)
-	}
-	testTags := ec2.DescribeTagsOutput{
-		NextToken: nil,
-		Tags:      []*ec2.TagDescription{&tagDesService},
-	}
-	return &testTags, nil
-}
-
 func Test_serviceprovider_startServiceProvider(t *testing.T) {
-	type args struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-		ec2Client        ec2iface.EC2API
-	}
 	tests := []struct {
-		name    string
-		args    args
-		wantIAM string
-		wantTag string
+		name             string
+		metadataProvider ec2metadataprovider.MetadataProvider
+		wantIAM          string
+		wantTag          string
 	}{
 		{
 			name: "HappyPath_AllServiceNames",
-			args: args{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-						InstanceID: "i-123456789"},
-				},
-				ec2Client: &mockServiceNameEC2Client{},
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+					InstanceID: "i-123456789"},
+				Tags: map[string]string{"service": "test-service"},
 			},
 			wantIAM: "TestRole",
 			wantTag: "test-service",
@@ -76,20 +38,16 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 			done := make(chan struct{})
 			logger, _ := zap.NewDevelopment()
 			s := serviceprovider{
-				metadataProvider: tt.args.metadataProvider,
-				ec2Provider: func(s string, config *configaws.CredentialConfig) ec2iface.EC2API {
-					return tt.args.ec2Client
-				},
-				ec2API: tt.args.ec2Client,
-				done:   done,
-				logger: logger,
+				metadataProvider: tt.metadataProvider,
+				done:             done,
+				logger:           logger,
 			}
 			go s.startServiceProvider()
 			time.Sleep(3 * time.Second)
 			close(done)
 
 			assert.Equal(t, tt.wantIAM, s.iamRole)
-			assert.Equal(t, tt.wantTag, s.ec2TagServiceName)
+			assert.Equal(t, tt.wantTag, s.imdsServiceName)
 		})
 	}
 }
@@ -196,10 +154,10 @@ func Test_serviceprovider_serviceAttributeForLogFile(t *testing.T) {
 
 func Test_serviceprovider_serviceAttributeFromEc2Tags(t *testing.T) {
 	s := &serviceprovider{}
-	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromEc2Tags())
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromImdsTags())
 
-	s = &serviceprovider{ec2TagServiceName: "test-service"}
-	assert.Equal(t, ServiceAttribute{ServiceName: "test-service", ServiceNameSource: ServiceNameSourceResourceTags}, s.serviceAttributeFromEc2Tags())
+	s = &serviceprovider{imdsServiceName: "test-service"}
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service", ServiceNameSource: ServiceNameSourceResourceTags}, s.serviceAttributeFromImdsTags())
 }
 
 func Test_serviceprovider_serviceAttributeFromIamRole(t *testing.T) {
@@ -248,7 +206,7 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 	s.iamRole = "test-role"
 	assert.Equal(t, ServiceAttribute{ServiceName: "test-role", ServiceNameSource: ServiceNameSourceClientIamRole, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 
-	s.ec2TagServiceName = "test-service-from-tags"
+	s.imdsServiceName = "test-service-from-tags"
 	assert.Equal(t, ServiceAttribute{ServiceName: "test-service-from-tags", ServiceNameSource: ServiceNameSourceResourceTags, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 
 	s.logFiles["glob"] = ServiceAttribute{ServiceName: "test-service-from-logfile", ServiceNameSource: ServiceNameSourceUserConfiguration}
@@ -274,36 +232,29 @@ func Test_serviceprovider_getServiceNameSource(t *testing.T) {
 	assert.Equal(t, s.iamRole, serviceName)
 	assert.Equal(t, ServiceNameSourceClientIamRole, serviceNameSource)
 
-	s.ec2TagServiceName = "test-service-from-tags"
+	s.imdsServiceName = "test-service-from-tags"
 	serviceName, serviceNameSource = s.getServiceNameAndSource()
-	assert.Equal(t, s.ec2TagServiceName, serviceName)
+	assert.Equal(t, s.imdsServiceName, serviceName)
 	assert.Equal(t, ServiceNameSourceResourceTags, serviceNameSource)
+
 }
 
 func Test_serviceprovider_getIAMRole(t *testing.T) {
-	type fields struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-		ec2API           ec2iface.EC2API
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   string
+		name             string
+		metadataProvider ec2metadataprovider.MetadataProvider
+		want             string
 	}{
 		{
-			name: "Happypath_MockMetadata",
-			fields: fields{
-				metadataProvider: &mockMetadataProvider{},
-				ec2API:           &mockServiceNameEC2Client{},
-			},
-			want: "TestRole",
+			name:             "Happypath_MockMetadata",
+			metadataProvider: &mockMetadataProvider{},
+			want:             "TestRole",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := serviceprovider{
-				metadataProvider: tt.fields.metadataProvider,
-				ec2API:           tt.fields.ec2API,
+				metadataProvider: tt.metadataProvider,
 			}
 			s.getIAMRole()
 			assert.Equal(t, tt.want, s.iamRole)
@@ -311,84 +262,52 @@ func Test_serviceprovider_getIAMRole(t *testing.T) {
 	}
 }
 
-func Test_serviceprovider_getEC2TagFilters(t *testing.T) {
-	type fields struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-		ec2API           ec2iface.EC2API
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		want    []*ec2.Filter
-		wantErr assert.ErrorAssertionFunc
-	}{
-		{
-			name: "HappyPath_MatchTags",
-			fields: fields{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-						InstanceID: "i-123456789"},
-				},
-				ec2API: &mockServiceNameEC2Client{},
-			},
-			want: []*ec2.Filter{
-				{
-					Name:   aws.String("resource-type"),
-					Values: aws.StringSlice([]string{"instance"}),
-				}, {
-					Name:   aws.String("resource-id"),
-					Values: aws.StringSlice([]string{"i-123456789"}),
-				}, {
-					Name:   aws.String("key"),
-					Values: aws.StringSlice([]string{"service", "application", "app"}),
-				},
-			},
-			wantErr: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &serviceprovider{
-				metadataProvider: tt.fields.metadataProvider,
-				ec2API:           tt.fields.ec2API,
-			}
-			got, err := s.getEC2TagFilters()
-			assert.NoError(t, err)
-			assert.Equalf(t, tt.want, got, "getEC2TagFilters()")
-		})
-	}
-}
+func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 
-func Test_serviceprovider_getEC2TagServiceName(t *testing.T) {
-	type fields struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-		ec2API           ec2iface.EC2API
-	}
 	tests := []struct {
 		name               string
-		fields             fields
+		metadataProvider   ec2metadataprovider.MetadataProvider
 		wantTagServiceName string
 	}{
 		{
-			name: "HappyPath_ServiceExists",
-			fields: fields{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-						InstanceID: "i-123456789"},
-				},
-				ec2API: &mockServiceNameEC2Client{},
-			},
+			name:               "HappyPath_ServiceExists",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"service": "test-service"}},
+			wantTagServiceName: "test-service",
+		},
+		{
+			name:               "HappyPath_ApplicationExists",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"application": "test-application"}},
+			wantTagServiceName: "test-application",
+		},
+		{
+			name:               "HappyPath_AppExists",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"app": "test-app"}},
+			wantTagServiceName: "test-app",
+		},
+		{
+			name:               "HappyPath_PreferServiceOverApplication",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"service": "test-service", "application": "test-application"}},
+			wantTagServiceName: "test-service",
+		},
+		{
+			name:               "HappyPath_PreferApplicationOverApp",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"application": "test-application", "app": "test-app"}},
+			wantTagServiceName: "test-application",
+		},
+		{
+			name:               "HappyPath_PreferServiceOverApplicationAndApp",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"service": "test-service", "application": "test-application", "app": "test-app"}},
 			wantTagServiceName: "test-service",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &serviceprovider{
-				metadataProvider: tt.fields.metadataProvider,
-				ec2API:           tt.fields.ec2API,
+				logger:           zap.NewExample(),
+				metadataProvider: tt.metadataProvider,
 			}
-			s.getEC2TagServiceName()
-			assert.Equal(t, tt.wantTagServiceName, s.ec2TagServiceName)
+			s.getImdsServiceName()
+			assert.Equal(t, tt.wantTagServiceName, s.imdsServiceName)
 		})
 	}
 }
