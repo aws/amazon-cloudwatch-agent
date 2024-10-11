@@ -143,6 +143,21 @@ processors:
               statements:
                 - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
+    transform/jmx/drop:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              statements:
+                - delete_matching_keys(attributes, "^cloud.*")
+                - delete_matching_keys(attributes, "^host.*")
+                - delete_matching_keys(attributes, "^os.*")
+                - delete_matching_keys(attributes, "^container.*")
+                - delete_matching_keys(attributes, "^process.*")
+                - delete_matching_keys(attributes, "^service.*")
+                - delete_matching_keys(attributes, "^telemetry.*")
+        trace_statements: []
 receivers:
     otlp/jmx:
         protocols:
@@ -164,6 +179,7 @@ service:
             processors:
                 - filter/jmx/0
                 - resource/jmx/0
+                - transform/jmx/drop
                 - transform/jmx/0
                 - batch/jmx/amp/0
             receivers:
@@ -174,6 +190,7 @@ service:
             processors:
                 - filter/jmx/1
                 - resource/jmx/1
+                - transform/jmx/drop
                 - transform/jmx/1
                 - batch/jmx/amp/1
             receivers:
@@ -184,6 +201,7 @@ service:
             processors:
                 - filter/jmx/0
                 - resource/jmx/0
+                - transform/jmx/drop
                 - transform/jmx/0
                 - cumulativetodelta/jmx
             receivers:
@@ -194,6 +212,7 @@ service:
             processors:
                 - filter/jmx/1
                 - resource/jmx/1
+                - transform/jmx/drop
                 - transform/jmx/1
                 - cumulativetodelta/jmx
             receivers:

@@ -398,7 +398,7 @@ processors:
               from_context: ""
               key: NodeName
               pattern: ""
-              value: "host_name_from_env"
+              value: host_name_from_env
     transform/containerinsightsjmx:
         error_mode: propagate
         flatten_data: false
@@ -412,23 +412,23 @@ processors:
                 - set(unit, "Bytes") where name == "jvm.memory.heap.used"
                 - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
                 - set(unit, "Bytes") where name == "jvm.memory.pool.used"
-                - set(unit, "Bytes") where name == "tomcat.traffic.received"
-                - set(unit, "Bytes") where name == "tomcat.traffic.sent"
                 - set(unit, "Bytes") where name == "jvm.system.swap.space.total"
                 - set(unit, "Bytes") where name == "jvm.system.swap.space.free"
                 - set(unit, "Bytes") where name == "jvm.system.physical.memory.total"
                 - set(unit, "Bytes") where name == "jvm.system.physical.memory.free"
-                - set(unit, "Count") where name == "tomcat.sessions"
-                - set(unit, "Count") where name == "tomcat.rejected_sessions"
                 - set(unit, "Count") where name == "jvm.threads.count"
                 - set(unit, "Count") where name == "jvm.daemon_threads.count"
-                - set(unit, "Count") where name == "jvm.open_file_descriptor.count"
-                - set(unit, "Count") where name == "jvm.system.available.processors"
-                - set(unit, "Count") where name == "tomcat.request_count"
-                - set(unit, "Count") where name == "tomcat.errors"
                 - set(unit, "Count") where name == "jvm.classes.loaded"
                 - set(unit, "Count") where name == "jvm.system.cpu.utilization"
                 - set(unit, "Count") where name == "jvm.cpu.recent_utilization"
+                - set(unit, "Count") where name == "jvm.open_file_descriptor.count"
+                - set(unit, "Count") where name == "jvm.system.available.processors"
+                - set(unit, "Bytes") where name == "tomcat.traffic.received"
+                - set(unit, "Bytes") where name == "tomcat.traffic.sent"
+                - set(unit, "Count") where name == "tomcat.sessions"
+                - set(unit, "Count") where name == "tomcat.rejected_sessions"
+                - set(unit, "Count") where name == "tomcat.request_count"
+                - set(unit, "Count") where name == "tomcat.errors"
                 - set(unit, "Milliseconds") where name == "tomcat.processing_time"
         trace_statements: []
 receivers:

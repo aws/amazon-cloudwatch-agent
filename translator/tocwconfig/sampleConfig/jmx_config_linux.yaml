@@ -122,11 +122,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx:
         error_mode: propagate
@@ -135,9 +135,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
 receivers:
     jmx:
@@ -161,14 +161,6 @@ service:
         - agenthealth/metrics
         - sigv4auth
     pipelines:
-        metrics/host/cloudwatch:
-            exporters:
-                - awscloudwatch
-            processors:
-                - transform
-            receivers:
-                - telegraf_cpu
-                - telegraf_disk
         metrics/host/amp:
             exporters:
                 - prometheusremotewrite/amp
@@ -176,8 +168,16 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
+                - telegraf_cpu
+        metrics/host/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - transform
+            receivers:
+                - telegraf_disk
+                - telegraf_cpu
         metrics/jmx/amp:
             exporters:
                 - prometheusremotewrite/amp

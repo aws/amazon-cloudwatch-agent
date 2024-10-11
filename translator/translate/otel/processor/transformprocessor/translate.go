@@ -5,6 +5,7 @@ package transformprocessor
 
 import (
 	_ "embed"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -16,6 +17,9 @@ import (
 
 //go:embed transform_jmx_config.yaml
 var transformJmxConfig string
+
+//go:embed transform_jmx_drop_config.yaml
+var transformJmxDropConfig string
 
 type translator struct {
 	name    string
@@ -32,13 +36,13 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if !(conf != nil && conf.IsSet(common.ContainerInsightsConfigKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.ContainerInsightsConfigKey}
-	}
+func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	if t.name == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, transformJmxConfig)
+	}
+	if strings.HasPrefix(t.name, common.PipelineNameJmx) { // For JMX on EKS
+		return common.GetYamlFileToYamlConfig(cfg, transformJmxDropConfig)
 	}
 
 	return cfg, nil
