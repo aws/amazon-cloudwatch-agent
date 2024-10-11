@@ -22,16 +22,12 @@ func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	if len(destinations) == 0 {
 		destinations = append(destinations, "")
 	}
-	switch v := conf.Get(common.MetricsPrometheus).(type) {
-	case []any:
-		for index := range v {
+
+	for dataType, configKey := range common.PrometheusConfigKeys {
+		if conf.IsSet(configKey) {
 			for _, destination := range destinations {
-				translators.Set(NewTranslator(WithIndex(index), WithDestination(destination)))
+				translators.Set(NewTranslator(WithDataType(dataType), WithDestination(destination)))
 			}
-		}
-	case map[string]any:
-		for _, destination := range destinations {
-			translators.Set(NewTranslator(WithDestination(destination)))
 		}
 	}
 	return translators
