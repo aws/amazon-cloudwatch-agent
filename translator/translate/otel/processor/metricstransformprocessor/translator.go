@@ -69,7 +69,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
   
-  if t.name == common.PipelineNameContainerInsightsJmx {
+	if t.name == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, metricTransformJmxConfig)
 	}
 
