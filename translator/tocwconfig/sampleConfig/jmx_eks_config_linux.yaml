@@ -114,20 +114,41 @@ processors:
               match_type: ""
               new_name: ""
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: delete_label_value
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: context
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.rejected_sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
               submatch_case: ""
     resource/jmx/0:
         attributes:

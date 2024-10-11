@@ -163,6 +163,20 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					},
 				},
 			},
+			{
+				"include": "tomcat.rejected_sessions",
+				"action":  "update",
+				"operations": []map[string]interface{}{
+					{
+						"action":           "aggregate_labels",
+						"aggregation_type": "sum",
+					},
+					{
+						"action": "delete_label_value",
+						"label":  "context",
+					},
+				},
+			},
 		}
 	}
 
