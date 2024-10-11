@@ -15,7 +15,7 @@ metrics:
       - jvm.open_file_descriptor.count
       - jvm.system.available.processors
       - jvm.threads.count
-      - jvm.threads.daemon
+      - jvm.daemon_threads.count
       - tomcat.sessions
       - tomcat.rejected_sessions
       - tomcat.traffic.received

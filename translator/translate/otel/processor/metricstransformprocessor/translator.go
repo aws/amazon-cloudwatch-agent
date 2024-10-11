@@ -17,7 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
-//go:embed configs/config.yaml
+//go:embed metricstransform_jmx_config.yaml
 var metricTransformJmxConfig string
 
 var metricDuplicateTypes = []string{

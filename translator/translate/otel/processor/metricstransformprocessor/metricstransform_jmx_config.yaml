@@ -85,7 +85,7 @@ transforms:
     new_name: jvm_threads_current
 
 
-  - include: jvm.threads.daemon
+  - include: jvm.daemon_threads.count
     match_type: strict
     action: update
     new_name: jvm_threads_daemon

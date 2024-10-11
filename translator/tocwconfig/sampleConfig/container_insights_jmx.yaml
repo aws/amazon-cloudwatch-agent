@@ -215,7 +215,7 @@ processors:
                     - jvm.open_file_descriptor.count
                     - jvm.system.available.processors
                     - jvm.threads.count
-                    - jvm.threads.daemon
+                    - jvm.daemon_threads.count
                     - tomcat.sessions
                     - tomcat.rejected_sessions
                     - tomcat.traffic.received
@@ -331,7 +331,7 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: jvm.threads.daemon
+              include: jvm.daemon_threads.count
               match_type: strict
               new_name: jvm_threads_daemon
               submatch_case: ""
@@ -421,7 +421,7 @@ processors:
                 - set(unit, "Count") where name == "tomcat.sessions"
                 - set(unit, "Count") where name == "tomcat.rejected_sessions"
                 - set(unit, "Count") where name == "jvm.threads.count"
-                - set(unit, "Count") where name == "jvm.threads.daemon"
+                - set(unit, "Count") where name == "jvm.daemon_threads.count"
                 - set(unit, "Count") where name == "jvm.open_file_descriptor.count"
                 - set(unit, "Count") where name == "jvm.system.available.processors"
                 - set(unit, "Count") where name == "tomcat.request_count"

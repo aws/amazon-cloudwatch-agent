@@ -47,7 +47,7 @@ var appSignalsConfigK8s string
 var appSignalsConfigGeneric string
 
 //go:embed awsemf_jmx_config.yaml
-var awsEmfJmxDefaultConfig string
+var defaultJmxConfig string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
@@ -86,7 +86,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if t.isAppSignals(c) {
 		defaultConfig = getAppSignalsConfig()
 	} else if t.isCiJMX(c) {
-		defaultConfig = awsEmfJmxDefaultConfig
+		defaultConfig = defaultJmxConfig
 	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
 	} else if isKubernetes(c) {
@@ -130,7 +130,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, err
 		}
 	} else if t.isCiJMX(c) {
-		if err := setCiJmx(); err != nil {
+		if err := setCiJmxFields(); err != nil {
 			return nil, err
 		}
 	} else if isEcs(c) {
@@ -216,7 +216,7 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	return nil
 }
 
-func setCiJmx() error {
+func setCiJmxFields() error {
 	return nil
 }
 func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {

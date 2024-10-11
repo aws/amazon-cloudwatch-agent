@@ -63,7 +63,7 @@ func TestTranslator(t *testing.T) {
 func TestContainerInsightsJmx(t *testing.T) {
 	transl := NewTranslatorWithName(common.PipelineNameContainerInsightsJmx).(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
-	c := testutil.GetConf(t, filepath.Join("configs", "config.yaml"))
+	c := testutil.GetConf(t, "metricstransform_jmx_config.yaml")
 	require.NoError(t, c.Unmarshal(&expectedCfg))
 
 	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))

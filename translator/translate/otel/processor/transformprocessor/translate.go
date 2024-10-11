@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-//go:embed config.yaml
+//go:embed transform_jmx_config.yaml
 var transformJmxConfig string
 
 type translator struct {

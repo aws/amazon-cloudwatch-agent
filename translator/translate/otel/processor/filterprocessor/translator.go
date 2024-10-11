@@ -20,8 +20,8 @@ const (
 	matchTypeStrict = "strict"
 )
 
-//go:embed ContainerInsightsJmxConfig.yaml
-var ContainerInsightsJmxConfig string
+//go:embed filter_jmx_config.yaml
+var containerInsightsJmxConfig string
 
 type translator struct {
 	common.NameProvider
@@ -58,7 +58,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 	if t.Name() == common.PipelineNameContainerInsightsJmx {
-		return common.GetYamlFileToYamlConfig(cfg, ContainerInsightsJmxConfig)
+		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
 	}
 
 	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())

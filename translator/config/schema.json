@@ -768,6 +768,10 @@
                   "minLength": 1,
                   "maxLength": 512
                 },
+                "jmx_container_insights": {
+                  "description": "Enable JMX Container Insights metrics",
+                  "type": "boolean"
+                },
                 "metrics_collection_interval": {
                   "$ref": "#/definitions/timeIntervalDefinition"
                 },

@@ -28,7 +28,7 @@ type translator struct {
 
 var (
 	baseKey                                     = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	eksKey                                      = common.ConfigKey(baseKey, common.KubernetesKey)
+	k8sKey                                      = common.ConfigKey(baseKey, common.KubernetesKey)
 	_       common.Translator[component.Config] = (*translator)(nil)
 )
 
@@ -62,30 +62,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
 		attributes = t.getJMXAttributes(conf)
 	} else if t.Name() == common.PipelineNameContainerInsightsJmx {
-		clusterName, ok := common.GetString(conf, common.ConfigKey(eksKey, "cluster_name"))
-
-		if !ok {
-			clusterName = util.GetClusterNameFromEc2Tagger()
-		}
-		nodeName := os.Getenv(config.HOST_NAME)
-		attributes = []any{
-			map[string]any{
-				"key":            "Namespace",
-				"from_attribute": "k8s.namespace.name",
-				"action":         "insert",
-			},
-			map[string]any{
-				"key":    "ClusterName",
-				"value":  clusterName, // Ensure 'clusterName' is defined earlier
-				"action": "upsert",
-			},
-			map[string]any{
-				"key":    "NodeName",
-				"value":  nodeName,
-				"action": "insert",
-			},
-		}
-
+		attributes = t.getContainerInsightsJMXAttributes(conf)
 	}
 	if len(attributes) == 0 {
 		baseKey := common.JmxConfigKey
@@ -133,4 +110,30 @@ func (t *translator) getJMXAttributes(conf *confmap.Conf) []any {
 		})
 	}
 	return attributes
+}
+
+func (t *translator) getContainerInsightsJMXAttributes(conf *confmap.Conf) []any {
+	clusterName, ok := common.GetString(conf, common.ConfigKey(k8sKey, "cluster_name"))
+
+	if !ok {
+		clusterName = util.GetClusterNameFromEc2Tagger()
+	}
+	nodeName := os.Getenv(config.HOST_NAME)
+	return []any{
+		map[string]any{
+			"key":            "Namespace",
+			"from_attribute": "k8s.namespace.name",
+			"action":         "insert",
+		},
+		map[string]any{
+			"key":    "ClusterName",
+			"value":  clusterName, // Ensure 'clusterName' is defined earlier
+			"action": "upsert",
+		},
+		map[string]any{
+			"key":    "NodeName",
+			"value":  nodeName,
+			"action": "insert",
+		},
+	}
 }

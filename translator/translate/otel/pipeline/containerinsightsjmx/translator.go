@@ -4,8 +4,6 @@
 package containerinsightsjmx
 
 import (
-	"fmt"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -44,7 +42,7 @@ func (t *translator) ID() component.ID {
 // section is present.
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	if conf == nil || !conf.IsSet(jmxKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(jmxKey)}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: jmxKey}
 	}
 	if !context.CurrentContext().RunInContainer() {
 		return nil, nil
