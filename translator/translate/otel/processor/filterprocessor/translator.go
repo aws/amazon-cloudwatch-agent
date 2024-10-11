@@ -4,6 +4,7 @@
 package filterprocessor
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 
@@ -18,6 +19,9 @@ import (
 const (
 	matchTypeStrict = "strict"
 )
+
+//go:embed filter_jmx_config.yaml
+var containerInsightsJmxConfig string
 
 type translator struct {
 	common.NameProvider
@@ -48,11 +52,14 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(common.JmxConfigKey) {
+	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
+	if t.Name() == common.PipelineNameContainerInsightsJmx {
+		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
+	}
 
 	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
 

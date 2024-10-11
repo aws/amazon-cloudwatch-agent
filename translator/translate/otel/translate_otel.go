@@ -23,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsightsjmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
@@ -67,6 +68,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Set(prometheus.NewTranslator())
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())
+	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
