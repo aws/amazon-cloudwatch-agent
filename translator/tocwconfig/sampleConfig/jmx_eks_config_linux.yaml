@@ -106,6 +106,50 @@ processors:
                     - kafka.consumer.fetch-rate
         spans: {}
         traces: {}
+    metricstransform/jmx:
+        transforms:
+            - action: update
+              aggregation_type: ""
+              include: tomcat.sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.rejected_sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
     resource/jmx/0:
         attributes:
             - action: upsert
@@ -178,6 +222,7 @@ service:
                 - prometheusremotewrite/amp
             processors:
                 - filter/jmx/0
+                - metricstransform/jmx
                 - resource/jmx/0
                 - transform/jmx/drop
                 - transform/jmx/0
@@ -189,6 +234,7 @@ service:
                 - prometheusremotewrite/amp
             processors:
                 - filter/jmx/1
+                - metricstransform/jmx
                 - resource/jmx/1
                 - transform/jmx/drop
                 - transform/jmx/1
@@ -200,6 +246,7 @@ service:
                 - awscloudwatch
             processors:
                 - filter/jmx/0
+                - metricstransform/jmx
                 - resource/jmx/0
                 - transform/jmx/drop
                 - transform/jmx/0
@@ -211,6 +258,7 @@ service:
                 - awscloudwatch
             processors:
                 - filter/jmx/1
+                - metricstransform/jmx
                 - resource/jmx/1
                 - transform/jmx/drop
                 - transform/jmx/1

@@ -1,4 +1,20 @@
 transforms:
+  - action: update
+    include: tomcat.sessions
+    operations:
+      - action: aggregate_labels
+        aggregation_type: sum
+      - action: delete_label_value
+        label: context
+
+  - action: update
+    include: tomcat.rejected_sessions
+    operations:
+      - action: aggregate_labels
+        aggregation_type: sum
+      - action: delete_label_value
+        label: context
+
   - include: jvm.classes.loaded
     match_type: strict
     action: update

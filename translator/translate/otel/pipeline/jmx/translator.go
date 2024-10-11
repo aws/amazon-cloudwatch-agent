@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
@@ -85,6 +86,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	if context.CurrentContext().RunInContainer() {
 		translators.Receivers.Set(otlp.NewTranslator(common.WithName(common.PipelineNameJmx)))
+		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.JmxKey))
 		if hasAppendDimensions(conf, t.Index()) {
 			translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())))
 		}

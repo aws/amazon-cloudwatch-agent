@@ -78,6 +78,7 @@ const (
 const (
 	PipelineNameHost                 = "host"
 	PipelineNameHostDeltaMetrics     = "hostDeltaMetrics"
+	PipelineNameContainerInsights    = "containerinsights"
 	PipelineNameJmx                  = "jmx"
 	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
 	PipelineNameEmfLogs              = "emf_logs"
