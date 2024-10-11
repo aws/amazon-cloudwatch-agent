@@ -11,6 +11,7 @@ Features:
 Enhancements:
 * [Traces] Support OTLP format in transit
 * [ApplicationSignals] Update metric processing
+* [ContainerInsights] Use protobuf content type for k8s client
 
 Bug Fixes:
 * [Metrics/Procstat] Fix memory_swap metrics on Linux
