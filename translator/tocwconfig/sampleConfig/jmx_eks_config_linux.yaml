@@ -106,6 +106,50 @@ processors:
                     - kafka.consumer.fetch-rate
         spans: {}
         traces: {}
+    metricstransform/jmx:
+        transforms:
+            - action: update
+              aggregation_type: ""
+              include: tomcat.sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.rejected_sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
     resource/jmx/0:
         attributes:
             - action: upsert
@@ -143,6 +187,21 @@ processors:
               statements:
                 - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
+    transform/jmx/drop:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              statements:
+                - delete_matching_keys(attributes, "^cloud.*")
+                - delete_matching_keys(attributes, "^host.*")
+                - delete_matching_keys(attributes, "^os.*")
+                - delete_matching_keys(attributes, "^container.*")
+                - delete_matching_keys(attributes, "^process.*")
+                - delete_matching_keys(attributes, "^service.*")
+                - delete_matching_keys(attributes, "^telemetry.*")
+        trace_statements: []
 receivers:
     otlp/jmx:
         protocols:
@@ -163,7 +222,9 @@ service:
                 - prometheusremotewrite/amp
             processors:
                 - filter/jmx/0
+                - metricstransform/jmx
                 - resource/jmx/0
+                - transform/jmx/drop
                 - transform/jmx/0
                 - batch/jmx/amp/0
             receivers:
@@ -173,7 +234,9 @@ service:
                 - prometheusremotewrite/amp
             processors:
                 - filter/jmx/1
+                - metricstransform/jmx
                 - resource/jmx/1
+                - transform/jmx/drop
                 - transform/jmx/1
                 - batch/jmx/amp/1
             receivers:
@@ -183,7 +246,9 @@ service:
                 - awscloudwatch
             processors:
                 - filter/jmx/0
+                - metricstransform/jmx
                 - resource/jmx/0
+                - transform/jmx/drop
                 - transform/jmx/0
                 - cumulativetodelta/jmx
             receivers:
@@ -193,7 +258,9 @@ service:
                 - awscloudwatch
             processors:
                 - filter/jmx/1
+                - metricstransform/jmx
                 - resource/jmx/1
+                - transform/jmx/drop
                 - transform/jmx/1
                 - cumulativetodelta/jmx
             receivers:
