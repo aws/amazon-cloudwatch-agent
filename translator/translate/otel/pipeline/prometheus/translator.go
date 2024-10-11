@@ -8,7 +8,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
-	"strconv"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -23,26 +22,13 @@ import (
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
 )
 
-var (
-	logsKey    = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
-	metricsKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey)
-)
-
 type translator struct {
 	name        string
-	index       int
+	dataType    component.DataType
 	destination string
 }
 
 type Option func(any)
-
-func WithIndex(index int) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.index = index
-		}
-	}
-}
 
 func WithDestination(destination string) Option {
 	return func(a any) {
@@ -52,38 +38,50 @@ func WithDestination(destination string) Option {
 	}
 }
 
+func WithDataType(dataType component.DataType) Option {
+	return func(a any) {
+		if t, ok := a.(*translator); ok {
+			t.dataType = dataType
+		}
+	}
+}
+
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[*common.ComponentTranslators] {
-	t := &translator{name: common.PipelineNamePrometheus, index: -1}
+	t := &translator{name: common.PipelineNamePrometheus}
 	for _, opt := range opts {
 		opt(t)
 	}
 	if t.destination != "" {
 		t.name += "/" + t.destination
 	}
-	if t.index != -1 {
-		t.name += "/" + strconv.Itoa(t.index)
-	}
 	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, common.PipelineNamePrometheus)
+	return component.NewIDWithName(t.dataType, t.name)
 }
 
 // Translate creates a pipeline for prometheus if the logs.metrics_collected.prometheus
 // section is present.
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || (!conf.IsSet(logsKey) && !conf.IsSet(metricsKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(logsKey, " or ", metricsKey)}
+	if conf == nil || !conf.IsSet(common.PrometheusConfigKeys[t.dataType]) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(common.PrometheusConfigKeys[t.dataType])}
 	}
 
+	if t.dataType == component.DataTypeMetrics && !conf.IsSet(common.ConfigKey(common.PrometheusConfigKeys[t.dataType], common.PrometheusConfigPathKey)) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(common.ConfigKey(common.PrometheusConfigKeys[t.dataType], common.PrometheusConfigPathKey))}
+	}
+
+	// return pipeline based on destination to keep source/destination combinations clearly separated
+	// telegraf_prometheus - cloudwatch
+	// otel_prometheus - AMP
 	switch t.destination {
 	case "", common.CloudWatchKey:
 		if !conf.IsSet(common.MetricsDestinations) || conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.CloudWatchKey)) {
 			return &common.ComponentTranslators{
-				Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, logsKey, time.Minute)),
+				Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, common.LogsKey, time.Minute)),
 				Processors: common.NewTranslatorMap(
 					batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 				),
