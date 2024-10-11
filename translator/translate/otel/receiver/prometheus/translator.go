@@ -6,10 +6,9 @@ package prometheus
 import (
 	"fmt"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
-	promconfig "github.com/prometheus/prometheus/config"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
@@ -21,18 +20,6 @@ import (
 var (
 	configPathKey = common.ConfigKey(common.PrometheusConfigKeys[component.DataTypeMetrics], common.PrometheusConfigPathKey)
 )
-
-type prometheusConfig struct {
-	promconfig.Config
-	TargetAllocator targetAllocator `yaml:"target_allocator"`
-}
-
-type targetAllocator struct {
-	Interval         time.Duration                            `yaml:"interval"`
-	CollectorID      string                                   `yaml:"collector_id"`
-	HTTPSDConfig     *prometheusreceiver.PromHTTPSDConfig     `yaml:"http_sd_config"`
-	HTTPScrapeConfig *prometheusreceiver.PromHTTPClientConfig `yaml:"http_scrape_config"`
-}
 
 type translator struct {
 	name     string
@@ -61,19 +48,40 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if conf.IsSet(configPathKey) {
 		configPath, _ := common.GetString(conf, configPathKey)
-		// first unmarshall passed in prometheus config yaml into PromConfig
-		promCfg := &prometheusConfig{}
 		content, err := os.ReadFile(configPath)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
 		}
-		if err := yaml.Unmarshal(content, &promCfg); err != nil {
-			return nil, fmt.Errorf("unable to unmarshall prometheus config yaml: %w", err)
+
+		var stringMap map[string]interface{}
+		err = yaml.Unmarshal(content, &stringMap)
+		if err != nil {
+			return nil, err
+		}
+		componentParser := confmap.NewFromStringMap(stringMap)
+		if componentParser == nil {
+			return nil, fmt.Errorf("unable to parse config from filename %s", configPath)
+		}
+		var isPrometheusConfig bool
+		err = componentParser.Unmarshal(&cfg)
+		if err != nil {
+			// passed in prometheus config is in plain prometheus format and not otel wrapper
+			if !strings.Contains(err.Error(), "has invalid keys: global") {
+				return nil, fmt.Errorf("unable to unmarshall config to otel prometheus config from filename %s", configPath)
+			}
+			isPrometheusConfig = true
 		}
 
-		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
-		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
-		//cfg.TargetAllocator = &promCfg.TargetAllocator
+		if isPrometheusConfig {
+			var promCfg prometheusreceiver.PromConfig
+			err = componentParser.Unmarshal(&promCfg)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshall config to prometheus config from filename %s", configPath)
+			}
+			cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
+			cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
+			cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
+		}
 	}
 
 	return cfg, nil

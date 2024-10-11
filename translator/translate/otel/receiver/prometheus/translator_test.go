@@ -4,32 +4,122 @@
 package prometheus
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/confmap"
-	"gopkg.in/yaml.v3"
-	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	promcommon "github.com/prometheus/common/config"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/config"
+	promconfig "github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/discovery"
+	"github.com/prometheus/prometheus/discovery/targetgroup"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/confmap"
 )
 
 func TestTranslator(t *testing.T) {
-	//factory := prometheusreceiver.NewFactory()
 	testCases := map[string]struct {
 		input   map[string]any
-		index   int
 		wantID  string
-		want    string
+		want    *prometheusreceiver.Config
 		wantErr error
 	}{
-		"WithCompleteConfig": {
+		"WithOtelConfig": {
 			input:  testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			index:  -1,
 			wantID: "prometheus",
-			want:   filepath.Join("testdata", "config.yaml"),
+			want: &prometheusreceiver.Config{
+				PrometheusConfig: &prometheusreceiver.PromConfig{
+					GlobalConfig: promconfig.GlobalConfig{
+						ScrapeInterval:     model.Duration(1 * time.Minute),
+						ScrapeTimeout:      model.Duration(30 * time.Second),
+						ScrapeProtocols:    promconfig.DefaultScrapeProtocols,
+						EvaluationInterval: model.Duration(1 * time.Minute),
+					},
+					ScrapeConfigs: []*config.ScrapeConfig{
+						{
+							ScrapeInterval:    model.Duration(1 * time.Minute),
+							ScrapeTimeout:     model.Duration(30 * time.Second),
+							JobName:           "prometheus_test_job",
+							HonorTimestamps:   true,
+							ScrapeProtocols:   promconfig.DefaultScrapeProtocols,
+							MetricsPath:       "/metrics",
+							Scheme:            "http",
+							EnableCompression: true,
+							ServiceDiscoveryConfigs: discovery.Configs{
+								discovery.StaticConfig{
+									&targetgroup.Group{
+										Targets: []model.LabelSet{
+											{
+												model.AddressLabel: "localhost:8000",
+											},
+										},
+										Labels: map[model.LabelName]model.LabelValue{
+											"label1": "test1",
+										},
+										Source: "0",
+									},
+								},
+							},
+							HTTPClientConfig: promcommon.HTTPClientConfig{
+								FollowRedirects: true,
+								EnableHTTP2:     true,
+							},
+						},
+					},
+				},
+				TargetAllocator: &prometheusreceiver.TargetAllocator{
+					CollectorID: "col-1234",
+				},
+			},
+		},
+		"WithPromConfig": {
+			input:  testutil.GetJson(t, filepath.Join("testdata", "config_prom.json")),
+			wantID: "prometheus",
+			want: &prometheusreceiver.Config{
+				PrometheusConfig: &prometheusreceiver.PromConfig{
+					GlobalConfig: promconfig.GlobalConfig{
+						ScrapeInterval:     model.Duration(1 * time.Minute),
+						ScrapeTimeout:      model.Duration(30 * time.Second),
+						ScrapeProtocols:    promconfig.DefaultScrapeProtocols,
+						EvaluationInterval: model.Duration(1 * time.Minute),
+					},
+					ScrapeConfigs: []*config.ScrapeConfig{
+						{
+							ScrapeInterval:    model.Duration(1 * time.Minute),
+							ScrapeTimeout:     model.Duration(30 * time.Second),
+							JobName:           "prometheus_test_job",
+							HonorTimestamps:   true,
+							ScrapeProtocols:   promconfig.DefaultScrapeProtocols,
+							MetricsPath:       "/metrics",
+							Scheme:            "http",
+							EnableCompression: true,
+							ServiceDiscoveryConfigs: discovery.Configs{
+								discovery.StaticConfig{
+									&targetgroup.Group{
+										Targets: []model.LabelSet{
+											{
+												model.AddressLabel: "localhost:8000",
+											},
+										},
+										Labels: map[model.LabelName]model.LabelValue{
+											"label1": "test1",
+										},
+										Source: "0",
+									},
+								},
+							},
+							HTTPClientConfig: promcommon.HTTPClientConfig{
+								FollowRedirects: true,
+								EnableHTTP2:     true,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	for name, testCase := range testCases {
@@ -43,14 +133,11 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*prometheusreceiver.Config)
 				require.True(t, ok)
-				wantCfg := &prometheusConfig{}
-				content, err := os.ReadFile(testCase.want)
+
 				assert.NoError(t, err)
-				err = yaml.Unmarshal(content, &wantCfg)
-				assert.NoError(t, err)
-				assert.Equal(t, wantCfg.ScrapeConfigs, gotCfg.PrometheusConfig.ScrapeConfigs)
-				assert.Equal(t, wantCfg.GlobalConfig, gotCfg.PrometheusConfig.GlobalConfig)
-				//assert.Equal(t, wantCfg.TargetAllocator, gotCfg.TargetAllocator)
+				assert.Equal(t, testCase.want.PrometheusConfig.ScrapeConfigs, gotCfg.PrometheusConfig.ScrapeConfigs)
+				assert.Equal(t, testCase.want.PrometheusConfig.GlobalConfig, gotCfg.PrometheusConfig.GlobalConfig)
+				assert.Equal(t, testCase.want.TargetAllocator, gotCfg.TargetAllocator)
 			}
 		})
 	}
