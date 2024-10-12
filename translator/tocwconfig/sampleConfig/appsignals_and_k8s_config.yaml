@@ -255,6 +255,7 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
+        transit_spans_in_otlp_format: true
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true

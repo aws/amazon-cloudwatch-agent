@@ -11,7 +11,7 @@ import "path/filepath"
 const (
 	AgentDir             = "/opt/aws/amazon-cloudwatch-agent"
 	BinaryDir            = "bin"
-	JsonDir              = "amazon-cloudwatch-agent.d"
+	ConfigDir            = "amazon-cloudwatch-agent.d"
 	TranslatorBinaryName = "config-translator"
 	AgentBinaryName      = "amazon-cloudwatch-agent"
 	WizardBinaryName     = "amazon-cloudwatch-agent-config-wizard"
@@ -22,7 +22,7 @@ const (
 
 func init() {
 	JsonConfigPath = filepath.Join(AgentDir, "etc", JSON)
-	JsonDirPath = filepath.Join(AgentDir, "etc", JsonDir)
+	ConfigDirPath = filepath.Join(AgentDir, "etc", ConfigDir)
 	EnvConfigPath = filepath.Join(AgentDir, "etc", ENV)
 	TomlConfigPath = filepath.Join(AgentDir, "etc", TOML)
 	CommonConfigPath = filepath.Join(AgentDir, "etc", COMMON_CONFIG)

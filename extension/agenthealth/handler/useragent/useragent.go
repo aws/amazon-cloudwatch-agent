@@ -84,11 +84,13 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 			name := strings.TrimPrefix(receiver.Type().String(), adapter.TelegrafPrefix)
 			ua.inputs.Add(name)
 			if name == common.JmxKey {
-				cfg := otelCfg.Receivers[receiver].(*jmxreceiver.Config)
-				targetSystems := strings.Split(cfg.TargetSystem, ",")
-				for _, system := range targetSystems {
-					targetSystem := name + "-" + system
-					ua.inputs.Add(targetSystem)
+				cfg, ok := otelCfg.Receivers[receiver].(*jmxreceiver.Config)
+				if ok {
+					targetSystems := strings.Split(cfg.TargetSystem, ",")
+					for _, system := range targetSystems {
+						targetSystem := name + "-" + system
+						ua.inputs.Add(targetSystem)
+					}
 				}
 			}
 		}
@@ -98,14 +100,16 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 		for _, exporter := range pipeline.Exporters {
 			ua.outputs.Add(exporter.Type().String())
 			if exporter.Type().String() == "awsemf" {
-				cfg := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
-				if cfg.IsAppSignalsEnabled() {
-					ua.outputs.Add(flagAppSignals)
-					agent.UsageFlags().Set(agent.FlagAppSignal)
-				}
-				if cfg.IsEnhancedContainerInsights() {
-					ua.outputs.Add(flagEnhancedContainerInsights)
-					agent.UsageFlags().Set(agent.FlagEnhancedContainerInsights)
+				cfg, ok := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
+				if ok {
+					if cfg.IsAppSignalsEnabled() {
+						ua.outputs.Add(flagAppSignals)
+						agent.UsageFlags().Set(agent.FlagAppSignal)
+					}
+					if cfg.IsEnhancedContainerInsights() {
+						ua.outputs.Add(flagEnhancedContainerInsights)
+						agent.UsageFlags().Set(agent.FlagEnhancedContainerInsights)
+					}
 				}
 			}
 		}

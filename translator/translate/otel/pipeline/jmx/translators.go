@@ -12,13 +12,18 @@ import (
 
 func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+	destinations := common.GetMetricsDestinations(conf)
 	switch v := conf.Get(common.JmxConfigKey).(type) {
 	case []any:
 		for index := range v {
-			translators.Set(NewTranslator(WithIndex(index)))
+			for _, destination := range destinations {
+				translators.Set(NewTranslator(common.WithIndex(index), common.WithDestination(destination)))
+			}
 		}
 	case map[string]any:
-		translators.Set(NewTranslator())
+		for _, destination := range destinations {
+			translators.Set(NewTranslator(common.WithDestination(destination)))
+		}
 	}
 	return translators
 }

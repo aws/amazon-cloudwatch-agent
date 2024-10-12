@@ -1,0 +1,23 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: localhost:4317
+  otlp/http:
+    protocols:
+      http:
+        endpoint: localhost:4318
+
+exporters:
+  debug/metrics:
+
+extensions:
+  pprof:
+  zpages:
+
+service:
+  extensions: [pprof, zpages]
+  pipelines:
+    metrics:
+      receivers: [statsd, otlp/http]
+      exporters: [debug/metrics]

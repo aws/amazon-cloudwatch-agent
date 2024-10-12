@@ -25,6 +25,7 @@
   "traces": {
     "traces_collected": {
       "application_signals": {}
-    }
+    },
+    "transit_spans_in_otlp_format": true
   }
 }

@@ -139,6 +139,32 @@ func TestEmf(t *testing.T) {
 	assert.Equal(t, "outputs:(application_signals awsemf)", ua.outputsStr.Load())
 }
 
+func TestMissingEmfExporterConfig(t *testing.T) {
+	otelCfg := &otelcol.Config{
+		Service: service.Config{
+			Pipelines: map[component.ID]*pipelines.PipelineConfig{
+				component.NewID(component.MustNewType("metrics")): {
+					Receivers: []component.ID{
+						component.NewID(component.MustNewType("nop")),
+					},
+					Exporters: []component.ID{
+						component.NewID(component.MustNewType("awsemf")),
+					},
+				},
+			},
+		},
+	}
+	ua := newUserAgent()
+	ua.SetComponents(otelCfg, &telegraf.Config{})
+	assert.Len(t, ua.inputs, 2)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 1)
+
+	assert.Equal(t, "inputs:(nop run_as_user)", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "outputs:(awsemf)", ua.outputsStr.Load())
+}
+
 func TestJmx(t *testing.T) {
 	jmx := "jmx"
 	jmxOther := "jmxOther"
