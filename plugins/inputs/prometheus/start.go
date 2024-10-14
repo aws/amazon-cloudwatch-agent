@@ -23,13 +23,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"os"
 	"os/signal"
 	"runtime"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/prometheus/discovery/targetgroup"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -197,9 +198,11 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			close(reloadReady.C)
 		})
 	}
+	// @TODO: REMOVE BEFORE RELEASE
 	//scrapeIn := make(chan map[string][]*targetgroup.Group)
 	//go debugChannelWrapper(logger, discoveryManagerScrape.SyncCh(), scrapeIn)
 	//go debugScrapeManager(logger, scrapeManager)
+	//----
 	var g run.Group
 	{
 		// Termination handler.

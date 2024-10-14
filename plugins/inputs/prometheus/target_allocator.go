@@ -1,8 +1,13 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package prometheus
 
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	otelpromreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
@@ -17,10 +22,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
-	"strings"
 
 	"os"
 )
+
+const DEFAULT_TLS_CA_FILE_PATH = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
 
 type TargetAllocatorManager struct {
 	enabled   bool
@@ -129,7 +135,7 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 		return nil // no target allocator return
 	}
 	//has target allocator
-	tam.config.TargetAllocator.TLSSetting.CAFile = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
+	tam.config.TargetAllocator.TLSSetting.CAFile = DEFAULT_TLS_CA_FILE_PATH
 	return nil
 }
 func (tam *TargetAllocatorManager) Start() error {
