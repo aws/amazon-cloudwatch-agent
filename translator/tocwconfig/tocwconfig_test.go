@@ -346,7 +346,29 @@ func TestOtelPrometheusConfig(t *testing.T) {
 	require.NoError(t, err)
 	// In the following checks, we first load the json and replace tokens with the temp files
 	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
-	checkTranslation(t, "otel_prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+	checkTranslation(t, "prometheus_otel_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+}
+
+func TestCombinedPrometheusConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
+	expectedEnvVars := map[string]string{}
+	tokenReplacements := map[string]string{
+		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+	}
+	// Load prometheus config and replace ecs sd results file name token with temp file name
+	prometheusConfig = strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusConfig), os.ModePerm)
+	require.NoError(t, err)
+	// In the following checks, we first load the json and replace tokens with the temp files
+	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
+	checkTranslation(t, "prometheus_combined_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 }
 
 func TestBasicConfig(t *testing.T) {
@@ -718,6 +740,8 @@ func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath st
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
 
+	//assert.NoError(t, os.WriteFile(desiredTomlPath, []byte(tomlStr), 0644)) // useful for regenerating TOML
+
 	// This less function sort the content of string slice in alphabetical order so the
 	// cmp.Equal method will compare the two struct with slices in them, regardless the elements within the slices
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
@@ -749,7 +773,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
-		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)

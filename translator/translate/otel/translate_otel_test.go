@@ -190,7 +190,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
-		"WithOtelPrometheusAMPDestinationConfig": {
+		"WithOutValidaPrometheusConfig": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_destinations": map[string]interface{}{
@@ -200,12 +200,12 @@ func TestTranslator(t *testing.T) {
 					},
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
-							"prometheus_config": "empty.yaml",
+							"prometheus_config": "missing.yaml",
 						},
 					},
 				},
 			},
-			wantErrContains: "invalid otel confi",
+			wantErrContains: "no valid pipelines",
 		},
 	}
 	for name, testCase := range testCases {
