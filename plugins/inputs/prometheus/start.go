@@ -331,8 +331,9 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 				default:
 				}
-
-				<-taManager.taReadyCh
+				if taManager.enabled {
+					<-taManager.taReadyCh
+				}
 				level.Info(logger).Log("msg", "handling config file")
 				if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 					return errors.Wrapf(err, "error loading config from %q", cfg.configFile)
