@@ -193,8 +193,8 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			close(reloadReady.C)
 		})
 	}
-	scrapeIn := make(chan map[string][]*targetgroup.Group)
-	go debugChannelWrapper(logger, discoveryManagerScrape.SyncCh(), scrapeIn)
+	//scrapeIn := make(chan map[string][]*targetgroup.Group)
+	//go debugChannelWrapper(logger, discoveryManagerScrape.SyncCh(), scrapeIn)
 	//go debugScrapeManager(logger, scrapeManager)
 	var g run.Group
 	{
@@ -246,8 +246,8 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 				<-reloadReady.C
 
 				level.Info(logger).Log("msg", "start discovery")
-				//err := scrapeManager.Run(discoveryManagerScrape.SyncCh())
-				err := scrapeManager.Run(scrapeIn)
+				err := scrapeManager.Run(discoveryManagerScrape.SyncCh())
+				//err := scrapeManager.Run(scrapeIn)
 				level.Info(logger).Log("msg", "Scrape manager stopped", "error", err)
 				return err
 			},

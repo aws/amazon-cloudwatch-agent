@@ -64,27 +64,15 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 }
 
 // Adapter from go-kit/log to zap.Logger
-func goKitToZapAdapter(kitLogger log.Logger) *zap.Logger {
+func createLogger(level zapcore.Level) *zap.Logger {
 	// Create a base zap logger (you can customize it as needed)
 	zapCore := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), // Use JSON encoder for zap
 		zapcore.AddSync(os.Stdout),                               // Output to stdout
-		zapcore.DebugLevel,                                       // Set log level to Debug
+		level,                                                    // Set log level to Debug
 	)
-
 	// Create the zap logger
 	zapLogger := zap.New(zapCore)
-	// Wrap zap.Logger to log with the go-kit logger
-	//zapLogger = zapLogger.WithOptions(zap.Hooks(func(entry zapcore.Entry) error {
-	//	// Convert zap log entry to go-kit log format
-	//	kitLogger.Log(
-	//		"level", entry.Level.String(),
-	//		"msg", entry.Message,
-	//		"ts", entry.Time,
-	//		"caller", entry.Caller,
-	//	)
-	//	return nil
-	//}))
 	return zapLogger
 }
 
@@ -110,17 +98,17 @@ func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape
 		return &tam
 	}
 	tam.host = nil
-	tam.loadManager(logger)
+	tam.loadManager()
 	if tam.config != nil {
 		tam.enabled = (tam.config.TargetAllocator != nil) && isPodNameAvailable()
 	}
 	return &tam
 }
-func (tam *TargetAllocatorManager) loadManager(logger log.Logger) {
+func (tam *TargetAllocatorManager) loadManager() {
 	receiverSettings := receiver.Settings{
 		ID: component.MustNewID(strings.ReplaceAll(tam.config.TargetAllocator.CollectorID, "-", "_")),
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         goKitToZapAdapter(logger),
+			Logger:         createLogger(zapcore.DebugLevel),
 			TracerProvider: nil,
 			MeterProvider:  nil,
 			MetricsLevel:   0,
