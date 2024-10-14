@@ -16,7 +16,7 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	cdpTranslator := NewTranslator(common.WithName("test"), WithDiskIONetKeys())
+	cdpTranslator := NewTranslator(common.WithName("test"), WithDefaultKeys())
 	require.EqualValues(t, "cumulativetodelta/test", cdpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]any
@@ -31,7 +31,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)},
+			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey, " or ", otlpKey, " or ", otlpEmfKey)},
 		},
 		"GenerateDeltaProcessorConfigWithNet": {
 			input: map[string]any{

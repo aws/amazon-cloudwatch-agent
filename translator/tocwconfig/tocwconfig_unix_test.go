@@ -9,6 +9,7 @@ package tocwconfig
 import (
 	"testing"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -16,6 +17,7 @@ import (
 func TestCompleteConfigUnix(t *testing.T) {
 	resetContext(t)
 	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
@@ -29,12 +31,31 @@ func TestCompleteConfigUnix(t *testing.T) {
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
 }
 
+func TestAMPConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "amp_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "amp_config_linux", "darwin", nil, "")
+}
+
 func TestJMXConfigLinux(t *testing.T) {
 	resetContext(t)
-	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
 	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "jmx_config_linux", "linux", expectedEnvVars, "")
+}
+
+func TestJMXConfigEKS(t *testing.T) {
+	resetContext(t)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetRunInContainer(true)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "jmx_eks_config_linux", "linux", expectedEnvVars, "")
 }
 
 func TestDeltaConfigLinux(t *testing.T) {

@@ -23,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsightsjmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
@@ -50,16 +51,24 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	translators, err := host.NewTranslators(conf, os)
+	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+	metricsHostTranslators, err := host.NewTranslators(conf, host.MetricsKey, os)
 	if err != nil {
 		return nil, err
 	}
+	translators.Merge(metricsHostTranslators)
+	logsHostTranslators, err := host.NewTranslators(conf, host.LogsKey, os)
+	if err != nil {
+		return nil, err
+	}
+	translators.Merge(logsHostTranslators)
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
 	translators.Set(containerinsights.NewTranslator())
 	translators.Set(prometheus.NewTranslator())
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())
+	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)

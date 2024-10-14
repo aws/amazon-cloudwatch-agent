@@ -4,6 +4,7 @@
 package host
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,18 +41,11 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input        map[string]interface{}
 		pipelineName string
+		destination  string
 		want         *want
 		wantErr      error
 	}{
-		"WithoutMetricsKey": {
-			input:        map[string]interface{}{},
-			pipelineName: common.PipelineNameHost,
-			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, common.PipelineNameHost),
-				JsonKey: common.MetricsKey,
-			},
-		},
-		"WithMetricsKey": {
+		"WithMetricsSection": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
 			},
@@ -64,7 +58,7 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
-		"WithMetricsKeyNet": {
+		"WithDeltaMetrics": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
@@ -72,11 +66,11 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			pipelineName: common.PipelineNameHostDeltaMetrics,
+			pipelineName: fmt.Sprintf("%s_test", common.PipelineNameHostDeltaMetrics),
 			want: &want{
-				pipelineID: "metrics/hostDeltaMetrics",
+				pipelineID: "metrics/hostDeltaMetrics_test",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostDeltaMetrics"},
+				processors: []string{"cumulativetodelta/hostDeltaMetrics_test"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -126,15 +120,62 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithAppendDimensions": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"append_dimensions": map[string]interface{}{},
+				},
+			},
+			pipelineName: common.PipelineNameHost,
+			want: &want{
+				pipelineID: "metrics/host",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"ec2tagger"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
+		"WithPRWExporter/Aggregation": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"aggregation_dimensions": []interface{}{[]interface{}{"d1", "d2"}},
+				},
+			},
+			pipelineName: common.PipelineNameHost,
+			destination:  common.AMPKey,
+			want: &want{
+				pipelineID: "metrics/host/amp",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"rollup", "batch/host/amp"},
+				exporters:  []string{"prometheusremotewrite/amp"},
+				extensions: []string{"sigv4auth"},
+			},
+		},
+		"WithPRWExporter/NoAggregation": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{},
+			},
+			pipelineName: common.PipelineNameHost,
+			destination:  common.AMPKey,
+			want: &want{
+				pipelineID: "metrics/host/amp",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"batch/host/amp"},
+				exporters:  []string{"prometheusremotewrite/amp"},
+				extensions: []string{"sigv4auth"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
-		nopType, _ := component.NewType("nop")
-		otherType, _ := component.NewType("other")
 		t.Run(name, func(t *testing.T) {
-			ht := NewTranslator(testCase.pipelineName, common.NewTranslatorMap[component.Config](
-				&testTranslator{id: component.NewID(nopType)},
-				&testTranslator{id: component.NewID(otherType)},
-			))
+			ht := NewTranslator(
+				testCase.pipelineName,
+				common.NewTranslatorMap[component.Config](
+					&testTranslator{id: component.NewID(component.MustNewType("nop"))},
+					&testTranslator{id: component.NewID(component.MustNewType("other"))},
+				),
+				common.WithDestination(testCase.destination),
+			)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := ht.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

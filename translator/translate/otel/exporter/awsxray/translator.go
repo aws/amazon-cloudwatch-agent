@@ -23,8 +23,9 @@ import (
 )
 
 const (
-	concurrencyKey = "concurrency"
-	resourceARNKey = "resource_arn"
+	concurrencyKey              = "concurrency"
+	resourceARNKey              = "resource_arn"
+	transitSpansInOtlpFormatKey = "transit_spans_in_otlp_format"
 )
 
 type translator struct {
@@ -101,6 +102,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	if resourceARN, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, resourceARNKey)); ok {
 		cfg.AWSSessionSettings.ResourceARN = resourceARN
+	}
+	if transitOtlp, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, transitSpansInOtlpFormatKey)); ok {
+		cfg.TransitSpansInOtlpFormat = transitOtlp
 	}
 	cfg.AWSSessionSettings.Region = getRegion(conf)
 	cfg.AWSSessionSettings.RoleARN = getRoleARN(conf)

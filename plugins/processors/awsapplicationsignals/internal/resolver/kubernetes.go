@@ -614,7 +614,7 @@ func (h *kubernetesResourceAttributesResolver) Process(attributes, resourceAttri
 	}
 
 	if val, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
-		env := getDefaultEnvironment(h.platformCode, h.clusterName+"/"+namespace)
+		env := generateLocalEnvironment(h.platformCode, h.clusterName+"/"+namespace)
 		attributes.PutStr(attr.AWSLocalEnvironment, env)
 	} else {
 		attributes.PutStr(attr.AWSLocalEnvironment, val.Str())

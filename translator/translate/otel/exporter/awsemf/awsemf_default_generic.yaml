@@ -1,0 +1,6 @@
+namespace: CWAgent
+log_group_name: '/aws/cwagent'
+dimension_rollup_option: NoDimensionRollup
+version: "0"
+resource_to_telemetry_conversion:
+  enabled: true

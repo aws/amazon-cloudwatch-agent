@@ -4,6 +4,7 @@
 package filterprocessor
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 
@@ -19,39 +20,25 @@ const (
 	matchTypeStrict = "strict"
 )
 
+//go:embed filter_jmx_config.yaml
+var containerInsightsJmxConfig string
+
 type translator struct {
-	name    string
-	index   int
+	common.NameProvider
+	common.IndexProvider
 	factory processor.Factory
-}
-
-type Option func(any)
-
-func WithName(name string) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.name = name
-		}
-	}
-}
-
-func WithIndex(index int) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.index = index
-		}
-	}
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	t := &translator{index: -1, factory: filterprocessor.NewFactory()}
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+	t := &translator{factory: filterprocessor.NewFactory()}
+	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.index != -1 {
-		t.name += "/" + strconv.Itoa(t.index)
+	if t.Index() != -1 {
+		t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
 	}
 	return t
 }
@@ -59,19 +46,22 @@ func NewTranslator(opts ...Option) common.Translator[component.Config] {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(common.JmxConfigKey) {
+	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
+	if t.Name() == common.PipelineNameContainerInsightsJmx {
+		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
+	}
 
-	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.index)
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
 
 	var includeMetricNames []string
 	for _, jmxTarget := range common.JmxTargets {

@@ -90,6 +90,14 @@ jobs:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
+  java-ecs-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ecs-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
   python-eks-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-metric-limiter-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-test.yml@main
@@ -118,6 +126,14 @@ jobs:
   python-k8s-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-k8s-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-ecs-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ecs-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1

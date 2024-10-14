@@ -38,6 +38,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
@@ -80,6 +81,19 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
+func TestContainerInsightsJMX(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+
+	expectedEnvVars := map[string]string{
+		"CWAGENT_LOG_LEVEL": "DEBUG",
+	}
+
+	checkTranslation(t, "container_insights_jmx", "linux", expectedEnvVars, "")
+}
 
 func TestGenericAppSignalsFallbackConfig(t *testing.T) {
 	resetContext(t)
@@ -120,6 +134,20 @@ func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_fallback_and_eks_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_fallback_and_eks_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsAndECSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = "test-region"
+	ecsutil.GetECSUtilSingleton().TaskARN = "arn:aws:ecs:us-east-1:account_id:task/task_id"
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_and_ecs_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_ecs_config", "windows", expectedEnvVars, "")
 }
 
 func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
@@ -201,6 +229,32 @@ func TestLogsAndKubernetesConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "logs_and_kubernetes_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")
+}
+
+func TestOtlpMetricsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
+}
+
+func TestOtlpMetricsEmfConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "windows", nil, "")
+}
+
+func TestProcstatMemorySwapConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	checkTranslation(t, "procstat_memory_swap_config", "linux", nil, "")
+	checkTranslation(t, "procstat_memory_swap_config", "darwin", nil, "")
 }
 
 func TestWindowsEventOnlyConfig(t *testing.T) {
@@ -618,6 +672,7 @@ func resetContext(t *testing.T) {
 	util.DetectCredentialsPath = func() string {
 		return "fake-path"
 	}
+	ecsutil.GetECSUtilSingleton().Region = ""
 	context.ResetContext()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
@@ -670,6 +725,8 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)

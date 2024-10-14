@@ -75,28 +75,6 @@ func TestResourceAttributesResolverWithNoConfiguredName(t *testing.T) {
 	}
 }
 
-func TestResourceAttributesResolverWithECSClusterName(t *testing.T) {
-	resolver := resourceAttributesResolver{
-		defaultEnvPrefix: "ecs",
-		platformType:     "Generic",
-		attributeMap:     DefaultInheritedAttributes,
-	}
-
-	attributes := pcommon.NewMap()
-	resourceAttributes := pcommon.NewMap()
-	resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/my-cluster/10838bed-421f-43ef-870a-f43feacbbb5b")
-
-	resolver.Process(attributes, resourceAttributes)
-
-	attribute, ok := attributes.Get(common.AttributePlatformType)
-	assert.True(t, ok)
-	assert.Equal(t, "Generic", attribute.Str())
-
-	attribute, ok = attributes.Get(attr.AWSLocalEnvironment)
-	assert.True(t, ok)
-	assert.Equal(t, "ecs:my-cluster", attribute.Str())
-}
-
 func TestResourceAttributesResolverWithOnEC2WithASG(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	attributesResolver := NewAttributesResolver([]config.Resolver{config.NewEC2Resolver("")}, logger)
@@ -225,23 +203,4 @@ func TestAttributesResolver_Stop(t *testing.T) {
 	assert.Error(t, err)
 	mockSubResolver1.AssertExpectations(t)
 	mockSubResolver2.AssertExpectations(t)
-}
-
-func TestGetClusterName(t *testing.T) {
-	resourceAttributes := pcommon.NewMap()
-	resourceAttributes.PutStr(semconv.AttributeAWSECSClusterARN, "arn:aws:ecs:us-west-2:123456789123:cluster/my-cluster")
-	clusterName, ok := getECSClusterName(resourceAttributes)
-	assert.True(t, ok)
-	assert.Equal(t, "my-cluster", clusterName)
-
-	resourceAttributes = pcommon.NewMap()
-	resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/10838bed-421f-43ef-870a-f43feacbbb5b")
-	_, ok = getECSClusterName(resourceAttributes)
-	assert.False(t, ok)
-
-	resourceAttributes = pcommon.NewMap()
-	resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/my-cluster/10838bed-421f-43ef-870a-f43feacbbb5b")
-	clusterName, ok = getECSClusterName(resourceAttributes)
-	assert.True(t, ok)
-	assert.Equal(t, "my-cluster", clusterName)
 }
