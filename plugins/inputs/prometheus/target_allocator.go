@@ -6,6 +6,7 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/go-kit/log"
@@ -22,8 +23,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
-
-	"os"
 )
 
 const DEFAULT_TLS_CA_FILE_PATH = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
