@@ -33,7 +33,6 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
-	tamanager "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	v "github.com/prometheus/client_golang/prometheus/collectors/version"
@@ -136,7 +135,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	cfg := struct {
 		configFile    string
 		promlogConfig promlog.Config
-		taConfig      tamanager.Config
 	}{
 		promlogConfig: promlog.Config{Level: logLevel, Format: logFormat},
 	}
@@ -144,8 +142,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	cfg.configFile = configFilePath
 
 	logger := promlog.New(&cfg.promlogConfig)
-	//stdlog.SetOutput(log.NewStdlibAdapter(logger))
-	//stdlog.Println("redirect std log")
 
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 

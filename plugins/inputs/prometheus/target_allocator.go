@@ -81,10 +81,6 @@ func createLogger(level zapcore.Level) *zap.Logger {
 	return zapLogger
 }
 
-type TargetAllocatorHost struct {
-	component.Host
-}
-
 func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled: false,
@@ -103,9 +99,12 @@ func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape
 		return &tam
 	}
 	tam.host = nil
-	tam.loadManager()
 	if tam.config != nil {
-		tam.enabled = (tam.config.TargetAllocator != nil) && isPodNameAvailable()
+		return &tam
+	}
+	tam.enabled = (tam.config.TargetAllocator != nil) && isPodNameAvailable()
+	if tam.enabled {
+		tam.loadManager()
 	}
 	return &tam
 }
