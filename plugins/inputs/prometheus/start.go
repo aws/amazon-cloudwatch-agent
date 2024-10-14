@@ -83,6 +83,8 @@ var (
 func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
+
+// @TODO: REMOVE BEFORE RELEASE
 func debugScrapeManager(logger log.Logger, scrapeManager *scrape.Manager) {
 	for {
 		for key, targets := range scrapeManager.TargetsAll() {
@@ -94,6 +96,8 @@ func debugScrapeManager(logger log.Logger, scrapeManager *scrape.Manager) {
 		time.Sleep(5 * time.Second)
 	}
 }
+
+// @TODO: REMOVE BEFORE RELEASE
 func debugChannelWrapper(logger log.Logger, in <-chan map[string][]*targetgroup.Group, out chan<- map[string][]*targetgroup.Group) {
 	for {
 		select {
