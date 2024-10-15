@@ -99,7 +99,7 @@ func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape
 		return &tam
 	}
 	tam.host = nil
-	if tam.config != nil {
+	if tam.config == nil {
 		return &tam
 	}
 	tam.enabled = (tam.config.TargetAllocator != nil) && isPodNameAvailable()
