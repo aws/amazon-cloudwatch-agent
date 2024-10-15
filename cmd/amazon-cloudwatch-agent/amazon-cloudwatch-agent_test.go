@@ -76,62 +76,60 @@ extensions:
 service:
   extensions: [nop]
   pipelines:
-    traces:
+    traces/1:
       receivers: [nop/1]
       exporters: [nop]
 `
 	testCases := map[string]struct {
-		input                   []string
-		isContainer             bool
-		isOnlyDefaultConfigPath bool
-		envValue                string
-		want                    *confmap.Conf
-		wantErr                 bool
+		input       []string
+		isContainer bool
+		envValue    string
+		want        *confmap.Conf
+		wantErr     bool
 	}{
-		"WithoutInvalidFile": {
-			input:   []string{filepath.Join("not", "a", "file")},
+		"WithInvalidFile": {
+			input:   []string{filepath.Join("not", "a", "file"), filepath.Join("testdata", "base.yaml")},
 			wantErr: true,
 		},
+		"WithNoMerge": {
+			input:   []string{filepath.Join("testdata", "base.yaml")},
+			wantErr: false,
+		},
 		"WithoutEnv/Container": {
-			input:                   []string{filepath.Join("testdata", "base.yaml")},
-			isContainer:             true,
-			isOnlyDefaultConfigPath: true,
-			want:                    mustLoadFromFile(t, filepath.Join("testdata", "base.yaml")),
+			input:       []string{filepath.Join("testdata", "base.yaml"), filepath.Join("testdata", "merge.yaml")},
+			isContainer: true,
+			want:        mustLoadFromFile(t, filepath.Join("testdata", "base+merge.yaml")),
 		},
 		"WithEnv/NonContainer": {
-			input:                   []string{filepath.Join("testdata", "base.yaml")},
-			isContainer:             false,
-			isOnlyDefaultConfigPath: true,
-			envValue:                testEnvValue,
-			want:                    mustLoadFromFile(t, filepath.Join("testdata", "base.yaml")),
+			input:       []string{filepath.Join("testdata", "base.yaml"), filepath.Join("testdata", "merge.yaml")},
+			isContainer: false,
+			envValue:    testEnvValue,
+			want:        mustLoadFromFile(t, filepath.Join("testdata", "base+merge.yaml")),
 		},
 		"WithEnv/Container": {
-			input:                   []string{filepath.Join("testdata", "base.yaml")},
-			isContainer:             true,
-			isOnlyDefaultConfigPath: true,
-			envValue:                testEnvValue,
-			want:                    mustLoadFromFile(t, filepath.Join("testdata", "base+env.yaml")),
+			input:       []string{filepath.Join("testdata", "base.yaml")},
+			isContainer: true,
+			envValue:    testEnvValue,
+			want:        mustLoadFromFile(t, filepath.Join("testdata", "base+env.yaml")),
 		},
 		"WithEmptyEnv/Container": {
-			input:                   []string{filepath.Join("testdata", "base.yaml")},
-			isContainer:             true,
-			isOnlyDefaultConfigPath: true,
-			envValue:                "",
-			want:                    mustLoadFromFile(t, filepath.Join("testdata", "base.yaml")),
+			input:       []string{filepath.Join("testdata", "base.yaml")},
+			isContainer: true,
+			envValue:    "",
+			want:        nil,
+			wantErr:     false,
 		},
 		"WithInvalidEnv/Container": {
-			input:                   []string{filepath.Join("testdata", "base.yaml")},
-			isContainer:             true,
-			isOnlyDefaultConfigPath: true,
-			envValue:                "test",
-			wantErr:                 true,
+			input:       []string{filepath.Join("testdata", "base.yaml")},
+			isContainer: true,
+			envValue:    "test",
+			wantErr:     true,
 		},
-		"WithIgnoredEnv/Container": {
-			input:                   []string{filepath.Join("testdata", "base.yaml")},
-			isContainer:             true,
-			isOnlyDefaultConfigPath: false,
-			envValue:                testEnvValue,
-			want:                    mustLoadFromFile(t, filepath.Join("testdata", "base.yaml")),
+		"WithEnv/Container/MultipleFiles": {
+			input:       []string{filepath.Join("testdata", "base.yaml"), filepath.Join("testdata", "merge.yaml")},
+			isContainer: true,
+			envValue:    testEnvValue,
+			want:        mustLoadFromFile(t, filepath.Join("testdata", "base+merge+env.yaml")),
 		},
 	}
 	for name, testCase := range testCases {
@@ -140,9 +138,12 @@ service:
 				t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
 			}
 			t.Setenv(envconfig.CWOtelConfigContent, testCase.envValue)
-			got, err := mergeConfigs(testCase.input, testCase.isOnlyDefaultConfigPath)
+			got, err := mergeConfigs(testCase.input)
 			if testCase.wantErr {
 				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else if testCase.want == nil {
+				assert.NoError(t, err)
 				assert.Nil(t, got)
 			} else {
 				assert.NoError(t, err)
@@ -154,7 +155,7 @@ service:
 }
 
 func mustLoadFromFile(t *testing.T, path string) *confmap.Conf {
-	conf, err := confmap.LoadFromFile(path)
+	conf, err := confmap.NewFileLoader(path).Load()
 	require.NoError(t, err)
 	return conf
 }

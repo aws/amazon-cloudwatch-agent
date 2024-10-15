@@ -1,19 +1,14 @@
 receivers:
   nop:
-  nop/1:
 
 exporters:
   nop:
 
-extensions:
-  nop:
-
 service:
-  extensions: [nop]
   pipelines:
     metrics:
       receivers: [nop]
       exporters: [nop]
-    traces/1:
-      receivers: [nop/1]
+    traces:
+      receivers: [nop]
       exporters: [nop]
