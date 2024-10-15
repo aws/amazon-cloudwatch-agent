@@ -76,7 +76,7 @@ extensions:
 service:
   extensions: [nop]
   pipelines:
-    traces:
+    traces/1:
       receivers: [nop/1]
       exporters: [nop]
 `
@@ -125,11 +125,11 @@ service:
 			envValue:    "test",
 			wantErr:     true,
 		},
-		"WithIgnoredEnv/Container": {
+		"WithEnv/Container/MultipleFiles": {
 			input:       []string{filepath.Join("testdata", "base.yaml"), filepath.Join("testdata", "merge.yaml")},
 			isContainer: true,
 			envValue:    testEnvValue,
-			want:        mustLoadFromFile(t, filepath.Join("testdata", "base+merge.yaml")),
+			want:        mustLoadFromFile(t, filepath.Join("testdata", "base+merge+env.yaml")),
 		},
 	}
 	for name, testCase := range testCases {

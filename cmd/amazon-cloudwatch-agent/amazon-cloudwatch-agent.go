@@ -322,6 +322,7 @@ func runAgent(ctx context.Context,
 		if len(fOtelConfigs) == 1 {
 			_, err = os.Stat(fOtelConfigs[0])
 			if errors.Is(err, os.ErrNotExist) {
+				log.Println("I! running in logs-only mode")
 				useragent.Get().SetComponents(&otelcol.Config{}, c)
 				return ag.Run(ctx)
 			}
@@ -405,22 +406,20 @@ func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.Co
 
 // mergeConfigs tries to merge configurations together. If nothing to merge, returns nil without an error.
 func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
-	// Similar to translator, for containerized agent, try to use env variable if no other supplemental config paths
-	// are provided.
 	var loaders []confmap.Loader
-	if envconfig.IsRunningInContainer() && len(configPaths) == 1 {
+	if envconfig.IsRunningInContainer() {
 		content, ok := os.LookupEnv(envconfig.CWOtelConfigContent)
 		if ok && len(content) > 0 {
-			log.Printf("D! Merging OTEL configuration from: %s, %s", envconfig.CWOtelConfigContent, configPaths[0])
-			loaders = append(loaders, confmap.NewByteLoader(envconfig.CWOtelConfigContent, []byte(content)), confmap.NewFileLoader(configPaths[0]))
+			log.Printf("D! Merging OTEL configuration from: %s", envconfig.CWOtelConfigContent)
+			loaders = append(loaders, confmap.NewByteLoader(envconfig.CWOtelConfigContent, []byte(content)))
 		}
-	} else if len(configPaths) > 1 {
+	}
+	// If using environment variable or passing in more than one config
+	if len(loaders) > 0 || len(configPaths) > 1 {
 		log.Printf("D! Merging OTEL configurations from: %s", configPaths)
 		for _, configPath := range configPaths {
 			loaders = append(loaders, confmap.NewFileLoader(configPath))
 		}
-	}
-	if len(loaders) > 0 {
 		result := confmap.New()
 		for _, loader := range loaders {
 			conf, err := loader.Load()
