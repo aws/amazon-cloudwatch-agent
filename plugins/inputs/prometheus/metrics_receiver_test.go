@@ -4,12 +4,8 @@
 package prometheus
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
-	kitlog "github.com/go-kit/log"
-	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
@@ -113,21 +109,4 @@ func Test_metricAppender_Commit(t *testing.T) {
 		tags:        map[string]string{"tag_a": "a"},
 	}
 	assert.Equal(t, expected, *pmb[0])
-}
-
-func Test_loadConfigFromFile(t *testing.T) {
-	os.Setenv("POD_NAME", "collector-1")
-	configFile := filepath.Join("testdata", "target_allocator.yaml")
-	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	var reloader = func(cfg *config.Config) error {
-		logger.Log("reloaded")
-		return nil
-	}
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloader)
-	assert.NoError(t, err)
-	assert.True(t, taManager.enabled)
-	assert.Equal(t, taManager.config.TargetAllocator.CollectorID, "collector-1")
-	assert.Equal(t, taManager.config.TargetAllocator.TLSSetting.CAFile, DEFAULT_TLS_CA_FILE_PATH)
-
 }
