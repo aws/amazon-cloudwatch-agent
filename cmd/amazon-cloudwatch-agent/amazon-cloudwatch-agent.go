@@ -310,18 +310,16 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	isOnlyDefaultConfigPath := len(fOtelConfigs) == 1 && fOtelConfigs[0] == paths.YamlConfigPath
-
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
 		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
 		go logAgent.Run(ctx)
 
-		// If only the default CWAgent config yaml is provided and does not exist, then ASSUME
+		// If only a single YAML is provided and does not exist, then ASSUME the agent is
 		// just monitoring logs since this is the default when no OTEL config flag is provided.
 		// So just start Telegraf.
-		if isOnlyDefaultConfigPath {
+		if len(fOtelConfigs) == 1 {
 			_, err = os.Stat(fOtelConfigs[0])
 			if errors.Is(err, os.ErrNotExist) {
 				useragent.Get().SetComponents(&otelcol.Config{}, c)
@@ -333,20 +331,20 @@ func runAgent(ctx context.Context,
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
 
-	uris := fOtelConfigs
-	// merge configs together
-	if len(uris) > 1 {
-		result, err := mergeConfigs(uris, isOnlyDefaultConfigPath)
-		if err != nil {
-			return err
-		}
-		_ = os.Setenv(envconfig.CWAgentMergedOtelConfig, toyamlconfig.ToYamlConfig(result.ToStringMap()))
-		uris = []string{"env:" + envconfig.CWAgentMergedOtelConfig}
+	otelConfigs := fOtelConfigs
+	// try merging configs together, will return nil if nothing to merge
+	merged, err := mergeConfigs(otelConfigs)
+	if err != nil {
+		return err
+	}
+	if merged != nil {
+		_ = os.Setenv(envconfig.CWAgentMergedOtelConfig, toyamlconfig.ToYamlConfig(merged.ToStringMap()))
+		otelConfigs = []string{"env:" + envconfig.CWAgentMergedOtelConfig}
 	} else {
 		_ = os.Unsetenv(envconfig.CWAgentMergedOtelConfig)
 	}
 
-	providerSettings := configprovider.GetSettings(uris, logger)
+	providerSettings := configprovider.GetSettings(otelConfigs, logger)
 	provider, err := otelcol.NewConfigProvider(providerSettings)
 	if err != nil {
 		return fmt.Errorf("error while initializing config provider: %v", err)
@@ -382,7 +380,7 @@ func runAgent(ctx context.Context,
 	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/93cbae436ae61b832279dbbb18a0d99214b7d305/otelcol/command.go#L63
 	// *************************************************************************************************
 	var e []string
-	for _, uri := range uris {
+	for _, uri := range otelConfigs {
 		e = append(e, "--config="+uri)
 	}
 	cmd.SetArgs(e)
@@ -405,32 +403,37 @@ func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.Co
 	}
 }
 
-func mergeConfigs(configPaths []string, isOnlyDefaultConfigPath bool) (*confmap.Conf, error) {
-	result := confmap.New()
-	content, ok := os.LookupEnv(envconfig.CWOtelConfigContent)
+// mergeConfigs tries to merge configurations together. If nothing to merge, returns nil without an error.
+func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
 	// Similar to translator, for containerized agent, try to use env variable if no other supplemental config paths
 	// are provided.
-	if ok && len(content) > 0 && isOnlyDefaultConfigPath && envconfig.IsRunningInContainer() {
-		log.Printf("D! Merging OTEL configuration from: %s", envconfig.CWOtelConfigContent)
-		conf, err := confmap.LoadFromBytes([]byte(content))
-		if err != nil {
-			return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
+	var loaders []confmap.Loader
+	if envconfig.IsRunningInContainer() && len(configPaths) == 1 {
+		content, ok := os.LookupEnv(envconfig.CWOtelConfigContent)
+		if ok && len(content) > 0 {
+			log.Printf("D! Merging OTEL configuration from: %s, %s", envconfig.CWOtelConfigContent, configPaths[0])
+			loaders = append(loaders, confmap.NewByteLoader(envconfig.CWOtelConfigContent, []byte(content)), confmap.NewFileLoader(configPaths[0]))
 		}
-		if err = result.Merge(conf); err != nil {
-			return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
-		}
-	}
-	log.Printf("D! Merging OTEL configurations from: %s", configPaths)
-	for _, configPath := range configPaths {
-		conf, err := confmap.LoadFromFile(configPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
-		}
-		if err = result.Merge(conf); err != nil {
-			return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
+	} else if len(configPaths) > 1 {
+		log.Printf("D! Merging OTEL configurations from: %s", configPaths)
+		for _, configPath := range configPaths {
+			loaders = append(loaders, confmap.NewFileLoader(configPath))
 		}
 	}
-	return result, nil
+	if len(loaders) > 0 {
+		result := confmap.New()
+		for _, loader := range loaders {
+			conf, err := loader.Load()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
+			}
+			if err = result.Merge(conf); err != nil {
+				return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
+			}
+		}
+		return result, nil
+	}
+	return nil, nil
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {

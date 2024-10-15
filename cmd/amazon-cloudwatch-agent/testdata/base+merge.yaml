@@ -1,0 +1,14 @@
+receivers:
+  nop:
+
+exporters:
+  nop:
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      exporters: [nop]
+    traces:
+      receivers: [nop]
+      exporters: [nop]
