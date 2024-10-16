@@ -384,7 +384,6 @@ func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocator
 			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 		}
 	}
-	level.Debug(logger).Log("config", conf)
 	// For saving name before relabel
 	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
