@@ -95,7 +95,7 @@ func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape
 	tam.taReadyCh = make(chan struct{}, 1)
 	err := tam.loadConfig(filename)
 	if err != nil {
-		level.Error(logger).Log("msg", "Error loading config", "err", err)
+		level.Warn(logger).Log("msg", "Could not load config for target allocator from file", "filename", filename, "err", err)
 		return &tam
 	}
 	tam.host = nil
