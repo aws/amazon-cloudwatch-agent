@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "ws-12345"
+      }
+    },
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "{prometheusFileName}"
+      }
+    }
+  }
+}

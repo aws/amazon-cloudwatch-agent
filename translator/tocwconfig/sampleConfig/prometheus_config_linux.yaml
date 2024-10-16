@@ -92,7 +92,7 @@ service:
     extensions:
         - agenthealth/logs
     pipelines:
-        metrics/prometheus:
+        logs/prometheus:
             exporters:
                 - awsemf/prometheus
             processors:

@@ -21,11 +21,14 @@ package prometheus
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -39,6 +42,7 @@ import (
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	_ "github.com/prometheus/prometheus/discovery/install"
+	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
@@ -79,6 +83,43 @@ func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
 
+// @TODO: REMOVE BEFORE RELEASE
+func debugScrapeManager(logger log.Logger, scrapeManager *scrape.Manager) {
+	for {
+		for key, targets := range scrapeManager.TargetsAll() {
+			level.Info(logger).Log("msg", "ScraperDebug", "key", key)
+			for _, target := range targets {
+				level.Info(logger).Log("msg", "ScraperDebug-Tar", "target", target.String(), "lastScrape", target.LastScrape())
+			}
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+// @TODO: REMOVE BEFORE RELEASE
+func debugChannelWrapper(logger log.Logger, in <-chan map[string][]*targetgroup.Group, out chan<- map[string][]*targetgroup.Group) {
+	for {
+		select {
+		case val, ok := <-in:
+			if !ok {
+				// Input channel is closed, stop processing
+				return
+			}
+			// Print the received value from the input channel
+			jsonVal, err := json.MarshalIndent(val, "", "  ")
+			if err != nil {
+				level.Info(logger).Log("Failed to marshal: %v", err)
+				continue
+			}
+			//Print the received value from the input channel in JSON format
+			fmt.Println("Received:", string(jsonVal))
+			//level.Info(logger).Log("Channels Received:", string(jsonVal))
+
+			// Send the value to the output channel
+			out <- val
+		}
+	}
+}
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	logLevel := &promlog.AllowedLevel{}
 	logLevel.Set("info")
@@ -101,8 +142,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	cfg.configFile = configFilePath
 
 	logger := promlog.New(&cfg.promlogConfig)
-	//stdlog.SetOutput(log.NewStdlibAdapter(logger))
-	//stdlog.Println("redirect std log")
 
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
@@ -117,7 +156,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		sdMetrics, _            = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), prometheus.DefaultRegisterer, sdMetrics, discovery.Name("scrape"))
 		scrapeManager, _        = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver, prometheus.DefaultRegisterer)
+		taManager               = createTargetAllocatorManager(configFilePath, log.With(logger, "component", "ta manager"), scrapeManager, discoveryManagerScrape)
 	)
+
+	level.Info(logger).Log("msg", fmt.Sprintf("Target Allocator  is %t", taManager.enabled))
 	mth.SetScrapeManager(scrapeManager)
 
 	var reloaders = []func(cfg *config.Config) error{
@@ -151,7 +193,11 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			close(reloadReady.C)
 		})
 	}
-
+	// @TODO: REMOVE BEFORE RELEASE
+	//scrapeIn := make(chan map[string][]*targetgroup.Group)
+	//go debugChannelWrapper(logger, discoveryManagerScrape.SyncCh(), scrapeIn)
+	//go debugScrapeManager(logger, scrapeManager)
+	//----
 	var g run.Group
 	{
 		// Termination handler.
@@ -179,13 +225,15 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		// Scrape discovery manager.
 		g.Add(
 			func() error {
+				level.Info(logger).Log("msg", "Scrape discovery manager  starting")
 				err := discoveryManagerScrape.Run()
-				level.Info(logger).Log("msg", "Scrape discovery manager stopped")
+				level.Info(logger).Log("msg", "Scrape discovery manager stopped", "error", err)
 				return err
 			},
 			func(err error) {
-				level.Info(logger).Log("msg", "Stopping scrape discovery manager...")
+				level.Info(logger).Log("msg", "Stopping scrape discovery manager...", "error", err)
 				cancelScrape()
+				taManager.dmLiveCh <- struct{}{}
 			},
 		)
 	}
@@ -201,16 +249,37 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 				level.Info(logger).Log("msg", "start discovery")
 				err := scrapeManager.Run(discoveryManagerScrape.SyncCh())
-				level.Info(logger).Log("msg", "Scrape manager stopped")
+				//err := scrapeManager.Run(scrapeIn)
+				level.Info(logger).Log("msg", "Scrape manager stopped", "error", err)
 				return err
 			},
 			func(err error) {
 				// Scrape manager needs to be stopped before closing the local TSDB
 				// so that it doesn't try to write samples to a closed storage.
-				level.Info(logger).Log("msg", "Stopping scrape manager...")
+				level.Info(logger).Log("msg", "Stopping scrape manager...", "error", err)
 				scrapeManager.Stop()
+				taManager.smLiveCh <- struct{}{}
 			},
 		)
+	}
+	{
+		// Target Allocator  manager.
+		if taManager.enabled {
+			g.Add(
+				func() error {
+
+					// we wait until the config is fully loaded.
+					level.Info(logger).Log("msg", "start ta manager")
+					err := taManager.Start()
+					level.Info(logger).Log("msg", "ta manager stopped", "error", err)
+					return err
+				},
+				func(err error) {
+					level.Info(logger).Log("msg", "Stopping ta manager...", "error", err)
+					taManager.Shutdown()
+				},
+			)
+		}
 	}
 	{
 		// Reload handler.
@@ -227,7 +296,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 				for {
 					select {
 					case <-hup:
-						if err := reloadConfig(cfg.configFile, logger, reloaders...); err != nil {
+						if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 							level.Error(logger).Log("msg", "Error reloading config", "err", err)
 						}
 
@@ -257,9 +326,11 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 				default:
 				}
-
+				if taManager.enabled {
+					<-taManager.taReadyCh
+				}
 				level.Info(logger).Log("msg", "handling config file")
-				if err := reloadConfig(cfg.configFile, logger, reloaders...); err != nil {
+				if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 					return errors.Wrapf(err, "error loading config from %q", cfg.configFile)
 				}
 				level.Info(logger).Log("msg", "finish handling config file")
@@ -288,7 +359,7 @@ const (
 	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
 )
 
-func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
+func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 	content, _ := os.ReadFile(filename)
 	text := string(content)
@@ -302,12 +373,18 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 			configSuccess.Set(0)
 		}
 	}()
-
-	conf, err := config.LoadFile(filename, false, false, logger)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
+	// Check for TA
+	var conf *config.Config
+	if taManager.enabled {
+		level.Info(logger).Log("msg", "Target Allocator is enabled")
+		conf = (*config.Config)(taManager.config.PrometheusConfig)
+	} else {
+		conf, err = config.LoadFile(filename, false, false, logger)
+		if err != nil {
+			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
+		}
 	}
-
+	level.Debug(logger).Log("config", conf)
 	// For saving name before relabel
 	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
