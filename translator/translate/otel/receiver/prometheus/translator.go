@@ -17,14 +17,18 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+const (
+	otelConfigParsingError = "has invalid keys: global"
+	defaultTlsCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
+)
+
 var (
 	configPathKey = common.ConfigKey(common.PrometheusConfigKeys[component.DataTypeMetrics], common.PrometheusConfigPathKey)
 )
 
 type translator struct {
-	name     string
-	dataType component.DataType
-	factory  receiver.Factory
+	name    string
+	factory receiver.Factory
 }
 
 type Option func(any)
@@ -66,10 +70,16 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		err = componentParser.Unmarshal(&cfg)
 		if err != nil {
 			// passed in prometheus config is in plain prometheus format and not otel wrapper
-			if !strings.Contains(err.Error(), "has invalid keys: global") {
+			if !strings.Contains(err.Error(), otelConfigParsingError) {
 				return nil, fmt.Errorf("unable to unmarshall config to otel prometheus config from filename %s", configPath)
 			}
 			isPrometheusConfig = true
+		} else {
+			// given prometheus config is in otel format so check if target allocator is being used
+			// then add the default cert for TargetAllocator
+			if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
+				cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTlsCaPath
+			}
 		}
 
 		if isPrometheusConfig {

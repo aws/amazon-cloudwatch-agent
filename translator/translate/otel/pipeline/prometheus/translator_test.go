@@ -76,6 +76,44 @@ func TestTranslator(t *testing.T) {
 			destination: common.AMPKey,
 			wantErr:     errors.New("pipeline (prometheus/amp) does not have destination (amp) in configuration"),
 		},
+		"WithInvalidMetricsWithCloudWatchDestination": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"prometheus_config_path": "test.yaml",
+						},
+					},
+				},
+			},
+			dataType:    component.DataTypeLogs,
+			destination: common.CloudWatchKey,
+			wantErr:     errors.New("pipeline (prometheus/cloudwatch) is not supported with destination (cloudwatch) in combination with metrics in configuration"),
+		},
+		"WithInvalidLogsWithAMPDestination": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"prometheus_config_path": "test.yaml",
+						},
+					},
+				},
+			},
+			dataType:    component.DataTypeMetrics,
+			destination: common.AMPKey,
+			wantErr:     errors.New("pipeline (prometheus/amp) is not supported with destination (amp) in combination with logs in configuration"),
+		},
 		"WithValidAMP": {
 			input: map[string]any{
 				"metrics": map[string]any{

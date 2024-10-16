@@ -80,6 +80,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	// this could change in future releases to support different source/destination combinations
 	switch t.destination {
 	case "", common.CloudWatchKey:
+		if conf.IsSet(common.PrometheusConfigKeys[component.DataTypeMetrics]) {
+			return nil, fmt.Errorf("pipeline (%s) is not supported with destination (%s) in combination with metrics in configuration", t.name, t.destination)
+		}
 		if !conf.IsSet(common.MetricsDestinations) || conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.CloudWatchKey)) {
 			return &common.ComponentTranslators{
 				Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, common.LogsKey, time.Minute)),
@@ -93,6 +96,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.destination)
 		}
 	case common.AMPKey:
+		if conf.IsSet(common.PrometheusConfigKeys[component.DataTypeLogs]) {
+			return nil, fmt.Errorf("pipeline (%s) is not supported with destination (%s) in combination with logs in configuration", t.name, t.destination)
+		}
 		if conf.IsSet(common.MetricsDestinations) && conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.AMPKey)) {
 			translators := &common.ComponentTranslators{
 				Receivers:  common.NewTranslatorMap(otelprom.NewTranslator()),

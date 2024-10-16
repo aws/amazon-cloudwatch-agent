@@ -58,96 +58,34 @@ processors:
 receivers:
     prometheus:
         config:
-            alertingconfig: {}
-            globalconfig:
-                bodysizelimit: 0B
-                evaluationinterval: 1m
-                keepdroppedtargets: 0
-                labellimit: 0
-                labelnamelengthlimit: 0
-                labelvaluelengthlimit: 0
-                querylogfile: ""
-                samplelimit: 0
-                scrapeinterval: 5m
-                scrapeprotocols:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 5m
+                scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
                     - PrometheusText0.0.4
-                scrapetimeout: 5s
-                targetlimit: 0
-            scrapeconfigs:
-                - bodysizelimit: 0B
-                  enablecompression: true
-                  honorlabels: false
-                  honortimestamps: true
-                  httpclientconfig:
-                    bearertoken: null
-                    bearertokenfile: ""
-                    enablehttp2: true
-                    followredirects: true
-                    proxyconfig:
-                        noproxy: ""
-                        proxyfromenvironment: false
-                        proxyurl: {}
-                    tlsconfig:
-                        ca: ""
-                        cafile: ""
-                        caref: ""
-                        cert: ""
-                        certfile: ""
-                        certref: ""
-                        insecureskipverify: false
-                        key: null
-                        keyfile: ""
-                        keyref: ""
-                        maxversion: TLS13
-                        minversion: TLS10
-                        servername: ""
-                  jobname: cwagent-ecs-file-sd-config
-                  keepdroppedtargets: 0
-                  labellimit: 0
-                  labelnamelengthlimit: 0
-                  labelvaluelengthlimit: 0
-                  metricspath: /metrics
-                  nativehistogrambucketlimit: 0
-                  nativehistogramminbucketfactor: 0
-                  samplelimit: 10000
-                  scheme: http
-                  scrapeclassichistograms: false
-                  scrapeinterval: 5m
-                  scrapeprotocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText0.0.4
-                  scrapetimeout: 5s
-                  servicediscoveryconfigs:
+                scrape_timeout: 5s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  file_sd_configs:
                     - files:
                         - {ecsSdFileName}
-                      refreshinterval: 5m
-                  targetlimit: 0
-                  tracktimestampsstaleness: false
-            storageconfig: {}
-            tracingconfig:
-                clienttype: ""
-                compression: ""
-                endpoint: ""
-                insecure: false
-                samplingfraction: 0
-                timeout: 0s
-                tlsconfig:
-                    ca: ""
-                    cafile: ""
-                    caref: ""
-                    cert: ""
-                    certfile: ""
-                    certref: ""
-                    insecureskipverify: false
-                    key: null
-                    keyfile: ""
-                    keyref: ""
-                    maxversion: TLS13
-                    minversion: TLS10
-                    servername: ""
+                      refresh_interval: 5m
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: cwagent-ecs-file-sd-config
+                  metrics_path: /metrics
+                  sample_limit: 10000
+                  scheme: http
+                  scrape_interval: 5m
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText0.0.4
+                  scrape_timeout: 5s
+                  track_timestamps_staleness: false
         report_extra_scrape_metrics: false
         start_time_metric_regex: ""
         trim_metric_suffixes: false
@@ -156,7 +94,7 @@ service:
     extensions:
         - sigv4auth
     pipelines:
-        metrics/prometheus:
+        metrics/prometheus/amp:
             exporters:
                 - prometheusremotewrite/amp
             processors:

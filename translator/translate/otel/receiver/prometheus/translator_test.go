@@ -17,6 +17,8 @@ import (
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/config/confighttp"
+	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -74,6 +76,13 @@ func TestTranslator(t *testing.T) {
 				},
 				TargetAllocator: &prometheusreceiver.TargetAllocator{
 					CollectorID: "col-1234",
+					ClientConfig: confighttp.ClientConfig{
+						TLSSetting: configtls.ClientConfig{
+							Config: configtls.Config{
+								CAFile: defaultTlsCaPath,
+							},
+						},
+					},
 				},
 			},
 		},
