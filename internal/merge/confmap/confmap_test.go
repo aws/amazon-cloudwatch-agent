@@ -57,7 +57,7 @@ func TestMerge(t *testing.T) {
 }
 
 func mustLoadFromFile(t *testing.T, path string) *Conf {
-	conf, err := LoadFromFile(path)
+	conf, err := NewFileLoader(path).Load()
 	require.NoError(t, err)
 	return conf
 }
