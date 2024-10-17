@@ -31,7 +31,7 @@ const (
 	eks = "eks"
 
 	defaultMetricsCollectionInterval = time.Minute
-	defaultLeaderLockName            = "cwagent-clusterleader" // To maintain backwards compatability with https://github.com/aws/amazon-cloudwatch-agent/blob/2dd89abaab4590cffbbc31ef89319b62809b09d1/plugins/inputs/k8sapiserver/k8sapiserver.go#L30
+	defaultLeaderLockName            = "cwagent-clusterleader" // To maintain backwards compatibility with https://github.com/aws/amazon-cloudwatch-agent/blob/2dd89abaab4590cffbbc31ef89319b62809b09d1/plugins/inputs/k8sapiserver/k8sapiserver.go#L30
 )
 
 type translator struct {

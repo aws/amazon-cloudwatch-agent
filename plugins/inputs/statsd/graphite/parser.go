@@ -183,7 +183,7 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if math.IsNaN(v) || math.IsInf(v, 0) {
-		return nil, &UnsupposedValueError{Field: fields[0], Value: v}
+		return nil, &UnsupportedValueError{Field: fields[0], Value: v}
 	}
 
 	fieldValues := map[string]interface{}{}
@@ -223,7 +223,7 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metric.New(measurement, tags, fieldValues, timestamp), nil
 }
 
-// ApplyTempleteForMetricName extracts the template fields from the given metric name line and
+// ApplyTemplateForMetricName extracts the template fields from the given metric name line and
 // returns the measurement name and tags.
 func (p *GraphiteParser) ApplyTemplateForMetricName(metricNameLine string) (string, map[string]string, string, error) {
 	// decode the name and tags
@@ -252,7 +252,7 @@ func (p *GraphiteParser) ApplyTemplate(line string) (string, map[string]string, 
 	return p.ApplyTemplateForMetricName(fields[0])
 }
 
-// template represents a pattern and tags to map a graphite metric string to a influxdb Point
+// template represents a pattern and tags to map a graphite metric string to an influxdb Point
 type template struct {
 	tags              []string
 	defaultTags       map[string]string
@@ -398,7 +398,7 @@ func (n *node) insert(values []string, template *template) {
 		return
 	}
 
-	// See if the the current element already exists in the tree. If so, insert the
+	// See if the current element already exists in the tree. If so, insert the
 	// into that sub-tree
 	for _, v := range n.children {
 		if v.value == values[0] {

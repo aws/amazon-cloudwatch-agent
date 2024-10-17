@@ -20,7 +20,7 @@ var credsTargetList = []string{Role_Arn_Key}
 func (c *GlobalCreds) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	result := map[string]interface{}{}
 
-	// Read fromm Json first.
+	// Read from Json first.
 	if val, ok := input.(map[string]interface{})[CredentialsSectionKey]; ok {
 		util.SetWithSameKeyIfFound(val, credsTargetList, result)
 	}
