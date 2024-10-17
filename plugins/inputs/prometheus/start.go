@@ -155,8 +155,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
 		sdMetrics, _            = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), prometheus.DefaultRegisterer, sdMetrics, discovery.Name("scrape"))
+		discoverManagerDoneCh   = make(chan struct{}, 1)
 		scrapeManager, _        = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver, prometheus.DefaultRegisterer)
-		taManager               = createTargetAllocatorManager(configFilePath, log.With(logger, "component", "ta manager"), scrapeManager, discoveryManagerScrape)
+		scrapeManagerDoneCh     = make(chan struct{}, 1)
+		taManager               = createTargetAllocatorManager(configFilePath, log.With(logger, "component", "ta manager"), scrapeManager, discoveryManagerScrape, scrapeManagerDoneCh, discoverManagerDoneCh)
 	)
 
 	level.Info(logger).Log("msg", fmt.Sprintf("Target Allocator  is %t", taManager.enabled))

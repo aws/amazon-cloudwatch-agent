@@ -6,6 +6,7 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"os"
 	"strings"
 
@@ -40,7 +41,7 @@ type TargetAllocatorManager struct {
 }
 
 func isPodNameAvailable() bool {
-	podName := os.Getenv("POD_NAME")
+	podName := os.Getenv(envconfig.PodName)
 	if podName == "" {
 		return false
 	}
@@ -81,7 +82,7 @@ func createLogger(level zapcore.Level) *zap.Logger {
 	return zapLogger
 }
 
-func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
+func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape.Manager, dm *discovery.Manager, smDoneCh, dmDoneCh chan struct{}) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled: false,
 		manager: nil,
@@ -90,8 +91,8 @@ func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape
 		sm:      sm,
 		dm:      dm,
 	}
-	tam.smLiveCh = make(chan struct{}, 1)
-	tam.dmLiveCh = make(chan struct{}, 1)
+	tam.smLiveCh = smDoneCh
+	tam.dmLiveCh = dmDoneCh
 	tam.taReadyCh = make(chan struct{}, 1)
 	err := tam.loadConfig(filename)
 	if err != nil {
