@@ -203,7 +203,7 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 		*/
 		for _, procStatKey := range common.GetArray[any](conf, cfgKey) {
 			// Each of the procstat monitored process has their own process; therefore, overriding the interval key chain
-			// and setting dirrectly
+			// and setting directly
 			psKey := procStatKey.(map[string]interface{})
 			psCollectionInterval, _ := common.ParseDuration(psKey[common.MetricsCollectionIntervalKey])
 

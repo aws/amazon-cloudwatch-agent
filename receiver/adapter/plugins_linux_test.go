@@ -154,7 +154,7 @@ func Test_DiskIOPlugin(t *testing.T) {
 	})
 }
 
-// Failing in Github Action; however, not local. Therefore, comment it for avoid causing disruptness and
+// Failing in GitHub Action; however, not local. Therefore, comment it for avoid causing disruption and
 // the test only serves as sanity.
 /*
 func Test_StatsdPlugin(t *testing.T) {
