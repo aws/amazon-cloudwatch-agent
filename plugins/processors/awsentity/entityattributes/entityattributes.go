@@ -9,6 +9,10 @@ const (
 	Resource = "Resource"
 	Service  = "Service"
 
+	AttributeServiceNameSource           = "service.name.source"
+	AttributeDeploymentEnvironmentSource = "deployment.environment.source"
+	AttributeServiceNameSourceUserConfig = "UserConfiguration"
+
 	// The following are entity related attributes
 	AWSEntityPrefix                      = "com.amazonaws.cloudwatch.entity.internal."
 	AttributeEntityType                  = AWSEntityPrefix + "type"

@@ -4,6 +4,7 @@
 package collected
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -19,9 +20,9 @@ func (obj *ServiceName) ApplyRule(input interface{}) (string, interface{}) {
 
 	parentKeyVal := metrics.GlobalMetricConfig.ServiceName
 	if returnVal != "" {
-		return common.Tags, map[string]interface{}{returnKey: returnVal}
+		return common.Tags, map[string]interface{}{returnKey: returnVal, entityattributes.AttributeServiceNameSource: entityattributes.AttributeServiceNameSourceUserConfig}
 	} else if parentKeyVal != "" {
-		return common.Tags, map[string]interface{}{returnKey: parentKeyVal}
+		return common.Tags, map[string]interface{}{returnKey: parentKeyVal, entityattributes.AttributeServiceNameSource: entityattributes.AttributeServiceNameSourceUserConfig}
 	}
 	return "", nil
 }

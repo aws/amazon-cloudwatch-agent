@@ -437,11 +437,13 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	tests := []struct {
-		name                          string
-		metrics                       pmetric.Metrics
-		mockServiceNameAndSource      func() (string, string)
-		mockGetEC2InfoFromEntityStore func() entitystore.EC2Info
-		want                          map[string]any
+		name                           string
+		checkDatapointAttributeRemoval bool
+		metrics                        pmetric.Metrics
+		mockServiceNameAndSource       func() (string, string)
+		mockGetEC2InfoFromEntityStore  func() entitystore.EC2Info
+		want                           map[string]any
+		wantDatapointAttributes        map[string]any
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -455,7 +457,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			want: map[string]any{
 				entityattributes.AttributeEntityType:              "Service",
 				entityattributes.AttributeEntityServiceName:       "test-service",
-				entityattributes.AttributeEntityServiceNameSource: "UserConfiguration",
+				entityattributes.AttributeEntityServiceNameSource: "Unknown",
 				entityattributes.AttributeEntityPlatformType:      "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:        "i-123456789",
 				entityattributes.AttributeEntityAwsAccountId:      "0123456789012",
@@ -488,7 +490,59 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
 				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
+				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
+			},
+		},
+		{
+			name:                           "DatapointAttributeServiceAndEnvironmentNameUserConfiguration",
+			checkDatapointAttributeRemoval: true,
+			metrics:                        generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment", entityattributes.AttributeServiceNameSource, entityattributes.AttributeServiceNameSourceUserConfig, entityattributes.AttributeDeploymentEnvironmentSource, entityattributes.AttributeServiceNameSourceUserConfig),
+			mockGetEC2InfoFromEntityStore:  newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
 				entityattributes.AttributeEntityServiceNameSource:     "UserConfiguration",
+			},
+			wantDatapointAttributes: map[string]any{},
+		},
+		{
+			name:                           "DatapointAttributeServiceNameUserConfigurationAndUserEnvironment",
+			checkDatapointAttributeRemoval: true,
+			metrics:                        generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment", entityattributes.AttributeServiceNameSource, entityattributes.AttributeServiceNameSourceUserConfig),
+			mockGetEC2InfoFromEntityStore:  newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
+				entityattributes.AttributeEntityServiceNameSource:     "UserConfiguration",
+			},
+			wantDatapointAttributes: map[string]any{
+				attributeDeploymentEnvironment: "test-environment",
+			},
+		},
+		{
+			name:                           "DatapointAttributeEnvironmentNameUserConfigurationAndUserServiceName",
+			checkDatapointAttributeRemoval: true,
+			metrics:                        generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment", entityattributes.AttributeDeploymentEnvironmentSource, entityattributes.AttributeServiceNameSourceUserConfig),
+			mockGetEC2InfoFromEntityStore:  newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
+				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
+			},
+			wantDatapointAttributes: map[string]any{
+				attributeServiceName: "test-service",
 			},
 		},
 	}
@@ -510,6 +564,9 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			rm := tt.metrics.ResourceMetrics()
 			if rm.Len() > 0 {
 				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
+			}
+			if tt.checkDatapointAttributeRemoval {
+				assert.Equal(t, tt.wantDatapointAttributes, rm.At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes().AsRaw())
 			}
 			getServiceNameSource = resetServiceNameSource
 		})

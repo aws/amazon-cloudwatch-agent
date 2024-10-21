@@ -81,8 +81,9 @@ type mockMetadataProvider struct {
 
 func mockMetadataProviderFunc() ec2metadataprovider.MetadataProvider {
 	return &mockMetadataProvider{
-		Tags:     "aws:autoscaling:groupName",
-		TagValue: "ASG-1",
+		Tags: map[string]string{
+			"aws:autoscaling:groupName": "ASG-1",
+		},
 		InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
 			InstanceID: "i-123456789",
 		},
@@ -568,7 +569,6 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 				Mode:           tt.args.mode,
 				KubernetesMode: tt.args.kubernetesMode,
 			}
-			getEC2Provider = mockEC2Provider
 			getMetaDataProvider = mockMetadataProviderFunc
 			es := &EntityStore{
 				logger:           logger,

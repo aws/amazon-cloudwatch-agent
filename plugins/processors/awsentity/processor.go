@@ -20,12 +20,11 @@ import (
 )
 
 const (
-	attributeAwsLogGroupNames            = "aws.log.group.names"
-	attributeDeploymentEnvironment       = "deployment.environment"
-	attributeServiceName                 = "service.name"
-	attributeService                     = "Service"
-	attributeServiceNameSourceUserConfig = "UserConfiguration"
-	EMPTY                                = ""
+	attributeAwsLogGroupNames      = "aws.log.group.names"
+	attributeDeploymentEnvironment = "deployment.environment"
+	attributeServiceName           = "service.name"
+	attributeService               = "Service"
+	EMPTY                          = ""
 )
 
 type scraper interface {
@@ -139,11 +138,11 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			entityServiceName := getServiceAttributes(resourceAttrs)
 			entityEnvironmentName := environmentName
 			if (entityServiceName == EMPTY || entityEnvironmentName == EMPTY) && p.config.ScrapeDatapointAttribute {
-				entityServiceName, entityEnvironmentName = p.scrapeServiceAttribute(rm.At(i).ScopeMetrics())
+				entityServiceName, entityEnvironmentName, entityServiceNameSource = p.scrapeServiceAttribute(rm.At(i).ScopeMetrics())
 				// If the entityServiceNameSource is empty here, that means it was not configured via instrumentation
 				// If entityServiceName is a datapoint attribute, that means the service name is coming from the UserConfiguration source
-				if entityServiceNameSource == EMPTY && entityServiceName != EMPTY {
-					entityServiceNameSource = attributeServiceNameSourceUserConfig
+				if entityServiceNameSource == entityattributes.AttributeServiceNameSourceUserConfig && entityServiceName != EMPTY {
+					entityServiceNameSource = entityattributes.AttributeServiceNameSourceUserConfig
 				}
 			}
 			if p.config.KubernetesMode != "" {
@@ -257,14 +256,15 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 // scrapeServiceAttribute expands the datapoint attributes and search for
 // service name and environment attributes. This is only used for components
 // that only emit attributes on datapoint level.
-func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMetricsSlice) (string, string) {
+func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMetricsSlice) (string, string, string) {
 	entityServiceName := EMPTY
+	entityServiceNameSource := EMPTY
 	entityEnvironmentName := EMPTY
 	for j := 0; j < scopeMetric.Len(); j++ {
 		metric := scopeMetric.At(j).Metrics()
 		for k := 0; k < metric.Len(); k++ {
-			if entityServiceName != EMPTY && entityEnvironmentName != EMPTY {
-				return entityServiceName, entityEnvironmentName
+			if entityServiceName != EMPTY && entityEnvironmentName != EMPTY && entityServiceNameSource != EMPTY {
+				return entityServiceName, entityEnvironmentName, entityServiceNameSource
 			}
 			m := metric.At(k)
 			switch m.Type() {
@@ -275,9 +275,19 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 					if dpService != EMPTY {
 						entityServiceName = dpService
 					}
+					if dpServiceNameSource, ok := dps.At(l).Attributes().Get(entityattributes.AttributeServiceNameSource); ok {
+						entityServiceNameSource = dpServiceNameSource.Str()
+						dps.At(l).Attributes().Remove(semconv.AttributeServiceName)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeServiceNameSource)
+					}
 					if dpEnvironment, ok := dps.At(l).Attributes().Get(semconv.AttributeDeploymentEnvironment); ok {
 						entityEnvironmentName = dpEnvironment.Str()
 					}
+					if _, ok := dps.At(l).Attributes().Get(entityattributes.AttributeDeploymentEnvironmentSource); ok {
+						dps.At(l).Attributes().Remove(semconv.AttributeDeploymentEnvironment)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeDeploymentEnvironmentSource)
+					}
+
 				}
 			case pmetric.MetricTypeSum:
 				dps := m.Sum().DataPoints()
@@ -286,8 +296,17 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 					if dpService != EMPTY {
 						entityServiceName = dpService
 					}
+					if dpServiceNameSource, ok := dps.At(l).Attributes().Get(entityattributes.AttributeServiceNameSource); ok {
+						entityServiceNameSource = dpServiceNameSource.Str()
+						dps.At(l).Attributes().Remove(semconv.AttributeServiceName)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeServiceNameSource)
+					}
 					if dpEnvironment, ok := dps.At(l).Attributes().Get(semconv.AttributeDeploymentEnvironment); ok {
 						entityEnvironmentName = dpEnvironment.Str()
+					}
+					if _, ok := dps.At(l).Attributes().Get(entityattributes.AttributeDeploymentEnvironmentSource); ok {
+						dps.At(l).Attributes().Remove(semconv.AttributeDeploymentEnvironment)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeDeploymentEnvironmentSource)
 					}
 				}
 			case pmetric.MetricTypeHistogram:
@@ -297,8 +316,17 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 					if dpService != EMPTY {
 						entityServiceName = dpService
 					}
+					if dpServiceNameSource, ok := dps.At(l).Attributes().Get(entityattributes.AttributeServiceNameSource); ok {
+						entityServiceNameSource = dpServiceNameSource.Str()
+						dps.At(l).Attributes().Remove(semconv.AttributeServiceName)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeServiceNameSource)
+					}
 					if dpEnvironment, ok := dps.At(l).Attributes().Get(semconv.AttributeDeploymentEnvironment); ok {
 						entityEnvironmentName = dpEnvironment.Str()
+					}
+					if _, ok := dps.At(l).Attributes().Get(entityattributes.AttributeDeploymentEnvironmentSource); ok {
+						dps.At(l).Attributes().Remove(semconv.AttributeDeploymentEnvironment)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeDeploymentEnvironmentSource)
 					}
 				}
 			case pmetric.MetricTypeExponentialHistogram:
@@ -308,8 +336,17 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 					if dpService != EMPTY {
 						entityServiceName = dpService
 					}
+					if dpServiceNameSource, ok := dps.At(l).Attributes().Get(entityattributes.AttributeServiceNameSource); ok {
+						entityServiceNameSource = dpServiceNameSource.Str()
+						dps.At(l).Attributes().Remove(semconv.AttributeServiceName)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeServiceNameSource)
+					}
 					if dpEnvironment, ok := dps.At(l).Attributes().Get(semconv.AttributeDeploymentEnvironment); ok {
 						entityEnvironmentName = dpEnvironment.Str()
+					}
+					if _, ok := dps.At(l).Attributes().Get(entityattributes.AttributeDeploymentEnvironmentSource); ok {
+						dps.At(l).Attributes().Remove(semconv.AttributeDeploymentEnvironment)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeDeploymentEnvironmentSource)
 					}
 				}
 			case pmetric.MetricTypeSummary:
@@ -319,8 +356,17 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 					if dpService != EMPTY {
 						entityServiceName = dpService
 					}
+					if dpServiceNameSource, ok := dps.At(l).Attributes().Get(entityattributes.AttributeServiceNameSource); ok {
+						entityServiceNameSource = dpServiceNameSource.Str()
+						dps.At(l).Attributes().Remove(semconv.AttributeServiceName)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeServiceNameSource)
+					}
 					if dpEnvironment, ok := dps.At(l).Attributes().Get(semconv.AttributeDeploymentEnvironment); ok {
 						entityEnvironmentName = dpEnvironment.Str()
+					}
+					if _, ok := dps.At(l).Attributes().Get(entityattributes.AttributeDeploymentEnvironmentSource); ok {
+						dps.At(l).Attributes().Remove(semconv.AttributeDeploymentEnvironment)
+						dps.At(l).Attributes().Remove(entityattributes.AttributeDeploymentEnvironmentSource)
 					}
 				}
 			default:
@@ -329,7 +375,7 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 
 		}
 	}
-	return entityServiceName, entityEnvironmentName
+	return entityServiceName, entityEnvironmentName, entityServiceNameSource
 }
 
 // getServiceAttributes prioritize service name retrieval based on
