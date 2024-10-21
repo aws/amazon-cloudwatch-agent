@@ -219,6 +219,14 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				entityPlatformType = entityattributes.AttributeEntityEC2Platform
 				ec2Info = getEC2InfoFromEntityStore()
 
+				if entityEnvironmentName == EMPTY {
+					if ec2Info.AutoScalingGroup != EMPTY {
+						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + ec2Info.AutoScalingGroup
+					} else {
+						entityEnvironmentName = entityattributes.DeploymentEnvironmentDefault
+					}
+				}
+
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)

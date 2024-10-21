@@ -51,6 +51,10 @@ const (
 	Platform              = "Platform"
 	InstanceID            = "InstanceID"
 	AutoscalingGroup      = "AutoScalingGroup"
+
+	// The following are values used for the environment fallbacks required on EC2
+	DeploymentEnvironmentFallbackPrefix = "ec2:"
+	DeploymentEnvironmentDefault        = DeploymentEnvironmentFallbackPrefix + "default"
 )
 
 // KeyAttributeEntityToShortNameMap is used to map key attributes from otel to the actual values used in the Entity object
