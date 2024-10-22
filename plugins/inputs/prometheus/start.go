@@ -120,6 +120,7 @@ func debugChannelWrapper(logger log.Logger, in <-chan map[string][]*targetgroup.
 		}
 	}
 }
+
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	logLevel := &promlog.AllowedLevel{}
 	logLevel.Set("info")
@@ -162,6 +163,14 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	)
 
 	level.Info(logger).Log("msg", fmt.Sprintf("Target Allocator  is %t", taManager.enabled))
+	//Setup Target Allocator Scrape Post Process Handler
+	taManager.AttachReloadConfigHandler(
+		func(prometheusConfig *config.Config) {
+			level.Info(logger).Log("msg", "ReloadConfigHandler called")
+			relabelScrapeConfigs(prometheusConfig, logger)
+		},
+	)
+
 	mth.SetScrapeManager(scrapeManager)
 
 	var reloaders = []func(cfg *config.Config) error{
@@ -235,7 +244,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			func(err error) {
 				level.Info(logger).Log("msg", "Stopping scrape discovery manager...", "error", err)
 				cancelScrape()
-				taManager.dmLiveCh <- struct{}{}
+				close(taManager.dmLiveCh)
 			},
 		)
 	}
@@ -260,7 +269,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 				// so that it doesn't try to write samples to a closed storage.
 				level.Info(logger).Log("msg", "Stopping scrape manager...", "error", err)
 				scrapeManager.Stop()
-				taManager.smLiveCh <- struct{}{}
+				close(taManager.smLiveCh)
 			},
 		)
 	}
@@ -269,10 +278,9 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		if taManager.enabled {
 			g.Add(
 				func() error {
-
 					// we wait until the config is fully loaded.
 					level.Info(logger).Log("msg", "start ta manager")
-					err := taManager.Start()
+					err := taManager.Run()
 					level.Info(logger).Log("msg", "ta manager stopped", "error", err)
 					return err
 				},
@@ -361,6 +369,36 @@ const (
 	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
 )
 
+func relabelScrapeConfigs(prometheusConfig *config.Config, logger log.Logger) {
+	// For saving name before relabel
+	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
+	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
+	for _, sc := range prometheusConfig.ScrapeConfigs {
+		relabelConfigs := []*relabel.Config{
+			// job
+			{
+				Action:       relabel.Replace,
+				Regex:        relabel.MustNewRegexp(".*"), // __address__ is always there, so we will find a match for every job
+				Replacement:  sc.JobName,                  // value is hard coded job name
+				SourceLabels: model.LabelNames{"__address__"},
+				TargetLabel:  savedScrapeJobLabel, // creates a new magic label
+			},
+			// instance
+			{
+				Action:       relabel.Replace,
+				Regex:        relabel.MustNewRegexp("(.*)"),
+				Replacement:  "$1", // value is actual __address__, i.e. instance if you don't relabel it.
+				SourceLabels: model.LabelNames{"__address__"},
+				TargetLabel:  savedScrapeInstanceLabel, // creates a new magic label
+			},
+		}
+
+		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
+
+		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
+		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
+	}
+}
 func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 	content, _ := os.ReadFile(filename)
@@ -386,36 +424,7 @@ func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocator
 			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 		}
 	}
-	// For saving name before relabel
-	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
-	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
-	for _, sc := range conf.ScrapeConfigs {
-		relabelConfigs := []*relabel.Config{
-			// job
-			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp(".*"), // __address__ is always there, so we will find a match for every job
-				Replacement:  sc.JobName,                  // value is hard coded job name
-				SourceLabels: model.LabelNames{"__address__"},
-				TargetLabel:  savedScrapeJobLabel, // creates a new magic label
-			},
-			// instance
-			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp("(.*)"),
-				Replacement:  "$1", // value is actual __address__, i.e. instance if you don't relabel it.
-				SourceLabels: model.LabelNames{"__address__"},
-				TargetLabel:  savedScrapeInstanceLabel, // creates a new magic label
-			},
-		}
-
-		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
-
-		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
-		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
-
-	}
-
+	relabelScrapeConfigs(conf, logger)
 	failed := false
 	for _, rl := range rls {
 		if err := rl(conf); err != nil {

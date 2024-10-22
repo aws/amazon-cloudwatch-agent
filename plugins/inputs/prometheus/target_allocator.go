@@ -6,9 +6,11 @@ package prometheus
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -29,15 +31,16 @@ import (
 const DEFAULT_TLS_CA_FILE_PATH = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
 
 type TargetAllocatorManager struct {
-	enabled   bool
-	manager   *tamanager.Manager
-	config    *otelpromreceiver.Config
-	host      component.Host
-	sm        *scrape.Manager
-	dm        *discovery.Manager
-	smLiveCh  chan struct{}
-	dmLiveCh  chan struct{}
-	taReadyCh chan struct{}
+	enabled             bool
+	manager             *tamanager.Manager
+	config              *otelpromreceiver.Config
+	host                component.Host
+	sm                  *scrape.Manager
+	dm                  *discovery.Manager
+	smLiveCh            chan struct{}
+	dmLiveCh            chan struct{}
+	taReadyCh           chan struct{}
+	reloadConfigHandler func(config *promconfig.Config)
 }
 
 func isPodNameAvailable() bool {
@@ -84,22 +87,22 @@ func createLogger(level zapcore.Level) *zap.Logger {
 
 func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape.Manager, dm *discovery.Manager, smDoneCh, dmDoneCh chan struct{}) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
-		enabled: false,
-		manager: nil,
-		config:  nil,
-		host:    nil,
-		sm:      sm,
-		dm:      dm,
+		enabled:             false,
+		manager:             nil,
+		config:              nil,
+		host:                nil,
+		sm:                  sm,
+		dm:                  dm,
+		smLiveCh:            smDoneCh,
+		dmLiveCh:            dmDoneCh,
+		taReadyCh:           make(chan struct{}, 1),
+		reloadConfigHandler: nil,
 	}
-	tam.smLiveCh = smDoneCh
-	tam.dmLiveCh = dmDoneCh
-	tam.taReadyCh = make(chan struct{}, 1)
 	err := tam.loadConfig(filename)
 	if err != nil {
 		level.Warn(logger).Log("msg", "Could not load config for target allocator from file", "filename", filename, "err", err)
 		return &tam
 	}
-	tam.host = nil
 	if tam.config == nil {
 		return &tam
 	}
@@ -113,7 +116,7 @@ func (tam *TargetAllocatorManager) loadManager() {
 	receiverSettings := receiver.Settings{
 		ID: component.MustNewID(strings.ReplaceAll(tam.config.TargetAllocator.CollectorID, "-", "_")),
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         createLogger(zapcore.DebugLevel),
+			Logger:         createLogger(zapcore.InfoLevel),
 			TracerProvider: nil,
 			MeterProvider:  nil,
 			MetricsLevel:   0,
@@ -137,9 +140,15 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 	tam.config.TargetAllocator.TLSSetting.CAFile = DEFAULT_TLS_CA_FILE_PATH
 	return nil
 }
-func (tam *TargetAllocatorManager) Start() error {
+func (tam *TargetAllocatorManager) Run() error {
 	err := tam.manager.Start(context.Background(), tam.host, tam.sm, tam.dm)
 	if err != nil {
+		return err
+	}
+	reloadConfigTickerStopCh := make(chan struct{})
+	err = tam.startReloadConfigTicker(reloadConfigTickerStopCh)
+	if err != nil {
+		close(reloadConfigTickerStopCh)
 		return err
 	}
 	// go ahead and let dependencies know TA is ready
@@ -147,8 +156,37 @@ func (tam *TargetAllocatorManager) Start() error {
 	//don't stop until Scrape and Discovery Manager ends
 	<-tam.smLiveCh
 	<-tam.dmLiveCh
+	// since sm and dm have stopped, stop reloadConfigTicker as well
+	close(reloadConfigTickerStopCh)
 	return nil
 }
 func (tam *TargetAllocatorManager) Shutdown() {
 	tam.manager.Shutdown()
+}
+func (tam *TargetAllocatorManager) AttachReloadConfigHandler(handler func(config *promconfig.Config)) {
+	tam.reloadConfigHandler = handler
+}
+func (tam *TargetAllocatorManager) startReloadConfigTicker(stopChan chan struct{}) error {
+	if tam.config.TargetAllocator == nil {
+		return fmt.Errorf("target Allocator is not configured properly")
+	}
+	if tam.reloadConfigHandler == nil {
+		return fmt.Errorf("target allocator reload config handler is not configured properly")
+	}
+	fmt.Printf("Starting Target Allocator Reload Config Ticker with %fs interval\n", tam.config.TargetAllocator.Interval.Seconds())
+	ticker := time.NewTicker(tam.config.TargetAllocator.Interval)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				tam.reloadConfigHandler((*promconfig.Config)(tam.config.PrometheusConfig))
+			case <-stopChan:
+				ticker.Stop()
+				// Stop the ticker and exit when stop is signaled
+				fmt.Printf("Stopping Target Allocator Reload Config Ticker \n")
+				return
+			}
+		}
+	}()
+	return nil
 }
