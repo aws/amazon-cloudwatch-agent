@@ -50,16 +50,16 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 
 	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
 
-	// Run ECS Service Discovery when in ECS
+	// Start ECS Service Discovery when in ECS
 	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus-Setup-autodiscovery-ecs.html
 	p.wg.Add(1)
 	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
 
-	// Run scraping prometheus metrics from prometheus endpoints
+	// Start scraping prometheus metrics from prometheus endpoints
 	p.wg.Add(1)
 	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
 
-	// Run filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
+	// Start filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
 	// and convert Prometheus metrics to Telegraf Metrics
 	p.wg.Add(1)
 	go handler.start(p.shutDownChan, &p.wg)

@@ -21,15 +21,7 @@ package prometheus
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"os/signal"
-	"runtime"
-	"sync"
-	"syscall"
-	"time"
-
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
@@ -42,13 +34,17 @@ import (
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	_ "github.com/prometheus/prometheus/discovery/install"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
+	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"syscall"
 )
 
 var (
@@ -81,44 +77,6 @@ var (
 
 func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
-}
-
-// @TODO: REMOVE BEFORE RELEASE
-func debugScrapeManager(logger log.Logger, scrapeManager *scrape.Manager) {
-	for {
-		for key, targets := range scrapeManager.TargetsAll() {
-			level.Info(logger).Log("msg", "ScraperDebug", "key", key)
-			for _, target := range targets {
-				level.Info(logger).Log("msg", "ScraperDebug-Tar", "target", target.String(), "lastScrape", target.LastScrape())
-			}
-		}
-		time.Sleep(5 * time.Second)
-	}
-}
-
-// @TODO: REMOVE BEFORE RELEASE
-func debugChannelWrapper(logger log.Logger, in <-chan map[string][]*targetgroup.Group, out chan<- map[string][]*targetgroup.Group) {
-	for {
-		select {
-		case val, ok := <-in:
-			if !ok {
-				// Input channel is closed, stop processing
-				return
-			}
-			// Print the received value from the input channel
-			jsonVal, err := json.MarshalIndent(val, "", "  ")
-			if err != nil {
-				level.Info(logger).Log("Failed to marshal: %v", err)
-				continue
-			}
-			//Print the received value from the input channel in JSON format
-			fmt.Println("Received:", string(jsonVal))
-			//level.Info(logger).Log("Channels Received:", string(jsonVal))
-
-			// Send the value to the output channel
-			out <- val
-		}
-	}
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
@@ -204,11 +162,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			close(reloadReady.C)
 		})
 	}
-	// @TODO: REMOVE BEFORE RELEASE
-	//scrapeIn := make(chan map[string][]*targetgroup.Group)
-	//go debugChannelWrapper(logger, discoveryManagerScrape.SyncCh(), scrapeIn)
-	//go debugScrapeManager(logger, scrapeManager)
-	//----
 	var g run.Group
 	{
 		// Termination handler.
@@ -260,7 +213,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 				level.Info(logger).Log("msg", "start discovery")
 				err := scrapeManager.Run(discoveryManagerScrape.SyncCh())
-				//err := scrapeManager.Run(scrapeIn)
 				level.Info(logger).Log("msg", "Scrape manager stopped", "error", err)
 				return err
 			},
