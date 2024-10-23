@@ -37,13 +37,16 @@ extensions:
       usage_flags:
         mode: EC2
         region_type: ACJ
+  entitystore:
+    mode: ec2
+    region: us-west-2
 processors:
-  batch/hostDeltaMetrics/cloudwatchlogs:
+  batch/hostOtlpMetrics/cloudwatchlogs:
     metadata_cardinality_limit: 1000
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 30s
-  cumulativetodelta/hostDeltaMetrics/cloudwatchlogs:
+  cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
     exclude:
       match_type: ""
     include:
@@ -93,13 +96,14 @@ receivers:
 service:
   extensions:
     - agenthealth/logs
+    - entitystore
   pipelines:
-    metrics/hostDeltaMetrics/cloudwatchlogs:
+    metrics/hostOtlpMetrics/cloudwatchlogs:
       exporters:
         - awsemf
       processors:
-        - batch/hostDeltaMetrics/cloudwatchlogs
-        - cumulativetodelta/hostDeltaMetrics/cloudwatchlogs
+        - batch/hostOtlpMetrics/cloudwatchlogs
+        - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
       receivers:
         - otlp/metrics
   telemetry:

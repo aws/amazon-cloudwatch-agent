@@ -39,6 +39,7 @@ func TestComponents(t *testing.T) {
 
 	wantProcessors := []string{
 		"awsapplicationsignals",
+		"awsentity",
 		"attributes",
 		"batch",
 		"cumulativetodelta",
@@ -83,10 +84,12 @@ func TestComponents(t *testing.T) {
 		"agenthealth",
 		"awsproxy",
 		"ecs_observer",
+		"entitystore",
 		"file_storage",
 		"health_check",
 		"memory_ballast",
 		"pprof",
+		"server",
 		"sigv4auth",
 		"zpages",
 	}

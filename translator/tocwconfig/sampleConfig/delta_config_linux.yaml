@@ -17,7 +17,14 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        scrape_datapoint_attribute: true
+        platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -44,12 +51,12 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "Count") where name == "diskio_iops_in_progress"
-                - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
-                - set(unit, "Milliseconds") where name == "diskio_read_time"
-                - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
-                - set(unit, "Milliseconds") where name == "diskio_write_time"
-                - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
+                  - set(unit, "Count") where name == "diskio_iops_in_progress"
+                  - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
+                  - set(unit, "Milliseconds") where name == "diskio_read_time"
+                  - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
+                  - set(unit, "Milliseconds") where name == "diskio_write_time"
+                  - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
         trace_statements: []
 receivers:
     telegraf_diskio:
@@ -59,11 +66,13 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform

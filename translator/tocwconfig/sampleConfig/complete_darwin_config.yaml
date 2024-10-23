@@ -91,7 +91,18 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        scrape_datapoint_attribute: true
+        platform: ec2
+    awsentity/service:
+        entity_type: Service
+        scrape_datapoint_attribute: true
+        platform: ec2
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -116,9 +127,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
@@ -128,11 +139,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
-                - set(unit, "unit") where name == "cpu_usage_idle"
-                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "disk_free"
+                  - set(name, "DISK_FREE") where name == "disk_free"
+                  - set(unit, "unit") where name == "cpu_usage_idle"
+                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                  - set(unit, "unit") where name == "cpu_usage_nice"
         trace_statements: []
 receivers:
     awsxray:
@@ -248,6 +259,7 @@ service:
         - agenthealth/metrics
         - agenthealth/logs
         - agenthealth/traces
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:
@@ -260,22 +272,32 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_statsd
-                - telegraf_netstat
-                - telegraf_disk
-                - telegraf_socket_listener
-                - telegraf_swap
                 - telegraf_procstat/1917393364
                 - telegraf_cpu
                 - telegraf_mem
+                - telegraf_netstat
                 - telegraf_processes
+                - telegraf_swap
+                - telegraf_disk
+        metrics/hostCustomMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - awsentity/service
+                - ec2tagger
+                - transform
+            receivers:
+                - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform

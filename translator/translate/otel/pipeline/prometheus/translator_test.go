@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	translatorConfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -25,15 +27,16 @@ func TestTranslator(t *testing.T) {
 	cit := NewTranslator()
 	require.EqualValues(t, "metrics/prometheus", cit.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *want
-		wantErr error
+		input          map[string]interface{}
+		kubernetesMode string
+		want           *want
+		wantErr        error
 	}{
 		"WithoutPrometheusKey": {
 			input:   map[string]interface{}{},
 			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: "logs::metrics_collected::prometheus"},
 		},
-		"WithPrometheusKey": {
+		"WithPrometheusKeyAndOnK8s": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
@@ -41,9 +44,26 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			kubernetesMode: translatorConfig.ModeEKS,
 			want: &want{
 				receivers:  []string{"telegraf_prometheus"},
-				processors: []string{"batch/prometheus"},
+				processors: []string{"batch/prometheus", "awsentity/service"},
+				exporters:  []string{"awsemf/prometheus"},
+				extensions: []string{"agenthealth/logs"},
+			},
+		},
+		"WithPrometheusKeyAndNotOnK8s": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": nil,
+					},
+				},
+			},
+			kubernetesMode: "",
+			want: &want{
+				receivers:  []string{"telegraf_prometheus"},
+				processors: []string{"batch/prometheus", "resourcedetection"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -52,6 +72,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
+			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
 			got, err := cit.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {

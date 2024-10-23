@@ -91,6 +91,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		}
 		tlsConfig.ClientCAs = pool
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		tlsConfig.MinVersion = tls.VersionTLS12
 	}
 
 	if c.TLSCert != "" && c.TLSKey != "" {

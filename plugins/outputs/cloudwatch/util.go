@@ -4,16 +4,17 @@
 package cloudwatch
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"sort"
+	"strings"
 	"time"
-
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -120,4 +121,74 @@ func payload(datum *cloudwatch.MetricDatum) (size int) {
 	}
 
 	return
+}
+
+func entityToString(entity cloudwatch.Entity) string {
+	var attributes, keyAttributes string
+	if entity.Attributes != nil {
+		attributes = entityAttributesToString(entity.Attributes)
+	}
+	if entity.KeyAttributes != nil {
+		keyAttributes = entityAttributesToString(entity.KeyAttributes)
+	}
+
+	data := fmt.Sprintf(
+		"%s|%s",
+		attributes,
+		keyAttributes,
+	)
+	return data
+}
+
+// Helper function to convert a map of entityAttributes to a consistent string representation
+func entityAttributesToString(m map[string]*string) string {
+	if m == nil {
+		return ""
+	}
+	pairs := make([]string, 0, len(m))
+	for k, v := range m {
+		if v == nil {
+			pairs = append(pairs, k+":")
+		} else {
+			pairs = append(pairs, k+":"+*v)
+		}
+	}
+	sort.Strings(pairs) // Ensure a consistent order
+	return strings.Join(pairs, ";")
+}
+
+func stringToEntity(data string) cloudwatch.Entity {
+	parts := strings.Split(data, "|")
+	if len(parts) < 2 {
+		// Handle error: invalid input string
+		return cloudwatch.Entity{}
+	}
+
+	entity := cloudwatch.Entity{
+		Attributes:    make(map[string]*string),
+		KeyAttributes: make(map[string]*string),
+	}
+
+	if parts[0] != "" {
+		entity.Attributes = stringToEntityAttributes(parts[0])
+	}
+
+	if parts[1] != "" {
+		entity.KeyAttributes = stringToEntityAttributes(parts[1])
+	}
+
+	return entity
+}
+
+func stringToEntityAttributes(s string) map[string]*string {
+	result := make(map[string]*string)
+	pairs := strings.Split(s, ";")
+	for _, pair := range pairs {
+		kv := strings.SplitN(pair, ":", 2)
+		if len(kv) == 2 {
+			value := kv[1]
+			result[kv[0]] = &value
+		}
+	}
+	return result
 }

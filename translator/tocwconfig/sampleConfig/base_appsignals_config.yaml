@@ -156,6 +156,11 @@ extensions:
         service_name: ""
         shared_credentials_file:
             - fake-path
+    entitystore:
+        mode: onPremise
+        profile: AmazonCloudWatchAgent
+        region: us-east-1
+        shared_credential_file: fake-path
 processors:
     awsapplicationsignals:
         resolvers:
@@ -473,6 +478,7 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
+        - entitystore
     pipelines:
         metrics/application_signals:
             exporters:
