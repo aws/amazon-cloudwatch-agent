@@ -6,3 +6,6 @@ scrape_configs:
     sample_limit: 10000
     file_sd_configs:
       - files: [ '{ecsSdFileName}' ]
+target_allocator:
+  endpoint: http://target-allocator-service:80
+  interval: 30s

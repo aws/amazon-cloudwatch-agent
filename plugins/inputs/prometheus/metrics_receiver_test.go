@@ -4,8 +4,12 @@
 package prometheus
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	kitlog "github.com/go-kit/log"
+	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
@@ -109,4 +113,63 @@ func Test_metricAppender_Commit(t *testing.T) {
 		tags:        map[string]string{"tag_a": "a"},
 	}
 	assert.Equal(t, expected, *pmb[0])
+}
+
+func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
+	os.Setenv("POD_NAME", "collector-1")
+	defer os.Unsetenv("POD_NAME")
+	configFile := filepath.Join("testdata", "target_allocator.yaml")
+	logger := kitlog.NewLogfmtLogger(os.Stdout)
+	var reloader = func(cfg *config.Config) error {
+		logger.Log("reloaded")
+		return nil
+	}
+	dmDoneCh := make(chan struct{}, 1)
+	smDoneCh := make(chan struct{}, 1)
+	taManager := createTargetAllocatorManager(configFile, logger, nil, nil, dmDoneCh, smDoneCh)
+	err := reloadConfig(configFile, logger, taManager, reloader)
+	close(dmDoneCh)
+	close(smDoneCh)
+	assert.NoError(t, err)
+	assert.True(t, taManager.enabled)
+	assert.Equal(t, taManager.config.TargetAllocator.CollectorID, "collector-1")
+	assert.Equal(t, taManager.config.TargetAllocator.TLSSetting.CAFile, DEFAULT_TLS_CA_FILE_PATH)
+
+}
+
+func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
+	os.Setenv("POD_NAME", "collector-1")
+	defer os.Unsetenv("POD_NAME")
+	configFile := filepath.Join("testdata", "base-k8.yaml")
+	logger := kitlog.NewLogfmtLogger(os.Stdout)
+	var reloader = func(cfg *config.Config) error {
+		logger.Log("reloaded")
+		return nil
+	}
+	dmDoneCh := make(chan struct{}, 1)
+	smDoneCh := make(chan struct{}, 1)
+	taManager := createTargetAllocatorManager(configFile, logger, nil, nil, dmDoneCh, smDoneCh)
+	err := reloadConfig(configFile, logger, taManager, reloader)
+	close(dmDoneCh)
+	close(smDoneCh)
+	assert.NoError(t, err)
+	assert.False(t, taManager.enabled)
+
+}
+func Test_loadConfigFromFileEC2(t *testing.T) {
+	configFile := filepath.Join("testdata", "base-k8.yaml")
+	logger := kitlog.NewLogfmtLogger(os.Stdout)
+	var reloader = func(cfg *config.Config) error {
+		logger.Log("reloaded")
+		return nil
+	}
+	dmDoneCh := make(chan struct{}, 1)
+	smDoneCh := make(chan struct{}, 1)
+	taManager := createTargetAllocatorManager(configFile, logger, nil, nil, dmDoneCh, smDoneCh)
+	err := reloadConfig(configFile, logger, taManager, reloader)
+	close(dmDoneCh)
+	close(smDoneCh)
+	assert.NoError(t, err)
+	assert.False(t, taManager.enabled)
+
 }
