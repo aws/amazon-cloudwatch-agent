@@ -1,6 +1,8 @@
 {
   "agent": {
-    "omit_hostname": true
+    "omit_hostname": true,
+    "debug": true,
+    "metrics_collection_interval": 10
   },
   "metrics": {
     "metrics_destinations": {
@@ -11,7 +13,7 @@
     },
     "metrics_collected": {
       "jmx": {
-        "endpoint": "localhost:8080",
+        "endpoint": "localhost:2030",
         "jvm": {
           "measurement": [
             "jvm.memory.heap.init",
@@ -20,7 +22,21 @@
               "rename": "JVM_MEM_HEAP_USED",
               "unit": "unit"
             },
-            "jvm.memory.nonheap.init"
+            "jvm.memory.nonheap.init",
+            "jvm.threads.count",
+            "jvm.gc.collections.elapsed",
+            "jvm.gc.collections.count",
+            "jvm.memory.pool.used",
+            "jvm.memory.pool.max",
+            "jvm.memory.pool.init",
+            "jvm.memory.pool.committed",
+            "jvm.memory.nonheap.used",
+            "jvm.memory.nonheap.max",
+            "jvm.memory.nonheap.committed",
+            "jvm.memory.heap.used",
+            "jvm.memory.heap.max",
+            "jvm.memory.heap.committed",
+            "jvm.classes.loaded"
           ]
         },
         "kafka-consumer": {
