@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,7 +29,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const DEFAULT_TLS_CA_FILE_PATH = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
+var DEFAULT_TLS_CA_FILE_PATH = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
 
 type TargetAllocatorManager struct {
 	enabled             bool
