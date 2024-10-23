@@ -13,7 +13,7 @@
     },
     "metrics_collected": {
       "jmx": {
-        "endpoint": "localhost:2030",
+        "endpoint": "localhost:8090",
         "jvm": {
           "measurement": [
             "jvm.memory.heap.init",
