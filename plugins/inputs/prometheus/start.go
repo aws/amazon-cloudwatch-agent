@@ -22,6 +22,12 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"syscall"
+
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
@@ -40,11 +46,6 @@ import (
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
-	"os"
-	"os/signal"
-	"runtime"
-	"sync"
-	"syscall"
 )
 
 var (
