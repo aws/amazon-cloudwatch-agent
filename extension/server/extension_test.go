@@ -4,6 +4,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -16,12 +17,26 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 )
 
 type mockEntityStore struct {
 	podToServiceEnvironmentMap *ttlcache.Cache[string, entitystore.ServiceEnvironment]
+}
+
+// This helper function creates a test logger
+// so that it can send the log messages into a
+// temporary buffer for pattern matching
+func CreateTestLogger(buf *bytes.Buffer) *zap.Logger {
+	writer := zapcore.AddSync(buf)
+
+	// Create a custom zapcore.Core that writes to the buffer
+	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
+	logger := zap.New(core)
+	return logger
 }
 
 func newMockEntityStore() *mockEntityStore {
@@ -32,11 +47,16 @@ func newMockEntityStore() *mockEntityStore {
 	}
 }
 
-func (es *mockEntityStore) AddPodServiceEnvironmentMapping(podName string, service string, env string) {
+func (es *mockEntityStore) AddPodServiceEnvironmentMapping(podName string, service string, env string, serviceSource string) {
 	es.podToServiceEnvironmentMap.Set(podName, entitystore.ServiceEnvironment{
-		ServiceName: service,
-		Environment: env,
+		ServiceName:       service,
+		Environment:       env,
+		ServiceNameSource: serviceSource,
 	}, time.Hour)
+}
+
+func (es *mockEntityStore) GetPodServiceEnvironmentMapping() *ttlcache.Cache[string, entitystore.ServiceEnvironment] {
+	return es.podToServiceEnvironmentMap
 }
 
 func newMockGetPodServiceEnvironmentMapping(es *mockEntityStore) func() *ttlcache.Cache[string, entitystore.ServiceEnvironment] {
@@ -175,12 +195,14 @@ func TestK8sPodToServiceMapHandler(t *testing.T) {
 			name: "HappyPath",
 			want: setupTTLCacheForTesting(map[string]entitystore.ServiceEnvironment{
 				"pod1": {
-					ServiceName: "service1",
-					Environment: "env1",
+					ServiceName:       "service1",
+					Environment:       "env1",
+					ServiceNameSource: "source1",
 				},
 				"pod2": {
-					ServiceName: "service2",
-					Environment: "env2",
+					ServiceName:       "service2",
+					Environment:       "env2",
+					ServiceNameSource: "source2",
 				},
 			}),
 		},
@@ -196,8 +218,8 @@ func TestK8sPodToServiceMapHandler(t *testing.T) {
 			es := newMockEntityStore()
 			getPodServiceEnvironmentMapping = newMockGetPodServiceEnvironmentMapping(es)
 			if !tt.emptyMap {
-				es.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
-				es.AddPodServiceEnvironmentMapping("pod2", "service2", "env2")
+				es.AddPodServiceEnvironmentMapping("pod1", "service1", "env1", "source1")
+				es.AddPodServiceEnvironmentMapping("pod2", "service2", "env2", "source2")
 			}
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -322,4 +344,76 @@ func setupTTLCacheForTesting(podToServiceMap map[string]entitystore.ServiceEnvir
 		cache.Set(pod, serviceEnv, ttlcache.DefaultTTL)
 	}
 	return cache
+}
+
+func TestServerNoSensitiveInfoInLogs(t *testing.T) {
+	// Create a buffer to capture log output
+	var buf bytes.Buffer
+	logger := CreateTestLogger(&buf)
+
+	config := &Config{
+		TLSCertPath:   "./testdata/example-server-cert.pem",
+		TLSKeyPath:    "./testdata/example-server-key.pem",
+		TLSCAPath:     "./testdata/example-CA-cert.pem",
+		ListenAddress: ":8080",
+	}
+
+	tests := []struct {
+		name          string
+		setupMockData func(*mockEntityStore)
+	}{
+		{
+			name:          "EmptyPodServiceMap",
+			setupMockData: func(es *mockEntityStore) {},
+		},
+		{
+			name: "PopulatedPodServiceMap",
+			setupMockData: func(es *mockEntityStore) {
+				es.AddPodServiceEnvironmentMapping("pod1", "service1", "env1", "source1")
+				es.AddPodServiceEnvironmentMapping("pod2", "service2", "env2", "source2")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear the buffer before each test
+			buf.Reset()
+
+			server := NewServer(logger, config)
+			es := newMockEntityStore()
+			tt.setupMockData(es)
+			getPodServiceEnvironmentMapping = newMockGetPodServiceEnvironmentMapping(es)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			server.k8sPodToServiceMapHandler(c)
+
+			// Check logs for sensitive information
+			logOutput := buf.String()
+			assertNoSensitiveInfo(t, logOutput, config, es)
+		})
+	}
+}
+
+func assertNoSensitiveInfo(t *testing.T, logOutput string, config *Config, es *mockEntityStore) {
+	confidentialInfo := []string{
+		"-----BEGIN CERTIFICATE-----",
+		"-----END CERTIFICATE-----",
+		"-----BEGIN RSA PRIVATE KEY-----",
+		"-----END RSA PRIVATE KEY-----",
+	}
+
+	for _, pattern := range confidentialInfo {
+		assert.NotContains(t, logOutput, pattern)
+	}
+
+	// Iterate through the pod service environment mapping
+	podServiceMap := es.GetPodServiceEnvironmentMapping()
+	for pod, serviceEnv := range podServiceMap.Items() {
+		assert.NotContains(t, logOutput, pod)
+		assert.NotContains(t, logOutput, serviceEnv.Value().ServiceName)
+		assert.NotContains(t, logOutput, serviceEnv.Value().Environment)
+		assert.NotContains(t, logOutput, serviceEnv.Value().ServiceNameSource)
+	}
 }
