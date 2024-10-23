@@ -105,11 +105,11 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 	tt := NewTranslator(component.DataTypeMetrics)
 	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
-		input      map[string]interface{}
-		want       *want
-		wantErr    error
-		detector   func() (eksdetector.Detector, error)
-		isEKSCache func() eksdetector.IsEKSCache
+		input          map[string]interface{}
+		want           *want
+		wantErr        error
+		detector       func() (eksdetector.Detector, error)
+		isEKSCache     func() eksdetector.IsEKSCache
 		kubernetesMode string
 	}{
 		"WithoutMetricsCollectedKey": {
@@ -130,8 +130,8 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:   eksdetector.TestEKSDetector,
-			isEKSCache: eksdetector.TestIsEKSCacheEKS,
+			detector:       eksdetector.TestEKSDetector,
+			isEKSCache:     eksdetector.TestIsEKSCacheEKS,
 			kubernetesMode: config.ModeEKS,
 		},
 		"WithAppSignalsAndLoggingEnabled": {
@@ -151,8 +151,8 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:   eksdetector.TestEKSDetector,
-			isEKSCache: eksdetector.TestIsEKSCacheEKS,
+			detector:       eksdetector.TestEKSDetector,
+			isEKSCache:     eksdetector.TestIsEKSCacheEKS,
 			kubernetesMode: config.ModeEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
@@ -169,8 +169,8 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:   eksdetector.TestK8sDetector,
-			isEKSCache: eksdetector.TestIsEKSCacheK8s,
+			detector:       eksdetector.TestK8sDetector,
+			isEKSCache:     eksdetector.TestIsEKSCacheK8s,
 			kubernetesMode: config.ModeEKS,
 		},
 	}

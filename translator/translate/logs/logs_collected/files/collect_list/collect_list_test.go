@@ -5,7 +5,6 @@ package collect_list
 
 import (
 	"encoding/json"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 )
 
 func TestFileConfig(t *testing.T) {
