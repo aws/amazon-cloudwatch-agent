@@ -6,8 +6,6 @@ package k8sattributescraper
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
-
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
 )
 
 var (
@@ -48,29 +46,9 @@ func NewK8sAttributeScraper(clusterName string) *K8sAttributeScraper {
 
 func (e *K8sAttributeScraper) Scrape(rm pcommon.Resource) {
 	resourceAttrs := rm.Attributes()
-	e.relabelPrometheus(resourceAttrs)
-
 	e.scrapeNamespace(resourceAttrs)
 	e.scrapeWorkload(resourceAttrs)
 	e.scrapeNode(resourceAttrs)
-}
-
-func (e *K8sAttributeScraper) relabelPrometheus(p pcommon.Map) {
-	// TODO: Retrieve workload from pod label
-	if podName, exists := p.Get(prometheus.EntityK8sPodLabel); exists {
-		p.PutStr(semconv.AttributeK8SPodName, podName.Str())
-		p.Remove(prometheus.EntityK8sPodLabel)
-	}
-
-	if namespace, exists := p.Get(prometheus.EntityK8sNamespaceLabel); exists {
-		p.PutStr(semconv.AttributeK8SNamespaceName, namespace.Str())
-		p.Remove(prometheus.EntityK8sNamespaceLabel)
-	}
-
-	if nodeName, exists := p.Get(prometheus.EntityK8sNodeLabel); exists {
-		p.PutStr(semconv.AttributeK8SNodeName, nodeName.Str())
-		p.Remove(prometheus.EntityK8sNodeLabel)
-	}
 }
 
 func (e *K8sAttributeScraper) scrapeNamespace(p pcommon.Map) {
