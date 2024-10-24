@@ -189,8 +189,8 @@ func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
 	keyAttributesMap := map[string]*string{}
 	attributeMap := map[string]*string{}
 
-	processEntityAttributes(entityattributes.KeyAttributeEntityToShortNameMap, keyAttributesMap, resourceAttributes)
-	processEntityAttributes(entityattributes.AttributeEntityToShortNameMap, attributeMap, resourceAttributes)
+	processEntityAttributes(entityattributes.GetKeyAttributeEntityShortNameMap(), keyAttributesMap, resourceAttributes)
+	processEntityAttributes(entityattributes.GetAttributeEntityShortNameMap(), attributeMap, resourceAttributes)
 	removeEntityFields(resourceAttributes)
 
 	return cloudwatch.Entity{

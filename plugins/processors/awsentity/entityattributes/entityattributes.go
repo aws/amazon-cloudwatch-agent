@@ -3,6 +3,11 @@
 
 package entityattributes
 
+import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+)
+
 const (
 
 	// The following are the possible values for EntityType config options
@@ -44,13 +49,15 @@ const (
 	ResourceType          = "ResourceType"
 	Identifier            = "Identifier"
 	AwsAccountId          = "AwsAccountId"
-	Cluster               = "Cluster"
-	Workload              = "Workload"
-	Node                  = "Node"
-	ServiceNameSource     = "Source"
-	Platform              = "Platform"
-	InstanceID            = "InstanceID"
-	AutoscalingGroup      = "AutoScalingGroup"
+	EksCluster            = "EKS.Cluster"
+	K8sCluster            = "K8s.Cluster"
+	NamespaceField        = "K8s.Namespace"
+	Workload              = "K8s.Workload"
+	Node                  = "K8s.Node"
+	ServiceNameSource     = "AWS.ServiceNameSource"
+	Platform              = "PlatformType"
+	InstanceID            = "EC2.InstanceId"
+	AutoscalingGroup      = "EC2.AutoScalingGroup"
 
 	// The following are values used for the environment fallbacks required on EC2
 	DeploymentEnvironmentFallbackPrefix = "ec2:"
@@ -58,7 +65,7 @@ const (
 )
 
 // KeyAttributeEntityToShortNameMap is used to map key attributes from otel to the actual values used in the Entity object
-var KeyAttributeEntityToShortNameMap = map[string]string{
+var keyAttributeEntityToShortNameMap = map[string]string{
 	AttributeEntityType:                  EntityType,
 	AttributeEntityResourceType:          ResourceType,
 	AttributeEntityIdentifier:            Identifier,
@@ -67,16 +74,27 @@ var KeyAttributeEntityToShortNameMap = map[string]string{
 	AttributeEntityDeploymentEnvironment: DeploymentEnvironment,
 }
 
-// AttributeEntityToShortNameMap is used to map attributes from otel to the actual values used in the Entity object
-var AttributeEntityToShortNameMap = map[string]string{
-	AttributeEntityCluster:           Cluster,
-	AttributeEntityNamespace:         Namespace,
+// attributeEntityToShortNameMap is used to map attributes from otel to the actual values used in the Entity object
+var attributeEntityToShortNameMap = map[string]string{
+	AttributeEntityNamespace:         NamespaceField,
 	AttributeEntityWorkload:          Workload,
 	AttributeEntityNode:              Node,
 	AttributeEntityPlatformType:      Platform,
 	AttributeEntityInstanceID:        InstanceID,
 	AttributeEntityAutoScalingGroup:  AutoscalingGroup,
 	AttributeEntityServiceNameSource: ServiceNameSource,
+}
+
+func GetKeyAttributeEntityShortNameMap() map[string]string {
+	return keyAttributeEntityToShortNameMap
+}
+
+// Cluster attribute prefix could be either EKS or K8s. We set the field once at runtime.
+func GetAttributeEntityShortNameMap() map[string]string {
+	if _, ok := attributeEntityToShortNameMap[AttributeEntityCluster]; !ok {
+		attributeEntityToShortNameMap[AttributeEntityCluster] = clusterType()
+	}
+	return attributeEntityToShortNameMap
 }
 
 // Container Insights attributes used for scraping EKS related information
@@ -86,3 +104,14 @@ const (
 	// PodName in Container Insights is the workload(Deployment, Daemonset, etc) name
 	PodName = "PodName"
 )
+
+func clusterType() string {
+	ctx := context.CurrentContext()
+	mode := ctx.KubernetesMode()
+	if mode == config.ModeEKS {
+		return EksCluster
+	} else if mode == config.ModeK8sEC2 || mode == config.ModeK8sOnPrem {
+		return K8sCluster
+	}
+	return ""
+}
