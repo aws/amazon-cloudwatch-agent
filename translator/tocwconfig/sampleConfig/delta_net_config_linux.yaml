@@ -17,7 +17,14 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        scrape_datapoint_attribute: true
+        platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: ""
@@ -29,9 +36,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -42,11 +49,13 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

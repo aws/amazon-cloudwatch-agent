@@ -19,6 +19,11 @@ extensions:
       usage_flags:
         mode: OP
         region_type: ACJ
+  entitystore:
+    mode: onPremise
+    profile: AmazonCloudWatchAgent
+    region: us-west-2
+    shared_credential_file: fake-path
 receivers:
   telegraf_procstat/793254176:
     alias_name: amazon-cloudwatch-agent
@@ -28,6 +33,7 @@ receivers:
 service:
   extensions:
     - agenthealth/metrics
+    - entitystore
   pipelines:
     metrics/host:
       exporters:

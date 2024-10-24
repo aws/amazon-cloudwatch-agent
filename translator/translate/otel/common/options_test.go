@@ -15,3 +15,17 @@ func TestWithName(t *testing.T) {
 	opt(p)
 	assert.Equal(t, "b", p.Name())
 }
+
+func TestWithIndex(t *testing.T) {
+	p := &IndexProvider{index: -1}
+	opt := WithIndex(1)
+	opt(p)
+	assert.Equal(t, 1, p.Index())
+}
+
+func TestWithDestination(t *testing.T) {
+	p := &DestinationProvider{destination: "a"}
+	opt := WithDestination("b")
+	opt(p)
+	assert.Equal(t, "b", p.Destination())
+}

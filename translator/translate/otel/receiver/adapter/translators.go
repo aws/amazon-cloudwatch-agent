@@ -22,8 +22,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (
@@ -34,9 +32,7 @@ var (
 	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
 	skipInputSet     = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
-	multipleInputSet = collections.NewSet[string](
-		procstat.SectionKey,
-	)
+	multipleInputSet = collections.NewSet[string](procstat.SectionKey)
 	// Order by PidFile, ExeKey, Pattern Key according to the public documents
 	// if multiple configuration is specified
 	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-procstat-process-metrics.html#CloudWatch-Agent-procstat-configuration
@@ -71,10 +67,7 @@ var (
 
 	// otelReceivers is used for receivers that need to be in the same pipeline that
 	// exports to Cloudwatch while not having to follow the adapter rules
-	otelReceivers = map[string]common.Translator[component.Config]{
-		common.OtlpKey: otlp.NewTranslator(otlp.WithDataType(component.DataTypeMetrics)),
-		common.JmxKey:  jmx.NewTranslator(),
-	}
+	otelReceivers = collections.NewSet[string](common.OtlpKey, common.JmxKey)
 )
 
 // FindReceiversInConfig looks in the metrics and logs sections to determine which
@@ -124,7 +117,7 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 	translators := common.NewTranslatorMap[component.Config]()
 	if inputs, ok := conf.Get(metricKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
-			if _, ok := otelReceivers[inputName]; ok {
+			if otelReceivers.Contains(inputName) {
 				continue
 			}
 			if windowsInputSet.Contains(inputName) {
@@ -159,7 +152,7 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				continue
 			}
 			if validInputs != nil {
-				if _, ok := otelReceivers[inputName]; ok {
+				if otelReceivers.Contains(inputName) {
 					continue
 				} else if _, ok := validInputs[inputName]; !ok {
 					log.Printf("W! Ignoring unrecognized input %s", inputName)

@@ -65,17 +65,24 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+      mode: ec2
+      region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
         region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        scrape_datapoint_attribute: true
+        platform:  ec2
     batch/host/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    batch/jmx:
+    batch/jmx/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -122,11 +129,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx:
         error_mode: propagate
@@ -135,9 +142,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
 receivers:
     jmx:
@@ -160,15 +167,8 @@ service:
     extensions:
         - agenthealth/metrics
         - sigv4auth
+        - entitystore
     pipelines:
-        metrics/host:
-            exporters:
-                - awscloudwatch
-            processors:
-                - transform
-            receivers:
-                - telegraf_cpu
-                - telegraf_disk
         metrics/host/amp:
             exporters:
                 - prometheusremotewrite/amp
@@ -176,18 +176,35 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
-        metrics/jmx:
+                - telegraf_cpu
+        metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
+            processors:
+                - awsentity/resource
+                - transform
+            receivers:
+                - telegraf_disk
+                - telegraf_cpu
+        metrics/jmx/amp:
+            exporters:
                 - prometheusremotewrite/amp
             processors:
                 - filter/jmx
                 - resource/jmx
-                - cumulativetodelta/jmx
-                - batch/jmx
                 - transform/jmx
+                - batch/jmx/amp
+            receivers:
+                - jmx
+        metrics/jmx/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx
+                - resource/jmx
+                - transform/jmx
+                - cumulativetodelta/jmx
             receivers:
                 - jmx
     telemetry:

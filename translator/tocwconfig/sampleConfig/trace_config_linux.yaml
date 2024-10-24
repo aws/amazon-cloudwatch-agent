@@ -30,6 +30,11 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        profile: default
+        region: us-west-2
+        shared_credential_file: /root/.aws/credentials
 processors:
     batch/xray:
         metadata_cardinality_limit: 1000
@@ -79,6 +84,7 @@ receivers:
 service:
     extensions:
         - agenthealth/traces
+        - entitystore
     pipelines:
         traces/xray:
             exporters:

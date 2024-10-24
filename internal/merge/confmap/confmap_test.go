@@ -37,13 +37,13 @@ func TestMerge(t *testing.T) {
 				filepath.Join("testdata", "base.yaml"),
 				filepath.Join("testdata", "merge.yaml"),
 			},
-			wantConf: mustLoadConf(t, filepath.Join("testdata", "base+merge.yaml")),
+			wantConf: mustLoadFromFile(t, filepath.Join("testdata", "base+merge.yaml")),
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			base := mustLoadConf(t, testCase.fileNames[0])
-			conf := mustLoadConf(t, testCase.fileNames[1])
+			base := mustLoadFromFile(t, testCase.fileNames[0])
+			conf := mustLoadFromFile(t, testCase.fileNames[1])
 			assert.Equal(t, testCase.wantErr, base.Merge(conf))
 			if testCase.wantConf != nil {
 				got := toyamlconfig.ToYamlConfig(base.ToStringMap())
@@ -52,10 +52,12 @@ func TestMerge(t *testing.T) {
 			}
 		})
 	}
+	conf := New()
+	assert.NoError(t, conf.Merge(nil))
 }
 
-func mustLoadConf(t *testing.T, path string) *Conf {
-	conf, err := LoadConf(path)
+func mustLoadFromFile(t *testing.T, path string) *Conf {
+	conf, err := NewFileLoader(path).Load()
 	require.NoError(t, err)
 	return conf
 }

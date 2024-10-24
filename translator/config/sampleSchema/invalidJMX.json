@@ -2,9 +2,7 @@
   "metrics": {
     "metrics_collected": {
       "jmx": {
-        "jvm": {
-          "measurement": []
-        }
+        "measurement": []
       }
     }
   }

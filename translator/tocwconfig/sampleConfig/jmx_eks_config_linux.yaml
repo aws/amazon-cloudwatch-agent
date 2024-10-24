@@ -1,0 +1,287 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+    prometheusremotewrite/amp:
+        add_metric_suffixes: true
+        auth:
+            authenticator: sigv4auth
+        compression: ""
+        disable_keep_alives: false
+        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+        export_created_metric:
+            enabled: false
+        http2_ping_timeout: 0s
+        http2_read_idle_timeout: 0s
+        max_batch_size_bytes: 3000000
+        namespace: ""
+        proxy_url: ""
+        read_buffer_size: 0
+        remote_write_queue:
+            enabled: true
+            num_consumers: 5
+            queue_size: 10000
+        resource_to_telemetry_conversion:
+            clear_after_copy: true
+            enabled: true
+        retry_on_failure:
+            enabled: true
+            initial_interval: 50ms
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        send_metadata: false
+        target_info:
+            enabled: true
+        timeout: 5s
+        tls:
+            ca_file: ""
+            cert_file: ""
+            include_system_ca_certs_pool: false
+            insecure: false
+            insecure_skip_verify: false
+            key_file: ""
+            max_version: ""
+            min_version: ""
+            reload_interval: 0s
+            server_name_override: ""
+        write_buffer_size: 524288
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    sigv4auth:
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
+    entitystore:
+      mode: ec2
+      region: us-west-2
+processors:
+    batch/jmx/amp/0:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    batch/jmx/amp/1:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    cumulativetodelta/jmx:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    filter/jmx/0:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - jvm.memory.heap.init
+                    - jvm.memory.heap.used
+                    - jvm.memory.nonheap.init
+        spans: {}
+        traces: {}
+    filter/jmx/1:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - kafka.consumer.fetch-rate
+        spans: {}
+        traces: {}
+    metricstransform/jmx:
+        transforms:
+            - action: update
+              aggregation_type: ""
+              include: tomcat.sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: tomcat.rejected_sessions
+              match_type: ""
+              new_name: ""
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: delete_label_value
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: context
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+    resource/jmx/0:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: k1
+              pattern: ""
+              value: v1
+    resource/jmx/1:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: k2
+              pattern: ""
+              value: v2
+    transform/jmx/0:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                - set(unit, "unit") where name == "jvm.memory.heap.used"
+                - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+        trace_statements: []
+    transform/jmx/1:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+        trace_statements: []
+    transform/jmx/drop:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              statements:
+                - delete_matching_keys(attributes, "^cloud.*")
+                - delete_matching_keys(attributes, "^host.*")
+                - delete_matching_keys(attributes, "^os.*")
+                - delete_matching_keys(attributes, "^container.*")
+                - delete_matching_keys(attributes, "^process.*")
+                - delete_matching_keys(attributes, "^service.*")
+                - delete_matching_keys(attributes, "^telemetry.*")
+        trace_statements: []
+receivers:
+    otlp/jmx:
+        protocols:
+            http:
+                endpoint: 0.0.0.0:4314
+                include_metadata: false
+                logs_url_path: /v1/logs
+                max_request_body_size: 0
+                metrics_url_path: /v1/metrics
+                traces_url_path: /v1/traces
+service:
+    extensions:
+        - agenthealth/metrics
+        - sigv4auth
+        - entitystore
+    pipelines:
+        metrics/jmx/amp/0:
+            exporters:
+                - prometheusremotewrite/amp
+            processors:
+                - filter/jmx/0
+                - metricstransform/jmx
+                - resource/jmx/0
+                - transform/jmx/drop
+                - transform/jmx/0
+                - batch/jmx/amp/0
+            receivers:
+                - otlp/jmx
+        metrics/jmx/amp/1:
+            exporters:
+                - prometheusremotewrite/amp
+            processors:
+                - filter/jmx/1
+                - metricstransform/jmx
+                - resource/jmx/1
+                - transform/jmx/drop
+                - transform/jmx/1
+                - batch/jmx/amp/1
+            receivers:
+                - otlp/jmx
+        metrics/jmx/cloudwatch/0:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx/0
+                - metricstransform/jmx
+                - resource/jmx/0
+                - transform/jmx/drop
+                - transform/jmx/0
+                - cumulativetodelta/jmx
+            receivers:
+                - otlp/jmx
+        metrics/jmx/cloudwatch/1:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx/1
+                - metricstransform/jmx
+                - resource/jmx/1
+                - transform/jmx/drop
+                - transform/jmx/1
+                - cumulativetodelta/jmx
+            receivers:
+                - otlp/jmx
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            level: info
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            address: ""
+            level: None
+        traces: {}

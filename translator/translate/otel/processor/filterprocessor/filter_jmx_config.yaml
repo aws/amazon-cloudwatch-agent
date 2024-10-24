@@ -1,0 +1,25 @@
+metrics:
+  include:
+    match_type: strict
+    metric_names:
+      - jvm.classes.loaded
+      - jvm.memory.heap.used
+      - jvm.memory.nonheap.used
+      - jvm.memory.pool.used
+      - jvm.system.swap.space.total
+      - jvm.system.cpu.utilization
+      - jvm.cpu.recent_utilization
+      - jvm.system.swap.space.free
+      - jvm.system.physical.memory.total
+      - jvm.system.physical.memory.free
+      - jvm.open_file_descriptor.count
+      - jvm.system.available.processors
+      - jvm.threads.count
+      - jvm.daemon_threads.count
+      - tomcat.sessions
+      - tomcat.rejected_sessions
+      - tomcat.traffic.received
+      - tomcat.traffic.sent
+      - tomcat.request_count
+      - tomcat.errors
+      - tomcat.processing_time

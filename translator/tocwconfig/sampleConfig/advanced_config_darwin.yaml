@@ -17,7 +17,14 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        scrape_datapoint_attribute: true
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -65,22 +72,25 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
             receivers:
+                - telegraf_disk
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_cpu
-                - telegraf_disk
                 - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

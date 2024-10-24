@@ -53,8 +53,11 @@ import (
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
@@ -85,6 +88,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Processors, err = processor.MakeFactoryMap(
 		attributesprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
+		awsentity.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		deltatorateprocessor.NewFactory(),
@@ -121,6 +125,8 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Extensions, err = extension.MakeFactoryMap(
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
+		entitystore.NewFactory(),
+		server.NewFactory(),
 		ballastextension.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),

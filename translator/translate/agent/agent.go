@@ -25,20 +25,25 @@ func RegisterRule(fieldname string, r translator.Rule) {
 }
 
 type Agent struct {
-	Interval    string
-	Credentials map[string]interface{}
-	Region      string
-	RegionType  string
-	Mode        string
-	Internal    bool
-	Role_arn    string
+	Interval              string
+	Credentials           map[string]interface{}
+	Region                string
+	RegionType            string
+	Mode                  string
+	Internal              bool
+	Role_arn              string
+	ServiceName           string
+	DeploymentEnvironment string
 }
 
-var Global_Config Agent = *new(Agent)
+var (
+	Global_Config Agent = *new(Agent)
+)
 
 func (a *Agent) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
 	result := map[string]interface{}{}
+
 	/*
 	  In JSON config file, it represent as "agent" : {//specification config information}
 	  To check the specification config entry

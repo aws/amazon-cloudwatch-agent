@@ -11,9 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -29,6 +28,7 @@ type aggregationDatum struct {
 	cloudwatch.MetricDatum
 	aggregationInterval time.Duration
 	distribution        distribution.Distribution
+	entity              cloudwatch.Entity
 }
 
 type Aggregator interface {

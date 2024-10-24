@@ -14,6 +14,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 const (
@@ -29,6 +31,7 @@ const (
 	ECSKey                             = "ecs"
 	KubernetesKey                      = "kubernetes"
 	CloudWatchKey                      = "cloudwatch"
+	CloudWatchLogsKey                  = "cloudwatchlogs"
 	PrometheusKey                      = "prometheus"
 	AMPKey                             = "amp"
 	WorkspaceIDKey                     = "workspace_id"
@@ -66,6 +69,8 @@ const (
 	ServiceAddress                     = "service_address"
 	Udp                                = "udp"
 	Tcp                                = "tcp"
+	TlsKey                             = "tls"
+	Tags                               = "tags"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
@@ -75,13 +80,43 @@ const (
 )
 
 const (
-	PipelineNameHost             = "host"
-	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
-	PipelineNameJmx              = "jmx"
-	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "application_signals"
-	AppSignalsFallback           = "app_signals"
-	AppSignalsRules              = "rules"
+	CollectDMetricKey = "collectd"
+	CollectDPluginKey = "socket_listener"
+	CPUMetricKey      = "cpu"
+	DiskMetricKey     = "disk"
+	DiskIoMetricKey   = "diskio"
+	StatsDMetricKey   = "statsd"
+	SwapMetricKey     = "swap"
+	MemMetricKey      = "mem"
+	NetMetricKey      = "net"
+	NetStatMetricKey  = "netstat"
+	ProcessMetricKey  = "process"
+	ProcStatMetricKey = "procstat"
+
+	//Windows Plugins
+	MemMetricKeyWindows          = "Memory"
+	LogicalDiskMetricKeyWindows  = "LogicalDisk"
+	NetworkMetricKeyWindows      = "Network Interface"
+	PagingMetricKeyWindows       = "Paging"
+	PhysicalDiskMetricKeyWindows = "PhysicalDisk"
+	ProcessorMetricKeyWindows    = "Processor"
+	SystemMetricKeyWindows       = "System"
+	TCPv4MetricKeyWindows        = "TCPv4"
+	TCPv6MetricKeyWindows        = "TCPv6"
+)
+
+const (
+	PipelineNameHost                 = "host"
+	PipelineNameHostCustomMetrics    = "hostCustomMetrics"
+	PipelineNameHostDeltaMetrics     = "hostDeltaMetrics"
+	PipelineNameHostOtlpMetrics      = "hostOtlpMetrics"
+	PipelineNameContainerInsights    = "containerinsights"
+	PipelineNameJmx                  = "jmx"
+	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
+	PipelineNameEmfLogs              = "emf_logs"
+	AppSignals                       = "application_signals"
+	AppSignalsFallback               = "app_signals"
+	AppSignalsRules                  = "rules"
 )
 
 var (
@@ -94,11 +129,19 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
-	JmxConfigKey = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
-	JmxTargets   = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
+
+	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
+
+	TelegrafPlugins = collections.NewSet[string](CollectDMetricKey, CPUMetricKey, DiskMetricKey, DiskIoMetricKey,
+		StatsDMetricKey, SwapMetricKey, MemMetricKey, NetMetricKey, NetStatMetricKey, ProcessMetricKey, ProcStatMetricKey,
+		//Windows Plugins
+		MemMetricKeyWindows, LogicalDiskMetricKeyWindows, NetworkMetricKeyWindows, PagingMetricKeyWindows, PhysicalDiskMetricKeyWindows,
+		ProcessorMetricKeyWindows, SystemMetricKeyWindows, TCPv4MetricKeyWindows, TCPv6MetricKeyWindows)
 )
 
 // Translator is used to translate the JSON config into an
@@ -407,6 +450,16 @@ func GetMeasurements(m map[string]any) []string {
 func IsAnySet(conf *confmap.Conf, keys []string) bool {
 	for _, key := range keys {
 		if conf.IsSet(key) {
+			return true
+		}
+	}
+	return false
+}
+
+// TelegrafMetricsEnabled checks if any telegraf plugin is present in the configuration.
+func TelegrafMetricsEnabled(conf *confmap.Conf) bool {
+	for plugin := range TelegrafPlugins {
+		if conf.IsSet(ConfigKey(MetricsKey, MetricsCollectedKey, plugin)) {
 			return true
 		}
 	}

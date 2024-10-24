@@ -81,6 +81,19 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
+func TestContainerInsightsJMX(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+
+	expectedEnvVars := map[string]string{
+		"CWAGENT_LOG_LEVEL": "DEBUG",
+	}
+
+	checkTranslation(t, "container_insights_jmx", "linux", expectedEnvVars, "")
+}
 
 func TestGenericAppSignalsFallbackConfig(t *testing.T) {
 	resetContext(t)
@@ -167,6 +180,19 @@ func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
 
+func TestCompassConfig(t *testing.T) {
+	resetContext(t)
+
+	//context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+
+	checkTranslation(t, "compass_linux_config", "linux", nil, "")
+	checkTranslation(t, "compass_linux_config", "darwin", nil, "")
+}
+
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
@@ -226,6 +252,14 @@ func TestOtlpMetricsConfig(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
 }
 
+func TestOtlpMetricsEmfConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "windows", nil, "")
+}
+
 func TestProcstatMemorySwapConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
@@ -234,7 +268,6 @@ func TestProcstatMemorySwapConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	checkTranslation(t, "procstat_memory_swap_config", "linux", nil, "")
 	checkTranslation(t, "procstat_memory_swap_config", "darwin", nil, "")
-
 }
 
 func TestWindowsEventOnlyConfig(t *testing.T) {
@@ -575,12 +608,17 @@ func TestECSNodeMetricConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsutil.GetECSUtilSingleton().TaskARN = "arn:aws:ecs:us-east-1:account_id:task/task_id"
+	ecsSingleton := ecsutil.GetECSUtilSingleton()
+	ecsSingleton.Region = "us-west-2"
 	t.Setenv("RUN_IN_CONTAINER", "True")
 	t.Setenv("HOST_NAME", "fake-host-name")
 	t.Setenv("HOST_IP", "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_ecs_metric_only", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_ecs_metric_only", "darwin", nil, "")
+	//Reset back to default value to not impact other tests
+	ecsSingleton.Region = ""
 }
 
 func TestLogFilterConfig(t *testing.T) {
@@ -705,8 +743,6 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
-
-		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
