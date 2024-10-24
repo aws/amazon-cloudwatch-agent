@@ -118,11 +118,25 @@ func TestContainerInsightsJmx(t *testing.T) {
 	c := testutil.GetConf(t, "metricstransform_jmx_config.yaml")
 	require.NoError(t, c.Unmarshal(&expectedCfg))
 
-	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "jmx_config.json")))
 	translatedCfg, err := transl.Translate(conf)
 	assert.NoError(t, err)
 	actualCfg, ok := translatedCfg.(*metricstransformprocessor.Config)
 	assert.True(t, ok)
 	assert.Equal(t, len(expectedCfg.Transforms), len(actualCfg.Transforms))
 
+}
+
+func TestAppSignalsRuntime(t *testing.T) {
+	transl := NewTranslatorWithName(common.AppSignals).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
+	c := testutil.GetConf(t, "appsignals_runtime_config.yaml")
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "appsignals_config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*metricstransformprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.Transforms), len(actualCfg.Transforms))
 }

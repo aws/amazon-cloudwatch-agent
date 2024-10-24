@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "traces": {
+    "traces_collected": {
+      "app_signals": {}
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "app_signals": {
+        "hosted_in": "test"
+      }
+    }
+  }
+}
