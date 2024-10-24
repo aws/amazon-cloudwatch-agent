@@ -612,7 +612,7 @@ processors:
             reload_interval: 0s
             server_name_override: ""
         write_buffer_size: 0
-    metricstransform:
+    metricstransform/application_signals:
       transforms:
         - include: jvm.cpu.recent_utilization
           action: update
@@ -1236,7 +1236,7 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
-                - metricstransform
+                - metricstransform/application_signals
                 - awsentity/service/application_signals
                 - resourcedetection
                 - awsapplicationsignals

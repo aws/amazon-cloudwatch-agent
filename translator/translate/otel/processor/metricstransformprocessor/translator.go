@@ -20,6 +20,9 @@ import (
 //go:embed metricstransform_jmx_config.yaml
 var metricTransformJmxConfig string
 
+//go:embed appsignals_runtime_config.yaml
+var appSignalsRuntimeConfig string
+
 var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeGpuContainer,
 	containerinsightscommon.TypeGpuPod,
@@ -70,6 +73,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
 	if t.name == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, metricTransformJmxConfig)
+	} else if t.name == common.AppSignals {
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsRuntimeConfig)
 	}
 
 	var transformRules []map[string]interface{}
