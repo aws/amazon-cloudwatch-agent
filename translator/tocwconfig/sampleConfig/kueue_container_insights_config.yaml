@@ -1,13 +1,13 @@
 exporters:
     awscloudwatchlogs/emf_logs:
-        certificate_file_path: ""
+        certificate_file_path: /etc/test/ca_bundle.pem
         emf_only: true
         endpoint: https://fake_endpoint
         imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
-        log_stream_name: fake-host-name
+        log_stream_name: host_name_from_env
         max_retries: 2
         middleware: agenthealth/logs
         no_verify_ssl: false
@@ -15,7 +15,7 @@ exporters:
         profile: ""
         proxy_address: ""
         raw_log: true
-        region: us-west-2
+        region: us-east-1
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
@@ -31,56 +31,152 @@ exporters:
             num_consumers: 1
             queue_size: 1000
     awsemf/containerinsights:
-        certificate_file_path: ""
+        certificate_file_path: /etc/test/ca_bundle.pem
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
-        disable_metric_extraction: false
+        disable_metric_extraction: true
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: false
         imds_retries: 1
         local_mode: false
-        log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
+        log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
-        log_stream_name: NodeTelemetry-{ContainerInstanceId}
+        log_stream_name: '{NodeName}'
         max_retries: 2
         metric_declarations:
             - dimensions:
                 - - ClusterName
-                  - ContainerInstanceId
-                  - InstanceId
+                  - Namespace
+                  - PodName
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                  - Service
+                - - ClusterName
+                  - Namespace
               metric_name_selectors:
-                - instance_cpu_reserved_capacity
-                - instance_cpu_utilization
-                - instance_filesystem_utilization
-                - instance_memory_reserved_capacity
-                - instance_memory_utilization
-                - instance_network_total_bytes
-                - instance_number_of_running_tasks
+                - pod_cpu_utilization
+                - pod_memory_utilization
+                - pod_network_rx_bytes
+                - pod_network_tx_bytes
+                - pod_cpu_utilization_over_pod_limit
+                - pod_memory_utilization_over_pod_limit
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+              metric_name_selectors:
+                - pod_number_of_container_restarts
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+              metric_name_selectors:
+                - pod_cpu_reserved_capacity
+                - pod_memory_reserved_capacity
+            - dimensions:
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+              metric_name_selectors:
+                - node_cpu_utilization
+                - node_memory_utilization
+                - node_network_total_bytes
+                - node_cpu_reserved_capacity
+                - node_memory_reserved_capacity
+                - node_number_of_running_pods
+                - node_number_of_running_containers
             - dimensions:
                 - - ClusterName
               metric_name_selectors:
-                - instance_cpu_limit
-                - instance_cpu_reserved_capacity
-                - instance_cpu_usage_total
-                - instance_cpu_utilization
-                - instance_filesystem_utilization
-                - instance_memory_limit
-                - instance_memory_reserved_capacity
-                - instance_memory_utilization
-                - instance_memory_working_set
-                - instance_network_total_bytes
-                - instance_number_of_running_tasks
+                - node_cpu_usage_total
+                - node_cpu_limit
+                - node_memory_working_set
+                - node_memory_limit
+            - dimensions:
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+              metric_name_selectors:
+                - node_filesystem_utilization
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - Service
+                - - ClusterName
+              metric_name_selectors:
+                - service_number_of_running_pods
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                - - ClusterName
+              metric_name_selectors:
+                - namespace_number_of_running_pods
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - cluster_node_count
+                - cluster_failed_node_count
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Status
+                - - ClusterName
+                  - Status
+              metric_name_selectors:
+                - kueue_pending_workloads
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Reason
+                - - ClusterName
+                  - Reason
+              metric_name_selectors:
+                - kueue_evicted_workloads_total
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+              metric_name_selectors:
+                - kueue_admitted_active_workloads
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Resource
+                - - ClusterName
+                  - ClusterQueue
+                  - Flavor
+                  - Resource
+                - - ClusterName
+                  - ClusterQueue
+                  - Flavor
+              metric_name_selectors:
+                - kueue_cluster_queue_resource_usage
+                - kueue_cluster_queue_nominal_quota
         middleware: agenthealth/logs
-        namespace: ECS/ContainerInsights
+        namespace: ContainerInsights
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
         parse_json_encoded_attr_values:
             - Sources
+            - kubernetes
         profile: ""
         proxy_address: ""
-        region: us-west-2
+        region: us-east-1
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
@@ -110,32 +206,31 @@ processors:
         timeout: 5s
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: true
-        kueue_container_insights: false
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
         certificate_file_path: ""
-        cluster_name: ""
+        cluster_name: TestCluster
         collection_interval: 30s
-        container_orchestrator: ecs
+        container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
         host_ip: ""
         host_name: ""
         imds_retries: 1
         kube_config_path: ""
-        kueue_container_insights: false
-        leader_lock_name: otel-container-insight-clusterleader
-        leader_lock_using_config_map_only: false
+        kueue_container_insights: true
+        leader_lock_name: cwagent-clusterleader
+        leader_lock_using_config_map_only: true
         local_mode: false
         max_retries: 0
         no_verify_ssl: false
         num_workers: 0
-        prefer_full_pod_name: false
+        prefer_full_pod_name: true
         profile: ""
         proxy_address: ""
-        region: us-west-2
+        region: us-east-1
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
