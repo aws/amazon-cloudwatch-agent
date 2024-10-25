@@ -62,7 +62,7 @@ func TestTranslator(t *testing.T) {
 				JsonKey: "metrics::metrics_collected::prometheus::prometheus_config_path",
 			},
 		},
-		"WithMissingDestinations": {
+		"WithMissingLogsConfiguration": {
 			input: map[string]any{
 				"metrics": map[string]any{
 					"metrics_collected": map[string]any{
@@ -73,8 +73,8 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			dataType:    component.DataTypeMetrics,
-			destination: common.AMPKey,
-			wantErr:     errors.New("pipeline (prometheus/amp) does not have destination (amp) in configuration"),
+			destination: common.CloudWatchKey,
+			wantErr:     errors.New("pipeline (prometheus/cloudwatch) is missing prometheus configuration under logs section with destination (cloudwatch)"),
 		},
 		"WithMetricsWithCloudWatchDestination": {
 			input: map[string]any{

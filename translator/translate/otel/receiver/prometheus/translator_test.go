@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
 	promcommon "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
@@ -74,7 +75,7 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 				},
-				TargetAllocator: &prometheusreceiver.TargetAllocator{
+				TargetAllocator: &targetallocator.Config{
 					CollectorID: "col-1234",
 					ClientConfig: confighttp.ClientConfig{
 						TLSSetting: configtls.ClientConfig{
