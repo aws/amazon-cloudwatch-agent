@@ -61,12 +61,12 @@ func NewPair[K any, V any](key K, value V) *Pair[K, V] {
 
 // Set is a map with a comparable K key and no
 // meaningful value.
-type Set[K comparable] map[K]any
+type Set[K comparable] map[K]struct{}
 
 // Add keys to the Set.
 func (s Set[K]) Add(keys ...K) {
 	for _, key := range keys {
-		s[key] = nil
+		s[key] = struct{}{}
 	}
 }
 
