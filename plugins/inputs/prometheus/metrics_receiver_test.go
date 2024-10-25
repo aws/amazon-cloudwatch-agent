@@ -120,16 +120,12 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 	defer os.Unsetenv("POD_NAME")
 	configFile := filepath.Join("testdata", "target_allocator.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	var reloader = func(cfg *config.Config) error {
+	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
 		return nil
 	}
-	dmDoneCh := make(chan struct{}, 1)
-	smDoneCh := make(chan struct{}, 1)
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil, dmDoneCh, smDoneCh)
-	err := reloadConfig(configFile, logger, taManager, reloader)
-	close(dmDoneCh)
-	close(smDoneCh)
+	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
+	err := reloadConfig(configFile, logger, taManager, reloadHandler)
 	assert.NoError(t, err)
 	assert.True(t, taManager.enabled)
 	assert.Equal(t, taManager.config.TargetAllocator.CollectorID, "collector-1")
@@ -142,16 +138,12 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 	defer os.Unsetenv("POD_NAME")
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	var reloader = func(cfg *config.Config) error {
+	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
 		return nil
 	}
-	dmDoneCh := make(chan struct{}, 1)
-	smDoneCh := make(chan struct{}, 1)
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil, dmDoneCh, smDoneCh)
-	err := reloadConfig(configFile, logger, taManager, reloader)
-	close(dmDoneCh)
-	close(smDoneCh)
+	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
+	err := reloadConfig(configFile, logger, taManager, reloadHandler)
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
 
@@ -159,16 +151,12 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 func Test_loadConfigFromFileEC2(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	var reloader = func(cfg *config.Config) error {
+	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
 		return nil
 	}
-	dmDoneCh := make(chan struct{}, 1)
-	smDoneCh := make(chan struct{}, 1)
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil, dmDoneCh, smDoneCh)
-	err := reloadConfig(configFile, logger, taManager, reloader)
-	close(dmDoneCh)
-	close(smDoneCh)
+	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
+	err := reloadConfig(configFile, logger, taManager, reloadHandler)
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
 

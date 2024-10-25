@@ -115,10 +115,8 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
 		sdMetrics, _            = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), prometheus.DefaultRegisterer, sdMetrics, discovery.Name("scrape"))
-		discoverManagerDoneCh   = make(chan struct{}, 1)
 		scrapeManager, _        = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver, prometheus.DefaultRegisterer)
-		scrapeManagerDoneCh     = make(chan struct{}, 1)
-		taManager               = createTargetAllocatorManager(configFilePath, log.With(logger, "component", "ta manager"), scrapeManager, discoveryManagerScrape, scrapeManagerDoneCh, discoverManagerDoneCh)
+		taManager               = createTargetAllocatorManager(configFilePath, log.With(logger, "component", "ta manager"), scrapeManager, discoveryManagerScrape)
 	)
 
 	level.Info(logger).Log("msg", fmt.Sprintf("Target Allocator  is %t", taManager.enabled))
@@ -198,7 +196,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			func(err error) {
 				level.Info(logger).Log("msg", "Stopping scrape discovery manager...", "error", err)
 				cancelScrape()
-				close(taManager.dmLiveCh)
 			},
 		)
 	}
@@ -222,7 +219,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 				// so that it doesn't try to write samples to a closed storage.
 				level.Info(logger).Log("msg", "Stopping scrape manager...", "error", err)
 				scrapeManager.Stop()
-				close(taManager.smLiveCh)
 			},
 		)
 	}
