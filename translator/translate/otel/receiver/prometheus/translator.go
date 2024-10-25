@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -79,6 +80,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			// then add the default cert for TargetAllocator
 			if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
 				cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTlsCaPath
+				cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 			}
 		}
 
