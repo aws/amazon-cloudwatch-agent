@@ -308,6 +308,51 @@ exporters:
                 - - ClusterName
               metric_name_selectors:
                 - apiserver_flowcontrol_request_concurrency_limit
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Status
+                - - ClusterName
+                  - Status
+              metric_name_selectors:
+                - kueue_pending_workloads
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Reason
+                - - ClusterName
+                  - Reason
+              metric_name_selectors:
+                - kueue_evicted_workloads_total
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+              metric_name_selectors:
+                - kueue_admitted_active_workloads
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Resource
+                - - ClusterName
+                  - ClusterQueue
+                  - Flavor
+                  - Resource
+                - - ClusterName
+                  - ClusterQueue
+                  - Flavor
+              metric_name_selectors:
+                - kueue_cluster_queue_resource_usage
+                - kueue_cluster_queue_nominal_quota
         metric_descriptors:
             - metric_name: apiserver_admission_controller_admission_duration_seconds
               overwrite: true

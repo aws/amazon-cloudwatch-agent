@@ -25,6 +25,7 @@ var kueueLabelFilter = map[string]interface{}{
 	containerinsightscommon.ClusterQueueReasonKey:   nil,
 	containerinsightscommon.ClusterQueueResourceKey: nil,
 	containerinsightscommon.Flavor:                  nil,
+	containerinsightscommon.NodeNameKey:             nil,
 }
 
 type kueueAttributesProcessor struct {

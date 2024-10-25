@@ -605,7 +605,6 @@ receivers:
         host_name: ""
         imds_retries: 1
         kube_config_path: ""
-        kueue_container_insights: false
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
         local_mode: false
