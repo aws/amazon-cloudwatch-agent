@@ -57,6 +57,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 )
 
@@ -91,6 +92,7 @@ func Factories() (otelcol.Factories, error) {
 		ec2tagger.NewFactory(),
 		filterprocessor.NewFactory(),
 		gpuattributes.NewFactory(),
+		kueueattributes.NewFactory(),
 		groupbytraceprocessor.NewFactory(),
 		k8sattributesprocessor.NewFactory(),
 		memorylimiterprocessor.NewFactory(),

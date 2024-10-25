@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/kueue"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
@@ -55,6 +56,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		acceleratedComputeMetricsEnabled := awscontainerinsight.AcceleratedComputeMetricsEnabled(conf)
 		if acceleratedComputeMetricsEnabled {
 			processors.Set(gpu.NewTranslatorWithName(pipelineName))
+		}
+		KueueContainerInsightsEnabled := awscontainerinsight.KueueContainerInsightsEnabled(conf)
+		if KueueContainerInsightsEnabled {
+			processors.Set(kueue.NewTranslatorWithName(pipelineName))
 		}
 		processors.Set(batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey))
 		return &common.ComponentTranslators{

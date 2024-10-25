@@ -122,6 +122,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 	cfg.EnableAcceleratedComputeMetrics = cfg.EnableAcceleratedComputeMetrics || AcceleratedComputeMetricsEnabled(conf)
+	cfg.EnableKueueContainerInsights = cfg.EnableKueueContainerInsights || KueueContainerInsightsEnabled(conf)
 
 	return cfg, nil
 }

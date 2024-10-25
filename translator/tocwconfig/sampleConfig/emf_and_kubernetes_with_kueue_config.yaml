@@ -3,8 +3,8 @@ exporters:
         certificate_file_path: ""
         emf_only: true
         endpoint: https://fake_endpoint
-        imds_retries: 0
-        local_mode: false
+        imds_retries: 2
+        local_mode: true
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: host_name_from_env
@@ -12,7 +12,7 @@ exporters:
         middleware: agenthealth/logs
         no_verify_ssl: false
         num_workers: 8
-        profile: ""
+        profile: default
         proxy_address: ""
         raw_log: true
         region: us-east-1
@@ -30,16 +30,18 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
+        shared_credentials_file:
+            - /root/.aws/credentials
     awsemf/containerinsights:
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
-        disable_metric_extraction: false
+        disable_metric_extraction: true
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: true
-        imds_retries: 0
-        local_mode: false
+        imds_retries: 2
+        local_mode: true
         log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
         log_stream_name: '{NodeName}'
@@ -132,9 +134,9 @@ exporters:
                 - pod_memory_request
                 - pod_memory_limit
                 - pod_cpu_limit
-                - pod_cpu_request
                 - pod_cpu_usage_total
                 - pod_memory_working_set
+                - pod_cpu_request
                 - pod_container_status_running
                 - pod_container_status_terminated
                 - pod_container_status_waiting
@@ -375,7 +377,7 @@ exporters:
         parse_json_encoded_attr_values:
             - Sources
             - kubernetes
-        profile: ""
+        profile: default
         proxy_address: ""
         region: us-east-1
         request_timeout_seconds: 30
@@ -384,6 +386,8 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
+        shared_credentials_file:
+            - /root/.aws/credentials
         version: "0"
 extensions:
     agenthealth/logs:
@@ -392,7 +396,7 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-                mode: EC2
+                mode: OP
                 region_type: ACJ
 processors:
     batch/containerinsights:
@@ -405,6 +409,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    kueueattributes/containerinsights: {}
     metricstransform/containerinsights:
         transforms:
             - action: insert
@@ -418,7 +423,7 @@ processors:
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false
-        kueue_container_insights: false
+        kueue_container_insights: true
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
@@ -430,21 +435,23 @@ receivers:
         endpoint: ""
         host_ip: ""
         host_name: ""
-        imds_retries: 0
+        imds_retries: 2
         kube_config_path: ""
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
-        local_mode: false
+        local_mode: true
         max_retries: 0
         no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: true
-        profile: ""
+        profile: default
         proxy_address: ""
         region: us-east-1
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
+        shared_credentials_file:
+            - /root/.aws/credentials
     tcplog/emf_logs:
         encoding: utf-8
         id: tcp_input
@@ -488,6 +495,7 @@ service:
                 - awsemf/containerinsights
             processors:
                 - metricstransform/containerinsights
+                - kueueattributes/containerinsights
                 - batch/containerinsights
             receivers:
                 - awscontainerinsightreceiver

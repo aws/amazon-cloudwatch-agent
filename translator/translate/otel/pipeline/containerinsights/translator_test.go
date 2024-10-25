@@ -73,6 +73,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
 							"enhanced_container_insights": true,
+							"kueue_container_insights":    true,
 							"cluster_name":                "TestCluster",
 						},
 					},
@@ -81,9 +82,14 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "metrics/containerinsights",
 				receivers:    []string{"awscontainerinsightreceiver"},
-				processors:   []string{"metricstransform/containerinsights", "gpuattributes/containerinsights", "batch/containerinsights"},
-				exporters:    []string{"awsemf/containerinsights"},
-				extensions:   []string{"agenthealth/logs"},
+				processors: []string{
+					"metricstransform/containerinsights",
+					"gpuattributes/containerinsights",
+					"kueueattributes/containerinsights",
+					"batch/containerinsights",
+				},
+				exporters:  []string{"awsemf/containerinsights"},
+				extensions: []string{"agenthealth/logs"},
 			},
 		},
 	}

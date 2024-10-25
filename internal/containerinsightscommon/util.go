@@ -50,7 +50,7 @@ func MetricName(mType string, name string) string {
 		prefix = containerPrefix
 	case TypeService:
 		prefix = service
-	case TypeCluster, TypeGpuCluster:
+	case TypeCluster, TypeGpuCluster, TypeClusterQueue:
 		prefix = cluster
 	case K8sNamespace:
 		prefix = namespace
