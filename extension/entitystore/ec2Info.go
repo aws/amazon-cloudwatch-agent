@@ -47,7 +47,6 @@ func (ei *EC2Info) initEc2Info() {
 		return
 	}
 	ei.logger.Debug("Finished initializing EC2Info")
-	ei.ignoreInvalidFields()
 }
 
 func (ei *EC2Info) setInstanceIDAccountID() error {
@@ -66,6 +65,10 @@ func (ei *EC2Info) setInstanceIDAccountID() error {
 		}
 		ei.logger.Debug("Successfully retrieved Instance ID and Account ID")
 		ei.InstanceID = metadataDoc.InstanceID
+		if idLength := len(ei.InstanceID); idLength > instanceIdSizeMax {
+			ei.logger.Warn("InstanceId length exceeds characters limit and will be ignored", zap.Int("length", idLength), zap.Int("character limit", instanceIdSizeMax))
+			ei.InstanceID = ""
+		}
 		ei.AccountID = metadataDoc.AccountID
 		return nil
 	}
@@ -117,6 +120,10 @@ func (ei *EC2Info) retrieveAsgName() error {
 		} else {
 			ei.logger.Debug("AutoScalingGroup retrieved through IMDS")
 			ei.AutoScalingGroup = asg
+			if asgLength := len(ei.AutoScalingGroup); asgLength > autoScalingGroupSizeMax {
+				ei.logger.Warn("AutoScalingGroup length exceeds characters limit and will be ignored", zap.Int("length", asgLength), zap.Int("character limit", autoScalingGroupSizeMax))
+				ei.AutoScalingGroup = ""
+			}
 		}
 	}
 	return nil
@@ -128,17 +135,5 @@ func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, done chan
 		done:             done,
 		Region:           region,
 		logger:           logger,
-	}
-}
-
-func (ei *EC2Info) ignoreInvalidFields() {
-	if idLength := len(ei.InstanceID); idLength > instanceIdSizeMax {
-		ei.logger.Warn("InstanceId length exceeds characters limit and will be ignored", zap.Int("length", idLength), zap.Int("character limit", instanceIdSizeMax))
-		ei.InstanceID = ""
-	}
-
-	if asgLength := len(ei.AutoScalingGroup); asgLength > autoScalingGroupSizeMax {
-		ei.logger.Warn("AutoScalingGroup length exceeds characters limit and will be ignored", zap.Int("length", asgLength), zap.Int("character limit", autoScalingGroupSizeMax))
-		ei.AutoScalingGroup = ""
 	}
 }
