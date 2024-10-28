@@ -4,13 +4,16 @@
 package awsentity
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
@@ -78,6 +81,19 @@ func newMockGetEC2InfoFromEntityStore(instance, accountId, asg string) func() en
 			AutoScalingGroup: asg,
 		}
 	}
+}
+
+// This helper function creates a test logger
+// so that it can send the log messages into a
+// temporary buffer for pattern matching
+func CreateTestLogger(buf *bytes.Buffer) *zap.Logger {
+	writer := zapcore.AddSync(buf)
+
+	// Create a custom zapcore.Core that writes to the buffer
+	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
+	logger := zap.New(core)
+	return logger
 }
 
 func TestProcessMetricsLogGroupAssociation(t *testing.T) {
@@ -464,6 +480,127 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
 			}
 		})
+	}
+}
+
+func TestAWSEntityProcessorNoSensitiveInfoInLogs(t *testing.T) {
+	// Create a buffer to capture log output
+	var buf bytes.Buffer
+	logger := CreateTestLogger(&buf)
+
+	configs := []struct {
+		name   string
+		config *Config
+	}{
+		{
+			name: "EC2Service",
+			config: &Config{
+				EntityType: entityattributes.Service,
+				Platform:   config.ModeEC2,
+			},
+		},
+		{
+			name: "EKSService",
+			config: &Config{
+				EntityType:     entityattributes.Service,
+				Platform:       config.ModeEC2,
+				KubernetesMode: config.ModeEKS,
+				ClusterName:    "test-cluster",
+			},
+		},
+		{
+			name: "EC2Resource",
+			config: &Config{
+				EntityType: entityattributes.Resource,
+				Platform:   config.ModeEC2,
+			},
+		},
+		{
+			name: "K8sOnPremService",
+			config: &Config{
+				EntityType:     entityattributes.Service,
+				Platform:       config.ModeOnPrem,
+				KubernetesMode: config.ModeK8sOnPrem,
+				ClusterName:    "test-cluster",
+			},
+		},
+	}
+
+	for _, cfg := range configs {
+		t.Run(cfg.name, func(t *testing.T) {
+			buf.Reset()
+			processor := newAwsEntityProcessor(cfg.config, logger)
+
+			resetServiceNameSource := getServiceNameSource
+			getServiceNameSource = newMockGetServiceNameAndSource("test-service", "UserConfiguration")
+			defer func() { getServiceNameSource = resetServiceNameSource }()
+
+			resetGetEC2InfoFromEntityStore := getEC2InfoFromEntityStore
+			asgName := "test-asg"
+			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore("i-1234567890abcdef0", "123456789012", asgName)
+			defer func() { getEC2InfoFromEntityStore = resetGetEC2InfoFromEntityStore }()
+
+			md := generateTestMetrics()
+			_, err := processor.processMetrics(context.Background(), md)
+			assert.NoError(t, err)
+
+			logOutput := buf.String()
+			assertNoSensitiveInfo(t, logOutput, md, asgName)
+		})
+	}
+}
+
+func generateTestMetrics() pmetric.Metrics {
+	md := pmetric.NewMetrics()
+	rm := md.ResourceMetrics().AppendEmpty()
+
+	attrs := rm.Resource().Attributes()
+	attrs.PutStr(attributeAwsLogGroupNames, "test-log-group")
+	attrs.PutStr(attributeServiceName, "test-service")
+	attrs.PutStr(attributeDeploymentEnvironment, "test-environment")
+	attrs.PutStr(semconv.AttributeK8SPodName, "test-pod")
+	attrs.PutStr(semconv.AttributeK8SNamespaceName, "test-namespace")
+	attrs.PutStr(semconv.AttributeK8SDeploymentName, "test-deployment")
+	attrs.PutStr(semconv.AttributeK8SNodeName, "test-node")
+
+	metric := rm.ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	metric.SetName("test-metric")
+	dp := metric.SetEmptyGauge().DataPoints().AppendEmpty()
+	dp.Attributes().PutStr(attributeServiceName, "datapoint-service-name")
+	dp.Attributes().PutStr(attributeDeploymentEnvironment, "datapoint-environment")
+
+	return md
+}
+
+func assertNoSensitiveInfo(t *testing.T, logOutput string, md pmetric.Metrics, asgName string) {
+	rm := md.ResourceMetrics().At(0)
+	attrs := rm.Resource().Attributes()
+	dp := rm.ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0)
+
+	getStringOrEmpty := func(val pcommon.Value, exists bool) string {
+		if !exists {
+			return ""
+		}
+		return val.AsString()
+	}
+
+	sensitivePatterns := []string{
+		`i-[0-9a-f]{17}`, // EC2 Instance ID regex pattern
+		`\d{12}`,         // AWS Account ID regex pattern
+		asgName,          // Auto Scaling Group name
+		getStringOrEmpty(attrs.Get(attributeAwsLogGroupNames)),
+		getStringOrEmpty(attrs.Get(attributeServiceName)),
+		getStringOrEmpty(attrs.Get(attributeDeploymentEnvironment)),
+		getStringOrEmpty(attrs.Get(semconv.AttributeK8SPodName)),
+		getStringOrEmpty(attrs.Get(semconv.AttributeK8SNamespaceName)),
+		getStringOrEmpty(attrs.Get(semconv.AttributeK8SDeploymentName)),
+		getStringOrEmpty(attrs.Get(semconv.AttributeK8SNodeName)),
+		getStringOrEmpty(dp.Attributes().Get(attributeServiceName)),
+		getStringOrEmpty(dp.Attributes().Get(attributeDeploymentEnvironment)),
+	}
+
+	for _, pattern := range sensitivePatterns {
+		assert.NotRegexp(t, pattern, logOutput)
 	}
 }
 
