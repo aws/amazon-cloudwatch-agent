@@ -78,7 +78,7 @@ service:
         - agenthealth/logs
         - entitystore
     pipelines:
-        logs/prometheus:
+        metrics/prometheus:
             exporters:
                 - awsemf/prometheus
             processors:

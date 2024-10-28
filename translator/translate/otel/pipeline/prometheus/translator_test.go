@@ -44,7 +44,7 @@ func TestTranslator(t *testing.T) {
 			input:    map[string]any{},
 			dataType: component.DataTypeLogs,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeLogs, "prometheus"),
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus"),
 				JsonKey: "logs::metrics_collected::prometheus",
 			},
 		},
@@ -94,7 +94,7 @@ func TestTranslator(t *testing.T) {
 			dataType:    component.DataTypeLogs,
 			destination: common.CloudWatchKey,
 			want: &want{
-				pipelineID: "logs/prometheus/cloudwatch",
+				pipelineID: "metrics/prometheus/cloudwatch",
 				receivers:  []string{"telegraf_prometheus"},
 				processors: []string{"batch/prometheus/cloudwatch"},
 				exporters:  []string{"awsemf/prometheus"},
@@ -137,7 +137,7 @@ func TestTranslator(t *testing.T) {
 			dataType:    component.DataTypeLogs,
 			destination: common.CloudWatchKey,
 			want: &want{
-				pipelineID: "logs/prometheus/cloudwatch",
+				pipelineID: "metrics/prometheus/cloudwatch",
 				receivers:  []string{"telegraf_prometheus"},
 				processors: []string{"batch/prometheus/cloudwatch"},
 				exporters:  []string{"awsemf/prometheus"},
@@ -147,7 +147,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tt := NewTranslator(WithDataType(testCase.dataType), WithDestination(testCase.destination))
+			tt := NewTranslator(WithDataType(testCase.dataType), common.WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

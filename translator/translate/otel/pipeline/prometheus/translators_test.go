@@ -66,7 +66,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []component.ID{
-				component.MustNewIDWithName("logs", "prometheus/cloudwatch"),
+				component.MustNewIDWithName("metrics", "prometheus/cloudwatch"),
 			},
 		},
 		"WithMultiple/Destinations": {
@@ -91,8 +91,6 @@ func TestTranslators(t *testing.T) {
 			want: []component.ID{
 				component.MustNewIDWithName("metrics", "prometheus/amp"),
 				component.MustNewIDWithName("metrics", "prometheus/cloudwatch"),
-				component.MustNewIDWithName("logs", "prometheus/amp"),
-				component.MustNewIDWithName("logs", "prometheus/cloudwatch"),
 			},
 		},
 	}

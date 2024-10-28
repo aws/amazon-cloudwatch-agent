@@ -12,21 +12,12 @@ import (
 
 func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
-	var destinations []string
-	if conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.CloudWatchKey)) {
-		destinations = append(destinations, common.CloudWatchKey)
-	}
-	if conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.AMPKey)) {
-		destinations = append(destinations, common.AMPKey)
-	}
-	if len(destinations) == 0 {
-		destinations = append(destinations, "")
-	}
+	destinations := common.GetMetricsDestinations(conf)
 
 	for dataType, configKey := range common.PrometheusConfigKeys {
 		if conf.IsSet(configKey) {
 			for _, destination := range destinations {
-				translators.Set(NewTranslator(WithDataType(dataType), WithDestination(destination)))
+				translators.Set(NewTranslator(WithDataType(dataType), common.WithDestination(destination)))
 			}
 		}
 	}

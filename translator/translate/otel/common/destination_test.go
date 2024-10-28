@@ -19,6 +19,7 @@ func TestGetMetricsDestinations(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{},
 			},
+			want: []string{DefaultDestination},
 		},
 		"WithMetrics/Default": {
 			input: map[string]any{

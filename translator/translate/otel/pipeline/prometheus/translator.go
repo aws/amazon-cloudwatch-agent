@@ -23,22 +23,14 @@ import (
 )
 
 type translator struct {
-	name        string
-	dataType    component.DataType
-	destination string
+	name     string
+	dataType component.DataType
+	common.DestinationProvider
 }
 
 type Option func(any)
 
-func WithDestination(destination string) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.destination = destination
-		}
-	}
-}
-
-func WithDataType(dataType component.DataType) Option {
+func WithDataType(dataType component.DataType) common.TranslatorOption {
 	return func(a any) {
 		if t, ok := a.(*translator); ok {
 			t.dataType = dataType
@@ -48,19 +40,19 @@ func WithDataType(dataType component.DataType) Option {
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[*common.ComponentTranslators] {
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.ComponentTranslators] {
 	t := &translator{name: common.PipelineNamePrometheus}
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.destination != "" {
-		t.name += "/" + t.destination
+	if t.Destination() != "" {
+		t.name += "/" + t.Destination()
 	}
 	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.dataType, t.name)
+	return component.NewIDWithName(component.DataTypeMetrics, t.name)
 }
 
 // Translate creates a pipeline for prometheus if the logs.metrics_collected.prometheus
@@ -73,19 +65,18 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if t.dataType == component.DataTypeMetrics && !conf.IsSet(common.ConfigKey(common.PrometheusConfigKeys[t.dataType], common.PrometheusConfigPathKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(common.ConfigKey(common.PrometheusConfigKeys[t.dataType], common.PrometheusConfigPathKey))}
 	}
-
 	// return pipeline based on destination to keep source/destination combinations clearly separated
 	// telegraf_prometheus - cloudwatch
 	// otel_prometheus - AMP
 	// this could change in future releases to support different source/destination combinations
-	switch t.destination {
-	case "", common.CloudWatchKey:
+	switch t.Destination() {
+	case common.DefaultDestination, common.CloudWatchKey:
 		if !conf.IsSet(common.PrometheusConfigKeys[component.DataTypeLogs]) {
-			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under logs section with destination (%s)", t.name, t.destination)
+			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under logs section with destination (%s)", t.name, t.Destination())
 		}
 		if !conf.IsSet(common.MetricsDestinations) || conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.CloudWatchKey)) {
 			return &common.ComponentTranslators{
-				Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, common.LogsKey, time.Minute)),
+				Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, common.PrometheusConfigKeys[t.dataType], time.Minute)),
 				Processors: common.NewTranslatorMap(
 					batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 				),
@@ -93,11 +84,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
 			}, nil
 		} else {
-			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.destination)
+			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.Destination())
 		}
 	case common.AMPKey:
 		if !conf.IsSet(common.PrometheusConfigKeys[component.DataTypeMetrics]) {
-			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.destination)
+			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
 		if conf.IsSet(common.MetricsDestinations) && conf.IsSet(common.ConfigKey(common.MetricsDestinations, common.AMPKey)) {
 			translators := &common.ComponentTranslators{
@@ -111,9 +102,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			}
 			return translators, nil
 		} else {
-			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.destination)
+			return nil, fmt.Errorf("pipeline (%s) does not have destination (%s) in configuration", t.name, t.Destination())
 		}
 	default:
-		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.destination)
+		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
 }

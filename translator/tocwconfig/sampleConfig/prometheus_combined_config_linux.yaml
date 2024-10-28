@@ -181,20 +181,6 @@ service:
         - agenthealth/logs
         - sigv4auth
     pipelines:
-        logs/prometheus/amp:
-            exporters:
-                - prometheusremotewrite/amp
-            processors:
-                - batch/prometheus/amp
-            receivers:
-                - prometheus
-        logs/prometheus/cloudwatch:
-            exporters:
-                - awsemf/prometheus
-            processors:
-                - batch/prometheus/cloudwatch
-            receivers:
-                - telegraf_prometheus
         metrics/prometheus/amp:
             exporters:
                 - prometheusremotewrite/amp
