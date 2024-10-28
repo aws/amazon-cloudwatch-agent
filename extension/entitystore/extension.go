@@ -94,18 +94,18 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		Profile:  e.config.Profile,
 		Filename: e.config.Filename,
 	}
+	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
 	switch e.mode {
 	case config.ModeEC2:
 		e.ec2Info = *newEC2Info(e.metadataprovider, e.done, e.config.Region, e.logger)
 		go e.ec2Info.initEc2Info()
+		go e.serviceprovider.startServiceProvider()
 	}
 	if e.kubernetesMode != "" {
 		e.eksInfo = newEKSInfo(e.logger)
 		// Starting the ttl cache will automatically evict all expired pods from the map
 		go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
 	}
-	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
-	go e.serviceprovider.startServiceProvider()
 	return nil
 }
 
