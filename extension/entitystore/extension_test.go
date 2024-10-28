@@ -503,7 +503,7 @@ func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	e.done = make(chan struct{})
 	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Microsecond)
 
-	go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
+	go e.StartPodToServiceEnvironmentMappingTtlCache()
 	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
 	e.AddPodServiceEnvironmentMapping("pod", "service", "env", "Instrumentation")
 	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())

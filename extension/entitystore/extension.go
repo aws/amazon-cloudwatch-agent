@@ -102,7 +102,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	if e.kubernetesMode != "" {
 		e.eksInfo = newEKSInfo(e.logger)
 		// Starting the ttl cache will automatically evict all expired pods from the map
-		go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
+		go e.StartPodToServiceEnvironmentMappingTtlCache()
 	}
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
 	go e.serviceprovider.startServiceProvider()
@@ -189,13 +189,13 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 	}
 }
 
-func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache(done chan struct{}) {
+func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
 	if e.eksInfo != nil {
 		e.eksInfo.podToServiceEnvMap.Start()
 
 		// Start a goroutine to stop the cache when done channel is closed
 		go func() {
-			<-done
+			<-e.done
 			e.eksInfo.podToServiceEnvMap.Stop()
 			e.logger.Info("Pod to Service Environment Mapping TTL Cache stopped")
 		}()
