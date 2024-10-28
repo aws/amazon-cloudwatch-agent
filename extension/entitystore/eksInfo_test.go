@@ -4,6 +4,7 @@
 package entitystore
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -102,6 +103,24 @@ func TestAddPodServiceEnvironmentMapping_TtlRefresh(t *testing.T) {
 	// assert that the expiration time is updated
 	assert.True(t, newExpiration.After(expiration))
 	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
+}
+
+func TestAddPodServiceEnvironmentMapping_MaxCapacity(t *testing.T) {
+	logger := zap.NewNop()
+	ei := newEKSInfo(logger)
+
+	//adds new pod to service environment mapping
+	for i := 0; i < 300; i++ {
+		ei.AddPodServiceEnvironmentMapping("test-pod-"+strconv.Itoa(i), "test-service", "test-environment", "Instrumentation")
+	}
+	assert.Equal(t, maxPodAssociationMapCapacity, ei.podToServiceEnvMap.Len())
+	itemIndex := 299
+	ei.podToServiceEnvMap.Range(func(item *ttlcache.Item[string, ServiceEnvironment]) bool {
+		// Check if the item's value equals the target string
+		assert.Equal(t, item.Key(), "test-pod-"+strconv.Itoa(itemIndex))
+		itemIndex--
+		return true
+	})
 }
 
 func TestGetPodServiceEnvironmentMapping(t *testing.T) {
