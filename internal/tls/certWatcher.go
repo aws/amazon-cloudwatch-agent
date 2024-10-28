@@ -72,8 +72,8 @@ func (cw *CertWatcher) RegisterCallback(callback func()) {
 
 // GetTLSConfig fetches the currently loaded tls Config, which may be nil.
 func (cw *CertWatcher) GetTLSConfig() *tls.Config {
-	cw.Lock()
-	defer cw.Unlock()
+	cw.RLock()
+	defer cw.RUnlock()
 	return cw.currentTLSConfig
 }
 
@@ -84,7 +84,6 @@ func (cw *CertWatcher) ReadTlsConfig() error {
 		TLSKey:            cw.keyPath,
 		TLSAllowedCACerts: []string{cw.caPath},
 	}
-	//cw.printCerts(serverConfig)
 	tlsConfig, err := serverConfig.TLSConfig()
 	if err != nil {
 		cw.logger.Error("failed to read certificate", zap.Error(err))
@@ -93,7 +92,9 @@ func (cw *CertWatcher) ReadTlsConfig() error {
 
 	if tlsConfig != cw.currentTLSConfig {
 		cw.logger.Debug("TLS certificate changed")
+		cw.Lock()
 		cw.currentTLSConfig = tlsConfig
+		cw.Unlock()
 
 		// If a callback is registered, invoke it with the new certificate.
 		if cw.callback != nil {

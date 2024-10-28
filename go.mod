@@ -96,8 +96,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.30.2
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/deckarep/golang-set/v2 v2.3.1
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-kit/log v0.2.1
+	github.com/go-playground/validator/v10 v10.20.0
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.6.0
@@ -203,11 +205,6 @@ require (
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0
 	k8s.io/klog/v2 v2.120.1
-)
-
-require (
-	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-playground/validator/v10 v10.20.0
 )
 
 require (
