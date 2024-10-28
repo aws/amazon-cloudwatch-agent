@@ -111,6 +111,8 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 
 func (e *EntityStore) Shutdown(_ context.Context) error {
 	close(e.done)
+	e.eksInfo.podToServiceEnvMap.Stop()
+	e.logger.Info("Pod to Service Environment Mapping TTL Cache stopped")
 	return nil
 }
 
@@ -192,13 +194,6 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
 	if e.eksInfo != nil {
 		e.eksInfo.podToServiceEnvMap.Start()
-
-		// Start a goroutine to stop the cache when done channel is closed
-		go func() {
-			<-e.done
-			e.eksInfo.podToServiceEnvMap.Stop()
-			e.logger.Info("Pod to Service Environment Mapping TTL Cache stopped")
-		}()
 	}
 }
 
