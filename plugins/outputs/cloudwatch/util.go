@@ -124,7 +124,7 @@ func payload(datum *cloudwatch.MetricDatum) (size int) {
 }
 
 func entityToString(entity cloudwatch.Entity) string {
-	var attributes, keyAttributes string
+	var attributes, keyAttributes, data string
 	if entity.Attributes != nil {
 		attributes = entityAttributesToString(entity.Attributes)
 	}
@@ -132,11 +132,13 @@ func entityToString(entity cloudwatch.Entity) string {
 		keyAttributes = entityAttributesToString(entity.KeyAttributes)
 	}
 
-	data := fmt.Sprintf(
-		"%s|%s",
-		attributes,
-		keyAttributes,
-	)
+	if attributes != "" || keyAttributes != "" {
+		data = fmt.Sprintf(
+			"%s|%s",
+			attributes,
+			keyAttributes,
+		)
+	}
 	return data
 }
 

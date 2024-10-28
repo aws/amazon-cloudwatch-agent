@@ -173,12 +173,40 @@ func TestEntityToString_StringToEntity(t *testing.T) {
 			},
 			entityString: "|Environment:Environment;Service:Service",
 		},
+		{
+			name:         "Empty Entity",
+			entity:       cloudwatch.Entity{},
+			entityString: "",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.entityString, entityToString(tc.entity))
 			assert.Equal(t, tc.entity, stringToEntity(tc.entityString))
+		})
+	}
+}
+
+func TestEntityToString(t *testing.T) {
+	testCases := []struct {
+		name         string
+		entity       cloudwatch.Entity
+		entityString string
+	}{
+		{
+			name: "EmptyEntityMaps",
+			entity: cloudwatch.Entity{
+				KeyAttributes: map[string]*string{},
+				Attributes:    map[string]*string{},
+			},
+			entityString: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.entityString, entityToString(tc.entity))
 		})
 	}
 }
