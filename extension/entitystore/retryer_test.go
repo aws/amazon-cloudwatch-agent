@@ -48,10 +48,10 @@ func TestRetryer_refreshLoop(t *testing.T) {
 				done:             done,
 			}
 			unlimitedRetryer := NewRetryer(tt.fields.oneTime, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, logger)
-			go unlimitedRetryer.refreshLoop(s.getIAMRole)
+			go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
 			time.Sleep(time.Second)
 			close(done)
-			assert.Equal(t, tt.wantIamRole, s.iamRole)
+			assert.Equal(t, tt.wantIamRole, s.GetIAMRole())
 		})
 	}
 }

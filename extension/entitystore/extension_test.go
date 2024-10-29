@@ -581,9 +581,9 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 
 			logOutput := buf.String()
 			log.Println(logOutput)
-			assertIfNonEmpty(t, logOutput, es.ec2Info.InstanceID)
-			assertIfNonEmpty(t, logOutput, es.ec2Info.AutoScalingGroup)
-			assertIfNonEmpty(t, logOutput, es.ec2Info.AccountID)
+			assertIfNonEmpty(t, logOutput, es.ec2Info.GetInstanceID())
+			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAutoScalingGroup())
+			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAccountID())
 
 		})
 	}

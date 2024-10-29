@@ -61,8 +61,8 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 			if err := ei.setInstanceIDAccountID(); (err != nil) != tt.wantErr {
 				t.Errorf("setInstanceIDAccountID() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			assert.Equal(t, tt.want.InstanceID, ei.InstanceID)
-			assert.Equal(t, tt.want.AccountID, ei.AccountID)
+			assert.Equal(t, tt.want.InstanceID, ei.GetInstanceID())
+			assert.Equal(t, tt.want.AccountID, ei.GetAccountID())
 		})
 	}
 }
@@ -122,7 +122,7 @@ func TestRetrieveASGName(t *testing.T) {
 			if err := ei.retrieveAsgName(); (err != nil) != tt.wantErr {
 				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			assert.Equal(t, tt.want.AutoScalingGroup, ei.AutoScalingGroup)
+			assert.Equal(t, tt.want.AutoScalingGroup, ei.GetAutoScalingGroup())
 		})
 	}
 }
@@ -185,9 +185,9 @@ func TestIgnoreInvalidFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.ignoreInvalidFields()
-			assert.Equal(t, tt.want.instanceId, tt.args.InstanceID)
-			assert.Equal(t, tt.want.accountId, tt.args.AccountID)
-			assert.Equal(t, tt.want.autoScalingGroup, tt.args.AutoScalingGroup)
+			assert.Equal(t, tt.want.instanceId, tt.args.GetInstanceID())
+			assert.Equal(t, tt.want.accountId, tt.args.GetAccountID())
+			assert.Equal(t, tt.want.autoScalingGroup, tt.args.GetAutoScalingGroup())
 		})
 	}
 }
@@ -229,8 +229,10 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 
 			logOutput := buf.String()
 			log.Println(logOutput)
-			assert.NotContains(t, logOutput, ei.InstanceID)
-			assert.NotContains(t, logOutput, ei.AutoScalingGroup)
+			ei.mutex.RLock()
+			assert.NotContains(t, logOutput, ei.GetInstanceID())
+			assert.NotContains(t, logOutput, ei.GetAutoScalingGroup())
+			ei.mutex.RUnlock()
 		})
 	}
 }

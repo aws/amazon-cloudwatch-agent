@@ -215,8 +215,8 @@ func (e *EntityStore) createAttributeMap() map[string]*string {
 	attributeMap := make(map[string]*string)
 
 	if e.mode == config.ModeEC2 {
-		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.InstanceID)
-		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.AutoScalingGroup)
+		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.GetInstanceID())
+		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.GetAutoScalingGroup())
 	}
 	switch e.mode {
 	case config.ModeEC2:
