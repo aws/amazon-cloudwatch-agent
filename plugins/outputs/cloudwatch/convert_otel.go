@@ -195,7 +195,9 @@ func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
 	processEntityAttributes(entityattributes.GetKeyAttributeEntityShortNameMap(), keyAttributesMap, resourceAttributes)
 	processEntityAttributes(entityattributes.GetAttributeEntityShortNameMap(platformType), attributeMap, resourceAttributes)
 	removeEntityFields(resourceAttributes)
-
+	if _, ok := keyAttributesMap[entityattributes.AwsAccountId]; !ok {
+		return cloudwatch.Entity{}
+	}
 	return cloudwatch.Entity{
 		KeyAttributes: keyAttributesMap,
 		Attributes:    attributeMap,

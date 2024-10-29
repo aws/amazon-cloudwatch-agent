@@ -15,8 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,6 +22,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -62,15 +61,6 @@ func (s *mockServiceProvider) logFileServiceAttribute(glob LogFileGlob, name Log
 
 func (s *mockServiceProvider) getServiceNameAndSource() (string, string) {
 	return "test-service-name", "UserConfiguration"
-}
-
-type mockSTSClient struct {
-	stsiface.STSAPI
-	accountId string
-}
-
-func (ms *mockSTSClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-	return &sts.GetCallerIdentityOutput{Account: aws.String(ms.accountId)}, nil
 }
 
 type mockMetadataProvider struct {
@@ -288,25 +278,25 @@ func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 			name:        "NameAndEnvironmentSet",
 			serviceAttr: ServiceAttribute{ServiceName: "test-service", Environment: "test-environment"},
 			want: map[string]*string{
-				Environment: aws.String("test-environment"),
-				Name:        aws.String("test-service"),
-				Type:        aws.String(Service),
+				entityattributes.DeploymentEnvironment: aws.String("test-environment"),
+				entityattributes.ServiceName:           aws.String("test-service"),
+				entityattributes.EntityType:            aws.String(Service),
 			},
 		},
 		{
 			name:        "OnlyNameSet",
 			serviceAttr: ServiceAttribute{ServiceName: "test-service"},
 			want: map[string]*string{
-				Name: aws.String("test-service"),
-				Type: aws.String(Service),
+				entityattributes.ServiceName: aws.String("test-service"),
+				entityattributes.EntityType:  aws.String(Service),
 			},
 		},
 		{
 			name:        "OnlyEnvironmentSet",
 			serviceAttr: ServiceAttribute{Environment: "test-environment"},
 			want: map[string]*string{
-				Environment: aws.String("test-environment"),
-				Type:        aws.String(Service),
+				entityattributes.DeploymentEnvironment: aws.String("test-environment"),
+				entityattributes.EntityType:            aws.String(Service),
 			},
 		},
 	}
@@ -332,10 +322,8 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
 	e := EntityStore{
 		mode:             config.ModeEC2,
-		ec2Info:          EC2Info{InstanceID: instanceId},
+		ec2Info:          EC2Info{InstanceID: instanceId, AccountID: accountId},
 		serviceprovider:  sp,
-		metadataprovider: mockMetadataProviderWithAccountId(accountId),
-		stsClient:        &mockSTSClient{accountId: accountId},
 		nativeCredential: &session.Session{},
 	}
 
@@ -343,9 +331,10 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 
 	expectedEntity := cloudwatchlogs.Entity{
 		KeyAttributes: map[string]*string{
-			Environment: aws.String("test-environment"),
-			Name:        aws.String("test-service"),
-			Type:        aws.String(Service),
+			entityattributes.DeploymentEnvironment: aws.String("test-environment"),
+			entityattributes.ServiceName:           aws.String("test-service"),
+			entityattributes.EntityType:            aws.String(Service),
+			entityattributes.AwsAccountId:          aws.String(accountId),
 		},
 		Attributes: map[string]*string{
 			InstanceIDKey:        aws.String(instanceId),
@@ -543,7 +532,6 @@ func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
 		ec2Info:          EC2Info{InstanceID: instanceId},
 		serviceprovider:  sp,
 		metadataprovider: mockMetadataProviderWithAccountId(accountId),
-		stsClient:        &mockSTSClient{accountId: accountId},
 		nativeCredential: &session.Session{},
 	}
 
