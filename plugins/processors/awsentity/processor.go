@@ -160,7 +160,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
 				// Perform fallback mechanism for service and environment name if they
 				// are empty
-				if entityServiceName == EMPTY && podInfo.Workload != EMPTY {
+				if entityServiceName == EMPTY && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}
