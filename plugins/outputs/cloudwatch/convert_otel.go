@@ -188,9 +188,12 @@ func ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
 	keyAttributesMap := map[string]*string{}
 	attributeMap := map[string]*string{}
-
+	platformType := ""
+	if platformTypeValue, ok := resourceAttributes.Get(entityattributes.AttributeEntityPlatformType); ok {
+		platformType = platformTypeValue.Str()
+	}
 	processEntityAttributes(entityattributes.GetKeyAttributeEntityShortNameMap(), keyAttributesMap, resourceAttributes)
-	processEntityAttributes(entityattributes.GetAttributeEntityShortNameMap(), attributeMap, resourceAttributes)
+	processEntityAttributes(entityattributes.GetAttributeEntityShortNameMap(platformType), attributeMap, resourceAttributes)
 	removeEntityFields(resourceAttributes)
 
 	return cloudwatch.Entity{

@@ -233,9 +233,7 @@ func (p *pusher) send() {
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
 	}
-	if p.region == "us-east-1" {
-		input.Entity = entity
-	}
+	input.Entity = entity
 
 	startTime := time.Now()
 
