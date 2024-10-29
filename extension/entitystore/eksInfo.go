@@ -10,7 +10,14 @@ import (
 	"go.uber.org/zap"
 )
 
-const ttlDuration = 5 * time.Minute
+const (
+	ttlDuration = 5 * time.Minute
+
+	// Agent server extension is mainly opened for FluentBit to
+	// consume data and FluentBit only caches 256 pods in memory
+	// so we will follow the same pattern
+	maxPodAssociationMapCapacity = 256
+)
 
 type ServiceEnvironment struct {
 	ServiceName       string
@@ -28,6 +35,7 @@ func newEKSInfo(logger *zap.Logger) *eksInfo {
 		logger: logger,
 		podToServiceEnvMap: ttlcache.New[string, ServiceEnvironment](
 			ttlcache.WithTTL[string, ServiceEnvironment](ttlDuration),
+			ttlcache.WithCapacity[string, ServiceEnvironment](maxPodAssociationMapCapacity),
 		),
 	}
 }

@@ -3,11 +3,6 @@
 
 package entityattributes
 
-import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-)
-
 const (
 
 	// The following are the possible values for EntityType config options
@@ -90,27 +85,17 @@ func GetKeyAttributeEntityShortNameMap() map[string]string {
 }
 
 // Cluster attribute prefix could be either EKS or K8s. We set the field once at runtime.
-func GetAttributeEntityShortNameMap() map[string]string {
+func GetAttributeEntityShortNameMap(platformType string) map[string]string {
 	if _, ok := attributeEntityToShortNameMap[AttributeEntityCluster]; !ok {
-		attributeEntityToShortNameMap[AttributeEntityCluster] = clusterType()
+		attributeEntityToShortNameMap[AttributeEntityCluster] = clusterType(platformType)
 	}
 	return attributeEntityToShortNameMap
 }
 
-// Container Insights attributes used for scraping EKS related information
-const (
-	NodeName  = "NodeName"
-	Namespace = "Namespace"
-	// PodName in Container Insights is the workload(Deployment, Daemonset, etc) name
-	PodName = "PodName"
-)
-
-func clusterType() string {
-	ctx := context.CurrentContext()
-	mode := ctx.KubernetesMode()
-	if mode == config.ModeEKS {
+func clusterType(platformType string) string {
+	if platformType == AttributeEntityEKSPlatform {
 		return EksCluster
-	} else if mode == config.ModeK8sEC2 || mode == config.ModeK8sOnPrem {
+	} else if platformType == AttributeEntityK8sPlatform {
 		return K8sCluster
 	}
 	return ""

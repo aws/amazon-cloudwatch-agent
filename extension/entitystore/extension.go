@@ -94,23 +94,27 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		Profile:  e.config.Profile,
 		Filename: e.config.Filename,
 	}
+	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
 	switch e.mode {
 	case config.ModeEC2:
 		e.ec2Info = *newEC2Info(e.metadataprovider, e.done, e.config.Region, e.logger)
 		go e.ec2Info.initEc2Info()
+		go e.serviceprovider.startServiceProvider()
 	}
 	if e.kubernetesMode != "" {
 		e.eksInfo = newEKSInfo(e.logger)
 		// Starting the ttl cache will automatically evict all expired pods from the map
-		go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
+		go e.StartPodToServiceEnvironmentMappingTtlCache()
 	}
-	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
-	go e.serviceprovider.startServiceProvider()
 	return nil
 }
 
 func (e *EntityStore) Shutdown(_ context.Context) error {
 	close(e.done)
+	if e.eksInfo != nil && e.eksInfo.podToServiceEnvMap != nil {
+		e.eksInfo.podToServiceEnvMap.Stop()
+	}
+	e.logger.Info("Pod to Service Environment Mapping TTL Cache stopped")
 	return nil
 }
 
@@ -189,16 +193,9 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 	}
 }
 
-func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache(done chan struct{}) {
+func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
 	if e.eksInfo != nil {
 		e.eksInfo.podToServiceEnvMap.Start()
-
-		// Start a goroutine to stop the cache when done channel is closed
-		go func() {
-			<-done
-			e.eksInfo.podToServiceEnvMap.Stop()
-			e.logger.Info("Pod to Service Environment Mapping TTL Cache stopped")
-		}()
 	}
 }
 
@@ -215,8 +212,8 @@ func (e *EntityStore) createAttributeMap() map[string]*string {
 	attributeMap := make(map[string]*string)
 
 	if e.mode == config.ModeEC2 {
-		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.InstanceID)
-		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.AutoScalingGroup)
+		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.GetInstanceID())
+		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.GetAutoScalingGroup())
 	}
 	switch e.mode {
 	case config.ModeEC2:

@@ -45,9 +45,8 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 			go s.startServiceProvider()
 			time.Sleep(3 * time.Second)
 			close(done)
-
-			assert.Equal(t, tt.wantIAM, s.iamRole)
-			assert.Equal(t, tt.wantTag, s.imdsServiceName)
+			assert.Equal(t, tt.wantIAM, s.GetIAMRole())
+			assert.Equal(t, tt.wantTag, s.GetIMDSServiceName())
 		})
 	}
 }
@@ -229,12 +228,12 @@ func Test_serviceprovider_getServiceNameSource(t *testing.T) {
 
 	s.iamRole = "test-role"
 	serviceName, serviceNameSource = s.getServiceNameAndSource()
-	assert.Equal(t, s.iamRole, serviceName)
+	assert.Equal(t, s.GetIAMRole(), serviceName)
 	assert.Equal(t, ServiceNameSourceClientIamRole, serviceNameSource)
 
 	s.imdsServiceName = "test-service-from-tags"
 	serviceName, serviceNameSource = s.getServiceNameAndSource()
-	assert.Equal(t, s.imdsServiceName, serviceName)
+	assert.Equal(t, s.GetIMDSServiceName(), serviceName)
 	assert.Equal(t, ServiceNameSourceResourceTags, serviceNameSource)
 
 }
@@ -256,8 +255,8 @@ func Test_serviceprovider_getIAMRole(t *testing.T) {
 			s := serviceprovider{
 				metadataProvider: tt.metadataProvider,
 			}
-			s.getIAMRole()
-			assert.Equal(t, tt.want, s.iamRole)
+			s.scrapeIAMRole()
+			assert.Equal(t, tt.want, s.GetIAMRole())
 		})
 	}
 }
@@ -306,8 +305,8 @@ func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 				logger:           zap.NewExample(),
 				metadataProvider: tt.metadataProvider,
 			}
-			s.getImdsServiceName()
-			assert.Equal(t, tt.wantTagServiceName, s.imdsServiceName)
+			s.scrapeImdsServiceName()
+			assert.Equal(t, tt.wantTagServiceName, s.GetIMDSServiceName())
 		})
 	}
 }

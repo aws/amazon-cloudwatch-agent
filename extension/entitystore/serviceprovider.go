@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"go.uber.org/zap"
@@ -64,6 +65,7 @@ type serviceprovider struct {
 	region           string
 	done             chan struct{}
 	logger           *zap.Logger
+	mutex            sync.RWMutex
 	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
 	// Example:
 	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "cloudwatch-agent"}
@@ -78,8 +80,20 @@ type serviceprovider struct {
 func (s *serviceprovider) startServiceProvider() {
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	limitedRetryer := NewRetryer(false, false, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
-	go unlimitedRetryer.refreshLoop(s.getIAMRole)
-	go limitedRetryer.refreshLoop(s.getImdsServiceName)
+	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
+	go limitedRetryer.refreshLoop(s.scrapeImdsServiceName)
+}
+
+func (s *serviceprovider) GetIAMRole() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.iamRole
+}
+
+func (s *serviceprovider) GetIMDSServiceName() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.imdsServiceName
 }
 
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
@@ -164,34 +178,34 @@ func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) Servic
 }
 
 func (s *serviceprovider) serviceAttributeFromImdsTags() ServiceAttribute {
-	if s.imdsServiceName == "" {
+	if s.GetIMDSServiceName() == "" {
 		return ServiceAttribute{}
 	}
 
 	return ServiceAttribute{
-		ServiceName:       s.imdsServiceName,
+		ServiceName:       s.GetIMDSServiceName(),
 		ServiceNameSource: ServiceNameSourceResourceTags,
 	}
 }
 
 func (s *serviceprovider) serviceAttributeFromIamRole() ServiceAttribute {
-	if s.iamRole == "" {
+	if s.GetIAMRole() == "" {
 		return ServiceAttribute{}
 	}
 
 	return ServiceAttribute{
-		ServiceName:       s.iamRole,
+		ServiceName:       s.GetIAMRole(),
 		ServiceNameSource: ServiceNameSourceClientIamRole,
 	}
 }
 
 func (s *serviceprovider) serviceAttributeFromAsg() ServiceAttribute {
-	if s.ec2Info == nil || s.ec2Info.AutoScalingGroup == "" {
+	if s.ec2Info == nil || s.ec2Info.GetAutoScalingGroup() == "" {
 		return ServiceAttribute{}
 	}
 
 	return ServiceAttribute{
-		Environment: "ec2:" + s.ec2Info.AutoScalingGroup,
+		Environment: "ec2:" + s.ec2Info.GetAutoScalingGroup(),
 	}
 }
 
@@ -207,7 +221,7 @@ func (s *serviceprovider) serviceAttributeFallback() ServiceAttribute {
 	return attr
 }
 
-func (s *serviceprovider) getIAMRole() error {
+func (s *serviceprovider) scrapeIAMRole() error {
 	iamRole, err := s.metadataProvider.InstanceProfileIAMRole()
 	if err != nil {
 		return err
@@ -219,13 +233,15 @@ func (s *serviceprovider) getIAMRole() error {
 	iamRoleResource := iamRoleArn.Resource
 	if strings.HasPrefix(iamRoleResource, INSTANCE_PROFILE) {
 		roleName := strings.TrimPrefix(iamRoleResource, INSTANCE_PROFILE)
+		s.mutex.Lock()
 		s.iamRole = roleName
+		s.mutex.Unlock()
 	} else {
 		return fmt.Errorf("IAM Role resource does not follow the expected pattern. Should be instance-profile/<role_name>")
 	}
 	return nil
 }
-func (s *serviceprovider) getImdsServiceName() error {
+func (s *serviceprovider) scrapeImdsServiceName() error {
 	tags, err := s.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
 		s.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
@@ -238,12 +254,14 @@ func (s *serviceprovider) getImdsServiceName() error {
 			if err != nil {
 				continue
 			} else {
+				s.mutex.Lock()
 				s.imdsServiceName = serviceName
+				s.mutex.Unlock()
 			}
 			break
 		}
 	}
-	if s.imdsServiceName == "" {
+	if s.GetIMDSServiceName() == "" {
 		s.logger.Debug("Service name not found through IMDS")
 	}
 	return nil

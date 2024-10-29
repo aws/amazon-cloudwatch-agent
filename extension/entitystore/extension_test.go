@@ -503,7 +503,7 @@ func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	e.done = make(chan struct{})
 	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Microsecond)
 
-	go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
+	go e.StartPodToServiceEnvironmentMappingTtlCache()
 	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
 	e.AddPodServiceEnvironmentMapping("pod", "service", "env", "Instrumentation")
 	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
@@ -514,6 +514,24 @@ func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	//cache should be cleared
 	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
 
+}
+
+func TestEntityStore_StopPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
+	e := EntityStore{eksInfo: newEKSInfo(zap.NewExample())}
+	e.done = make(chan struct{})
+	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Second)
+	e.logger = zap.NewNop()
+
+	go e.StartPodToServiceEnvironmentMappingTtlCache()
+	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
+	e.AddPodServiceEnvironmentMapping("pod", "service", "env", "Instrumentation")
+	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
+
+	time.Sleep(time.Millisecond)
+	assert.NoError(t, e.Shutdown(nil))
+	//cache should be cleared
+	time.Sleep(time.Second)
+	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
 }
 
 func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
@@ -581,9 +599,9 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 
 			logOutput := buf.String()
 			log.Println(logOutput)
-			assertIfNonEmpty(t, logOutput, es.ec2Info.InstanceID)
-			assertIfNonEmpty(t, logOutput, es.ec2Info.AutoScalingGroup)
-			assertIfNonEmpty(t, logOutput, es.ec2Info.AccountID)
+			assertIfNonEmpty(t, logOutput, es.ec2Info.GetInstanceID())
+			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAutoScalingGroup())
+			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAccountID())
 
 		})
 	}

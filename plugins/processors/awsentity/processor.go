@@ -113,13 +113,13 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 		switch p.config.EntityType {
 		case entityattributes.Resource:
 			if p.config.Platform == config.ModeEC2 {
-				ec2Info := getEC2InfoFromEntityStore()
-				if ec2Info.InstanceID != EMPTY {
+				ec2Info = getEC2InfoFromEntityStore()
+				if ec2Info.GetInstanceID() != EMPTY {
 					resourceAttrs.PutStr(entityattributes.AttributeEntityType, entityattributes.AttributeEntityAWSResource)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityResourceType, entityattributes.AttributeEntityEC2InstanceResource)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.InstanceID)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.GetInstanceID())
 				}
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.AccountID)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 			}
 		case entityattributes.Service:
 			if logGroupNamesAttr, ok := resourceAttrs.Get(attributeAwsLogGroupNames); ok {
@@ -160,7 +160,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
 				// Perform fallback mechanism for service and environment name if they
 				// are empty
-				if entityServiceName == EMPTY && podInfo.Workload != EMPTY {
+				if entityServiceName == EMPTY && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}
@@ -186,7 +186,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					Namespace:         podInfo.Namespace,
 					Workload:          podInfo.Workload,
 					Node:              podInfo.Node,
-					InstanceId:        ec2Info.InstanceID,
+					InstanceId:        ec2Info.GetInstanceID(),
 					ServiceNameSource: entityServiceNameSource,
 				}
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
@@ -199,8 +199,8 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNode, eksAttributes.Node)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.InstanceID)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.AccountID)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.GetInstanceID())
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
 				}
 				p.k8sscraper.Reset()
@@ -220,8 +220,8 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				ec2Info = getEC2InfoFromEntityStore()
 
 				if entityEnvironmentName == EMPTY {
-					if ec2Info.AutoScalingGroup != EMPTY {
-						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + ec2Info.AutoScalingGroup
+					if ec2Info.GetAutoScalingGroup() != EMPTY {
+						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + ec2Info.GetAutoScalingGroup()
 					} else {
 						entityEnvironmentName = entityattributes.DeploymentEnvironmentDefault
 					}
@@ -230,11 +230,11 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.AccountID)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 
 				ec2Attributes := EC2ServiceAttributes{
-					InstanceId:        ec2Info.InstanceID,
-					AutoScalingGroup:  ec2Info.AutoScalingGroup,
+					InstanceId:        ec2Info.GetInstanceID(),
+					AutoScalingGroup:  ec2Info.GetAutoScalingGroup(),
 					ServiceNameSource: entityServiceNameSource,
 				}
 				if err := validate.Struct(ec2Attributes); err == nil {
