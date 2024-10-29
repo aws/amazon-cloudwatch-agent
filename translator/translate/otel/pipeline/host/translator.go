@@ -66,9 +66,9 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		entityProcessor = nil
 	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service)
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
 	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource)
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
 	}
 
 	translators := common.ComponentTranslators{

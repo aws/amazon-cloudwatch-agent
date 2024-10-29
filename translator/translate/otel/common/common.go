@@ -14,8 +14,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v3"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 const (
@@ -136,12 +134,6 @@ var (
 
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
-
-	TelegrafPlugins = collections.NewSet[string](CollectDMetricKey, CPUMetricKey, DiskMetricKey, DiskIoMetricKey,
-		StatsDMetricKey, SwapMetricKey, MemMetricKey, NetMetricKey, NetStatMetricKey, ProcessMetricKey, ProcStatMetricKey,
-		//Windows Plugins
-		MemMetricKeyWindows, LogicalDiskMetricKeyWindows, NetworkMetricKeyWindows, PagingMetricKeyWindows, PhysicalDiskMetricKeyWindows,
-		ProcessorMetricKeyWindows, SystemMetricKeyWindows, TCPv4MetricKeyWindows, TCPv6MetricKeyWindows)
 )
 
 // Translator is used to translate the JSON config into an
@@ -450,16 +442,6 @@ func GetMeasurements(m map[string]any) []string {
 func IsAnySet(conf *confmap.Conf, keys []string) bool {
 	for _, key := range keys {
 		if conf.IsSet(key) {
-			return true
-		}
-	}
-	return false
-}
-
-// TelegrafMetricsEnabled checks if any telegraf plugin is present in the configuration.
-func TelegrafMetricsEnabled(conf *confmap.Conf) bool {
-	for plugin := range TelegrafPlugins {
-		if conf.IsSet(ConfigKey(MetricsKey, MetricsCollectedKey, plugin)) {
 			return true
 		}
 	}

@@ -75,7 +75,6 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        scrape_datapoint_attribute: true
         platform:  ec2
     batch/host/amp:
         metadata_cardinality_limit: 1000

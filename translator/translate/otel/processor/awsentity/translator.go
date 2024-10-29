@@ -24,9 +24,10 @@ const (
 )
 
 type translator struct {
-	factory    processor.Factory
-	entityType string
-	name       string
+	factory                  processor.Factory
+	entityType               string
+	name                     string
+	scrapeDatapointAttribute bool
 }
 
 func NewTranslator() common.Translator[component.Config] {
@@ -35,11 +36,17 @@ func NewTranslator() common.Translator[component.Config] {
 	}
 }
 
-func NewTranslatorWithEntityType(entityType string) common.Translator[component.Config] {
+func NewTranslatorWithEntityType(entityType string, name string, scrapeDatapointAttribute bool) common.Translator[component.Config] {
+	pipelineName := strings.ToLower(entityType)
+	if name != "" {
+		pipelineName = pipelineName + "/" + name
+	}
+
 	return &translator{
-		factory:    awsentity.NewFactory(),
-		entityType: entityType,
-		name:       strings.ToLower(entityType),
+		factory:                  awsentity.NewFactory(),
+		entityType:               entityType,
+		name:                     pipelineName,
+		scrapeDatapointAttribute: scrapeDatapointAttribute,
 	}
 }
 
@@ -59,7 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.EntityType = t.entityType
 	}
 
-	if common.TelegrafMetricsEnabled(conf) {
+	if t.scrapeDatapointAttribute {
 		cfg.ScrapeDatapointAttribute = true
 	}
 

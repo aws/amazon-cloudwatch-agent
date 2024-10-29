@@ -23,7 +23,6 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        scrape_datapoint_attribute: true
         platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:

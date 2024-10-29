@@ -27,7 +27,6 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        scrape_datapoint_attribute: true
         platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:

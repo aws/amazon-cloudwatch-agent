@@ -126,7 +126,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity/service", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"awsentity/service/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -147,7 +147,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity/service", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"awsentity/service/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -165,7 +165,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity/service", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"awsentity/service/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},

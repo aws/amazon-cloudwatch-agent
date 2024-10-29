@@ -56,7 +56,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	mode := context.CurrentContext().KubernetesMode()
 	if t.dataType == component.DataTypeMetrics && mode != "" {
-		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service))
+		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
 	}
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithDataType(t.dataType)))

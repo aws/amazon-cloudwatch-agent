@@ -306,7 +306,7 @@ processors:
         resolvers:
           - name: TestCluster
             platform: k8s
-    awsentity/service:
+    awsentity/service/application_signals:
         cluster_name: TestCluster
         entity_type: Service
         kubernetes_mode: K8sEC2
@@ -663,7 +663,7 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
-                - awsentity/service
+                - awsentity/service/application_signals
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

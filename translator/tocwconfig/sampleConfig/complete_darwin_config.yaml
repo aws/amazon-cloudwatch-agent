@@ -97,9 +97,8 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        scrape_datapoint_attribute: true
         platform: ec2
-    awsentity/service:
+    awsentity/service/telegraf:
         entity_type: Service
         scrape_datapoint_attribute: true
         platform: ec2
@@ -287,7 +286,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/service
+                - awsentity/service/telegraf
                 - ec2tagger
                 - transform
             receivers:
