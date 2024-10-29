@@ -25,11 +25,19 @@ var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	ImageID:      "ami-09edd32d9b0990d49",
 }
 
+var mockedInstanceIdentityDocWithLargeInstanceId = &ec2metadata.EC2InstanceIdentityDocument{
+	InstanceID:   "i-01d2417c27a396e44394824728",
+	AccountID:    "874389809020",
+	Region:       "us-east-1",
+	InstanceType: "m5ad.large",
+	ImageID:      "ami-09edd32d9b0990d49",
+}
+
 var (
 	tagVal3 = "ASG-1"
 )
 
-func TestSetInstanceIdAndRegion(t *testing.T) {
+func TestSetInstanceIDAccountID(t *testing.T) {
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
 	}
@@ -48,6 +56,17 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 			want: EC2Info{
 				InstanceID: mockedInstanceIdentityDoc.InstanceID,
 				AccountID:  mockedInstanceIdentityDoc.AccountID,
+			},
+		},
+		{
+			name: "InstanceId too large",
+			args: args{
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDocWithLargeInstanceId},
+			},
+			wantErr: false,
+			want: EC2Info{
+				InstanceID: "",
+				AccountID:  mockedInstanceIdentityDocWithLargeInstanceId.AccountID,
 			},
 		},
 	}
@@ -105,6 +124,23 @@ func TestRetrieveASGName(t *testing.T) {
 			},
 		},
 		{
+			name: "AutoScalingGroup too large",
+			args: args{
+				metadataProvider: &mockMetadataProvider{
+					InstanceIdentityDocument: mockedInstanceIdentityDoc,
+					Tags: map[string]string{
+						"aws:autoscaling:groupName": strings.Repeat("a", 256),
+						"env":                       "test-env",
+						"name":                      "test-name",
+					}},
+			},
+
+			wantErr: false,
+			want: EC2Info{
+				AutoScalingGroup: "",
+			},
+		},
+		{
 			name: "Success IMDS tags call but no ASG",
 			args: args{
 				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"name": tagVal3}},
@@ -123,71 +159,6 @@ func TestRetrieveASGName(t *testing.T) {
 				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want.AutoScalingGroup, ei.GetAutoScalingGroup())
-		})
-	}
-}
-
-func TestIgnoreInvalidFields(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	type want struct {
-		instanceId       string
-		accountId        string
-		autoScalingGroup string
-	}
-	tests := []struct {
-		name string
-		args *EC2Info
-		want want
-	}{
-		{
-			name: "Happy path",
-			args: &EC2Info{
-				InstanceID:       "i-01d2417c27a396e44",
-				AccountID:        "0123456789012",
-				AutoScalingGroup: "asg",
-				logger:           logger,
-			},
-			want: want{
-				instanceId:       "i-01d2417c27a396e44",
-				accountId:        "0123456789012",
-				autoScalingGroup: "asg",
-			},
-		},
-		{
-			name: "InstanceId too large",
-			args: &EC2Info{
-				InstanceID:       strings.Repeat("a", 20),
-				AccountID:        "0123456789012",
-				AutoScalingGroup: "asg",
-				logger:           logger,
-			},
-			want: want{
-				instanceId:       "",
-				accountId:        "0123456789012",
-				autoScalingGroup: "asg",
-			},
-		},
-		{
-			name: "AutoScalingGroup too large",
-			args: &EC2Info{
-				InstanceID:       "i-01d2417c27a396e44",
-				AccountID:        "0123456789012",
-				AutoScalingGroup: strings.Repeat("a", 256),
-				logger:           logger,
-			},
-			want: want{
-				instanceId:       "i-01d2417c27a396e44",
-				accountId:        "0123456789012",
-				autoScalingGroup: "",
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.args.ignoreInvalidFields()
-			assert.Equal(t, tt.want.instanceId, tt.args.GetInstanceID())
-			assert.Equal(t, tt.want.accountId, tt.args.GetAccountID())
-			assert.Equal(t, tt.want.autoScalingGroup, tt.args.GetAutoScalingGroup())
 		})
 	}
 }

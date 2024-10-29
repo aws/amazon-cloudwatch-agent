@@ -18,8 +18,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 const (
@@ -250,7 +248,6 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 		resourceAttributes map[string]any
 		wantedAttributes   map[string]*string
 		leftoverAttributes map[string]any
-		kubernetesMode     string
 	}{
 		{
 			name: "key_attributes",
@@ -267,19 +264,20 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 		{
 			name: "non-key_attributes",
 			resourceAttributes: map[string]any{
-				entityattributes.AttributeEntityCluster:   "my-cluster",
-				entityattributes.AttributeEntityNamespace: "my-namespace",
-				entityattributes.AttributeEntityNode:      "my-node",
-				entityattributes.AttributeEntityWorkload:  "my-workload",
+				entityattributes.AttributeEntityCluster:      "my-cluster",
+				entityattributes.AttributeEntityNamespace:    "my-namespace",
+				entityattributes.AttributeEntityNode:         "my-node",
+				entityattributes.AttributeEntityWorkload:     "my-workload",
+				entityattributes.AttributeEntityPlatformType: "AWS::EKS",
 			},
 			wantedAttributes: map[string]*string{
 				entityattributes.EksCluster:     aws.String("my-cluster"),
 				entityattributes.NamespaceField: aws.String("my-namespace"),
 				entityattributes.Node:           aws.String("my-node"),
 				entityattributes.Workload:       aws.String("my-workload"),
+				entityattributes.Platform:       aws.String("AWS::EKS"),
 			},
 			leftoverAttributes: make(map[string]any),
-			kubernetesMode:     config.ModeEKS,
 		},
 		{
 			name: "key_and_non_key_attributes",
@@ -290,6 +288,7 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityattributes.AttributeEntityNamespace:             "my-namespace",
 				entityattributes.AttributeEntityNode:                  "my-node",
 				entityattributes.AttributeEntityWorkload:              "my-workload",
+				entityattributes.AttributeEntityPlatformType:          "K8s",
 			},
 			wantedAttributes: map[string]*string{
 				entityattributes.ServiceName:           aws.String("my-service"),
@@ -298,9 +297,9 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityattributes.NamespaceField:        aws.String("my-namespace"),
 				entityattributes.Node:                  aws.String("my-node"),
 				entityattributes.Workload:              aws.String("my-workload"),
+				entityattributes.Platform:              aws.String("K8s"),
 			},
 			leftoverAttributes: make(map[string]any),
-			kubernetesMode:     config.ModeK8sEC2,
 		},
 		{
 			name: "key_and_non_key_attributes_plus_extras",
@@ -312,6 +311,7 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityattributes.AttributeEntityNamespace:             "my-namespace",
 				entityattributes.AttributeEntityNode:                  "my-node",
 				entityattributes.AttributeEntityWorkload:              "my-workload",
+				entityattributes.AttributeEntityPlatformType:          "K8s",
 			},
 			wantedAttributes: map[string]*string{
 				entityattributes.ServiceName:           aws.String("my-service"),
@@ -320,11 +320,11 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityattributes.NamespaceField:        aws.String("my-namespace"),
 				entityattributes.Node:                  aws.String("my-node"),
 				entityattributes.Workload:              aws.String("my-workload"),
+				entityattributes.Platform:              aws.String("K8s"),
 			},
 			leftoverAttributes: map[string]any{
 				"extra_attribute": "extra_value",
 			},
-			kubernetesMode: config.ModeK8sOnPrem,
 		},
 		{
 			name: "key_and_non_key_attributes_plus_unsupported_entity_field",
@@ -336,6 +336,7 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityattributes.AttributeEntityNamespace:             "my-namespace",
 				entityattributes.AttributeEntityNode:                  "my-node",
 				entityattributes.AttributeEntityWorkload:              "my-workload",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
 			},
 			wantedAttributes: map[string]*string{
 				entityattributes.ServiceName:           aws.String("my-service"),
@@ -344,25 +345,27 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityattributes.NamespaceField:        aws.String("my-namespace"),
 				entityattributes.Node:                  aws.String("my-node"),
 				entityattributes.Workload:              aws.String("my-workload"),
+				entityattributes.Platform:              aws.String("AWS::EKS"),
 			},
 			leftoverAttributes: map[string]any{},
-			kubernetesMode:     config.ModeEKS,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// resetting fields for current test case
-			ctx := context.CurrentContext()
-			ctx.SetKubernetesMode(tc.kubernetesMode)
-			entityAttrMap := []map[string]string{entityattributes.GetKeyAttributeEntityShortNameMap()}
-			if tc.kubernetesMode != "" {
-				delete(entityattributes.GetAttributeEntityShortNameMap(), entityattributes.AttributeEntityCluster)
-				entityAttrMap = append(entityAttrMap, entityattributes.GetAttributeEntityShortNameMap())
-			}
-
 			attrs := pcommon.NewMap()
 			err := attrs.FromRaw(tc.resourceAttributes)
+
+			// resetting fields for current test case
+			entityAttrMap := []map[string]string{entityattributes.GetKeyAttributeEntityShortNameMap()}
+			platformType := ""
+			if platformTypeValue, ok := attrs.Get(entityattributes.AttributeEntityPlatformType); ok {
+				platformType = platformTypeValue.Str()
+			}
+			if platformType != "" {
+				delete(entityattributes.GetAttributeEntityShortNameMap(platformType), entityattributes.AttributeEntityCluster)
+				entityAttrMap = append(entityAttrMap, entityattributes.GetAttributeEntityShortNameMap(platformType))
+			}
 			assert.Nil(t, err)
 			targetMap := make(map[string]*string)
 			for _, entityMap := range entityAttrMap {
@@ -384,8 +387,8 @@ func TestFetchEntityFields(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityCluster, "my-cluster")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNamespace, "my-namespace")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityWorkload, "my-workload")
-	assert.Equal(t, 7, resourceMetrics.Resource().Attributes().Len())
-	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EKS")
+	assert.Equal(t, 8, resourceMetrics.Resource().Attributes().Len())
 
 	expectedEntity := cloudwatch.Entity{
 		KeyAttributes: map[string]*string{
@@ -398,12 +401,66 @@ func TestFetchEntityFields(t *testing.T) {
 			entityattributes.EksCluster:     aws.String("my-cluster"),
 			entityattributes.NamespaceField: aws.String("my-namespace"),
 			entityattributes.Workload:       aws.String("my-workload"),
+			entityattributes.Platform:       aws.String("AWS::EKS"),
 		},
 	}
 	entity := fetchEntityFields(resourceMetrics.Resource().Attributes())
 	assert.Equal(t, 0, resourceMetrics.Resource().Attributes().Len())
 	assert.Equal(t, expectedEntity, entity)
+}
 
+func TestFetchEntityFieldsOnK8s(t *testing.T) {
+	resourceMetrics := pmetric.NewResourceMetrics()
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "my-environment")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "my-service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNode, "my-node")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityCluster, "my-cluster")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNamespace, "my-namespace")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityWorkload, "my-workload")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "K8s")
+	assert.Equal(t, 8, resourceMetrics.Resource().Attributes().Len())
+
+	expectedEntity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			entityattributes.EntityType:            aws.String(entityattributes.Service),
+			entityattributes.ServiceName:           aws.String("my-service"),
+			entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+		},
+		Attributes: map[string]*string{
+			entityattributes.Node:           aws.String("my-node"),
+			entityattributes.K8sCluster:     aws.String("my-cluster"),
+			entityattributes.NamespaceField: aws.String("my-namespace"),
+			entityattributes.Workload:       aws.String("my-workload"),
+			entityattributes.Platform:       aws.String("K8s"),
+		},
+	}
+	entity := fetchEntityFields(resourceMetrics.Resource().Attributes())
+	assert.Equal(t, 0, resourceMetrics.Resource().Attributes().Len())
+	assert.Equal(t, expectedEntity, entity)
+}
+
+func TestFetchEntityFieldsOnEc2(t *testing.T) {
+	resourceMetrics := pmetric.NewResourceMetrics()
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "my-environment")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "my-service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EC2")
+	assert.Equal(t, 4, resourceMetrics.Resource().Attributes().Len())
+
+	expectedEntity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			entityattributes.EntityType:            aws.String(entityattributes.Service),
+			entityattributes.ServiceName:           aws.String("my-service"),
+			entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+		},
+		Attributes: map[string]*string{
+			entityattributes.Platform: aws.String("AWS::EC2"),
+		},
+	}
+	entity := fetchEntityFields(resourceMetrics.Resource().Attributes())
+	assert.Equal(t, 0, resourceMetrics.Resource().Attributes().Len())
+	assert.Equal(t, expectedEntity, entity)
 }
 
 func TestInvalidMetric(t *testing.T) {
