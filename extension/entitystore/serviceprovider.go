@@ -37,8 +37,8 @@ const (
 
 	describeTagsJitterMax = 3600
 	describeTagsJitterMin = 3000
-	defaultJitterMin      = 60
-	defaultJitterMax      = 180
+	defaultJitterMin      = 480
+	defaultJitterMax      = 600
 	maxRetry              = 3
 )
 
@@ -79,7 +79,7 @@ type serviceprovider struct {
 
 func (s *serviceprovider) startServiceProvider() {
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
-	limitedRetryer := NewRetryer(false, false, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
+	limitedRetryer := NewRetryer(false, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
 	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
 	go limitedRetryer.refreshLoop(s.scrapeImdsServiceName)
 }
