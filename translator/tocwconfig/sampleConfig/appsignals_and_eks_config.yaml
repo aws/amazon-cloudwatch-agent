@@ -285,6 +285,15 @@ extensions:
         region: us-east-1
         role_arn: ""
         service_name: ""
+    entitystore:
+      mode: ec2
+      region: us-east-1
+      kubernetes_mode: EKS
+    server:
+      listen_addr: :4311
+      tls_ca_path: "/etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt"
+      tls_cert_path: "/etc/amazon-cloudwatch-observability-agent-server-cert/server.crt"
+      tls_key_path: "/etc/amazon-cloudwatch-observability-agent-server-cert/server.key"
 processors:
     awsapplicationsignals:
         limiter:
@@ -296,6 +305,11 @@ processors:
         resolvers:
             - name: TestCluster
               platform: eks
+    awsentity/service/application_signals:
+        cluster_name: TestCluster
+        entity_type: Service
+        kubernetes_mode: EKS
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -661,11 +675,14 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
+        - entitystore
+        - server
     pipelines:
         metrics/application_signals:
             exporters:
                 - awsemf/application_signals
             processors:
+                - awsentity/service/application_signals
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

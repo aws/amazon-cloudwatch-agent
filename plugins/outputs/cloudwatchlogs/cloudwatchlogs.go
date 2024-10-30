@@ -14,7 +14,6 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go.uber.org/zap"
@@ -28,6 +27,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
@@ -104,7 +104,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGroupClass string) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGroupClass string, logSrc logs.LogSrc) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
@@ -121,10 +121,10 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 		Retention: retention,
 		Class:     logGroupClass,
 	}
-	return c.getDest(t)
+	return c.getDest(t, logSrc)
 }
 
-func (c *CloudWatchLogs) getDest(t Target) *cwDest {
+func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd
 	}
@@ -162,7 +162,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			c.Log.Info("Configured middleware on AWS client")
 		}
 	}
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
+	pusher := NewPusher(c.Region, t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, logSrc)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
@@ -173,7 +173,7 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 	if err != nil {
 		c.Log.Errorf("Failed to find target: %v", err)
 	}
-	cwd := c.getDest(t)
+	cwd := c.getDest(t, nil)
 	if cwd == nil {
 		c.Log.Warnf("unable to find log destination, group: %v, stream: %v", t.Group, t.Stream)
 		return

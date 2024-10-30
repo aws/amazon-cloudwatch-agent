@@ -17,8 +17,6 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
@@ -29,6 +27,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
 )
 
 // Return true if found.
@@ -203,13 +203,13 @@ func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 		distribution.MinValue * 1.001,
 	}
 	for _, testCase := range testCases {
-		got := cw.BuildMetricDatum(&aggregationDatum{
+		_, datums := cw.BuildMetricDatum(&aggregationDatum{
 			MetricDatum: cloudwatch.MetricDatum{
 				MetricName: aws.String("test"),
 				Value:      aws.Float64(testCase),
 			},
 		})
-		assert.Empty(t, got)
+		assert.Empty(t, datums)
 	}
 }
 
@@ -333,7 +333,9 @@ func TestIsFlushable(t *testing.T) {
 		Dimensions: BuildDimensions(tags),
 		Timestamp:  aws.Time(time.Now()),
 	}
-	batch.Partition = append(batch.Partition, &datum)
+	batch.Partition = map[string][]*cloudwatch.MetricDatum{
+		"TestEntity": append([]*cloudwatch.MetricDatum{}, &datum),
+	}
 	assert.False(cw.timeToPublish(batch))
 	time.Sleep(time.Second + cw.config.ForceFlushInterval)
 	assert.True(cw.timeToPublish(batch))
@@ -351,13 +353,19 @@ func TestIsFull(t *testing.T) {
 		Dimensions: BuildDimensions(tags),
 		Timestamp:  aws.Time(time.Now()),
 	}
+	batch.Partition = map[string][]*cloudwatch.MetricDatum{
+		"TestEntity": {},
+	}
+	partition := batch.Partition["TestEntity"]
 	for i := 0; i < 3; {
-		batch.Partition = append(batch.Partition, &datum)
+		batch.Partition["TestEntity"] = append(partition, &datum)
+		batch.Count++
 		i++
 	}
 	assert.False(batch.isFull())
 	for i := 0; i < defaultMaxDatumsPerCall-3; {
-		batch.Partition = append(batch.Partition, &datum)
+		batch.Partition["TestEntity"] = append(partition, &datum)
+		batch.Count++
 		i++
 	}
 	assert.True(batch.isFull())
@@ -495,6 +503,7 @@ func TestPublish(t *testing.T) {
 	// 10K metrics in batches of 20...
 	time.Sleep(interval)
 	assert.Equal(t, expectedCalls, len(svc.Calls))
+	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	cw.Shutdown(ctx)
 }
 
@@ -572,13 +581,122 @@ func TestBackoffRetries(t *testing.T) {
 // Take 1 item out of the channel and verify it is no longer full.
 func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	c := &CloudWatch{
-		datumBatchChan: make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize),
+		datumBatchChan: make(chan map[string][]*cloudwatch.MetricDatum, datumBatchChanBufferSize),
 	}
 	assert.False(t, c.metricDatumBatchFull())
 	for i := 0; i < datumBatchChanBufferSize; i++ {
-		c.datumBatchChan <- []*cloudwatch.MetricDatum{}
+		c.datumBatchChan <- map[string][]*cloudwatch.MetricDatum{}
 	}
 	assert.True(t, c.metricDatumBatchFull())
 	<-c.datumBatchChan
 	assert.False(t, c.metricDatumBatchFull())
+}
+
+func TestCreateEntityMetricData(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	entity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			"Type":         aws.String("Service"),
+			"Environment":  aws.String("Environment"),
+			"Name":         aws.String("MyServiceName"),
+			"AwsAccountId": aws.String("0123456789012"),
+		},
+		Attributes: map[string]*string{
+			"InstanceID": aws.String("i-123456789"),
+			"Platform":   aws.String("AWS::EC2"),
+		},
+	}
+	metrics := createTestMetrics(1, 1, 1, "s")
+	assert.Equal(t, 7, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
+	aggregations := ConvertOtelMetrics(metrics)
+	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
+	entity, metricDatum := cw.BuildMetricDatum(aggregations[0])
+
+	entityToMetrics := map[string][]*cloudwatch.MetricDatum{
+		entityToString(entity): metricDatum,
+	}
+	wantedEntityMetricData := []*cloudwatch.EntityMetricData{
+		{
+			Entity:     &entity,
+			MetricData: metricDatum,
+		},
+	}
+	assert.Equal(t, wantedEntityMetricData, createEntityMetricData(entityToMetrics))
+}
+
+func TestWriteToCloudWatchEntity(t *testing.T) {
+	timestampNow := aws.Time(time.Now())
+	expectedPMDInput := &cloudwatch.PutMetricDataInput{
+		Namespace:              aws.String(""),
+		StrictEntityValidation: aws.Bool(false),
+		EntityMetricData: []*cloudwatch.EntityMetricData{
+			{
+				Entity: &cloudwatch.Entity{
+					Attributes: map[string]*string{},
+					KeyAttributes: map[string]*string{
+						"Environment": aws.String("Environment"),
+						"Service":     aws.String("Service"),
+					},
+				},
+				MetricData: []*cloudwatch.MetricDatum{
+					{
+						MetricName: aws.String("TestMetricWithEntity"),
+						Value:      aws.Float64(1),
+						Timestamp:  timestampNow,
+						Dimensions: []*cloudwatch.Dimension{
+							{Name: aws.String("Class"), Value: aws.String("class")},
+							{Name: aws.String("Object"), Value: aws.String("object")},
+						},
+					},
+				},
+			},
+		},
+		MetricData: []*cloudwatch.MetricDatum{
+			{
+				MetricName: aws.String("TestMetricNoEntity"),
+				Value:      aws.Float64(1),
+				Timestamp:  timestampNow,
+				Dimensions: []*cloudwatch.Dimension{
+					{Name: aws.String("Class"), Value: aws.String("class")},
+					{Name: aws.String("Object"), Value: aws.String("object")},
+				},
+			},
+		},
+	}
+
+	var input *cloudwatch.PutMetricDataInput
+	svc := new(mockCloudWatchClient)
+	svc.On("PutMetricData", &cloudwatch.PutMetricDataInput{}).Return(&cloudwatch.PutMetricDataOutput{}, nil)
+	svc.On("PutMetricData", mock.Anything).Run(func(args mock.Arguments) {
+		input = args.Get(0).(*cloudwatch.PutMetricDataInput)
+	}).Return(&cloudwatch.PutMetricDataOutput{}, nil)
+
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.WriteToCloudWatch(map[string][]*cloudwatch.MetricDatum{
+		"": {
+			{
+				MetricName: aws.String("TestMetricNoEntity"),
+				Value:      aws.Float64(1),
+				Timestamp:  timestampNow,
+				Dimensions: []*cloudwatch.Dimension{
+					{Name: aws.String("Class"), Value: aws.String("class")},
+					{Name: aws.String("Object"), Value: aws.String("object")},
+				},
+			},
+		},
+		"|Environment:Environment;Service:Service": {
+			{
+				MetricName: aws.String("TestMetricWithEntity"),
+				Value:      aws.Float64(1),
+				Timestamp:  timestampNow,
+				Dimensions: []*cloudwatch.Dimension{
+					{Name: aws.String("Class"), Value: aws.String("class")},
+					{Name: aws.String("Object"), Value: aws.String("object")},
+				},
+			},
+		},
+	})
+
+	assert.Equal(t, expectedPMDInput, input)
 }

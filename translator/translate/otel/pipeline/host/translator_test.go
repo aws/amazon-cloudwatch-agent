@@ -4,7 +4,6 @@
 package host
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +12,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -39,21 +40,24 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testCases := map[string]struct {
-		input        map[string]interface{}
-		pipelineName string
-		destination  string
-		want         *want
-		wantErr      error
+		input          map[string]interface{}
+		pipelineName   string
+		destination    string
+		mode           string
+		runInContainer bool
+		want           *want
+		wantErr        error
 	}{
 		"WithMetricsSection": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{},
+				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -66,11 +70,49 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			pipelineName: fmt.Sprintf("%s_test", common.PipelineNameHostDeltaMetrics),
+			pipelineName: common.PipelineNameHostDeltaMetrics,
+			mode:         config.ModeEC2,
 			want: &want{
-				pipelineID: "metrics/hostDeltaMetrics_test",
+				pipelineID: "metrics/hostDeltaMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostDeltaMetrics_test"},
+				processors: []string{"awsentity/resource", "cumulativetodelta/hostDeltaMetrics"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
+		"WithMetricsKeyStatsD": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"statsd": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostCustomMetrics,
+			mode:         config.ModeEC2,
+			want: &want{
+				pipelineID: "metrics/hostCustomMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"awsentity/service/telegraf"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
+		"WithMetricsKeyStatsDContainer": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"statsd": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName:   common.PipelineNameHostCustomMetrics,
+			mode:           config.ModeEC2,
+			runInContainer: true,
+			want: &want{
+				pipelineID: "metrics/hostCustomMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -91,10 +133,11 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"transform"},
+				processors: []string{"awsentity/resource", "transform"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -112,10 +155,11 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{},
+				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -127,10 +171,11 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"ec2tagger"},
+				processors: []string{"awsentity/resource", "ec2tagger"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -143,6 +188,7 @@ func TestTranslator(t *testing.T) {
 			},
 			pipelineName: common.PipelineNameHost,
 			destination:  common.AMPKey,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
@@ -157,6 +203,7 @@ func TestTranslator(t *testing.T) {
 			},
 			pipelineName: common.PipelineNameHost,
 			destination:  common.AMPKey,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
@@ -168,6 +215,8 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			context.CurrentContext().SetMode(testCase.mode)
+			context.CurrentContext().SetRunInContainer(testCase.runInContainer)
 			ht := NewTranslator(
 				testCase.pipelineName,
 				common.NewTranslatorMap[component.Config](

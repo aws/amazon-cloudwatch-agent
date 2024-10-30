@@ -16,7 +16,13 @@ import (
 
 type Rule translator.Rule
 
-var ChildRule = map[string]Rule{}
+var (
+	ChildRule          = map[string]Rule{}
+	GlobalMetricConfig = Metrics{}
+
+	serviceName           ServiceName
+	deploymentEnvironment DeploymentEnvironment
+)
 
 const (
 	SectionKey = "metrics"
@@ -33,12 +39,18 @@ func RegisterRule(fieldName string, r Rule) {
 }
 
 type Metrics struct {
+	ServiceName           string
+	DeploymentEnvironment string
 }
 
 func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
 	result := map[string]interface{}{}
 	outputPlugInfo := map[string]interface{}{}
+
+	//Apply Environment and ServiceName rules
+	serviceName.ApplyRule(im[SectionKey])
+	deploymentEnvironment.ApplyRule(im[SectionKey])
 
 	//Check if this plugin exist in the input instance
 	//If not, not process

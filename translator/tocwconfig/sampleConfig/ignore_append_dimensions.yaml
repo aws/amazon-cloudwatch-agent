@@ -17,7 +17,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform:  ec2
     ec2tagger:
         imds_retries: 1
         refresh_interval_seconds: 0s
@@ -33,11 +39,13 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
             receivers:
                 - telegraf_disk

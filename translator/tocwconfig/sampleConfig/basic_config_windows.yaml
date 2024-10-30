@@ -17,7 +17,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform:  ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -41,11 +47,13 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
             receivers:
                 - telegraf_win_perf_counters/1492679118

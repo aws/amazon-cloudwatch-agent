@@ -11,12 +11,15 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
@@ -59,6 +62,14 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if conf == nil || t.receivers.Len() == 0 {
 		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
+	var entityProcessor common.Translator[component.Config]
+	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+		entityProcessor = nil
+	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+	}
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
@@ -66,8 +77,12 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
+	currentContext := context.CurrentContext()
+	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
+		translators.Processors.Set(entityProcessor)
+	}
 
-	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
+	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 	}

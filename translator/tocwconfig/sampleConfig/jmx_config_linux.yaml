@@ -65,11 +65,17 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+      mode: ec2
+      region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
         region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform:  ec2
     batch/host/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -160,6 +166,7 @@ service:
     extensions:
         - agenthealth/metrics
         - sigv4auth
+        - entitystore
     pipelines:
         metrics/host/amp:
             exporters:
@@ -174,6 +181,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - transform
             receivers:
                 - telegraf_disk

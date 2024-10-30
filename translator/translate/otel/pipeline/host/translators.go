@@ -24,7 +24,9 @@ var (
 func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.TranslatorMap, error) {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
 	hostReceivers := common.NewTranslatorMap[component.Config]()
+	hostCustomReceivers := common.NewTranslatorMap[component.Config]()
 	deltaReceivers := common.NewTranslatorMap[component.Config]()
+	otlpReceivers := common.NewTranslatorMap[component.Config]()
 
 	// Gather adapter receivers
 	if configSection == MetricsKey {
@@ -35,6 +37,8 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 		adapterReceivers.Range(func(translator common.Translator[component.Config]) {
 			if translator.ID().Type() == adapter.Type(common.DiskIOKey) || translator.ID().Type() == adapter.Type(common.NetKey) {
 				deltaReceivers.Set(translator)
+			} else if translator.ID().Type() == adapter.Type(common.StatsDMetricKey) || translator.ID().Type() == adapter.Type(common.CollectDPluginKey) {
+				hostCustomReceivers.Set(translator)
 			} else {
 				hostReceivers.Set(translator)
 			}
@@ -45,21 +49,23 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
 	case []any:
 		for index := range v {
-			deltaReceivers.Set(otlpreceiver.NewTranslator(
+			otlpReceivers.Set(otlpreceiver.NewTranslator(
 				otlpreceiver.WithDataType(component.DataTypeMetrics),
 				otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 				common.WithIndex(index),
 			))
 		}
 	case map[string]any:
-		deltaReceivers.Set(otlpreceiver.NewTranslator(
+		otlpReceivers.Set(otlpreceiver.NewTranslator(
 			otlpreceiver.WithDataType(component.DataTypeMetrics),
 			otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 		))
 	}
 
 	hasHostPipeline := hostReceivers.Len() != 0
+	hasHostCustomPipeline := hostCustomReceivers.Len() != 0
 	hasDeltaPipeline := deltaReceivers.Len() != 0
+	hasOtlpPipeline := otlpReceivers.Len() != 0
 
 	var destinations []string
 	switch configSection {
@@ -76,6 +82,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 			receivers := common.NewTranslatorMap[component.Config]()
 			receivers.Merge(hostReceivers)
 			receivers.Merge(deltaReceivers)
+			receivers.Merge(otlpReceivers)
 			translators.Set(NewTranslator(
 				common.PipelineNameHost,
 				receivers,
@@ -89,10 +96,23 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 					common.WithDestination(destination),
 				))
 			}
+			if hasHostCustomPipeline {
+				translators.Set(NewTranslator(
+					common.PipelineNameHostCustomMetrics,
+					hostCustomReceivers,
+					common.WithDestination(destination)))
+			}
 			if hasDeltaPipeline {
 				translators.Set(NewTranslator(
 					common.PipelineNameHostDeltaMetrics,
 					deltaReceivers,
+					common.WithDestination(destination),
+				))
+			}
+			if hasOtlpPipeline {
+				translators.Set(NewTranslator(
+					common.PipelineNameHostOtlpMetrics,
+					otlpReceivers,
 					common.WithDestination(destination),
 				))
 			}

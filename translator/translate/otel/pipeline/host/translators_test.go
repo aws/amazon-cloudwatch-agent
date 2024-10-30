@@ -131,7 +131,7 @@ func TestTranslators(t *testing.T) {
 			},
 			configSection: MetricsKey,
 			want: map[string]want{
-				"metrics/hostDeltaMetrics": {
+				"metrics/hostOtlpMetrics": {
 					receivers: []string{"otlp/metrics"},
 					exporters: []string{"awscloudwatch"},
 				},
@@ -147,9 +147,25 @@ func TestTranslators(t *testing.T) {
 			},
 			configSection: LogsKey,
 			want: map[string]want{
-				"metrics/hostDeltaMetrics/cloudwatchlogs": {
+				"metrics/hostOtlpMetrics/cloudwatchlogs": {
 					receivers: []string{"otlp/metrics"},
 					exporters: []string{"awsemf"},
+				},
+			},
+		},
+		"WithCustomMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"statsd": map[string]interface{}{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostCustomMetrics": {
+					receivers: []string{"telegraf_statsd"},
+					exporters: []string{"awscloudwatch"},
 				},
 			},
 		},
