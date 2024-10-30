@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	pipelineName = "containerinsights"
+	ciPipelineName    = "containerinsights"
+	kueuePipelineName = "kueueContainerInsights"
 )
 
 var (
@@ -30,16 +31,21 @@ var (
 )
 
 type translator struct {
+	pipelineName string
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
 func NewTranslator() common.Translator[*common.ComponentTranslators] {
-	return &translator{}
+	return NewTranslatorWithName(ciPipelineName)
+}
+
+func NewTranslatorWithName(pipelineName string) common.Translator[*common.ComponentTranslators] {
+	return &translator{pipelineName: pipelineName}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, pipelineName)
+	return component.NewIDWithName(component.DataTypeMetrics, t.pipelineName)
 }
 
 // Translate creates a pipeline for container insights if the logs.metrics_collected.ecs or logs.metrics_collected.kubernetes
@@ -49,31 +55,44 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 
-	// Append the metricstransformprocessor only if enhanced container insights is enabled
-	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
-	if enhancedContainerInsightsEnabled {
-		processors := common.NewTranslatorMap(metricstransformprocessor.NewTranslatorWithName(pipelineName))
-		acceleratedComputeMetricsEnabled := awscontainerinsight.AcceleratedComputeMetricsEnabled(conf)
-		if acceleratedComputeMetricsEnabled {
-			processors.Set(gpu.NewTranslatorWithName(pipelineName))
+	// create processor map with default batch processor based on pipeline name
+	processors := common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey))
+	// create exporter map with default emf exporter based on pipeline name
+	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
+	// create extensions map based on pipeline name
+	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
+	// create variable for receivers, use switch block below to assign
+	var receivers common.TranslatorMap[component.Config]
+
+	switch t.pipelineName {
+	case ciPipelineName:
+		// add aws container insights receiver
+		receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator())
+		// Append the metricstransformprocessor only if enhanced container insights is enabled
+		enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
+		if enhancedContainerInsightsEnabled {
+			// add metricstransformprocessor to processors for enhanced container insights
+			processors.Set(metricstransformprocessor.NewTranslatorWithName(t.pipelineName))
+			acceleratedComputeMetricsEnabled := awscontainerinsight.AcceleratedComputeMetricsEnabled(conf)
+			if acceleratedComputeMetricsEnabled {
+				processors.Set(gpu.NewTranslatorWithName(t.pipelineName))
+			}
 		}
+	case kueuePipelineName:
+		// add prometheus receiver for kueue
+		receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator()) // TODO: replace w prometheus receiver
 		KueueContainerInsightsEnabled := awscontainerinsight.KueueContainerInsightsEnabled(conf)
 		if KueueContainerInsightsEnabled {
-			processors.Set(kueue.NewTranslatorWithName(pipelineName))
+			processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
 		}
-		processors.Set(batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey))
-		return &common.ComponentTranslators{
-			Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
-			Processors: processors, // EKS & ECS CI sit under metrics_collected in "logs"
-			Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
-			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
-		}, nil
+	default:
+		return nil, fmt.Errorf("unknown container insights pipeline name: %s", t.pipelineName)
 	}
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
-		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey)), // EKS & ECS CI sit under metrics_collected in "logs"
-		Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
+		Receivers:  receivers,
+		Processors: processors, // EKS & ECS CI sit under metrics_collected in "logs"
+		Exporters:  exporters,
+		Extensions: extensions,
 	}, nil
 }
