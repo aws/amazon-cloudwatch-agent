@@ -2,8 +2,9 @@
 Amazon CloudWatch Agent 1.300049.0 (2024-10-30)
 ========================================================================
 Enhancements:
-* [Metrics/Logs] Annotate Infra, statsD, collectD metrics and Fluent-bit application logs with entities
+* [Metrics/Logs] Annotate Infra, statsD, collectD metrics and application logs with entities
 * [ApplicationSignals] Support runtime metrics for Application Signals
+* [ApplicationSignals] Create a server to expose service names for instrumented applications on K8s
 
 ========================================================================
 Amazon CloudWatch Agent 1.300048.2 (2024-10-24)
