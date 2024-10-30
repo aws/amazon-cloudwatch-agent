@@ -54,9 +54,6 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEFAMetricDeclarations(conf)...)
 
-	// Setup Kueue metrics
-	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getKueueMetricDeclarations(conf)...)
-
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
@@ -641,59 +638,6 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_efa_rdma_read_bytes",
 					"node_efa_rdma_write_bytes",
 					"node_efa_rdma_write_recv_bytes",
-				},
-			},
-		}
-	}
-	return metricDeclarations
-}
-
-func getKueueMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
-	var metricDeclarations []*awsemfexporter.MetricDeclaration
-	if awscontainerinsight.KueueContainerInsightsEnabled(conf) {
-		metricDeclarations = []*awsemfexporter.MetricDeclaration{
-			{
-				Dimensions: [][]string{
-					{"ClusterName"},
-					{"ClusterName", "ClusterQueue"},
-					{"ClusterName", "ClusterQueue", "Status"},
-					{"ClusterName", "Status"},
-				},
-				MetricNameSelectors: []string{
-					"kueue_pending_workloads",
-				},
-			},
-			{
-				Dimensions: [][]string{
-					{"ClusterName"},
-					{"ClusterName", "ClusterQueue"},
-					{"ClusterName", "ClusterQueue", "Reason"},
-					{"ClusterName", "Reason"},
-				},
-				MetricNameSelectors: []string{
-					"kueue_evicted_workloads_total",
-				},
-			},
-			{
-				Dimensions: [][]string{
-					{"ClusterName"},
-					{"ClusterName", "ClusterQueue"},
-				},
-				MetricNameSelectors: []string{
-					"kueue_admitted_active_workloads",
-				},
-			},
-			{
-				Dimensions: [][]string{
-					{"ClusterName"},
-					{"ClusterName", "ClusterQueue"},
-					{"ClusterName", "ClusterQueue", "Resource"},
-					{"ClusterName", "ClusterQueue", "Resource", "Flavor"},
-					{"ClusterName", "ClusterQueue", "Flavor"},
-				},
-				MetricNameSelectors: []string{
-					"kueue_cluster_queue_resource_usage",
-					"kueue_cluster_queue_nominal_quota",
 				},
 			},
 		}

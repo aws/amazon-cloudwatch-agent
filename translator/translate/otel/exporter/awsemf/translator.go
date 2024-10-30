@@ -25,6 +25,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
+const (
+	kueuePipelineName = "kueueContainerInsights"
+)
+
 //go:embed awsemf_default_generic.yaml
 var defaultGenericConfig string
 
@@ -33,6 +37,9 @@ var defaultEcsConfig string
 
 //go:embed awsemf_default_kubernetes.yaml
 var defaultKubernetesConfig string
+
+//go:embed awsemf_default_kubernetes_kueue.yaml
+var defaultKubernetesKueueConfig string
 
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
@@ -47,12 +54,13 @@ var appSignalsConfigK8s string
 var appSignalsConfigGeneric string
 
 var (
-	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
-	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
-	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
-	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
-	endpointOverrideKey     = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
-	roleARNPathKey          = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
+	ecsBasePathKey             = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
+	kubernetesBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
+	kubernetesKueueBasePathKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableKueueContainerInsights)
+	prometheusBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+	emfProcessorBasePathKey    = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
+	endpointOverrideKey        = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
+	roleARNPathKey             = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 )
 
 type translator struct {
@@ -84,6 +92,8 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = getAppSignalsConfig()
 	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
+	} else if isKubernetesKueue(c, t.name) {
+		defaultConfig = defaultKubernetesKueueConfig
 	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
 	} else if isPrometheus(c) {
@@ -126,6 +136,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	} else if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
+			return nil, err
+		}
+	} else if isKubernetesKueue(c, t.name) {
+		if err := setKubernetesKueueFields(c, cfg); err != nil {
 			return nil, err
 		}
 	} else if isKubernetes(c) {
@@ -177,6 +191,11 @@ func isKubernetes(conf *confmap.Conf) bool {
 	return conf.IsSet(kubernetesBasePathKey)
 }
 
+// `kueue_container_insights` is a child of `kubernetes` in config spec.
+func isKubernetesKueue(conf *confmap.Conf, pipelineName string) bool {
+	return isKubernetes(conf) && pipelineName == kueuePipelineName && conf.IsSet(kubernetesKueueBasePathKey)
+}
+
 func isPrometheus(conf *confmap.Conf) bool {
 	return conf.IsSet(prometheusBasePathKey)
 }
@@ -199,6 +218,20 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 
 	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
 		cfg.EnhancedContainerInsights = true
+	}
+
+	return nil
+}
+
+func setKubernetesKueueFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	setDisableMetricExtraction(kubernetesKueueBasePathKey, conf, cfg)
+
+	if err := setKubernetesKueueMetricDeclaration(conf, cfg); err != nil {
+		return err
+	}
+
+	if awscontainerinsight.KueueContainerInsightsEnabled(conf) {
+		cfg.KueueContainerInsights = true
 	}
 
 	return nil
