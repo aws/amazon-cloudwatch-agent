@@ -46,7 +46,8 @@ func newKueueAttributesProcessor(config *Config, logger *zap.Logger) *kueueAttri
 func (d *kueueAttributesProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
-		sms := rms.At(i).ScopeMetrics()
+		rm := rms.At(i)
+		sms := rm.ScopeMetrics()
 		for j := 0; j < sms.Len(); j++ {
 			metrics := sms.At(j).Metrics()
 			for k := 0; k < metrics.Len(); k++ {
@@ -54,12 +55,12 @@ func (d *kueueAttributesProcessor) processMetrics(_ context.Context, md pmetric.
 				d.processMetricAttributes(m)
 			}
 		}
+		d.dropResourceMetricAttributes(rm)
 	}
 	return md, nil
 }
 
 func (d *kueueAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
-
 	// only decorate kueue metrics
 	if !strings.HasPrefix(m.Name(), kueueMetricsIdentifier) {
 		return
@@ -92,4 +93,14 @@ func (d *kueueAttributesProcessor) filterAttributes(attributes pcommon.Map) {
 		}
 		return true
 	})
+}
+
+func (d *kueueAttributesProcessor) dropResourceMetricAttributes(resourceMetric pmetric.ResourceMetrics) {
+	serviceNameKey := "service.name"
+	attributes := resourceMetric.Resource().Attributes()
+	serviceName, exists := attributes.Get(serviceNameKey)
+
+	if exists && (serviceName.Str() == "containerInsightsKueueMetricsScraper") {
+		resourceMetric.Resource().Attributes().Clear()
+	}
 }
