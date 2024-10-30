@@ -27,26 +27,20 @@ import (
 
 type mockLogSrc struct {
 	logs.LogSrc
-	returnEmpty bool
 }
 
 func (m *mockLogSrc) Entity() *cloudwatchlogs.Entity {
-	entity := &cloudwatchlogs.Entity{
+	return &cloudwatchlogs.Entity{
 		Attributes: map[string]*string{
 			"PlatformType":         aws.String("AWS::EC2"),
 			"EC2.InstanceId":       aws.String("i-123456789"),
 			"EC2.AutoScalingGroup": aws.String("test-group"),
 		},
 		KeyAttributes: map[string]*string{
-			"Name":         aws.String("myService"),
-			"Environment":  aws.String("myEnvironment"),
-			"AwsAccountId": aws.String("123456789"),
+			"Name":        aws.String("myService"),
+			"Environment": aws.String("myEnvironment"),
 		},
 	}
-	if m.returnEmpty {
-		return nil
-	}
-	return entity
 }
 
 var wg sync.WaitGroup
@@ -109,7 +103,7 @@ func (e evtMock) Done() {
 	}
 }
 
-func TestAddSingleEvent_WithAccountId(t *testing.T) {
+func TestAddSingleEvent(t *testing.T) {
 	var s svcMock
 	called := false
 	nst := "NEXT_SEQ_TOKEN"
@@ -120,9 +114,8 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 			"EC2.AutoScalingGroup": aws.String("test-group"),
 		},
 		KeyAttributes: map[string]*string{
-			"Name":         aws.String("myService"),
-			"Environment":  aws.String("myEnvironment"),
-			"AwsAccountId": aws.String("123456789"),
+			"Name":        aws.String("myService"),
+			"Environment": aws.String("myEnvironment"),
 		},
 	}
 
@@ -147,48 +140,6 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	}
 
 	stop, p := testPreparation(-1, &s, 1*time.Hour, maxRetryTimeout)
-
-	p.AddEvent(evtMock{"MSG", time.Now(), nil})
-	require.False(t, called, "PutLogEvents has been called too fast, it should wait until FlushTimeout.")
-
-	p.FlushTimeout = 10 * time.Millisecond
-	p.resetFlushTimer()
-
-	time.Sleep(3 * time.Second)
-	require.True(t, called, "PutLogEvents has not been called after FlushTimeout has been reached.")
-	require.NotNil(t, nst, *p.sequenceToken, "Pusher did not capture the NextSequenceToken")
-
-	close(stop)
-	wg.Wait()
-}
-
-func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
-	var s svcMock
-	called := false
-	nst := "NEXT_SEQ_TOKEN"
-
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-		called = true
-
-		if in.SequenceToken != nil {
-			t.Errorf("PutLogEvents called with wrong sequenceToken, first call should not provide any token")
-		}
-
-		if *in.LogGroupName != "G" || *in.LogStreamName != "S" {
-			t.Errorf("PutLogEvents called with wrong group and stream: %v/%v", *in.LogGroupName, *in.LogStreamName)
-		}
-
-		if len(in.LogEvents) != 1 || *in.LogEvents[0].Message != "MSG" {
-			t.Errorf("PutLogEvents called with incorrect message, got: '%v'", *in.LogEvents[0].Message)
-		}
-		require.Nil(t, in.Entity)
-		return &cloudwatchlogs.PutLogEventsOutput{
-			NextSequenceToken: &nst,
-		}, nil
-	}
-
-	stop, p := testPreparation(-1, &s, 1*time.Hour, maxRetryTimeout)
-	p.logSrc = &mockLogSrc{returnEmpty: true}
 
 	p.AddEvent(evtMock{"MSG", time.Now(), nil})
 	require.False(t, called, "PutLogEvents has been called too fast, it should wait until FlushTimeout.")

@@ -222,15 +222,18 @@ func (p *pusher) send() {
 	if p.needSort {
 		sort.Stable(ByTimestamp(p.events))
 	}
+	var entity *cloudwatchlogs.Entity
+	if p.logSrc != nil {
+		entity = p.logSrc.Entity()
+	}
+
 	input := &cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     p.events,
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
 	}
-	if p.logSrc != nil {
-		input.Entity = p.logSrc.Entity()
-	}
+	input.Entity = entity
 
 	startTime := time.Now()
 
