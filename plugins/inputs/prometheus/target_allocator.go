@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/common/promlog"
+
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 
 	"github.com/go-kit/log"
@@ -75,19 +77,24 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 }
 
 // Adapter from go-kit/log to zap.Logger
-func createLogger(level zapcore.Level) *zap.Logger {
+func createLogger(level *promlog.AllowedLevel) *zap.Logger {
+	zapLevel, err := zapcore.ParseLevel(level.String())
+	if err != nil {
+		fmt.Printf("Error parsing level: %v. Defaulting to info.", err)
+		zapLevel = zapcore.InfoLevel
+	}
 	// Create a base zap logger (you can customize it as needed)
 	zapCore := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), // Use JSON encoder for zap
 		zapcore.AddSync(os.Stdout),                               // Output to stdout
-		level,                                                    // Set log level to Debug
+		zapLevel,                                                 // Set log level to Debug
 	)
 	// Create the zap logger
 	zapLogger := zap.New(zapCore)
 	return zapLogger
 }
 
-func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
+func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *promlog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled:             false,
 		manager:             nil,
@@ -109,15 +116,15 @@ func createTargetAllocatorManager(filename string, logger log.Logger, sm *scrape
 	}
 	tam.enabled = (tam.config.TargetAllocator != nil) && isPodNameAvailable()
 	if tam.enabled {
-		tam.loadManager()
+		tam.loadManager(logLevel)
 	}
 	return &tam
 }
-func (tam *TargetAllocatorManager) loadManager() {
+func (tam *TargetAllocatorManager) loadManager(logLevel *promlog.AllowedLevel) {
 	receiverSettings := receiver.Settings{
 		ID: component.MustNewID(strings.ReplaceAll(tam.config.TargetAllocator.CollectorID, "-", "_")),
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         createLogger(zapcore.InfoLevel),
+			Logger:         createLogger(logLevel),
 			TracerProvider: nil,
 			MeterProvider:  nil,
 			MetricsLevel:   0,

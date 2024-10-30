@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/prometheus/common/promlog"
+
 	kitlog "github.com/go-kit/log"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
@@ -120,11 +122,13 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 	defer os.Unsetenv("POD_NAME")
 	configFile := filepath.Join("testdata", "target_allocator.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
+	logLevel := promlog.AllowedLevel{}
+	logLevel.Set("DEBUG")
 	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
 		return nil
 	}
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
+	taManager := createTargetAllocatorManager(configFile, logger, &logLevel, nil, nil)
 	err := reloadConfig(configFile, logger, taManager, reloadHandler)
 	assert.NoError(t, err)
 	assert.True(t, taManager.enabled)
@@ -137,12 +141,14 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 	os.Setenv("POD_NAME", "collector-1")
 	defer os.Unsetenv("POD_NAME")
 	configFile := filepath.Join("testdata", "base-k8.yaml")
+	logLevel := promlog.AllowedLevel{}
+	logLevel.Set("DEBUG")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
 	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
 		return nil
 	}
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
+	taManager := createTargetAllocatorManager(configFile, logger, &logLevel, nil, nil)
 	err := reloadConfig(configFile, logger, taManager, reloadHandler)
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
@@ -151,11 +157,14 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 func Test_loadConfigFromFileEC2(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
+	logLevel := promlog.AllowedLevel{}
+	logLevel.Set("DEBUG")
 	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
 		return nil
 	}
-	taManager := createTargetAllocatorManager(configFile, logger, nil, nil)
+
+	taManager := createTargetAllocatorManager(configFile, logger, &logLevel, nil, nil)
 	err := reloadConfig(configFile, logger, taManager, reloadHandler)
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
