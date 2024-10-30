@@ -378,7 +378,7 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 	}
 }
 
-func TestFetchEntityFields(t *testing.T) {
+func TestFetchEntityFields_WithoutAccountID(t *testing.T) {
 	resourceMetrics := pmetric.NewResourceMetrics()
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "my-environment")
@@ -391,10 +391,33 @@ func TestFetchEntityFields(t *testing.T) {
 	assert.Equal(t, 8, resourceMetrics.Resource().Attributes().Len())
 
 	expectedEntity := cloudwatch.Entity{
+		KeyAttributes: nil,
+		Attributes:    nil,
+	}
+	entity := fetchEntityFields(resourceMetrics.Resource().Attributes())
+	assert.Equal(t, 0, resourceMetrics.Resource().Attributes().Len())
+	assert.Equal(t, expectedEntity, entity)
+}
+
+func TestFetchEntityFields_WithAccountID(t *testing.T) {
+	resourceMetrics := pmetric.NewResourceMetrics()
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "my-environment")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "my-service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNode, "my-node")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityCluster, "my-cluster")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNamespace, "my-namespace")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityWorkload, "my-workload")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EKS")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityAwsAccountId, "123456789")
+	assert.Equal(t, 9, resourceMetrics.Resource().Attributes().Len())
+
+	expectedEntity := cloudwatch.Entity{
 		KeyAttributes: map[string]*string{
 			entityattributes.EntityType:            aws.String(entityattributes.Service),
 			entityattributes.ServiceName:           aws.String("my-service"),
 			entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+			entityattributes.AwsAccountId:          aws.String("123456789"),
 		},
 		Attributes: map[string]*string{
 			entityattributes.Node:           aws.String("my-node"),
@@ -421,13 +444,15 @@ func TestFetchEntityFieldsOnK8s(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNamespace, "my-namespace")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityWorkload, "my-workload")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "K8s")
-	assert.Equal(t, 8, resourceMetrics.Resource().Attributes().Len())
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityAwsAccountId, "123456789")
+	assert.Equal(t, 9, resourceMetrics.Resource().Attributes().Len())
 
 	expectedEntity := cloudwatch.Entity{
 		KeyAttributes: map[string]*string{
 			entityattributes.EntityType:            aws.String(entityattributes.Service),
 			entityattributes.ServiceName:           aws.String("my-service"),
 			entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+			entityattributes.AwsAccountId:          aws.String("123456789"),
 		},
 		Attributes: map[string]*string{
 			entityattributes.Node:           aws.String("my-node"),
@@ -448,13 +473,15 @@ func TestFetchEntityFieldsOnEc2(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "my-environment")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "my-service")
 	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EC2")
-	assert.Equal(t, 4, resourceMetrics.Resource().Attributes().Len())
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityAwsAccountId, "123456789")
+	assert.Equal(t, 5, resourceMetrics.Resource().Attributes().Len())
 
 	expectedEntity := cloudwatch.Entity{
 		KeyAttributes: map[string]*string{
 			entityattributes.EntityType:            aws.String(entityattributes.Service),
 			entityattributes.ServiceName:           aws.String("my-service"),
 			entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+			entityattributes.AwsAccountId:          aws.String("123456789"),
 		},
 		Attributes: map[string]*string{
 			entityattributes.Platform: aws.String("AWS::EC2"),

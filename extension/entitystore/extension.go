@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/jellydator/ttlcache/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
@@ -20,6 +19,7 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -31,9 +31,6 @@ const (
 	ServiceNameSourceKey        = "AWS.ServiceNameSource"
 	PlatformType                = "PlatformType"
 	EC2PlatForm                 = "AWS::EC2"
-	Type                        = "Type"
-	Name                        = "Name"
-	Environment                 = "Environment"
 	podTerminationCheckInterval = 5 * time.Minute
 )
 
@@ -73,8 +70,6 @@ type EntityStore struct {
 	nativeCredential client.ConfigProvider
 
 	metadataprovider ec2metadataprovider.MetadataProvider
-
-	stsClient stsiface.STSAPI
 
 	podTerminationCheckInterval time.Duration
 }
@@ -225,10 +220,10 @@ func (e *EntityStore) createAttributeMap() map[string]*string {
 // createServiceKeyAttribute creates KeyAttributes for Service entities
 func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) map[string]*string {
 	serviceKeyAttr := map[string]*string{
-		Type: aws.String(Service),
+		entityattributes.EntityType: aws.String(Service),
 	}
-	addNonEmptyToMap(serviceKeyAttr, Name, serviceAttr.ServiceName)
-	addNonEmptyToMap(serviceKeyAttr, Environment, serviceAttr.Environment)
+	addNonEmptyToMap(serviceKeyAttr, entityattributes.ServiceName, serviceAttr.ServiceName)
+	addNonEmptyToMap(serviceKeyAttr, entityattributes.DeploymentEnvironment, serviceAttr.Environment)
 	return serviceKeyAttr
 }
 
