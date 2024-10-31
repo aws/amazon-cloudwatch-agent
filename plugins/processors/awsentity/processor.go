@@ -25,6 +25,7 @@ const (
 	attributeServiceName           = "service.name"
 	attributeService               = "Service"
 	EMPTY                          = ""
+	unknownNameSpace               = "UnknownNamespace"
 )
 
 type scraper interface {
@@ -163,6 +164,11 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				if entityServiceName == EMPTY && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
+				}
+
+				//Referred https://github.com/aws/amazon-cloudwatch-agent/blob/main/plugins/processors/awsapplicationsignals/internal/resolver/kubernetes.go
+				if podInfo.Namespace == EMPTY {
+					podInfo.Namespace = unknownNameSpace
 				}
 
 				if entityEnvironmentName == EMPTY && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
