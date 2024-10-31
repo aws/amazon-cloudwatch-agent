@@ -4,22 +4,32 @@
 package host
 
 import (
+	"fmt"
 	"log"
+	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
-	otlpReceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 )
 
 type translator struct {
-	name      string
+	name string
+	common.DestinationProvider
 	receivers common.TranslatorMap[component.Config]
 }
 
@@ -31,8 +41,16 @@ var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 func NewTranslator(
 	name string,
 	receivers common.TranslatorMap[component.Config],
+	opts ...common.TranslatorOption,
 ) common.Translator[*common.ComponentTranslators] {
-	return &translator{name, receivers}
+	t := &translator{name: name, receivers: receivers}
+	for _, opt := range opts {
+		opt(t)
+	}
+	if t.Destination() != "" {
+		t.name += "/" + t.Destination()
+	}
+	return t
 }
 
 func (t translator) ID() component.ID {
@@ -41,51 +59,65 @@ func (t translator) ID() component.ID {
 
 // Translate creates a pipeline if metrics section exists.
 func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(common.MetricsKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.MetricsKey}
+	if conf == nil || t.receivers.Len() == 0 {
+		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
-
-	hostReceivers := t.receivers
-	if common.PipelineNameHost == t.name {
-		switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)).(type) {
-		case []interface{}:
-			for index, _ := range v {
-				hostReceivers.Set(otlpReceiver.NewTranslator(
-					otlpReceiver.WithDataType(component.DataTypeMetrics),
-					otlpReceiver.WithInstanceNum(index)))
-			}
-		case map[string]interface{}:
-			hostReceivers.Set(otlpReceiver.NewTranslator(otlpReceiver.WithDataType(component.DataTypeMetrics)))
-		}
-	}
-
-	if hostReceivers.Len() == 0 {
-		log.Printf("D! pipeline %s has no receivers", t.name)
-		return nil, nil
+	var entityProcessor common.Translator[component.Config]
+	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+		entityProcessor = nil
+	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
 	}
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
 		Processors: common.NewTranslatorMap[component.Config](),
-		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
+		Exporters:  common.NewTranslatorMap[component.Config](),
+		Extensions: common.NewTranslatorMap[component.Config](),
+	}
+	currentContext := context.CurrentContext()
+	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
+		translators.Processors.Set(entityProcessor)
 	}
 
-	// we need to add delta processor because (only) diskio and net input plugins report delta metric
-	if common.PipelineNameHostDeltaMetrics == t.name {
+	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
-		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDiskIONetKeys()))
+		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 	}
 
-	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
-		log.Printf("D! ec2tagger processor required because append_dimensions is set")
-		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+	if t.Destination() != common.CloudWatchLogsKey {
+		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
+			log.Printf("D! ec2tagger processor required because append_dimensions is set")
+			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+		}
+
+		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
+		if mdt.IsSet(conf) {
+			log.Printf("D! metric decorator required because measurement fields are set")
+			translators.Processors.Set(mdt)
+		}
 	}
 
-	mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
-	if mdt.IsSet(conf) {
-		log.Printf("D! metric decorator required because measurement fields are set")
-		translators.Processors.Set(mdt)
+	switch t.Destination() {
+	case common.DefaultDestination, common.CloudWatchKey:
+		translators.Exporters.Set(awscloudwatch.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
+	case common.AMPKey:
+		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
+			translators.Processors.Set(rollupprocessor.NewTranslator())
+		}
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		translators.Extensions.Set(sigv4auth.NewTranslator())
+	case common.CloudWatchLogsKey:
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
+		translators.Exporters.Set(awsemf.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
+	default:
+		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
+
 	return &translators, nil
 }

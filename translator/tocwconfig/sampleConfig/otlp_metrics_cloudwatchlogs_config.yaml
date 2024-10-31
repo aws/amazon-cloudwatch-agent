@@ -1,0 +1,126 @@
+exporters:
+  awsemf:
+    certificate_file_path: ""
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
+    eks_fargate_container_insights_enabled: false
+    endpoint: ""
+    enhanced_container_insights: false
+    imds_retries: 1
+    local_mode: false
+    log_group_name: /aws/cwagent
+    log_retention: 0
+    log_stream_name: ""
+    max_retries: 2
+    middleware: agenthealth/logs
+    namespace: CWAgent
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    profile: ""
+    proxy_address: ""
+    region: us-west-2
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: true
+    retain_initial_value_of_delta_metric: false
+    role_arn: ""
+    version: "0"
+extensions:
+  agenthealth/logs:
+    is_usage_data_enabled: true
+    stats:
+      operations:
+        - PutLogEvents
+      usage_flags:
+        mode: EC2
+        region_type: ACJ
+  entitystore:
+    mode: ec2
+    region: us-west-2
+processors:
+  batch/hostOtlpMetrics/cloudwatchlogs:
+    metadata_cardinality_limit: 1000
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 30s
+  cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
+    exclude:
+      match_type: ""
+    include:
+      match_type: ""
+    initial_value: 2
+    max_staleness: 0s
+receivers:
+  otlp/metrics:
+    protocols:
+      grpc:
+        dialer:
+          timeout: 0s
+        endpoint: 0.0.0.0:1234
+        include_metadata: false
+        max_concurrent_streams: 0
+        max_recv_msg_size_mib: 0
+        read_buffer_size: 524288
+        transport: tcp
+        write_buffer_size: 0
+        tls:
+          ca_file: ""
+          cert_file: /path/to/cert.pem
+          client_ca_file: ""
+          client_ca_file_reload: false
+          include_system_ca_certs_pool: false
+          key_file: /path/to/key.pem
+          max_version: ""
+          min_version: ""
+          reload_interval: 0s
+      http:
+        endpoint: 0.0.0.0:2345
+        include_metadata: false
+        logs_url_path: /v1/logs
+        max_request_body_size: 0
+        metrics_url_path: /v1/metrics
+        traces_url_path: /v1/traces
+        tls:
+          ca_file: ""
+          cert_file: /path/to/cert.pem
+          client_ca_file: ""
+          client_ca_file_reload: false
+          include_system_ca_certs_pool: false
+          key_file: /path/to/key.pem
+          max_version: ""
+          min_version: ""
+          reload_interval: 0s
+service:
+  extensions:
+    - agenthealth/logs
+    - entitystore
+  pipelines:
+    metrics/hostOtlpMetrics/cloudwatchlogs:
+      exporters:
+        - awsemf
+      processors:
+        - batch/hostOtlpMetrics/cloudwatchlogs
+        - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+      receivers:
+        - otlp/metrics
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      level: info
+      output_paths:
+        - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+      sampling:
+        enabled: true
+        initial: 2
+        thereafter: 500
+        tick: 10s
+    metrics:
+      address: ""
+      level: None
+    traces: { }

@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 func TestPublishJitter(t *testing.T) {
@@ -140,4 +140,73 @@ func TestPayload_Min(t *testing.T) {
 	datum.SetMetricName("MetricName")
 	datum.SetTimestamp(time.Now())
 	assert.Equal(t, 148, payload(datum))
+}
+
+func TestEntityToString_StringToEntity(t *testing.T) {
+	testCases := []struct {
+		name         string
+		entity       cloudwatch.Entity
+		entityString string
+	}{
+		{
+			name: "Full Entity",
+			entity: cloudwatch.Entity{
+				KeyAttributes: map[string]*string{
+					"Service":     aws.String("Service"),
+					"Environment": aws.String("Environment"),
+				},
+				Attributes: map[string]*string{
+					"InstanceId":   aws.String("InstanceId"),
+					"InstanceType": aws.String("InstanceType"),
+				},
+			},
+			entityString: "InstanceId:InstanceId;InstanceType:InstanceType|Environment:Environment;Service:Service",
+		},
+		{
+			name: "Empty Attributes",
+			entity: cloudwatch.Entity{
+				KeyAttributes: map[string]*string{
+					"Service":     aws.String("Service"),
+					"Environment": aws.String("Environment"),
+				},
+				Attributes: map[string]*string{},
+			},
+			entityString: "|Environment:Environment;Service:Service",
+		},
+		{
+			name:         "Empty Entity",
+			entity:       cloudwatch.Entity{},
+			entityString: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.entityString, entityToString(tc.entity))
+			assert.Equal(t, tc.entity, stringToEntity(tc.entityString))
+		})
+	}
+}
+
+func TestEntityToString(t *testing.T) {
+	testCases := []struct {
+		name         string
+		entity       cloudwatch.Entity
+		entityString string
+	}{
+		{
+			name: "EmptyEntityMaps",
+			entity: cloudwatch.Entity{
+				KeyAttributes: map[string]*string{},
+				Attributes:    map[string]*string{},
+			},
+			entityString: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.entityString, entityToString(tc.entity))
+		})
+	}
 }

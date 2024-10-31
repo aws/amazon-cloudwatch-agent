@@ -234,6 +234,24 @@ jobs:
         working-directory: tool/clean
         run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go --tags=clean
 
+  clean-launch-configs:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old launch configuration
+        working-directory: tool/clean
+        run: go run ./clean_launch_configuration/clean_launch_configuration.go --tags=clean
   clean-iam-roles:
     runs-on: ubuntu-latest
     permissions:

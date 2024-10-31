@@ -17,6 +17,14 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+processors:
+    awsentity/service/telegraf:
+        entity_type: Service
+        scrape_datapoint_attribute: true
+        platform: ec2
 receivers:
     telegraf_statsd:
         collection_interval: 10s
@@ -25,11 +33,13 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
-        metrics/host:
+        metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch
-            processors: []
+            processors:
+                - awsentity/service/telegraf
             receivers:
                 - telegraf_statsd
     telemetry:

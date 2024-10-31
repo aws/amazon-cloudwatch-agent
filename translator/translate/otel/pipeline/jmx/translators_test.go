@@ -35,6 +35,23 @@ func TestTranslators(t *testing.T) {
 				component.MustNewIDWithName("metrics", "jmx"),
 			},
 		},
+		"WithSingle/Destinations": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{},
+					},
+				},
+			},
+			want: []component.ID{
+				component.MustNewIDWithName("metrics", "jmx/amp"),
+			},
+		},
 		"WithMultiple": {
 			input: map[string]any{
 				"metrics": map[string]any{
@@ -49,6 +66,30 @@ func TestTranslators(t *testing.T) {
 			want: []component.ID{
 				component.MustNewIDWithName("metrics", "jmx/0"),
 				component.MustNewIDWithName("metrics", "jmx/1"),
+			},
+		},
+		"WithMultiple/Destinations": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"cloudwatch": map[string]any{},
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"jmx": []any{
+							map[string]any{},
+							map[string]any{},
+						},
+					},
+				},
+			},
+			want: []component.ID{
+				component.MustNewIDWithName("metrics", "jmx/cloudwatch/0"),
+				component.MustNewIDWithName("metrics", "jmx/amp/0"),
+				component.MustNewIDWithName("metrics", "jmx/cloudwatch/1"),
+				component.MustNewIDWithName("metrics", "jmx/amp/1"),
 			},
 		},
 	}

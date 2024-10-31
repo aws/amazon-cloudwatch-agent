@@ -10,23 +10,41 @@ import (
 )
 
 func TestValidatePassed(t *testing.T) {
-	config := Config{
-		Resolvers: []Resolver{NewEKSResolver("test"), NewGenericResolver("")},
-		Rules:     nil,
+	tests := []struct {
+		name     string
+		resolver Resolver
+	}{
+		{
+			"testEKS",
+			NewEKSResolver("test"),
+		},
+		{
+			"testK8S",
+			NewK8sResolver("test"),
+		},
+		{
+			"testEC2",
+			NewEC2Resolver("test"),
+		},
+		{
+			"testECS",
+			NewECSResolver("test"),
+		},
+		{
+			"testGeneric",
+			NewGenericResolver("test"),
+		},
 	}
-	assert.Nil(t, config.Validate())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Resolvers: []Resolver{tt.resolver},
+				Rules:     nil,
+			}
+			assert.Nil(t, config.Validate())
 
-	config = Config{
-		Resolvers: []Resolver{NewK8sResolver("test"), NewGenericResolver("")},
-		Rules:     nil,
+		})
 	}
-	assert.Nil(t, config.Validate())
-
-	config = Config{
-		Resolvers: []Resolver{NewEC2Resolver("test"), NewGenericResolver("")},
-		Rules:     nil,
-	}
-	assert.Nil(t, config.Validate())
 }
 
 func TestValidateFailedOnEmptyResolver(t *testing.T) {
@@ -38,15 +56,27 @@ func TestValidateFailedOnEmptyResolver(t *testing.T) {
 }
 
 func TestValidateFailedOnEmptyResolverName(t *testing.T) {
-	config := Config{
-		Resolvers: []Resolver{NewEKSResolver("")},
-		Rules:     nil,
+	tests := []struct {
+		name     string
+		resolver Resolver
+	}{
+		{
+			"testEKS",
+			NewEKSResolver(""),
+		},
+		{
+			"testK8S",
+			NewK8sResolver(""),
+		},
 	}
-	assert.NotNil(t, config.Validate())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Resolvers: []Resolver{tt.resolver},
+				Rules:     nil,
+			}
+			assert.NotNil(t, config.Validate())
 
-	config = Config{
-		Resolvers: []Resolver{NewK8sResolver("")},
-		Rules:     nil,
+		})
 	}
-	assert.NotNil(t, config.Validate())
 }

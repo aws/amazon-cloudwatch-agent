@@ -25,9 +25,14 @@ const (
 	MetricsCollectedKey                = "metrics_collected"
 	LogsCollectedKey                   = "logs_collected"
 	TracesCollectedKey                 = "traces_collected"
+	MetricsDestinationsKey             = "metrics_destinations"
 	ECSKey                             = "ecs"
 	KubernetesKey                      = "kubernetes"
+	CloudWatchKey                      = "cloudwatch"
+	CloudWatchLogsKey                  = "cloudwatchlogs"
 	PrometheusKey                      = "prometheus"
+	AMPKey                             = "amp"
+	WorkspaceIDKey                     = "workspace_id"
 	EMFProcessorKey                    = "emf_processor"
 	DisableMetricExtraction            = "disable_metric_extraction"
 	XrayKey                            = "xray"
@@ -42,7 +47,9 @@ const (
 	LocalModeKey                       = "local_mode"
 	CredentialsKey                     = "credentials"
 	RoleARNKey                         = "role_arn"
+	SigV4Auth                          = "sigv4auth"
 	MetricsCollectionIntervalKey       = "metrics_collection_interval"
+	AggregationDimensionsKey           = "aggregation_dimensions"
 	MeasurementKey                     = "measurement"
 	DropOriginalMetricsKey             = "drop_original_metrics"
 	ForceFlushIntervalKey              = "force_flush_interval"
@@ -60,6 +67,8 @@ const (
 	ServiceAddress                     = "service_address"
 	Udp                                = "udp"
 	Tcp                                = "tcp"
+	TlsKey                             = "tls"
+	Tags                               = "tags"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
@@ -69,13 +78,43 @@ const (
 )
 
 const (
-	PipelineNameHost             = "host"
-	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
-	PipelineNameJmx              = "jmx"
-	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "application_signals"
-	AppSignalsFallback           = "app_signals"
-	AppSignalsRules              = "rules"
+	CollectDMetricKey = "collectd"
+	CollectDPluginKey = "socket_listener"
+	CPUMetricKey      = "cpu"
+	DiskMetricKey     = "disk"
+	DiskIoMetricKey   = "diskio"
+	StatsDMetricKey   = "statsd"
+	SwapMetricKey     = "swap"
+	MemMetricKey      = "mem"
+	NetMetricKey      = "net"
+	NetStatMetricKey  = "netstat"
+	ProcessMetricKey  = "process"
+	ProcStatMetricKey = "procstat"
+
+	//Windows Plugins
+	MemMetricKeyWindows          = "Memory"
+	LogicalDiskMetricKeyWindows  = "LogicalDisk"
+	NetworkMetricKeyWindows      = "Network Interface"
+	PagingMetricKeyWindows       = "Paging"
+	PhysicalDiskMetricKeyWindows = "PhysicalDisk"
+	ProcessorMetricKeyWindows    = "Processor"
+	SystemMetricKeyWindows       = "System"
+	TCPv4MetricKeyWindows        = "TCPv4"
+	TCPv6MetricKeyWindows        = "TCPv6"
+)
+
+const (
+	PipelineNameHost                 = "host"
+	PipelineNameHostCustomMetrics    = "hostCustomMetrics"
+	PipelineNameHostDeltaMetrics     = "hostDeltaMetrics"
+	PipelineNameHostOtlpMetrics      = "hostOtlpMetrics"
+	PipelineNameContainerInsights    = "containerinsights"
+	PipelineNameJmx                  = "jmx"
+	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
+	PipelineNameEmfLogs              = "emf_logs"
+	AppSignals                       = "application_signals"
+	AppSignalsFallback               = "app_signals"
+	AppSignalsRules                  = "rules"
 )
 
 var (
@@ -88,10 +127,13 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
-	JmxConfigKey = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
-	JmxTargets   = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
 
-	AgentDebugConfigKey = ConfigKey(AgentKey, DebugKey)
+	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+
+	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
+	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
 )
 
 // Translator is used to translate the JSON config into an
@@ -136,6 +178,9 @@ func (t translatorMap[C]) Set(translator Translator[C]) {
 
 func (t translatorMap[C]) Get(id component.ID) (Translator[C], bool) {
 	element, ok := t.lookup[id]
+	if !ok {
+		return nil, ok
+	}
 	return element.Value.(Translator[C]), ok
 }
 

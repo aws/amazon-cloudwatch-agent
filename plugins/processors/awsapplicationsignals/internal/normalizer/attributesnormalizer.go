@@ -31,20 +31,23 @@ type attributesNormalizer struct {
 }
 
 var attributesRenamingForMetric = map[string]string{
-	attr.AWSLocalService:             common.CWMetricAttributeLocalService,
-	attr.AWSLocalOperation:           common.CWMetricAttributeLocalOperation,
-	attr.AWSLocalEnvironment:         common.CWMetricAttributeEnvironment,
-	attr.AWSRemoteService:            common.CWMetricAttributeRemoteService,
-	attr.AWSRemoteOperation:          common.CWMetricAttributeRemoteOperation,
-	attr.AWSRemoteEnvironment:        common.CWMetricAttributeRemoteEnvironment,
-	attr.AWSRemoteTarget:             common.CWMetricAttributeRemoteResourceIdentifier,
-	attr.AWSRemoteResourceIdentifier: common.CWMetricAttributeRemoteResourceIdentifier,
-	attr.AWSRemoteResourceType:       common.CWMetricAttributeRemoteResourceType,
-	attr.AWSRemoteDbUser:             common.MetricAttributeRemoteDbUser,
+	attr.AWSLocalService:                       common.CWMetricAttributeLocalService,
+	attr.AWSLocalOperation:                     common.CWMetricAttributeLocalOperation,
+	attr.AWSLocalEnvironment:                   common.CWMetricAttributeEnvironment,
+	attr.AWSRemoteService:                      common.CWMetricAttributeRemoteService,
+	attr.AWSRemoteOperation:                    common.CWMetricAttributeRemoteOperation,
+	attr.AWSRemoteEnvironment:                  common.CWMetricAttributeRemoteEnvironment,
+	attr.AWSRemoteTarget:                       common.CWMetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceIdentifier:           common.CWMetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceType:                 common.CWMetricAttributeRemoteResourceType,
+	attr.AWSRemoteDbUser:                       common.MetricAttributeRemoteDbUser,
+	attr.AWSRemoteResourceCfnPrimaryIdentifier: common.MetricAttributeRemoteResourceCfnPrimaryIdentifier,
+	attr.AWSECSClusterName:                     common.MetricAttributeECSCluster,
+	attr.AWSECSTaskID:                          common.MetricAttributeECSTaskId,
 }
 
 var resourceAttributesRenamingForTrace = map[string]string{
-	// these kubernetes resource attributes are set by the openTelemetry operator
+	// these kubernetes resource attributes are set by the OpenTelemetry operator
 	// see the code references from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
@@ -60,9 +63,9 @@ var attributesRenamingForTrace = map[string]string{
 	attr.AWSRemoteTarget: attr.AWSRemoteResourceIdentifier,
 }
 
-var copyMapForMetric = map[string]string{
-	// these kubernetes resource attributes are set by the openTelemtry operator
-	// see the code referecnes from upstream:
+var resourceToMetricAttributes = map[string]string{
+	// these kubernetes resource attributes are set by the OpenTelemetry operator
+	// see the code references from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
 	semconv.AttributeK8SDeploymentName:  common.AttributeK8SWorkload,
@@ -72,6 +75,8 @@ var copyMapForMetric = map[string]string{
 	semconv.AttributeK8SCronJobName:     common.AttributeK8SWorkload,
 	semconv.AttributeK8SPodName:         common.AttributeK8SPod,
 	semconv.AttributeAWSLogGroupNames:   "aws.log.group.names",
+	semconv.AttributeAWSECSTaskRevision: common.MetricAttributeECSTaskDefinitionRevision,
+	semconv.AttributeAWSECSTaskFamily:   common.MetricAttributeECSTaskDefinitionFamily,
 }
 
 const (
@@ -106,7 +111,7 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 	if isTrace {
 		return
 	}
-	for k, v := range copyMapForMetric {
+	for k, v := range resourceToMetricAttributes {
 		if resourceAttrValue, ok := resourceAttributes.Get(k); ok {
 			// print some debug info when an attribute value is overwritten
 			if originalAttrValue, ok := attributes.Get(k); ok {
@@ -120,6 +125,11 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 				}
 			}
 		}
+	}
+	// If a metric doesn't `aws.local.service` attribute, copy it from resource attributes. This is now only used in
+	// processing runtime metrics.
+	if serviceAttribute, ok := resourceAttributes.Get(attr.AWSLocalService); ok {
+		attributes.PutStr(attr.AWSLocalService, serviceAttribute.AsString())
 	}
 }
 

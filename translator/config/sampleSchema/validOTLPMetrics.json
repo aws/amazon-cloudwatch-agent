@@ -1,0 +1,38 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "otlp": [
+        {
+          "grpc_endpoint": "0.0.0.0:1234",
+          "http_endpoint": "0.0.0.0:2345"
+        },
+        {
+          "grpc_endpoint": "0.0.0.0:3456",
+          "http_endpoint": "0.0.0.0:4567",
+          "tls": {
+            "cert_file": "/path/to/cert.pem",
+            "key_file": "/path/to/key.pem"
+          }
+        }
+      ]
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "otlp": [
+        {
+          "grpc_endpoint": "0.0.0.0:1234",
+          "http_endpoint": "0.0.0.0:2345"
+        },
+        {
+          "grpc_endpoint": "0.0.0.0:3456",
+          "http_endpoint": "0.0.0.0:4567",
+          "tls": {
+            "cert_file": "/path/to/cert.pem",
+            "key_file": "/path/to/key.pem"
+          }
+        }
+      ]
+    }
+  }
+}

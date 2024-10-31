@@ -1,0 +1,28 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: localhost:4317
+
+processors:
+  batch:
+
+exporters:
+  debug:
+  nop:
+
+extensions:
+  health_check:
+    endpoint: localhost:1234
+  nop:
+
+service:
+  extensions: [health_check,nop]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [nop]
+    traces/debug:
+      receivers: [otlp]
+      exporters: [debug]

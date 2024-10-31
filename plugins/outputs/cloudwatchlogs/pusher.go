@@ -11,11 +11,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
@@ -43,6 +43,8 @@ type pusher struct {
 	RetryDuration time.Duration
 	Log           telegraf.Logger
 
+	region              string
+	logSrc              logs.LogSrc
 	events              []*cloudwatchlogs.InputLogEvent
 	minT, maxT          *time.Time
 	doneCallbacks       []func()
@@ -63,13 +65,15 @@ type pusher struct {
 	wg                    *sync.WaitGroup
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
+func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
 		FlushTimeout:    flushTimeout,
 		RetryDuration:   retryDuration,
 		Log:             logger,
+		region:          region,
+		logSrc:          logSrc,
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
@@ -218,17 +222,20 @@ func (p *pusher) send() {
 	if p.needSort {
 		sort.Stable(ByTimestamp(p.events))
 	}
-
 	input := &cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     p.events,
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
 	}
+	if p.logSrc != nil {
+		input.Entity = p.logSrc.Entity()
+	}
 
 	startTime := time.Now()
 
-	retryCount := 0
+	retryCountShort := 0
+	retryCountLong := 0
 	for {
 		input.SequenceToken = p.sequenceToken
 		output, err := p.Service.PutLogEvents(input)
@@ -297,36 +304,34 @@ func (p *pusher) send() {
 			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
 		}
 
-		wait := retryWait(retryCount)
+		// retry wait strategy depends on the type of error returned
+		var wait time.Duration
+		if chooseRetryWaitStrategy(err) == retryLong {
+			wait = retryWaitLong(retryCountLong)
+			retryCountLong++
+		} else {
+			wait = retryWaitShort(retryCountShort)
+			retryCountShort++
+		}
+
 		if time.Since(startTime)+wait > p.RetryDuration {
-			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, p.Group, p.Stream)
 			p.reset()
 			return
 		}
 
-		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
+		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCountShort+retryCountLong-1, wait)
 
 		select {
 		case <-p.stop:
-			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, p.Group, p.Stream)
 			p.reset()
 			return
 		case <-time.After(wait):
 		}
 
-		retryCount++
 	}
 
-}
-
-func retryWait(n int) time.Duration {
-	const base = 200 * time.Millisecond
-	// Max wait time is 1 minute (jittered)
-	d := 1 * time.Minute
-	if n < 5 {
-		d = base * time.Duration(1<<int64(n))
-	}
-	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
 }
 
 func (p *pusher) createLogGroupAndStream() error {

@@ -16,8 +16,8 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	tt := NewTranslator()
-	assert.EqualValues(t, "debug/application_signals", tt.ID().String())
+	tt := NewTranslator(common.WithName("test"))
+	assert.EqualValues(t, "debug/test", tt.ID().String())
 	got, err := tt.Translate(confmap.New())
 	assert.Error(t, err)
 	assert.Nil(t, got)

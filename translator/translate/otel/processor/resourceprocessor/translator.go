@@ -5,36 +5,41 @@ package resourceprocessor
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type translator struct {
-	name    string
+	common.NameProvider
+	common.IndexProvider
 	factory processor.Factory
 }
 
-type Option func(any)
+var (
+	baseKey                                     = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
+	k8sKey                                      = common.ConfigKey(baseKey, common.KubernetesKey)
+	_       common.Translator[component.Config] = (*translator)(nil)
+)
 
-func WithName(name string) Option {
-	return func(a any) {
-		if t, ok := a.(*translator); ok {
-			t.name = name
-		}
-	}
-}
-
-var _ common.Translator[component.Config] = (*translator)(nil)
-
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
 	t := &translator{factory: resourceprocessor.NewFactory()}
+	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
+	}
+	if t.Index() != -1 {
+		t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
 	}
 	return t
 }
@@ -42,20 +47,44 @@ func NewTranslator(opts ...Option) common.Translator[component.Config] {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(common.JmxConfigKey) {
+	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
-
+	var attributes []any
+	if strings.HasPrefix(t.Name(), common.PipelineNameJmx) {
+		attributes = t.getJMXAttributes(conf)
+	} else if t.Name() == common.PipelineNameContainerInsightsJmx {
+		attributes = t.getContainerInsightsJMXAttributes(conf)
+	}
+	if len(attributes) == 0 {
+		baseKey := common.JmxConfigKey
+		if t.Index() != -1 {
+			baseKey = fmt.Sprintf("%s[%d]", baseKey, t.Index())
+		}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.ConfigKey(baseKey, common.AppendDimensionsKey)}
+	}
 	c := confmap.NewFromStringMap(map[string]any{
-		"attributes": []any{
+		"attributes": attributes,
+	})
+
+	if err := c.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal resource processor: %w", err)
+	}
+
+	return cfg, nil
+}
+
+func (t *translator) getJMXAttributes(conf *confmap.Conf) []any {
+	if !context.CurrentContext().RunInContainer() {
+		return []any{
 			map[string]any{
 				"action":  "delete",
 				"pattern": "telemetry.sdk.*",
@@ -65,12 +94,46 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				"key":    "service.name",
 				"value":  "unknown_service:java",
 			},
-		},
-	})
-
-	if err := c.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal resource processor: %w", err)
+		}
 	}
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
+	appendDimensions, ok := jmxMap[common.AppendDimensionsKey].(map[string]any)
+	if !ok {
+		return nil
+	}
+	var attributes []any
+	for key, value := range appendDimensions {
+		attributes = append(attributes, map[string]any{
+			"action": "upsert",
+			"key":    key,
+			"value":  value,
+		})
+	}
+	return attributes
+}
 
-	return cfg, nil
+func (t *translator) getContainerInsightsJMXAttributes(conf *confmap.Conf) []any {
+	clusterName, ok := common.GetString(conf, common.ConfigKey(k8sKey, "cluster_name"))
+
+	if !ok {
+		clusterName = util.GetClusterNameFromEc2Tagger()
+	}
+	nodeName := os.Getenv(config.HOST_NAME)
+	return []any{
+		map[string]any{
+			"key":            "Namespace",
+			"from_attribute": "k8s.namespace.name",
+			"action":         "insert",
+		},
+		map[string]any{
+			"key":    "ClusterName",
+			"value":  clusterName, // Ensure 'clusterName' is defined earlier
+			"action": "upsert",
+		},
+		map[string]any{
+			"key":    "NodeName",
+			"value":  nodeName,
+			"action": "insert",
+		},
+	}
 }

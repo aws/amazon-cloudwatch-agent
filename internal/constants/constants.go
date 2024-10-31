@@ -4,5 +4,8 @@
 package constants
 
 const (
+	FileSuffixTmp  = ".tmp"
+	FileSuffixYAML = ".yaml"
+
 	ExitCodeNoJSONFile = 99
 )

@@ -1,4 +1,60 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300049.0 (2024-10-30)
+========================================================================
+Enhancements:
+* [Metrics/Logs] Annotate Infra, statsD, collectD metrics and application logs with entities
+* [ApplicationSignals] Support runtime metrics for Application Signals
+* [ApplicationSignals] Create a server to expose service names for instrumented applications on K8s
+
+========================================================================
+Amazon CloudWatch Agent 1.300048.2 (2024-10-24)
+========================================================================
+Enhancements:
+* [ContainerInsights] Use LocalNode decorator for DCGM and Neuron metrics
+
+========================================================================
+Amazon CloudWatch Agent 1.300048.1 (2024-10-15)
+========================================================================
+Bug Fixes:
+* Fix logs-only check in agent and container environment merge
+
+========================================================================
+Amazon CloudWatch Agent 1.300048.0 (2024-10-11)
+========================================================================
+Features:
+* Support OTLP receiver for metrics
+* Support AMP as a metrics destination
+* Support for supplemental configuration
+* Support JMX metric collection for JVM, Tomcat, and Kafka on EKS
+* Support JMX Container Insights
+
+Enhancements:
+* [Traces] Support OTLP format in transit
+* [ApplicationSignals] Update metric processing
+* [ContainerInsights] Use protobuf content type for k8s client
+
+Bug Fixes:
+* [Metrics/Procstat] Fix memory_swap metrics on Linux
+
+========================================================================
+Amazon CloudWatch Agent 1.300047.0 (2024-10-03)
+========================================================================
+Enhancements:
+* Increase retry delay on PLE for certain exceptions
+* [ApplicationSignals] Add new log attribute for AWS Resource CloudFormation Primary Identifier in EMF logs
+* [ApplicationSignals] Add ECS as a supported platform with ECS specific attributes for EMF logs
+
+========================================================================
+Amazon CloudWatch Agent 1.300045.1 (2024-09-03)
+========================================================================
+Bug Fixes:
+* [ApplicationSignals] EKS resource detector is now no-op on non-EKS environments
+* Stop converting nanosecond metrics to microsecond
+
+Enhancements:
+* [ContainerInsights] Use IMDS to get instance ID and type for Neuron Monitor.
+
+========================================================================
 Amazon CloudWatch Agent 1.300045.0 (2024-08-26)
 ========================================================================
 Bug Fixes:
@@ -148,7 +204,7 @@ Enhancements:
 * [AppSignals] Improve Kubernetes support
 
 ========================================================================
-Amazon CloudWatch Agent 1.300033.0 (2023-01-31)
+Amazon CloudWatch Agent 1.300033.0 (2024-01-31)
 ========================================================================
 
 Enchancements:

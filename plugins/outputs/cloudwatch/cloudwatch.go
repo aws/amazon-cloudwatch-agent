@@ -14,8 +14,6 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -32,6 +30,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
 )
 
 const (
@@ -61,7 +61,7 @@ type CloudWatch struct {
 	// 1 telegraf Metric could have many Fields.
 	// Each field corresponds to a MetricDatum.
 	metricChan             chan *aggregationDatum
-	datumBatchChan         chan []*cloudwatch.MetricDatum
+	datumBatchChan         chan map[string][]*cloudwatch.MetricDatum
 	metricDatumBatch       *MetricDatumBatch
 	shutdownChan           chan struct{}
 	retries                int
@@ -122,7 +122,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 func (c *CloudWatch) startRoutines() {
 	setNewDistributionFunc(c.config.MaxValuesPerDatum)
 	c.metricChan = make(chan *aggregationDatum, metricChanBufferSize)
-	c.datumBatchChan = make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize)
+	c.datumBatchChan = make(chan map[string][]*cloudwatch.MetricDatum, datumBatchChanBufferSize)
 	c.shutdownChan = make(chan struct{})
 	c.aggregatorShutdownChan = make(chan struct{})
 	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
@@ -172,11 +172,13 @@ func (c *CloudWatch) pushMetricDatum() {
 	for {
 		select {
 		case metric := <-c.metricChan:
-			datums := c.BuildMetricDatum(metric)
+			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
 			for i := 0; i < numberOfPartitions; i++ {
-				c.metricDatumBatch.Partition = append(c.metricDatumBatch.Partition, datums[i])
+				entityStr := entityToString(entity)
+				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])
 				c.metricDatumBatch.Size += payload(datums[i])
+				c.metricDatumBatch.Count++
 				if c.metricDatumBatch.isFull() {
 					// if batch is full
 					c.datumBatchChan <- c.metricDatumBatch.Partition
@@ -198,30 +200,33 @@ func (c *CloudWatch) pushMetricDatum() {
 
 type MetricDatumBatch struct {
 	MaxDatumsPerCall    int
-	Partition           []*cloudwatch.MetricDatum
+	Partition           map[string][]*cloudwatch.MetricDatum
 	BeginTime           time.Time
 	Size                int
+	Count               int
 	perRequestConstSize int
 }
 
 func newMetricDatumBatch(maxDatumsPerCall, perRequestConstSize int) *MetricDatumBatch {
 	return &MetricDatumBatch{
 		MaxDatumsPerCall:    maxDatumsPerCall,
-		Partition:           make([]*cloudwatch.MetricDatum, 0, maxDatumsPerCall),
+		Partition:           map[string][]*cloudwatch.MetricDatum{},
 		BeginTime:           time.Now(),
 		Size:                perRequestConstSize,
+		Count:               0,
 		perRequestConstSize: perRequestConstSize,
 	}
 }
 
 func (b *MetricDatumBatch) clear() {
-	b.Partition = make([]*cloudwatch.MetricDatum, 0, b.MaxDatumsPerCall)
+	b.Partition = map[string][]*cloudwatch.MetricDatum{}
 	b.BeginTime = time.Now()
 	b.Size = b.perRequestConstSize
+	b.Count = 0
 }
 
 func (b *MetricDatumBatch) isFull() bool {
-	return len(b.Partition) >= b.MaxDatumsPerCall || b.Size >= bottomLinePayloadSizeInBytesToPublish
+	return b.Count >= b.MaxDatumsPerCall || b.Size >= bottomLinePayloadSizeInBytesToPublish
 }
 
 func (c *CloudWatch) timeToPublish(b *MetricDatumBatch) bool {
@@ -334,12 +339,37 @@ func (c *CloudWatch) backoffSleep() {
 	time.Sleep(d)
 }
 
-func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
-	datums := req.([]*cloudwatch.MetricDatum)
-	params := &cloudwatch.PutMetricDataInput{
-		MetricData: datums,
-		Namespace:  aws.String(c.config.Namespace),
+func createEntityMetricData(entityToMetrics map[string][]*cloudwatch.MetricDatum) []*cloudwatch.EntityMetricData {
+	var entityMetricData []*cloudwatch.EntityMetricData
+	for entityStr, metrics := range entityToMetrics {
+		if entityStr == "" {
+			continue
+		}
+		entity := stringToEntity(entityStr)
+		entityMetricData = append(entityMetricData, &cloudwatch.EntityMetricData{
+			Entity:     &entity,
+			MetricData: metrics,
+		})
 	}
+	return entityMetricData
+}
+
+func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
+	entityToMetricDatum := req.(map[string][]*cloudwatch.MetricDatum)
+
+	// PMD requires PutMetricData to have MetricData
+	metricData := entityToMetricDatum[""]
+	if _, ok := entityToMetricDatum[""]; !ok {
+		metricData = []*cloudwatch.MetricDatum{}
+	}
+
+	params := &cloudwatch.PutMetricDataInput{
+		MetricData:             metricData,
+		Namespace:              aws.String(c.config.Namespace),
+		EntityMetricData:       createEntityMetricData(entityToMetricDatum),
+		StrictEntityValidation: aws.Bool(false),
+	}
+
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
 		_, err = c.svc.PutMetricData(params)
@@ -375,14 +405,14 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // BuildMetricDatum may just return the datum as-is.
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
-func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.MetricDatum {
+func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
 	var datums []*cloudwatch.MetricDatum
 	var distList []distribution.Distribution
 
 	if metric.distribution != nil {
 		if metric.distribution.Size() == 0 {
 			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
-			return datums
+			return metric.entity, datums
 		}
 		if metric.distribution.Unit() != "" {
 			metric.SetUnit(metric.distribution.Unit())
@@ -437,7 +467,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			}
 		}
 	}
-	return datums
+	return metric.entity, datums
 }
 
 func (c *CloudWatch) IsDropping(metricName string) bool {

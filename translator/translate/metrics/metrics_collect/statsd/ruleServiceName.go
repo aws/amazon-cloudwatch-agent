@@ -1,0 +1,33 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package statsd
+
+import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+)
+
+type ServiceName struct {
+}
+
+const SectionkeyServicename = "service.name"
+
+func (obj *ServiceName) ApplyRule(input interface{}) (string, interface{}) {
+	returnKey, returnVal := translator.DefaultCase(SectionkeyServicename, "", input)
+
+	parentKeyVal := metrics.GlobalMetricConfig.ServiceName
+	if returnVal != "" {
+		return common.Tags, map[string]interface{}{returnKey: returnVal, entityattributes.AttributeServiceNameSource: entityattributes.AttributeServiceNameSourceUserConfig}
+	} else if parentKeyVal != "" {
+		return common.Tags, map[string]interface{}{returnKey: parentKeyVal, entityattributes.AttributeServiceNameSource: entityattributes.AttributeServiceNameSourceUserConfig}
+	}
+	return "", nil
+}
+
+func init() {
+	obj := new(ServiceName)
+	RegisterRule(SectionkeyServicename, obj)
+}

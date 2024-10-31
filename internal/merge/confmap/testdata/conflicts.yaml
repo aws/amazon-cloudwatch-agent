@@ -1,0 +1,23 @@
+receivers:
+  statsd:
+  otlp:
+    protocols:
+      http:
+        endpoint: localhost:4318
+
+exporters:
+  debug:
+  nop:
+
+extensions:
+  health_check:
+    endpoint: localhost:5678
+  pprof:
+  zpages:
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [statsd, otlp]
+      exporters: [debug]

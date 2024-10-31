@@ -17,12 +17,31 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
+
+type mockLogSrc struct {
+	logs.LogSrc
+}
+
+func (m *mockLogSrc) Entity() *cloudwatchlogs.Entity {
+	return &cloudwatchlogs.Entity{
+		Attributes: map[string]*string{
+			"PlatformType":         aws.String("AWS::EC2"),
+			"EC2.InstanceId":       aws.String("i-123456789"),
+			"EC2.AutoScalingGroup": aws.String("test-group"),
+		},
+		KeyAttributes: map[string]*string{
+			"Name":        aws.String("myService"),
+			"Environment": aws.String("myEnvironment"),
+		},
+	}
+}
 
 var wg sync.WaitGroup
 
@@ -88,6 +107,17 @@ func TestAddSingleEvent(t *testing.T) {
 	var s svcMock
 	called := false
 	nst := "NEXT_SEQ_TOKEN"
+	expectedEntity := &cloudwatchlogs.Entity{
+		Attributes: map[string]*string{
+			"PlatformType":         aws.String("AWS::EC2"),
+			"EC2.InstanceId":       aws.String("i-123456789"),
+			"EC2.AutoScalingGroup": aws.String("test-group"),
+		},
+		KeyAttributes: map[string]*string{
+			"Name":        aws.String("myService"),
+			"Environment": aws.String("myEnvironment"),
+		},
+	}
 
 	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		called = true
@@ -103,7 +133,7 @@ func TestAddSingleEvent(t *testing.T) {
 		if len(in.LogEvents) != 1 || *in.LogEvents[0].Message != "MSG" {
 			t.Errorf("PutLogEvents called with incorrect message, got: '%v'", *in.LogEvents[0].Message)
 		}
-
+		require.Equal(t, expectedEntity, in.Entity)
 		return &cloudwatchlogs.PutLogEventsOutput{
 			NextSequenceToken: &nst,
 		}, nil
@@ -769,6 +799,7 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 
 func testPreparation(retention int, s *svcMock, flushTimeout time.Duration, retryDuration time.Duration) (chan struct{}, *pusher) {
 	stop := make(chan struct{})
-	p := NewPusher(Target{"G", "S", util.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg)
+	mockLogSrcObj := &mockLogSrc{}
+	p := NewPusher("us-east-1", Target{"G", "S", util.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg, mockLogSrcObj)
 	return stop, p
 }
