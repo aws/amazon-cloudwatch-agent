@@ -21,8 +21,12 @@ func GetMetricsDestinations(conf *confmap.Conf) []string {
 	if conf.IsSet(ConfigKey(metricsDestinationsKey, AMPKey)) {
 		destinations = append(destinations, AMPKey)
 	}
-	if len(destinations) == 0 {
+	if conf.IsSet(MetricsKey) && len(destinations) == 0 {
 		destinations = append(destinations, DefaultDestination)
 	}
 	return destinations
+}
+
+func GetLogsDestinations() []string {
+	return []string{CloudWatchLogsKey}
 }

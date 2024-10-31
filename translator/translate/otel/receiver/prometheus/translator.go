@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -24,7 +25,7 @@ const (
 )
 
 var (
-	configPathKey = common.ConfigKey(common.PrometheusConfigKeys[component.DataTypeMetrics], common.PrometheusConfigPathKey)
+	configPathKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey, common.PrometheusConfigPathKey)
 )
 
 type translator struct {
@@ -53,6 +54,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if conf.IsSet(configPathKey) {
 		configPath, _ := common.GetString(conf, configPathKey)
+		processedConfigPath, err := util.GetConfigPath("prometheus.yaml", configPathKey, configPath, nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to process prometheus config with given config: %w", err)
+		}
+		configPath = processedConfigPath.(string)
 		content, err := os.ReadFile(configPath)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
@@ -67,24 +73,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if componentParser == nil {
 			return nil, fmt.Errorf("unable to parse config from filename %s", configPath)
 		}
-		var isPrometheusConfig bool
 		err = componentParser.Unmarshal(&cfg)
 		if err != nil {
 			// passed in prometheus config is in plain prometheus format and not otel wrapper
 			if !strings.Contains(err.Error(), otelConfigParsingError) {
 				return nil, fmt.Errorf("unable to unmarshall config to otel prometheus config from filename %s", configPath)
 			}
-			isPrometheusConfig = true
-		} else {
-			// given prometheus config is in otel format so check if target allocator is being used
-			// then add the default cert for TargetAllocator
-			if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
-				cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTlsCaPath
-				cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
-			}
-		}
 
-		if isPrometheusConfig {
 			var promCfg prometheusreceiver.PromConfig
 			err = componentParser.Unmarshal(&promCfg)
 			if err != nil {
@@ -93,6 +88,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
 			cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
 			cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
+		} else {
+			// given prometheus config is in otel format so check if target allocator is being used
+			// then add the default cert for TargetAllocator
+			if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
+				cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTlsCaPath
+				cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
+			}
 		}
 	}
 

@@ -25,46 +25,51 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testCases := map[string]struct {
-		input       map[string]any
-		index       int
-		destination string
-		dataType    component.DataType
-		want        *want
-		wantErr     error
+		input         map[string]any
+		index         int
+		configSection string
+		want          *want
+		wantErr       error
 	}{
 		"WithoutPrometheusMetrics": {
-			input:    map[string]any{},
-			dataType: component.DataTypeMetrics,
+			input:         map[string]any{},
+			configSection: MetricsKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus"),
-				JsonKey: "metrics::metrics_collected::prometheus",
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/amp"),
+				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
 		"WithoutPrometheusLogs": {
-			input:    map[string]any{},
-			dataType: component.DataTypeLogs,
+			input:         map[string]any{},
+			configSection: LogsKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus"),
-				JsonKey: "logs::metrics_collected::prometheus",
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/cloudwatch"),
+				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
 		"WithEmptyPath": {
 			input: map[string]any{
 				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{},
+					},
 					"metrics_collected": map[string]any{
 						"prometheus": map[string]any{},
 					},
 				},
 			},
-			dataType: component.DataTypeMetrics,
+			configSection: MetricsKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus"),
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/amp"),
 				JsonKey: "metrics::metrics_collected::prometheus::prometheus_config_path",
 			},
 		},
 		"WithMissingLogsConfiguration": {
 			input: map[string]any{
 				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{},
+					},
 					"metrics_collected": map[string]any{
 						"prometheus": map[string]any{
 							"prometheus_config_path": "test.yaml",
@@ -72,9 +77,8 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			dataType:    component.DataTypeMetrics,
-			destination: common.CloudWatchKey,
-			wantErr:     errors.New("pipeline (prometheus/cloudwatch) is missing prometheus configuration under logs section with destination (cloudwatch)"),
+			configSection: LogsKey,
+			wantErr:       errors.New("pipeline (prometheus/cloudwatch) is missing prometheus configuration under logs section with destination (cloudwatchlogs)"),
 		},
 		"WithMetricsWithCloudWatchDestination": {
 			input: map[string]any{
@@ -91,8 +95,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			dataType:    component.DataTypeLogs,
-			destination: common.CloudWatchKey,
+			configSection: LogsKey,
 			want: &want{
 				pipelineID: "metrics/prometheus/cloudwatch",
 				receivers:  []string{"telegraf_prometheus"},
@@ -116,8 +119,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			dataType:    component.DataTypeMetrics,
-			destination: common.AMPKey,
+			configSection: MetricsKey,
 			want: &want{
 				pipelineID: "metrics/prometheus/amp",
 				receivers:  []string{"prometheus"},
@@ -134,8 +136,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			dataType:    component.DataTypeLogs,
-			destination: common.CloudWatchKey,
+			configSection: LogsKey,
 			want: &want{
 				pipelineID: "metrics/prometheus/cloudwatch",
 				receivers:  []string{"telegraf_prometheus"},
@@ -147,7 +148,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tt := NewTranslator(WithDataType(testCase.dataType), common.WithDestination(testCase.destination))
+			tt := NewTranslator(testCase.configSection)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
