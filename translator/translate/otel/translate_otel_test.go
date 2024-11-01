@@ -6,6 +6,7 @@ package otel
 import (
 	"testing"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -205,7 +206,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErrContains: "no valid pipelines",
+			wantErrContains: common.ConfigKey(prometheus.MetricsKey, common.PrometheusConfigPathKey),
 		},
 	}
 	for name, testCase := range testCases {

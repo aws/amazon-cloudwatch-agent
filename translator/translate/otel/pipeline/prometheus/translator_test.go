@@ -25,43 +25,26 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testCases := map[string]struct {
-		input         map[string]any
-		index         int
-		configSection string
-		want          *want
-		wantErr       error
+		input       map[string]any
+		index       int
+		destination string
+		want        *want
+		wantErr     error
 	}{
 		"WithoutPrometheusMetrics": {
-			input:         map[string]any{},
-			configSection: MetricsKey,
+			input:       map[string]any{},
+			destination: common.AMPKey,
 			wantErr: &common.MissingKeyError{
 				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/amp"),
 				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
 		"WithoutPrometheusLogs": {
-			input:         map[string]any{},
-			configSection: LogsKey,
+			input:       map[string]any{},
+			destination: common.CloudWatchLogsKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/cloudwatch"),
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/cloudwatchlogs"),
 				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
-			},
-		},
-		"WithEmptyPath": {
-			input: map[string]any{
-				"metrics": map[string]any{
-					"metrics_destinations": map[string]any{
-						"amp": map[string]any{},
-					},
-					"metrics_collected": map[string]any{
-						"prometheus": map[string]any{},
-					},
-				},
-			},
-			configSection: MetricsKey,
-			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/amp"),
-				JsonKey: "metrics::metrics_collected::prometheus::prometheus_config_path",
 			},
 		},
 		"WithMissingLogsConfiguration": {
@@ -77,8 +60,8 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			configSection: LogsKey,
-			wantErr:       errors.New("pipeline (prometheus/cloudwatch) is missing prometheus configuration under logs section with destination (cloudwatchlogs)"),
+			destination: common.CloudWatchLogsKey,
+			wantErr:     errors.New("pipeline (prometheus/cloudwatchlogs) is missing prometheus configuration under logs section with destination (cloudwatchlogs)"),
 		},
 		"WithMetricsWithCloudWatchDestination": {
 			input: map[string]any{
@@ -95,11 +78,11 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			configSection: LogsKey,
+			destination: common.CloudWatchLogsKey,
 			want: &want{
-				pipelineID: "metrics/prometheus/cloudwatch",
+				pipelineID: "metrics/prometheus/cloudwatchlogs",
 				receivers:  []string{"telegraf_prometheus"},
-				processors: []string{"batch/prometheus/cloudwatch"},
+				processors: []string{"batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -119,7 +102,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			configSection: MetricsKey,
+			destination: common.AMPKey,
 			want: &want{
 				pipelineID: "metrics/prometheus/amp",
 				receivers:  []string{"prometheus"},
@@ -136,11 +119,11 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			configSection: LogsKey,
+			destination: common.CloudWatchLogsKey,
 			want: &want{
-				pipelineID: "metrics/prometheus/cloudwatch",
+				pipelineID: "metrics/prometheus/cloudwatchlogs",
 				receivers:  []string{"telegraf_prometheus"},
-				processors: []string{"batch/prometheus/cloudwatch"},
+				processors: []string{"batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -148,7 +131,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tt := NewTranslator(testCase.configSection)
+			tt := NewTranslator(common.WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

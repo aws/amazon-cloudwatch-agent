@@ -33,7 +33,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_destinations": map[string]interface{}{},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: AMPSectionKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: AMPSectionKey + " or " + common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)},
 		},
 		"WithAMPDestination": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
