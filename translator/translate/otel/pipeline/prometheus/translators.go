@@ -16,7 +16,7 @@ func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	if conf.IsSet(LogsKey) {
 		destinations = append(destinations, common.CloudWatchLogsKey)
 	}
-	if conf.IsSet(MetricsKey) && conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey, common.AMPKey)) {
+	if conf.IsSet(MetricsKey) {
 		destinations = append(destinations, common.AMPKey)
 	}
 
