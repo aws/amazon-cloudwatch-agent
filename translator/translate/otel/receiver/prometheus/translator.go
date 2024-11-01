@@ -53,7 +53,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
 
 	if !conf.IsSet(configPathKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(configPathKey)}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configPathKey}
 	}
 
 	configPath, _ := common.GetString(conf, configPathKey)

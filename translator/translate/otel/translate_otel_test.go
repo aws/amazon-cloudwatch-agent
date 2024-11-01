@@ -191,7 +191,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
-		"WithOutValidaPrometheusConfig": {
+		"WithOutValidatePrometheusConfig": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_destinations": map[string]interface{}{
