@@ -1,14 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package tcp_logs
+package udplog
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/tcp"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/udp"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -17,17 +17,17 @@ import (
 
 func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
-	require.EqualValues(t, "tcplog", acit.ID().String())
+	require.EqualValues(t, "udplog", acit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
-		want    *tcplogreceiver.TCPLogConfig
+		want    *udplogreceiver.UDPLogConfig
 		wantErr error
 	}{
 		"WithoutEmf": {
 			input: map[string]interface{}{},
 			wantErr: &common.MissingKeyError{
 				ID:      acit.ID(),
-				JsonKey: fmt.Sprintf("missing %s or tcp service address", baseKey),
+				JsonKey: fmt.Sprintf("missing %s or udp service address", baseKey),
 			},
 		},
 		"WithoutServiceAddress": {
@@ -38,9 +38,9 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: &tcplogreceiver.TCPLogConfig{
-				InputConfig: tcp.Config{
-					BaseConfig: tcp.BaseConfig{
+			want: &udplogreceiver.UDPLogConfig{
+				InputConfig: udp.Config{
+					BaseConfig: udp.BaseConfig{
 						ListenAddress: "0.0.0.0:25888",
 					},
 				},
@@ -56,12 +56,9 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: &tcplogreceiver.TCPLogConfig{
-				InputConfig: tcp.Config{
-					BaseConfig: tcp.BaseConfig{
-						ListenAddress: "0.0.0.0:25888",
-					},
-				},
+			wantErr: &common.MissingKeyError{
+				ID:      acit.ID(),
+				JsonKey: fmt.Sprintf("missing %s or udp service address", baseKey),
 			},
 		},
 		"UdpServiceAddress": {
@@ -74,42 +71,45 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{
-				ID:      acit.ID(),
-				JsonKey: fmt.Sprintf("missing %s or tcp service address", baseKey),
+			want: &udplogreceiver.UDPLogConfig{
+				InputConfig: udp.Config{
+					BaseConfig: udp.BaseConfig{
+						ListenAddress: "0.0.0.0:25888",
+					},
+				},
 			},
 		},
-		"TcpDoubleSlashServiceAddress": {
+		"UdpDoubleSlashServiceAddress": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"emf": map[string]interface{}{
-							"service_address": "tcp://localhost:25888",
+							"service_address": "udp://localhost:25888",
 						},
 					},
 				},
 			},
-			want: &tcplogreceiver.TCPLogConfig{
-				InputConfig: tcp.Config{
-					BaseConfig: tcp.BaseConfig{
+			want: &udplogreceiver.UDPLogConfig{
+				InputConfig: udp.Config{
+					BaseConfig: udp.BaseConfig{
 						ListenAddress: "localhost:25888",
 					},
 				},
 			},
 		},
-		"TcpEmptyDoubleSlashServiceAddress": {
+		"UdpEmptyDoubleSlashServiceAddress": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"emf": map[string]interface{}{
-							"service_address": "tcp://:25888",
+							"service_address": "udp://:25888",
 						},
 					},
 				},
 			},
-			want: &tcplogreceiver.TCPLogConfig{
-				InputConfig: tcp.Config{
-					BaseConfig: tcp.BaseConfig{
+			want: &udplogreceiver.UDPLogConfig{
+				InputConfig: udp.Config{
+					BaseConfig: udp.BaseConfig{
 						ListenAddress: "0.0.0.0:25888",
 					},
 				},
@@ -123,7 +123,7 @@ func TestTranslator(t *testing.T) {
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
-				gotCfg, ok := got.(*tcplogreceiver.TCPLogConfig)
+				gotCfg, ok := got.(*udplogreceiver.UDPLogConfig)
 				require.True(t, ok)
 				require.Equal(t, testCase.want.InputConfig.ListenAddress, gotCfg.InputConfig.ListenAddress)
 				require.Equal(t, testCase.want.InputConfig.ListenAddress, gotCfg.InputConfig.ListenAddress)
