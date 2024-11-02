@@ -41,7 +41,7 @@ func (t *translator) ID() component.ID {
 // Translate creates an exporter config based on the fields in the
 // amp or prometheus section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !(conf.IsSet(AMPSectionKey) || conf.IsSet(common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))) {
+	if conf == nil || !(conf.IsSet(AMPSectionKey) && conf.IsSet(common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: AMPSectionKey + " or " + common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*prometheusremotewriteexporter.Config)

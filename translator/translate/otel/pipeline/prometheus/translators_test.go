@@ -24,6 +24,45 @@ func TestTranslators(t *testing.T) {
 			input: map[string]any{},
 			want:  []component.ID{},
 		},
+		"WithMetricsWithoutDestinations": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			want: []component.ID{
+				component.MustNewIDWithName("metrics", "prometheus/amp"),
+			},
+		},
+		"WithLogsWithoutDestinations": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			want: []component.ID{
+				component.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+			},
+		},
+		"WithMetricsWithCloudWatchDestination": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			want: []component.ID{
+				component.MustNewIDWithName("metrics", "prometheus/amp"),
+			},
+		},
 		"WithMetricsWithAMP": {
 			input: map[string]any{
 				"metrics": map[string]any{
