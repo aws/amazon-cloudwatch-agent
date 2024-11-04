@@ -91,7 +91,17 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform:  ec2
+    awsentity/service/telegraf:
+        entity_type: Service
+        scrape_datapoint_attribute: true
+        platform: ec2
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -235,6 +245,7 @@ service:
         - agenthealth/metrics
         - agenthealth/logs
         - agenthealth/traces
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:
@@ -247,6 +258,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
                 - transform
             receivers:
@@ -254,11 +266,19 @@ service:
                 - telegraf_nvidia_smi
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/3081249416
-                - telegraf_statsd
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/2402387132
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_procstat/1340600742
+        metrics/hostCustomMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - awsentity/service/telegraf
+                - ec2tagger
+                - transform
+            receivers:
+                - telegraf_statsd
         traces/xray:
             exporters:
                 - awsxray

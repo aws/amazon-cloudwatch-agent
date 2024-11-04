@@ -47,7 +47,7 @@ func (obj *StatsD) ApplyRule(input interface{}) (returnKey string, returnVal int
 	} else {
 		//If exists, process it
 		//Check if there are some config entry with rules applied
-		result = translator.ProcessRuleToApply(m[SectionKey], ChildRule, result)
+		result = translator.ProcessRuleToMergeAndApply(m[SectionKey], ChildRule, result)
 		resArray = append(resArray, result)
 		returnKey = SectionKey
 		returnVal = resArray

@@ -6,6 +6,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -37,11 +38,16 @@ func TestHandle(t *testing.T) {
 	assert.Nil(t, got.PayloadBytes)
 	assert.Nil(t, got.StatusCode)
 	time.Sleep(time.Millisecond)
-	handler.HandleResponse(ctx, &http.Response{StatusCode: http.StatusOK})
+	handler.HandleResponse(ctx, &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(`{"rejectedEntityInfo":{"errorType":"InvalidAttributes"}}`)),
+	})
 	got = handler.Stats(operation)
 	assert.NotNil(t, got.LatencyMillis)
 	assert.NotNil(t, got.PayloadBytes)
 	assert.NotNil(t, got.StatusCode)
+	assert.NotNil(t, got.EntityRejected)
+	assert.Equal(t, 1, *got.EntityRejected)
 	assert.Equal(t, http.StatusOK, *got.StatusCode)
 	assert.Equal(t, 20, *got.PayloadBytes)
 	assert.GreaterOrEqual(t, *got.LatencyMillis, int64(1))
@@ -64,4 +70,17 @@ func TestHandle(t *testing.T) {
 	got = handler.Stats(operation)
 	assert.NotNil(t, got.PayloadBytes)
 	assert.Equal(t, 29, *got.PayloadBytes)
+}
+
+func BenchmarkRejectedEntityInfoExists(b *testing.B) {
+	body := `{"rejectedEntityInfo":{"errorType":"InvalidAttributes"}}`
+	resp := &http.Response{
+		Body: io.NopCloser(bytes.NewBufferString(body)),
+	}
+
+	for n := 0; n < b.N; n++ {
+		rejectedEntityInfoExists(resp)
+		// Reset the body for the next iteration
+		resp.Body = io.NopCloser(bytes.NewBufferString(body))
+	}
 }

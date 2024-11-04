@@ -24,6 +24,7 @@ func TestComponents(t *testing.T) {
 		"jaeger",
 		"jmx",
 		"kafka",
+		"nop",
 		"otlp",
 		"prometheus",
 		"statsd",
@@ -39,6 +40,7 @@ func TestComponents(t *testing.T) {
 
 	wantProcessors := []string{
 		"awsapplicationsignals",
+		"awsentity",
 		"attributes",
 		"batch",
 		"cumulativetodelta",
@@ -71,6 +73,7 @@ func TestComponents(t *testing.T) {
 		"awscloudwatch",
 		"awsxray",
 		"debug",
+		"nop",
 		"prometheusremotewrite",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
@@ -83,10 +86,12 @@ func TestComponents(t *testing.T) {
 		"agenthealth",
 		"awsproxy",
 		"ecs_observer",
+		"entitystore",
 		"file_storage",
 		"health_check",
 		"memory_ballast",
 		"pprof",
+		"server",
 		"sigv4auth",
 		"zpages",
 	}

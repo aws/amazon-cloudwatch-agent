@@ -42,6 +42,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
+	"go.opentelemetry.io/collector/exporter/nopexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/ballastextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
@@ -50,11 +51,15 @@ import (
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/receiver/nopreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
@@ -72,6 +77,7 @@ func Factories() (otelcol.Factories, error) {
 		jaegerreceiver.NewFactory(),
 		jmxreceiver.NewFactory(),
 		kafkareceiver.NewFactory(),
+		nopreceiver.NewFactory(),
 		otlpreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
@@ -85,6 +91,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Processors, err = processor.MakeFactoryMap(
 		attributesprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
+		awsentity.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		deltatorateprocessor.NewFactory(),
@@ -113,6 +120,7 @@ func Factories() (otelcol.Factories, error) {
 		awsxrayexporter.NewFactory(),
 		cloudwatch.NewFactory(),
 		debugexporter.NewFactory(),
+		nopexporter.NewFactory(),
 		prometheusremotewriteexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
@@ -121,6 +129,8 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Extensions, err = extension.MakeFactoryMap(
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
+		entitystore.NewFactory(),
+		server.NewFactory(),
 		ballastextension.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),

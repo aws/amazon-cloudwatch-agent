@@ -66,6 +66,9 @@ extensions:
         assume_role:
             sts_region: us-west-2
         region: us-west-2
+    entitystore:
+      mode: ec2
+      region: us-west-2
 processors:
     batch/jmx/amp/0:
         metadata_cardinality_limit: 1000
@@ -216,6 +219,7 @@ service:
     extensions:
         - agenthealth/metrics
         - sigv4auth
+        - entitystore
     pipelines:
         metrics/jmx/amp/0:
             exporters:

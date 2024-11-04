@@ -67,6 +67,8 @@ const (
 	ServiceAddress                     = "service_address"
 	Udp                                = "udp"
 	Tcp                                = "tcp"
+	TlsKey                             = "tls"
+	Tags                               = "tags"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
@@ -76,8 +78,36 @@ const (
 )
 
 const (
+	CollectDMetricKey = "collectd"
+	CollectDPluginKey = "socket_listener"
+	CPUMetricKey      = "cpu"
+	DiskMetricKey     = "disk"
+	DiskIoMetricKey   = "diskio"
+	StatsDMetricKey   = "statsd"
+	SwapMetricKey     = "swap"
+	MemMetricKey      = "mem"
+	NetMetricKey      = "net"
+	NetStatMetricKey  = "netstat"
+	ProcessMetricKey  = "process"
+	ProcStatMetricKey = "procstat"
+
+	//Windows Plugins
+	MemMetricKeyWindows          = "Memory"
+	LogicalDiskMetricKeyWindows  = "LogicalDisk"
+	NetworkMetricKeyWindows      = "Network Interface"
+	PagingMetricKeyWindows       = "Paging"
+	PhysicalDiskMetricKeyWindows = "PhysicalDisk"
+	ProcessorMetricKeyWindows    = "Processor"
+	SystemMetricKeyWindows       = "System"
+	TCPv4MetricKeyWindows        = "TCPv4"
+	TCPv6MetricKeyWindows        = "TCPv6"
+)
+
+const (
 	PipelineNameHost                 = "host"
+	PipelineNameHostCustomMetrics    = "hostCustomMetrics"
 	PipelineNameHostDeltaMetrics     = "hostDeltaMetrics"
+	PipelineNameHostOtlpMetrics      = "hostOtlpMetrics"
 	PipelineNameContainerInsights    = "containerinsights"
 	PipelineNameJmx                  = "jmx"
 	PipelineNameContainerInsightsJmx = "containerinsightsjmx"

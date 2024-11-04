@@ -7,7 +7,7 @@ exporters:
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
-        log_stream_name: fake-host-name
+        log_stream_name: arn_aws_ecs_us-east-1_account_id_task/task_id
         max_retries: 2
         middleware: agenthealth/logs
         no_verify_ssl: false

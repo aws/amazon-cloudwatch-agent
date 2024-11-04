@@ -1,4 +1,24 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300049.0 (2024-10-30)
+========================================================================
+Enhancements:
+* [Metrics/Logs] Annotate Infra, statsD, collectD metrics and application logs with entities
+* [ApplicationSignals] Support runtime metrics for Application Signals
+* [ApplicationSignals] Create a server to expose service names for instrumented applications on K8s
+
+========================================================================
+Amazon CloudWatch Agent 1.300048.2 (2024-10-24)
+========================================================================
+Enhancements:
+* [ContainerInsights] Use LocalNode decorator for DCGM and Neuron metrics
+
+========================================================================
+Amazon CloudWatch Agent 1.300048.1 (2024-10-15)
+========================================================================
+Bug Fixes:
+* Fix logs-only check in agent and container environment merge
+
+========================================================================
 Amazon CloudWatch Agent 1.300048.0 (2024-10-11)
 ========================================================================
 Features:
