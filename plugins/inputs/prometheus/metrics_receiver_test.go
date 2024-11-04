@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/prometheus/common/promlog"
-
 	kitlog "github.com/go-kit/log"
+	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"

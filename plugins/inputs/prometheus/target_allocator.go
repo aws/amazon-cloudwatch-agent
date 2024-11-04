@@ -11,14 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/common/promlog"
-
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	otelpromreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	tamanager "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
+	"github.com/prometheus/common/promlog"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
@@ -29,6 +26,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 var DEFAULT_TLS_CA_FILE_PATH = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
