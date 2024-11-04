@@ -139,6 +139,9 @@ func (e *EntityStore) NativeCredentialExists() bool {
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
 func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
+	if e.serviceprovider == nil {
+		return nil
+	}
 	serviceAttr := e.serviceprovider.logFileServiceAttribute(logFileGlob, logGroupName)
 
 	keyAttributes := e.createServiceKeyAttributes(serviceAttr)
@@ -153,6 +156,9 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 
 // GetMetricServiceNameAndSource gets the service name source for service metrics if not customer provided
 func (e *EntityStore) GetMetricServiceNameAndSource() (string, string) {
+	if e.serviceprovider == nil {
+		return "", ""
+	}
 	return e.serviceprovider.getServiceNameAndSource()
 }
 
@@ -175,11 +181,13 @@ func (e *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, servic
 
 // AddServiceAttrEntryForLogGroup adds an entry to the entity store for the provided log group nme -> (serviceName, environmentName) key-value pair
 func (e *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
-	e.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
-		ServiceName:       serviceName,
-		ServiceNameSource: ServiceNameSourceInstrumentation,
-		Environment:       environmentName,
-	})
+	if e.serviceprovider != nil {
+		e.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
+			ServiceName:       serviceName,
+			ServiceNameSource: ServiceNameSourceInstrumentation,
+			Environment:       environmentName,
+		})
+	}
 }
 
 func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string, serviceNameSource string) {
@@ -189,7 +197,7 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 }
 
 func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
-	if e.eksInfo != nil {
+	if e.eksInfo != nil && e.eksInfo.GetPodServiceEnvironmentMapping() != nil {
 		e.eksInfo.podToServiceEnvMap.Start()
 	}
 }
