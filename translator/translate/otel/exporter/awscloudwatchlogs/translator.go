@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package otel_aws_cloudwatch_logs
+package awscloudwatchlogs
 
 import (
 	_ "embed"
@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
-	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -24,8 +23,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
-//go:embed aws_cloudwatch_logs_default.yaml
-var defaultAwsCloudwatchLogsDefault string
+const (
+	defaultLogGroupName = "emf/logs/default"
+)
 
 var (
 	emfBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.Emf)
@@ -54,23 +54,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscloudwatchlogsexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
-	var defaultConfig string
-	// Add more else if when otel supports log reading
-	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
-		defaultConfig = defaultAwsCloudwatchLogsDefault
-	}
-
-	if defaultConfig != "" {
-		var rawConf map[string]interface{}
-		if err := yaml.Unmarshal([]byte(defaultConfig), &rawConf); err != nil {
-			return nil, fmt.Errorf("unable to read default config: %w", err)
-		}
-		conf := confmap.NewFromStringMap(rawConf)
-		if err := conf.Unmarshal(&cfg); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal config: %w", err)
-		}
-	}
-
 	// Add more else if when otel supports log reading
 	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
 		if err := t.setEmfFields(c, cfg); err != nil {
@@ -79,8 +62,11 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	if c.IsSet(endpointOverrideKey) {
-		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
+	if endpoint, ok := common.GetString(c, endpointOverrideKey); ok {
+		// for some reason the exporter has an endpoint field in the config that
+		// clashes with the AWSSessionsSettings
+		cfg.Endpoint = endpoint
+		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
@@ -106,19 +92,16 @@ func (t *translator) isEmf(conf *confmap.Conf) bool {
 
 func (t *translator) setEmfFields(conf *confmap.Conf, cfg *awscloudwatchlogsexporter.Config) error {
 	cfg.Region = agent.Global_Config.Region
-
-	if conf.IsSet(streamNameKey) {
-		cfg.LogStreamName = fmt.Sprintf("%v", conf.Get(streamNameKey))
-	} else {
-		rule := logs.LogStreamName{}
-		_, val := rule.ApplyRule(conf.Get(common.LogsKey))
-		if logStreamName, ok := val.(map[string]interface{})[common.LogStreamName]; !ok {
-			return &common.MissingKeyError{ID: t.ID(), JsonKey: streamNameKey}
-		} else {
-			cfg.LogStreamName = logStreamName.(string)
-		}
-	}
-
 	cfg.EmfOnly = true
+	cfg.RawLog = true
+	cfg.LogGroupName = defaultLogGroupName
+
+	rule := logs.LogStreamName{}
+	_, val := rule.ApplyRule(conf.Get(common.LogsKey))
+	if logStreamName, ok := val.(map[string]any)[common.LogStreamName]; !ok {
+		return &common.MissingKeyError{ID: t.ID(), JsonKey: streamNameKey}
+	} else {
+		cfg.LogStreamName = logStreamName.(string)
+	}
 	return nil
 }

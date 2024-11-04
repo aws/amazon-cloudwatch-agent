@@ -1,3 +1,0 @@
-raw_log: true
-log_stream_name: "{instance_id}"
-log_group_name: "emf/logs/default"
