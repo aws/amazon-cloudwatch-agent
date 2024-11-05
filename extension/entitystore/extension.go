@@ -198,7 +198,7 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 
 func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
 	if e.eksInfo != nil && e.eksInfo.GetPodServiceEnvironmentMapping() != nil {
-		e.eksInfo.podToServiceEnvMap.Start()
+		e.eksInfo.GetPodServiceEnvironmentMapping().Start()
 	}
 }
 
