@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
@@ -359,6 +360,7 @@ func TestOtelPrometheusConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
@@ -381,6 +383,7 @@ func TestOtelPrometheusConfig(t *testing.T) {
 func TestCombinedPrometheusConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
