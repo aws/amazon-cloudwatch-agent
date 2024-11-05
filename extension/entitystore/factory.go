@@ -20,7 +20,7 @@ var (
 func GetEntityStore() *EntityStore {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	if entityStore != nil && entityStore.ready {
+	if entityStore != nil && entityStore.ready.Load() {
 		return entityStore
 	}
 	return nil
