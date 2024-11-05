@@ -49,6 +49,9 @@ extensions:
         assume_role:
             sts_region: us-west-2
         region: us-west-2
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
     batch/prometheus/amp:
         metadata_cardinality_limit: 1000
@@ -93,6 +96,7 @@ receivers:
 service:
     extensions:
         - sigv4auth
+        - entitystore
     pipelines:
         metrics/prometheus/amp:
             exporters:
