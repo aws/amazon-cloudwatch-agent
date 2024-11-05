@@ -227,6 +227,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					}
 				}
 
+				//Need to add an if condition here
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)

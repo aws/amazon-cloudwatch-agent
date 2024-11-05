@@ -312,36 +312,62 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	instanceId := "i-abcd1234"
 	glob := LogFileGlob("glob")
 	group := LogGroupName("group")
-	serviceAttr := ServiceAttribute{
-		ServiceName:       "test-service",
-		ServiceNameSource: ServiceNameSourceUserConfiguration,
-		Environment:       "test-environment",
-	}
-	sp := new(mockServiceProvider)
-	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
-	e := EntityStore{
-		mode:             config.ModeEC2,
-		ec2Info:          EC2Info{InstanceID: instanceId},
-		serviceprovider:  sp,
-		nativeCredential: &session.Session{},
-	}
 
-	entity := e.CreateLogFileEntity(glob, group)
-
-	expectedEntity := cloudwatchlogs.Entity{
-		KeyAttributes: map[string]*string{
-			entityattributes.DeploymentEnvironment: aws.String("test-environment"),
-			entityattributes.ServiceName:           aws.String("test-service"),
-			entityattributes.EntityType:            aws.String(Service),
+	tests := []struct {
+		name        string
+		serviceAttr ServiceAttribute
+		wantEntity  *cloudwatchlogs.Entity
+	}{
+		{
+			name: "HappyPath_UserConfiguration",
+			serviceAttr: ServiceAttribute{
+				ServiceName:       "test-service",
+				ServiceNameSource: ServiceNameSourceUserConfiguration,
+				Environment:       "test-environment",
+			},
+			wantEntity: &cloudwatchlogs.Entity{
+				KeyAttributes: map[string]*string{
+					entityattributes.DeploymentEnvironment: aws.String("test-environment"),
+					entityattributes.ServiceName:           aws.String("test-service"),
+					entityattributes.EntityType:            aws.String(Service),
+				},
+				Attributes: map[string]*string{
+					InstanceIDKey:        aws.String(instanceId),
+					ServiceNameSourceKey: aws.String(ServiceNameSourceUserConfiguration),
+					PlatformType:         aws.String(EC2PlatForm),
+				},
+			},
 		},
-		Attributes: map[string]*string{
-			InstanceIDKey:        aws.String(instanceId),
-			ServiceNameSourceKey: aws.String(ServiceNameSourceUserConfiguration),
-			PlatformType:         aws.String(EC2PlatForm),
+		{
+			name: "HappyPath_ClientIAMRole",
+			serviceAttr: ServiceAttribute{
+				ServiceName:       "client-iam-role",
+				ServiceNameSource: ServiceNameSourceClientIamRole,
+			},
+			wantEntity: nil,
 		},
 	}
-	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
-	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sp := new(mockServiceProvider)
+			sp.On("logFileServiceAttribute", glob, group).Return(tt.serviceAttr)
+			e := EntityStore{
+				mode:             config.ModeEC2,
+				ec2Info:          EC2Info{InstanceID: instanceId},
+				serviceprovider:  sp,
+				nativeCredential: &session.Session{},
+			}
+
+			entity := e.CreateLogFileEntity(glob, group)
+
+			if tt.wantEntity == nil {
+				assert.Nil(t, entity)
+				return
+			}
+			assert.Equal(t, dereferenceMap(tt.wantEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
+			assert.Equal(t, dereferenceMap(tt.wantEntity.Attributes), dereferenceMap(entity.Attributes))
+		})
+	}
 }
 
 func TestEntityStore_createLogFileRID_ServiceProviderIsEmpty(t *testing.T) {

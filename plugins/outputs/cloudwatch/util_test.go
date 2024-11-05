@@ -202,6 +202,18 @@ func TestEntityToString(t *testing.T) {
 			},
 			entityString: "",
 		},
+		{
+			name: "Client IAM Role service name",
+			entity: cloudwatch.Entity{
+				KeyAttributes: map[string]*string{
+					"Service": aws.String("Service"),
+				},
+				Attributes: map[string]*string{
+					"AWS.ServiceNameSource": aws.String("ClientIamRole"),
+				},
+			},
+			entityString: "",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -5,6 +5,7 @@ package cloudwatch
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"log"
 	"math/rand"
 	"sort"
@@ -132,7 +133,7 @@ func entityToString(entity cloudwatch.Entity) string {
 		keyAttributes = entityAttributesToString(entity.KeyAttributes)
 	}
 
-	if attributes != "" || keyAttributes != "" {
+	if (attributes != "" || keyAttributes != "") && *entity.Attributes[entityattributes.ServiceNameSource] != "ClientIamRole" {
 		data = fmt.Sprintf(
 			"%s|%s",
 			attributes,

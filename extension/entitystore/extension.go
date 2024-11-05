@@ -151,6 +151,9 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 	attributeMap := e.createAttributeMap()
 	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
 
+	if serviceAttr.ServiceNameSource == ServiceNameSourceClientIamRole {
+		return nil
+	}
 	return &cloudwatchlogs.Entity{
 		KeyAttributes: keyAttributes,
 		Attributes:    attributeMap,
