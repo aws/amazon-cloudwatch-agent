@@ -48,6 +48,7 @@ type EntityStore struct {
 	logger *zap.Logger
 	config *Config
 	done   chan struct{}
+	ready  bool
 
 	// mode should be EC2, ECS, EKS, and K8S
 	mode string
@@ -101,6 +102,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		// Starting the ttl cache will automatically evict all expired pods from the map
 		go e.StartPodToServiceEnvironmentMappingTtlCache()
 	}
+	e.ready = true
 	return nil
 }
 
