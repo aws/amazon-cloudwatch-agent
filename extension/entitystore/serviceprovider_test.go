@@ -32,6 +32,11 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 			wantIAM: "TestRole",
 			wantTag: "test-service",
 		},
+		{
+			name:    "EmptyServiceProvider",
+			wantIAM: "",
+			wantTag: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,10 +69,32 @@ func Test_serviceprovider_addEntryForLogFile(t *testing.T) {
 	assert.Equal(t, serviceAttr, actual)
 }
 
+func Test_serviceprovider_addEntryForLogFile_logFilesEmpty(t *testing.T) {
+	s := &serviceprovider{}
+	glob := LogFileGlob("glob")
+	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
+
+	s.addEntryForLogFile(glob, serviceAttr)
+
+	actual := s.logFiles[glob]
+	assert.Equal(t, serviceAttr, actual)
+}
+
 func Test_serviceprovider_addEntryForLogGroup(t *testing.T) {
 	s := &serviceprovider{
 		logGroups: make(map[LogGroupName]ServiceAttribute),
 	}
+	group := LogGroupName("group")
+	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
+
+	s.addEntryForLogGroup(group, serviceAttr)
+
+	actual := s.logGroups[group]
+	assert.Equal(t, serviceAttr, actual)
+}
+
+func Test_serviceprovider_addEntryForLogGroup_logGroupsEmpty(t *testing.T) {
+	s := &serviceprovider{}
 	group := LogGroupName("group")
 	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
 
@@ -142,6 +169,8 @@ func Test_serviceprovider_serviceAttributeForLogGroup(t *testing.T) {
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup(""))
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup("othergroup"))
 	assert.Equal(t, ServiceAttribute{ServiceName: "test-service"}, s.serviceAttributeForLogGroup("group"))
+	s.logGroups = nil
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup("group"))
 }
 
 func Test_serviceprovider_serviceAttributeForLogFile(t *testing.T) {
@@ -149,6 +178,8 @@ func Test_serviceprovider_serviceAttributeForLogFile(t *testing.T) {
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile(""))
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile("otherglob"))
 	assert.Equal(t, ServiceAttribute{ServiceName: "test-service"}, s.serviceAttributeForLogFile("glob"))
+	s.logFiles = nil
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile("glob"))
 }
 
 func Test_serviceprovider_serviceAttributeFromEc2Tags(t *testing.T) {
