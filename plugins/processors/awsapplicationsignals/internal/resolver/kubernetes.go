@@ -562,6 +562,7 @@ func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map)
 		}
 
 		if ipStr != "" {
+			resourceAttributes.PutStr("com.amazonaws.cloudwatch.entity.internal.source.ip", ipStr)
 			if workload, ns, err := e.getWorkloadAndNamespaceByIP(ipStr); err == nil {
 				attributes.PutStr(attr.AWSRemoteService, workload)
 				namespace = ns

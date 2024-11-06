@@ -6,6 +6,7 @@ package k8sattributescraper
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
+	"go.uber.org/zap"
 )
 
 var (
@@ -36,11 +37,13 @@ type K8sAttributeScraper struct {
 	Namespace string
 	Workload  string
 	Node      string
+	logger    *zap.Logger
 }
 
-func NewK8sAttributeScraper(clusterName string) *K8sAttributeScraper {
+func NewK8sAttributeScraper(clusterName string, logger *zap.Logger) *K8sAttributeScraper {
 	return &K8sAttributeScraper{
 		Cluster: clusterName,
+		logger:  logger,
 	}
 }
 

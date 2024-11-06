@@ -100,6 +100,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		e.eksInfo = newEKSInfo(e.logger)
 		// Starting the ttl cache will automatically evict all expired pods from the map
 		go e.StartPodToServiceEnvironmentMappingTtlCache()
+		go e.StartIPToServiceEnvironmentMappingTtlCache()
 	}
 	return nil
 }
@@ -188,9 +189,21 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 	}
 }
 
+func (e *EntityStore) AddIPServiceEnvironmentMapping(ip string, serviceName string, environmentName string, serviceNameSource string, cluster string, namespace string, workload string, node string, instanceId string) {
+	if e.eksInfo != nil {
+		e.eksInfo.AddIPServiceEnvironmentMappping(ip, serviceName, environmentName, serviceNameSource, cluster, namespace, workload, node, instanceId)
+	}
+}
+
 func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
 	if e.eksInfo != nil {
 		e.eksInfo.podToServiceEnvMap.Start()
+	}
+}
+
+func (e *EntityStore) StartIPToServiceEnvironmentMappingTtlCache() {
+	if e.eksInfo != nil {
+		e.eksInfo.ipToServiceEnvMap.Start()
 	}
 }
 
@@ -201,6 +214,13 @@ func (e *EntityStore) GetPodServiceEnvironmentMapping() *ttlcache.Cache[string, 
 	return ttlcache.New[string, ServiceEnvironment](
 		ttlcache.WithTTL[string, ServiceEnvironment](ttlDuration),
 	)
+}
+
+func (e *EntityStore) GetIPServiceEnvironmentMapping() *ttlcache.Cache[string, KubernetesEntity] {
+	if e.eksInfo != nil {
+		return e.eksInfo.GetIPServiceEnvironmentMapping()
+	}
+	return nil
 }
 
 func (e *EntityStore) createAttributeMap() map[string]*string {

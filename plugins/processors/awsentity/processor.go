@@ -5,6 +5,11 @@ package awsentity
 
 import (
 	"context"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
+	"github.com/jellydator/ttlcache/v3"
+	"go.opentelemetry.io/collector/pdata/plog"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -67,6 +72,14 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
 }
 
+var addIPToServiceEnvironmentMap = func(ip string, serviceName string, environmentName string, serviceNameSource string, cluster string, namespace string, workload string, node string, instanceId string) {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return
+	}
+	es.AddIPServiceEnvironmentMapping(ip, serviceName, environmentName, serviceNameSource, cluster, namespace, workload, node, instanceId)
+}
+
 var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
 	es := entitystore.GetEntityStore()
 	if es == nil {
@@ -84,6 +97,14 @@ var getServiceNameSource = func() (string, string) {
 	return es.GetMetricServiceNameAndSource()
 }
 
+var getIPToServiceEnvironmentMap = func() *ttlcache.Cache[string, entitystore.KubernetesEntity] {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return nil
+	}
+	return es.GetIPServiceEnvironmentMapping()
+}
+
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
@@ -96,9 +117,53 @@ type awsEntityProcessor struct {
 func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcessor {
 	return &awsEntityProcessor{
 		config:     config,
-		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
+		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName, logger),
 		logger:     logger,
 	}
+}
+
+func (p *awsEntityProcessor) processLogs(ctx context.Context, ld plog.Logs) (plog.Logs, error) {
+
+	rl := ld.ResourceLogs()
+
+	for i := 0; i < rl.Len(); i++ {
+		sl := rl.At(i).ScopeLogs()
+		for j := 0; j < sl.Len(); j++ {
+			lr := sl.At(j).LogRecords()
+			for k := 0; k < lr.Len(); k++ {
+				record := lr.At(k).Attributes()
+				podIP, ok := record.Get("net.peer.ip")
+				if !ok {
+					p.logger.Warn("Could not find net.peer.ip attribute")
+					return ld, nil
+				}
+				pods, err := k8sclient.Get().ClientSet.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+				if err != nil {
+					return ld, nil
+				}
+
+				for _, pod := range pods.Items {
+					if pod.Status.PodIP == podIP.Str() {
+						p.logger.Info("Pod Name: " + pod.Name)
+						p.logger.Info("Namespace: " + pod.Namespace)
+						p.logger.Info("Workload Name: " + getWorkloadName(&pod))
+						return ld, nil
+					}
+				}
+			}
+		}
+	}
+
+	return ld, nil
+}
+
+func getWorkloadName(pod *corev1.Pod) string {
+	ownerRefs := pod.OwnerReferences
+	if len(ownerRefs) > 0 {
+		// Assuming the first owner reference is the workload
+		return ownerRefs[0].Name
+	}
+	return "N/A"
 }
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
@@ -181,6 +246,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				} else if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
 					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, entityEnvironmentName, entitystore.ServiceNameSourceUnknown)
 				}
+
 				eksAttributes := K8sServiceAttributes{
 					Cluster:           podInfo.Cluster,
 					Namespace:         podInfo.Namespace,
@@ -194,6 +260,14 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
 
 				if err := validate.Struct(eksAttributes); err == nil {
+					if ipStr, ok := rm.At(i).Resource().Attributes().Get("com.amazonaws.cloudwatch.entity.internal.source.ip"); ok && entityServiceName != EMPTY && entityServiceNameSource != EMPTY {
+						addIPToServiceEnvironmentMap(ipStr.Str(), entityServiceName, entityEnvironmentName, entityServiceNameSource, eksAttributes.Cluster, eksAttributes.Namespace, eksAttributes.Workload, eksAttributes.Node, ec2Info.GetInstanceID())
+						item := getIPToServiceEnvironmentMap().Get(ipStr.Str())
+						if item != nil {
+							p.logger.Info("Got IP mapping from Appsignal for IP: "+ipStr.Str()+" and value is ", zap.Any("ip mapping", item.Value()))
+						}
+					}
+
 					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityCluster, eksAttributes.Cluster)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
@@ -202,6 +276,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.GetInstanceID())
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
+
 				}
 				p.k8sscraper.Reset()
 			} else if p.config.Platform == config.ModeEC2 {

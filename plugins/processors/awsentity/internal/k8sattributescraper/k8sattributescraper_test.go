@@ -4,6 +4,7 @@
 package k8sattributescraper
 
 import (
+	"go.uber.org/zap"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestNewK8sAttributeScraper(t *testing.T) {
-	scraper := NewK8sAttributeScraper("test")
+	scraper := NewK8sAttributeScraper("test", zap.NewNop())
 	assert.Equal(t, "test", scraper.Cluster)
 }
 
@@ -53,7 +54,7 @@ func Test_k8sattributescraper_Scrape(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewK8sAttributeScraper(tt.clusterName)
+			e := NewK8sAttributeScraper(tt.clusterName, zap.NewNop())
 			e.Scrape(tt.args)
 			assert.Equal(t, e, tt.want)
 		})

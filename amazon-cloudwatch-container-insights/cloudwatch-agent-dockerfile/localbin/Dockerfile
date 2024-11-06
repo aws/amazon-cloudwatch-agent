@@ -13,11 +13,12 @@ RUN apt-get update &&  \
     rm -rf /var/lib/apt/lists/*
 COPY build/bin/linux_${TARGETARCH}/ /opt/aws/amazon-cloudwatch-agent/bin
 
-FROM scratch
+FROM busybox
 
 COPY --from=cert /tmp /tmp
 COPY --from=cert /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=cert /opt/aws/amazon-cloudwatch-agent /opt/aws/amazon-cloudwatch-agent
 
 ENV RUN_IN_CONTAINER="True"
-ENTRYPOINT ["/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent"]
+# ENTRYPOINT ["/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent"]
+ENTRYPOINT ["tail", "-f", "/dev/null"]

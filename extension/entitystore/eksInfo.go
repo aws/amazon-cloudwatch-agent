@@ -25,9 +25,21 @@ type ServiceEnvironment struct {
 	ServiceNameSource string
 }
 
+type KubernetesEntity struct {
+	ServiceName       string
+	Environment       string
+	ServiceNameSource string
+	Cluster           string
+	Namespace         string
+	Workload          string
+	Node              string
+	InstanceId        string
+}
+
 type eksInfo struct {
 	logger             *zap.Logger
 	podToServiceEnvMap *ttlcache.Cache[string, ServiceEnvironment]
+	ipToServiceEnvMap  *ttlcache.Cache[string, KubernetesEntity]
 }
 
 func newEKSInfo(logger *zap.Logger) *eksInfo {
@@ -37,6 +49,25 @@ func newEKSInfo(logger *zap.Logger) *eksInfo {
 			ttlcache.WithTTL[string, ServiceEnvironment](ttlDuration),
 			ttlcache.WithCapacity[string, ServiceEnvironment](maxPodAssociationMapCapacity),
 		),
+		ipToServiceEnvMap: ttlcache.New[string, KubernetesEntity](
+			ttlcache.WithTTL[string, KubernetesEntity](ttlDuration),
+			ttlcache.WithCapacity[string, KubernetesEntity](maxPodAssociationMapCapacity),
+		),
+	}
+}
+
+func (eks *eksInfo) AddIPServiceEnvironmentMappping(ip string, serviceName string, environmentName string, serviceNameSource string, cluster string, namespace string, workload string, node string, instanceId string) {
+	if eks.ipToServiceEnvMap != nil {
+		eks.ipToServiceEnvMap.Set(ip, KubernetesEntity{
+			ServiceName:       serviceName,
+			Environment:       environmentName,
+			ServiceNameSource: serviceNameSource,
+			Cluster:           cluster,
+			Namespace:         namespace,
+			Workload:          workload,
+			Node:              node,
+			InstanceId:        instanceId,
+		}, ttlcache.DefaultTTL)
 	}
 }
 
@@ -52,4 +83,8 @@ func (eks *eksInfo) AddPodServiceEnvironmentMapping(podName string, serviceName 
 
 func (eks *eksInfo) GetPodServiceEnvironmentMapping() *ttlcache.Cache[string, ServiceEnvironment] {
 	return eks.podToServiceEnvMap
+}
+
+func (eks *eksInfo) GetIPServiceEnvironmentMapping() *ttlcache.Cache[string, KubernetesEntity] {
+	return eks.ipToServiceEnvMap
 }
