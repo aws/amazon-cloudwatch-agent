@@ -29,6 +29,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/tailsamplingprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsecscontainermetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
@@ -67,6 +68,7 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Receivers, err = receiver.MakeFactoryMap(
 		awscontainerinsightreceiver.NewFactory(),
+		awscontainerinsightskueuereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
