@@ -201,6 +201,8 @@ require (
 	k8s.io/klog/v2 v2.120.1
 )
 
+require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-00010101000000-000000000000
+
 require (
 	cloud.google.com/go v0.112.1 // indirect
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
