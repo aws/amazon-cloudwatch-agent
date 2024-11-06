@@ -310,6 +310,7 @@ func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 
 func TestEntityStore_createLogFileRID(t *testing.T) {
 	instanceId := "i-abcd1234"
+	accountId := "123456789012"
 	glob := LogFileGlob("glob")
 	group := LogGroupName("group")
 	serviceAttr := ServiceAttribute{
@@ -321,7 +322,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
 	e := EntityStore{
 		mode:             config.ModeEC2,
-		ec2Info:          EC2Info{InstanceID: instanceId},
+		ec2Info:          EC2Info{InstanceID: instanceId, AccountID: accountId},
 		serviceprovider:  sp,
 		nativeCredential: &session.Session{},
 	}
@@ -333,6 +334,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 			entityattributes.DeploymentEnvironment: aws.String("test-environment"),
 			entityattributes.ServiceName:           aws.String("test-service"),
 			entityattributes.EntityType:            aws.String(Service),
+			entityattributes.AwsAccountId:          aws.String(accountId),
 		},
 		Attributes: map[string]*string{
 			InstanceIDKey:        aws.String(instanceId),

@@ -1,0 +1,10 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "statsd": {
+        "metrics_aggregation_interval": 0,
+        "allowed_pending_messages": 10000
+      }
+    }
+  }
+}
