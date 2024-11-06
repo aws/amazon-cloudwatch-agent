@@ -591,7 +591,6 @@ processors:
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false
-        kueue_container_insights: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true

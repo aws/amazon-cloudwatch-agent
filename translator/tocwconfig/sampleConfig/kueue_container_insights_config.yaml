@@ -121,6 +121,39 @@ exporters:
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
+        middleware: agenthealth/logs
+        namespace: ContainerInsights
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        parse_json_encoded_attr_values:
+            - Sources
+            - kubernetes
+        profile: ""
+        proxy_address: ""
+        region: us-east-1
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
+    awsemf/kueueContainerInsights:
+        certificate_file_path: /etc/test/ca_bundle.pem
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: https://fake_endpoint
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/containerinsights/{ClusterName}/performance
+        log_retention: 0
+        log_stream_name: kubernetes-kueue
+        max_retries: 2
+        metric_declarations:
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -167,7 +200,7 @@ exporters:
                 - kueue_cluster_queue_resource_usage
                 - kueue_cluster_queue_nominal_quota
         middleware: agenthealth/logs
-        namespace: ContainerInsights
+        namespace: ContainerInsights/Prometheus
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
@@ -204,6 +237,12 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    batch/kueueContainerInsights:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    kueueattributes/kueueContainerInsights: {}
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false
@@ -220,7 +259,6 @@ receivers:
         host_name: ""
         imds_retries: 1
         kube_config_path: ""
-        kueue_container_insights: true
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
         local_mode: false
@@ -234,6 +272,9 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
+    awscontainerinsightskueuereceiver:
+        cluster_name: TestCluster
+        collection_interval: 1m0s
     tcplog/emf_logs:
         encoding: utf-8
         id: tcp_input
@@ -279,6 +320,14 @@ service:
                 - batch/containerinsights
             receivers:
                 - awscontainerinsightreceiver
+        metrics/kueueContainerInsights:
+            exporters:
+                - awsemf/kueueContainerInsights
+            processors:
+                - batch/kueueContainerInsights
+                - kueueattributes/kueueContainerInsights
+            receivers:
+                - awscontainerinsightskueuereceiver
     telemetry:
         logs:
             development: false
