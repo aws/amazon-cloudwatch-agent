@@ -230,10 +230,6 @@ func setKubernetesKueueFields(conf *confmap.Conf, cfg *awsemfexporter.Config) er
 		return err
 	}
 
-	if awscontainerinsight.KueueContainerInsightsEnabled(conf) {
-		cfg.KueueContainerInsights = true
-	}
-
 	return nil
 }
 
