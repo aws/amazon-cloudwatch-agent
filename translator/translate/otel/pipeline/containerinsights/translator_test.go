@@ -101,7 +101,7 @@ func TestKueueTranslator(t *testing.T) {
 		want    *want
 		wantErr error
 	}{
-		"WithKubernetes/WithEnhancedContainerInsights": {
+		"WithKueueContainerInsights": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
@@ -114,7 +114,7 @@ func TestKueueTranslator(t *testing.T) {
 			},
 			want: &want{
 				pipelineType: "metrics/kueueContainerInsights",
-				receivers:    []string{"awscontainerinsightreceiver"},
+				receivers:    []string{"awscontainerinsightskueuereceiver"},
 				processors: []string{
 					"batch/kueueContainerInsights",
 					"kueueattributes/kueueContainerInsights",

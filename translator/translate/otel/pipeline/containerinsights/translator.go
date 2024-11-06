@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/kueue"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsightskueue"
 )
 
 const (
@@ -80,7 +81,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		}
 	case kueuePipelineName:
 		// add prometheus receiver for kueue
-		receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator()) // TODO: replace w prometheus receiver
+		//receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator()) // TODO: replace w prometheus receiver
+		receivers = common.NewTranslatorMap((awscontainerinsightskueue.NewTranslator()))
 		KueueContainerInsightsEnabled := awscontainerinsight.KueueContainerInsightsEnabled(conf)
 		if KueueContainerInsightsEnabled {
 			processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
