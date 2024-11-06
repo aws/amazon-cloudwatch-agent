@@ -1,6 +1,6 @@
 namespace: ContainerInsights/Prometheus
 log_group_name: '/aws/containerinsights/{ClusterName}/performance'
-log_stream_name: 'kubernetes-kueue' # look into using {JobName} placeholder rather than hardcoding
+log_stream_name: 'kubernetes-kueue'
 detailed_metrics: false
 dimension_rollup_option: NoDimensionRollup
 version: "0"
