@@ -78,6 +78,9 @@ type serviceprovider struct {
 }
 
 func (s *serviceprovider) startServiceProvider() {
+	if s.metadataProvider == nil {
+		return
+	}
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	limitedRetryer := NewRetryer(false, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
 	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
@@ -99,12 +102,18 @@ func (s *serviceprovider) GetIMDSServiceName() string {
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
 // CloudWatch Agent config.
 func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAttr ServiceAttribute) {
+	if s.logFiles == nil {
+		s.logFiles = make(map[LogFileGlob]ServiceAttribute)
+	}
 	s.logFiles[logFileGlob] = serviceAttr
 }
 
 // addEntryForLogGroup adds an association between a log group name and a service attribute, as observed from incoming
 // telemetry received by CloudWatch Agent.
 func (s *serviceprovider) addEntryForLogGroup(logGroupName LogGroupName, serviceAttr ServiceAttribute) {
+	if s.logGroups == nil {
+		s.logGroups = make(map[LogGroupName]ServiceAttribute)
+	}
 	s.logGroups[logGroupName] = serviceAttr
 }
 
@@ -162,7 +171,7 @@ func (s *serviceprovider) getServiceNameAndSource() (string, string) {
 }
 
 func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) ServiceAttribute {
-	if logGroup == "" {
+	if logGroup == "" || s.logGroups == nil {
 		return ServiceAttribute{}
 	}
 
@@ -170,7 +179,7 @@ func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) Ser
 }
 
 func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) ServiceAttribute {
-	if logFile == "" {
+	if logFile == "" || s.logFiles == nil {
 		return ServiceAttribute{}
 	}
 

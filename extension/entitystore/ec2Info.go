@@ -41,6 +41,9 @@ type EC2Info struct {
 }
 
 func (ei *EC2Info) initEc2Info() {
+	if ei.metadataProvider == nil {
+		return
+	}
 	ei.logger.Debug("Initializing EC2Info")
 	if err := ei.setInstanceIDAccountID(); err != nil {
 		return
