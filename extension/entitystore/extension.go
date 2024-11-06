@@ -14,6 +14,7 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -48,6 +49,7 @@ type EntityStore struct {
 	logger *zap.Logger
 	config *Config
 	done   chan struct{}
+	ready  atomic.Bool
 
 	// mode should be EC2, ECS, EKS, and K8S
 	mode string
@@ -101,6 +103,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		// Starting the ttl cache will automatically evict all expired pods from the map
 		go e.StartPodToServiceEnvironmentMappingTtlCache()
 	}
+	e.ready.Store(true)
 	return nil
 }
 
@@ -139,6 +142,9 @@ func (e *EntityStore) NativeCredentialExists() bool {
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
 func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
+	if e.serviceprovider == nil {
+		return nil
+	}
 	serviceAttr := e.serviceprovider.logFileServiceAttribute(logFileGlob, logGroupName)
 
 	keyAttributes := e.createServiceKeyAttributes(serviceAttr)
@@ -153,6 +159,9 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 
 // GetMetricServiceNameAndSource gets the service name source for service metrics if not customer provided
 func (e *EntityStore) GetMetricServiceNameAndSource() (string, string) {
+	if e.serviceprovider == nil {
+		return "", ""
+	}
 	return e.serviceprovider.getServiceNameAndSource()
 }
 
@@ -175,11 +184,13 @@ func (e *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, servic
 
 // AddServiceAttrEntryForLogGroup adds an entry to the entity store for the provided log group nme -> (serviceName, environmentName) key-value pair
 func (e *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
-	e.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
-		ServiceName:       serviceName,
-		ServiceNameSource: ServiceNameSourceInstrumentation,
-		Environment:       environmentName,
-	})
+	if e.serviceprovider != nil {
+		e.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
+			ServiceName:       serviceName,
+			ServiceNameSource: ServiceNameSourceInstrumentation,
+			Environment:       environmentName,
+		})
+	}
 }
 
 func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string, serviceNameSource string) {
@@ -189,8 +200,8 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 }
 
 func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache() {
-	if e.eksInfo != nil {
-		e.eksInfo.podToServiceEnvMap.Start()
+	if e.eksInfo != nil && e.eksInfo.GetPodServiceEnvironmentMapping() != nil {
+		e.eksInfo.GetPodServiceEnvironmentMapping().Start()
 	}
 }
 

@@ -205,3 +205,34 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 		})
 	}
 }
+
+func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "AutoScalingGroupWithInstanceTags",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a buffer to capture the logger output
+			var buf bytes.Buffer
+
+			logger := CreateTestLogger(&buf)
+			done := make(chan struct{})
+
+			ei := &EC2Info{
+				logger: logger,
+				done:   done,
+			}
+			go ei.initEc2Info()
+			time.Sleep(3 * time.Second)
+
+			logOutput := buf.String()
+			log.Println(logOutput)
+			assert.NotContains(t, logOutput, "Initializing EC2Info")
+			assert.NotContains(t, logOutput, "Finished initializing EC2Info")
+		})
+	}
+}

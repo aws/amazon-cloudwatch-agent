@@ -344,6 +344,21 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
 }
 
+func TestEntityStore_createLogFileRID_ServiceProviderIsEmpty(t *testing.T) {
+	instanceId := "i-abcd1234"
+	glob := LogFileGlob("glob")
+	group := LogGroupName("group")
+	e := EntityStore{
+		mode:             config.ModeEC2,
+		ec2Info:          EC2Info{InstanceID: instanceId},
+		nativeCredential: &session.Session{},
+	}
+
+	entity := e.CreateLogFileEntity(glob, group)
+
+	assert.Nil(t, entity)
+}
+
 func dereferenceMap(input map[string]*string) map[string]string {
 	result := make(map[string]string)
 	for k, v := range input {
@@ -539,6 +554,22 @@ func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
 	assert.Equal(t, "UserConfiguration", serviceNameSource)
 }
 
+func TestEntityStore_GetMetricServiceNameSource_ServiceProviderEmpty(t *testing.T) {
+	instanceId := "i-abcd1234"
+	accountId := "123456789012"
+	e := EntityStore{
+		mode:             config.ModeEC2,
+		ec2Info:          EC2Info{InstanceID: instanceId},
+		metadataprovider: mockMetadataProviderWithAccountId(accountId),
+		nativeCredential: &session.Session{},
+	}
+
+	serviceName, serviceNameSource := e.GetMetricServiceNameAndSource()
+
+	assert.Equal(t, "", serviceName)
+	assert.Equal(t, "", serviceNameSource)
+}
+
 func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -588,7 +619,7 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetInstanceID())
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAutoScalingGroup())
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAccountID())
-
+			assert.True(t, es.ready.Load(), "EntityStore should be ready")
 		})
 	}
 }
