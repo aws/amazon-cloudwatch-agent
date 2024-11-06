@@ -5,11 +5,9 @@ package entitystore
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -19,10 +17,9 @@ import (
 )
 
 const (
-	INSTANCE_PROFILE = "instance-profile/"
-	SERVICE          = "service"
-	APPLICATION      = "application"
-	APP              = "app"
+	SERVICE     = "service"
+	APPLICATION = "application"
+	APP         = "app"
 
 	// Matches the default value from OTel
 	// https://opentelemetry.io/docs/languages/sdk-configuration/general/#otel_service_name
@@ -231,23 +228,13 @@ func (s *serviceprovider) serviceAttributeFallback() ServiceAttribute {
 }
 
 func (s *serviceprovider) scrapeIAMRole() error {
-	iamRole, err := s.metadataProvider.InstanceProfileIAMRole()
+	iamRole, err := s.metadataProvider.ClientIAMRole(context.Background())
 	if err != nil {
 		return err
 	}
-	iamRoleArn, err := arn.Parse(iamRole)
-	if err != nil {
-		return err
-	}
-	iamRoleResource := iamRoleArn.Resource
-	if strings.HasPrefix(iamRoleResource, INSTANCE_PROFILE) {
-		roleName := strings.TrimPrefix(iamRoleResource, INSTANCE_PROFILE)
-		s.mutex.Lock()
-		s.iamRole = roleName
-		s.mutex.Unlock()
-	} else {
-		return fmt.Errorf("IAM Role resource does not follow the expected pattern. Should be instance-profile/<role_name>")
-	}
+	s.mutex.Lock()
+	s.iamRole = iamRole
+	s.mutex.Unlock()
 	return nil
 }
 func (s *serviceprovider) scrapeImdsServiceName() error {
