@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"hash/fnv"
 	"os"
 	"sync"
@@ -189,8 +188,6 @@ func (t *Tagger) updateTags() error {
 			fmt.Println("It's false!")
 			t.logger.Info("It's false")
 		}
-
-		provider.IncrementDescribeTagsCounter(isSuccess)
 
 		if err != nil {
 			return err
