@@ -15,7 +15,7 @@ var (
 	LogsKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 )
 
-func NewTranslators(conf *confmap.Conf) (pipeline.TranslatorMap, error) {
+func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
 	// create default container insights translator
 	ciTranslator := NewTranslatorWithName(ciPipelineName)
@@ -27,5 +27,5 @@ func NewTranslators(conf *confmap.Conf) (pipeline.TranslatorMap, error) {
 		translators.Set(kueueTranslator)
 	}
 	// return the translator map
-	return translators, nil
+	return translators
 }

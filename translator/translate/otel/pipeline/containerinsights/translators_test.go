@@ -86,8 +86,7 @@ func TestTranslators(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := NewTranslators(conf)
-			require.NoError(t, err)
+			got := NewTranslators(conf)
 			if testCase.want == nil {
 				require.Nil(t, got)
 			} else {

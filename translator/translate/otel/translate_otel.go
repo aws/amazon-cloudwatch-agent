@@ -61,7 +61,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		return nil, err
 	}
 	translators.Merge(logsHostTranslators)
-	containerInsightsTranslators, _ := containerinsights.NewTranslators(conf)
+	containerInsightsTranslators := containerinsights.NewTranslators(conf)
 	translators.Merge(containerInsightsTranslators)
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
