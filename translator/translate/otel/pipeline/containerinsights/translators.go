@@ -8,7 +8,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 var (
@@ -21,7 +20,7 @@ func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	ciTranslator := NewTranslatorWithName(ciPipelineName)
 	translators.Set(ciTranslator)
 	// create kueue container insights translator
-	KueueContainerInsightsEnabled := awscontainerinsight.KueueContainerInsightsEnabled(conf)
+	KueueContainerInsightsEnabled := KueueContainerInsightsEnabled(conf)
 	if KueueContainerInsightsEnabled {
 		kueueTranslator := NewTranslatorWithName(kueuePipelineName)
 		translators.Set(kueueTranslator)
