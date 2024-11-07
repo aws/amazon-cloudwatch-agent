@@ -72,7 +72,3 @@ func (t *translator) setClusterName(conf *confmap.Conf, cfg *awscontainerinsight
 	}
 	return nil
 }
-
-func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
-	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableKueueContainerInsights), false)
-}
