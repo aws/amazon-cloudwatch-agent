@@ -117,7 +117,6 @@ func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Reques
 	}
 
 	requestID := csh.getRequestID(ctx)
-	log.Printf("Generated request ID: %s", requestID)
 
 	recorder := &requestRecorder{start: time.Now()}
 
@@ -131,14 +130,11 @@ func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Reques
 		}
 		if length, _ := aws.SeekerLen(rsc); length > 0 {
 			recorder.payloadBytes = length
-			log.Printf("Seeker length of request body: %d bytes", length)
 		} else if body, err := r.GetBody(); err == nil {
 			recorder.payloadBytes, _ = io.Copy(io.Discard, body)
-			log.Printf("Calculated body length by copying: %d bytes", recorder.payloadBytes)
 		}
 	}
 
-	log.Printf("Storing recorder in cache for request ID: %s", requestID)
 	csh.requestCache.Set(requestID, recorder, ttlcache.DefaultTTL)
 }
 
@@ -156,7 +152,6 @@ func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Respo
 
 	item, ok := csh.requestCache.GetAndDelete(requestID)
 	if !ok {
-		log.Printf("No request recorder found in cache for request ID: %s", requestID)
 		return
 	}
 
