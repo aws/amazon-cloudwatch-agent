@@ -26,6 +26,7 @@ jobs:
         runs-on: ubuntu-latest
         outputs:
             operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
+            operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}} 
         steps:
           - name: Checkout the target repo
             uses: actions/checkout@v3
@@ -59,7 +60,7 @@ jobs:
         with:
             tag: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
             target-branch: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
-            repository: ${{env.OPERATOR_GITHUB_REPO_NAME}} 
+            repository:  ${{needs.GetLatestCommitSHAs.outputs.operator_repo_name}}
 
 
 
