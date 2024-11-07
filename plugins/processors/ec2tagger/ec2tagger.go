@@ -228,9 +228,9 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 			t.logger.Debug("ec2tagger refreshing")
 			allTagsRetrieved := t.ec2TagsRetrieved()
 			allVolumesRetrieved := t.ebsVolumesRetrieved()
-			t.logger.Debug("Retrieve status",
-				zap.Bool("Ec2AllTagsRetrieved", allTagsRetrieved),
-				zap.Bool("EbsAllVolumesRetrieved", allVolumesRetrieved))
+			//t.logger.Debug("Retrieve status",
+			//	zap.Bool("Ec2AllTagsRetrieved", allTagsRetrieved),
+			//	zap.Bool("EbsAllVolumesRetrieved", allVolumesRetrieved))
 			refreshTags := len(t.EC2InstanceTagKeys) > 0
 			refreshVolumes := len(t.EBSDeviceKeys) > 0
 
@@ -246,12 +246,12 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 			}
 
 			if err := t.updateTags(); err != nil {
-				t.logger.Warn("ec2tagger: Error refreshing EC2 tags, keeping old values", zap.Error(err))
+				//t.logger.Warn("ec2tagger: Error refreshing EC2 tags, keeping old values", zap.Error(err))
 			}
 
 			if refreshVolumes {
 				if err := t.updateVolumes(); err != nil {
-					t.logger.Warn("ec2tagger: Error refreshing EBS volumes, keeping old values", zap.Error(err))
+					//t.logger.Warn("ec2tagger: Error refreshing EBS volumes, keeping old values", zap.Error(err))
 				}
 			}
 

@@ -167,7 +167,7 @@ func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Respo
 	log.Printf("Request stats for operation %s: PayloadBytes=%d, StatusCode=%d, LatencyMillis=%d",
 		operation, recorder.payloadBytes, r.StatusCode, stats.LatencyMillis)
 
-	csh.UpdateStatusCode(operation, r.StatusCode)
+	//csh.UpdateStatusCode(operation, r.StatusCode)
 
 	csh.statsByOperation.Store(operation, stats)
 	log.Printf("Stored stats for operation: %s", operation)
