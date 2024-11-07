@@ -46,7 +46,7 @@ type clientStatsHandler struct {
 	//Map to track status codes by API
 	StatusCodesByAPI map[string][]int // e.g., [200, 400, 404, ...]
 	resetTimer       *time.Ticker
-	stopTimer        chan struct{}
+	//stopTimer        chan struct{}
 }
 
 var _ Stats = (*clientStatsHandler)(nil)
@@ -64,9 +64,9 @@ func NewHandler(filter agent.OperationsFilter) Stats {
 		getRequestID:     awsmiddleware.GetRequestID,
 		requestCache:     requestCache,
 		StatusCodesByAPI: make(map[string][]int),
-		stopTimer:        make(chan struct{}),
+		//stopTimer:        make(chan struct{}),
 	}
-	csh.startResetTimer()
+	//csh.startResetTimer()
 	return csh
 }
 
