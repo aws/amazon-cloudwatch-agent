@@ -11,12 +11,7 @@ import (
 )
 
 func setKubernetesKueueMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
-	var kueueMetricsDeclarations []*awsemfexporter.MetricDeclaration
-
-	kueueMetricsDeclarations = append(kueueMetricsDeclarations, getKueueMetricDeclarations(conf)...)
-
-	cfg.MetricDeclarations = kueueMetricsDeclarations
-
+	cfg.MetricDeclarations = getKueueMetricDeclarations(conf)
 	return nil
 }
 
