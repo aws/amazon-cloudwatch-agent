@@ -414,3 +414,7 @@ func IsAnySet(conf *confmap.Conf, keys []string) bool {
 	}
 	return false
 }
+
+func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
+	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
+}

@@ -82,7 +82,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	case kueuePipelineName:
 		// add prometheus receiver for kueue
 		receivers = common.NewTranslatorMap((awscontainerinsightskueue.NewTranslator()))
-		KueueContainerInsightsEnabled := KueueContainerInsightsEnabled(conf)
+		KueueContainerInsightsEnabled := common.KueueContainerInsightsEnabled(conf)
 		if KueueContainerInsightsEnabled {
 			processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
 		}
@@ -96,8 +96,4 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Exporters:  exporters,
 		Extensions: extensions,
 	}, nil
-}
-
-func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
-	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableKueueContainerInsights), false)
 }

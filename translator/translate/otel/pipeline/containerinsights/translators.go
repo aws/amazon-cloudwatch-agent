@@ -20,7 +20,7 @@ func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	ciTranslator := NewTranslatorWithName(ciPipelineName)
 	translators.Set(ciTranslator)
 	// create kueue container insights translator
-	KueueContainerInsightsEnabled := KueueContainerInsightsEnabled(conf)
+	KueueContainerInsightsEnabled := common.KueueContainerInsightsEnabled(conf)
 	if KueueContainerInsightsEnabled {
 		kueueTranslator := NewTranslatorWithName(kueuePipelineName)
 		translators.Set(kueueTranslator)

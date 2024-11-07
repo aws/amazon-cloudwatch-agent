@@ -4,10 +4,9 @@
 package awsemf
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 func setKubernetesKueueMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
@@ -17,7 +16,7 @@ func setKubernetesKueueMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter
 
 func getKueueMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var metricDeclarations []*awsemfexporter.MetricDeclaration
-	if awscontainerinsight.KueueContainerInsightsEnabled(conf) {
+	if common.KueueContainerInsightsEnabled(conf) {
 		metricDeclarations = []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{
