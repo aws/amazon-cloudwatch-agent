@@ -4,20 +4,13 @@
 name: Build End-to-End Test Artifacts
 env:
     OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
+    ECR_TARGET_ALLOCATOR_STAGING_REPO: ${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO}}
+    ECR_OPERATOR_RELEASE_IMAGE: ${{ vars.ECR_TARGET_ALLOCATOR_TEST_OPERATOR_REPO}}
+
 on:
-    push:
-        branches:
-            - e2c-build-workflow
     workflow_dispatch:
         inputs:
             operator-branch:
-                required: true
-                type: string
-                default: 'main'
-            agent-branch:
                 required: true
                 type: string
                 default: 'main'
@@ -27,14 +20,12 @@ on:
                 required: true
                 type: string
                 default: 'main'
-            agent-branch:
-                required: true
-                type: string
-                default: ${{github.ref_name}}
 
 jobs:
     GetLatestCommitSHAs:
         runs-on: ubuntu-latest
+        outputs:
+            operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
         steps:
           - name: Checkout the target repo
             uses: actions/checkout@v3
@@ -48,21 +39,27 @@ jobs:
             run: |
                     cd operator-repo
                     latest_sha=$(git rev-parse HEAD)
-                    echo "::set-output name=LATEST_SHA::$latest_sha"
+                    echo "::set-output name=operator_sha::$latest_sha"
     BuildAgent:
         uses: ./.github/workflows/build-test-artifacts.yml
-        secrets: inherit
         concurrency:
-            group: ${{ github.workflow }}-${{inputs.agent-branch}}
+            group: "Build-Test-Artifacts-${{ inputs.agent-branch}}"
             cancel-in-progress: true
+        secrets: inherit
         permissions:
           id-token: write
           contents: read
     BuildOperator:
         needs: [GetLatestCommitSHAs]
-        uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload-release.yml@main
+        uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@e2e-testing
+        concurrency:
+            group: ${{ github.workflow }}-operator-${{ inputs.operator-branch}}
+            cancel-in-progress: true
         secrets: inherit
         with:
-            tag: ${{needs.GetLatestCommitSHAs.outputs.LATEST_SHA}}
+            tag: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
+            target-branch: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
+            repository: ${{env.OPERATOR_GITHUB_REPO_NAME}} 
+
 
 
