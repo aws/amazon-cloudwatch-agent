@@ -82,10 +82,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	case kueuePipelineName:
 		// add prometheus receiver for kueue
 		receivers = common.NewTranslatorMap((awscontainerinsightskueue.NewTranslator()))
-		KueueContainerInsightsEnabled := common.KueueContainerInsightsEnabled(conf)
-		if KueueContainerInsightsEnabled {
-			processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
-		}
+		processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
 	default:
 		return nil, fmt.Errorf("unknown container insights pipeline name: %s", t.pipelineName)
 	}
