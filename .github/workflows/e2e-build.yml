@@ -50,6 +50,8 @@ jobs:
         permissions:
           id-token: write
           contents: read
+        with:
+            test-image-before-upload: false            
     BuildOperator:
         needs: [GetLatestCommitSHAs]
         uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@e2e-testing
@@ -61,6 +63,7 @@ jobs:
             tag: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
             target-branch: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
             repository:  ${{needs.GetLatestCommitSHAs.outputs.operator_repo_name}}
+            test-image-before-upload: false            
 
 
 
