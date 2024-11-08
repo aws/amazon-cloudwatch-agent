@@ -20,8 +20,8 @@ type MetadataProvider interface {
 	Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error)
 	Hostname(ctx context.Context) (string, error)
 	InstanceID(ctx context.Context) (string, error)
-	InstanceProfileIAMRole() (string, error)
 	InstanceTags(ctx context.Context) (string, error)
+	ClientIAMRole(ctx context.Context) (string, error)
 	InstanceTagValue(ctx context.Context, tagKey string) (string, error)
 }
 
@@ -61,13 +61,9 @@ func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
 	})
 }
 
-func (c *metadataClient) InstanceProfileIAMRole() (string, error) {
-	return withMetadataFallbackRetry(context.Background(), c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
-		iamInfo, err := metadataClient.IAMInfo()
-		if err != nil {
-			return "", err
-		}
-		return iamInfo.InstanceProfileArn, nil
+func (c *metadataClient) ClientIAMRole(ctx context.Context) (string, error) {
+	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+		return metadataClient.GetMetadataWithContext(ctx, "iam/security-credentials")
 	})
 }
 

@@ -148,12 +148,12 @@ func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error)
 	return "MockInstanceTag", nil
 }
 
-func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
-	return "MockIAM", nil
-}
-
 func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
 	return "MockInstanceValue", nil
+}
+
+func (m *mockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
+	return "MockIAMRole", nil
 }
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{

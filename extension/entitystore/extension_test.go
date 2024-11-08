@@ -103,10 +103,6 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
-	return "arn:aws:iam::123456789:instance-profile/TestRole", nil
-}
-
 func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
 	if m.InstanceTagError {
 		return "", errors.New("an error occurred for instance tag retrieval")
@@ -116,6 +112,10 @@ func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error)
 		tagsString += key + "=" + val + ","
 	}
 	return tagsString, nil
+}
+
+func (m *mockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
+	return "TestRole", nil
 }
 
 func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
