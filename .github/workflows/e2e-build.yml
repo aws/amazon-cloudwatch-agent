@@ -22,7 +22,7 @@ on:
                 default: 'main'
 
 jobs:
-    GetLatestCommitSHAs:
+    GetLatestOperatorCommitSHA:
         runs-on: ubuntu-latest
         outputs:
             operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
@@ -44,7 +44,7 @@ jobs:
     BuildAgent:
         uses: ./.github/workflows/build-test-artifacts.yml
         concurrency:
-            group: "Build-Test-Artifacts-${{ inputs.agent-branch}}"
+            group: "Build-Test-Artifacts-${{github.ref_name}}"
             cancel-in-progress: true
         secrets: inherit
         permissions:
@@ -53,16 +53,16 @@ jobs:
         with:
             test-image-before-upload: false            
     BuildOperator:
-        needs: [GetLatestCommitSHAs]
+        needs: [GetLatestOperatorCommitSHA]
         uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@e2e-testing
         concurrency:
             group: ${{ github.workflow }}-operator-${{ inputs.operator-branch}}
             cancel-in-progress: true
         secrets: inherit
         with:
-            tag: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
-            target-branch: ${{needs.GetLatestCommitSHAs.outputs.operator_commit_sha}}
-            repository:  ${{needs.GetLatestCommitSHAs.outputs.operator_repo_name}}
+            tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+            target-branch: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+            repository:  ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
             test-image-before-upload: false            
 
 
