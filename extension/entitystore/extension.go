@@ -150,7 +150,9 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 	keyAttributes := e.createServiceKeyAttributes(serviceAttr)
 	attributeMap := e.createAttributeMap()
 	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
-
+	if _, ok := keyAttributes[entityattributes.AwsAccountId]; !ok {
+		return nil
+	}
 	return &cloudwatchlogs.Entity{
 		KeyAttributes: keyAttributes,
 		Attributes:    attributeMap,
@@ -235,6 +237,7 @@ func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 	}
 	addNonEmptyToMap(serviceKeyAttr, entityattributes.ServiceName, serviceAttr.ServiceName)
 	addNonEmptyToMap(serviceKeyAttr, entityattributes.DeploymentEnvironment, serviceAttr.Environment)
+	addNonEmptyToMap(serviceKeyAttr, entityattributes.AwsAccountId, e.ec2Info.GetAccountID())
 	return serviceKeyAttr
 }
 

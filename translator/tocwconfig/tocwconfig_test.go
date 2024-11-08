@@ -136,6 +136,21 @@ func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_fallback_and_eks_config", "windows", expectedEnvVars, "")
 }
 
+func TestStatsDAndEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_statsd_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "statsd_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "statsd_eks_config", "windows", expectedEnvVars, "")
+}
+
 func TestAppSignalsAndECSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -617,6 +632,22 @@ func TestECSNodeMetricConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_ecs_metric_only", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_ecs_metric_only", "darwin", nil, "")
+	//Reset back to default value to not impact other tests
+	ecsSingleton.Region = ""
+}
+
+func TestECSNodeStatsDConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsSingleton := ecsutil.GetECSUtilSingleton()
+	ecsSingleton.Region = "us-west-2"
+	t.Setenv("RUN_IN_CONTAINER", "True")
+	t.Setenv("HOST_NAME", "fake-host-name")
+	t.Setenv("HOST_IP", "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "statsd_ecs_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "statsd_ecs_config", "darwin", nil, "")
 	//Reset back to default value to not impact other tests
 	ecsSingleton.Region = ""
 }
