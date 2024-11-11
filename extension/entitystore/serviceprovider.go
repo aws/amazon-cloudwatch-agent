@@ -5,11 +5,9 @@ package entitystore
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -19,10 +17,9 @@ import (
 )
 
 const (
-	INSTANCE_PROFILE = "instance-profile/"
-	SERVICE          = "service"
-	APPLICATION      = "application"
-	APP              = "app"
+	SERVICE     = "service"
+	APPLICATION = "application"
+	APP         = "app"
 
 	// Matches the default value from OTel
 	// https://opentelemetry.io/docs/languages/sdk-configuration/general/#otel_service_name
@@ -78,6 +75,9 @@ type serviceprovider struct {
 }
 
 func (s *serviceprovider) startServiceProvider() {
+	if s.metadataProvider == nil {
+		return
+	}
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	limitedRetryer := NewRetryer(false, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
 	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
@@ -99,12 +99,18 @@ func (s *serviceprovider) GetIMDSServiceName() string {
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
 // CloudWatch Agent config.
 func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAttr ServiceAttribute) {
+	if s.logFiles == nil {
+		s.logFiles = make(map[LogFileGlob]ServiceAttribute)
+	}
 	s.logFiles[logFileGlob] = serviceAttr
 }
 
 // addEntryForLogGroup adds an association between a log group name and a service attribute, as observed from incoming
 // telemetry received by CloudWatch Agent.
 func (s *serviceprovider) addEntryForLogGroup(logGroupName LogGroupName, serviceAttr ServiceAttribute) {
+	if s.logGroups == nil {
+		s.logGroups = make(map[LogGroupName]ServiceAttribute)
+	}
 	s.logGroups[logGroupName] = serviceAttr
 }
 
@@ -162,7 +168,7 @@ func (s *serviceprovider) getServiceNameAndSource() (string, string) {
 }
 
 func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) ServiceAttribute {
-	if logGroup == "" {
+	if logGroup == "" || s.logGroups == nil {
 		return ServiceAttribute{}
 	}
 
@@ -170,7 +176,7 @@ func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) Ser
 }
 
 func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) ServiceAttribute {
-	if logFile == "" {
+	if logFile == "" || s.logFiles == nil {
 		return ServiceAttribute{}
 	}
 
@@ -222,23 +228,13 @@ func (s *serviceprovider) serviceAttributeFallback() ServiceAttribute {
 }
 
 func (s *serviceprovider) scrapeIAMRole() error {
-	iamRole, err := s.metadataProvider.InstanceProfileIAMRole()
+	iamRole, err := s.metadataProvider.ClientIAMRole(context.Background())
 	if err != nil {
 		return err
 	}
-	iamRoleArn, err := arn.Parse(iamRole)
-	if err != nil {
-		return err
-	}
-	iamRoleResource := iamRoleArn.Resource
-	if strings.HasPrefix(iamRoleResource, INSTANCE_PROFILE) {
-		roleName := strings.TrimPrefix(iamRoleResource, INSTANCE_PROFILE)
-		s.mutex.Lock()
-		s.iamRole = roleName
-		s.mutex.Unlock()
-	} else {
-		return fmt.Errorf("IAM Role resource does not follow the expected pattern. Should be instance-profile/<role_name>")
-	}
+	s.mutex.Lock()
+	s.iamRole = iamRole
+	s.mutex.Unlock()
 	return nil
 }
 func (s *serviceprovider) scrapeImdsServiceName() error {

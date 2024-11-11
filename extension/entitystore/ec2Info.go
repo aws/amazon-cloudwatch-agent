@@ -41,6 +41,9 @@ type EC2Info struct {
 }
 
 func (ei *EC2Info) initEc2Info() {
+	if ei.metadataProvider == nil {
+		return
+	}
 	ei.logger.Debug("Initializing EC2Info")
 	if err := ei.setInstanceIDAccountID(); err != nil {
 		return
@@ -73,7 +76,7 @@ func (ei *EC2Info) setInstanceIDAccountID() error {
 	for {
 		metadataDoc, err := ei.metadataProvider.Get(context.Background())
 		if err != nil {
-			ei.logger.Warn("Failed to get Instance ID / Account ID through metadata provider", zap.Error(err))
+			ei.logger.Debug("Failed to get Instance ID / Account ID through metadata provider", zap.Error(err))
 			wait := time.NewTimer(1 * time.Minute)
 			select {
 			case <-ei.done:
@@ -119,7 +122,7 @@ func (ei *EC2Info) setAutoScalingGroup() error {
 		}
 
 		if err := ei.retrieveAsgName(); err != nil {
-			ei.logger.Warn("Unable to fetch instance tags with imds", zap.Int("retry", retry), zap.Error(err))
+			ei.logger.Debug("Unable to fetch instance tags with imds", zap.Int("retry", retry), zap.Error(err))
 		} else {
 			ei.logger.Debug("Retrieval of auto-scaling group tags succeeded")
 			return nil

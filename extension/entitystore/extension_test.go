@@ -103,10 +103,6 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
-	return "arn:aws:iam::123456789:instance-profile/TestRole", nil
-}
-
 func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
 	if m.InstanceTagError {
 		return "", errors.New("an error occurred for instance tag retrieval")
@@ -116,6 +112,10 @@ func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error)
 		tagsString += key + "=" + val + ","
 	}
 	return tagsString, nil
+}
+
+func (m *mockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
+	return "TestRole", nil
 }
 
 func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
@@ -310,6 +310,7 @@ func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 
 func TestEntityStore_createLogFileRID(t *testing.T) {
 	instanceId := "i-abcd1234"
+	accountId := "123456789012"
 	glob := LogFileGlob("glob")
 	group := LogGroupName("group")
 	serviceAttr := ServiceAttribute{
@@ -321,7 +322,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
 	e := EntityStore{
 		mode:             config.ModeEC2,
-		ec2Info:          EC2Info{InstanceID: instanceId},
+		ec2Info:          EC2Info{InstanceID: instanceId, AccountID: accountId},
 		serviceprovider:  sp,
 		nativeCredential: &session.Session{},
 	}
@@ -333,6 +334,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 			entityattributes.DeploymentEnvironment: aws.String("test-environment"),
 			entityattributes.ServiceName:           aws.String("test-service"),
 			entityattributes.EntityType:            aws.String(Service),
+			entityattributes.AwsAccountId:          aws.String(accountId),
 		},
 		Attributes: map[string]*string{
 			InstanceIDKey:        aws.String(instanceId),
@@ -342,6 +344,21 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	}
 	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
 	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
+}
+
+func TestEntityStore_createLogFileRID_ServiceProviderIsEmpty(t *testing.T) {
+	instanceId := "i-abcd1234"
+	glob := LogFileGlob("glob")
+	group := LogGroupName("group")
+	e := EntityStore{
+		mode:             config.ModeEC2,
+		ec2Info:          EC2Info{InstanceID: instanceId},
+		nativeCredential: &session.Session{},
+	}
+
+	entity := e.CreateLogFileEntity(glob, group)
+
+	assert.Nil(t, entity)
 }
 
 func dereferenceMap(input map[string]*string) map[string]string {
@@ -539,6 +556,22 @@ func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
 	assert.Equal(t, "UserConfiguration", serviceNameSource)
 }
 
+func TestEntityStore_GetMetricServiceNameSource_ServiceProviderEmpty(t *testing.T) {
+	instanceId := "i-abcd1234"
+	accountId := "123456789012"
+	e := EntityStore{
+		mode:             config.ModeEC2,
+		ec2Info:          EC2Info{InstanceID: instanceId},
+		metadataprovider: mockMetadataProviderWithAccountId(accountId),
+		nativeCredential: &session.Session{},
+	}
+
+	serviceName, serviceNameSource := e.GetMetricServiceNameAndSource()
+
+	assert.Equal(t, "", serviceName)
+	assert.Equal(t, "", serviceNameSource)
+}
+
 func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -588,7 +621,7 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetInstanceID())
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAutoScalingGroup())
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAccountID())
-
+			assert.True(t, es.ready.Load(), "EntityStore should be ready")
 		})
 	}
 }
