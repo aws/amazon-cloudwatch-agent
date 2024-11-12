@@ -1,4 +1,9 @@
 {
+  "agent": {
+    "debug": true,
+    "aws_sdk_log_level": "LogDebugWithHTTPBody",
+    "region": "us-west-2"
+  },
   "metrics": {
     "append_dimensions": {
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
@@ -14,7 +19,8 @@
           "cpu_usage_user",
           "cpu_usage_system"
         ],
-        "totalcpu": false
+        "totalcpu": false,
+        "metrics_collection_interval": 10
       },
       "disk": {
         "resources": [
@@ -23,7 +29,8 @@
         "measurement": [
           "used_percent",
           "inodes_free"
-        ]
+        ],
+        "metrics_collection_interval": 60
       },
       "diskio": {
         "resources": [
@@ -35,23 +42,27 @@
           "read_bytes",
           "writes",
           "reads"
-        ]
+        ],
+        "metrics_collection_interval": 60
       },
       "mem": {
         "measurement": [
           "mem_used_percent"
-        ]
+        ],
+        "metrics_collection_interval": 10
       },
       "netstat": {
         "measurement": [
           "tcp_established",
           "tcp_time_wait"
-        ]
+        ],
+        "metrics_collection_interval": 60
       },
       "swap": {
         "measurement": [
           "swap_used_percent"
-        ]
+        ],
+        "metrics_collection_interval": 10
       },
       "ethtool": {
         "interface_include": [
@@ -65,15 +76,19 @@
           "conntrack_allowance_exceeded",
           "linklocal_allowance_exceeded"
         ]
-      },
-      "nvidia_gpu": {
-        "measurement": [
-          "utilization_gpu",
-          "utilization_memory",
-          "power_draw",
-          "temperature_gpu"
-        ],
-        "metrics_collection_interval": 60
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "StatusCode",
+            "log_stream_name": "agent-1"
+          }
+        ]
       }
     }
   }
