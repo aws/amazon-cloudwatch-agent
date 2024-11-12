@@ -59,7 +59,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.IsUsageDataEnabled = t.isUsageDataEnabled
 	//if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 	//	cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
-	//} // for now we will comment this ???????
+	//} // for now we will comment this ???????c
 	cfg.Stats = agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{

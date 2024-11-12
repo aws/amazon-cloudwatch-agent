@@ -54,7 +54,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsm
 			zap.Int("requestHandlerCount", 2),
 			zap.Int("responseHandlerCount", 1),
 		)
-		return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+		return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	} else {
 		logger.Debug("Stats are disabled, creating only status code stats handler")
 
@@ -67,7 +67,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsm
 			zap.Int("requestHandlerCount", 0),
 			zap.Int("responseHandlerCount", 1),
 		)
-		return []awsmiddleware.RequestHandler{}, []awsmiddleware.ResponseHandler{statusCodeStats}
+		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
 }
 
