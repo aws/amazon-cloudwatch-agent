@@ -849,6 +849,7 @@ jobs:
 
       - name: Cache if success
         id: eks-ec2-integration-test
+        if: false
         uses: actions/cache@v3
         with:
           path: go.mod
