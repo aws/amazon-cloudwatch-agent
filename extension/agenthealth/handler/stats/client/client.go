@@ -4,9 +4,9 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -22,6 +22,10 @@ const (
 	handlerID   = "cloudwatchagent.ClientStats"
 	ttlDuration = 10 * time.Second
 	cacheSize   = 1000
+)
+
+var (
+	rejectedEntityInfo = []byte("\"rejectedEntityInfo\"")
 )
 
 type Stats interface {
@@ -71,20 +75,13 @@ func (csh *clientStatsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := csh.getOperationName(ctx)
-	log.Printf("Handling request for operation: %s", operation)
-
 	if !csh.filter.IsAllowed(operation) {
-		log.Printf("Operation %s is not allowed by the filter, skipping request handling.", operation)
 		return
 	}
-
 	requestID := csh.getRequestID(ctx)
-
 	recorder := &requestRecorder{start: time.Now()}
-
 	if r.ContentLength > 0 {
 		recorder.payloadBytes = r.ContentLength
-		log.Printf("Request content length: %d bytes", r.ContentLength)
 	} else if r.Body != nil {
 		rsc, ok := r.Body.(aws.ReaderSeekerCloser)
 		if !ok {
@@ -96,43 +93,30 @@ func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Reques
 			recorder.payloadBytes, _ = io.Copy(io.Discard, body)
 		}
 	}
-
 	csh.requestCache.Set(requestID, recorder, ttlcache.DefaultTTL)
 }
 
 func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := csh.getOperationName(ctx)
-	log.Printf("Handling response for operation: %s", operation)
-
 	if !csh.filter.IsAllowed(operation) {
-		log.Printf("Operation %s is not allowed by the filter, skipping response handling.", operation)
 		return
 	}
-
 	requestID := csh.getRequestID(ctx)
-	log.Printf("Retrieved request ID for response: %s", requestID)
-
 	item, ok := csh.requestCache.GetAndDelete(requestID)
 	if !ok {
 		return
 	}
-
 	recorder := item.Value()
 	stats := agent.Stats{
 		PayloadBytes: aws.Int(int(recorder.payloadBytes)),
 		StatusCode:   aws.Int(r.StatusCode),
 	}
-
 	latency := time.Since(recorder.start)
 	stats.LatencyMillis = aws.Int64(latency.Milliseconds())
-
-	log.Printf("Request stats for operation %s: PayloadBytes=%d, StatusCode=%d, LatencyMillis=%d",
-		operation, recorder.payloadBytes, r.StatusCode, stats.LatencyMillis)
-
-	//csh.UpdateStatusCode(operation, r.StatusCode)
-
+	if rejectedEntityInfoExists(r) {
+		stats.EntityRejected = aws.Int(1)
+	}
 	csh.statsByOperation.Store(operation, stats)
-	log.Printf("Stored stats for operation: %s", operation)
 }
 
 func (csh *clientStatsHandler) Stats(operation string) agent.Stats {
@@ -145,4 +129,23 @@ func (csh *clientStatsHandler) Stats(operation string) agent.Stats {
 		return agent.Stats{}
 	}
 	return stats
+}
+
+// rejectedEntityInfoExists checks if the response body
+// contains element rejectedEntityInfo
+func rejectedEntityInfoExists(r *http.Response) bool {
+	// Example body for rejectedEntityInfo would be:
+	// {"rejectedEntityInfo":{"errorType":"InvalidAttributes"}}
+	if r == nil || r.Body == nil {
+		return false
+	}
+	bodyBytes, err := io.ReadAll(r.Body)
+	r.Body.Close()
+	// Reset the response body stream since it can only be read once. Not doing this results in duplicate requests.
+	// See https://stackoverflow.com/questions/33532374/in-go-how-can-i-reuse-a-readcloser
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	if err != nil {
+		return false
+	}
+	return bytes.Contains(bodyBytes, rejectedEntityInfo)
 }
