@@ -232,6 +232,18 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
 }
 
+func TestEmfAndKubernetesWithKueueConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "emf_and_kubernetes_with_kueue_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_with_kueue_config", "darwin", nil, "")
+}
+
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -240,6 +252,20 @@ func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "kubernetes_on_prem_config", "linux", expectedEnvVars, "")
+}
+
+func TestKueueContainerInsightsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/etc/test/ca_bundle.pem")
+	expectedEnvVars := map[string]string{
+		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
+	}
+	checkTranslation(t, "kueue_container_insights_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "kueue_container_insights_config", "darwin", nil, "")
 }
 
 func TestLogsAndKubernetesConfig(t *testing.T) {

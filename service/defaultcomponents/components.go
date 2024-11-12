@@ -29,6 +29,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/tailsamplingprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsecscontainermetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
@@ -62,6 +63,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 )
 
@@ -71,6 +73,7 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Receivers, err = receiver.MakeFactoryMap(
 		awscontainerinsightreceiver.NewFactory(),
+		awscontainerinsightskueuereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
@@ -98,6 +101,7 @@ func Factories() (otelcol.Factories, error) {
 		ec2tagger.NewFactory(),
 		filterprocessor.NewFactory(),
 		gpuattributes.NewFactory(),
+		kueueattributes.NewFactory(),
 		groupbytraceprocessor.NewFactory(),
 		k8sattributesprocessor.NewFactory(),
 		memorylimiterprocessor.NewFactory(),

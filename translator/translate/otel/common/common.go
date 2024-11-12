@@ -57,6 +57,7 @@ const (
 	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
+	EnableKueueContainerInsights       = "kueue_container_insights"
 	AppendDimensionsKey                = "append_dimensions"
 	Console                            = "console"
 	DiskKey                            = "disk"
@@ -446,4 +447,8 @@ func IsAnySet(conf *confmap.Conf, keys []string) bool {
 		}
 	}
 	return false
+}
+
+func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
+	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
 }
