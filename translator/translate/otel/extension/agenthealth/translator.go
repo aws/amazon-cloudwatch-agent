@@ -25,9 +25,10 @@ const (
 )
 
 var (
-	MetricsID = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
-	LogsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
-	TracesID  = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	MetricsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
+	LogsID       = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
+	TracesID     = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	StatusCodeID = component.NewIDWithName(agenthealth.TypeStr, "StatusCode")
 )
 
 type translator struct {
@@ -56,9 +57,9 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*agenthealth.Config)
 	cfg.IsUsageDataEnabled = t.isUsageDataEnabled
-	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
-		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
-	}
+	//if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
+	//	cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
+	//} // for now we will comment this ???????
 	cfg.Stats = agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{

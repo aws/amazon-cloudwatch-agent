@@ -44,11 +44,14 @@ func createMetricsProcessor(
 		return nil, fmt.Errorf("configuration parsing error")
 	}
 
+	// Now passing host to newTagger
 	metricsProcessor := newTagger(processorConfig, set.Logger)
 
-	return processorhelper.NewMetricsProcessor(ctx, set, cfg, nextConsumer,
+	return processorhelper.NewMetricsProcessor(
+		ctx, set, cfg, nextConsumer,
 		metricsProcessor.processMetrics,
 		processorhelper.WithCapabilities(processorCapabilities),
-		processorhelper.WithStart(metricsProcessor.Start),
-		processorhelper.WithShutdown(metricsProcessor.Shutdown))
+		processorhelper.WithStart(metricsProcessor.Start), // Use the Start method of metricsProcessor
+		processorhelper.WithShutdown(metricsProcessor.Shutdown),
+	)
 }

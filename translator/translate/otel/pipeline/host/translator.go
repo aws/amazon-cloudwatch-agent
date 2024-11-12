@@ -90,6 +90,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if t.Destination() != common.CloudWatchLogsKey {
 		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 			log.Printf("D! ec2tagger processor required because append_dimensions is set")
+			translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{"*"})) //not sure if we need to change this??????
 			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 		}
 
