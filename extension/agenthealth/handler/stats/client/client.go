@@ -6,6 +6,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"io"
 	"net/http"
 	"sync"
@@ -14,8 +15,6 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/jellydator/ttlcache/v3"
-
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 const (
