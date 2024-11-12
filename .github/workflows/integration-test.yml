@@ -13,7 +13,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "fix-JMX-integ-tests"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
@@ -162,7 +162,6 @@ jobs:
           key: "cf-integration-${{ github.sha }}-test"
 
       - name: Test cf
-        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
         run: |
           cd test/test/cloudformation
           go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
@@ -477,7 +476,6 @@ jobs:
 
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.ec2-win-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -559,7 +557,6 @@ jobs:
 
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.ec2-mac-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -685,15 +682,12 @@ jobs:
 
       - name: Login ECR
         id: login-ecr
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -768,15 +762,12 @@ jobs:
 
       - name: Login ECR
         id: login-ecr
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -846,15 +837,12 @@ jobs:
 
       - name: Login ECR
         id: login-ecr
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
@@ -928,15 +916,12 @@ jobs:
 
       - name: Login ECR
         id: login-ecr
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -1007,11 +992,9 @@ jobs:
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1075,11 +1058,9 @@ jobs:
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1143,14 +1124,12 @@ jobs:
           key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
       - name: Terraform apply
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1213,14 +1192,12 @@ jobs:
           key: ec2-win-stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
       - name: Terraform apply
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1345,3 +1322,4 @@ jobs:
               cd terraform/eks/addon/gpu
             fi
             terraform destroy --auto-approve
+            
