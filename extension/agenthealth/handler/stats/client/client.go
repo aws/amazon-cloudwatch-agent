@@ -42,11 +42,6 @@ type clientStatsHandler struct {
 
 	statsByOperation sync.Map
 	requestCache     *ttlcache.Cache[string, *requestRecorder]
-
-	//Map to track status codes by API
-	StatusCodesByAPI map[string][]int // e.g., [200, 400, 404, ...]
-	resetTimer       *time.Ticker
-	//stopTimer        chan struct{}
 }
 
 var _ Stats = (*clientStatsHandler)(nil)
@@ -58,45 +53,12 @@ func NewHandler(filter agent.OperationsFilter) Stats {
 		ttlcache.WithDisableTouchOnHit[string, *requestRecorder](),
 	)
 	go requestCache.Start()
-	csh := &clientStatsHandler{
+	return &clientStatsHandler{
 		filter:           filter,
 		getOperationName: awsmiddleware.GetOperationName,
 		getRequestID:     awsmiddleware.GetRequestID,
 		requestCache:     requestCache,
-		StatusCodesByAPI: make(map[string][]int),
-		//stopTimer:        make(chan struct{}),
 	}
-	//csh.startResetTimer()
-	return csh
-}
-
-func (csh *clientStatsHandler) startResetTimer() {
-	csh.resetTimer = time.NewTicker(5 * time.Minute)
-
-	go func() {
-		for {
-			select {
-			case <-csh.resetTimer.C:
-				csh.resetStatusCodes()
-			case <-csh.stopTimer:
-				csh.resetTimer.Stop()
-				return
-			}
-		}
-	}()
-}
-
-func (csh *clientStatsHandler) resetStatusCodes() {
-	log.Println("Resetting status codes counts for all APIs")
-	for api := range csh.StatusCodesByAPI {
-		// Reset the count for each status code for the API
-		csh.StatusCodesByAPI[api] = make([]int, 10) // Adjust size based on expected status codes
-	}
-}
-
-// Stop the reset timer when no longer needed
-func (csh *clientStatsHandler) Stop() {
-	close(csh.stopTimer)
 }
 
 func (csh *clientStatsHandler) ID() string {
@@ -171,33 +133,6 @@ func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Respo
 
 	csh.statsByOperation.Store(operation, stats)
 	log.Printf("Stored stats for operation: %s", operation)
-}
-
-func (csh *clientStatsHandler) UpdateStatusCode(api string, statusCode int) {
-	if csh.StatusCodesByAPI == nil {
-		csh.StatusCodesByAPI = make(map[string][]int)
-		log.Printf("Initialized StatusCodesByAPI map")
-	}
-
-	if _, exists := csh.StatusCodesByAPI[api]; !exists {
-		csh.StatusCodesByAPI[api] = make([]int, 10) // Adjust size based on expected status codes
-		log.Printf("Initialized status code count for API: %s", api)
-	}
-
-	switch statusCode {
-	case 200:
-		csh.StatusCodesByAPI[api][0]++
-		log.Printf("Incremented status code 200 count for API: %s, new count: %d", api, csh.StatusCodesByAPI[api][0])
-	case 400:
-		csh.StatusCodesByAPI[api][1]++
-		log.Printf("Incremented status code 400 count for API: %s, new count: %d", api, csh.StatusCodesByAPI[api][1])
-	case 404:
-		csh.StatusCodesByAPI[api][2]++
-		log.Printf("Incremented status code 404 count for API: %s, new count: %d", api, csh.StatusCodesByAPI[api][2])
-	// Add additional cases for other status codes as necessary
-	default:
-		log.Printf("Received untracked status code %d for API: %s", statusCode, api)
-	}
 }
 
 func (csh *clientStatsHandler) Stats(operation string) agent.Stats {

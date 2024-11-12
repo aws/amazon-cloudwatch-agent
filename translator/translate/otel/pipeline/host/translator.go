@@ -89,6 +89,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
 		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{"*"})) //not sure if we need to change this??????
+
 	case common.AMPKey:
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
 			translators.Processors.Set(rollupprocessor.NewTranslator())

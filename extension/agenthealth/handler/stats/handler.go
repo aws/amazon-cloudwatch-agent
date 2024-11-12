@@ -21,12 +21,54 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	filter := agent.NewOperationsFilter(cfg.Operations...)
-	clientStats := client.NewHandler(filter)
-	stats := newStatsHandler(logger, filter, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
-	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{clientStats}
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	if statsB {
+		logger.Debug("Stats are enabled, creating handlers")
+
+		// Create the operations filter
+		filter := agent.NewOperationsFilter(cfg.Operations...)
+		logger.Debug("Operations filter created", zap.Strings("operations", cfg.Operations))
+
+		// Create client stats handler
+		clientStats := client.NewHandler(filter)
+		logger.Debug("Client stats handler created")
+
+		// Get status code stats
+		statusCodeStats := provider.GetStatusCodeStats()
+		logger.Debug("Status code stats handler retrieved")
+
+		// Create stats handler
+		stats := newStatsHandler(logger, filter, []agent.StatsProvider{
+			clientStats,
+			provider.GetProcessStats(),
+			provider.GetFlagsStats(),
+			statusCodeStats,
+		})
+		logger.Debug("Stats handler created with providers")
+
+		// Set usage flags
+		agent.UsageFlags().SetValues(cfg.UsageFlags)
+
+		// Return handlers
+		logger.Debug("Returning request and response handlers",
+			zap.Int("requestHandlerCount", 2),
+			zap.Int("responseHandlerCount", 1),
+		)
+		return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	} else {
+		logger.Debug("Stats are disabled, creating only status code stats handler")
+
+		// Get status code stats
+		statusCodeStats := provider.GetStatusCodeStats()
+		logger.Debug("Status code stats handler retrieved")
+
+		// Return empty request handlers and response handlers with status code stats
+		logger.Debug("Returning handlers",
+			zap.Int("requestHandlerCount", 0),
+			zap.Int("responseHandlerCount", 1),
+		)
+		return []awsmiddleware.RequestHandler{}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	}
 }
 
 type statsHandler struct {
@@ -58,9 +100,9 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := awsmiddleware.GetOperationName(ctx)
-	if !sh.filter.IsAllowed(operation) {
-		return
-	}
+	//if !sh.filter.IsAllowed(operation) {
+	//	return
+	//}
 	header := sh.Header(operation)
 	if header != "" {
 		r.Header.Set(headerKeyAgentStats, header)
