@@ -231,11 +231,9 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	return nil
 }
 
-<<<<<<< HEAD
 func setCiJmxFields() error {
 	return nil
 }
-=======
 func setKubernetesKueueFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	setDisableMetricExtraction(kubernetesKueueBasePathKey, conf, cfg)
 
@@ -246,7 +244,6 @@ func setKubernetesKueueFields(conf *confmap.Conf, cfg *awsemfexporter.Config) er
 	return nil
 }
 
->>>>>>> main-kueue
 func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	setDisableMetricExtraction(prometheusBasePathKey, conf, cfg)
 
