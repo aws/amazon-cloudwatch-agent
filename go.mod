@@ -164,6 +164,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/component v0.103.0
 	go.opentelemetry.io/collector/config/configauth v0.103.0
+	go.opentelemetry.io/collector/config/confighttp v0.103.0
 	go.opentelemetry.io/collector/config/configopaque v1.10.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.103.0
 	go.opentelemetry.io/collector/config/configtls v0.103.0
@@ -206,8 +207,6 @@ require (
 	k8s.io/client-go v0.30.0
 	k8s.io/klog/v2 v2.120.1
 )
-
-require go.opentelemetry.io/collector/config/confighttp v0.103.0
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
