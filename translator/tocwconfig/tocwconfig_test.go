@@ -44,7 +44,7 @@ import (
 
 const (
 	prometheusFileNameToken = "prometheusFileName"
-	ecsSdFileNamToken       = "ecsSdFileName"
+	ecsSdFileNameToken      = "ecsSdFileName"
 )
 
 //go:embed sampleConfig/prometheus_config.yaml
@@ -342,10 +342,10 @@ func TestPrometheusConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	tokenReplacements := map[string]string{
 		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
-		ecsSdFileNamToken:       strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	prometheusConfig = strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNamToken+"}", ecsSdFileName)
+	prometheusConfig = strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusConfig), os.ModePerm)
 	require.NoError(t, err)

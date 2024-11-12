@@ -272,7 +272,7 @@ func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structur
 
 		jsonMap, err := json.Marshal(content)
 		if err != nil {
-			c.Log.Errorf("Unalbe to marshal structured log content: %v", err)
+			c.Log.Errorf("Unable to marshal structured log content: %v", err)
 		}
 		message = string(jsonMap)
 	}

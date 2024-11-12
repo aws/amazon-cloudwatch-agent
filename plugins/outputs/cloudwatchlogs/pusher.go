@@ -50,7 +50,7 @@ type pusher struct {
 	doneCallbacks       []func()
 	eventsCh            chan logs.LogEvent
 	nonBlockingEventsCh chan logs.LogEvent
-	bufferredSize       int
+	bufferedSize        int
 	flushTimer          *time.Timer
 	sequenceToken       *string
 	lastValidTime       int64
@@ -103,7 +103,7 @@ func (p *pusher) AddEventNonBlocking(e logs.LogEvent) {
 
 	p.initNonBlockingChOnce.Do(func() {
 		p.nonBlockingEventsCh = make(chan logs.LogEvent, reqEventsLimit*2)
-		p.startNonBlockCh <- struct{}{} // Unblock the select loop to recogonize the channel merge
+		p.startNonBlockCh <- struct{}{} // Unblock the select loop to recognize the channel merge
 	})
 
 	// Drain the channel until new event can be added
@@ -169,7 +169,7 @@ func (p *pusher) start() {
 			}
 
 			size := len(*ce.Message) + eventHeaderSize
-			if p.bufferredSize+size > reqSizeLimit || len(p.events) == reqEventsLimit {
+			if p.bufferedSize+size > reqSizeLimit || len(p.events) == reqEventsLimit {
 				p.send()
 			}
 
@@ -179,7 +179,7 @@ func (p *pusher) start() {
 
 			p.events = append(p.events, ce)
 			p.doneCallbacks = append(p.doneCallbacks, e.Done)
-			p.bufferredSize += size
+			p.bufferedSize += size
 			if p.minT == nil || p.minT.After(et) {
 				p.minT = &et
 			}
@@ -211,7 +211,7 @@ func (p *pusher) reset() {
 		p.doneCallbacks[i] = nil
 	}
 	p.doneCallbacks = p.doneCallbacks[:0]
-	p.bufferredSize = 0
+	p.bufferedSize = 0
 	p.needSort = false
 	p.minT = nil
 	p.maxT = nil
@@ -261,7 +261,7 @@ func (p *pusher) send() {
 			}
 
 			p.Log.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(p.events), p.Group, p.Stream, p.bufferredSize/1024, time.Since(startTime))
-			p.addStats("rawSize", float64(p.bufferredSize))
+			p.addStats("rawSize", float64(p.bufferedSize))
 
 			p.reset()
 			p.lastSentTime = time.Now()

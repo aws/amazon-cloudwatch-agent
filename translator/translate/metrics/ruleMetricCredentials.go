@@ -25,7 +25,7 @@ func (c *MetricsCreds) ApplyRule(input interface{}) (returnKey string, returnVal
 		result[Role_Arn_Key] = agent.Global_Config.Role_arn
 	}
 
-	// Read fromm Json first.
+	// Read from Json first.
 	if val, ok := input.(map[string]interface{})[CredentialsSectionKey]; ok {
 		util.SetWithSameKeyIfFound(val, credsTargetList, result)
 	}
