@@ -124,7 +124,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	//Setup Target Allocator Scrape Post Process Handler
 	taManager.AttachReloadConfigHandler(
 		func(prometheusConfig *config.Config) {
-			level.Info(logger).Log("msg", "ReloadConfigHandler called")
 			relabelScrapeConfigs(prometheusConfig, logger)
 		},
 	)
@@ -343,7 +342,7 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger log.Logger) {
 			},
 		}
 
-		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
+		level.Debug(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
 
 		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
 		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)

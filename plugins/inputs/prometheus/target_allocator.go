@@ -36,14 +36,15 @@ const DEFAULT_TLS_RELOAD_INTERVAL_SECONDS = 10 * time.Second
 
 type TargetAllocatorManager struct {
 	enabled             bool
-	manager             *tamanager.Manager
-	config              *otelpromreceiver.Config
 	host                component.Host
-	sm                  *scrape.Manager
-	dm                  *discovery.Manager
 	shutdownCh          chan struct{}
 	taReadyCh           chan struct{}
 	reloadConfigHandler func(config *promconfig.Config)
+	manager             *tamanager.Manager
+	config              *otelpromreceiver.Config
+	sm                  *scrape.Manager
+	dm                  *discovery.Manager
+	logger              log.Logger
 }
 
 func isPodNameAvailable() bool {
@@ -76,10 +77,10 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 }
 
 // Adapter from go-kit/log to zap.Logger
-func createLogger(level *promlog.AllowedLevel) *zap.Logger {
+func createLogger(level *promlog.AllowedLevel) (*zap.Logger, error) {
 	zapLevel, err := zapcore.ParseLevel(level.String())
 	if err != nil {
-		fmt.Printf("Error parsing level: %v. Defaulting to info.", err)
+		err = fmt.Errorf("Error parsing level: %v. Defaulting to info.", err)
 		zapLevel = zapcore.InfoLevel
 	}
 	// Create a base zap logger (you can customize it as needed)
@@ -90,7 +91,7 @@ func createLogger(level *promlog.AllowedLevel) *zap.Logger {
 	)
 	// Create the zap logger
 	zapLogger := zap.New(zapCore)
-	return zapLogger
+	return zapLogger, err
 }
 
 func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *promlog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
@@ -104,6 +105,7 @@ func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *
 		shutdownCh:          make(chan struct{}, 1),
 		taReadyCh:           make(chan struct{}, 1),
 		reloadConfigHandler: nil,
+		logger:              logger,
 	}
 	err := tam.loadConfig(filename)
 	if err != nil {
@@ -120,10 +122,14 @@ func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *
 	return &tam
 }
 func (tam *TargetAllocatorManager) loadManager(logLevel *promlog.AllowedLevel) {
+	logger, err := createLogger(logLevel)
+	if err != nil {
+		level.Error(tam.logger).Log("msg", "Error creating logger", "err", err)
+	}
 	receiverSettings := receiver.Settings{
 		ID: component.MustNewID(strings.ReplaceAll(tam.config.TargetAllocator.CollectorID, "-", "_")),
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         createLogger(logLevel),
+			Logger:         logger,
 			TracerProvider: nil,
 			MeterProvider:  nil,
 			MetricsLevel:   0,
@@ -155,7 +161,7 @@ func (tam *TargetAllocatorManager) Run() error {
 	}
 	err = tam.reloadConfigTicker()
 	if err != nil {
-		close(tam.shutdownCh)
+		tam.manager.Shutdown()
 		return err
 	}
 	// go ahead and let dependencies know TA is ready
@@ -172,13 +178,14 @@ func (tam *TargetAllocatorManager) AttachReloadConfigHandler(handler func(config
 	tam.reloadConfigHandler = handler
 }
 func (tam *TargetAllocatorManager) reloadConfigTicker() error {
+
 	if tam.config.TargetAllocator == nil {
-		return fmt.Errorf("target Allocator is not configured properly")
+		return level.Error(tam.logger).Log("msg", "target Allocator is not configured properly")
 	}
 	if tam.reloadConfigHandler == nil {
-		return fmt.Errorf("target allocator reload config handler is not configured properly")
+		return level.Error(tam.logger).Log("msg", "target allocator reload config handler is not configured properly")
 	}
-	fmt.Printf("Starting Target Allocator Reload Config Ticker with %fs interval\n", tam.config.TargetAllocator.Interval.Seconds())
+	level.Info(tam.logger).Log("msg", "Starting Target Allocator Reload Config Ticker", "interval", tam.config.TargetAllocator.Interval.Seconds())
 	ticker := time.NewTicker(tam.config.TargetAllocator.Interval)
 	go func() {
 		for {
@@ -188,7 +195,7 @@ func (tam *TargetAllocatorManager) reloadConfigTicker() error {
 			case <-tam.shutdownCh:
 				ticker.Stop()
 				// Stop the ticker and exit when stop is signaled
-				fmt.Printf("Stopping Target Allocator Reload Config Ticker \n")
+				level.Info(tam.logger).Log("msg", "Stopping Target Allocator Reload Config Ticker")
 				return
 			}
 		}
