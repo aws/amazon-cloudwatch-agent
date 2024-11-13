@@ -92,6 +92,17 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	// Store updated stats back in the map
 	h.statsByOperation.Store(operation, stats)
 	log.Printf("Updated stats for operation '%s': Success=%d, Failures=%d", operation, stats[0], stats[1])
+
+	// Log the entire status code map
+	log.Println("Complete status code map:")
+	h.statsByOperation.Range(func(key, value interface{}) bool {
+		log.Print("Printing all stats by operations map")
+
+		operation := key.(string)
+		stats := value.(*[2]int)
+		log.Printf("Operation: %s, Success=%d, Failures=%d", operation, stats[0], stats[1])
+		return true
+	})
 }
 
 // GetStats retrieves the success and failure counts for a specific operation.
