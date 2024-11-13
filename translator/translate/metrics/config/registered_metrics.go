@@ -57,4 +57,5 @@ var DisableWinPerfCounters = map[string]bool{
 	"nvidia_smi": true,
 	"jmx":        true,
 	"otlp":       true,
+	"prometheus": true,
 }

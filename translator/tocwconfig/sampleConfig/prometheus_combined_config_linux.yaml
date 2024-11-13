@@ -60,7 +60,7 @@ exporters:
         output_destination: cloudwatch
         profile: ""
         proxy_address: ""
-        region: us-east-1
+        region: us-west-2
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
@@ -68,6 +68,51 @@ exporters:
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
+    prometheusremotewrite/amp:
+        add_metric_suffixes: true
+        auth:
+            authenticator: sigv4auth
+        compression: ""
+        disable_keep_alives: false
+        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+        export_created_metric:
+            enabled: false
+        http2_ping_timeout: 0s
+        http2_read_idle_timeout: 0s
+        max_batch_size_bytes: 3000000
+        namespace: ""
+        proxy_url: ""
+        read_buffer_size: 0
+        remote_write_queue:
+            enabled: true
+            num_consumers: 5
+            queue_size: 10000
+        resource_to_telemetry_conversion:
+            clear_after_copy: true
+            enabled: true
+        retry_on_failure:
+            enabled: true
+            initial_interval: 50ms
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        send_metadata: false
+        target_info:
+            enabled: true
+        timeout: 5s
+        tls:
+            ca_file: ""
+            cert_file: ""
+            include_system_ca_certs_pool: false
+            insecure: false
+            insecure_skip_verify: false
+            key_file: ""
+            max_version: ""
+            min_version: ""
+            reload_interval: 0s
+            server_name_override: ""
+        write_buffer_size: 524288
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -77,16 +122,59 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    sigv4auth:
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
     entitystore:
         mode: ec2
-        region: us-east-1
+        region: us-west-2
 processors:
+    batch/prometheus/amp:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
     batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 30s
 receivers:
+    prometheus:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 5m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText0.0.4
+                scrape_timeout: 5s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  file_sd_configs:
+                    - files:
+                        - {ecsSdFileName}
+                      refresh_interval: 5m
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: cwagent-ecs-file-sd-config
+                  metrics_path: /metrics
+                  sample_limit: 10000
+                  scheme: http
+                  scrape_interval: 5m
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText0.0.4
+                  scrape_timeout: 5s
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
     telegraf_prometheus:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -94,8 +182,16 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - sigv4auth
         - entitystore
     pipelines:
+        metrics/prometheus/amp:
+            exporters:
+                - prometheusremotewrite/amp
+            processors:
+                - batch/prometheus/amp
+            receivers:
+                - prometheus
         metrics/prometheus/cloudwatchlogs:
             exporters:
                 - awsemf/prometheus
@@ -110,6 +206,8 @@ service:
             disable_stacktrace: false
             encoding: console
             level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2
