@@ -66,28 +66,24 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 		log.Printf("Processing response for operation: %s", operation)
 	}
 
-	// Extract the status code
+	operation = GetShortOperationName(operation)
 	statusCode := r.StatusCode
 	log.Printf("Received status code: %d for operation: %s", statusCode, operation)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	// Load or initialize stats for the operation
-	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{}) // Adjusted to hold counts for multiple status codes
+	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{})
 	if !loaded {
 		log.Printf("Initializing stats for operation: %s", operation)
 	}
 	stats := value.(*[5]int)
 
-	// Update counts based on specific status codes
 	h.updateStatusCodeCount(stats, statusCode, operation)
 
-	// Store updated stats back in the map
 	h.statsByOperation.Store(operation, stats)
 	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 
-	// Log the entire status code map
 	log.Println("Complete status code map:")
 	h.statsByOperation.Range(func(key, value interface{}) bool {
 		log.Print("Printing all stats by operations map")
@@ -119,6 +115,37 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 		log.Printf("Incremented 429 count for operation: %s. New 429=%d", operation, stats[4])
 	default:
 		log.Printf("Received an untracked status code %d for operation: %s", statusCode, operation)
+	}
+}
+
+func GetShortOperationName(operation string) string {
+	switch operation {
+	case "PutMetricData":
+		return "pmd"
+	case "DescribeInstances":
+		return "di"
+	case "DescribeTags":
+		return "dt"
+	case "DescribeVolumes":
+		return "dv"
+	case "DescribeContainerInstances":
+		return "dci"
+	case "DescribeServices":
+		return "ds"
+	case "DescribeTaskDefinition":
+		return "dtd"
+	case "ListServices":
+		return "ls"
+	case "ListTasks":
+		return "lt"
+	case "CreateLogGroup":
+		return "clg"
+	case "CreateLogStream":
+		return "cls"
+	case "AssumeRole":
+		return "sts"
+	default:
+		return operation
 	}
 }
 
