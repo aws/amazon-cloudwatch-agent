@@ -5,11 +5,15 @@ package ec2tagger
 
 import (
 	"context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+
 	"hash/fnv"
 	"log"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -64,7 +68,7 @@ type Tagger struct {
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
-
+	config.MiddlewareID = &agenthealth.StatusCodeID
 	p := &Tagger{
 		Config:           config,
 		logger:           logger,
@@ -349,25 +353,25 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		}
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
-		//if ec2Client, ok := t.ec2API.(*ec2.EC2); ok {
-		//	t.logger.Info("Inside ec2tagger ec2api logger statement")
-		//	log.Print("Inside ec2tagger ec2api - log printf statement")
-		//
-		//	if t.Config.MiddlewareID == nil {
-		//		t.logger.Info("Inside ec2tagger middleware default")
-		//		log.Print("Inside ec2tagger ec2api - log printf statement")
-		//
-		//		TypeStr, _ = component.NewType("agenthealth")
-		//		defaultMiddlewareID := component.NewIDWithName(TypeStr, component.DataTypeMetrics.String())
-		//		t.Config.MiddlewareID = &defaultMiddlewareID
-		//		t.logger.Info("ec2tagger: MiddlewareID was nil, initialized to default value.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
-		//	}
-		//
-		//	t.logger.Info("ec2tagger: Configuring middleware for EC2 client.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
-		//	log.Print("Inside ec2tagger ec2api - log printf statement")
-		//	log.Print(*t.Config.MiddlewareID)
-		//awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&ec2Client.Handlers)) //Change this so that we confiugure new tegger to have the status code middware id !!!!!!!!!!!??????
-		//}
+		if ec2Client, ok := t.ec2API.(*ec2.EC2); ok {
+			t.logger.Info("Inside ec2tagger ec2api logger statement")
+			log.Print("Inside ec2tagger ec2api - log printf statement")
+
+			if t.Config.MiddlewareID == nil {
+				t.logger.Info("Inside ec2tagger middleware default")
+				log.Print("Inside ec2tagger ec2api - log printf statement")
+
+				TypeStr, _ = component.NewType("agenthealth")
+				defaultMiddlewareID := component.NewIDWithName(TypeStr, component.DataTypeMetrics.String())
+				t.Config.MiddlewareID = &defaultMiddlewareID
+				log.Println("ec2tagger: MiddlewareID was nil, initialized to default value.", t.Config.MiddlewareID.Name())
+			}
+
+			t.logger.Info("ec2tagger: Configuring middleware for EC2 client.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
+			log.Print("Inside ec2tagger ec2api - log printf statement")
+			log.Print(*t.Config.MiddlewareID)
+			awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&ec2Client.Handlers)) //Change this so that we confiugure new tegger to have the status code middware id !!!!!!!!!!!??????
+		}
 
 		go func() {
 			t.logger.Info("ec2tagger: Starting initial retrieval of tags and volumes.")
