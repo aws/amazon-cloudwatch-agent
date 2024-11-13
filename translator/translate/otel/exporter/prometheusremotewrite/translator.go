@@ -41,15 +41,15 @@ func (t *translator) ID() component.ID {
 // Translate creates an exporter config based on the fields in the
 // amp or prometheus section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(AMPSectionKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: AMPSectionKey}
+	if conf == nil || !(conf.IsSet(AMPSectionKey) && conf.IsSet(common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: AMPSectionKey + " or " + common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*prometheusremotewriteexporter.Config)
 	cfg.ClientConfig.Auth = &configauth.Authentication{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))}
 	cfg.ResourceToTelemetrySettings = resourcetotelemetry.Settings{Enabled: true, ClearAfterCopy: true}
-	if value, ok := common.GetString(conf, common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)); ok {
-		ampEndpoint := "https://aps-workspaces." + agent.Global_Config.Region + ".amazonaws.com/workspaces/" + value + "/api/v1/remote_write"
-		cfg.ClientConfig.Endpoint = ampEndpoint
-	}
+	// ignoring bool return value since we are checking with isSet beforehand
+	value, _ := common.GetString(conf, common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))
+	ampEndpoint := "https://aps-workspaces." + agent.Global_Config.Region + ".amazonaws.com/workspaces/" + value + "/api/v1/remote_write"
+	cfg.ClientConfig.Endpoint = ampEndpoint
 	return cfg, nil
 }

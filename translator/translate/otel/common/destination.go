@@ -26,3 +26,7 @@ func GetMetricsDestinations(conf *confmap.Conf) []string {
 	}
 	return destinations
 }
+
+func GetLogsDestinations() []string {
+	return []string{CloudWatchLogsKey}
+}
