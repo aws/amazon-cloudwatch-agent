@@ -283,24 +283,24 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 // Start acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
 // It will be called when OTel is enabling each processor
 func (t *Tagger) Start(ctx context.Context, host component.Host) error {
-	t.logger.Debug("ec2tagger: Starting the EC2 tagger.")
+	t.logger.Info("ec2tagger: Starting the EC2 tagger.")
 	log.Printf("start function called with host: %s\n", host)
 
 	t.shutdownC = make(chan bool)
 	t.ec2TagCache = map[string]string{}
 
 	// Derive EC2 Metadata
-	t.logger.Debug("ec2tagger: Deriving EC2 metadata from IMDS.")
+	t.logger.Info("ec2tagger: Deriving EC2 metadata from IMDS.")
 	if err := t.deriveEC2MetadataFromIMDS(ctx); err != nil {
 		t.logger.Error("ec2tagger: Failed to derive EC2 metadata from IMDS.", zap.Error(err))
 		return err
 	}
-	t.logger.Debug("ec2tagger: Successfully derived EC2 metadata from IMDS.",
+	t.logger.Info("ec2tagger: Successfully derived EC2 metadata from IMDS.",
 		zap.String("instanceId", t.ec2MetadataRespond.instanceId),
 		zap.String("region", t.ec2MetadataRespond.region))
 
 	// Set up tag filters
-	t.logger.Debug("ec2tagger: Setting up tag filters.")
+	t.logger.Info("ec2tagger: Setting up tag filters.")
 	t.tagFilters = []*ec2.Filter{
 		{
 			Name:   aws.String("resource-type"),
@@ -314,12 +314,12 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 
 	useAllTags := len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*"
 	if !useAllTags && len(t.EC2InstanceTagKeys) > 0 {
-		t.logger.Debug("ec2tagger: Processing specified EC2InstanceTagKeys.",
+		t.logger.Info("ec2tagger: Processing specified EC2InstanceTagKeys.",
 			zap.Strings("keys", t.EC2InstanceTagKeys))
 
 		for i, key := range t.EC2InstanceTagKeys {
 			if cwDimensionASG == key {
-				t.logger.Debug("ec2tagger: Replacing 'AutoScalingGroupName' with the correct EC2 tag name.")
+				t.logger.Info("ec2tagger: Replacing 'AutoScalingGroupName' with the correct EC2 tag name.")
 				t.EC2InstanceTagKeys[i] = Ec2InstanceTagKeyASG
 			}
 		}
@@ -329,9 +329,13 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			Values: aws.StringSlice(t.EC2InstanceTagKeys),
 		})
 	}
+	log.Print("Outside ec2tagger instance key")
+	t.logger.Info("Outside ec2tagger instance key - t.logger statement ")
 
 	if len(t.EC2InstanceTagKeys) > 0 || len(t.EBSDeviceKeys) > 0 {
-		t.logger.Debug("ec2tagger: Configuring EC2 API client.",
+		log.Print("Inside ec2tagger instance key")
+
+		t.logger.Info("ec2tagger: Configuring EC2 API client.",
 			zap.String("region", t.ec2MetadataRespond.region),
 			zap.String("roleARN", t.RoleARN))
 
@@ -347,14 +351,22 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
 		if ec2Client, ok := t.ec2API.(*ec2.EC2); ok {
+			t.logger.Info("Inside ec2tagger ec2api logger statement")
+			log.Print("Inside ec2tagger ec2api - log printf statement")
+
 			if t.Config.MiddlewareID == nil {
+				t.logger.Info("Inside ec2tagger middleware default")
+				log.Print("Inside ec2tagger ec2api - log printf statement")
+
 				TypeStr, _ = component.NewType("agenthealth")
 				defaultMiddlewareID := component.NewIDWithName(TypeStr, component.DataTypeMetrics.String())
 				t.Config.MiddlewareID = &defaultMiddlewareID
-				t.logger.Debug("ec2tagger: MiddlewareID was nil, initialized to default value.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
+				t.logger.Info("ec2tagger: MiddlewareID was nil, initialized to default value.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
 			}
 
-			t.logger.Debug("ec2tagger: Configuring middleware for EC2 client.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
+			t.logger.Info("ec2tagger: Configuring middleware for EC2 client.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
+			log.Print("Inside ec2tagger ec2api - log printf statement")
+			log.Print(*t.Config.MiddlewareID)
 			awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&ec2Client.Handlers))
 		}
 
@@ -371,7 +383,7 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		t.setStarted()
 	}
 
-	t.logger.Debug("ec2tagger: EC2 tagger has started successfully.")
+	t.logger.Info("ec2tagger: EC2 tagger has started successfully.")
 	return nil
 }
 

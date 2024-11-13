@@ -5,6 +5,7 @@ package stats
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 
@@ -23,19 +24,19 @@ const (
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	if statsB {
-		logger.Debug("Stats are enabled, creating handlers")
+		log.Println("Stats are enabled, creating handlers")
 
 		// Create the operations filter
 		filter := agent.NewOperationsFilter(cfg.Operations...)
-		logger.Debug("Operations filter created", zap.Strings("operations", cfg.Operations))
+		log.Println("Operations filter created, operations:", cfg.Operations)
 
 		// Create client stats handler
 		clientStats := client.NewHandler(filter)
-		logger.Debug("Client stats handler created")
+		log.Println("Client stats handler created")
 
 		// Get status code stats
 		statusCodeStats := provider.GetStatusCodeStats()
-		logger.Debug("Status code stats handler retrieved")
+		log.Println("Status code stats handler retrieved")
 
 		// Create stats handler
 		stats := newStatsHandler(logger, filter, []agent.StatsProvider{
@@ -44,29 +45,23 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsm
 			provider.GetFlagsStats(),
 			statusCodeStats,
 		})
-		logger.Debug("Stats handler created with providers")
+		log.Println("Stats handler created with providers")
 
 		// Set usage flags
 		agent.UsageFlags().SetValues(cfg.UsageFlags)
 
 		// Return handlers
-		logger.Debug("Returning request and response handlers",
-			zap.Int("requestHandlerCount", 2),
-			zap.Int("responseHandlerCount", 1),
-		)
+		log.Println("Returning request and response handlers, requestHandlerCount: 2, responseHandlerCount: 1")
 		return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	} else {
-		logger.Debug("Stats are disabled, creating only status code stats handler")
+		log.Println("Stats are disabled, creating only status code stats handler")
 
 		// Get status code stats
 		statusCodeStats := provider.GetStatusCodeStats()
-		logger.Debug("Status code stats handler retrieved")
+		log.Println("Status code stats handler retrieved")
 
 		// Return empty request handlers and response handlers with status code stats
-		logger.Debug("Returning handlers",
-			zap.Int("requestHandlerCount", 0),
-			zap.Int("responseHandlerCount", 1),
-		)
+		log.Println("Returning handlers, requestHandlerCount: 0, responseHandlerCount: 1")
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
 }
