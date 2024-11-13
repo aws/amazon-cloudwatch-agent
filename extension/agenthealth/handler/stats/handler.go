@@ -104,6 +104,7 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	log.Println("Generating header for operation:", operation)
 	header := sh.Header(operation)
 
+	fmt.Println("This is the header", header)
 	// If a valid header is generated, set it in the request
 	if header != "" {
 		log.Println("Setting header for operation:", operation)
