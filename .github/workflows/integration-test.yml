@@ -840,6 +840,7 @@ jobs:
       - name: Cache if success
         id: eks-ec2-integration-test
         uses: actions/cache@v3
+        if: false
         with:
           path: go.mod
           key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8s_version }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
