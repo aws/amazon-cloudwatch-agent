@@ -121,8 +121,7 @@ func (sh *statsHandler) Header(operation string) string {
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
 		log.Println("Merging stats from provider:", fmt.Sprintf("%T", p))
-		stats.Merge(p.Stats("PutMetricData"))
-		stats.Merge(p.Stats("DescribeTags"))
+		stats.Merge(p.Stats(operation))
 
 	}
 

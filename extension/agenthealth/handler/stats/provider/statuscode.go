@@ -127,17 +127,21 @@ func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
 
 // Stats implements the `Stats` method required by the `agent.StatsProvider` interface.
 func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
-	value, ok := h.statsByOperation.Load(operation)
-	if !ok {
-		return agent.Stats{
-			StatusCodes: map[string][2]int{},
-		}
-	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
-	stats := value.(*[2]int)
+	// Initialize the map to store status codes for all operations
+	statusCodeMap := make(map[string][2]int)
+
+	// Iterate over all operations and collect their status codes
+	h.statsByOperation.Range(func(key, value interface{}) bool {
+		operation := key.(string)
+		stats := value.(*[2]int)
+		statusCodeMap[operation] = [2]int{stats[0], stats[1]}
+		return true
+	})
+
 	return agent.Stats{
-		StatusCodes: map[string][2]int{
-			operation: {stats[0], stats[1]},
-		},
+		StatusCodes: statusCodeMap,
 	}
 }
