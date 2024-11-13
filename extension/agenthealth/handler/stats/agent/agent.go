@@ -163,14 +163,27 @@ type StatsConfig struct {
 type StatusCodeConfig struct {
 	// Operations are the allowed operation names to gather stats for.
 	Operations []string `json:"operations,omitempty"`
+}
 
-	// AllowedStatusCodes are the allowed status codes to gather stats for.
-	AllowedStatusCodes []int `json:"allowedStatusCodes,omitempty"`
+var StatusCodeOperations = []string{
+	"DescribeInstances",
+	"DescribeTags",
+	"DescribeVolumes",
+	"DescribeContainerInstances",
+	"DescribeServices",
+	"DescribeTaskDefinition",
+	"ListServices",
+	"ListTasks",
+	"CreateLogGroup",
+	"CreateLogStream",
 }
 
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
-func NewStatusCodeOperationsFilter(cfg StatusCodeConfig) OperationsFilter {
-	allowed := collections.NewSet[string](cfg.Operations...)
+func NewStatusCodeOperationsFilter() OperationsFilter {
+	//Need to add more operations !!!!!!!??????
+
+	allowed := collections.NewSet[string](StatusCodeOperations...)
+
 	return OperationsFilter{
 		operations: allowed,
 		allowAll:   allowed.Contains(AllowAllOperations),

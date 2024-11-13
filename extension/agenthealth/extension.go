@@ -26,21 +26,9 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	var responseHandlers []awsmiddleware.ResponseHandler
 	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
 
-	// Log the initialization
-	ah.logger.Debug("Initialized default request handler with user agent handler")
-
 	if ah.cfg.IsUsageDataEnabled {
-		// Log usage data configuration
-		ah.logger.Debug("Usage data is enabled, creating stats handlers")
-
-		// Create stats handlers
-		req, res := stats.NewHandlers(ah.logger, ah.cfg.Stats, true)
-
-		// Add stats handlers
-		ah.logger.Debug("Appending request handlers", zap.Int("count", len(req)))
+		req, res := stats.NewHandlers(ah.logger, ah.cfg)
 		requestHandlers = append(requestHandlers, req...)
-
-		ah.logger.Debug("Appending response handlers", zap.Int("count", len(res)))
 		responseHandlers = append(responseHandlers, res...)
 	} else {
 		// Log usage data configuration is disabled

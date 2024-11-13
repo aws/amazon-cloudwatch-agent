@@ -26,12 +26,14 @@ type StatusCodeHandler struct {
 	statsByOperation sync.Map
 	mu               sync.Mutex
 	resetTimer       *time.Timer
+	filter           agent.OperationsFilter
 }
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
-func GetStatusCodeStats() *StatusCodeHandler {
+func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
 	statusCodeStatsOnce.Do(func() {
 		handler := &StatusCodeHandler{}
+		handler.filter = filter
 		handler.startResetTimer()
 		statusCodeSingleton = handler
 	})
@@ -62,6 +64,8 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	operation := awsmiddleware.GetOperationName(ctx)
 	if operation == "" {
 		log.Println("No operation name found in the context")
+	} else if !h.filter.IsAllowed(operation) {
+		log.Printf("Operation %s is not allowed", operation)
 	} else {
 		log.Printf("Processing response for operation: %s", operation)
 	}

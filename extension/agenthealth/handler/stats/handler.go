@@ -6,6 +6,7 @@ package stats
 import (
 	"context"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"log"
 	"net/http"
 	"sync"
@@ -23,18 +24,17 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	if statsB {
+func NewHandlers(logger *zap.Logger, cfg agenthealth.Config) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
+	if !cfg.StatusCodeOnly {
 		log.Println("Stats are enabled, creating handlers")
-
-		// Create the operations filter
-		filter := agent.NewOperationsFilter(cfg.Operations...)
-		log.Println("Operations filter created, operations:", cfg.Operations)
+		filter := agent.NewOperationsFilter(cfg.Stats.Operations...)
+		log.Println("Operations filter created, operations:", cfg.Stats.Operations)
 
 		clientStats := client.NewHandler(filter)
 		log.Println("Client stats handler created")
 
-		statusCodeStats := provider.GetStatusCodeStats()
+		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		log.Println("Status code stats handler retrieved")
 
 		stats := newStatsHandler(logger, filter, []agent.StatsProvider{
@@ -46,15 +46,14 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsm
 		log.Println("Stats handler created with providers")
 
 		// Set usage flags
-		agent.UsageFlags().SetValues(cfg.UsageFlags)
+		agent.UsageFlags().SetValues(cfg.Stats.UsageFlags)
 
 		// Return handlers
 		log.Println("Returning request and response handlers, requestHandlerCount: 2, responseHandlerCount: 1")
 		return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	} else {
 		log.Println("Stats are disabled, creating only status code stats handler")
-
-		statusCodeStats := provider.GetStatusCodeStats()
+		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		log.Println("Status code stats handler retrieved")
 
 		log.Println("Returning handlers, requestHandlerCount: 0, responseHandlerCount: 1")

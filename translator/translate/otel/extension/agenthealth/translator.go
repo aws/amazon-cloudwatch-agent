@@ -4,15 +4,15 @@
 package agenthealth
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -36,9 +36,20 @@ type translator struct {
 	operations         []string
 	isUsageDataEnabled bool
 	factory            extension.Factory
+	statuscodeonly     bool
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
+
+func NewTranslatorWithStatusCode(name component.DataType, operations []string, statuscodeonly bool) common.Translator[component.Config] {
+	return &translator{
+		name:               name.String(),
+		operations:         operations,
+		factory:            agenthealth.NewFactory(),
+		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+		statuscodeonly:     statuscodeonly,
+	}
+}
 
 func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
 	return &translator{
@@ -46,6 +57,7 @@ func NewTranslator(name component.DataType, operations []string) common.Translat
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+		statuscodeonly:     false,
 	}
 }
 
@@ -57,9 +69,16 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*agenthealth.Config)
 	cfg.IsUsageDataEnabled = t.isUsageDataEnabled
-	//if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
-	//	cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
-	//} // for now we will comment this ???????c
+	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
+		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
+	}
+	cfg.StatusCodeOnly = t.statuscodeonly
+	if t.statuscodeonly {
+		cfg.StatusCode = agent.StatusCodeConfig{
+			Operations: agent.StatusCodeOperations,
+		}
+		return cfg, nil
+	}
 	cfg.Stats = agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
@@ -67,5 +86,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			agent.FlagRegionType: translateagent.Global_Config.RegionType,
 		},
 	}
+	cfg.StatusCode = agent.StatusCodeConfig{
+		Operations: agent.StatusCodeOperations,
+	}
+
 	return cfg, nil
 }
