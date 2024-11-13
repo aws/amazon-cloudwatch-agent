@@ -74,9 +74,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg.StatusCodeOnly = t.statuscodeonly
 	if t.statuscodeonly {
-		cfg.StatusCode = agent.StatusCodeConfig{
-			Operations: agent.StatusCodeOperations,
-		}
+		//cfg.StatusCode = agent.StatusCodeConfig{
+		//	Operations: agent.StatusCodeOperations,
+		//}
 		return cfg, nil
 	}
 	cfg.Stats = agent.StatsConfig{
@@ -86,9 +86,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			agent.FlagRegionType: translateagent.Global_Config.RegionType,
 		},
 	}
-	cfg.StatusCode = agent.StatusCodeConfig{
-		Operations: agent.StatusCodeOperations,
-	}
+	//cfg.StatusCode = agent.StatusCodeConfig{
+	//	Operations: agent.StatusCodeOperations,
+	//} //Do we need to add anything to otel config?
 
 	return cfg, nil
 }
