@@ -5,6 +5,7 @@ package stats
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -30,15 +31,12 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsm
 		filter := agent.NewOperationsFilter(cfg.Operations...)
 		log.Println("Operations filter created, operations:", cfg.Operations)
 
-		// Create client stats handler
 		clientStats := client.NewHandler(filter)
 		log.Println("Client stats handler created")
 
-		// Get status code stats
 		statusCodeStats := provider.GetStatusCodeStats()
 		log.Println("Status code stats handler retrieved")
 
-		// Create stats handler
 		stats := newStatsHandler(logger, filter, []agent.StatsProvider{
 			clientStats,
 			provider.GetProcessStats(),
@@ -56,11 +54,9 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statsB bool) ([]awsm
 	} else {
 		log.Println("Stats are disabled, creating only status code stats handler")
 
-		// Get status code stats
 		statusCodeStats := provider.GetStatusCodeStats()
 		log.Println("Status code stats handler retrieved")
 
-		// Return empty request handlers and response handlers with status code stats
 		log.Println("Returning handlers, requestHandlerCount: 0, responseHandlerCount: 1")
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
@@ -105,13 +101,24 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 }
 
 func (sh *statsHandler) Header(operation string) string {
+	log.Println("Generating header for operation:", operation)
+
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
-		stats.Merge(p.Stats(operation))
+		log.Println("Merging stats from provider:", fmt.Sprintf("%T", p))
+		stats.Merge(p.Stats("PutMetricData"))
+		stats.Merge(p.Stats("DescribeTags"))
+
 	}
+
+	log.Println("Stats after merging all providers:", stats)
+
 	header, err := stats.Marshal()
 	if err != nil {
-		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
+		log.Println("Failed to serialize agent stats:", err)
+		return ""
 	}
+
+	log.Println("Successfully generated header for operation:", operation)
 	return header
 }

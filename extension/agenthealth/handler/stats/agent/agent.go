@@ -5,6 +5,7 @@ package agent
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
@@ -82,19 +83,36 @@ func (s *Stats) Merge(other Stats) {
 		s.EntityRejected = other.EntityRejected
 	}
 	if other.StatusCodes != nil {
+		log.Println("Merging status codes from another source.")
+
 		if s.StatusCodes == nil {
+			log.Println("Initializing status codes map as it was nil.")
 			s.StatusCodes = make(map[string][2]int)
 		}
+
 		for key, value := range other.StatusCodes {
+			log.Printf("Processing key: %s with value: Success=%d, Failures=%d", key, value[0], value[1])
+
 			if existing, ok := s.StatusCodes[key]; ok {
+				log.Printf(
+					"Key %s already exists. Existing: Success=%d, Failures=%d. Merging with: Success=%d, Failures=%d",
+					key, existing[0], existing[1], value[0], value[1],
+				)
 				// Merge the existing value with the new one
 				s.StatusCodes[key] = [2]int{existing[0] + value[0], existing[1] + value[1]}
+				log.Printf(
+					"Updated key %s: Success=%d, Failures=%d",
+					key, s.StatusCodes[key][0], s.StatusCodes[key][1],
+				)
 			} else {
 				// Add the new value if the key doesn't exist
+				log.Printf("Key %s does not exist. Adding it with: Success=%d, Failures=%d", key, value[0], value[1])
 				s.StatusCodes[key] = value
 			}
 		}
+		log.Println("Merging of status codes completed.")
 	}
+
 }
 
 func (s *Stats) Marshal() (string, error) {
