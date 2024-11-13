@@ -68,8 +68,10 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	operation := awsmiddleware.GetOperationName(ctx)
 	if operation == "" {
 		log.Println("No operation name found in the context")
+		return
 	} else if !h.filter.IsAllowed(operation) {
 		log.Printf("Operation %s is not allowed", operation)
+		return
 	} else {
 		log.Printf("Processing response for operation: %s", operation)
 	}
