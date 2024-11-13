@@ -90,13 +90,27 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 }
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
+	// Extract the operation name from the context
 	operation := awsmiddleware.GetOperationName(ctx)
-	//if !sh.filter.IsAllowed(operation) {
-	//	return
-	//}
+	log.Println("Handling request for operation:", operation)
+
+	// If filtering is enabled, check if the operation is allowed (commented out for now)
+	// if !sh.filter.IsAllowed(operation) {
+	// 	log.Println("Operation not allowed:", operation)
+	// 	return
+	// }
+
+	// Generate the header for the operation
+	log.Println("Generating header for operation:", operation)
 	header := sh.Header(operation)
+
+	// If a valid header is generated, set it in the request
 	if header != "" {
+		log.Println("Setting header for operation:", operation)
 		r.Header.Set(headerKeyAgentStats, header)
+		log.Println("Header set successfully for operation:", operation)
+	} else {
+		log.Println("No header generated for operation:", operation)
 	}
 }
 
