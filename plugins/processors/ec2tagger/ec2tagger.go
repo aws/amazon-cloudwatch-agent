@@ -5,8 +5,6 @@ package ec2tagger
 
 import (
 	"context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
-
 	"hash/fnv"
 	"log"
 	"os"
@@ -68,7 +66,6 @@ type Tagger struct {
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
-	config.MiddlewareID = &agenthealth.StatusCodeID
 	p := &Tagger{
 		Config:           config,
 		logger:           logger,
