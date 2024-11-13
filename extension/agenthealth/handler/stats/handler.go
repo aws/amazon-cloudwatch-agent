@@ -6,7 +6,6 @@ package stats
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"log"
 	"net/http"
 	"sync"
@@ -24,12 +23,12 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agenthealth.Config) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-	if !cfg.StatusCodeOnly {
+	if !statuscodeonly {
 		log.Println("Stats are enabled, creating handlers")
-		filter := agent.NewOperationsFilter(cfg.Stats.Operations...)
-		log.Println("Operations filter created, operations:", cfg.Stats.Operations)
+		filter := agent.NewOperationsFilter(cfg.Operations...)
+		log.Println("Operations filter created, operations:", cfg.Operations)
 
 		clientStats := client.NewHandler(filter)
 		log.Println("Client stats handler created")
@@ -46,7 +45,7 @@ func NewHandlers(logger *zap.Logger, cfg agenthealth.Config) ([]awsmiddleware.Re
 		log.Println("Stats handler created with providers")
 
 		// Set usage flags
-		agent.UsageFlags().SetValues(cfg.Stats.UsageFlags)
+		agent.UsageFlags().SetValues(cfg.UsageFlags)
 
 		// Return handlers
 		log.Println("Returning request and response handlers, requestHandlerCount: 2, responseHandlerCount: 1")

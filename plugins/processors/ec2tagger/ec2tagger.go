@@ -5,12 +5,13 @@ package ec2tagger
 
 import (
 	"context"
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"hash/fnv"
 	"log"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
