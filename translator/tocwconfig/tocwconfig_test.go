@@ -355,7 +355,30 @@ func TestPrometheusConfig(t *testing.T) {
 	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 }
+func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus_ta_config.yaml")
+	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
+	expectedEnvVars := map[string]string{}
+	tokenReplacements := map[string]string{
+		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+	}
+	// Load prometheus config and replace ecs sd results file name token with temp file name
+	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
+	require.NoError(t, err)
+	// In the following checks, we first load the json and replace tokens with the temp files
+	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
+	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 
+}
 func TestOtelPrometheusConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
