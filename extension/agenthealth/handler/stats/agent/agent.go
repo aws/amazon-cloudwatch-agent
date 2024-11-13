@@ -31,7 +31,7 @@ type Stats struct {
 	RegionType                *string           `json:"rt,omitempty"`
 	Mode                      *string           `json:"m,omitempty"`
 	EntityRejected            *int              `json:"ent,omitempty"`
-	StatusCodes               map[string][2]int `json:"codes,omitempty"`
+	StatusCodes               map[string][5]int `json:"codes,omitempty"`
 }
 
 // Merge the other Stats into the current. If the field is not nil,
@@ -87,26 +87,34 @@ func (s *Stats) Merge(other Stats) {
 
 		if s.StatusCodes == nil {
 			log.Println("Initializing status codes map as it was nil.")
-			s.StatusCodes = make(map[string][2]int)
+			s.StatusCodes = make(map[string][5]int)
 		}
 
 		for key, value := range other.StatusCodes {
-			log.Printf("Processing key: %s with value: Success=%d, Failures=%d", key, value[0], value[1])
+			log.Printf("Processing key: %s with value: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", key, value[0], value[1], value[2], value[3], value[4])
 
 			if existing, ok := s.StatusCodes[key]; ok {
 				log.Printf(
-					"Key %s already exists. Existing: Success=%d, Failures=%d. Merging with: Success=%d, Failures=%d",
-					key, existing[0], existing[1], value[0], value[1],
+					"Key %s already exists. Existing: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d. Merging with: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+					key, existing[0], existing[1], existing[2], existing[3], existing[4],
+					value[0], value[1], value[2], value[3], value[4],
 				)
-				// Merge the existing value with the new one
-				s.StatusCodes[key] = [2]int{existing[0] + value[0], existing[1] + value[1]}
+
+				//Merge the values for each status code
+				s.StatusCodes[key] = [5]int{
+					existing[0] + value[0], // 200
+					existing[1] + value[1], // 400
+					existing[2] + value[2], // 408
+					existing[3] + value[3], // 413
+					existing[4] + value[4], // 429
+				}
+
 				log.Printf(
-					"Updated key %s: Success=%d, Failures=%d",
-					key, s.StatusCodes[key][0], s.StatusCodes[key][1],
+					"Updated key %s: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+					key, s.StatusCodes[key][0], s.StatusCodes[key][1], s.StatusCodes[key][2], s.StatusCodes[key][3], s.StatusCodes[key][4],
 				)
 			} else {
-				// Add the new value if the key doesn't exist
-				log.Printf("Key %s does not exist. Adding it with: Success=%d, Failures=%d", key, value[0], value[1])
+				log.Printf("Key %s does not exist. Adding it with: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", key, value[0], value[1], value[2], value[3], value[4])
 				s.StatusCodes[key] = value
 			}
 		}

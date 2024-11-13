@@ -74,24 +74,18 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	defer h.mu.Unlock()
 
 	// Load or initialize stats for the operation
-	value, loaded := h.statsByOperation.LoadOrStore(operation, &[2]int{})
+	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{}) // Adjusted to hold counts for multiple status codes
 	if !loaded {
 		log.Printf("Initializing stats for operation: %s", operation)
 	}
-	stats := value.(*[2]int)
+	stats := value.(*[5]int)
 
-	// Update success or failure count
-	if statusCode >= 200 && statusCode < 300 {
-		stats[0]++
-		log.Printf("Incremented success count for operation: %s. New Success=%d", operation, stats[0])
-	} else {
-		stats[1]++
-		log.Printf("Incremented failure count for operation: %s. New Failures=%d", operation, stats[1])
-	}
+	// Update counts based on specific status codes
+	h.updateStatusCodeCount(stats, statusCode, operation)
 
 	// Store updated stats back in the map
 	h.statsByOperation.Store(operation, stats)
-	log.Printf("Updated stats for operation '%s': Success=%d, Failures=%d", operation, stats[0], stats[1])
+	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 
 	// Log the entire status code map
 	log.Println("Complete status code map:")
@@ -99,10 +93,33 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 		log.Print("Printing all stats by operations map")
 
 		operation := key.(string)
-		stats := value.(*[2]int)
-		log.Printf("Operation: %s, Success=%d, Failures=%d", operation, stats[0], stats[1])
+		stats := value.(*[5]int)
+		log.Printf("Operation: %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 		return true
 	})
+}
+
+// Helper function to update the status code counts
+func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int, operation string) {
+	switch statusCode {
+	case 200:
+		stats[0]++
+		log.Printf("Incremented 200 count for operation: %s. New 200=%d", operation, stats[0])
+	case 400:
+		stats[1]++
+		log.Printf("Incremented 400 count for operation: %s. New 400=%d", operation, stats[1])
+	case 408:
+		stats[2]++
+		log.Printf("Incremented 408 count for operation: %s. New 408=%d", operation, stats[2])
+	case 413:
+		stats[3]++
+		log.Printf("Incremented 413 count for operation: %s. New 413=%d", operation, stats[3])
+	case 429:
+		stats[4]++
+		log.Printf("Incremented 429 count for operation: %s. New 429=%d", operation, stats[4])
+	default:
+		log.Printf("Received an untracked status code %d for operation: %s", statusCode, operation)
+	}
 }
 
 // GetStats retrieves the success and failure counts for a specific operation.
@@ -130,14 +147,12 @@ func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	// Initialize the map to store status codes for all operations
-	statusCodeMap := make(map[string][2]int)
+	statusCodeMap := make(map[string][5]int)
 
-	// Iterate over all operations and collect their status codes
 	h.statsByOperation.Range(func(key, value interface{}) bool {
 		operation := key.(string)
-		stats := value.(*[2]int)
-		statusCodeMap[operation] = [2]int{stats[0], stats[1]}
+		stats := value.(*[5]int)
+		statusCodeMap[operation] = [5]int{stats[0], stats[1], stats[2], stats[3], stats[4]}
 		return true
 	})
 

@@ -367,7 +367,7 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			t.logger.Info("ec2tagger: Configuring middleware for EC2 client.", zap.Any("MiddlewareID", t.Config.MiddlewareID))
 			log.Print("Inside ec2tagger ec2api - log printf statement")
 			log.Print(*t.Config.MiddlewareID)
-			awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&ec2Client.Handlers))
+			awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&ec2Client.Handlers)) //Change this so that we confiugure new tegger to have the status code middware id !!!!!!!!!!!??????
 		}
 
 		go func() {
