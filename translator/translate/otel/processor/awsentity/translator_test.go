@@ -52,6 +52,7 @@ func TestTranslate(t *testing.T) {
 				t.Setenv(config.RUN_IN_CONTAINER, config.RUN_IN_CONTAINER_TRUE)
 				ecsutil.GetECSUtilSingleton().Region = "test"
 			} else {
+				ecsutil.GetECSUtilSingleton().Region = ""
 				context.CurrentContext().SetMode(testCase.mode)
 				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
 			}
