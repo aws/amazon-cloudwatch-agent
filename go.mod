@@ -144,6 +144,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/tailsamplingprocessor v0.103.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.103.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.103.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20241112181539-bc8278558352
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsecscontainermetricsreceiver v0.103.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.103.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.103.0
@@ -208,8 +209,6 @@ require (
 	k8s.io/client-go v0.30.0
 	k8s.io/klog/v2 v2.120.1
 )
-
-require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20241112181539-bc8278558352
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
