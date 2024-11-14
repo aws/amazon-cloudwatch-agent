@@ -159,16 +159,6 @@ func GetShortOperationName(operation string) string {
 	}
 }
 
-// GetStats retrieves the success and failure counts for a specific operation.
-func (h *StatusCodeHandler) GetStats(operation string) (successCount, failureCount int) {
-	value, ok := h.statsByOperation.Load(operation)
-	if !ok {
-		return 0, 0
-	}
-	stats := value.(*[2]int)
-	return stats[0], stats[1]
-}
-
 // ID returns the unique identifier for the handler.
 func (h *StatusCodeHandler) ID() string {
 	return statusHandlerID

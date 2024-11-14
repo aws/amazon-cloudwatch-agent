@@ -36,7 +36,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		log.Println("Status code stats handler retrieved")
 
-		stats := newStatsHandler(logger, filter, []agent.StatsProvider{
+		stats := newStatsHandler(logger, statusCodeFilter, []agent.StatsProvider{
 			clientStats,
 			provider.GetProcessStats(),
 			provider.GetFlagsStats(),
@@ -93,10 +93,10 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	log.Println("Handling request for operation:", operation)
 
 	// If filtering is enabled, check if the operation is allowed (commented out for now)
-	// if !sh.filter.IsAllowed(operation) {
-	// 	log.Println("Operation not allowed:", operation)
-	// 	return
-	// }
+	//if !sh.filter.IsAllowed(operation) {
+	//	log.Println("Operation not allowed:", operation)
+	//	return
+	//}
 
 	// Generate the header for the operation
 	log.Println("Generating header for operation:", operation)
