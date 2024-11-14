@@ -808,6 +808,106 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
+func TestTranslatorForKueue(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
+	tt := NewTranslatorWithName("kueueContainerInsights")
+	require.EqualValues(t, "awsemf/kueueContainerInsights", tt.ID().String())
+	testCases := map[string]struct {
+		env     map[string]string
+		input   map[string]any
+		want    map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
+		wantErr error
+	}{
+		"GenerateAwsEmfExporterConfigForKubernetesKueueMetrics": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{
+							"kueue_container_insights": true,
+						},
+					},
+				},
+			},
+			want: map[string]any{
+				"namespace":                              "ContainerInsights/Prometheus",
+				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
+				"log_stream_name":                        "kubernetes-kueue",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}, {"ClusterName", "ClusterQueue", "Status"}, {"ClusterName", "Status"}},
+						MetricNameSelectors: []string{
+							"kueue_pending_workloads",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}, {"ClusterName", "ClusterQueue", "Reason"}, {"ClusterName", "Reason"}},
+						MetricNameSelectors: []string{
+							"kueue_evicted_workloads_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}},
+						MetricNameSelectors: []string{
+							"kueue_admitted_active_workloads",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}, {"ClusterName", "ClusterQueue", "Resource"}, {"ClusterName", "ClusterQueue", "Resource", "Flavor"}, {"ClusterName", "ClusterQueue", "Flavor"}},
+						MetricNameSelectors: []string{
+							"kueue_cluster_queue_resource_usage",
+							"kueue_cluster_queue_nominal_quota",
+						},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
+			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*awsemfexporter.Config)
+				require.True(t, ok)
+				assert.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
+				assert.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
+				assert.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
+				assert.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
+				assert.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
+				assert.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
+				assert.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
+				assert.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
+				assert.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
+				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
+				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
+				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
+				assert.Equal(t, "global_arn", gotCfg.RoleARN)
+				assert.Equal(t, "us-east-1", gotCfg.Region)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
+			}
+		})
+	}
+}
+
 func TestTranslateAppSignals(t *testing.T) {
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
