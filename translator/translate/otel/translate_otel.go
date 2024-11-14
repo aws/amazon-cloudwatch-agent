@@ -70,7 +70,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Merge(containerInsightsTranslators)
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
-	translators.Set(prometheus.NewTranslator())
+	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())
 	translators.Set(containerinsightsjmx.NewTranslator())

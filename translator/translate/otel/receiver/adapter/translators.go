@@ -67,7 +67,7 @@ var (
 
 	// otelReceivers is used for receivers that need to be in the same pipeline that
 	// exports to Cloudwatch while not having to follow the adapter rules
-	otelReceivers = collections.NewSet[string](common.OtlpKey, common.JmxKey)
+	otelReceivers = collections.NewSet[string](common.OtlpKey, common.JmxKey, common.PrometheusKey)
 )
 
 // FindReceiversInConfig looks in the metrics and logs sections to determine which
