@@ -25,6 +25,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
+const (
+	kueuePipelineName = "kueueContainerInsights"
+)
+
 //go:embed awsemf_default_generic.yaml
 var defaultGenericConfig string
 
@@ -93,7 +97,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultJmxConfig
 	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
-	} else if isKubernetesKueue(c) {
+	} else if isKubernetesKueue(c, t.name) {
 		defaultConfig = defaultKubernetesKueueConfig
 	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
@@ -143,7 +147,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if isKubernetesKueue(c) {
+	} else if isKubernetesKueue(c, t.name) {
 		if err := setKubernetesKueueFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -200,8 +204,8 @@ func isKubernetes(conf *confmap.Conf) bool {
 }
 
 // `kueue_container_insights` is a child of `kubernetes` in config spec.
-func isKubernetesKueue(conf *confmap.Conf) bool {
-	return isKubernetes(conf) && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
+func isKubernetesKueue(conf *confmap.Conf, pipelineName string) bool {
+	return isKubernetes(conf) && pipelineName == kueuePipelineName && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
 }
 
 func isPrometheus(conf *confmap.Conf) bool {
