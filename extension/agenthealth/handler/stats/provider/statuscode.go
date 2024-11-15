@@ -78,7 +78,6 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 
 	operation = GetShortOperationName(operation)
 	statusCode := r.StatusCode
-	log.Printf("Received status code: %d for operation: %s", statusCode, operation)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -92,11 +91,8 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	h.updateStatusCodeCount(stats, statusCode, operation)
 
 	h.statsByOperation.Store(operation, stats)
-	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 
-	log.Println("Complete status code map:")
 	h.statsByOperation.Range(func(key, value interface{}) bool {
-		log.Print("Printing all stats by operations map")
 
 		operation := key.(string)
 		stats := value.(*[5]int)
@@ -110,19 +106,14 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 	switch statusCode {
 	case 200:
 		stats[0]++
-		log.Printf("Incremented 200 count for operation: %s. New 200=%d", operation, stats[0])
 	case 400:
 		stats[1]++
-		log.Printf("Incremented 400 count for operation: %s. New 400=%d", operation, stats[1])
 	case 408:
 		stats[2]++
-		log.Printf("Incremented 408 count for operation: %s. New 408=%d", operation, stats[2])
 	case 413:
 		stats[3]++
-		log.Printf("Incremented 413 count for operation: %s. New 413=%d", operation, stats[3])
 	case 429:
 		stats[4]++
-		log.Printf("Incremented 429 count for operation: %s. New 429=%d", operation, stats[4])
 	default:
 		log.Printf("Received an untracked status code %d for operation: %s", statusCode, operation)
 	}
