@@ -25,39 +25,23 @@ const (
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-	if !statuscodeonly {
-		log.Println("Stats are enabled, creating handlers")
-		filter := agent.NewOperationsFilter(cfg.Operations...)
-		log.Println("Operations filter created, operations:", cfg.Operations)
-
-		clientStats := client.NewHandler(filter)
-		log.Println("Client stats handler created")
-
+	if statuscodeonly {
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-		log.Println("Status code stats handler retrieved")
-
-		stats := newStatsHandler(logger, statusCodeFilter, []agent.StatsProvider{
-			clientStats,
-			provider.GetProcessStats(),
-			provider.GetFlagsStats(),
-			statusCodeStats,
-		})
-		log.Println("Stats handler created with providers")
-
-		// Set usage flags
-		agent.UsageFlags().SetValues(cfg.UsageFlags)
-
-		// Return handlers
-		log.Println("Returning request and response handlers, requestHandlerCount: 2, responseHandlerCount: 1")
-		return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
-	} else {
-		log.Println("Stats are disabled, creating only status code stats handler")
-		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-		log.Println("Status code stats handler retrieved")
-
-		log.Println("Returning handlers, requestHandlerCount: 0, responseHandlerCount: 1")
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
+	filter := agent.NewOperationsFilter(cfg.Operations...)
+	clientStats := client.NewHandler(filter)
+	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
+
+	stats := newStatsHandler(logger, statusCodeFilter, []agent.StatsProvider{
+		clientStats,
+		provider.GetProcessStats(),
+		provider.GetFlagsStats(),
+		statusCodeStats,
+	})
+	agent.UsageFlags().SetValues(cfg.UsageFlags)
+
+	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 }
 
 type statsHandler struct {
@@ -88,15 +72,13 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 }
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
-	// Extract the operation name from the context
 	operation := awsmiddleware.GetOperationName(ctx)
 	log.Println("Handling request for operation:", operation)
 
-	// If filtering is enabled, check if the operation is allowed (commented out for now)
-	//if !sh.filter.IsAllowed(operation) {
-	//	log.Println("Operation not allowed:", operation)
-	//	return
-	//}
+	if !sh.filter.IsAllowed(operation) {
+		log.Println("Operation not allowed:", operation)
+		return
+	}
 
 	// Generate the header for the operation
 	log.Println("Generating header for operation:", operation)

@@ -31,7 +31,7 @@ type Stats struct {
 	RegionType                *string           `json:"rt,omitempty"`
 	Mode                      *string           `json:"m,omitempty"`
 	EntityRejected            *int              `json:"ent,omitempty"`
-	StatusCodes               map[string][5]int `json:"codes,omitempty"`
+	StatusCodes               map[string][5]int `json:"codes,omitempty"` //represents status codes 200,400,408,413,429,
 }
 
 // Merge the other Stats into the current. If the field is not nil,
@@ -165,7 +165,7 @@ type StatusCodeConfig struct {
 	Operations []string `json:"operations,omitempty"`
 }
 
-var StatusCodeOperations = []string{
+var StatusCodeOperations = []string{ // all the operations that are allowed
 	"DescribeInstances",
 	"DescribeTags",
 	"DescribeVolumes",
@@ -180,8 +180,6 @@ var StatusCodeOperations = []string{
 
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
 func NewStatusCodeOperationsFilter() OperationsFilter {
-	//Need to add more operations !!!!!!!??????
-
 	allowed := collections.NewSet[string](StatusCodeOperations...)
 
 	return OperationsFilter{

@@ -31,15 +31,8 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 		requestHandlers = append(requestHandlers, req...)
 		responseHandlers = append(responseHandlers, res...)
 	} else {
-		// Log usage data configuration is disabled
 		ah.logger.Debug("Usage data is disabled, skipping stats handlers")
 	}
-
-	// Log final handlers
-	ah.logger.Debug("Handlers created",
-		zap.Int("requestHandlersCount", len(requestHandlers)),
-		zap.Int("responseHandlersCount", len(responseHandlers)),
-	)
 
 	return requestHandlers, responseHandlers
 }
