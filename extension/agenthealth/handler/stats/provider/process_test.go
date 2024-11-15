@@ -11,8 +11,6 @@ import (
 
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 type mockProcessMetrics struct {
@@ -77,6 +75,7 @@ func TestProcessStats(t *testing.T) {
 	mock.mu.Unlock()
 	provider.refresh()
 	assert.Eventually(t, func() bool {
-		return provider.getStats() == agent.Stats{}
+		stats := provider.getStats()
+		return len(stats.StatusCodes) == 0 //map isn't comparable so we can just do this
 	}, 5*time.Millisecond, time.Millisecond)
 }

@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,9 +40,23 @@ func (p *intervalStats) Stats(string) agent.Stats {
 
 func (p *intervalStats) getStats() agent.Stats {
 	var stats agent.Stats
+
+	// Load the value from the stats field
 	if value := p.stats.Load(); value != nil {
-		stats = value.(agent.Stats)
+		// Perform type assertion safely
+		if s, ok := value.(agent.Stats); ok {
+			stats = s
+		} else {
+			// Handle the case where the value is not of the expected type
+			log.Println("Error: Loaded value is not of type agent.Stats")
+		}
 	}
+
+	// Ensure that the map is not nil
+	if stats.StatusCodes == nil {
+		stats.StatusCodes = make(map[string][5]int)
+	}
+
 	return stats
 }
 

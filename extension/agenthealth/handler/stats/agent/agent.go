@@ -160,11 +160,6 @@ type StatsConfig struct {
 	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
 }
 
-type StatusCodeConfig struct {
-	// Operations are the allowed operation names to gather stats for.
-	Operations []string `json:"operations,omitempty"`
-}
-
 var StatusCodeOperations = []string{ // all the operations that are allowed
 	"DescribeInstances",
 	"DescribeTags",
