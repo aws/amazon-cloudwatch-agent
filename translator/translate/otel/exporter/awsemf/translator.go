@@ -22,7 +22,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 const (
@@ -43,12 +42,6 @@ var defaultKubernetesKueueConfig string
 
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
-
-//go:embed appsignals_config_eks.yaml
-var appSignalsConfigEks string
-
-//go:embed appsignals_config_k8s.yaml
-var appSignalsConfigK8s string
 
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
@@ -92,7 +85,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 
 	defaultConfig := defaultGenericConfig
 	if t.isAppSignals(c) {
-		defaultConfig = getAppSignalsConfig()
+		defaultConfig = appSignalsConfigGeneric
 	} else if t.isCiJMX(c) {
 		defaultConfig = defaultJmxConfig
 	} else if isEcs(c) {
@@ -161,31 +154,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 	return cfg, nil
-}
-
-func getAppSignalsConfig() string {
-	ctx := context.CurrentContext()
-
-	mode := ctx.KubernetesMode()
-	if mode == "" {
-		mode = ctx.Mode()
-	}
-	if mode == config.ModeEC2 {
-		if ecsutil.GetECSUtilSingleton().IsECS() {
-			mode = config.ModeECS
-		}
-	}
-
-	switch mode {
-	case config.ModeEKS:
-		return appSignalsConfigEks
-	case config.ModeK8sEC2, config.ModeK8sOnPrem:
-		return appSignalsConfigK8s
-	case config.ModeEC2, config.ModeECS:
-		return appSignalsConfigGeneric
-	default:
-		return appSignalsConfigGeneric
-	}
 }
 
 func (t *translator) isAppSignals(conf *confmap.Conf) bool {

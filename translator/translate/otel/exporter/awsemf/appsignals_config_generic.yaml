@@ -15,9 +15,14 @@ metric_declarations:
       - Fault
       - Error
   - dimensions:
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteEnvironment, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteEnvironment]
       - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
       - [Environment, Service, Operation, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService, RemoteEnvironment]
       - [Environment, Service, RemoteService]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteEnvironment, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteEnvironment]
       - [Environment, Service, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
       - [Environment, Service, RemoteService, RemoteOperation]
       - [Environment, Service, RemoteService, RemoteResourceIdentifier, RemoteResourceType]
