@@ -29,11 +29,11 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
-	filter := agent.NewOperationsFilter(cfg.Operations...)
+	filter := agent.NewStatusCodeAndOtherOperationsFilter()
 	clientStats := client.NewHandler(filter)
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 
-	stats := newStatsHandler(logger, statusCodeFilter, []agent.StatsProvider{
+	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
 		clientStats,
 		provider.GetProcessStats(),
 		provider.GetFlagsStats(),
@@ -80,12 +80,10 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 		return
 	}
 
-	// Generate the header for the operation
 	log.Println("Generating header for operation:", operation)
 	header := sh.Header(operation)
 
 	log.Println("This is the header", header)
-	// If a valid header is generated, set it in the request
 	if header != "" {
 		log.Println("Setting header for operation:", operation)
 		r.Header.Set(headerKeyAgentStats, header)

@@ -5,7 +5,7 @@
     "internal": true,
     "debug": true,
     "quiet": true,
-    "aws_sdk_log_level": "LogDebugWithHTTPBody",
+    "aws_sdk_log_level": "LogDebug",
     "user_agent": "CUSTOM USER AGENT VALUE",
     "credentials": {
       "role_arn": "global_role_arn_value"
@@ -14,6 +14,10 @@
     "omit_hostname": true
   },
   "metrics": {
+    "metrics_destinations": {
+      "cloudwatch": {
+      }
+    },
     "metrics_collected": {
       "jmx": [
         {
@@ -251,8 +255,8 @@
         "collect_list": [
           {
             "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-            "log_group_name": "/aws/amazon-cloudwatch-agent",
-            "log_stream_name": "agent-1",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
             "timezone": "UTC",
             "retention_in_days": 5
           },
