@@ -87,7 +87,6 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 }
 
 func (sh *statsHandler) Header(operation string) string {
-
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
 		stats.Merge(p.Stats(operation))
@@ -96,7 +95,7 @@ func (sh *statsHandler) Header(operation string) string {
 
 	header, err := stats.Marshal()
 	if err != nil {
-		return ""
+		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}
 
 	return header

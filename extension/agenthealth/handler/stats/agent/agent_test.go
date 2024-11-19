@@ -11,14 +11,12 @@ import (
 )
 
 func TestMergeWithStatusCodes(t *testing.T) {
-	// Initial stats with some status codes
 	stats := &Stats{
 		StatusCodes: map[string][5]int{
 			"operation1": {1, 2, 3, 4, 5},
 		},
 	}
 
-	// Merge with new stats containing additional status codes
 	stats.Merge(Stats{
 		StatusCodes: map[string][5]int{
 			"operation1": {2, 3, 4, 5, 6}, // Existing operation with new values
@@ -26,16 +24,13 @@ func TestMergeWithStatusCodes(t *testing.T) {
 		},
 	})
 
-	// Assert merged values
 	assert.Equal(t, [5]int{3, 5, 7, 9, 11}, stats.StatusCodes["operation1"]) // Values should sum
 	assert.Equal(t, [5]int{0, 1, 2, 3, 4}, stats.StatusCodes["operation2"])  // New operation added
 
-	// Merge with empty StatusCodes map
 	stats.Merge(Stats{
 		StatusCodes: nil,
 	})
 
-	// Assert that StatusCodes remains unchanged
 	assert.Equal(t, [5]int{3, 5, 7, 9, 11}, stats.StatusCodes["operation1"])
 	assert.Equal(t, [5]int{0, 1, 2, 3, 4}, stats.StatusCodes["operation2"])
 }
