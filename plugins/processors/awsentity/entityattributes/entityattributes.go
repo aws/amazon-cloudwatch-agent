@@ -3,6 +3,8 @@
 
 package entityattributes
 
+import "sync"
+
 const (
 
 	// The following are the possible values for EntityType config options
@@ -80,15 +82,19 @@ var attributeEntityToShortNameMap = map[string]string{
 	AttributeEntityServiceNameSource: ServiceNameSource,
 }
 
+var attributeEntityToShortNameMapRWMutex = sync.RWMutex{}
+
 func GetKeyAttributeEntityShortNameMap() map[string]string {
 	return keyAttributeEntityToShortNameMap
 }
 
 // Cluster attribute prefix could be either EKS or K8s. We set the field once at runtime.
 func GetAttributeEntityShortNameMap(platformType string) map[string]string {
+	attributeEntityToShortNameMapRWMutex.Lock()
 	if _, ok := attributeEntityToShortNameMap[AttributeEntityCluster]; !ok {
 		attributeEntityToShortNameMap[AttributeEntityCluster] = clusterType(platformType)
 	}
+	attributeEntityToShortNameMapRWMutex.Unlock()
 	return attributeEntityToShortNameMap
 }
 
