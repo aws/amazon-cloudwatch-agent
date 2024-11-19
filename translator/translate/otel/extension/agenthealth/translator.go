@@ -35,7 +35,7 @@ type translator struct {
 	operations         []string
 	isUsageDataEnabled bool
 	factory            extension.Factory
-	statuscodeonly     bool
+	statuscodeonly     *bool
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
@@ -46,7 +46,7 @@ func NewTranslatorWithStatusCode(name component.DataType, operations []string, s
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-		statuscodeonly:     statuscodeonly,
+		statuscodeonly:     &statuscodeonly,
 	}
 }
 
@@ -56,7 +56,7 @@ func NewTranslator(name component.DataType, operations []string) common.Translat
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-		statuscodeonly:     false,
+		statuscodeonly:     nil,
 	}
 }
 
@@ -72,10 +72,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
 	cfg.StatusCodeOnly = t.statuscodeonly
-	if t.statuscodeonly {
-		//cfg.StatusCode = agent.StatusCodeConfig{
-		//	Operations: agent.StatusCodeOperations,
-		//}
+	if t.statuscodeonly != nil && *t.statuscodeonly {
 		return cfg, nil
 	}
 	cfg.Stats = agent.StatsConfig{
@@ -85,9 +82,5 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			agent.FlagRegionType: translateagent.Global_Config.RegionType,
 		},
 	}
-	//cfg.StatusCode = agent.StatusCodeConfig{
-	//	Operations: agent.StatusCodeOperations,
-	//} //Do we need to add anything to otel config?
-
 	return cfg, nil
 }

@@ -22,17 +22,18 @@ type agentHealth struct {
 var _ awsmiddleware.Extension = (*agentHealth)(nil)
 
 func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	// Initialize handlers
 	var responseHandlers []awsmiddleware.ResponseHandler
 	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
 
-	if ah.cfg.IsUsageDataEnabled {
-		req, res := stats.NewHandlers(ah.logger, ah.cfg.Stats, ah.cfg.StatusCodeOnly)
-		requestHandlers = append(requestHandlers, req...)
-		responseHandlers = append(responseHandlers, res...)
-	} else {
+	if !ah.cfg.IsUsageDataEnabled {
 		ah.logger.Debug("Usage data is disabled, skipping stats handlers")
+		return requestHandlers, responseHandlers
 	}
+
+	statusCodeOnly := ah.cfg.StatusCodeOnly != nil
+	statsRequestHandlers, statsResponseHandlers := stats.NewHandlers(ah.logger, ah.cfg.Stats, statusCodeOnly)
+	requestHandlers = append(requestHandlers, statsRequestHandlers...)
+	responseHandlers = append(responseHandlers, statsResponseHandlers...)
 
 	return requestHandlers, responseHandlers
 }
