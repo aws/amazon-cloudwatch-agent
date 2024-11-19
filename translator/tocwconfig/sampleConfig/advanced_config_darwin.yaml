@@ -38,9 +38,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -80,11 +80,11 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
-                - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
+                - telegraf_cpu
+                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

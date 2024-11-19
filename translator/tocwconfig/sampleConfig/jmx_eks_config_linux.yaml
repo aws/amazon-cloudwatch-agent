@@ -62,13 +62,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    entitystore:
-        mode: ec2
-        region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
         region: us-west-2
+    entitystore:
+      mode: ec2
+      region: us-west-2
 processors:
     batch/jmx/amp/0:
         metadata_cardinality_limit: 1000

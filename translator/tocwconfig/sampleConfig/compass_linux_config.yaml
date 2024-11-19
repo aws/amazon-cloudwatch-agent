@@ -34,15 +34,15 @@ extensions:
 processors:
     awsentity/service/telegraf:
         entity_type: Service
-        platform: ec2
         scrape_datapoint_attribute: true
+        platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:

@@ -23,14 +23,14 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform: ec2
+        platform:  ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:

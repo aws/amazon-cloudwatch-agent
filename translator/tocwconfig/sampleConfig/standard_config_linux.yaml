@@ -23,7 +23,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform: ec2
+        platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict

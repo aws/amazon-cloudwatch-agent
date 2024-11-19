@@ -183,8 +183,8 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     entitystore:
-        mode: ec2
-        region: us-west-2
+      mode: ec2
+      region: us-west-2
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000

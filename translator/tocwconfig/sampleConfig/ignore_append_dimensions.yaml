@@ -23,7 +23,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform: ec2
+        platform:  ec2
     ec2tagger:
         imds_retries: 1
         refresh_interval_seconds: 0s
@@ -48,8 +48,8 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             development: false

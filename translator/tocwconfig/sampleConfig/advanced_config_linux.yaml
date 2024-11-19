@@ -23,7 +23,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform: ec2
+        platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -88,13 +88,13 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_ethtool
                 - telegraf_nvidia_smi
-                - telegraf_cpu
-                - telegraf_disk
-                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
