@@ -68,7 +68,6 @@ exporters:
             include_metadata: true
 extensions:
     agenthealth/logs:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -77,7 +76,6 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     agenthealth/metrics:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -86,7 +84,6 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     agenthealth/traces:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -279,11 +276,11 @@ service:
                 - transform
             receivers:
                 - telegraf_cpu
-                - telegraf_swap
                 - telegraf_processes
-                - telegraf_procstat/1917393364
-                - telegraf_netstat
+                - telegraf_swap
                 - telegraf_mem
+                - telegraf_netstat
+                - telegraf_procstat/1917393364
                 - telegraf_disk
         metrics/hostCustomMetrics:
             exporters:

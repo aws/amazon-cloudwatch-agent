@@ -55,7 +55,6 @@ exporters:
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:

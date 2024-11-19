@@ -10,7 +10,6 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -29,9 +28,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:

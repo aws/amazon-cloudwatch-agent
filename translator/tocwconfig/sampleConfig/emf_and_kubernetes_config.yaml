@@ -391,7 +391,6 @@ exporters:
         version: "0"
 extensions:
     agenthealth/logs:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:

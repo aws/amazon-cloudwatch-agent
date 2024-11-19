@@ -128,7 +128,6 @@ exporters:
             include_metadata: true
 extensions:
     agenthealth/logs:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -137,7 +136,6 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     agenthealth/traces:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:

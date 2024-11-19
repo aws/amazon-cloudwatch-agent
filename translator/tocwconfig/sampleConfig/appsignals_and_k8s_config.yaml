@@ -268,7 +268,6 @@ exporters:
         transit_spans_in_otlp_format: true
 extensions:
     agenthealth/logs:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -277,7 +276,6 @@ extensions:
                 mode: K8E
                 region_type: ACJ
     agenthealth/traces:
-        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
