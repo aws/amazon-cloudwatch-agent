@@ -58,6 +58,7 @@ exporters:
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
+        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -66,8 +67,8 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     entitystore:
-      mode: ec2
-      region: us-west-2
+        mode: ec2
+        region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
@@ -75,7 +76,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     batch/host/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -141,9 +142,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
 receivers:
     jmx:
@@ -175,8 +176,8 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -184,8 +185,8 @@ service:
                 - awsentity/resource
                 - transform
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/jmx/amp:
             exporters:
                 - prometheusremotewrite/amp

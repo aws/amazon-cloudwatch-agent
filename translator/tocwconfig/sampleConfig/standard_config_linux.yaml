@@ -10,6 +10,7 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -23,7 +24,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -75,10 +76,10 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
+                - telegraf_cpu
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

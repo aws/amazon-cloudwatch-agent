@@ -10,6 +10,7 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -23,7 +24,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     ec2tagger:
         imds_retries: 1
         refresh_interval_seconds: 0s

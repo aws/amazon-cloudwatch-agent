@@ -21,6 +21,7 @@ exporters:
             - []
 extensions:
     agenthealth/metrics:
+        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -34,15 +35,15 @@ extensions:
 processors:
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:

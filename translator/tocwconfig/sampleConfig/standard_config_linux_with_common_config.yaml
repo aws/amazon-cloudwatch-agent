@@ -12,6 +12,7 @@ exporters:
         shared_credential_file: fake-path
 extensions:
     agenthealth/metrics:
+        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -42,9 +43,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 2
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
@@ -82,10 +83,10 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
+                - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
-                - telegraf_swap
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

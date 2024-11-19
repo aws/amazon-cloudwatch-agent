@@ -15,6 +15,7 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_only: false
         is_usage_data_enabled: true
         stats:
             operations:
@@ -28,7 +29,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -45,9 +46,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "cpu_usage_idle"
-                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                  - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "cpu_usage_idle"
+                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                - set(unit, "unit") where name == "cpu_usage_nice"
         trace_statements: []
 receivers:
     telegraf_cpu:
@@ -75,9 +76,9 @@ service:
                 - ec2tagger
                 - transform
             receivers:
+                - telegraf_disk
                 - telegraf_nvidia_smi
                 - telegraf_cpu
-                - telegraf_disk
     telemetry:
         logs:
             development: false

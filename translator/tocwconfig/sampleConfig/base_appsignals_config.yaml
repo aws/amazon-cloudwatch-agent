@@ -15,74 +15,74 @@ exporters:
         max_retries: 2
         metric_declarations:
             - dimensions:
-                  - - Environment
-                    - Operation
-                    - Service
-                  - - Environment
-                    - Service
+                - - Environment
+                  - Operation
+                  - Service
+                - - Environment
+                  - Service
               label_matchers:
-                  - label_names:
-                        - Telemetry.Source
-                    regex: ^(ServerSpan|LocalRootSpan)$
-                    separator: ;
+                - label_names:
+                    - Telemetry.Source
+                  regex: ^(ServerSpan|LocalRootSpan)$
+                  separator: ;
               metric_name_selectors:
-                  - Latency
-                  - Fault
-                  - Error
+                - Latency
+                - Fault
+                - Error
             - dimensions:
-                  - - Environment
-                    - Operation
-                    - RemoteOperation
-                    - RemoteResourceIdentifier
-                    - RemoteResourceType
-                    - RemoteService
-                    - Service
-                  - - Environment
-                    - Operation
-                    - RemoteOperation
-                    - RemoteService
-                    - Service
-                  - - Environment
-                    - RemoteService
-                    - Service
-                  - - Environment
-                    - RemoteOperation
-                    - RemoteResourceIdentifier
-                    - RemoteResourceType
-                    - RemoteService
-                    - Service
-                  - - Environment
-                    - RemoteOperation
-                    - RemoteService
-                    - Service
-                  - - Environment
-                    - RemoteResourceIdentifier
-                    - RemoteResourceType
-                    - RemoteService
-                    - Service
-                  - - RemoteResourceIdentifier
-                    - RemoteResourceType
-                    - RemoteService
-                  - - RemoteService
+                - - Environment
+                  - Operation
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - Operation
+                  - RemoteOperation
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteOperation
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                - - RemoteService
               label_matchers:
-                  - label_names:
-                        - Telemetry.Source
-                    regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
-                    separator: ;
+                - label_names:
+                    - Telemetry.Source
+                  regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
+                  separator: ;
               metric_name_selectors:
-                  - Latency
-                  - Fault
-                  - Error
+                - Latency
+                - Fault
+                - Error
             - dimensions:
-                  - - Environment
-                    - Service
+                - - Environment
+                  - Service
               label_matchers:
-                  - label_names:
-                        - Telemetry.Source
-                    regex: ^RuntimeMetric$
-                    separator: ;
+                - label_names:
+                    - Telemetry.Source
+                  regex: ^RuntimeMetric$
+                  separator: ;
               metric_name_selectors:
-                  - ^.*$
+                - ^.*$
         middleware: agenthealth/logs
         namespace: ApplicationSignals
         no_verify_ssl: false
@@ -186,21 +186,21 @@ processors:
               match_type: ""
               new_name: JVMCpuRecentUtilization
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -208,21 +208,21 @@ processors:
               match_type: ""
               new_name: JVMCpuTime
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -230,21 +230,21 @@ processors:
               match_type: ""
               new_name: JVMClassLoaded
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -252,21 +252,21 @@ processors:
               match_type: ""
               new_name: JVMThreadCount
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -274,21 +274,21 @@ processors:
               match_type: ""
               new_name: JVMMemoryNonHeapUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -296,21 +296,21 @@ processors:
               match_type: ""
               new_name: JVMMemoryUsedAfterLastGC
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -318,93 +318,93 @@ processors:
               match_type: ""
               new_name: JVMMemoryHeapUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: .*Old\sGen$
+                name: .*Old\sGen$
               include: jvm.memory.pool.used
               match_type: regexp
               new_name: JVMMemoryOldGenUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: .*Survivor\sSpace$
+                name: .*Survivor\sSpace$
               include: jvm.memory.pool.used
               match_type: regexp
               new_name: JVMMemorySurvivorSpaceUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: .*Eden\sSpace$
+                name: .*Eden\sSpace$
               include: jvm.memory.pool.used
               match_type: regexp
               new_name: JVMMemoryEdenSpaceUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
@@ -412,21 +412,21 @@ processors:
               match_type: ""
               new_name: JVMGCDuration
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
@@ -434,117 +434,117 @@ processors:
               match_type: ""
               new_name: JVMGCCount
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: G1 Old Generation
+                name: G1 Old Generation
               include: jvm.gc.collections.elapsed
               match_type: strict
               new_name: JVMGCOldGenDuration
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: G1 Young Generation
+                name: G1 Young Generation
               include: jvm.gc.collections.elapsed
               match_type: strict
               new_name: JVMGCYoungGenDuration
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: G1 Old Generation
+                name: G1 Old Generation
               include: jvm.gc.collections.count
               match_type: strict
               new_name: JVMGCOldGenCount
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  name: G1 Young Generation
+                name: G1 Young Generation
               include: jvm.gc.collections.count
               match_type: strict
               new_name: JVMGCYoungGenCount
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
@@ -552,93 +552,93 @@ processors:
               match_type: regexp
               new_name: PythonProcessGCCount
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  count: "0"
+                count: "0"
               include: ^process\.runtime\.(.*)\.gc_count$$
               match_type: regexp
               new_name: PythonProcessGCGen0Count
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  count: "1"
+                count: "1"
               include: ^process\.runtime\.(.*)\.gc_count$$
               match_type: regexp
               new_name: PythonProcessGCGen1Count
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  count: "2"
+                count: "2"
               include: ^process\.runtime\.(.*)\.gc_count$$
               match_type: regexp
               new_name: PythonProcessGCGen2Count
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -646,21 +646,21 @@ processors:
               match_type: regexp
               new_name: PythonProcessThreadCount
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -668,21 +668,21 @@ processors:
               match_type: regexp
               new_name: PythonProcessCpuTime
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -690,69 +690,69 @@ processors:
               match_type: regexp
               new_name: PythonProcessCpuUtilization
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  type: vms
+                type: vms
               include: ^process\.runtime\.(.*)\.memory$$
               match_type: regexp
               new_name: PythonProcessVMSMemoryUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
-                  type: rss
+                type: rss
               include: ^process\.runtime\.(.*)\.memory$$
               match_type: regexp
               new_name: PythonProcessRSSMemoryUsed
               operations:
-                  - action: aggregate_labels
-                    aggregation_type: sum
-                    experimental_scale: 0
-                    label: ""
-                    label_set: []
-                    label_value: ""
-                    new_label: ""
-                    new_value: ""
-                  - action: add_label
-                    aggregation_type: ""
-                    experimental_scale: 0
-                    label: ""
-                    label_value: ""
-                    new_label: Telemetry.Source
-                    new_value: RuntimeMetric
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
               submatch_case: ""
     resourcedetection:
         aks:
