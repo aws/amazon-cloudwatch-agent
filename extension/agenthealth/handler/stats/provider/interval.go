@@ -52,7 +52,6 @@ func (p *intervalStats) getStats() agent.Stats {
 	if stats.StatusCodes == nil {
 		stats.StatusCodes = make(map[string][5]int)
 	}
-
 	return stats
 }
 

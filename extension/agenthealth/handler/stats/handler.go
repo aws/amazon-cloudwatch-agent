@@ -5,7 +5,6 @@ package stats
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 
@@ -72,17 +71,12 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := awsmiddleware.GetOperationName(ctx)
-
 	if !sh.filter.IsAllowed(operation) {
 		return
 	}
-
 	header := sh.Header(operation)
-
 	if header != "" {
 		r.Header.Set(headerKeyAgentStats, header)
-	} else {
-		log.Println("No header generated for operation:", operation)
 	}
 }
 
@@ -90,13 +84,10 @@ func (sh *statsHandler) Header(operation string) string {
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
 		stats.Merge(p.Stats(operation))
-
 	}
-
 	header, err := stats.Marshal()
 	if err != nil {
 		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}
-
 	return header
 }
