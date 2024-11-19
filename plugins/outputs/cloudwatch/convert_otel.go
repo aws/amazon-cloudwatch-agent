@@ -206,6 +206,9 @@ func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
 
 // processEntityAttributes fetches the fields with entity prefix and creates an entity to be sent at the PutMetricData call.
 func processEntityAttributes(entityMap map[string]string, targetMap map[string]*string, mutableResourceAttributes pcommon.Map) {
+	entityattributes.AttributeEntityToShortNameMapRWMutex.RLock()
+	defer entityattributes.AttributeEntityToShortNameMapRWMutex.RUnlock()
+
 	for entityField, shortName := range entityMap {
 		if val, ok := mutableResourceAttributes.Get(entityField); ok {
 			if strVal := val.Str(); strVal != "" {

@@ -82,7 +82,7 @@ var attributeEntityToShortNameMap = map[string]string{
 	AttributeEntityServiceNameSource: ServiceNameSource,
 }
 
-var attributeEntityToShortNameMapRWMutex = sync.RWMutex{}
+var AttributeEntityToShortNameMapRWMutex = sync.RWMutex{}
 
 func GetKeyAttributeEntityShortNameMap() map[string]string {
 	return keyAttributeEntityToShortNameMap
@@ -90,11 +90,12 @@ func GetKeyAttributeEntityShortNameMap() map[string]string {
 
 // Cluster attribute prefix could be either EKS or K8s. We set the field once at runtime.
 func GetAttributeEntityShortNameMap(platformType string) map[string]string {
-	attributeEntityToShortNameMapRWMutex.Lock()
+	AttributeEntityToShortNameMapRWMutex.Lock()
+	defer AttributeEntityToShortNameMapRWMutex.Unlock()
+
 	if _, ok := attributeEntityToShortNameMap[AttributeEntityCluster]; !ok {
 		attributeEntityToShortNameMap[AttributeEntityCluster] = clusterType(platformType)
 	}
-	attributeEntityToShortNameMapRWMutex.Unlock()
 	return attributeEntityToShortNameMap
 }
 
