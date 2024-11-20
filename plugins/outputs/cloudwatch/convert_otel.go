@@ -170,7 +170,7 @@ func ConvertOtelMetric(m pmetric.Metric, entity cloudwatch.Entity) []*aggregatio
 func ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 	datums := make([]*aggregationDatum, 0, m.DataPointCount())
 	for i := 0; i < m.ResourceMetrics().Len(); i++ {
-		entity := fetchEntityFields(m.ResourceMetrics().At(i).Resource().Attributes())
+		entity := entityattributes.CreateCloudWatchEntityFromAttributes(m.ResourceMetrics().At(i).Resource().Attributes())
 		scopeMetrics := m.ResourceMetrics().At(i).ScopeMetrics()
 		for j := 0; j < scopeMetrics.Len(); j++ {
 			metrics := scopeMetrics.At(j).Metrics()
@@ -183,44 +183,4 @@ func ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 		}
 	}
 	return datums
-}
-
-func fetchEntityFields(resourceAttributes pcommon.Map) cloudwatch.Entity {
-	keyAttributesMap := map[string]*string{}
-	attributeMap := map[string]*string{}
-	platformType := ""
-	if platformTypeValue, ok := resourceAttributes.Get(entityattributes.AttributeEntityPlatformType); ok {
-		platformType = platformTypeValue.Str()
-	}
-	processEntityAttributes(entityattributes.GetKeyAttributeEntityShortNameMap(), keyAttributesMap, resourceAttributes)
-	processEntityAttributes(entityattributes.GetAttributeEntityShortNameMap(platformType), attributeMap, resourceAttributes)
-	removeEntityFields(resourceAttributes)
-	if _, ok := keyAttributesMap[entityattributes.AwsAccountId]; !ok {
-		return cloudwatch.Entity{}
-	}
-	return cloudwatch.Entity{
-		KeyAttributes: keyAttributesMap,
-		Attributes:    attributeMap,
-	}
-}
-
-// processEntityAttributes fetches the fields with entity prefix and creates an entity to be sent at the PutMetricData call.
-func processEntityAttributes(entityMap map[string]string, targetMap map[string]*string, mutableResourceAttributes pcommon.Map) {
-	entityattributes.AttributeEntityToShortNameMapRWMutex.RLock()
-	defer entityattributes.AttributeEntityToShortNameMapRWMutex.RUnlock()
-
-	for entityField, shortName := range entityMap {
-		if val, ok := mutableResourceAttributes.Get(entityField); ok {
-			if strVal := val.Str(); strVal != "" {
-				targetMap[shortName] = aws.String(strVal)
-			}
-		}
-	}
-}
-
-// removeEntityFields so that it is not tagged as a dimension, and reduces the size of the PMD payload.
-func removeEntityFields(mutableResourceAttributes pcommon.Map) {
-	mutableResourceAttributes.RemoveIf(func(s string, _ pcommon.Value) bool {
-		return strings.HasPrefix(s, entityattributes.AWSEntityPrefix)
-	})
 }
