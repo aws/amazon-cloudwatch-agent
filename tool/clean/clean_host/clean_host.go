@@ -39,6 +39,7 @@ func cleanHost() error {
 }
 
 func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
+	log.Println("yooooo we in above describe instances")
 	maxResults := int32(1000)
 	nameFilter := types.Filter{Name: aws.String("tag:Name"), Values: []string{
 		"buildLinuxPackage",
@@ -66,6 +67,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 	for {
 		instanceIds := make([]string, 0)
 		expirationDateInstance := time.Now().UTC().Add(clean.KeepDurationOneDay)
+		log.Println("yooooo we in above describe instances for host")
 		describeInstanceOutput, _ := ec2client.DescribeInstances(cxt, &instanceInput)
 		for _, reservation := range describeInstanceOutput.Reservations {
 			for _, instance := range reservation.Instances {
