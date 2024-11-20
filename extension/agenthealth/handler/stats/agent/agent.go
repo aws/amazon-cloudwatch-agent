@@ -173,22 +173,6 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"CreateLogStream",
 }
 
-var StatusCodeAndOtherOperations = []string{ // all the operations that are allowed
-	"PutMetricData",
-	"PutLogEvents",
-	"PutTraceSegments",
-	"DescribeInstances",
-	"DescribeTags",
-	"DescribeVolumes",
-	"DescribeContainerInstances",
-	"DescribeServices",
-	"DescribeTaskDefinition",
-	"ListServices",
-	"ListTasks",
-	"CreateLogGroup",
-	"CreateLogStream",
-}
-
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
 func NewStatusCodeOperationsFilter() OperationsFilter {
 	allowed := collections.NewSet[string](StatusCodeOperations...)
@@ -199,8 +183,12 @@ func NewStatusCodeOperationsFilter() OperationsFilter {
 	}
 }
 
-func NewStatusCodeAndOtherOperationsFilter() OperationsFilter {
-	allowed := collections.NewSet[string](StatusCodeAndOtherOperations...)
+func NewStatusCodeAndOtherOperationsFilter(operations []string) OperationsFilter {
+	allowed := collections.NewSet[string](StatusCodeOperations...)
+
+	for _, operation := range operations {
+		allowed.Add(operation)
+	}
 
 	return OperationsFilter{
 		operations: allowed,

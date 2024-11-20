@@ -27,7 +27,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
-	filter := agent.NewStatusCodeAndOtherOperationsFilter()
+	filter := agent.NewStatusCodeAndOtherOperationsFilter(cfg.Operations)
 	clientStats := client.NewHandler(filter)
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 
