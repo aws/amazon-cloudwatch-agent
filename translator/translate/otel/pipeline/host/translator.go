@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
@@ -92,7 +91,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 			log.Printf("D! ec2tagger processor required because append_dimensions is set")
 			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
-			translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
+			//translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
 		}
 
 		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
@@ -106,7 +105,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
 		log.Println("adding translator extension")
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
+		//translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
 	case common.AMPKey:
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
 			translators.Processors.Set(rollupprocessor.NewTranslator())
@@ -114,12 +113,12 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{"*"}, true))
+		//translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{"*"}, true))
 
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
 		translators.Exporters.Set(awsemf.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}, false))
+		//translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}, false))
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
