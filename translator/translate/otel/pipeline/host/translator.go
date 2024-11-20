@@ -88,9 +88,11 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	}
 
 	if t.Destination() != common.CloudWatchLogsKey {
+
 		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 			log.Printf("D! ec2tagger processor required because append_dimensions is set")
 			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+			translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
 		}
 
 		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
@@ -103,6 +105,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	switch t.Destination() {
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
+		log.Println("adding translator extension")
 		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
 	case common.AMPKey:
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
