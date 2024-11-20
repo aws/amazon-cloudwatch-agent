@@ -35,9 +35,20 @@ type translator struct {
 	operations         []string
 	isUsageDataEnabled bool
 	factory            extension.Factory
+	statuscodeonly     bool
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
+
+func NewTranslatorWithStatusCode(name component.DataType, operations []string, statuscodeonly bool) common.Translator[component.Config] {
+	return &translator{
+		name:               name.String(),
+		operations:         operations,
+		factory:            agenthealth.NewFactory(),
+		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+		statuscodeonly:     statuscodeonly,
+	}
+}
 
 func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
 	return &translator{
@@ -45,6 +56,7 @@ func NewTranslator(name component.DataType, operations []string) common.Translat
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+		statuscodeonly:     false,
 	}
 }
 
@@ -59,6 +71,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
+	cfg.StatusCodeOnly = t.statuscodeonly
+	if t.statuscodeonly {
+		//cfg.StatusCode = agent.StatusCodeConfig{
+		//	Operations: agent.StatusCodeOperations,
+		//}
+		return cfg, nil
+	}
 	cfg.Stats = agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
@@ -66,5 +85,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			agent.FlagRegionType: translateagent.Global_Config.RegionType,
 		},
 	}
+	//cfg.StatusCode = agent.StatusCodeConfig{
+	//	Operations: agent.StatusCodeOperations,
+	//} //Do we need to add anything to otel config?
+
 	return cfg, nil
 }
