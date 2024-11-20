@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -63,7 +65,6 @@ type Tagger struct {
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
-
 	p := &Tagger{
 		Config:           config,
 		logger:           logger,
@@ -280,7 +281,7 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 
 // Start acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
 // It will be called when OTel is enabling each processor
-func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
+func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	t.shutdownC = make(chan bool)
 	t.ec2TagCache = map[string]string{}
 
@@ -300,10 +301,8 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 	}
 
 	useAllTags := len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*"
-
 	if !useAllTags && len(t.EC2InstanceTagKeys) > 0 {
-		// if the customer said 'AutoScalingGroupName' (the CW dimension), do what they mean not what they said
-		// and filter for the EC2 tag name called 'aws:autoscaling:groupName'
+
 		for i, key := range t.EC2InstanceTagKeys {
 			if cwDimensionASG == key {
 				t.EC2InstanceTagKeys[i] = Ec2InstanceTagKeyASG
@@ -327,11 +326,20 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 			Region:    t.ec2MetadataRespond.region,
 		}
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
-		go func() { //Async start of initial retrieval to prevent block of agent start
+
+		if ec2Client, ok := t.ec2API.(*ec2.EC2); ok {
+			if t.Config.MiddlewareID == nil {
+				TypeStr, _ = component.NewType("agenthealth")
+				defaultMiddlewareID := component.NewIDWithName(TypeStr, component.DataTypeMetrics.String())
+				t.Config.MiddlewareID = &defaultMiddlewareID
+			}
+			awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&ec2Client.Handlers)) //Change this so that we confiugure new tegger to have the status code middware id !!!!!!!!!!!??????
+		}
+
+		go func() {
 			t.initialRetrievalOfTagsAndVolumes()
 			t.refreshLoopToUpdateTagsAndVolumes()
 		}()
-		t.logger.Info("ec2tagger: EC2 tagger has started initialization.")
 
 	} else {
 		t.setStarted()
