@@ -1,4 +1,12 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300050.0 (2024-11-18)
+========================================================================
+Features:
+* [Prometheus] Introduce OTel Prometheus Receiver for publishing to AMP
+* [Prometheus] Support Target Allocator with Prometheus Receivers
+* [ContainerInsights] Introduce Kueue metrics for Container Insights
+
+========================================================================
 Amazon CloudWatch Agent 1.300049.1 (2024-11-06)
 ========================================================================
 Enhancements:
