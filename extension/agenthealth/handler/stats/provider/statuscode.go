@@ -78,6 +78,7 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 
 	operation = GetShortOperationName(operation)
 	statusCode := r.StatusCode
+	log.Printf("Received status code: %d for operation: %s", statusCode, operation)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -91,8 +92,11 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	h.updateStatusCodeCount(stats, statusCode, operation)
 
 	h.statsByOperation.Store(operation, stats)
+	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 
+	log.Println("Complete status code map:")
 	h.statsByOperation.Range(func(key, value interface{}) bool {
+		log.Print("Printing all stats by operations map")
 
 		operation := key.(string)
 		stats := value.(*[5]int)
