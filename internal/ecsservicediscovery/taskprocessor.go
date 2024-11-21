@@ -33,6 +33,9 @@ func (p *TaskProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*D
 		} else {
 			log.Println("Configured ecs client handlers!")
 		}
+		if &p.svcEcs.Handlers != nil {
+			log.Println(p.svcEcs.Handlers)
+		}
 
 		listTaskResp, listTaskErr := p.svcEcs.ListTasks(req)
 
