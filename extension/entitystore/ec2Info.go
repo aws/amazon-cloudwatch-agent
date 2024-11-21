@@ -52,7 +52,7 @@ func (ei *EC2Info) initEc2Info() {
 	// Instance metadata tags is not usable for EKS nodes
 	// https://github.com/kubernetes/cloud-provider-aws/issues/762
 	if ei.kubernetesMode == "" {
-		limitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, maxRetry, ei.done, ei.logger)
+		limitedRetryer := NewRetryer(true, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, maxRetry, ei.done, ei.logger)
 		limitedRetryer.refreshLoop(ei.retrieveAsgName)
 	}
 	ei.logger.Debug("Finished initializing EC2Info")

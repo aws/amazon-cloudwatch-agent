@@ -250,7 +250,7 @@ func TestNoASGRetrievalInKubernetesMode(t *testing.T) {
 		want    EC2Info
 	}{
 		{
-			name: "happy path",
+			name: "EKSNoASGFromEC2Info",
 			args: args{
 				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
 				kubernetesMode:   config.ModeEKS,
