@@ -30,6 +30,7 @@ type Prometheus struct {
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
 	middleware           awsmiddleware.Middleware
+	Configurer           *awsmiddleware.Configurer
 }
 
 func (p *Prometheus) SampleConfig() string {
@@ -45,11 +46,15 @@ func (p *Prometheus) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
-	log.Println("Promethues handleContainerInstances - - - - - ")
+	log.Println("Starting Prometheus")
 
+	// Initialize Metrics Type Handler
 	mth := NewMetricsTypeHandler()
+
+	// Initialize the Prometheus receiver and handler
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
-	handler := &metricsHandler{mbCh: p.mbCh,
+	handler := &metricsHandler{
+		mbCh:        p.mbCh,
 		acc:         accIn,
 		calculator:  NewCalculator(),
 		filter:      NewMetricsFilter(),
@@ -57,19 +62,29 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 		mtHandler:   mth,
 	}
 
-	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+	var configurer *awsmiddleware.Configurer
+	var ecssd *ecsservicediscovery.ServiceDiscovery
 
-	// Start ECS Service Discovery when in ECS
-	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus-Setup-autodiscovery-ecs.html
+	if p.middleware != nil {
+		if configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers()); configurer != nil {
+			log.Println("failed to configure awsmiddleware")
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+
+		} else {
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
+			log.Println("passed awsmiddleware configurer")
+		}
+	}
+
+	// Launch ECS Service Discovery as a goroutine
 	p.wg.Add(1)
 	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
 
-	// Start scraping prometheus metrics from prometheus endpoints
+	// Launch the Prometheus scraping process as a goroutine
 	p.wg.Add(1)
 	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
 
-	// Start filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
-	// and convert Prometheus metrics to Telegraf Metrics
+	// Launch the handler for filtering and converting Prometheus metrics as a goroutine
 	p.wg.Add(1)
 	go handler.start(p.shutDownChan, &p.wg)
 
@@ -82,6 +97,7 @@ func (p *Prometheus) Stop() {
 }
 
 func init() {
+	log.Println("Initializing Prometheus")
 	inputs.Add("prometheus", func() telegraf.Input {
 		boolean := true
 		return &Prometheus{
@@ -91,7 +107,7 @@ func init() {
 				zap.NewNop(),
 				&agenthealth.Config{
 					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					Stats:              agent.StatsConfig{},
+					Stats:              agent.StatsConfig{Operations: []string{"PutMetricData"}},
 					StatusCodeOnly:     &boolean,
 				},
 			),

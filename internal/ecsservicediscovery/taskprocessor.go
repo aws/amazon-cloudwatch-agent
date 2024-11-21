@@ -4,28 +4,38 @@
 package ecsservicediscovery
 
 import (
-	"log"
-
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"log"
 )
 
 // Get all running tasks for the target cluster
 type TaskProcessor struct {
-	svcEcs *ecs.ECS
-	stats  *ProcessorStats
+	svcEcs     *ecs.ECS
+	stats      *ProcessorStats
+	Configurer *awsmiddleware.Configurer
 }
 
-func NewTaskProcessor(ecs *ecs.ECS, s *ProcessorStats) *TaskProcessor {
+// NewTaskProcessor creates a new TaskProcessor instance
+func NewTaskProcessor(ecs *ecs.ECS, s *ProcessorStats, configurer *awsmiddleware.Configurer) *TaskProcessor {
 	return &TaskProcessor{
-		svcEcs: ecs,
-		stats:  s,
+		svcEcs:     ecs,
+		stats:      s,
+		Configurer: configurer,
 	}
 }
 
 func (p *TaskProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	req := &ecs.ListTasksInput{Cluster: &cluster}
 	for {
+		if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
+			log.Println("Failed to configure ecs client")
+		} else {
+			log.Println("Configured ecs client handlers!")
+		}
+
 		listTaskResp, listTaskErr := p.svcEcs.ListTasks(req)
+
 		p.stats.AddStats(AWSCLIListTasks)
 		if listTaskErr != nil {
 			return taskList, newServiceDiscoveryError("Failed to list task ARNs for "+cluster, &listTaskErr)

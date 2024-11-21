@@ -4,6 +4,7 @@
 package ecsservicediscovery
 
 import (
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"log"
 	"sync"
 	"time"
@@ -23,6 +24,7 @@ type ServiceDiscovery struct {
 
 	stats             ProcessorStats
 	clusterProcessors []Processor
+	Configurer        *awsmiddleware.Configurer
 }
 
 func (sd *ServiceDiscovery) init() {
@@ -37,7 +39,7 @@ func (sd *ServiceDiscovery) init() {
 }
 
 func (sd *ServiceDiscovery) initClusterProcessorPipeline() {
-	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskProcessor(sd.svcEcs, &sd.stats))
+	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskProcessor(sd.svcEcs, &sd.stats, sd.Configurer))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskDefinitionProcessor(sd.svcEcs, &sd.stats))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewServiceEndpointDiscoveryProcessor(sd.svcEcs, sd.Config.ServiceNamesForTasks, &sd.stats))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewDockerLabelDiscoveryProcessor(sd.Config.DockerLabel))
