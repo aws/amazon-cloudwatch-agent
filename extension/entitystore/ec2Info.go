@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
@@ -51,7 +52,7 @@ func (ei *EC2Info) initEc2Info() {
 	}
 	// Instance metadata tags is not usable for EKS nodes
 	// https://github.com/kubernetes/cloud-provider-aws/issues/762
-	if ei.kubernetesMode == "" {
+	if ei.kubernetesMode != config.ModeEKS {
 		limitedRetryer := NewRetryer(true, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, maxRetry, ei.done, ei.logger)
 		limitedRetryer.refreshLoop(ei.retrieveAsgName)
 	}
