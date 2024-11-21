@@ -5,7 +5,6 @@ package entitystore
 
 import (
 	"bytes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"log"
 	"strings"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
