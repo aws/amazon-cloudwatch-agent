@@ -79,7 +79,9 @@ func (sd *ServiceDiscovery) work() {
 	var err error
 	var clusterTasks []*DecoratedTask
 	for _, p := range sd.clusterProcessors {
+		log.Println(p.ProcessorName())
 		clusterTasks, err = p.Process(sd.Config.TargetCluster, clusterTasks)
+
 		// Ignore partial result to avoid overwriting existing targets
 		if err != nil {
 			log.Printf("E! ECS SD processor: %v got error: %v \n", p.ProcessorName(), err.Error())

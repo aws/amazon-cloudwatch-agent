@@ -66,13 +66,15 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 	var ecssd *ecsservicediscovery.ServiceDiscovery
 
 	if p.middleware != nil {
-		if configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers()); configurer != nil {
-			log.Println("failed to configure awsmiddleware")
-			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
+		if configurer != nil {
+			log.Println("passed awsmiddleware configurer")
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
 
 		} else {
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
-			log.Println("passed awsmiddleware configurer")
+			log.Println("failed awsmiddleware configurer")
+
 		}
 	}
 
