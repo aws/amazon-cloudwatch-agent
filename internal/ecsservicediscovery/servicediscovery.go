@@ -48,6 +48,8 @@ func (sd *ServiceDiscovery) initClusterProcessorPipeline() {
 }
 
 func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{}, wg *sync.WaitGroup) {
+	log.Println("StartECSServiceDiscovery handleContainerInstances - - - - - ")
+
 	defer wg.Done()
 
 	if !sd.validateConfig() {
@@ -69,6 +71,8 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 }
 
 func (sd *ServiceDiscovery) work() {
+	log.Println("Work handleContainerInstances - - - - - ")
+
 	sd.stats.ResetStats()
 	var err error
 	var clusterTasks []*DecoratedTask

@@ -64,6 +64,7 @@ func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 }
 
 func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, batch []string, containerInstanceMap map[string]*EC2MetaData) error {
+	log.Println("handleContainerInstances - - - - - ")
 	ec2Id2containerInstanceIdMap := make(map[string]*string)
 	input := &ecs.DescribeContainerInstancesInput{
 		Cluster:            &cluster,
@@ -126,6 +127,8 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 }
 
 func (p *ContainerInstanceProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
+	log.Println("Process handleContainerInstances - - - - - ")
+
 	defer func() {
 		p.stats.AddStatsCount(LRUCacheSizeContainerInstance, p.ec2MetaDataCache.Len())
 	}()

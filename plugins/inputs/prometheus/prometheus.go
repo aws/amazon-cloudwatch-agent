@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"go.uber.org/zap"
+	"log"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -44,6 +45,8 @@ func (p *Prometheus) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
+	log.Println("Promethues handleContainerInstances - - - - - ")
+
 	mth := NewMetricsTypeHandler()
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
 	handler := &metricsHandler{mbCh: p.mbCh,
