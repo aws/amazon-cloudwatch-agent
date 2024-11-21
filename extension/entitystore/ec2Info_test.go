@@ -5,6 +5,7 @@ package entitystore
 
 import (
 	"bytes"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"log"
 	"strings"
 	"testing"
@@ -233,6 +234,40 @@ func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
 			log.Println(logOutput)
 			assert.NotContains(t, logOutput, "Initializing EC2Info")
 			assert.NotContains(t, logOutput, "Finished initializing EC2Info")
+		})
+	}
+}
+
+func TestNoASGRetrievalInKubernetesMode(t *testing.T) {
+	type args struct {
+		metadataProvider ec2metadataprovider.MetadataProvider
+		kubernetesMode   string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+		want    EC2Info
+	}{
+		{
+			name: "happy path",
+			args: args{
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
+				kubernetesMode:   config.ModeEKS,
+			},
+			wantErr: false,
+			want: EC2Info{
+				AutoScalingGroup: "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		logger, _ := zap.NewDevelopment()
+		t.Run(tt.name, func(t *testing.T) {
+			ei := &EC2Info{metadataProvider: tt.args.metadataProvider, kubernetesMode: tt.args.kubernetesMode, logger: logger}
+			go ei.initEc2Info()
+			time.Sleep(3 * time.Second)
+			assert.Equal(t, tt.want.AutoScalingGroup, ei.GetAutoScalingGroup())
 		})
 	}
 }
