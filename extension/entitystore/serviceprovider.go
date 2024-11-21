@@ -240,7 +240,7 @@ func (s *serviceprovider) scrapeIAMRole() error {
 func (s *serviceprovider) scrapeImdsServiceName() error {
 	tags, err := s.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
-		s.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
+		s.logger.Debug("Failed to get service name from instance tags. This is likely because instance tag is not enabled for IMDS but will not affect agent functionality.")
 		return err
 	}
 	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order.

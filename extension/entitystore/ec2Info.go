@@ -107,7 +107,7 @@ func (ei *EC2Info) setInstanceIDAccountID() error {
 func (ei *EC2Info) retrieveAsgName() error {
 	tags, err := ei.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
-		ei.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
+		ei.logger.Debug("Failed to get AutoScalingGroup from instance tags. This is likely because instance tag is not enabled for IMDS but will not affect agent functionality.")
 		return err
 	} else if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
 		asg, err := ei.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)

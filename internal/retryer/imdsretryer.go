@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/influxdata/wlog"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
@@ -44,7 +43,6 @@ func (r IMDSRetryer) ShouldRetry(req *request.Request) bool {
 	if awsError, ok := req.Error.(awserr.Error); r.DefaultRetryer.ShouldRetry(req) || (ok && awsError != nil && awsError.Code() == "EC2MetadataError") {
 		shouldRetry = true
 	}
-	fmtDebugLog("D! should retry %t for imds error : %v", shouldRetry, req.Error)
 	return shouldRetry
 }
 
@@ -55,11 +53,4 @@ func GetDefaultRetryNumber() int {
 		return imdsRetry
 	}
 	return DefaultImdsRetries
-}
-
-// fmtDebugLog logs the content only if the log level is DEBUG
-func fmtDebugLog(format string, args ...interface{}) {
-	if wlog.LogLevel() == wlog.DEBUG {
-		fmt.Printf(format, args...)
-	}
 }
