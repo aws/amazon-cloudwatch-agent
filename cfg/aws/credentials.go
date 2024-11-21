@@ -225,6 +225,8 @@ func newStsClient(p client.ConfigProvider, cfgs ...*aws.Config) *sts.STS {
 				"x-amz-source-account": sourceAccount,
 			}))
 		})
+
+		log.Printf("D! Found confused deputy header environment variables: source account: %q, source arn: %q", sourceAccount, sourceArn)
 	}
 
 	return client
