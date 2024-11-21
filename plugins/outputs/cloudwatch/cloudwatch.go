@@ -177,7 +177,7 @@ func (c *CloudWatch) pushMetricDatum() {
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
 				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])
-				c.metricDatumBatch.Size += payload(datums[i])
+				c.metricDatumBatch.Size += payload(datums[i], &entity)
 				c.metricDatumBatch.Count++
 				if c.metricDatumBatch.isFull() {
 					// if batch is full

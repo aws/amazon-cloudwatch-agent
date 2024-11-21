@@ -4,6 +4,7 @@
 package cloudwatch
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"testing"
@@ -118,7 +119,7 @@ func TestPayload_ValuesAndCounts(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 867, payload(datum))
+	assert.Equal(t, 867, payload(datum, nil))
 }
 
 func TestPayload_Value(t *testing.T) {
@@ -131,7 +132,7 @@ func TestPayload_Value(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 356, payload(datum))
+	assert.Equal(t, 356, payload(datum, nil))
 }
 
 func TestPayload_Min(t *testing.T) {
@@ -139,7 +140,29 @@ func TestPayload_Min(t *testing.T) {
 	datum.SetValue(1.23456789)
 	datum.SetMetricName("MetricName")
 	datum.SetTimestamp(time.Now())
-	assert.Equal(t, 148, payload(datum))
+	assert.Equal(t, 148, payload(datum, nil))
+}
+
+func TestPayload_Entity(t *testing.T) {
+	datum := new(cloudwatch.MetricDatum)
+	datum.SetValue(1.23456789)
+	datum.SetMetricName("MetricName")
+	datum.SetTimestamp(time.Now())
+
+	entity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			"Environment": aws.String("Environment"),
+			"Service":     aws.String("Service"),
+		},
+		Attributes: map[string]*string{
+			"TestAttribute": aws.String("TestValue"),
+		},
+	}
+
+	expectedDatumSize := 148
+	expectedEntitySize := 133
+	fmt.Println(entity.String())
+	assert.Equal(t, expectedDatumSize+expectedEntitySize, payload(datum, &entity))
 }
 
 func TestEntityToString_StringToEntity(t *testing.T) {
