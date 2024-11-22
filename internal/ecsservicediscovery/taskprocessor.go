@@ -27,16 +27,13 @@ func NewTaskProcessor(ecs *ecs.ECS, s *ProcessorStats, configurer *awsmiddleware
 
 func (p *TaskProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	req := &ecs.ListTasksInput{Cluster: &cluster}
-	for {
-		if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
-			log.Println("Failed to configure ecs client")
-		} else {
-			log.Println("Configured ecs client handlers!")
-		}
-		if &p.svcEcs.Handlers != nil {
-			log.Println(p.svcEcs.Handlers)
-		}
+	if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
+		log.Println("Failed to configure ecs client")
+	} else {
+		log.Println("Configured ecs client handlers!")
+	}
 
+	for {
 		listTaskResp, listTaskErr := p.svcEcs.ListTasks(req)
 
 		p.stats.AddStats(AWSCLIListTasks)

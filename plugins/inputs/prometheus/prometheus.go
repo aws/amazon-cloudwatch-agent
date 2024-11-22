@@ -72,7 +72,7 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
 
 		} else {
-			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
 			log.Println("failed awsmiddleware configurer")
 
 		}
