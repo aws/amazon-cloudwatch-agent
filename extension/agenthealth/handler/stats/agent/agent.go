@@ -127,21 +127,6 @@ func (of OperationsFilter) IsAllowed(operationName string) bool {
 	return of.allowAll || of.operations.Contains(operationName)
 }
 
-func NewOperationsFilter(operations ...string) OperationsFilter {
-	allowed := collections.NewSet[string](operations...)
-	return OperationsFilter{
-		operations: allowed,
-		allowAll:   allowed.Contains(AllowAllOperations),
-	}
-}
-
-type StatsConfig struct {
-	// Operations are the allowed operation names to gather stats for.
-	Operations []string `mapstructure:"operations,omitempty"`
-	// UsageFlags are the usage flags to set on start up.
-	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
-}
-
 var StatusCodeOperations = []string{ // all the operations that are allowed
 	"DescribeInstances",
 	"DescribeTags",
@@ -155,9 +140,24 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"CreateLogStream",
 }
 
+type StatsConfig struct {
+	// Operations are the allowed operation names to gather stats for.
+	Operations []string `mapstructure:"operations,omitempty"`
+	// UsageFlags are the usage flags to set on start up.
+	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
+}
+
+func NewOperationsFilter(operations ...string) OperationsFilter {
+	allowed := collections.NewSet[string](operations...)
+	return OperationsFilter{
+		operations: allowed,
+		allowAll:   allowed.Contains(AllowAllOperations),
+	}
+}
+
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
 func NewStatusCodeOperationsFilter() OperationsFilter {
-	allowed := collections.NewSet[string](StatusCodeOperations...)
+	allowed := make(map[string]struct{}, len(StatusCodeOperations))
 
 	return OperationsFilter{
 		operations: allowed,

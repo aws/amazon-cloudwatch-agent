@@ -39,7 +39,6 @@ func cleanHost() error {
 }
 
 func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
-	log.Println("yooooo we in above describe instances")
 	maxResults := int32(1000)
 	nameFilter := types.Filter{Name: aws.String("tag:Name"), Values: []string{
 		"buildLinuxPackage",

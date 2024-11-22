@@ -39,11 +39,9 @@ func (p *intervalStats) Stats(string) agent.Stats {
 
 func (p *intervalStats) getStats() agent.Stats {
 	var stats agent.Stats
-
 	if value := p.stats.Load(); value != nil {
 		stats = value.(agent.Stats)
 	}
-
 	return stats
 }
 

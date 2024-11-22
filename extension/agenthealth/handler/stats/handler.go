@@ -21,25 +21,36 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	var requestHandlers []awsmiddleware.RequestHandler
+	var responseHandlers []awsmiddleware.ResponseHandler
+	var statsProviders []agent.StatsProvider
+
+	if !statusCodeEnabled && !agentStatsEnabled {
+		return nil, nil
+	}
+
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
+	if statusCodeEnabled {
+		requestHandlers = append(requestHandlers, statusCodeStats)
+		responseHandlers = append(responseHandlers, statusCodeStats)
+		statsProviders = append(statsProviders, statusCodeStats)
+	}
 
-	if statuscodeonly {
-		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	if agentStatsEnabled {
+		clientStats := client.NewHandler(agent.NewOperationsFilter())
+		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
+		responseHandlers = append(responseHandlers, clientStats)
+		requestHandlers = append(requestHandlers, clientStats)
+
 	}
 	filter := agent.NewStatusCodeAndOtherOperationsFilter(cfg.Operations)
-	clientStats := client.NewHandler(filter)
+	stats := newStatsHandler(logger, filter, statsProviders)
+	requestHandlers = append(requestHandlers, stats)
 
-	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
-		clientStats,
-		provider.GetProcessStats(),
-		provider.GetFlagsStats(),
-		statusCodeStats,
-	})
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-
-	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats, clientStats}
+	return requestHandlers, responseHandlers
 }
 
 type statsHandler struct {

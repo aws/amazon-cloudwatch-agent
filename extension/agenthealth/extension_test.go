@@ -5,6 +5,7 @@ package agenthealth
 
 import (
 	"context"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ import (
 
 func TestExtension(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{IsUsageDataEnabled: true}
+	cfg := &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{"PutLogEvents"}}}
 	extension := NewAgentHealth(zap.NewNop(), cfg)
 	assert.NotNil(t, extension)
 	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
