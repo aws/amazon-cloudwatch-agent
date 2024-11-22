@@ -21,9 +21,9 @@ func TestExtension(t *testing.T) {
 	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
 	requestHandlers, responseHandlers := extension.Handlers()
 	// user agent, client stats, stats
-	assert.Len(t, requestHandlers, 4)
+	assert.Len(t, requestHandlers, 3)
 	// client stats
-	assert.Len(t, responseHandlers, 2)
+	assert.Len(t, responseHandlers, 1)
 	cfg.IsUsageDataEnabled = false
 	requestHandlers, responseHandlers = extension.Handlers()
 	// user agent
