@@ -7,11 +7,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestExtension(t *testing.T) {
