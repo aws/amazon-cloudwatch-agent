@@ -245,6 +245,7 @@ func runAgent(ctx context.Context,
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 	c.AllowUnusedFields = true
+
 	err = loadTomlConfigIntoAgent(c)
 	if err != nil {
 		return err

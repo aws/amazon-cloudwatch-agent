@@ -5,11 +5,6 @@ package prometheus
 
 import (
 	_ "embed"
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"go.uber.org/zap"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -28,7 +23,6 @@ type Prometheus struct {
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
-	middleware           awsmiddleware.Middleware
 }
 
 func (p *Prometheus) SampleConfig() string {
@@ -80,19 +74,9 @@ func (p *Prometheus) Stop() {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
-		boolean := true
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),
 			shutDownChan: make(chan interface{}),
-			middleware: agenthealth.NewAgentHealth(
-				zap.NewNop(),
-				&agenthealth.Config{
-					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					Stats:              agent.StatsConfig{},
-					StatusCodeOnly:     &boolean,
-				},
-			),
 		}
-
 	})
 }

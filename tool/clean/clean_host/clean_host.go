@@ -67,7 +67,6 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 	for {
 		instanceIds := make([]string, 0)
 		expirationDateInstance := time.Now().UTC().Add(clean.KeepDurationOneDay)
-		log.Println("yooooo we in above describe instances for host")
 		describeInstanceOutput, _ := ec2client.DescribeInstances(cxt, &instanceInput)
 		for _, reservation := range describeInstanceOutput.Reservations {
 			for _, instance := range reservation.Instances {

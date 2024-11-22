@@ -28,7 +28,6 @@ var (
 // StatusCodeHandler provides monitoring for status codes per operation.
 type StatusCodeHandler struct {
 	statsByOperation sync.Map
-	mu               sync.Mutex
 	resetTimer       *time.Timer
 	filter           agent.OperationsFilter
 }
@@ -47,13 +46,7 @@ func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
 // startResetTimer initializes a reset timer to clear stats every 5 minutes.
 func (h *StatusCodeHandler) startResetTimer() {
 	h.resetTimer = time.AfterFunc(statusResetInterval, func() {
-		h.mu.Lock()
-		defer h.mu.Unlock()
-
-		h.statsByOperation.Range(func(key, _ interface{}) bool {
-			h.statsByOperation.Delete(key)
-			return true
-		})
+		h.statsByOperation.Clear()
 		log.Println("Status code stats reset.")
 		h.startResetTimer()
 	})
@@ -66,10 +59,7 @@ func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) 
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	// Extract the operation name
 	operation := awsmiddleware.GetOperationName(ctx)
-	if operation == "" {
-		log.Println("No operation name found in the context")
-		return
-	} else if !h.filter.IsAllowed(operation) {
+	if !h.filter.IsAllowed(operation) {
 		log.Printf("Operation %s is not allowed", operation)
 		return
 	} else {
@@ -77,10 +67,10 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	}
 
 	operation = GetShortOperationName(operation)
+	if operation == "" {
+		return
+	}
 	statusCode := r.StatusCode
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{})
 	if !loaded {
@@ -144,9 +134,9 @@ func GetShortOperationName(operation string) string {
 	case "CreateLogStream":
 		return "cls"
 	case "AssumeRole":
-		return "sts"
+		return "ar"
 	default:
-		return operation
+		return ""
 	}
 }
 
@@ -162,8 +152,6 @@ func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
 
 // Stats implements the `Stats` method required by the `agent.StatsProvider` interface.
 func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
-	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	statusCodeMap := make(map[string][5]int)
 

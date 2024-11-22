@@ -71,7 +71,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
-	cfg.StatusCodeOnly = t.statuscodeonly
+	cfg.IsOnlyStatusCodeEnabled = t.statuscodeonly
 	if t.statuscodeonly != nil && *t.statuscodeonly {
 		return cfg, nil
 	}

@@ -23,13 +23,13 @@ const (
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
+	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
+
 	if statuscodeonly {
-		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
 	filter := agent.NewStatusCodeAndOtherOperationsFilter(cfg.Operations)
 	clientStats := client.NewHandler(filter)
-	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 
 	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
 		clientStats,
@@ -39,7 +39,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 	})
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
 
-	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats, clientStats}
 }
 
 type statsHandler struct {

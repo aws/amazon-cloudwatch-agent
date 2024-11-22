@@ -64,7 +64,6 @@ func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 }
 
 func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, batch []string, containerInstanceMap map[string]*EC2MetaData) error {
-	log.Println("yooooo we in above describe instances for host")
 	ec2Id2containerInstanceIdMap := make(map[string]*string)
 	input := &ecs.DescribeContainerInstancesInput{
 		Cluster:            &cluster,
