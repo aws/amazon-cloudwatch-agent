@@ -169,6 +169,7 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"DescribeTaskDefinition",
 	"ListServices",
 	"ListTasks",
+	"DescribeTasks",
 	"CreateLogGroup",
 	"CreateLogStream",
 }
