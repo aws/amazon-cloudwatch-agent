@@ -45,11 +45,14 @@ func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
 
 // startResetTimer initializes a reset timer to clear stats every 5 minutes.
 func (h *StatusCodeHandler) startResetTimer() {
-	h.resetTimer = time.AfterFunc(statusResetInterval, func() {
-		h.statsByOperation.Clear()
-		log.Println("Status code stats reset.")
-		h.startResetTimer()
-	})
+	ticker := time.NewTicker(statusResetInterval)
+
+	go func() {
+		for range ticker.C {
+			h.statsByOperation.Clear()
+			log.Println("Status code stats reset.")
+		}
+	}()
 }
 
 // HandleRequest is a no-op for the StatusCodeHandler.

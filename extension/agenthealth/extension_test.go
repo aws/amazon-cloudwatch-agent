@@ -22,7 +22,7 @@ func TestExtension(t *testing.T) {
 	// user agent, client stats, stats
 	assert.Len(t, requestHandlers, 4)
 	// client stats
-	assert.Len(t, responseHandlers, 1)
+	assert.Len(t, responseHandlers, 2)
 	cfg.IsUsageDataEnabled = false
 	requestHandlers, responseHandlers = extension.Handlers()
 	// user agent
