@@ -98,8 +98,8 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	h.statsByOperation.Range(func(key, value interface{}) bool {
 		log.Print("Printing all stats by operations map")
 
-		operation := key.(string)
-		stats := value.(*[5]int)
+		operation = key.(string)
+		stats = value.(*[5]int)
 		log.Printf("Operation: %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 		return true
 	})
@@ -174,7 +174,7 @@ func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
 	statusCodeMap := make(map[string][5]int)
 
 	h.statsByOperation.Range(func(key, value interface{}) bool {
-		operation := key.(string)
+		operation = key.(string)
 		stats := value.(*[5]int)
 		statusCodeMap[operation] = [5]int{stats[0], stats[1], stats[2], stats[3], stats[4]}
 		return true
