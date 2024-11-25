@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -42,11 +41,7 @@ func GetStatusCodeStats(filter interface{}) *StatusCodeHandler {
 
 		if opsFilter, ok := filter.(agent.OperationsFilter); ok {
 			handler.filter = opsFilter
-		} else {
-			// Provide a default or fallback implementation if the filter is not valid
-			log.Println("Invalid filter provided; using NoOpOperationsFilter.")
 		}
-
 		handler.startResetTimer()
 		statusCodeSingleton = handler
 	})
@@ -61,7 +56,6 @@ func (h *StatusCodeHandler) startResetTimer() {
 		for key := range h.statsByOperation {
 			delete(h.statsByOperation, key)
 		}
-		log.Println("Status code stats reset.")
 		h.startResetTimer()
 	})
 }
@@ -75,10 +69,7 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	operation := awsmiddleware.GetOperationName(ctx)
 
 	if !h.filter.IsAllowed(operation) {
-		log.Printf("Operation %s is not allowed", operation)
 		return
-	} else {
-		log.Printf("Processing response for operation: %s", operation)
 	}
 
 	operation = GetShortOperationName(operation)
@@ -95,15 +86,9 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	if !exists {
 		stats = &[5]int{}
 		h.statsByOperation[operation] = stats
-		log.Printf("Initializing stats for operation: %s", operation)
 	}
 
 	h.updateStatusCodeCount(stats, statusCode, operation)
-
-	// Optionally, log all stats (protected by the mutex)
-	for operation, stats := range h.statsByOperation {
-		log.Printf("Operation: %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
-	}
 }
 
 // Helper function to update the status code counts
@@ -120,7 +105,7 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 	case 429:
 		stats[4]++
 	default:
-		log.Printf("Received an untracked status code %d for operation: %s", statusCode, operation)
+		return
 	}
 }
 
