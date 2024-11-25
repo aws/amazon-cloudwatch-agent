@@ -1,6 +1,3 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 package provider
 
 import (
@@ -11,7 +8,6 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
@@ -27,16 +23,26 @@ var (
 
 // StatusCodeHandler provides monitoring for status codes per operation.
 type StatusCodeHandler struct {
-	statsByOperation sync.Map
+	statsByOperation map[string]*[5]int
 	resetTimer       *time.Timer
 	filter           agent.OperationsFilter
+	mu               sync.Mutex
 }
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
-func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
+func GetStatusCodeStats(filter interface{}) *StatusCodeHandler {
 	statusCodeStatsOnce.Do(func() {
-		handler := &StatusCodeHandler{}
-		handler.filter = filter
+		handler := &StatusCodeHandler{
+			statsByOperation: make(map[string]*[5]int),
+		}
+
+		if opsFilter, ok := filter.(agent.OperationsFilter); ok {
+			handler.filter = opsFilter
+		} else {
+			// Provide a default or fallback implementation if the filter is not valid
+			log.Println("Invalid filter provided; using NoOpOperationsFilter.")
+		}
+
 		handler.startResetTimer()
 		statusCodeSingleton = handler
 	})
@@ -45,14 +51,15 @@ func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
 
 // startResetTimer initializes a reset timer to clear stats every 5 minutes.
 func (h *StatusCodeHandler) startResetTimer() {
-	ticker := time.NewTicker(statusResetInterval)
-
-	go func() {
-		for range ticker.C {
-			h.statsByOperation.Clear()
-			log.Println("Status code stats reset.")
+	h.resetTimer = time.AfterFunc(statusResetInterval, func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		for key := range h.statsByOperation {
+			delete(h.statsByOperation, key)
 		}
-	}()
+		log.Println("Status code stats reset.")
+		h.startResetTimer()
+	})
 }
 
 // HandleRequest is a no-op for the StatusCodeHandler.
@@ -62,6 +69,7 @@ func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) 
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	// Extract the operation name
 	operation := awsmiddleware.GetOperationName(ctx)
+
 	if !h.filter.IsAllowed(operation) {
 		log.Printf("Operation %s is not allowed", operation)
 		return
@@ -73,25 +81,25 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	if operation == "" {
 		return
 	}
+
 	statusCode := r.StatusCode
 
-	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{})
-	if !loaded {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	stats, exists := h.statsByOperation[operation]
+	if !exists {
+		stats = &[5]int{}
+		h.statsByOperation[operation] = stats
 		log.Printf("Initializing stats for operation: %s", operation)
 	}
-	stats := value.(*[5]int)
 
 	h.updateStatusCodeCount(stats, statusCode, operation)
 
-	h.statsByOperation.Store(operation, stats)
-
-	h.statsByOperation.Range(func(key, value interface{}) bool {
-
-		operation := key.(string)
-		stats := value.(*[5]int)
+	// Optionally, log all stats (protected by the mutex)
+	for operation, stats := range h.statsByOperation {
 		log.Printf("Operation: %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
-		return true
-	})
+	}
 }
 
 // Helper function to update the status code counts
@@ -155,15 +163,15 @@ func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
 
 // Stats implements the `Stats` method required by the `agent.StatsProvider` interface.
 func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
+	// Lock mutex to safely access statsByOperation
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	statusCodeMap := make(map[string][5]int)
 
-	h.statsByOperation.Range(func(key, value interface{}) bool {
-		operation := key.(string)
-		stats := value.(*[5]int)
-		statusCodeMap[operation] = [5]int{stats[0], stats[1], stats[2], stats[3], stats[4]}
-		return true
-	})
+	for operation, stats := range h.statsByOperation {
+		statusCodeMap[operation] = *stats
+	}
 
 	return agent.Stats{
 		StatusCodes: statusCodeMap,
