@@ -4,6 +4,7 @@
 package cloudwatchlogs
 
 import (
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"math/rand"
 	"sort"
 	"sync"
@@ -63,9 +64,10 @@ type pusher struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+	Configurer            *awsmiddleware.Configurer
 }
 
-func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
+func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc, configurer *awsmiddleware.Configurer) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -80,6 +82,7 @@ func NewPusher(region string, target Target, service CloudWatchLogsService, flus
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		Configurer:      configurer,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)

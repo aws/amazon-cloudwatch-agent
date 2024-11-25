@@ -5,6 +5,7 @@ package cloudwatchlogs
 import (
 	"bytes"
 	"fmt"
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"io"
 	"sync"
 	"time"
@@ -650,6 +651,15 @@ func (c *CloudWatchLogs) CreateLogGroupRequest(input *CreateLogGroupInput) (req 
 	output = &CreateLogGroupOutput{}
 	req = c.newRequest(op, input, output)
 	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+
+	if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
+		c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
+	} else {
+		c.Log.Info("Configured middleware on AWS client")
+	}
+
+
+	configurer := awsmiddleware.NewConfigurer(c.middleware.Handlers())
 	return
 }
 

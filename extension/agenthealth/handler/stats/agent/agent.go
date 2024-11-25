@@ -175,9 +175,6 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 }
 
 var StatusCodeAndOtherOperations = []string{ // all the operations that are allowed
-	"PutMetricData",
-	"PutLogEvents",
-	"PutTraceSegments",
 	"DescribeInstances",
 	"DescribeTags",
 	"DescribeVolumes",

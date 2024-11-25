@@ -4,6 +4,7 @@
 package ecsservicediscovery
 
 import (
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,12 +23,14 @@ type TaskDefinitionProcessor struct {
 	stats  *ProcessorStats
 
 	taskDefCache *simplelru.LRU
+	Configurer   *awsmiddleware.Configurer
 }
 
-func NewTaskDefinitionProcessor(ecs *ecs.ECS, s *ProcessorStats) *TaskDefinitionProcessor {
+func NewTaskDefinitionProcessor(ecs *ecs.ECS, s *ProcessorStats, configurer *awsmiddleware.Configurer) *TaskDefinitionProcessor {
 	p := &TaskDefinitionProcessor{
-		svcEcs: ecs,
-		stats:  s,
+		svcEcs:     ecs,
+		stats:      s,
+		Configurer: configurer,
 	}
 
 	// initiate the caching
@@ -47,6 +50,11 @@ func (p *TaskDefinitionProcessor) Process(cluster string, taskList []*DecoratedT
 	arn2Definition := make(map[string]*ecs.TaskDefinition)
 	for _, t := range taskList {
 		arn2Definition[aws.StringValue(t.Task.TaskDefinitionArn)] = nil
+	}
+	if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
+		log.Println("Failed to configure ecs client")
+	} else {
+		log.Println("Configured ecs client handlers!")
 	}
 
 	for k := range arn2Definition {
