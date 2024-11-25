@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"io"
+	"log"
 	"sync"
 	"time"
 
@@ -651,15 +652,6 @@ func (c *CloudWatchLogs) CreateLogGroupRequest(input *CreateLogGroupInput) (req 
 	output = &CreateLogGroupOutput{}
 	req = c.newRequest(op, input, output)
 	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
-
-	if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
-		c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
-	} else {
-		c.Log.Info("Configured middleware on AWS client")
-	}
-
-
-	configurer := awsmiddleware.NewConfigurer(c.middleware.Handlers())
 	return
 }
 
@@ -724,6 +716,11 @@ func (c *CloudWatchLogs) CreateLogGroupRequest(input *CreateLogGroupInput) (req 
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/CreateLogGroup
 func (c *CloudWatchLogs) CreateLogGroup(input *CreateLogGroupInput) (*CreateLogGroupOutput, error) {
+	if err := input.Configurer.Configure(awsmiddleware.SDKv1(&c.Handlers)); err != nil {
+		log.Println("Failed to configure ecs client")
+	} else {
+		log.Println("Configured ecs client handlers!")
+	}
 	req, out := c.CreateLogGroupRequest(input)
 	return out, req.Send()
 }
@@ -827,6 +824,11 @@ func (c *CloudWatchLogs) CreateLogStreamRequest(input *CreateLogStreamInput) (re
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/CreateLogStream
 func (c *CloudWatchLogs) CreateLogStream(input *CreateLogStreamInput) (*CreateLogStreamOutput, error) {
+	if err := input.Configurer.Configure(awsmiddleware.SDKv1(&c.Handlers)); err != nil {
+		log.Println("Failed to configure handlers")
+	} else {
+		log.Println("Configured handlers on client!")
+	}
 	req, out := c.CreateLogStreamRequest(input)
 	return out, req.Send()
 }
@@ -9583,6 +9585,9 @@ type CreateLogGroupInput struct {
 	// information about using tags to control access, see Controlling access to
 	// Amazon Web Services resources using tags (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_tags.html).
 	Tags map[string]*string `locationName:"tags" min:"1" type:"map"`
+
+
+	Configurer *awsmiddleware.Configurer
 }
 
 // String returns the string representation.
@@ -9680,6 +9685,8 @@ type CreateLogStreamInput struct {
 	//
 	// LogStreamName is a required field
 	LogStreamName *string `locationName:"logStreamName" min:"1" type:"string" required:"true"`
+	Configurer *awsmiddleware.Configurer
+
 }
 
 // String returns the string representation.

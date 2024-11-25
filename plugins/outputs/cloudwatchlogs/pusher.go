@@ -338,9 +338,11 @@ func (p *pusher) send() {
 }
 
 func (p *pusher) createLogGroupAndStream() error {
+
 	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
+		Configurer:    p.Configurer,
 	})
 
 	if err == nil {
@@ -358,6 +360,7 @@ func (p *pusher) createLogGroupAndStream() error {
 			_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 				LogGroupName:  &p.Group,
 				LogStreamName: &p.Stream,
+				Configurer:    p.Configurer,
 			})
 
 			if err == nil {
@@ -383,10 +386,12 @@ func (p *pusher) createLogGroup() error {
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName:  &p.Group,
 			LogGroupClass: &p.Class,
+			Configurer:    p.Configurer,
 		})
 	} else {
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName: &p.Group,
+			Configurer:   p.Configurer,
 		})
 	}
 	return err
