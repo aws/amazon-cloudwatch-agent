@@ -5,7 +5,6 @@ package ecsservicediscovery
 
 import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -47,11 +46,6 @@ func (p *ServiceEndpointDiscoveryProcessor) Process(cluster string, taskList []*
 	idToServiceName := make(map[string]string)
 	var servicesToDescribe []*string
 	req := &ecs.ListServicesInput{Cluster: &cluster}
-	if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
-		log.Println("Failed to configure ecs client")
-	} else {
-		log.Println("Configured ecs client handlers!")
-	}
 	for {
 		listServiceResp, listServiceErr := p.svcEcs.ListServices(req)
 		p.stats.AddStats(AWSCLIListServices)
@@ -90,11 +84,6 @@ func (p *ServiceEndpointDiscoveryProcessor) mapDeploymentIDs(cluster string, ser
 	for startIndex := 0; startIndex < len(servicesForInput); startIndex += 10 {
 		endIndex := minInt(startIndex+10, len(servicesForInput))
 		req := &ecs.DescribeServicesInput{Cluster: &cluster, Services: servicesForInput[startIndex:endIndex]}
-		if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
-			log.Println("Failed to configure ecs client")
-		} else {
-			log.Println("Configured ecs client handlers!")
-		}
 		describeServiceResp, describeServiceErr := p.svcEcs.DescribeServices(req)
 		for _, describedService := range describeServiceResp.Services {
 			for _, deployment := range describedService.Deployments {

@@ -51,11 +51,6 @@ func (p *TaskDefinitionProcessor) Process(cluster string, taskList []*DecoratedT
 	for _, t := range taskList {
 		arn2Definition[aws.StringValue(t.Task.TaskDefinitionArn)] = nil
 	}
-	if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
-		log.Println("Failed to configure ecs client")
-	} else {
-		log.Println("Configured ecs client handlers!")
-	}
 
 	for k := range arn2Definition {
 		if k == "" {

@@ -33,8 +33,17 @@ func (sd *ServiceDiscovery) init() {
 	}
 	configProvider := credentialConfig.Credentials()
 	sd.svcEcs = ecs.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
+	if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEcs.Handlers)); err != nil {
+		log.Println("Failed to configure ecs client")
+	} else {
+		log.Println("Configured ecs client handlers!")
+	}
 	sd.svcEc2 = ec2.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
-
+	if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEc2.Handlers)); err != nil {
+		log.Println("Failed to configure ec2 client")
+	} else {
+		log.Println("Configured ec2 client handlers!")
+	}
 	sd.initClusterProcessorPipeline()
 }
 

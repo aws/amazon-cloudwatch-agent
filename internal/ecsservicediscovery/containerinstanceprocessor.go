@@ -67,14 +67,6 @@ func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 }
 
 func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, batch []string, containerInstanceMap map[string]*EC2MetaData) error {
-	log.Println("handleContainerInstances - - - - - ")
-
-	if err := p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEcs.Handlers)); err != nil {
-		log.Println("Failed to configure ecs client")
-	} else {
-		log.Println("Configured ecs client handlers!")
-	}
-
 	ec2Id2containerInstanceIdMap := make(map[string]*string)
 	input := &ecs.DescribeContainerInstancesInput{
 		Cluster:            &cluster,
@@ -103,12 +95,6 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 
 	// Get the EC2 Instances
 	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
-	if err = p.Configurer.Configure(awsmiddleware.SDKv1(&p.svcEc2.Handlers)); err != nil {
-		log.Printf("Failed to configure ECS client: %v\n", err)
-	} else {
-		log.Println("Configured ECS client handlers successfully!")
-	}
-
 	for {
 		ec2resp, ec2err := p.svcEc2.DescribeInstances(ec2input)
 		p.stats.AddStats(AWSCLIDescribeInstancesRequest)
