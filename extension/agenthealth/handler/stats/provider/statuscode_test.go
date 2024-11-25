@@ -19,16 +19,16 @@ func TestStatusCodeHandler(t *testing.T) {
 
 	// Locking to ensure thread-safe operations
 	handler.mu.Lock()
-	handler.statsByOperation["pmd"] = &[5]int{1, 2, 0, 1, 0}
+	handler.statsByOperation["dt"] = &[5]int{1, 2, 0, 1, 0}
 	handler.mu.Unlock()
 
 	// Retrieve stats after modification
-	stats := handler.Stats("pmd")
+	stats := handler.Stats("dt")
 	expected := [5]int{1, 2, 0, 1, 0}
-	actualStats := stats.StatusCodes["pmd"]
+	actualStats := stats.StatusCodes["dt"]
 
 	// Perform assertions
-	assert.Equal(t, expected, actualStats, "Unexpected stats values for operation 'pmd'")
-	assert.Contains(t, stats.StatusCodes, "pmd", "Status code map should contain 'pmd'")
-	assert.Equal(t, expected, stats.StatusCodes["pmd"], "Stats for 'pmd' do not match")
+	assert.Equal(t, expected, actualStats, "Unexpected stats values for operation 'dt'")
+	assert.Contains(t, stats.StatusCodes, "dt", "Status code map should contain 'dt'")
+	assert.Equal(t, expected, stats.StatusCodes["dt"], "Stats for 'dt' do not match")
 }
