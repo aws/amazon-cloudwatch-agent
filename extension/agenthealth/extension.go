@@ -32,7 +32,7 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	}
 
 	statusCodeEnabled := false
-	statusCodeEnabled = ah.cfg.IsOnlyStatusCodeEnabled
+	statusCodeEnabled = ah.cfg.IsStatusCodeEnabled
 
 	agentStatsEnabled :=
 		slices.Contains(ah.cfg.Stats.Operations, "PutMetricData") ||
