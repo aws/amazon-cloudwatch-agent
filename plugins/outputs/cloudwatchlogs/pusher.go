@@ -5,6 +5,7 @@ package cloudwatchlogs
 
 import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"log"
 	"math/rand"
 	"sort"
 	"sync"
@@ -86,6 +87,7 @@ func NewPusher(region string, target Target, service CloudWatchLogsService, flus
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
+
 	go p.start()
 	return p
 }
@@ -137,7 +139,11 @@ func hasValidTime(e logs.LogEvent) bool {
 
 func (p *pusher) start() {
 	defer p.wg.Done()
-
+	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+		LogGroupName:  &p.Group,
+		LogStreamName: &p.Stream,
+	})
+	log.Println("We in start function for pusher.go ----------- ", err)
 	ec := make(chan logs.LogEvent)
 
 	// Merge events from both blocking and non-blocking channel

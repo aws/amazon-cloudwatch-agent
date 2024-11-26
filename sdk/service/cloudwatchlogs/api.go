@@ -824,11 +824,6 @@ func (c *CloudWatchLogs) CreateLogStreamRequest(input *CreateLogStreamInput) (re
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/CreateLogStream
 func (c *CloudWatchLogs) CreateLogStream(input *CreateLogStreamInput) (*CreateLogStreamOutput, error) {
-	if err := input.Configurer.Configure(awsmiddleware.SDKv1(&c.Handlers)); err != nil {
-		log.Println("Failed to configure handlers")
-	} else {
-		log.Println("Configured handlers on client!")
-	}
 	req, out := c.CreateLogStreamRequest(input)
 	return out, req.Send()
 }
