@@ -4,7 +4,6 @@
 package aws
 
 import (
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"log"
 	"net/http"
 	"os"
@@ -135,7 +134,7 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 	return getSession(config)
 }
 
-func (c *CredentialConfig) assumeCredentials(configurer *awsmiddleware.Configurer) client.ConfigProvider {
+func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 	rootCredentials := c.rootCredentials()
 	config := &aws.Config{
 		Region:     aws.String(c.Region),
@@ -143,25 +142,13 @@ func (c *CredentialConfig) assumeCredentials(configurer *awsmiddleware.Configure
 		LogLevel:   SDKLogLevel(),
 		Logger:     SDKLogger{},
 	}
-	log.Println("Assume Credentials - we in here")
-	config.Credentials = newStsCredentials(rootCredentials, "arn:aws:ecs:us-west-2:730335384949:cluster/testCluster", c.Region, configurer)
+	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region)
 	return getSession(config)
 }
 
-func (c *CredentialConfig) Credentials(configurers ...*awsmiddleware.Configurer) client.ConfigProvider {
-	var configurer *awsmiddleware.Configurer
-	log.Println("We in Credentials!!!!!")
-	// If no configurer is passed, use the default
-	if len(configurers) > 0 {
-		log.Println("Configurer size greater than 1")
-		configurer = configurers[0]
-	} else {
-		log.Println("Configurer size is less than 1")
-		configurer = &awsmiddleware.Configurer{}
-	}
-	c.assumeCredentials(configurer)
+func (c *CredentialConfig) Credentials() client.ConfigProvider {
 	if c.RoleARN != "" {
-		return c.assumeCredentials(configurer)
+		return c.assumeCredentials()
 	} else {
 		return c.rootCredentials()
 	}
@@ -185,8 +172,7 @@ func (s *stsCredentialProvider) Retrieve() (credentials.Value, error) {
 	return v, err
 }
 
-func newStsCredentials(c client.ConfigProvider, roleARN string, region string, configurer *awsmiddleware.Configurer) *credentials.Credentials {
-	// Create AssumeRoleProvider for the regional client
+func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *credentials.Credentials {
 	regional := &stscreds.AssumeRoleProvider{
 		Client: sts.New(c, &aws.Config{
 			Region:              aws.String(region),
@@ -199,36 +185,22 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string, c
 		Duration: stscreds.DefaultDuration,
 	}
 
-	// Get fallback region and endpoint
 	fallbackRegion := getFallbackRegion(region)
-	partitional := sts.New(c, &aws.Config{
-		Region:              aws.String(fallbackRegion),
-		Endpoint:            aws.String(getFallbackEndpoint(fallbackRegion)),
-		STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
-		HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
-		LogLevel:            SDKLogLevel(),
-		Logger:              SDKLogger{},
-	})
 
-	// Apply middleware to the fallback client (partitional)
-	err := configurer.Configure(awsmiddleware.SDKv1(&partitional.Handlers))
-	if err != nil {
-		log.Println("There was a error trying to configure handlers for sts client!")
-	} else {
-		log.Println("Successfully configured sts clients")
-	}
-	// Create AssumeRoleProvider for the fallback (partitional) client
-	partitionalRoleProvider := &stscreds.AssumeRoleProvider{
-		Client:   partitional, // Using the configured sts client
+	partitional := &stscreds.AssumeRoleProvider{
+		Client: sts.New(c, &aws.Config{
+			Region:              aws.String(fallbackRegion),
+			Endpoint:            aws.String(getFallbackEndpoint(fallbackRegion)),
+			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+			HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
+			LogLevel:            SDKLogLevel(),
+			Logger:              SDKLogger{},
+		}),
 		RoleARN:  roleARN,
 		Duration: stscreds.DefaultDuration,
 	}
 
-	// Create and return credentials using both regional and partitional AssumeRoleProviders
-	return credentials.NewCredentials(&stsCredentialProvider{
-		regional:    regional,
-		partitional: partitionalRoleProvider,
-	})
+	return credentials.NewCredentials(&stsCredentialProvider{regional: regional, partitional: partitional})
 }
 
 // The partitional STS endpoint used to fallback when regional STS endpoint is not activated.

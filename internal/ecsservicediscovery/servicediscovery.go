@@ -31,7 +31,7 @@ func (sd *ServiceDiscovery) init() {
 	credentialConfig := &configaws.CredentialConfig{
 		Region: sd.Config.TargetClusterRegion,
 	}
-	configProvider := credentialConfig.Credentials(sd.Configurer)
+	configProvider := credentialConfig.Credentials()
 	sd.svcEcs = ecs.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
 	if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEcs.Handlers)); err != nil {
 		log.Println("Failed to configure ecs client")
