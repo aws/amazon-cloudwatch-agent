@@ -68,6 +68,12 @@ func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 
 func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, batch []string, containerInstanceMap map[string]*EC2MetaData) error {
 	log.Println("In handleContainerInstances ----------")
+	ec2Ids := make([]*string, 0, batchSize)
+	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
+	temp, _ := p.svcEc2.DescribeInstances(ec2input)
+
+	log.Println(temp)
+
 	ec2Id2containerInstanceIdMap := make(map[string]*string)
 	input := &ecs.DescribeContainerInstancesInput{
 		Cluster:            &cluster,
@@ -83,7 +89,7 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 		log.Printf("E! DescribeContainerInstances Failure for %v, Reason: %v, Detail: %v \n", *f.Arn, *f.Reason, *f.Detail)
 	}
 
-	ec2Ids := make([]*string, 0, batchSize)
+	ec2Ids = make([]*string, 0, batchSize)
 	for _, ci := range resp.ContainerInstances {
 		if ci.Ec2InstanceId != nil && ci.ContainerInstanceArn != nil {
 			containerInstanceMap[aws.StringValue(ci.ContainerInstanceArn)] = &EC2MetaData{
@@ -132,11 +138,6 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 
 func (p *ContainerInstanceProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	log.Println("Process handleContainerInstances - - - - - ")
-	ec2Ids := make([]*string, 0, batchSize)
-	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
-	temp, _ := p.svcEc2.DescribeInstances(ec2input)
-
-	log.Println(temp)
 
 	defer func() {
 		p.stats.AddStatsCount(LRUCacheSizeContainerInstance, p.ec2MetaDataCache.Len())
