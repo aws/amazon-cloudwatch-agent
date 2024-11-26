@@ -86,17 +86,32 @@ func (sd *ServiceDiscovery) work() {
 	ec2Ids := make([]*string, 0, batchSize)
 	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
 	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
+	input := &ecs.DescribeContainerInstancesInput{}
+	resp, _ := sd.svcEcs.DescribeContainerInstances(input)
+	log.Println(resp)
 
 	log.Println(temp)
-	input := &ec2.DescribeVolumesInput{
+	input2 := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			{
 				Name: aws.String("attachment.instance-id"),
 			},
 		},
 	}
-	output, _ := sd.svcEc2.DescribeVolumes(input)
+	output, _ := sd.svcEc2.DescribeVolumes(input2)
 	log.Println(output)
+
+	req := &ecs.DescribeServicesInput{}
+	jo, _ := sd.svcEcs.DescribeServices(req)
+	log.Println(jo)
+
+	output2, _ := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{})
+	log.Println(output2)
+
+	req2 := &ecs.ListServicesInput{}
+
+	output3, _ := sd.svcEcs.ListServices(req2)
+	log.Println(output3)
 
 	sd.stats.ResetStats()
 	var err error
