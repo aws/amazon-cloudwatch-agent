@@ -81,7 +81,7 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
-    batch/prometheus:
+    batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -96,11 +96,11 @@ service:
         - agenthealth/logs
         - entitystore
     pipelines:
-        metrics/prometheus:
+        metrics/prometheus/cloudwatchlogs:
             exporters:
                 - awsemf/prometheus
             processors:
-                - batch/prometheus
+                - batch/prometheus/cloudwatchlogs
             receivers:
                 - telegraf_prometheus
     telemetry:

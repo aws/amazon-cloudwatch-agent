@@ -70,7 +70,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 	var destinations []string
 	switch configSection {
 	case LogsKey:
-		destinations = []string{common.CloudWatchLogsKey}
+		destinations = common.GetLogsDestinations()
 	case MetricsKey:
 		destinations = common.GetMetricsDestinations(conf)
 	}
