@@ -144,7 +144,7 @@ func (c *CredentialConfig) assumeCredentials(configurer *awsmiddleware.Configure
 		Logger:     SDKLogger{},
 	}
 	log.Println("Assume Credentials - we in here")
-	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region, configurer)
+	config.Credentials = newStsCredentials(rootCredentials, "arn:aws:ecs:us-west-2:730335384949:cluster/testCluster", c.Region, configurer)
 	return getSession(config)
 }
 
