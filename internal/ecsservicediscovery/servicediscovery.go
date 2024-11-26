@@ -83,6 +83,18 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 
 func (sd *ServiceDiscovery) work() {
 	log.Println("Work handleContainerInstances - - - - - ")
+	req := &ecs.DescribeServicesInput{}
+	jo, _ := sd.svcEcs.DescribeServices(req)
+	log.Println(jo)
+
+	output2, _ := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{})
+	log.Println(output2)
+
+	req2 := &ecs.ListServicesInput{}
+
+	output3, _ := sd.svcEcs.ListServices(req2)
+	log.Println(output3)
+
 	ec2Ids := make([]*string, 0, batchSize)
 	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
 	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
@@ -100,18 +112,6 @@ func (sd *ServiceDiscovery) work() {
 	}
 	output, _ := sd.svcEc2.DescribeVolumes(input2)
 	log.Println(output)
-
-	req := &ecs.DescribeServicesInput{}
-	jo, _ := sd.svcEcs.DescribeServices(req)
-	log.Println(jo)
-
-	output2, _ := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{})
-	log.Println(output2)
-
-	req2 := &ecs.ListServicesInput{}
-
-	output3, _ := sd.svcEcs.ListServices(req2)
-	log.Println(output3)
 
 	sd.stats.ResetStats()
 	var err error
