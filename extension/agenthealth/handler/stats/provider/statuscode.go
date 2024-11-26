@@ -127,6 +127,8 @@ func GetShortOperationName(operation string) string {
 	switch operation {
 	case "PutMetricData":
 		return "pmd"
+	case "PutRetentionPolicy":
+		return "prp"
 	case "DescribeInstances":
 		return "di"
 	case "DescribeTags":

@@ -178,6 +178,7 @@ var StatusCodeAndOtherOperations = []string{ // all the operations that are allo
 	"PutMetricData",
 	"PutLogEvents",
 	"PutTraceSegments",
+	"PutRetentionPolicy",
 	"DescribeInstances",
 	"DescribeTags",
 	"DescribeVolumes",

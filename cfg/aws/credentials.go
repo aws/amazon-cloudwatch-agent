@@ -143,6 +143,7 @@ func (c *CredentialConfig) assumeCredentials(configurer *awsmiddleware.Configure
 		LogLevel:   SDKLogLevel(),
 		Logger:     SDKLogger{},
 	}
+	log.Println("Assume Credentials - we in here")
 	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region, configurer)
 	return getSession(config)
 }
@@ -211,8 +212,9 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string, c
 	err := configurer.Configure(awsmiddleware.SDKv1(&partitional.Handlers))
 	if err != nil {
 		log.Println("There was a error trying to configure handlers for sts client!")
+	} else {
+		log.Println("Successfully configured sts clients")
 	}
-
 	// Create AssumeRoleProvider for the fallback (partitional) client
 	partitionalRoleProvider := &stscreds.AssumeRoleProvider{
 		Client:   partitional, // Using the configured sts client
