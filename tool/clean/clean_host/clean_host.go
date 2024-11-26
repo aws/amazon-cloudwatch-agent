@@ -33,7 +33,6 @@ func cleanHost() error {
 		return err
 	}
 	ec2client := ec2.NewFromConfig(defaultConfig)
-
 	terminateInstances(cxt, ec2client)
 	return err
 }

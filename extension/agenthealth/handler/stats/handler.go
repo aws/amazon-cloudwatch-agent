@@ -27,36 +27,29 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 	// Log entry into the function
 	logger.Info("Entering NewHandlers function", zap.Bool("statuscodeonly", statuscodeonly))
 
-	// Create the StatusCodeOperationsFilter
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 	logger.Debug("Created StatusCodeOperationsFilter", zap.Any("filter", statusCodeFilter))
 
-	// If statuscodeonly is true, return the filtered handlers with only status code stats
 	if statuscodeonly {
 		logger.Info("Status code only mode is enabled, using status code stats only")
 
-		// Get status code stats
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 		logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
 
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
 
-	// Create the StatusCodeAndOtherOperationsFilter if statuscodeonly is false
 	logger.Info("Status code and other operations filter is being used")
 
 	filter := agent.NewStatusCodeAndOtherOperationsFilter()
 	logger.Debug("Created StatusCodeAndOtherOperationsFilter", zap.Any("filter", filter))
 
-	// Create client stats handler
 	clientStats := client.NewHandler(filter)
 	logger.Debug("Created ClientStats handler", zap.Any("handler", clientStats))
 
-	// Get status code stats
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 	logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
 
-	// Create the stats handler with multiple providers
 	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
 		clientStats,
 		provider.GetProcessStats(),
@@ -65,11 +58,9 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 	})
 	logger.Debug("Created Stats handler", zap.Any("handler", stats))
 
-	// Set usage flags in the agent
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
 	logger.Info("Set usage flags", zap.Any("usageFlags", cfg.UsageFlags))
 
-	// Return the handlers
 	logger.Info("Returning request and response handlers")
 	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 }

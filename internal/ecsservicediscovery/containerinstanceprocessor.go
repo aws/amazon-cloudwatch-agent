@@ -67,6 +67,7 @@ func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 }
 
 func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, batch []string, containerInstanceMap map[string]*EC2MetaData) error {
+	log.Println("In handleContainerInstances ----------")
 	ec2Id2containerInstanceIdMap := make(map[string]*string)
 	input := &ecs.DescribeContainerInstancesInput{
 		Cluster:            &cluster,
@@ -96,6 +97,7 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 	// Get the EC2 Instances
 	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
 	for {
+		log.Println("yoooooooo")
 		ec2resp, ec2err := p.svcEc2.DescribeInstances(ec2input)
 		p.stats.AddStats(AWSCLIDescribeInstancesRequest)
 		if err != nil {
@@ -130,6 +132,11 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 
 func (p *ContainerInstanceProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	log.Println("Process handleContainerInstances - - - - - ")
+	ec2Ids := make([]*string, 0, batchSize)
+	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
+	temp, _ := p.svcEc2.DescribeInstances(ec2input)
+
+	log.Println(temp)
 
 	defer func() {
 		p.stats.AddStatsCount(LRUCacheSizeContainerInstance, p.ec2MetaDataCache.Len())
