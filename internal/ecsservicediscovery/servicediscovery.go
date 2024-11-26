@@ -88,6 +88,15 @@ func (sd *ServiceDiscovery) work() {
 	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
 
 	log.Println(temp)
+	input := &ec2.DescribeVolumesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("attachment.instance-id"),
+			},
+		},
+	}
+	output, _ := sd.svcEc2.DescribeVolumes(input)
+	log.Println(output)
 
 	sd.stats.ResetStats()
 	var err error
