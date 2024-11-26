@@ -18,6 +18,7 @@ func TestComponents(t *testing.T) {
 	assert.NoError(t, err)
 	wantReceivers := []string{
 		"awscontainerinsightreceiver",
+		"awscontainerinsightskueuereceiver",
 		"awsecscontainermetrics",
 		"awsxray",
 		"filelog",
@@ -49,6 +50,7 @@ func TestComponents(t *testing.T) {
 		"experimental_metricsgeneration",
 		"filter",
 		"gpuattributes",
+		"kueueattributes",
 		"groupbytrace",
 		"k8sattributes",
 		"memory_limiter",
