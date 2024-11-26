@@ -153,8 +153,10 @@ func (c *CredentialConfig) Credentials(configurers ...*awsmiddleware.Configurer)
 	log.Println("We in Credentials!!!!!")
 	// If no configurer is passed, use the default
 	if len(configurers) > 0 {
+		log.Println("Configurer size greater than 1")
 		configurer = configurers[0]
 	} else {
+		log.Println("Configurer size is less than 1")
 		configurer = &awsmiddleware.Configurer{}
 	}
 	c.assumeCredentials(configurer)
