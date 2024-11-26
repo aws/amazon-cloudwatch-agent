@@ -101,7 +101,7 @@ func (p *ContainerInstanceProcessor) handleContainerInstances(cluster string, ba
 	}
 
 	// Get the EC2 Instances
-	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
+	ec2input = &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
 	for {
 		log.Println("yoooooooo")
 		ec2resp, ec2err := p.svcEc2.DescribeInstances(ec2input)

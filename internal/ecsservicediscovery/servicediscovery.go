@@ -83,6 +83,11 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 
 func (sd *ServiceDiscovery) work() {
 	log.Println("Work handleContainerInstances - - - - - ")
+	ec2Ids := make([]*string, 0, batchSize)
+	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
+	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
+
+	log.Println(temp)
 
 	sd.stats.ResetStats()
 	var err error
