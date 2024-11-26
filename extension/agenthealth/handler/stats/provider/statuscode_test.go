@@ -16,11 +16,19 @@ func TestStatusCodeHandler(t *testing.T) {
 	filter := agent.NewStatusCodeOperationsFilter()
 	handler := GetStatusCodeStats(filter)
 	require.NotNil(t, handler)
-	handler.statsByOperation.Store("pmd", &[5]int{1, 2, 0, 1, 0})
-	stats := handler.Stats("pmd")
+
+	// Locking to ensure thread-safe operations
+	handler.mu.Lock()
+	handler.statsByOperation["dt"] = &[5]int{1, 2, 0, 1, 0}
+	handler.mu.Unlock()
+
+	// Retrieve stats after modification
+	stats := handler.Stats("dt")
 	expected := [5]int{1, 2, 0, 1, 0}
-	actualStats := stats.StatusCodes["pmd"]
-	assert.Equal(t, expected, actualStats, "Unexpected stats values for operation 'pmd'")
-	assert.Contains(t, stats.StatusCodes, "pmd", "Status code map should contain 'pmd'")
-	assert.Equal(t, expected, stats.StatusCodes["pmd"], "Stats for 'pmd' do not match")
+	actualStats := stats.StatusCodes["dt"]
+
+	// Perform assertions
+	assert.Equal(t, expected, actualStats, "Unexpected stats values for operation 'dt'")
+	assert.Contains(t, stats.StatusCodes, "dt", "Status code map should contain 'dt'")
+	assert.Equal(t, expected, stats.StatusCodes["dt"], "Stats for 'dt' do not match")
 }

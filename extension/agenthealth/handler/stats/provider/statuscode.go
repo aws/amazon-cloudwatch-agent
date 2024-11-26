@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -27,17 +26,22 @@ var (
 
 // StatusCodeHandler provides monitoring for status codes per operation.
 type StatusCodeHandler struct {
-	statsByOperation sync.Map
-	mu               sync.Mutex
+	statsByOperation map[string]*[5]int
 	resetTimer       *time.Timer
 	filter           agent.OperationsFilter
+	mu               sync.Mutex
 }
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
-func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
+func GetStatusCodeStats(filter interface{}) *StatusCodeHandler {
 	statusCodeStatsOnce.Do(func() {
-		handler := &StatusCodeHandler{}
-		handler.filter = filter
+		handler := &StatusCodeHandler{
+			statsByOperation: make(map[string]*[5]int),
+		}
+
+		if opsFilter, ok := filter.(agent.OperationsFilter); ok {
+			handler.filter = opsFilter
+		}
 		handler.startResetTimer()
 		statusCodeSingleton = handler
 	})
@@ -49,12 +53,9 @@ func (h *StatusCodeHandler) startResetTimer() {
 	h.resetTimer = time.AfterFunc(statusResetInterval, func() {
 		h.mu.Lock()
 		defer h.mu.Unlock()
-
-		h.statsByOperation.Range(func(key, _ interface{}) bool {
-			h.statsByOperation.Delete(key)
-			return true
-		})
-		log.Println("Status code stats reset.")
+		for key := range h.statsByOperation {
+			delete(h.statsByOperation, key)
+		}
 		h.startResetTimer()
 	})
 }
@@ -66,43 +67,28 @@ func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) 
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	// Extract the operation name
 	operation := awsmiddleware.GetOperationName(ctx)
-	if operation == "" {
-		log.Println("No operation name found in the context")
+
+	if !h.filter.IsAllowed(operation) {
 		return
-	} else if !h.filter.IsAllowed(operation) {
-		log.Printf("Operation %s is not allowed", operation)
-		return
-	} else {
-		log.Printf("Processing response for operation: %s", operation)
 	}
 
 	operation = GetShortOperationName(operation)
+	if operation == "" {
+		return
+	}
+
 	statusCode := r.StatusCode
-	log.Printf("Received status code: %d for operation: %s", statusCode, operation)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{})
-	if !loaded {
-		log.Printf("Initializing stats for operation: %s", operation)
+	stats, exists := h.statsByOperation[operation]
+	if !exists {
+		stats = &[5]int{}
+		h.statsByOperation[operation] = stats
 	}
-	stats := value.(*[5]int)
 
 	h.updateStatusCodeCount(stats, statusCode, operation)
-
-	h.statsByOperation.Store(operation, stats)
-	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
-
-	log.Println("Complete status code map:")
-	h.statsByOperation.Range(func(key, value interface{}) bool {
-		log.Print("Printing all stats by operations map")
-
-		operation = key.(string)
-		stats = value.(*[5]int)
-		log.Printf("Operation: %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
-		return true
-	})
 }
 
 // Helper function to update the status code counts
@@ -119,14 +105,12 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 	case 429:
 		stats[4]++
 	default:
-		log.Printf("Received an untracked status code %d for operation: %s", statusCode, operation)
+		return
 	}
 }
 
 func GetShortOperationName(operation string) string {
 	switch operation {
-	case "PutMetricData":
-		return "pmd"
 	case "PutRetentionPolicy":
 		return "prp"
 	case "DescribeInstances":
@@ -141,8 +125,6 @@ func GetShortOperationName(operation string) string {
 		return "ds"
 	case "DescribeTaskDefinition":
 		return "dtd"
-	case "DescribeTasks":
-		return "dts"
 	case "ListServices":
 		return "ls"
 	case "ListTasks":
@@ -151,10 +133,8 @@ func GetShortOperationName(operation string) string {
 		return "clg"
 	case "CreateLogStream":
 		return "cls"
-	case "AssumeRole":
-		return "sts"
 	default:
-		return operation
+		return ""
 	}
 }
 
@@ -170,17 +150,15 @@ func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
 
 // Stats implements the `Stats` method required by the `agent.StatsProvider` interface.
 func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
+	// Lock mutex to safely access statsByOperation
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	statusCodeMap := make(map[string][5]int)
 
-	h.statsByOperation.Range(func(key, value interface{}) bool {
-		operation = key.(string)
-		stats := value.(*[5]int)
-		statusCodeMap[operation] = [5]int{stats[0], stats[1], stats[2], stats[3], stats[4]}
-		return true
-	})
+	for operation, stats := range h.statsByOperation {
+		statusCodeMap[operation] = *stats
+	}
 
 	return agent.Stats{
 		StatusCodes: statusCodeMap,

@@ -75,7 +75,6 @@ func TestProcessStats(t *testing.T) {
 	mock.mu.Unlock()
 	provider.refresh()
 	assert.Eventually(t, func() bool {
-		stats := provider.getStats()
-		return len(stats.StatusCodes) == 0 //map isn't comparable so we can just do this
+		return len(provider.getStats().StatusCodes) == 0 // map isn't comparable, so we check the length
 	}, 5*time.Millisecond, time.Millisecond)
 }

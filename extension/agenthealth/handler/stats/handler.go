@@ -5,8 +5,6 @@ package stats
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"sync"
 
@@ -23,46 +21,36 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	// Log entry into the function
-	logger.Info("Entering NewHandlers function", zap.Bool("statuscodeonly", statuscodeonly))
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	var requestHandlers []awsmiddleware.RequestHandler
+	var responseHandlers []awsmiddleware.ResponseHandler
+	var statsProviders []agent.StatsProvider
 
-	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-	logger.Debug("Created StatusCodeOperationsFilter", zap.Any("filter", statusCodeFilter))
-
-	if statuscodeonly {
-		logger.Info("Status code only mode is enabled, using status code stats only")
-
-		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-		logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
-
-		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	if !statusCodeEnabled && !agentStatsEnabled {
+		return nil, nil
 	}
 
-	logger.Info("Status code and other operations filter is being used")
-
-	filter := agent.NewStatusCodeAndOtherOperationsFilter()
-	logger.Debug("Created StatusCodeAndOtherOperationsFilter", zap.Any("filter", filter))
-
-	clientStats := client.NewHandler(filter)
-	logger.Debug("Created ClientStats handler", zap.Any("handler", clientStats))
-
+	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-	logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
+	if statusCodeEnabled {
+		requestHandlers = append(requestHandlers, statusCodeStats)
+		responseHandlers = append(responseHandlers, statusCodeStats)
+		statsProviders = append(statsProviders, statusCodeStats)
+	}
 
-	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
-		clientStats,
-		provider.GetProcessStats(),
-		provider.GetFlagsStats(),
-		statusCodeStats,
-	})
-	logger.Debug("Created Stats handler", zap.Any("handler", stats))
+	if agentStatsEnabled {
+		clientStats := client.NewHandler(agent.NewOperationsFilter())
+		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
+		responseHandlers = append(responseHandlers, clientStats)
+		requestHandlers = append(requestHandlers, clientStats)
+
+	}
+	filter := agent.NewStatusCodeAndOtherOperationsFilter(cfg.Operations)
+	stats := newStatsHandler(logger, filter, statsProviders)
+	requestHandlers = append(requestHandlers, stats)
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	logger.Info("Set usage flags", zap.Any("usageFlags", cfg.UsageFlags))
-
-	logger.Info("Returning request and response handlers")
-	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	return requestHandlers, responseHandlers
 }
 
 type statsHandler struct {
@@ -94,44 +82,23 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := awsmiddleware.GetOperationName(ctx)
-	log.Println("Handling request for operation:", operation)
-
 	if !sh.filter.IsAllowed(operation) {
-		log.Println("Operation not allowed:", operation)
 		return
 	}
-
-	log.Println("Generating header for operation:", operation)
 	header := sh.Header(operation)
-
-	log.Println("This is the header", header)
 	if header != "" {
-		log.Println("Setting header for operation:", operation)
 		r.Header.Set(headerKeyAgentStats, header)
-		log.Println("Header set successfully for operation:", operation)
-	} else {
-		log.Println("No header generated for operation:", operation)
 	}
 }
 
 func (sh *statsHandler) Header(operation string) string {
-	log.Println("Generating header for operation:", operation)
-
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
-		log.Println("Merging stats from provider:", fmt.Sprintf("%T", p))
 		stats.Merge(p.Stats(operation))
-
 	}
-
-	log.Println("Stats after merging all providers:", stats)
-
 	header, err := stats.Marshal()
 	if err != nil {
-		log.Println("Failed to serialize agent stats:", err)
-		return ""
+		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}
-
-	log.Println("Successfully generated header for operation:", operation)
 	return header
 }

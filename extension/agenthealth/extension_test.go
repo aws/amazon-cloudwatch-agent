@@ -10,17 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestExtension(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{IsUsageDataEnabled: true}
+	cfg := &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{"PutLogEvents"}}}
 	extension := NewAgentHealth(zap.NewNop(), cfg)
 	assert.NotNil(t, extension)
 	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
 	requestHandlers, responseHandlers := extension.Handlers()
 	// user agent, client stats, stats
-	assert.Len(t, requestHandlers, 4)
+	assert.Len(t, requestHandlers, 3)
 	// client stats
 	assert.Len(t, responseHandlers, 1)
 	cfg.IsUsageDataEnabled = false
