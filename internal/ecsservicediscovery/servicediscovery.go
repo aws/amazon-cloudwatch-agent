@@ -89,7 +89,7 @@ func (sd *ServiceDiscovery) work() {
 
 	jo, err := sd.svcEcs.DescribeServices(req)
 	if err != nil {
-		log.Println("This is the err for describe services")
+		log.Println("This is the err for describe services", err)
 	} else {
 		log.Println("Success for Describe Services")
 	}
@@ -100,7 +100,7 @@ func (sd *ServiceDiscovery) work() {
 	output2, err := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{TaskDefinition: &td})
 	log.Println(output2)
 	if err != nil {
-		log.Println("This is the err for describe TaskDef")
+		log.Println("This is the err for describe TaskDef", err)
 	} else {
 		log.Println("Success for Describe TaskDef")
 	}
@@ -110,7 +110,7 @@ func (sd *ServiceDiscovery) work() {
 	log.Println(output3)
 
 	if err != nil {
-		log.Println("This is the err for List services")
+		log.Println("This is the err for List services", err)
 	} else {
 		log.Println("Success for List Services")
 	}
@@ -121,7 +121,7 @@ func (sd *ServiceDiscovery) work() {
 	resp, _ := sd.svcEcs.DescribeContainerInstances(input)
 	log.Println(resp)
 	if err != nil {
-		log.Println("This is the err for  DescribeContainerInstances")
+		log.Println("This is the err for  DescribeContainerInstances", err)
 	} else {
 		log.Println("Success for DescribeContainerInstances")
 	}
