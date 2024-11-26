@@ -287,10 +287,23 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	t.logger.Info("ec2tagger: Starting the EC2 tagger.")
 	log.Println("running update volumes")
-	err := t.updateVolumes()
-	if err != nil {
-		log.Println("Runni")
+	if err := t.Configurer.Configure(awsmiddleware.SDKv1(&t.ec2API.(*ec2.EC2).Handlers)); err != nil {
+		log.Println("Failed to configure ec2 client for update Volumes")
+	} else {
+		log.Println("Configured ec2 client handlers for update volumes!")
 	}
+
+	input := &ec2.DescribeVolumesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("attachment.instance-id"),
+			},
+		},
+	}
+	output, _ := t.ec2API.(*ec2.EC2).DescribeVolumes(input)
+	log.Println("Below is the output of Describe volumes")
+	log.Println(output)
+
 	log.Printf("start function called with host: %s\n", host)
 	boolean := true
 	t.Configurer = awsmiddleware.NewConfigurer(agenthealth.NewAgentHealth(t.logger, &agenthealth.Config{IsUsageDataEnabled: true, StatusCodeOnly: &boolean}).Handlers())
@@ -430,22 +443,6 @@ func (t *Tagger) refreshLoopToUpdateTagsAndVolumes() {
 // updateVolumes calls EC2 describe volume
 func (t *Tagger) updateVolumes() error {
 	if t.volumeSerialCache == nil {
-		if err := t.Configurer.Configure(awsmiddleware.SDKv1(&t.ec2API.(*ec2.EC2).Handlers)); err != nil {
-			log.Println("Failed to configure ec2 client for update Volumes")
-		} else {
-			log.Println("Configured ec2 client handlers for update volumes!")
-		}
-
-		input := &ec2.DescribeVolumesInput{
-			Filters: []*ec2.Filter{
-				{
-					Name: aws.String("attachment.instance-id"),
-				},
-			},
-		}
-		output, _ := t.ec2API.(*ec2.EC2).DescribeVolumes(input)
-		log.Println("Below is the output of Describe volumes")
-		log.Println(output)
 		t.volumeSerialCache = volume.NewCache(volume.NewProvider(t.ec2API, t.ec2MetadataRespond.instanceId))
 	}
 
