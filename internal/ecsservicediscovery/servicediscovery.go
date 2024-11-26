@@ -87,25 +87,44 @@ func (sd *ServiceDiscovery) work() {
 	cluster := "name"
 	req := &ecs.DescribeServicesInput{Cluster: &cluster}
 
-	jo, _ := sd.svcEcs.DescribeServices(req)
+	jo, err := sd.svcEcs.DescribeServices(req)
+	if err != nil {
+		log.Println("This is the err for describe services")
+	} else {
+		log.Println("Success for Describe Services")
+	}
 	log.Println(jo)
 
 	td := "bob"
 
-	output2, _ := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{TaskDefinition: &td})
+	output2, err := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{TaskDefinition: &td})
 	log.Println(output2)
-
+	if err != nil {
+		log.Println("This is the err for describe TaskDef")
+	} else {
+		log.Println("Success for Describe TaskDef")
+	}
 	req2 := &ecs.ListServicesInput{Cluster: &td}
 
-	output3, _ := sd.svcEcs.ListServices(req2)
+	output3, err := sd.svcEcs.ListServices(req2)
 	log.Println(output3)
 
+	if err != nil {
+		log.Println("This is the err for List services")
+	} else {
+		log.Println("Success for List Services")
+	}
 	ec2Ids := make([]*string, 0, batchSize)
 	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
 	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
 	input := &ecs.DescribeContainerInstancesInput{Cluster: &td}
 	resp, _ := sd.svcEcs.DescribeContainerInstances(input)
 	log.Println(resp)
+	if err != nil {
+		log.Println("This is the err for  DescribeContainerInstances")
+	} else {
+		log.Println("Success for DescribeContainerInstances")
+	}
 
 	log.Println(temp)
 	input2 := &ec2.DescribeVolumesInput{
@@ -119,7 +138,6 @@ func (sd *ServiceDiscovery) work() {
 	log.Println(output)
 
 	sd.stats.ResetStats()
-	var err error
 	var clusterTasks []*DecoratedTask
 	for _, p := range sd.clusterProcessors {
 		log.Println(p.ProcessorName())
