@@ -84,9 +84,16 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 func (sd *ServiceDiscovery) work() {
 	log.Println("Work handleContainerInstances - - - - - ")
 
-	cluster := "name"
-	req := &ecs.DescribeServicesInput{Cluster: &cluster}
+	cluster := "testCluster"
+	var services []*string
 
+	service1 := "Compute"
+	service2 := "Storage"
+	service3 := "Networking"
+
+	// Appending pointers to the slice
+	services = append(services, &service1, &service2, &service3)
+	req := &ecs.DescribeServicesInput{Cluster: &cluster, Services: services}
 	jo, err := sd.svcEcs.DescribeServices(req)
 	if err != nil {
 		log.Println("This is the err for describe services", err)
@@ -95,16 +102,16 @@ func (sd *ServiceDiscovery) work() {
 	}
 	log.Println(jo)
 
-	td := "bob"
+	td := "testCluster"
 
-	output2, err := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{TaskDefinition: &td})
+	output2, err := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{})
 	log.Println(output2)
 	if err != nil {
 		log.Println("This is the err for describe TaskDef", err)
 	} else {
 		log.Println("Success for Describe TaskDef")
 	}
-	req2 := &ecs.ListServicesInput{Cluster: &td}
+	req2 := &ecs.ListServicesInput{}
 
 	output3, err := sd.svcEcs.ListServices(req2)
 	log.Println(output3)
