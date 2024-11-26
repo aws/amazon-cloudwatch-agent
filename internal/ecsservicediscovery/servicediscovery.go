@@ -83,14 +83,19 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 
 func (sd *ServiceDiscovery) work() {
 	log.Println("Work handleContainerInstances - - - - - ")
-	req := &ecs.DescribeServicesInput{}
+
+	cluster := "name"
+	req := &ecs.DescribeServicesInput{Cluster: &cluster}
+
 	jo, _ := sd.svcEcs.DescribeServices(req)
 	log.Println(jo)
 
-	output2, _ := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{})
+	td := "bob"
+
+	output2, _ := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{TaskDefinition: &td})
 	log.Println(output2)
 
-	req2 := &ecs.ListServicesInput{}
+	req2 := &ecs.ListServicesInput{Cluster: &td}
 
 	output3, _ := sd.svcEcs.ListServices(req2)
 	log.Println(output3)
@@ -98,7 +103,7 @@ func (sd *ServiceDiscovery) work() {
 	ec2Ids := make([]*string, 0, batchSize)
 	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
 	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
-	input := &ecs.DescribeContainerInstancesInput{}
+	input := &ecs.DescribeContainerInstancesInput{Cluster: &td}
 	resp, _ := sd.svcEcs.DescribeContainerInstances(input)
 	log.Println(resp)
 
