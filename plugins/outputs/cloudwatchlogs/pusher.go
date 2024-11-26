@@ -86,6 +86,7 @@ func NewPusher(region string, target Target, service CloudWatchLogsService, flus
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
+
 	go p.start()
 	return p
 }
