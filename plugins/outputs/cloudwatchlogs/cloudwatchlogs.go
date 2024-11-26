@@ -140,7 +140,7 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 	}
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
-		credentialConfig.Credentials(),
+		credentialConfig.Credentials(awsmiddleware.NewConfigurer(c.middleware.Handlers())),
 		&aws.Config{
 			Endpoint: aws.String(c.EndpointOverride),
 			Retryer:  logThrottleRetryer,
