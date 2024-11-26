@@ -209,7 +209,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"jmx"},
 				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
-				extensions: []string{"sigv4auth"},
+				extensions: []string{"sigv4auth", "agenthealth/metrics"},
 			},
 		},
 		"WithValidJMX/Object/AMP/EKS": {
@@ -239,7 +239,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"otlp/jmx"},
 				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "batch/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
-				extensions: []string{"sigv4auth"},
+				extensions: []string{"sigv4auth", "agenthealth/metrics"},
 			},
 		},
 		"WithValidJMX/Object/Decoration": {
@@ -339,7 +339,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"otlp/jmx"},
 				processors: []string{"filter/jmx/0", "metricstransform/jmx", "transform/jmx/drop", "transform/jmx/0", "batch/jmx/amp/0"},
 				exporters:  []string{"prometheusremotewrite/amp"},
-				extensions: []string{"sigv4auth"},
+				extensions: []string{"sigv4auth", "agenthealth/metrics"},
 			},
 		},
 	}

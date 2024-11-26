@@ -4,7 +4,6 @@
 package ecsservicediscovery
 
 import (
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,7 +15,6 @@ type ServiceEndpointDiscoveryProcessor struct {
 	serviceNamesForTasksConfig []*ServiceNameForTasksConfig
 	svcEcs                     *ecs.ECS
 	stats                      *ProcessorStats
-	Configurer                 *awsmiddleware.Configurer
 }
 
 func minInt(a int, b int) int {
@@ -26,7 +24,7 @@ func minInt(a int, b int) int {
 	return b
 }
 
-func NewServiceEndpointDiscoveryProcessor(ecs *ecs.ECS, serviceNamesForTasks []*ServiceNameForTasksConfig, s *ProcessorStats, configurer *awsmiddleware.Configurer) *ServiceEndpointDiscoveryProcessor {
+func NewServiceEndpointDiscoveryProcessor(ecs *ecs.ECS, serviceNamesForTasks []*ServiceNameForTasksConfig, s *ProcessorStats) *ServiceEndpointDiscoveryProcessor {
 	for _, v := range serviceNamesForTasks {
 		v.init()
 	}
@@ -35,7 +33,6 @@ func NewServiceEndpointDiscoveryProcessor(ecs *ecs.ECS, serviceNamesForTasks []*
 		serviceNamesForTasksConfig: serviceNamesForTasks,
 		svcEcs:                     ecs,
 		stats:                      s,
-		Configurer:                 configurer,
 	}
 }
 

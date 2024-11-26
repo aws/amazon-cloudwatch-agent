@@ -4,7 +4,6 @@
 package ecsservicediscovery
 
 import (
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,14 +22,12 @@ type TaskDefinitionProcessor struct {
 	stats  *ProcessorStats
 
 	taskDefCache *simplelru.LRU
-	Configurer   *awsmiddleware.Configurer
 }
 
-func NewTaskDefinitionProcessor(ecs *ecs.ECS, s *ProcessorStats, configurer *awsmiddleware.Configurer) *TaskDefinitionProcessor {
+func NewTaskDefinitionProcessor(ecs *ecs.ECS, s *ProcessorStats) *TaskDefinitionProcessor {
 	p := &TaskDefinitionProcessor{
-		svcEcs:     ecs,
-		stats:      s,
-		Configurer: configurer,
+		svcEcs: ecs,
+		stats:  s,
 	}
 
 	// initiate the caching

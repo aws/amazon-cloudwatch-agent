@@ -4,11 +4,11 @@
 package ecsservicediscovery
 
 import (
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"log"
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -48,19 +48,17 @@ func (sd *ServiceDiscovery) init() {
 }
 
 func (sd *ServiceDiscovery) initClusterProcessorPipeline() {
-	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskProcessor(sd.svcEcs, &sd.stats, sd.Configurer))
-	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskDefinitionProcessor(sd.svcEcs, &sd.stats, sd.Configurer))
-	sd.clusterProcessors = append(sd.clusterProcessors, NewServiceEndpointDiscoveryProcessor(sd.svcEcs, sd.Config.ServiceNamesForTasks, &sd.stats, sd.Configurer))
+	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskProcessor(sd.svcEcs, &sd.stats))
+	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskDefinitionProcessor(sd.svcEcs, &sd.stats))
+	sd.clusterProcessors = append(sd.clusterProcessors, NewServiceEndpointDiscoveryProcessor(sd.svcEcs, sd.Config.ServiceNamesForTasks, &sd.stats))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewDockerLabelDiscoveryProcessor(sd.Config.DockerLabel))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskDefinitionDiscoveryProcessor(sd.Config.TaskDefinitions))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskFilterProcessor())
-	sd.clusterProcessors = append(sd.clusterProcessors, NewContainerInstanceProcessor(sd.svcEcs, sd.svcEc2, &sd.stats, sd.Configurer))
+	sd.clusterProcessors = append(sd.clusterProcessors, NewContainerInstanceProcessor(sd.svcEcs, sd.svcEc2, &sd.stats))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTargetsExportProcessor(sd.Config, &sd.stats))
 }
 
 func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{}, wg *sync.WaitGroup) {
-	log.Println("StartECSServiceDiscovery handleContainerInstances - - - - - ")
-
 	defer wg.Done()
 
 	if !sd.validateConfig() {
@@ -82,74 +80,11 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 }
 
 func (sd *ServiceDiscovery) work() {
-	log.Println("Work handleContainerInstances - - - - - ")
-
-	cluster := "testCluster"
-	var services []*string
-
-	service1 := "Compute"
-	service2 := "Storage"
-	service3 := "Networking"
-
-	// Appending pointers to the slice
-	services = append(services, &service1, &service2, &service3)
-	req := &ecs.DescribeServicesInput{Cluster: &cluster, Services: services}
-	jo, err := sd.svcEcs.DescribeServices(req)
-	if err != nil {
-		log.Println("This is the err for describe services", err)
-	} else {
-		log.Println("Success for Describe Services")
-	}
-	log.Println(jo)
-
-	td := "testCluster"
-
-	output2, err := sd.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{})
-	log.Println(output2)
-	if err != nil {
-		log.Println("This is the err for describe TaskDef", err)
-	} else {
-		log.Println("Success for Describe TaskDef")
-	}
-	req2 := &ecs.ListServicesInput{}
-
-	output3, err := sd.svcEcs.ListServices(req2)
-	log.Println(output3)
-
-	if err != nil {
-		log.Println("This is the err for List services", err)
-	} else {
-		log.Println("Success for List Services")
-	}
-	ec2Ids := make([]*string, 0, batchSize)
-	ec2input := &ec2.DescribeInstancesInput{InstanceIds: ec2Ids}
-	temp, _ := sd.svcEc2.DescribeInstances(ec2input)
-	input := &ecs.DescribeContainerInstancesInput{Cluster: &td}
-	resp, _ := sd.svcEcs.DescribeContainerInstances(input)
-	log.Println(resp)
-	if err != nil {
-		log.Println("This is the err for  DescribeContainerInstances", err)
-	} else {
-		log.Println("Success for DescribeContainerInstances")
-	}
-
-	log.Println(temp)
-	input2 := &ec2.DescribeVolumesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name: aws.String("attachment.instance-id"),
-			},
-		},
-	}
-	output, _ := sd.svcEc2.DescribeVolumes(input2)
-	log.Println(output)
-
 	sd.stats.ResetStats()
 	var clusterTasks []*DecoratedTask
+	var err error
 	for _, p := range sd.clusterProcessors {
-		log.Println(p.ProcessorName())
 		clusterTasks, err = p.Process(sd.Config.TargetCluster, clusterTasks)
-
 		// Ignore partial result to avoid overwriting existing targets
 		if err != nil {
 			log.Printf("E! ECS SD processor: %v got error: %v \n", p.ProcessorName(), err.Error())

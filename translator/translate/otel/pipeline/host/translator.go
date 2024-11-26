@@ -106,7 +106,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
 		log.Println("adding translator extension")
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, false))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, true))
 	case common.AMPKey:
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
 			translators.Processors.Set(rollupprocessor.NewTranslator())
@@ -119,7 +119,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
 		translators.Exporters.Set(awsemf.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}, false))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}, true))
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}

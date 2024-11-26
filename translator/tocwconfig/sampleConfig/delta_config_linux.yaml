@@ -10,20 +10,18 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
+                - '*'
     entitystore:
         mode: ec2
         region: us-east-1
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -50,12 +48,12 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "Count") where name == "diskio_iops_in_progress"
-                  - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
-                  - set(unit, "Milliseconds") where name == "diskio_read_time"
-                  - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
-                  - set(unit, "Milliseconds") where name == "diskio_write_time"
-                  - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
+                - set(unit, "Count") where name == "diskio_iops_in_progress"
+                - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
+                - set(unit, "Milliseconds") where name == "diskio_read_time"
+                - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
+                - set(unit, "Milliseconds") where name == "diskio_write_time"
+                - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
         trace_statements: []
 receivers:
     telegraf_diskio:

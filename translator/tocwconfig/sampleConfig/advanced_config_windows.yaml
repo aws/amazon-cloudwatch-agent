@@ -10,13 +10,11 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
+                - '*'
     entitystore:
         mode: ec2
         region: us-west-2
@@ -81,13 +79,13 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/2039663244
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
                 - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/2073218482
+                - telegraf_win_perf_counters/2039663244
     telemetry:
         logs:
             development: false

@@ -4,13 +4,12 @@
 package cloudwatchlogs
 
 import (
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"log"
 	"math/rand"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
@@ -87,11 +86,6 @@ func NewPusher(region string, target Target, service CloudWatchLogsService, flus
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
-	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
-		LogGroupName:  &p.Group,
-		LogStreamName: &p.Stream,
-	})
-	log.Println("We in start function for pusher.go ----------- ", err)
 	go p.start()
 	return p
 }
@@ -344,7 +338,6 @@ func (p *pusher) send() {
 }
 
 func (p *pusher) createLogGroupAndStream() error {
-
 	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,

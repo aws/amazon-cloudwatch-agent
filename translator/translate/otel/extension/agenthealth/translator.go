@@ -74,7 +74,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if t.statuscodeonly != false && t.statuscodeonly {
 		return cfg, nil
 	}
-	cfg.Stats = agent.StatsConfig{
+	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
 			agent.FlagMode:       context.CurrentContext().ShortMode(),

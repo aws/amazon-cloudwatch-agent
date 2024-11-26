@@ -10,21 +10,19 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
+                - '*'
     entitystore:
         mode: ec2
         region: us-west-2
 processors:
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
 receivers:
     telegraf_statsd:
         collection_interval: 10s

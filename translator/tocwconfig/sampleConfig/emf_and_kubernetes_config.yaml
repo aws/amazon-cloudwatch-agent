@@ -498,8 +498,8 @@ service:
             exporters:
                 - awsemf/containerinsights
             processors:
-                - metricstransform/containerinsights
                 - batch/containerinsights
+                - metricstransform/containerinsights
             receivers:
                 - awscontainerinsightreceiver
     telemetry:

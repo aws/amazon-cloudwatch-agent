@@ -12,13 +12,11 @@ exporters:
         shared_credential_file: fake-path
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
+                - '*'
     entitystore:
         mode: ec2
         profile: AmazonCloudWatchAgent
@@ -82,10 +80,10 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_cpu
-                - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
+                - telegraf_cpu
+                - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

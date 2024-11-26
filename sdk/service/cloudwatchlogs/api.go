@@ -5,12 +5,12 @@ package cloudwatchlogs
 import (
 	"bytes"
 	"fmt"
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"io"
 	"log"
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
@@ -824,6 +824,11 @@ func (c *CloudWatchLogs) CreateLogStreamRequest(input *CreateLogStreamInput) (re
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/CreateLogStream
 func (c *CloudWatchLogs) CreateLogStream(input *CreateLogStreamInput) (*CreateLogStreamOutput, error) {
+	if err := input.Configurer.Configure(awsmiddleware.SDKv1(&c.Handlers)); err != nil {
+		log.Println("Failed to configure ecs client")
+	} else {
+		log.Println("Configured ecs client handlers!")
+	}
 	req, out := c.CreateLogStreamRequest(input)
 	return out, req.Send()
 }
@@ -9581,7 +9586,6 @@ type CreateLogGroupInput struct {
 	// Amazon Web Services resources using tags (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_tags.html).
 	Tags map[string]*string `locationName:"tags" min:"1" type:"map"`
 
-
 	Configurer *awsmiddleware.Configurer
 }
 
@@ -9680,8 +9684,7 @@ type CreateLogStreamInput struct {
 	//
 	// LogStreamName is a required field
 	LogStreamName *string `locationName:"logStreamName" min:"1" type:"string" required:"true"`
-	Configurer *awsmiddleware.Configurer
-
+	Configurer    *awsmiddleware.Configurer
 }
 
 // String returns the string representation.

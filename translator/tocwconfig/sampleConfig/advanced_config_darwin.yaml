@@ -10,13 +10,11 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
+                - '*'
     entitystore:
         mode: ec2
         region: us-west-2
@@ -38,9 +36,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -80,11 +78,11 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_disk
-                - telegraf_netstat
                 - telegraf_swap
                 - telegraf_cpu
+                - telegraf_disk
                 - telegraf_mem
+                - telegraf_netstat
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
