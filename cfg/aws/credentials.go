@@ -157,7 +157,7 @@ func (c *CredentialConfig) Credentials(configurers ...*awsmiddleware.Configurer)
 	} else {
 		configurer = &awsmiddleware.Configurer{}
 	}
-
+	c.assumeCredentials(configurer)
 	if c.RoleARN != "" {
 		return c.assumeCredentials(configurer)
 	} else {
