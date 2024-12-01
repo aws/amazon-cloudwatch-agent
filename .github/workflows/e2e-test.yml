@@ -1,0 +1,95 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Run E2E Tests
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "e2e"
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        required: false
+        type: string
+        description: 'AWS Region to run tests in'
+        default: 'us-west-2'
+      operator-branch:
+        required: false
+        type: string
+        description: 'Branch of the operator to test'
+        default: 'main'
+      helm-charts-branch:
+        required: false
+        type: string
+        description: 'Branch of the helm charts to test'
+        default: 'main'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  SetUpE2EEnvironment:
+    uses: ./.github/workflows/e2e-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      operator-branch: ${{ inputs.operator-branch }}
+
+  GenerateTestMatrix:
+    needs: [ SetUpE2EEnvironment ]
+    name: 'GenerateTestMatrix'
+    runs-on: ubuntu-latest
+    outputs:
+      eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          go run --tags=generator generator/test_case_generator.go
+          echo "::set-output name=eks_e2e_matrix::$(echo $(cat generator/resources/eks_e2e_complete_test_matrix.json))"
+
+      - name: Echo test plan matrix
+        run: |
+          echo "eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}"
+
+  EKSE2EJMXTest:
+    needs: [ GenerateTestMatrix ]
+    name: 'EKSE2EJMX'
+    uses:  ./.github/workflows/eks-e2e-test.yml
+    with:
+      terraform_dir: terraform/eks/e2e
+      job_id: eks-e2e-jmx-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_repo_name: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ env.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_operator_repository: ${{ split(vars.ECR_OPERATOR_STAGING_REPO, '/')[1] }}
+      cloudwatch_agent_operator_tag: ${{ inputs.operator-branch }}
+      region: ${{ inputs.region }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      agent_config: resources/cwagent_configs/jvm_tomcat.json
+      sample_app: resources/sample_apps/tomcat-deployment.yaml
+    secrets: inherit

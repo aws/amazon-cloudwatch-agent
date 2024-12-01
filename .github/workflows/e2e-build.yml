@@ -11,13 +11,14 @@ on:
     workflow_dispatch:
         inputs:
             operator-branch:
-                required: true
+                required: false
                 type: string
+                description: 'The branch to use for the operator'
                 default: 'main'
     workflow_call:
         inputs:
             operator-branch:
-                required: true
+                required: false
                 type: string
                 default: 'main'
 
@@ -64,6 +65,3 @@ jobs:
             target-branch: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
             repository:  ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
             test-image-before-upload: false            
-
-
-
