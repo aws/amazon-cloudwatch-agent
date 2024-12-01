@@ -4,8 +4,6 @@
 name: Reusable EKS E2E Test
 
 env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  KEY_NAME: ${{ secrets.KEY_NAME }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
 
 on:
@@ -79,14 +77,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
-          aws-region: ${{inputs.region}}
+          aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
@@ -139,18 +137,3 @@ jobs:
             else
               terraform destroy --auto-approve && exit 1
             fi
-
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ inputs.terraform_dir }}" != "" ]; then
-              cd "${{ inputs.terraform_dir }}"
-            else
-              cd terraform/eks/e2e
-            fi
-            terraform destroy --auto-approve
