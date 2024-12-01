@@ -13,6 +13,9 @@ env:
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
 on:
+  push:
+    branches:
+      - e2e
   workflow_dispatch:
     inputs:
       region:
