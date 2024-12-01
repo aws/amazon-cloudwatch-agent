@@ -81,7 +81,7 @@ jobs:
     secrets: inherit
     with:
       tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      target-branch: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
       repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
       test-image-before-upload: false
 
