@@ -85,6 +85,38 @@ jobs:
       repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
       test-image-before-upload: false
 
+  OutputEnvVariables:
+    needs: [ BuildAgent, BuildOperator ]
+    name: 'OutputEnvVariables'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: SetOutputs
+        id: set-outputs
+        run: |
+          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
+      - name: Echo test variables
+        run: |
+          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
   GenerateTestMatrix:
     needs: [BuildAgent, BuildOperator]
     name: 'GenerateTestMatrix'
@@ -113,16 +145,16 @@ jobs:
           echo "eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}"
 
   EKSE2EJMXTest:
-    needs: [GenerateTestMatrix]
+    needs: [GenerateTestMatrix, OutputEnvVariables]
     name: 'EKSE2EJMX'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-jmx-test
       test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
-      test_repo_name: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ env.ECR_INTEGRATION_TEST_REPO }}
       cloudwatch_agent_tag: ${{ github.sha }}
       cloudwatch_agent_operator_repository: ${{ split(vars.ECR_OPERATOR_STAGING_REPO, '/')[1] }}
