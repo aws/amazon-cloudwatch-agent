@@ -65,7 +65,7 @@ on:
 
 jobs:
   EKSE2ETest:
-    name: 'Test'
+    name: 'EKSE2ETest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

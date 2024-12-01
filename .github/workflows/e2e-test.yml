@@ -14,9 +14,6 @@ env:
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 on:
-  push:
-    branches:
-      - e2e
   workflow_dispatch:
     inputs:
       region:
