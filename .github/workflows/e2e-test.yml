@@ -36,7 +36,7 @@ on:
         default: 'main'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}-parent
   cancel-in-progress: true
 
 jobs:
@@ -62,6 +62,9 @@ jobs:
 
   BuildAgent:
     uses: ./.github/workflows/build-test-artifacts.yml
+    concurrency:
+      group: "Build-Test-Artifacts-${{github.ref_name}}"
+      cancel-in-progress: true
     secrets: inherit
     permissions:
       id-token: write
