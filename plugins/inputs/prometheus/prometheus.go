@@ -14,7 +14,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
 )
 
@@ -92,7 +91,6 @@ func init() {
 				zap.NewNop(),
 				&agenthealth.Config{
 					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
-					Stats:               &agent.StatsConfig{Operations: []string{"PutMetricData"}},
 					IsStatusCodeEnabled: true,
 				},
 			),
