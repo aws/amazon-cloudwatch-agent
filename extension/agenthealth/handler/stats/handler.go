@@ -45,7 +45,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 		requestHandlers = append(requestHandlers, clientStats)
 
 	}
-	filter := agent.NewStatusCodeAndOtherOperationsFilter(cfg.Operations)
+	filter := agent.NewOperationsFilter(cfg.Operations...)
 	stats := newStatsHandler(logger, filter, statsProviders)
 	requestHandlers = append(requestHandlers, stats)
 
