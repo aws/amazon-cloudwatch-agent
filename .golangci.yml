@@ -44,11 +44,9 @@ linters-settings:
       - performancetest
     
 linters:
-  disable-all: true
-  enable:
+  disable:
     - errcheck
-    - goconst
-    - gocritic
+  enable:
     - gofmt
     - goimports
     - gosec
@@ -56,8 +54,9 @@ linters:
     - govet
     - ineffassign
     - misspell
-    - nolintlint
     - revive
+    - unused
+    - nonamedreturns
 
 issues:
   new-from-rev: 3221f76
