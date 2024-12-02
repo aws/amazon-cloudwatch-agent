@@ -113,7 +113,7 @@ jobs:
 
       - name: Build Binaries
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        run: make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win
+        run: make amazon-cloudwatch-agent-linux package-rpm
 
       - name: Sign Build Files
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
