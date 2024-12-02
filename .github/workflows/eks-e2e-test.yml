@@ -137,3 +137,18 @@ jobs:
             else
               terraform destroy --auto-approve && exit 1
             fi
+            
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/e2e
+            fi
+            terraform destroy --auto-approve
