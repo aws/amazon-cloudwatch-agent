@@ -29,9 +29,6 @@ output:
 
 # All available settings of specific linters
 linters-settings:
-  revive:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.7
   gofmt:
     # Simplify code: gofmt with `-s` option, true by default
     simplify: true
@@ -47,14 +44,21 @@ linters-settings:
       - performancetest
     
 linters:
-  disable:
+  disable-all: true
+  enable:
     - errcheck
+    - goconst
+    - gocritic
     - gofmt
     - goimports
-  enable:
-    - gosimple
     - gosec
-    - unused
+    - gosimple
+    - govet
+    - ineffassign
     - misspell
+    - nolintlint
     - revive
-    - nonamedreturns
+
+
+issues:
+  new-from-rev: 3221f769358168c0602e58918c1fb7b6083e33af

@@ -67,7 +67,7 @@ jobs:
 
       - name: Check license and imports
         if: needs.changes.outputs.lint == 'true'
-        run: make simple-lint
+        run: make lint
 
   build:
     needs: [lint, changes]
