@@ -160,7 +160,7 @@ jobs:
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
       cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ inputs.operator-branch }}
       region: ${{ inputs.region }}
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
