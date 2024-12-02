@@ -59,6 +59,5 @@ linters:
     - nolintlint
     - revive
 
-
 issues:
-  new-from-rev: 3221f769358168c0602e58918c1fb7b6083e33af
+  new-from-rev: 3221f76
