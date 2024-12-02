@@ -1292,8 +1292,6 @@ jobs:
           terraform init
           if terraform apply --auto-approve \
             -var="beta=true" \
-            -var="addon_name=${{ matrix.arrays.addon_name }}" \
-            -var="addon_version=${{ matrix.arrays.addon_version }}" \
             -var="ami_type=${{ matrix.arrays.ami }}" \
             -var="instance_type=${{ matrix.arrays.instanceType }}" \
             -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
