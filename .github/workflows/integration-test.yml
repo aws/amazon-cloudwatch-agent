@@ -842,7 +842,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: go.mod
-          key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8s_version }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+          key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8sVersion }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr
@@ -874,7 +874,7 @@ jobs:
               -var="cwagent_image_tag=${{ github.sha }}" \
               -var="ami_type=${{ matrix.arrays.ami }}" \
               -var="instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
+              -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -1294,7 +1294,7 @@ jobs:
             -var="beta=true" \
             -var="ami_type=${{ matrix.arrays.ami }}" \
             -var="instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
+            -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
             echo "Terraform apply successful."
           
             # Capture the output
@@ -1346,4 +1346,4 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            terraform destroy --auto-approve
+            terraform destroy -var="beta=${{ github.event.inputs.run_in_beta }}" -auto-approve
