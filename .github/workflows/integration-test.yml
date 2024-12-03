@@ -156,47 +156,6 @@ jobs:
 #      github_sha: ${{github.sha}}
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
-  CloudformationTest:
-    needs: [GenerateTestMatrix]
-    name: 'CFTest'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-          path: test
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v2
-        with:
-          go-version: ~1.22.2
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
-      - name: Cache if success
-        id: cf-integration-test
-        uses: actions/cache@v2
-        with:
-          path: go.mod
-          key: "cf-integration-${{ github.sha }}-test"
-
-      - name: Test cf
-        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
-        run: |
-          cd test/test/cloudformation
-          go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
-
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
