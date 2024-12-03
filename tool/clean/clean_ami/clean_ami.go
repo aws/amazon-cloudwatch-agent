@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -184,13 +183,13 @@ func cleanAMIs() error {
 			continue
 		}
 
-		if len(describeImagesOutput.Images) == 1 {
-			log.Printf("Only 1 image found for filter %s, skipping", filter)
+		if len(describeImagesOutput.Images) <= 1 {
+			log.Printf("1 or less image found for filter %s, skipping", filter)
 			continue
 		}
 
 		for _, image := range describeImagesOutput.Images {
-			if image.Name != nil && strings.HasPrefix(*image.Name, "cloudwatch-agent-integration-test-mac") {
+			if image.Name != nil && filter == "cloudwatch-agent-integration-test-mac" {
 				// mac image - add it to the map and do nothing else for now
 				macosImageAmiMap[*image.Name] = append(macosImageAmiMap[*image.Name], image)
 			} else {
@@ -204,15 +203,4 @@ func cleanAMIs() error {
 	cleanMacAMIs(ctx, ec2client, macosImageAmiMap, expirationDate, &errList)
 
 	return nil
-}
-
-func getAMIsForFilter(string filter) ([]types.Image, error) {
-	//get instances to delete
-	describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{filter}}
-	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
-	if err != nil {
-		return []types.Image{}, err
-	}
-
-	return describeImagesOutput.Images, error
 }
