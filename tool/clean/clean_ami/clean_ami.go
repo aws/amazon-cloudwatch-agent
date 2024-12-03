@@ -183,6 +183,7 @@ func cleanAMIs() error {
 			continue
 		}
 
+		log.Printf("%s: %d images found", filter, len(describeImagesOutput.Images))
 		if len(describeImagesOutput.Images) <= 1 {
 			log.Printf("1 or less image found for filter %s, skipping", filter)
 			continue
