@@ -55,10 +55,13 @@ jobs:
           go-version: ~1.22.2
 
       - name: Run go mod vendor
-        run: go mod vendor
+
+        run: |
+          go mod tidy
+          go mod vendor -mod=mod
 
       - name: Compress vendor directory
-        run: tar -czf vendor.tar.gz vendor
+        run: tar -czf vendor.tar.gz vendor go.mod go.sum
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
