@@ -251,23 +251,6 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
 
-  StopLocalStack:
-    name: 'StopLocalStack'
-    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-west-2
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
   StopLocalStackCN:
     name: 'StopLocalStackCN'
     if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
