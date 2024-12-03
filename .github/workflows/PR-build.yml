@@ -159,22 +159,9 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
 
-  fast-test-integration-test:
-    needs: [lint, changes]
-    name: Fast run integration tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go 1.x
-        if: needs.changes.outputs.build == 'true'
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-          cache: false
-
-      - name: Check out code
-        if: needs.changes.outputs.build == 'true'
-        uses: actions/checkout@v3
-
-      - run: gh workflow run fast-run-integration-test.yml
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  fast-run-integration-test:
+    uses: ./.github/workflows/fast-run-integration-test.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
