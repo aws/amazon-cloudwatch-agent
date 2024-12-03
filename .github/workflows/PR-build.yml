@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-12]
+        os: [ubuntu-latest, windows-2019, windows-latest, macos-12]
         include:
           - os: ubuntu-latest
             family: linux
@@ -138,3 +138,23 @@ jobs:
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
+
+  test-data-race:
+    needs: [lint, changes]
+    name: Test data race
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        if: needs.changes.outputs.build == 'true'
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+          cache: false
+
+      - name: Check out code
+        if: needs.changes.outputs.build == 'true'
+        uses: actions/checkout@v3
+
+      - name: Test data race
+        if: needs.changes.outputs.build == 'true'
+        run: make test-data-race
