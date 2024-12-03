@@ -5,8 +5,12 @@ name: Run Integration Tests
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
   CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
@@ -14,10 +18,6 @@ env:
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
   workflow_dispatch:
@@ -56,6 +56,66 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  MakeAndUploadVendor:
+    needs: [ CheckBuildTestArtifacts ]
+    name: 'MakeAndUploadVendor'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Run go mod vendor
+        run: go mod vendor
+
+      - name: Compress vendor directory
+        run: tar -czf vendor.tar.gz vendor
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Upload to Commercial S3
+        run: |
+          echo "BucketKey: ${{ vars.S3_INTEGRATION_BUCKET }}/integration-test/test-vendor/${{ github.sha }}"
+          aws s3 cp vendor.tar.gz s3://${{ vars.S3_INTEGRATION_BUCKET }}/integration-test/test-vendor/${{ github.sha }}/vendor.tar.gz
+
+      - name: Configure China AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Upload to China S3
+        run: |
+          echo "BucketKey: ${{ vars.S3_INTEGRATION_BUCKET_CN }}/integration-test/test-vendor/${{ github.sha }}"
+          aws s3 cp vendor.tar.gz s3://${{ vars.S3_INTEGRATION_BUCKET_CN }}/integration-test/test-vendor/${{ github.sha }}/vendor.tar.gz
+
+      - name: Configure ITAR AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Upload to ITAR S3
+        run: |
+          echo "BucketKey: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/test-vendor/${{ github.sha }}"
+          aws s3 cp vendor.tar.gz s3://${{ vars.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/test-vendor/${{ github.sha }}/vendor.tar.gz
 
   GenerateTestMatrix:
     needs: [ CheckBuildTestArtifacts ]
@@ -217,8 +277,6 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
-
-
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix ]
@@ -420,7 +478,6 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
-
 
   LinuxOnPremIntegrationTest:
     needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
