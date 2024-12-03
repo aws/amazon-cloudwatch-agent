@@ -23,10 +23,33 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
+// Image Prefixes are taken from checking the Image Builder Pipelines in us-west-2
 var imagePrefixes = []string{
-	"cloudwatch-agent-integration-test-mac*",
-	"cloudwatch-agent-integration-test-al2*",
-	"cloudwatch-agent-integration-test-ubuntu*",g
+	"cloudwatch-agent-integration-test-aarch64-al2023",
+	"cloudwatch-agent-integration-test-al2",
+	"cloudwatch-agent-integration-test-alma-linux-8",
+	"cloudwatch-agent-integration-test-alma-linux-9",
+	"cloudwatch-agent-integration-test-arm64-al2",
+	"cloudwatch-agent-integration-test-debian-11-arm64",
+	"cloudwatch-agent-integration-test-debian-12-arm64",
+	"cloudwatch-agent-integration-test-nvidia-gpu-al2",
+	"cloudwatch-agent-integration-test-ol7",
+	"cloudwatch-agent-integration-test-ol8",
+	"cloudwatch-agent-integration-test-ol9",
+	"cloudwatch-agent-integration-test-rocky-linux-8",
+	"cloudwatch-agent-integration-test-rocky-linux-9",
+	"cloudwatch-agent-integration-test-sles-15",
+	"cloudwatch-agent-integration-test-ubuntu-23",
+	"cloudwatch-agent-integration-test-ubuntu-24",
+	"cloudwatch-agent-integration-test-ubuntu",
+	"cloudwatch-agent-integration-test-ubuntu-LTS-22",
+	"cloudwatch-agent-integration-test-win-10",
+	"cloudwatch-agent-integration-test-win-11",
+	"cloudwatch-agent-integration-test-win-2016",
+	"cloudwatch-agent-integration-test-win-2019",
+	"cloudwatch-agent-integration-test-win-2022",
+	"cloudwatch-agent-integration-test-x86-al2023",
+	"cloudwatch-agent-integration-test-mac",
 }
 
 func main() {
@@ -148,7 +171,7 @@ func cleanAMIs() error {
 	// Cleanup for each AMI image type
 	for _, filter := range imagePrefixes {
 		nameFilter := types.Filter{Name: aws.String("name"), Values: []string{
-			filter,
+			fmt.Sprintf("%s*", filter),
 		}}
 
 		//get instances to delete
