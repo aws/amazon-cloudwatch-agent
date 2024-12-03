@@ -34,19 +34,6 @@ jobs:
       TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  BuildAndUploadPackages:
-    uses: ./.github/workflows/test-build-packages.yml
-    needs: [BuildAndUpload]
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
   BuildAndUploadCN:
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
