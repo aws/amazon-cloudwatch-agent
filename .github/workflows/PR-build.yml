@@ -135,8 +135,9 @@ jobs:
         if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
 
-      - name: Start Integration Tests
-        run: gh workflow run fast-run-integration-test.yml
+      - name: Build
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
+        run: make amazon-cloudwatch-agent-${{ matrix.family }}
 
   test-data-race:
     needs: [lint, changes]
@@ -157,3 +158,12 @@ jobs:
       - name: Test data race
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
+
+  fast-test-integration-test:
+    needs: [lint, changes]
+    name: Fast run integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run fast-run-integration-test.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
