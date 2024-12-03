@@ -134,3 +134,6 @@ jobs:
       - name: Unit Test
         if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
+
+      - name: Start Integration Tests
+        run: gh workflow run fast-run-integration-test.yml
