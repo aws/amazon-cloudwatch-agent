@@ -92,6 +92,12 @@ jobs:
 
       - name: Configure ITAR AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
+        env:
+          AWS_DEFAULT_REGION: ${{ null }}
+          AWS_REGION: ${{ null }}
+          AWS_ACCESS_KEY_ID: ${{ null }}
+          AWS_SECRET_ACCESS_KEY: ${{ null }}
+          AWS_SESSION_TOKEN: ${{ null }}
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
           aws-region: us-gov-east-1
