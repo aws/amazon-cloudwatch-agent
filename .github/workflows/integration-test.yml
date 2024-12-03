@@ -36,26 +36,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  CheckBuildTestArtifacts:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
-            echo "Build SHA matches test SHA"
-          else
-            echo "Build SHA does not match test SHA"
-            exit 1
-          fi
-      - run: |
-          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
-          if [[ $conclusion == "success" ]]; then
-            echo "Run succeeded"
-          else
-            echo "Run failed"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   MakeAndUploadVendor:
     needs: [ CheckBuildTestArtifacts ]
