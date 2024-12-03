@@ -212,7 +212,7 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
 
   EC2LinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ GenerateTestMatrix, OutputEnvVariables, MakeAndUploadVendor ]
     name: 'EC2Linux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -229,7 +229,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestCN:
-    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables, MakeAndUploadVendor ]
     name: 'EC2LinuxCN'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
