@@ -65,6 +65,14 @@ jobs:
           aws-region: ${{inputs.region}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Download go mod vendor from S3 and unzip
+        run: |
+          aws s3 cp s3://${{ inputs.s3_integration_bucket }}/integration-test/test-vendor/${{ github.sha }}/vendor.tar.gz ./vendor.tar.gz
+
+      - name: Extract vendor directory
+        run: |
+          tar -xzf vendor.tar.gz
+
       - name: Cache if success
         id: cache_if_success
         uses: actions/cache@v3
@@ -113,6 +121,7 @@ jobs:
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="use_vendor=true" \
               -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
