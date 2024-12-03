@@ -133,12 +133,10 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_china_matrix::$(echo $(cat generator/resources/ec2_linux_china_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
-          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
           echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
 
 #  StartLocalStackCN:
