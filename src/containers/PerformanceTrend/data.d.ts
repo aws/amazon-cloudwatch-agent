@@ -34,6 +34,8 @@ export interface PerformanceTrendData {
     CommitHash: { S: string };
 
     DataType: { S: string };
+    Service: { S: string };
+    UniqueID: { S: string };
 
     InstanceAMI: { S: string };
     InstanceType: { S: string };
@@ -55,7 +57,10 @@ export interface TrendData {
     data_tpm: number;
     data_series: {
         name: string;
-        data: number[];
+        data: {
+            y: number;
+            x: string;
+        }[];
     }[];
 }
 
@@ -70,8 +75,11 @@ export interface PerformanceMetricStatistic {
 
 export interface ServiceCommitInformation {
     // Release version for the service
-    author: { login: string };
-    commit: { message: string; committer: { date: string } };
+    author: {
+        login: string;
+        date: string;
+    };
+    commit: { message: string };
     sha: string;
 }
 

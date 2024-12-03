@@ -47,6 +47,7 @@ export interface PerformanceMetricReport {
 
 // PerformanceMetric shows all collected metrics when running performance metrics
 export interface PerformanceMetric {
+    cpu_usage?: { M: PerformanceMetricStatistic };
     procstat_cpu_usage?: { M: PerformanceMetricStatistic };
     procstat_memory_rss?: { M: PerformanceMetricStatistic };
     procstat_memory_swap?: { M: PerformanceMetricStatistic };
@@ -86,6 +87,7 @@ export interface UseCaseData {
     instance_type?: string;
     data: {
         [data_rate: string]: {
+            cpu_usage?: string;
             procstat_cpu_usage?: string;
             procstat_memory_rss?: string;
             procstat_memory_swap?: string;
