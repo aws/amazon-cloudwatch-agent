@@ -9,7 +9,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -23,6 +22,12 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
+
+var imagePrefixes = []string{
+	"cloudwatch-agent-integration-test-mac*",
+	"cloudwatch-agent-integration-test-al2*",
+	"cloudwatch-agent-integration-test-ubuntu*",g
+}
 
 func main() {
 	err := cleanAMIs()
@@ -137,38 +142,52 @@ func cleanAMIs() error {
 	}
 	ec2client := ec2.NewFromConfig(defaultConfig)
 
-	// Get list of ami
-	nameFilter := types.Filter{Name: aws.String("name"), Values: []string{
-		"cloudwatch-agent-integration-test*",
-	}}
-
-	//get instances to delete
-	describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{nameFilter}}
-	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
-	if err != nil {
-		return err
-	}
-
-	var errList []error
 	// stores a list of AMIs per each macos version/architecture
 	macosImageAmiMap := make(map[string][]types.Image)
 
-	for _, image := range describeImagesOutput.Images {
-		if image.Name != nil && strings.HasPrefix(*image.Name, "cloudwatch-agent-integration-test-mac") {
-			// mac image - add it to the map and do nothing else for now
-			macosImageAmiMap[*image.Name] = append(macosImageAmiMap[*image.Name], image)
-		} else {
-			// non mac image - clean it if it's older than 60 days
-			cleanNonMacAMIs(ctx, ec2client, image, expirationDate, &errList)
+	// Cleanup for each AMI image type
+	for _, filter := range imagePrefixes {
+		nameFilter := types.Filter{Name: aws.String("name"), Values: []string{
+			filter,
+		}}
+
+		//get instances to delete
+		describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{nameFilter}}
+		describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
+		if err != nil {
+			log.Printf("Image filter %s returned an error, skipping :%v", filter, err.Error())
+			continue
+		}
+
+		if len(describeImagesOutput.Images) == 1 {
+			log.Printf("Only 1 image found for filter %s, skipping", filter)
+			continue
+		}
+
+		for _, image := range describeImagesOutput.Images {
+			if image.Name != nil && strings.HasPrefix(*image.Name, "cloudwatch-agent-integration-test-mac") {
+				// mac image - add it to the map and do nothing else for now
+				macosImageAmiMap[*image.Name] = append(macosImageAmiMap[*image.Name], image)
+			} else {
+				// non mac image - clean it if it's older than 60 days
+				cleanNonMacAMIs(ctx, ec2client, image, expirationDate, &errList)
+			}
 		}
 	}
 
 	// handle the mac AMIs
 	cleanMacAMIs(ctx, ec2client, macosImageAmiMap, expirationDate, &errList)
 
-	if len(errList) != 0 {
-		return fmt.Errorf("%v", errList)
+	return nil
+}
+
+func getAMIsForFilter(string filter) ([]types.Image, error) {
+	//get instances to delete
+	describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{filter}}
+	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
+	if err != nil {
+		return []types.Image{}, err
 	}
 
-	return nil
+	return describeImagesOutput.Images, error
 }
