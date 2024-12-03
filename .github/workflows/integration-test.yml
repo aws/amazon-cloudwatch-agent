@@ -60,6 +60,7 @@ jobs:
           go version
           go mod tidy
           go mod vendor
+          go mod verify
 
       - name: Compress vendor directory
         run: tar -czf vendor.tar.gz vendor go.mod go.sum
