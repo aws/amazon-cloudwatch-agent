@@ -38,7 +38,6 @@ concurrency:
 jobs:
 
   MakeAndUploadVendor:
-    needs: [ CheckBuildTestArtifacts ]
     name: 'MakeAndUploadVendor'
     runs-on: ubuntu-latest
     permissions:
@@ -98,7 +97,6 @@ jobs:
           aws s3 cp vendor.tar.gz s3://${{ vars.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/test-vendor/${{ github.sha }}/vendor.tar.gz
 
   GenerateTestMatrix:
-    needs: [ CheckBuildTestArtifacts ]
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
@@ -183,7 +181,6 @@ jobs:
           go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
 
   OutputEnvVariables:
-    needs: [CheckBuildTestArtifacts]
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
