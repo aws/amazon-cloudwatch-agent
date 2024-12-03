@@ -170,6 +170,7 @@ function useStatePerformanceReport(password: string) {
                         (accu, tpm) => ({
                             ...accu,
                             [tpm]: {
+                                cpu_usage: pReport?.Results.M[tpm]?.M?.cpu_usage?.M?.Average?.N,
                                 procstat_cpu_usage: pReport?.Results.M[tpm]?.M?.procstat_cpu_usage?.M?.Average?.N,
                                 procstat_memory_rss: pReport?.Results.M[tpm]?.M?.procstat_memory_rss?.M?.Average?.N,
                                 procstat_memory_swap: pReport?.Results.M[tpm]?.M?.procstat_memory_swap?.M?.Average?.N,
