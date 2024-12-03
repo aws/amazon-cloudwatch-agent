@@ -30,6 +30,7 @@ type ConfigTranslator struct {
 }
 
 func NewConfigTranslator(inputOs, inputJsonFile, inputJsonDir, inputTomlFile, inputMode, inputConfig, multiConfig string) (*ConfigTranslator, error) {
+
 	ct := ConfigTranslator{
 		ctx: context.CurrentContext(),
 	}
