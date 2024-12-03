@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -169,6 +170,7 @@ func cleanAMIs() error {
 	macosImageAmiMap := make(map[string][]types.Image)
 
 	// Cleanup for each AMI image type
+	var errList []error
 	for _, filter := range imagePrefixes {
 		nameFilter := types.Filter{Name: aws.String("name"), Values: []string{
 			fmt.Sprintf("%s*", filter),
