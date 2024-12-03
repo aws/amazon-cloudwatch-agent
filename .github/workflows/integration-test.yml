@@ -57,6 +57,7 @@ jobs:
       - name: Run go mod vendor
 
         run: |
+          go version
           go mod tidy
           go mod vendor -mod=mod
 
