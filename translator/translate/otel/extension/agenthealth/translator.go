@@ -35,7 +35,7 @@ type translator struct {
 	operations         []string
 	isUsageDataEnabled bool
 	factory            extension.Factory
-	statuscodeonly     *bool
+	statuscodeonly     bool
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
@@ -46,7 +46,7 @@ func NewTranslatorWithStatusCode(name component.DataType, operations []string, s
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-		statuscodeonly:     &statuscodeonly,
+		statuscodeonly:     statuscodeonly,
 	}
 }
 
@@ -56,7 +56,7 @@ func NewTranslator(name component.DataType, operations []string) common.Translat
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-		statuscodeonly:     nil,
+		statuscodeonly:     true,
 	}
 }
 
@@ -71,11 +71,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
-	cfg.StatusCodeOnly = t.statuscodeonly
-	if t.statuscodeonly != nil && *t.statuscodeonly {
-		return cfg, nil
-	}
-	cfg.Stats = agent.StatsConfig{
+	cfg.IsStatusCodeEnabled = t.statuscodeonly
+	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
 			agent.FlagMode:       context.CurrentContext().ShortMode(),

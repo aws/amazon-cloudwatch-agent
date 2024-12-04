@@ -5,15 +5,17 @@ package prometheus
 
 import (
 	_ "embed"
-	"sync"
-
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"go.uber.org/zap"
-
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"go.uber.org/zap"
+	"log"
+	"sync"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
 )
 
@@ -44,7 +46,12 @@ func (p *Prometheus) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
+	log.Println("Starting Prometheus")
+
+	// Initialize Metrics Type Handler
 	mth := NewMetricsTypeHandler()
+
+	// Initialize the Prometheus receiver and handler
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
 	handler := &metricsHandler{
 		mbCh:        p.mbCh,
@@ -61,16 +68,25 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 	if p.middleware != nil {
 		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
 		if configurer != nil {
+			log.Println("passed awsmiddleware configurer")
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
 
 		} else {
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+			log.Println("failed awsmiddleware configurer")
+
 		}
 	}
+
+	// Launch ECS Service Discovery as a goroutine
 	p.wg.Add(1)
 	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
+
+	// Launch the Prometheus scraping process as a goroutine
 	p.wg.Add(1)
 	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
+
+	// Launch the handler for filtering and converting Prometheus metrics as a goroutine
 	p.wg.Add(1)
 	go handler.start(p.shutDownChan, &p.wg)
 
@@ -83,16 +99,17 @@ func (p *Prometheus) Stop() {
 }
 
 func init() {
+	log.Println("Initializing Prometheus")
 	inputs.Add("prometheus", func() telegraf.Input {
-		boolean := true
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),
 			shutDownChan: make(chan interface{}),
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
-					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					StatusCodeOnly:     &boolean,
+					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+					Stats:               &agent.StatsConfig{Operations: []string{"PutMetricData"}},
+					IsStatusCodeEnabled: true,
 				},
 			),
 		}
