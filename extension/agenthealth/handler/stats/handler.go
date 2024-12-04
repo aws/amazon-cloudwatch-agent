@@ -23,43 +23,46 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	log.Println("creating New handler")
-
-	var requestHandlers []awsmiddleware.RequestHandler
-	var responseHandlers []awsmiddleware.ResponseHandler
-	var statsProviders []agent.StatsProvider
-
-	if !statusCodeEnabled && !agentStatsEnabled {
-		return nil, nil
-	}
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	// Log entry into the function
+	logger.Info("Entering NewHandlers function", zap.Bool("statuscodeonly", statuscodeonly))
 
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
+	logger.Debug("Created StatusCodeOperationsFilter", zap.Any("filter", statusCodeFilter))
+
+	if statuscodeonly {
+		logger.Info("Status code only mode is enabled, using status code stats only")
+
+		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
+		logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
+
+		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	}
+
+	logger.Info("Status code and other operations filter is being used")
+
+	filter := agent.NewStatusCodeAndOtherOperationsFilter()
+	logger.Debug("Created StatusCodeAndOtherOperationsFilter", zap.Any("filter", filter))
+
+	clientStats := client.NewHandler(filter)
+	logger.Debug("Created ClientStats handler", zap.Any("handler", clientStats))
+
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-	if statusCodeEnabled {
-		log.Println("StatusCode is enabled!")
-		requestHandlers = append(requestHandlers, statusCodeStats)
-		responseHandlers = append(responseHandlers, statusCodeStats)
-		statsProviders = append(statsProviders, statusCodeStats)
-	}
+	logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
 
-	if agentStatsEnabled {
-		clientStats := client.NewHandler(agent.NewOperationsFilter())
-		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
-		responseHandlers = append(responseHandlers, clientStats)
-		requestHandlers = append(requestHandlers, clientStats)
-
-	}
-	filter := agent.NewStatusCodeAndOtherOperationsFilter(cfg.Operations)
-	stats := newStatsHandler(logger, filter, statsProviders)
-	requestHandlers = append(requestHandlers, stats)
+	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
+		clientStats,
+		provider.GetProcessStats(),
+		provider.GetFlagsStats(),
+		statusCodeStats,
+	})
+	logger.Debug("Created Stats handler", zap.Any("handler", stats))
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	log.Println("Request Handlers:")
-	log.Println(requestHandlers)
-	log.Println("Response Handlers:")
-	log.Println(responseHandlers)
-	return requestHandlers, responseHandlers
+	logger.Info("Set usage flags", zap.Any("usageFlags", cfg.UsageFlags))
+
+	logger.Info("Returning request and response handlers")
+	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 }
 
 type statsHandler struct {
