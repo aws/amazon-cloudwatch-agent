@@ -35,12 +35,10 @@ type StatusCodeHandler struct {
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
 func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
-	statusCodeStatsOnce.Do(func() {
-		handler := &StatusCodeHandler{}
-		handler.filter = filter
-		handler.startResetTimer()
-		statusCodeSingleton = handler
-	})
+	handler := &StatusCodeHandler{}
+	handler.filter = filter
+	handler.startResetTimer()
+	statusCodeSingleton = handler
 	return statusCodeSingleton
 }
 
@@ -119,7 +117,7 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 	case 429:
 		stats[4]++
 	default:
-		log.Printf("Received an untracked status code %d for operation: %s", statusCode, operation)
+		return
 	}
 }
 
@@ -139,8 +137,6 @@ func GetShortOperationName(operation string) string {
 		return "ds"
 	case "DescribeTaskDefinition":
 		return "dtd"
-	case "DescribeTasks":
-		return "dts"
 	case "ListServices":
 		return "ls"
 	case "ListTasks":
@@ -149,8 +145,6 @@ func GetShortOperationName(operation string) string {
 		return "clg"
 	case "CreateLogStream":
 		return "cls"
-	case "AssumeRole":
-		return "sts"
 	default:
 		return ""
 	}
