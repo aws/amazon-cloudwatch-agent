@@ -20,6 +20,11 @@ const (
 	statusHandlerID     = "cloudwatchagent.StatusCodeHandler"
 )
 
+var (
+	statusCodeSingleton *StatusCodeHandler
+	statusCodeStatsOnce sync.Once
+)
+
 // StatusCodeHandler provides monitoring for status codes per operation.
 type StatusCodeHandler struct {
 	statsByOperation map[string]*[5]int
@@ -29,14 +34,20 @@ type StatusCodeHandler struct {
 }
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
-func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
-	log.Println("creating status code stats")
-	handler := &StatusCodeHandler{
-		statsByOperation: make(map[string]*[5]int),
-	}
-	handler.filter = filter
-	handler.startResetTimer()
-	return handler
+func GetStatusCodeStats(filter interface{}) *StatusCodeHandler {
+	log.Println("Creating a handler")
+	statusCodeStatsOnce.Do(func() {
+		handler := &StatusCodeHandler{
+			statsByOperation: make(map[string]*[5]int),
+		}
+
+		if opsFilter, ok := filter.(agent.OperationsFilter); ok {
+			handler.filter = opsFilter
+		}
+		handler.startResetTimer()
+		statusCodeSingleton = handler
+	})
+	return statusCodeSingleton
 }
 
 // startResetTimer initializes a reset timer to clear stats every 5 minutes.
@@ -50,6 +61,9 @@ func (h *StatusCodeHandler) startResetTimer() {
 		h.startResetTimer()
 	})
 }
+
+// HandleRequest is a no-op for the StatusCodeHandler.
+func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) {}
 
 // HandleResponse processes the HTTP response to update status code stats.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
