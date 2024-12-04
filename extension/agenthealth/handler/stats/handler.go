@@ -131,7 +131,6 @@ func (sh *statsHandler) Header(operation string) string {
 		log.Println("Failed to serialize agent stats:", err)
 		return ""
 	}
-
 	log.Println("Successfully generated header for operation:", operation)
 	return header
 }
