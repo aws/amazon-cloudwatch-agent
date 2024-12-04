@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -61,15 +60,11 @@ func (p *SingletonStatsProvider) Stats(operation string) agent.Stats {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	log.Println("Operation below:")
-	log.Println(operation)
 	statusCodeMap := make(map[string][5]int, len(p.statusCodeStats))
 	for op, stats := range p.statusCodeStats {
 		statusCodeMap[op] = stats
 	}
 
-	log.Println("Status code map:")
-	log.Println(statusCodeMap)
 	return agent.Stats{
 		StatusCodes: statusCodeMap,
 	}
@@ -93,7 +88,6 @@ func (h *StatusCodeHandler) startResetTimer() {
 		h.statsProvider.statusCodeStats = make(map[string][5]int)
 		h.statsProvider.mu.Unlock()
 
-		log.Println("Status code stats reset.")
 		h.startResetTimer()
 	})
 }
@@ -105,18 +99,13 @@ func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) 
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
 	if operation == "" {
-		log.Println("No operation name found in the context")
 		return
 	} else if !h.filter.IsAllowed(operation) {
-		log.Printf("Operation %s is not allowed", operation)
 		return
-	} else {
-		log.Printf("Processing response for operation: %s", operation)
 	}
 
 	operation = GetShortOperationName(operation)
 	statusCode := r.StatusCode
-	log.Printf("Received status code: %d for operation: %s", statusCode, operation)
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -130,8 +119,6 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 
 	// Update the singleton stats provider
 	h.statsProvider.UpdateStats(operation, stats)
-
-	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 }
 
 // updateStatusCodeCount updates the count for a given status code.
