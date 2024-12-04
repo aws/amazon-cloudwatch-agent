@@ -247,7 +247,7 @@ func TestNoASGRetrievalInKubernetesMode(t *testing.T) {
 		name    string
 		args    args
 		wantErr bool
-		want    EC2Info
+		want    string
 	}{
 		{
 			name: "EKSNoASGFromEC2Info",
@@ -256,9 +256,7 @@ func TestNoASGRetrievalInKubernetesMode(t *testing.T) {
 				kubernetesMode:   config.ModeEKS,
 			},
 			wantErr: false,
-			want: EC2Info{
-				AutoScalingGroup: "",
-			},
+			want:    "",
 		},
 	}
 	for _, tt := range tests {
@@ -267,7 +265,7 @@ func TestNoASGRetrievalInKubernetesMode(t *testing.T) {
 			ei := &EC2Info{metadataProvider: tt.args.metadataProvider, kubernetesMode: tt.args.kubernetesMode, logger: logger}
 			go ei.initEc2Info()
 			time.Sleep(3 * time.Second)
-			assert.Equal(t, tt.want.AutoScalingGroup, ei.GetAutoScalingGroup())
+			assert.Equal(t, tt.want, ei.GetAutoScalingGroup())
 		})
 	}
 }

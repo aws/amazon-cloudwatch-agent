@@ -29,7 +29,6 @@ import (
 
 type mockServiceProvider struct {
 	mock.Mock
-	started bool
 }
 
 // This helper function creates a test logger
@@ -629,9 +628,8 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 
 func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
 	type args struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-		mode             string
-		kubernetesMode   string
+		mode           string
+		kubernetesMode string
 	}
 	tests := []struct {
 		name string
@@ -663,7 +661,7 @@ func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
 				logger: zap.NewNop(),
 				config: esConfig,
 			}
-			e.Start(nil, nil)
+			e.Start(context.TODO(), nil)
 			time.Sleep(3 * time.Second)
 
 			name, source := e.serviceprovider.getServiceNameAndSource()
