@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
@@ -27,7 +26,7 @@ var (
 
 // StatusCodeHandler provides monitoring for status codes per operation.
 type StatusCodeHandler struct {
-	statsByOperation sync.Map
+	statsByOperation map[string]*[5]int
 	mu               sync.Mutex
 	resetTimer       *time.Timer
 	filter           agent.OperationsFilter
@@ -36,8 +35,10 @@ type StatusCodeHandler struct {
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
 func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
 	statusCodeStatsOnce.Do(func() {
-		handler := &StatusCodeHandler{}
-		handler.filter = filter
+		handler := &StatusCodeHandler{
+			statsByOperation: make(map[string]*[5]int),
+			filter:           filter,
+		}
 		handler.startResetTimer()
 		statusCodeSingleton = handler
 	})
@@ -50,10 +51,7 @@ func (h *StatusCodeHandler) startResetTimer() {
 		h.mu.Lock()
 		defer h.mu.Unlock()
 
-		h.statsByOperation.Range(func(key, _ interface{}) bool {
-			h.statsByOperation.Delete(key)
-			return true
-		})
+		h.statsByOperation = make(map[string]*[5]int)
 		log.Println("Status code stats reset.")
 		h.startResetTimer()
 	})
@@ -64,7 +62,6 @@ func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) 
 
 // HandleResponse processes the HTTP response to update status code stats.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
-	// Extract the operation name
 	operation := awsmiddleware.GetOperationName(ctx)
 	if operation == "" {
 		log.Println("No operation name found in the context")
@@ -83,30 +80,20 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	value, loaded := h.statsByOperation.LoadOrStore(operation, &[5]int{})
-	if !loaded {
+	stats, exists := h.statsByOperation[operation]
+	if !exists {
+		stats = &[5]int{}
+		h.statsByOperation[operation] = stats
 		log.Printf("Initializing stats for operation: %s", operation)
 	}
-	stats := value.(*[5]int)
 
-	h.updateStatusCodeCount(stats, statusCode, operation)
+	h.updateStatusCodeCount(stats, statusCode)
 
-	h.statsByOperation.Store(operation, stats)
 	log.Printf("Updated stats for operation '%s': 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
-
-	log.Println("Complete status code map:")
-	h.statsByOperation.Range(func(key, value interface{}) bool {
-		log.Print("Printing all stats by operations map")
-
-		operation = key.(string)
-		stats = value.(*[5]int)
-		log.Printf("Operation: --- %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
-		return true
-	})
 }
 
-// Helper function to update the status code counts
-func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int, operation string) {
+// updateStatusCodeCount updates the count for a given status code.
+func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int) {
 	switch statusCode {
 	case 200:
 		stats[0]++
@@ -118,11 +105,10 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 		stats[3]++
 	case 429:
 		stats[4]++
-	default:
-		return
 	}
 }
 
+// GetShortOperationName returns a shortened name for known operations.
 func GetShortOperationName(operation string) string {
 	switch operation {
 	case "PutRetentionPolicy":
@@ -167,14 +153,10 @@ func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	statusCodeMap := make(map[string][5]int)
-
-	h.statsByOperation.Range(func(key, value interface{}) bool {
-		operation = key.(string)
-		stats := value.(*[5]int)
-		statusCodeMap[operation] = [5]int{stats[0], stats[1], stats[2], stats[3], stats[4]}
-		return true
-	})
+	statusCodeMap := make(map[string][5]int, len(h.statsByOperation))
+	for op, stats := range h.statsByOperation {
+		statusCodeMap[op] = *stats
+	}
 
 	return agent.Stats{
 		StatusCodes: statusCodeMap,
