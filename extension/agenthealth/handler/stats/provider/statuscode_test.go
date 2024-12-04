@@ -1,34 +1,70 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 package provider
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"reflect"
+	"testing"
 )
 
-func TestStatusCodeHandler(t *testing.T) {
-	filter := agent.NewStatusCodeOperationsFilter()
-	handler := GetStatusCodeStats(filter)
-	require.NotNil(t, handler)
+// MockOperationsFilter is a mock implementation of OperationsFilter.
+type MockOperationsFilter struct {
+	allowedOperations map[string]bool
+}
 
-	// Locking to ensure thread-safe operations
-	handler.mu.Lock()
-	handler.statsByOperation["dt"] = &[5]int{1, 2, 0, 1, 0}
-	handler.mu.Unlock()
+func (m *MockOperationsFilter) IsAllowed(operation string) bool {
+	return m.allowedOperations[operation]
+}
 
-	// Retrieve stats after modification
-	stats := handler.Stats("dt")
-	expected := [5]int{1, 2, 0, 1, 0}
-	actualStats := stats.StatusCodes["dt"]
+func TestSingletonStatsProvider_Stats(t *testing.T) {
+	provider := &SingletonStatsProvider{
+		statusCodeStats: map[string][5]int{
+			"operation1": {1, 2, 3, 4, 5},
+		},
+	}
 
-	// Perform assertions
-	assert.Equal(t, expected, actualStats, "Unexpected stats values for operation 'dt'")
-	assert.Contains(t, stats.StatusCodes, "dt", "Status code map should contain 'dt'")
-	assert.Equal(t, expected, stats.StatusCodes["dt"], "Stats for 'dt' do not match")
+	stats := provider.Stats("operation1")
+
+	expected := agent.Stats{
+		StatusCodes: map[string][5]int{
+			"operation1": {1, 2, 3, 4, 5},
+		},
+	}
+
+	if !reflect.DeepEqual(stats, expected) {
+		t.Errorf("Stats() failed. Got %+v, expected %+v", stats, expected)
+	}
+}
+
+func TestSingletonStatsProvider_UpdateStats(t *testing.T) {
+	provider := &SingletonStatsProvider{
+		statusCodeStats: make(map[string][5]int),
+	}
+
+	provider.UpdateStats("operation1", [5]int{1, 0, 0, 0, 0})
+
+	expected := map[string][5]int{
+		"operation1": {1, 0, 0, 0, 0},
+	}
+
+	if !reflect.DeepEqual(provider.statusCodeStats, expected) {
+		t.Errorf("UpdateStats() failed. Got %+v, expected %+v", provider.statusCodeStats, expected)
+	}
+}
+
+func TestGetShortOperationName(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"PutRetentionPolicy", "prp"},
+		{"DescribeInstances", "di"},
+		{"UnknownOperation", ""},
+	}
+
+	for _, test := range tests {
+		result := GetShortOperationName(test.input)
+		if result != test.expected {
+			t.Errorf("GetShortOperationName(%q) = %q; want %q", test.input, result, test.expected)
+		}
+	}
 }

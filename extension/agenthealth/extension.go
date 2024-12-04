@@ -5,9 +5,9 @@ package agenthealth
 
 import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
@@ -31,15 +31,20 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 		return requestHandlers, responseHandlers
 	}
 
-	statusCodeEnabled := false
-	statusCodeEnabled = ah.cfg.IsStatusCodeEnabled
+	if ah.cfg == nil {
+		return nil, nil
+	}
+	statusCodeEnabled := ah.cfg.IsStatusCodeEnabled
 
-	agentStatsEnabled :=
-		slices.Contains(ah.cfg.Stats.Operations, "PutMetricData") ||
-			slices.Contains(ah.cfg.Stats.Operations, "PutLogEvents") ||
-			slices.Contains(ah.cfg.Stats.Operations, "PutTraceSegment")
+	var statsResponseHandlers []awsmiddleware.ResponseHandler
+	var statsRequestHandlers []awsmiddleware.RequestHandler
 
-	statsRequestHandlers, statsResponseHandlers := stats.NewHandlers(ah.logger, ah.cfg.Stats, statusCodeEnabled, agentStatsEnabled)
+	if ah.cfg.Stats != nil {
+		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled, true)
+	} else {
+		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, agent.StatsConfig{}, statusCodeEnabled, false)
+	}
+
 	requestHandlers = append(requestHandlers, statsRequestHandlers...)
 	responseHandlers = append(responseHandlers, statsResponseHandlers...)
 

@@ -71,10 +71,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
 	cfg.IsStatusCodeEnabled = t.statuscodeonly
-	if t.statuscodeonly != false && t.statuscodeonly {
-		return cfg, nil
-	}
-	cfg.Stats = agent.StatsConfig{
+	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
 			agent.FlagMode:       context.CurrentContext().ShortMode(),

@@ -1,15 +1,11 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 package provider
 
 import (
 	"context"
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
@@ -20,44 +16,33 @@ const (
 )
 
 var (
-	statusCodeSingleton *StatusCodeHandler
-	statusCodeStatsOnce sync.Once
+	statsProviderSingleton agent.StatsProvider
+	statsProviderOnce      sync.Once
 )
+
+// SingletonStatsProvider manages a collection of statistics.
+type SingletonStatsProvider struct {
+	mu              sync.Mutex
+	statusCodeStats map[string][5]int
+}
 
 // StatusCodeHandler provides monitoring for status codes per operation.
 type StatusCodeHandler struct {
-	statsByOperation map[string]*[5]int
-	resetTimer       *time.Timer
-	filter           agent.OperationsFilter
-	mu               sync.Mutex
+	statsProvider *SingletonStatsProvider
+	filter        agent.OperationsFilter
+	resetTimer    *time.Timer
+	mu            sync.Mutex
 }
 
-// GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
-func GetStatusCodeStats(filter interface{}) *StatusCodeHandler {
-	statusCodeStatsOnce.Do(func() {
-		handler := &StatusCodeHandler{
-			statsByOperation: make(map[string]*[5]int),
-		}
-
-		if opsFilter, ok := filter.(agent.OperationsFilter); ok {
-			handler.filter = opsFilter
-		}
-		handler.startResetTimer()
-		statusCodeSingleton = handler
-	})
-	return statusCodeSingleton
-}
-
-// startResetTimer initializes a reset timer to clear stats every 5 minutes.
-func (h *StatusCodeHandler) startResetTimer() {
-	h.resetTimer = time.AfterFunc(statusResetInterval, func() {
-		h.mu.Lock()
-		defer h.mu.Unlock()
-		for key := range h.statsByOperation {
-			delete(h.statsByOperation, key)
-		}
-		h.startResetTimer()
-	})
+// NewStatusCodeHandler creates a new instance of StatusCodeHandler.
+func NewStatusCodeHandler(filter agent.OperationsFilter) *StatusCodeHandler {
+	provider := GetStatsProvider().(*SingletonStatsProvider) // Get the singleton provider.
+	handler := &StatusCodeHandler{
+		statsProvider: provider,
+		filter:        filter,
+	}
+	handler.startResetTimer()
+	return handler
 }
 
 // HandleRequest is a no-op for the StatusCodeHandler.
@@ -65,34 +50,89 @@ func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) 
 
 // HandleResponse processes the HTTP response to update status code stats.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
-	// Extract the operation name
 	operation := awsmiddleware.GetOperationName(ctx)
-
-	if !h.filter.IsAllowed(operation) {
+	if operation == "" {
+		return
+	} else if !h.filter.IsAllowed(operation) {
 		return
 	}
 
 	operation = GetShortOperationName(operation)
-	if operation == "" {
-		return
-	}
-
 	statusCode := r.StatusCode
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	stats, exists := h.statsByOperation[operation]
-	if !exists {
-		stats = &[5]int{}
-		h.statsByOperation[operation] = stats
-	}
+	// Get or initialize stats
+	h.statsProvider.mu.Lock()
+	stats := h.statsProvider.statusCodeStats[operation]
+	h.statsProvider.mu.Unlock()
 
-	h.updateStatusCodeCount(stats, statusCode, operation)
+	h.updateStatusCodeCount(&stats, statusCode)
+
+	// Update the singleton stats provider
+	h.statsProvider.UpdateStats(operation, stats)
 }
 
-// Helper function to update the status code counts
-func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int, operation string) {
+// ID returns the unique identifier for the handler.
+func (h *StatusCodeHandler) ID() string {
+	return statusHandlerID
+}
+
+// Position specifies the handler's position in the middleware chain.
+func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
+	return awsmiddleware.After
+}
+
+// GetStatsProvider retrieves the singleton instance of the `agent.StatsProvider`.
+func GetStatsProvider() agent.StatsProvider {
+	statsProviderOnce.Do(func() {
+		statsProviderSingleton = &SingletonStatsProvider{
+			statusCodeStats: make(map[string][5]int),
+		}
+	})
+	return statsProviderSingleton
+}
+
+// Stats returns the current statistics for a given operation.
+func (p *SingletonStatsProvider) Stats(operation string) agent.Stats {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	statusCodeMap := make(map[string][5]int, len(p.statusCodeStats))
+	for op, stats := range p.statusCodeStats {
+		statusCodeMap[op] = stats
+	}
+
+	return agent.Stats{
+		StatusCodes: statusCodeMap,
+	}
+}
+
+// UpdateStats updates the statistics for a given operation.
+func (p *SingletonStatsProvider) UpdateStats(operation string, stats [5]int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.statusCodeStats[operation] = stats
+}
+
+// startResetTimer initializes a reset timer to clear stats every 5 minutes.
+func (h *StatusCodeHandler) startResetTimer() {
+	h.resetTimer = time.AfterFunc(statusResetInterval, func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+
+		h.statsProvider.mu.Lock()
+		h.statsProvider.statusCodeStats = make(map[string][5]int)
+		h.statsProvider.mu.Unlock()
+
+		h.startResetTimer()
+	})
+}
+
+// updateStatusCodeCount updates the count for a given status code.
+func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int) {
 	switch statusCode {
 	case 200:
 		stats[0]++
@@ -104,17 +144,17 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 		stats[3]++
 	case 429:
 		stats[4]++
-	default:
-		return
 	}
 }
 
 func GetShortOperationName(operation string) string {
 	switch operation {
-	case "PutMetricData":
-		return "pmd"
+	case "PutRetentionPolicy":
+		return "prp"
 	case "DescribeInstances":
 		return "di"
+	case "DescribeTasks":
+		return "dt"
 	case "DescribeTags":
 		return "dt"
 	case "DescribeVolumes":
@@ -133,36 +173,7 @@ func GetShortOperationName(operation string) string {
 		return "clg"
 	case "CreateLogStream":
 		return "cls"
-	case "AssumeRole":
-		return "ar"
 	default:
 		return ""
-	}
-}
-
-// ID returns the unique identifier for the handler.
-func (h *StatusCodeHandler) ID() string {
-	return statusHandlerID
-}
-
-// Position specifies the handler's position in the middleware chain.
-func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
-	return awsmiddleware.After
-}
-
-// Stats implements the `Stats` method required by the `agent.StatsProvider` interface.
-func (h *StatusCodeHandler) Stats(operation string) agent.Stats {
-	// Lock mutex to safely access statsByOperation
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	statusCodeMap := make(map[string][5]int)
-
-	for operation, stats := range h.statsByOperation {
-		statusCodeMap[operation] = *stats
-	}
-
-	return agent.Stats{
-		StatusCodes: statusCodeMap,
 	}
 }
