@@ -23,38 +23,34 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	var requestHandlers []awsmiddleware.RequestHandler
-	var responseHandlers []awsmiddleware.ResponseHandler
-	var statsProviders []agent.StatsProvider
-
-	if !statusCodeEnabled && !agentStatsEnabled {
-		return nil, nil
-	}
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	// Log entry into the function
 
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-	if statusCodeEnabled {
+
+	if statuscodeonly {
+
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-		log.Println("StatusCode is enabled!")
-		requestHandlers = append(requestHandlers, statusCodeStats)
-		responseHandlers = append(responseHandlers, statusCodeStats)
-		statsProviders = append(statsProviders, statusCodeStats)
+
+		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
 
-	if agentStatsEnabled {
-		clientStats := client.NewHandler(agent.NewStatusCodeAndOtherOperationsFilter())
-		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
-		responseHandlers = append(responseHandlers, clientStats)
-		requestHandlers = append(requestHandlers, clientStats)
-
-	}
 	filter := agent.NewStatusCodeAndOtherOperationsFilter()
-	stats := newStatsHandler(logger, filter, statsProviders)
-	requestHandlers = append(requestHandlers, stats)
+
+	clientStats := client.NewHandler(filter)
+
+	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
+
+	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
+		clientStats,
+		provider.GetProcessStats(),
+		provider.GetFlagsStats(),
+		statusCodeStats,
+	})
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	log.Println("Request Handlers:")
-	return requestHandlers, responseHandlers
+
+	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 }
 
 type statsHandler struct {
