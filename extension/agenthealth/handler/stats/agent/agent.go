@@ -15,7 +15,7 @@ const (
 )
 
 type Stats struct {
-	CPUPercent                *float64          `json:"cpu,omitempty"`
+	CpuPercent                *float64          `json:"cpu,omitempty"`
 	MemoryBytes               *uint64           `json:"mem,omitempty"`
 	FileDescriptorCount       *int32            `json:"fd,omitempty"`
 	ThreadCount               *int32            `json:"th,omitempty"`

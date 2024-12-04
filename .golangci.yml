@@ -59,4 +59,4 @@ linters:
     - nonamedreturns
 
 issues:
-  new-from-rev: 3221f76
+  new-from-rev: 9af4477
