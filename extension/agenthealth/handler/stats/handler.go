@@ -25,22 +25,17 @@ const (
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	// Log entry into the function
-
+	logger.Info("Entering NewHandlers function", zap.Bool("statuscodeonly", statuscodeonly))
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-
 	if statuscodeonly {
-
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
+	logger.Debug("Created StatusCodeOperationsFilter", zap.Any("filter", statusCodeFilter))
 
 	filter := agent.NewStatusCodeAndOtherOperationsFilter()
-
 	clientStats := client.NewHandler(filter)
-
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-
 	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
 		clientStats,
 		provider.GetProcessStats(),
@@ -49,7 +44,6 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 	})
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-
 	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 }
 
