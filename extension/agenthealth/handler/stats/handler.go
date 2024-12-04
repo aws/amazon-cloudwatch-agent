@@ -25,30 +25,21 @@ const (
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	// Log entry into the function
-	logger.Info("Entering NewHandlers function", zap.Bool("statuscodeonly", statuscodeonly))
 
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-	logger.Debug("Created StatusCodeOperationsFilter", zap.Any("filter", statusCodeFilter))
 
 	if statuscodeonly {
-		logger.Info("Status code only mode is enabled, using status code stats only")
 
 		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-		logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
 
 		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 	}
 
-	logger.Info("Status code and other operations filter is being used")
-
 	filter := agent.NewStatusCodeAndOtherOperationsFilter()
-	logger.Debug("Created StatusCodeAndOtherOperationsFilter", zap.Any("filter", filter))
 
 	clientStats := client.NewHandler(filter)
-	logger.Debug("Created ClientStats handler", zap.Any("handler", clientStats))
 
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-	logger.Debug("Created StatusCodeStats handler", zap.Any("handler", statusCodeStats))
 
 	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
 		clientStats,
@@ -56,12 +47,9 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool)
 		provider.GetFlagsStats(),
 		statusCodeStats,
 	})
-	logger.Debug("Created Stats handler", zap.Any("handler", stats))
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	logger.Info("Set usage flags", zap.Any("usageFlags", cfg.UsageFlags))
 
-	logger.Info("Returning request and response handlers")
 	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
 }
 
