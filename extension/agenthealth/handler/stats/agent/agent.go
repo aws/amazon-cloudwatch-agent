@@ -159,7 +159,10 @@ func NewOperationsFilter(operations ...string) OperationsFilter {
 
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
 func NewStatusCodeOperationsFilter() OperationsFilter {
-	allowed := make(map[string]struct{}, len(StatusCodeOperations))
+	allowed := make(map[string]struct{})
+	for _, op := range StatusCodeOperations {
+		allowed[op] = struct{}{}
+	}
 
 	return OperationsFilter{
 		operations: allowed,

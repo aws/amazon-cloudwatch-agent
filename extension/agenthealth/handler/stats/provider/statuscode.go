@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ type StatusCodeHandler struct {
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
 func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
+	log.Println("creating status code stats")
 	handler := &StatusCodeHandler{
 		statsByOperation: make(map[string]*[5]int),
 	}

@@ -23,6 +23,8 @@ const (
 )
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	log.Println("creating New handler")
+
 	var requestHandlers []awsmiddleware.RequestHandler
 	var responseHandlers []awsmiddleware.ResponseHandler
 	var statsProviders []agent.StatsProvider
@@ -34,6 +36,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 	if statusCodeEnabled {
+		log.Println("StatusCode is enabled!")
 		responseHandlers = append(responseHandlers, statusCodeStats)
 		statsProviders = append(statsProviders, statusCodeStats)
 	}
