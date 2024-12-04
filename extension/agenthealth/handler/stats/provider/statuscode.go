@@ -100,7 +100,7 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 
 		operation = key.(string)
 		stats = value.(*[5]int)
-		log.Printf("Operation: %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
+		log.Printf("Operation: --- %s, 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", operation, stats[0], stats[1], stats[2], stats[3], stats[4])
 		return true
 	})
 }
