@@ -164,12 +164,3 @@ func NewStatusCodeOperationsFilter() OperationsFilter {
 		allowAll:   false,
 	}
 }
-
-func NewStatusCodeAndOtherOperationsFilter(operations []string) OperationsFilter {
-	filter := NewStatusCodeOperationsFilter()
-	for _, operation := range operations {
-		filter.operations.Add(operation)
-	}
-
-	return filter
-}
