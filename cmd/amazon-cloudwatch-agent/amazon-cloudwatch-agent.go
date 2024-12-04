@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -94,6 +95,16 @@ var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Col
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
+
+// config-translator
+var fConfigTranslator = flag.Bool("config-translator", false, "run in config-translator mode")
+var fTranslatorOs = flag.String("ct-os", "", "Please provide the os preference, valid value: windows/linux.")
+var fTranslatorInput = flag.String("ct-input", "", "Please provide the path of input agent json config file")
+var fTranslatorInputDir = flag.String("ct-input-dir", "", "Please provide the path of input agent json config directory.")
+var fTranslatorOutput = flag.String("ct-output", "", "Please provide the path of the output CWAgent config file")
+var fTranslatorMode = flag.String("ct-mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, onPrem, auto")
+var fTranslatorConfig = flag.String("ct-config", "", "Please provide the common-config file")
+var fTranslatorMultiConfig = flag.String("ct-multi-config", "remove", "valid values: default, append, remove")
 
 var stop chan struct{}
 
@@ -605,6 +616,16 @@ func main() {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}
+		}
+		return
+	case *fConfigTranslator:
+		ct, err := cmdutil.NewConfigTranslator(*fTranslatorOs, *fTranslatorInput, *fTranslatorInputDir, *fTranslatorOutput, *fTranslatorMode, *fTranslatorConfig, *fTranslatorMultiConfig)
+		if err != nil {
+			log.Fatalf("E! Failed to initialize config translator: %v", err)
+		}
+		err = ct.Translate()
+		if err != nil {
+			log.Fatalf("E! Failed to translate config: %v", err)
 		}
 		return
 	}
