@@ -56,7 +56,6 @@ func NewTranslator(name component.DataType, operations []string) common.Translat
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-		statuscodeonly:     true,
 	}
 }
 
