@@ -138,7 +138,6 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
-
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
@@ -154,15 +153,19 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 	if containerInsightsRegexp.MatchString(t.Group) {
 		useragent.Get().SetContainerInsightsFlag()
 	}
+	var configurer *awsmiddleware.Configurer
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	if c.middleware != nil {
 		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
 			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
 		} else {
 			c.Log.Info("Configured middleware on AWS client")
+			configurer = awsmiddleware.NewConfigurer(c.middleware.Handlers())
 		}
 	}
-	pusher := NewPusher(c.Region, t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, logSrc)
+
+	pusher := NewPusher(c.Region, t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, logSrc, configurer)
+
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
@@ -402,8 +405,9 @@ func init() {
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
-					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					Stats:              agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+					Stats:               &agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+					IsStatusCodeEnabled: true,
 				},
 			),
 		}

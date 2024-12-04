@@ -16,7 +16,7 @@ import (
 
 func TestCreateDefaultConfig(t *testing.T) {
 	cfg := NewFactory().CreateDefaultConfig()
-	assert.Equal(t, &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}}, cfg)
+	assert.Equal(t, &Config{IsUsageDataEnabled: true, Stats: &agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}}, cfg)
 	assert.NoError(t, componenttest.CheckConfigStruct(cfg))
 }
 

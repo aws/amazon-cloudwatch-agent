@@ -2,13 +2,13 @@ exporters:
     nop: {}
 extensions:
     entitystore:
-      mode: "ec2"
-      region: us-west-2
+        mode: ec2
+        region: us-west-2
 receivers:
     nop: {}
 service:
     extensions:
-      - entitystore
+        - entitystore
     pipelines:
         metrics/nop:
             exporters:
@@ -24,13 +24,13 @@ service:
             encoding: console
             level: info
             output_paths:
-              - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
+                - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
             sampling:
-              enabled: true
-              initial: 2
-              thereafter: 500
-              tick: 10s
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None
-        traces: { }
+        traces: {}

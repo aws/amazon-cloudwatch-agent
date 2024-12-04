@@ -5,6 +5,12 @@ package prometheus
 
 import (
 	_ "embed"
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"go.uber.org/zap"
+	"log"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -23,6 +29,8 @@ type Prometheus struct {
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
+	middleware           awsmiddleware.Middleware
+	Configurer           *awsmiddleware.Configurer
 }
 
 func (p *Prometheus) SampleConfig() string {
@@ -38,9 +46,15 @@ func (p *Prometheus) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
+	log.Println("Starting Prometheus")
+
+	// Initialize Metrics Type Handler
 	mth := NewMetricsTypeHandler()
+
+	// Initialize the Prometheus receiver and handler
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
-	handler := &metricsHandler{mbCh: p.mbCh,
+	handler := &metricsHandler{
+		mbCh:        p.mbCh,
 		acc:         accIn,
 		calculator:  NewCalculator(),
 		filter:      NewMetricsFilter(),
@@ -48,19 +62,31 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 		mtHandler:   mth,
 	}
 
-	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+	var configurer *awsmiddleware.Configurer
+	var ecssd *ecsservicediscovery.ServiceDiscovery
 
-	// Start ECS Service Discovery when in ECS
-	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus-Setup-autodiscovery-ecs.html
+	if p.middleware != nil {
+		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
+		if configurer != nil {
+			log.Println("passed awsmiddleware configurer")
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
+
+		} else {
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+			log.Println("failed awsmiddleware configurer")
+
+		}
+	}
+
+	// Launch ECS Service Discovery as a goroutine
 	p.wg.Add(1)
 	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
 
-	// Start scraping prometheus metrics from prometheus endpoints
+	// Launch the Prometheus scraping process as a goroutine
 	p.wg.Add(1)
 	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
 
-	// Start filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
-	// and convert Prometheus metrics to Telegraf Metrics
+	// Launch the handler for filtering and converting Prometheus metrics as a goroutine
 	p.wg.Add(1)
 	go handler.start(p.shutDownChan, &p.wg)
 
@@ -73,10 +99,20 @@ func (p *Prometheus) Stop() {
 }
 
 func init() {
+	log.Println("Initializing Prometheus")
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),
 			shutDownChan: make(chan interface{}),
+			middleware: agenthealth.NewAgentHealth(
+				zap.NewNop(),
+				&agenthealth.Config{
+					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+					Stats:               &agent.StatsConfig{Operations: []string{"PutMetricData"}},
+					IsStatusCodeEnabled: true,
+				},
+			),
 		}
+
 	})
 }

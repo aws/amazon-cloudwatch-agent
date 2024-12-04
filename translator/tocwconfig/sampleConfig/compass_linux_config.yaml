@@ -21,28 +21,26 @@ exporters:
             - []
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
+                - '*'
     entitystore:
         mode: ec2
         region: us-west-2
 processors:
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -66,8 +64,8 @@ service:
                 - awsentity/service/telegraf
                 - ec2tagger
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
     telemetry:
         logs:
             development: false

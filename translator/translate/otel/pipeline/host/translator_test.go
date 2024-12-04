@@ -194,7 +194,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"rollup", "batch/host/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
-				extensions: []string{"sigv4auth"},
+				extensions: []string{"sigv4auth", "agenthealth/metrics"},
 			},
 		},
 		"WithPRWExporter/NoAggregation": {
@@ -209,7 +209,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"batch/host/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
-				extensions: []string{"sigv4auth"},
+				extensions: []string{"sigv4auth", "agenthealth/metrics"},
 			},
 		},
 	}

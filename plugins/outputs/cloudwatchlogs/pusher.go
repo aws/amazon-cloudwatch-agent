@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
@@ -63,9 +64,10 @@ type pusher struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+	Configurer            *awsmiddleware.Configurer
 }
 
-func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
+func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc, configurer *awsmiddleware.Configurer) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -80,9 +82,11 @@ func NewPusher(region string, target Target, service CloudWatchLogsService, flus
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		Configurer:      configurer,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
+
 	go p.start()
 	return p
 }
@@ -338,6 +342,7 @@ func (p *pusher) createLogGroupAndStream() error {
 	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
+		Configurer:    p.Configurer,
 	})
 
 	if err == nil {
@@ -355,6 +360,7 @@ func (p *pusher) createLogGroupAndStream() error {
 			_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 				LogGroupName:  &p.Group,
 				LogStreamName: &p.Stream,
+				Configurer:    p.Configurer,
 			})
 
 			if err == nil {
@@ -380,10 +386,12 @@ func (p *pusher) createLogGroup() error {
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName:  &p.Group,
 			LogGroupClass: &p.Class,
+			Configurer:    p.Configurer,
 		})
 	} else {
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName: &p.Group,
+			Configurer:   p.Configurer,
 		})
 	}
 	return err
