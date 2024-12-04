@@ -24,33 +24,33 @@ const (
 )
 
 func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	// Log entry into the function
+	var requestHandlers []awsmiddleware.RequestHandler
+	var responseHandlers []awsmiddleware.ResponseHandler
+	var statsProviders []agent.StatsProvider
 
-	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-
-	if statuscodeonly {
-
-		statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
-
-		return []awsmiddleware.RequestHandler{statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	if !statuscodeonly {
+		return nil, nil
 	}
 
-	filter := agent.NewStatusCodeAndOtherOperationsFilter()
-
-	clientStats := client.NewHandler(filter)
-
+	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
+	if statuscodeonly {
+		requestHandlers = append(requestHandlers, statusCodeStats)
+		responseHandlers = append(responseHandlers, statusCodeStats)
+		statsProviders = append(statsProviders, statusCodeStats)
+	}
 
-	stats := newStatsHandler(logger, filter, []agent.StatsProvider{
-		clientStats,
-		provider.GetProcessStats(),
-		provider.GetFlagsStats(),
-		statusCodeStats,
-	})
+	clientStats := client.NewHandler(agent.NewOperationsFilter())
+	statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
+	responseHandlers = append(responseHandlers, clientStats)
+	requestHandlers = append(requestHandlers, clientStats)
+
+	filter := agent.NewStatusCodeAndOtherOperationsFilter()
+	stats := newStatsHandler(logger, filter, statsProviders)
+	requestHandlers = append(requestHandlers, stats)
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-
-	return []awsmiddleware.RequestHandler{stats, clientStats, statusCodeStats}, []awsmiddleware.ResponseHandler{statusCodeStats}
+	return requestHandlers, responseHandlers
 }
 
 type statsHandler struct {
