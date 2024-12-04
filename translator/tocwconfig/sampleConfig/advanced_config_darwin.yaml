@@ -78,11 +78,11 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_swap
-                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
                 - telegraf_netstat
+                - telegraf_swap
+                - telegraf_cpu
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
