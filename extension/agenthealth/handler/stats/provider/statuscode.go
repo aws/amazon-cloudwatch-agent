@@ -61,16 +61,17 @@ func (p *SingletonStatsProvider) Stats(operation string) agent.Stats {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if stats, exists := p.statusCodeStats[operation]; exists {
-		return agent.Stats{
-			StatusCodes: map[string][5]int{
-				operation: stats,
-			},
-		}
+	log.Println("Operation below:")
+	log.Println(operation)
+	statusCodeMap := make(map[string][5]int, len(p.statusCodeStats))
+	for op, stats := range p.statusCodeStats {
+		statusCodeMap[op] = stats
 	}
 
+	log.Println("Status code map:")
+	log.Println(statusCodeMap)
 	return agent.Stats{
-		StatusCodes: map[string][5]int{},
+		StatusCodes: statusCodeMap,
 	}
 }
 
@@ -155,6 +156,8 @@ func GetShortOperationName(operation string) string {
 		return "prp"
 	case "DescribeInstances":
 		return "di"
+	case "DescribeTasks":
+		return "dt"
 	case "DescribeTags":
 		return "dt"
 	case "DescribeVolumes":
