@@ -35,10 +35,12 @@ type StatusCodeHandler struct {
 
 // GetStatusCodeStats retrieves or initializes the singleton StatusCodeHandler.
 func GetStatusCodeStats(filter agent.OperationsFilter) *StatusCodeHandler {
-	handler := &StatusCodeHandler{}
-	handler.filter = filter
-	handler.startResetTimer()
-	statusCodeSingleton = handler
+	statusCodeStatsOnce.Do(func() {
+		handler := &StatusCodeHandler{}
+		handler.filter = filter
+		handler.startResetTimer()
+		statusCodeSingleton = handler
+	})
 	return statusCodeSingleton
 }
 
