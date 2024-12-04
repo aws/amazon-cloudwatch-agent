@@ -125,8 +125,8 @@ func (h *StatusCodeHandler) updateStatusCodeCount(stats *[5]int, statusCode int,
 
 func GetShortOperationName(operation string) string {
 	switch operation {
-	case "PutMetricData":
-		return "pmd"
+	case "PutRetentionPolicy":
+		return "prp"
 	case "DescribeInstances":
 		return "di"
 	case "DescribeTags":
@@ -152,7 +152,7 @@ func GetShortOperationName(operation string) string {
 	case "AssumeRole":
 		return "sts"
 	default:
-		return operation
+		return ""
 	}
 }
 

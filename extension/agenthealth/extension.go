@@ -32,12 +32,12 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 
 	statusCodeEnabled := ah.cfg.IsStatusCodeEnabled
 
-	//agentStatsEnabled := false
-	//if ah.cfg.Stats != nil {
-	//	agentStatsEnabled = true
-	//}
+	agentStatsEnabled := false
+	if ah.cfg.Stats != nil {
+		agentStatsEnabled = true
+	}
 
-	statsRequestHandlers, statsResponseHandlers := stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled)
+	statsRequestHandlers, statsResponseHandlers := stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled, agentStatsEnabled)
 	requestHandlers = append(requestHandlers, statsRequestHandlers...)
 	responseHandlers = append(responseHandlers, statsResponseHandlers...)
 
