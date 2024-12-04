@@ -49,9 +49,6 @@ func NewStatusCodeHandler(filter agent.OperationsFilter) *StatusCodeHandler {
 	return handler
 }
 
-// HandleRequest is a no-op for the StatusCodeHandler.
-func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) {}
-
 // HandleResponse processes the HTTP response to update status code stats.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
@@ -99,7 +96,7 @@ func GetStatsProvider() agent.StatsProvider {
 }
 
 // Stats returns the current statistics for a given operation.
-func (p *SingletonStatsProvider) Stats(operation string) agent.Stats {
+func (p *SingletonStatsProvider) Stats(_ string) agent.Stats {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
