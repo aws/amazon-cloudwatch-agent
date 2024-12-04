@@ -23,7 +23,7 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statuscodeonly bool, agentstats bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	// Log entry into the function
 	logger.Info("Entering NewHandlers function", zap.Bool("statuscodeonly", statuscodeonly))
 
@@ -131,6 +131,7 @@ func (sh *statsHandler) Header(operation string) string {
 		log.Println("Failed to serialize agent stats:", err)
 		return ""
 	}
+
 	log.Println("Successfully generated header for operation:", operation)
 	return header
 }
