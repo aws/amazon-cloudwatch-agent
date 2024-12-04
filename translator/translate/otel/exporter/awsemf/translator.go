@@ -43,7 +43,7 @@ var defaultKubernetesKueueConfig string
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
-//go:embed appsignals_config_generic.yaml
+//go:embed awsemf_default_appsignals.yaml
 var appSignalsConfigGeneric string
 
 //go:embed awsemf_jmx_config.yaml
