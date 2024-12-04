@@ -398,7 +398,6 @@ func (c *CloudWatchLogs) SampleConfig() string {
 
 func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
-		boolean := true
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),
@@ -406,9 +405,9 @@ func init() {
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
-					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					Stats:              agent.StatsConfig{Operations: []string{"PutLogEvents"}},
-					StatusCodeOnly:     &boolean,
+					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+					Stats:               &agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+					IsStatusCodeEnabled: true,
 				},
 			),
 		}
