@@ -5,6 +5,7 @@ package stats
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -54,6 +55,10 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	requestHandlers = append(requestHandlers, stats)
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
+	log.Println("Request Handlers:")
+	log.Println(requestHandlers)
+	log.Println("Response Handlers:")
+	log.Println(responseHandlers)
 	return requestHandlers, responseHandlers
 }
 
@@ -86,25 +91,44 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := awsmiddleware.GetOperationName(ctx)
+	log.Println("Handling request for operation:", operation)
+
 	if !sh.filter.IsAllowed(operation) {
+		log.Println("Operation not allowed:", operation)
 		return
 	}
+
+	log.Println("Generating header for operation:", operation)
 	header := sh.Header(operation)
+
+	log.Println("This is the header", header)
 	if header != "" {
+		log.Println("Setting header for operation:", operation)
 		r.Header.Set(headerKeyAgentStats, header)
+		log.Println("Header set successfully for operation:", operation)
+	} else {
+		log.Println("No header generated for operation:", operation)
 	}
 }
 
 func (sh *statsHandler) Header(operation string) string {
+	log.Println("Generating header for operation:", operation)
+
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
+		log.Println("Merging stats from provider:", fmt.Sprintf("%T", p))
 		stats.Merge(p.Stats(operation))
+
 	}
+
+	log.Println("Stats after merging all providers:", stats)
+
 	header, err := stats.Marshal()
-	log.Println("This is the header")
-	log.Println(header)
 	if err != nil {
-		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
+		log.Println("Failed to serialize agent stats:", err)
+		return ""
 	}
+
+	log.Println("Successfully generated header for operation:", operation)
 	return header
 }
