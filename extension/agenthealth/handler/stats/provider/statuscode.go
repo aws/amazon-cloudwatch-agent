@@ -155,7 +155,7 @@ func GetShortOperationName(operation string) string {
 	case "DescribeInstances":
 		return "di"
 	case "DescribeTasks":
-		return "dt"
+		return "dts"
 	case "DescribeTags":
 		return "dt"
 	case "DescribeVolumes":

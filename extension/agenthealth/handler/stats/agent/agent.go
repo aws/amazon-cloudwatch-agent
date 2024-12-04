@@ -130,6 +130,7 @@ func (of OperationsFilter) IsAllowed(operationName string) bool {
 var StatusCodeOperations = []string{ // all the operations that are allowed
 	"DescribeInstances",
 	"DescribeTags",
+	"DescribeTasks",
 	"DescribeVolumes",
 	"DescribeContainerInstances",
 	"DescribeServices",
