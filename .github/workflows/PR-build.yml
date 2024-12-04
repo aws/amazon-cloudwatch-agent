@@ -54,6 +54,8 @@ jobs:
       - name: Check out code
         if: needs.changes.outputs.lint == 'true'
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Check format
         if: needs.changes.outputs.lint == 'true'
@@ -67,7 +69,7 @@ jobs:
 
       - name: Check license and imports
         if: needs.changes.outputs.lint == 'true'
-        run: make simple-lint
+        run: make lint
 
   build:
     needs: [lint, changes]
