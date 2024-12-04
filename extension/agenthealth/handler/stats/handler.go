@@ -5,6 +5,7 @@ package stats
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 
@@ -96,6 +97,8 @@ func (sh *statsHandler) Header(operation string) string {
 		stats.Merge(p.Stats(operation))
 	}
 	header, err := stats.Marshal()
+	log.Println("This is the header")
+	log.Println(header)
 	if err != nil {
 		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}
