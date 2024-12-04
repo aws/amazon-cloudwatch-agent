@@ -161,6 +161,7 @@ type StatsConfig struct {
 }
 
 var StatusCodeOperations = []string{ // all the operations that are allowed
+	"PutRetentionPolicy",
 	"DescribeInstances",
 	"DescribeTags",
 	"DescribeVolumes",
