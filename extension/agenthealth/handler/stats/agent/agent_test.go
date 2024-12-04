@@ -11,17 +11,17 @@ import (
 )
 
 func TestMerge(t *testing.T) {
-	stats := &Stats{CpuPercent: aws.Float64(1.2)}
-	assert.EqualValues(t, 1.2, *stats.CpuPercent)
+	stats := &Stats{CPUPercent: aws.Float64(1.2)}
+	assert.EqualValues(t, 1.2, *stats.CPUPercent)
 	assert.Nil(t, stats.MemoryBytes)
 	stats.Merge(Stats{
-		CpuPercent:  aws.Float64(1.3),
+		CPUPercent:  aws.Float64(1.3),
 		MemoryBytes: aws.Uint64(123),
 	})
-	assert.EqualValues(t, 1.3, *stats.CpuPercent)
+	assert.EqualValues(t, 1.3, *stats.CPUPercent)
 	assert.EqualValues(t, 123, *stats.MemoryBytes)
 	stats.Merge(Stats{
-		CpuPercent:                aws.Float64(1.5),
+		CPUPercent:                aws.Float64(1.5),
 		MemoryBytes:               aws.Uint64(133),
 		FileDescriptorCount:       aws.Int32(456),
 		ThreadCount:               aws.Int32(789),
@@ -36,7 +36,7 @@ func TestMerge(t *testing.T) {
 		RegionType:                aws.String("RegionType"),
 		Mode:                      aws.String("Mode"),
 	})
-	assert.EqualValues(t, 1.5, *stats.CpuPercent)
+	assert.EqualValues(t, 1.5, *stats.CPUPercent)
 	assert.EqualValues(t, 133, *stats.MemoryBytes)
 	assert.EqualValues(t, 456, *stats.FileDescriptorCount)
 	assert.EqualValues(t, 789, *stats.ThreadCount)
@@ -109,15 +109,15 @@ func TestMarshalWithStatusCodes(t *testing.T) {
 
 func TestMergeFullWithStatusCodes(t *testing.T) {
 	stats := &Stats{
-		CpuPercent:  aws.Float64(1.0),
+		CPUPercent:  aws.Float64(1.0),
 		StatusCodes: map[string][5]int{"operation1": {1, 0, 0, 0, 0}},
 	}
 	stats.Merge(Stats{
-		CpuPercent:  aws.Float64(2.0),
+		CPUPercent:  aws.Float64(2.0),
 		StatusCodes: map[string][5]int{"operation1": {0, 1, 0, 0, 0}, "operation2": {1, 1, 1, 1, 1}},
 	})
 
-	assert.Equal(t, 2.0, *stats.CpuPercent)
+	assert.Equal(t, 2.0, *stats.CPUPercent)
 	assert.Equal(t, [5]int{1, 1, 0, 0, 0}, stats.StatusCodes["operation1"])
 	assert.Equal(t, [5]int{1, 1, 1, 1, 1}, stats.StatusCodes["operation2"])
 }
@@ -133,7 +133,7 @@ func TestMarshal(t *testing.T) {
 		},
 		"WithPartial": {
 			stats: &Stats{
-				CpuPercent:   aws.Float64(1.2),
+				CPUPercent:   aws.Float64(1.2),
 				MemoryBytes:  aws.Uint64(123),
 				ThreadCount:  aws.Int32(789),
 				PayloadBytes: aws.Int(5678),
@@ -142,7 +142,7 @@ func TestMarshal(t *testing.T) {
 		},
 		"WithFull": {
 			stats: &Stats{
-				CpuPercent:          aws.Float64(1.2),
+				CPUPercent:          aws.Float64(1.2),
 				MemoryBytes:         aws.Uint64(123),
 				FileDescriptorCount: aws.Int32(456),
 				ThreadCount:         aws.Int32(789),

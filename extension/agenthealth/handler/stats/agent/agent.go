@@ -15,7 +15,7 @@ const (
 )
 
 type Stats struct {
-	CpuPercent                *float64          `json:"cpu,omitempty"`
+	CPUPercent                *float64          `json:"cpu,omitempty"`
 	MemoryBytes               *uint64           `json:"mem,omitempty"`
 	FileDescriptorCount       *int32            `json:"fd,omitempty"`
 	ThreadCount               *int32            `json:"th,omitempty"`
@@ -36,8 +36,8 @@ type Stats struct {
 // Merge the other Stats into the current. If the field is not nil,
 // then it'll overwrite the existing one.
 func (s *Stats) Merge(other Stats) {
-	if other.CpuPercent != nil {
-		s.CpuPercent = other.CpuPercent
+	if other.CPUPercent != nil {
+		s.CPUPercent = other.CPUPercent
 	}
 	if other.MemoryBytes != nil {
 		s.MemoryBytes = other.MemoryBytes

@@ -64,11 +64,11 @@ func TestProcessStats(t *testing.T) {
 	mock := &mockProcessMetrics{}
 	provider := newProcessStats(mock, time.Millisecond)
 	got := provider.getStats()
-	assert.NotNil(t, got.CpuPercent)
+	assert.NotNil(t, got.CPUPercent)
 	assert.NotNil(t, got.MemoryBytes)
 	assert.NotNil(t, got.FileDescriptorCount)
 	assert.NotNil(t, got.ThreadCount)
-	assert.EqualValues(t, 1, *got.CpuPercent)
+	assert.EqualValues(t, 1, *got.CPUPercent)
 	assert.EqualValues(t, 2, *got.MemoryBytes)
 	assert.EqualValues(t, 3, *got.FileDescriptorCount)
 	assert.EqualValues(t, 4, *got.ThreadCount)
@@ -82,7 +82,7 @@ func TestProcessStats(t *testing.T) {
 }
 
 func isAgentStatsReset(stats agent.Stats) bool {
-	return stats.CpuPercent == nil &&
+	return stats.CPUPercent == nil &&
 		stats.MemoryBytes == nil &&
 		stats.FileDescriptorCount == nil &&
 		stats.ThreadCount == nil &&
