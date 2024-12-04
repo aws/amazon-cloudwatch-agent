@@ -28,7 +28,7 @@ func NewFactory() extension.Factory {
 func createDefaultConfig() component.Config {
 	return &Config{
 		IsUsageDataEnabled: true,
-		Stats: &agent.StatsConfig{
+		Stats: agent.StatsConfig{
 			Operations: []string{agent.AllowAllOperations},
 		},
 	}

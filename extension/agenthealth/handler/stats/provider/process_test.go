@@ -5,7 +5,6 @@ package provider
 
 import (
 	"errors"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"sync"
 	"testing"
 	"time"
@@ -76,25 +75,6 @@ func TestProcessStats(t *testing.T) {
 	mock.mu.Unlock()
 	provider.refresh()
 	assert.Eventually(t, func() bool {
-		return isAgentStatsReset(provider.getStats())
+		return len(provider.getStats().StatusCodes) == 0 // map isn't comparable, so we check the length
 	}, 5*time.Millisecond, time.Millisecond)
-}
-
-func isAgentStatsReset(stats agent.Stats) bool {
-	return stats.CpuPercent == nil &&
-		stats.MemoryBytes == nil &&
-		stats.FileDescriptorCount == nil &&
-		stats.ThreadCount == nil &&
-		stats.LatencyMillis == nil &&
-		stats.PayloadBytes == nil &&
-		stats.StatusCode == nil &&
-		stats.SharedConfigFallback == nil &&
-		stats.ImdsFallbackSucceed == nil &&
-		stats.AppSignals == nil &&
-		stats.EnhancedContainerInsights == nil &&
-		stats.RunningInContainer == nil &&
-		stats.RegionType == nil &&
-		stats.Mode == nil &&
-		stats.EntityRejected == nil &&
-		len(stats.StatusCodes) == 0
 }

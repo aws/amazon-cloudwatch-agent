@@ -14,7 +14,10 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutMetricData
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
     entitystore:
         kubernetes_mode: EKS
         mode: ec2

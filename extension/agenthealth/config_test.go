@@ -26,11 +26,11 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "1"),
-			want: &Config{IsUsageDataEnabled: false, Stats: &agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}},
+			want: &Config{IsUsageDataEnabled: false, Stats: agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}},
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "2"),
-			want: &Config{IsUsageDataEnabled: true, Stats: &agent.StatsConfig{Operations: []string{"ListBuckets"}}},
+			want: &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{"ListBuckets"}}},
 		},
 	}
 	for _, testCase := range testCases {
