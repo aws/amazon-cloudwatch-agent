@@ -35,7 +35,7 @@ func TestTranslate(t *testing.T) {
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: true,
-				Stats: &agent.StatsConfig{
+				Stats: agent.StatsConfig{
 					Operations: operations,
 					UsageFlags: usageFlags,
 				},
@@ -46,7 +46,7 @@ func TestTranslate(t *testing.T) {
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: false,
-				Stats: &agent.StatsConfig{
+				Stats: agent.StatsConfig{
 					Operations: operations,
 					UsageFlags: usageFlags,
 				},
@@ -57,7 +57,7 @@ func TestTranslate(t *testing.T) {
 			isEnvUsageData: false,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: false,
-				Stats: &agent.StatsConfig{
+				Stats: agent.StatsConfig{
 					Operations: operations,
 					UsageFlags: usageFlags,
 				},
@@ -68,7 +68,7 @@ func TestTranslate(t *testing.T) {
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: true,
-				Stats: &agent.StatsConfig{
+				Stats: agent.StatsConfig{
 					Operations: operations,
 					UsageFlags: usageFlags,
 				},

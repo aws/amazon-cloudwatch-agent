@@ -84,14 +84,15 @@ func (p *Prometheus) Stop() {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
+		boolean := true
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),
 			shutDownChan: make(chan interface{}),
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
-					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
-					IsStatusCodeEnabled: true,
+					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+					StatusCodeOnly:     &boolean,
 				},
 			),
 		}

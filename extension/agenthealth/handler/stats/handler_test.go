@@ -71,23 +71,7 @@ func TestStatsHandler(t *testing.T) {
 }
 
 func TestNewHandlersWithStatusCodeOnly(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, true, false)
+	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, true)
 	assert.Len(t, requestHandlers, 1)
 	assert.Len(t, responseHandlers, 1)
-}
-func TestNewHandlersWithAgentStatsOnly(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, false, true)
-	assert.Len(t, requestHandlers, 2)
-	assert.Len(t, responseHandlers, 1)
-}
-
-func TestNewHandlersWithStatusCodeAndAgenthStats(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, true, true)
-	assert.Len(t, requestHandlers, 2)
-	assert.Len(t, responseHandlers, 2)
-}
-func TestNewHandlersWithoutStatusCodeAndAgenthStats(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, false, false)
-	assert.Len(t, requestHandlers, 0)
-	assert.Len(t, responseHandlers, 0)
 }
