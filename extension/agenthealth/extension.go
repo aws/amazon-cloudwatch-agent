@@ -5,11 +5,11 @@ package agenthealth
 
 import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 )
 

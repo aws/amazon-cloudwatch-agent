@@ -5,13 +5,14 @@ package provider
 
 import (
 	"errors"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 type mockProcessMetrics struct {

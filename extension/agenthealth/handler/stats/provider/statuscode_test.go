@@ -1,19 +1,14 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package provider
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"reflect"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
-
-// MockOperationsFilter is a mock implementation of OperationsFilter.
-type MockOperationsFilter struct {
-	allowedOperations map[string]bool
-}
-
-func (m *MockOperationsFilter) IsAllowed(operation string) bool {
-	return m.allowedOperations[operation]
-}
 
 func TestSingletonStatsProvider_Stats(t *testing.T) {
 	provider := &SingletonStatsProvider{
