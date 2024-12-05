@@ -184,3 +184,35 @@ func NewStatusCodeOperationsFilter() OperationsFilter {
 		allowAll:   allowed.Contains(AllowAllOperations),
 	}
 }
+
+// GetShortOperationName maps long operation names to short ones.
+func GetShortOperationName(operation string) string {
+	switch operation {
+	case "PutRetentionPolicy":
+		return "pmd"
+	case "DescribeInstances":
+		return "di"
+	case "DescribeTags":
+		return "dt"
+	case "DescribeTasks":
+		return "dts"
+	case "DescribeVolumes":
+		return "dv"
+	case "DescribeContainerInstances":
+		return "dci"
+	case "DescribeServices":
+		return "ds"
+	case "DescribeTaskDefinition":
+		return "dtd"
+	case "ListServices":
+		return "ls"
+	case "ListTasks":
+		return "lt"
+	case "CreateLogGroup":
+		return "clg"
+	case "CreateLogStream":
+		return "cls"
+	default:
+		return ""
+	}
+}
