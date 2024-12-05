@@ -79,10 +79,10 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-      # nick-fields/retry@v2 starts at base dir
+      # nick-fields/retry@v3 starts at base dir
       - name: Terraform apply
         if: steps.cache_if_success.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 2
           timeout_minutes: 60
@@ -120,7 +120,7 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 2
           timeout_minutes: 8
