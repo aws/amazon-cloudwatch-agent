@@ -226,6 +226,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				}
 
 				entityPlatformType = entityattributes.AttributeEntityEC2Platform
+				ec2Info = getEC2InfoFromEntityStore()
 
 				if entityEnvironmentName == EMPTY {
 					if getAutoScalingGroupFromEntityStore() != EMPTY {

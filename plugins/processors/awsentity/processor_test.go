@@ -627,6 +627,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 		metrics                        pmetric.Metrics
 		mockServiceNameAndSource       func() (string, string)
 		mockGetEC2InfoFromEntityStore  func() entitystore.EC2Info
+		mockGetAutoScalingGroup        func() string
 		want                           map[string]any
 		wantDatapointAttributes        map[string]any
 	}{
@@ -639,6 +640,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			name:                          "DatapointAttributeServiceNameOnly",
 			metrics:                       generateDatapointMetrics(attributeServiceName, "test-service"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:       newMockGetAutoScalingGroupFromEntityStore("auto-scaling"),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
@@ -655,6 +657,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			metrics:                       generateDatapointMetrics(attributeDeploymentEnvironment, "test-environment"),
 			mockServiceNameAndSource:      newMockGetServiceNameAndSource("test-service-name", "ClientIamRole"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:       newMockGetAutoScalingGroupFromEntityStore(""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service-name",
@@ -669,6 +672,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			name:                          "DatapointAttributeServiceNameAndEnvironment",
 			metrics:                       generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:       newMockGetAutoScalingGroupFromEntityStore(""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
@@ -684,6 +688,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			checkDatapointAttributeRemoval: true,
 			metrics:                        generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment", entityattributes.AttributeServiceNameSource, entityattributes.AttributeServiceNameSourceUserConfig, entityattributes.AttributeDeploymentEnvironmentSource, entityattributes.AttributeServiceNameSourceUserConfig),
 			mockGetEC2InfoFromEntityStore:  newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:        newMockGetAutoScalingGroupFromEntityStore(""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
@@ -700,6 +705,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			checkDatapointAttributeRemoval: true,
 			metrics:                        generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment", entityattributes.AttributeServiceNameSource, entityattributes.AttributeServiceNameSourceUserConfig),
 			mockGetEC2InfoFromEntityStore:  newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:        newMockGetAutoScalingGroupFromEntityStore(""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
@@ -718,6 +724,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			checkDatapointAttributeRemoval: true,
 			metrics:                        generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment", entityattributes.AttributeDeploymentEnvironmentSource, entityattributes.AttributeServiceNameSourceUserConfig),
 			mockGetEC2InfoFromEntityStore:  newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:        newMockGetAutoScalingGroupFromEntityStore(""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
@@ -742,6 +749,9 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			}
 			if tt.mockGetEC2InfoFromEntityStore != nil {
 				getEC2InfoFromEntityStore = tt.mockGetEC2InfoFromEntityStore
+			}
+			if tt.mockGetAutoScalingGroup != nil {
+				getAutoScalingGroupFromEntityStore = tt.mockGetAutoScalingGroup
 			}
 			p := newAwsEntityProcessor(&Config{ScrapeDatapointAttribute: true, EntityType: attributeService}, logger)
 			p.config.Platform = config.ModeEC2
