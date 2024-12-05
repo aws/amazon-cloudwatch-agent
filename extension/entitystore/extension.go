@@ -94,9 +94,13 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
 	switch e.mode {
 	case config.ModeEC2:
-		e.ec2Info = *newEC2Info(e.metadataprovider, e.done, e.config.Region, e.logger)
+		e.ec2Info = *newEC2Info(e.metadataprovider, e.kubernetesMode, e.done, e.config.Region, e.logger)
 		go e.ec2Info.initEc2Info()
-		go e.serviceprovider.startServiceProvider()
+		// Instance metadata tags is not usable for EKS nodes
+		// https://github.com/kubernetes/cloud-provider-aws/issues/762
+		if e.kubernetesMode == "" {
+			go e.serviceprovider.startServiceProvider()
+		}
 	}
 	if e.kubernetesMode != "" {
 		e.eksInfo = newEKSInfo(e.logger)
