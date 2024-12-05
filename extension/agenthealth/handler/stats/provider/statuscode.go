@@ -29,7 +29,6 @@ var (
 type StatusCodeProvider struct {
 	statsByOperation map[string]*[5]int
 	resetTimer       *time.Timer
-	filter           agent.OperationsFilter
 	statusCodeChan   chan statusCodeEntry
 	stopChan         chan struct{}
 	shouldResetStats bool
@@ -44,7 +43,7 @@ type statusCodeEntry struct {
 }
 
 // GetStatusCodeStatusCodeProvider initializes and retrieves the singleton StatusCodeProvider.
-func GetStatusCodeStatsProvider(filter interface{}) *StatusCodeProvider {
+func GetStatusCodeStatsProvider() *StatusCodeProvider {
 	StatusCodeProviderOnce.Do(func() {
 		provider := &StatusCodeProvider{
 			statsByOperation: make(map[string]*[5]int),
@@ -52,9 +51,6 @@ func GetStatusCodeStatsProvider(filter interface{}) *StatusCodeProvider {
 			stopChan:         make(chan struct{}),
 		}
 
-		if opsFilter, ok := filter.(agent.OperationsFilter); ok {
-			provider.filter = opsFilter
-		}
 		provider.startResetTimer()
 		provider.startProcessing()
 		statusCodeProviderSingleton = provider
@@ -126,6 +122,7 @@ func (sp *StatusCodeProvider) startResetTimer() {
 // StatusCodeHandler is the handler that uses the StatusCodeProvider for processing.
 type StatusCodeHandler struct {
 	StatusCodeProvider *StatusCodeProvider
+	filter             agent.OperationsFilter
 }
 
 func (h *StatusCodeHandler) ID() string {
@@ -137,14 +134,14 @@ func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
 }
 
 // NewStatusCodeHandler creates a new handler with the given StatusCodeProvider.
-func NewStatusCodeHandler(provider *StatusCodeProvider) *StatusCodeHandler {
-	return &StatusCodeHandler{StatusCodeProvider: provider}
+func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsFilter) *StatusCodeHandler {
+	return &StatusCodeHandler{StatusCodeProvider: provider, filter: filter}
 }
 
 // HandleResponse enqueues the status code into the StatusCodeProvider's channel.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
-	if !h.StatusCodeProvider.filter.IsAllowed(operation) {
+	if !h.filter.IsAllowed(operation) {
 		return
 	}
 

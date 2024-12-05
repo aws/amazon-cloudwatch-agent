@@ -58,8 +58,8 @@ func TestNewHandlers(t *testing.T) {
 }
 
 func TestSingleton(t *testing.T) {
-	instance1 := provider.GetStatusCodeStatsProvider(nil)
-	instance2 := provider.GetStatusCodeStatsProvider(nil)
+	instance1 := provider.GetStatusCodeStatsProvider()
+	instance2 := provider.GetStatusCodeStatsProvider()
 
 	if instance1 != instance2 {
 		t.Errorf("Expected both instances to be the same, but they are different")
