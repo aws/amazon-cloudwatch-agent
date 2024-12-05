@@ -154,21 +154,35 @@ export function PerformanceTable(props: { use_cases: UseCaseData[]; data_rate: s
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {use_cases?.map((use_case) => (
-                        <StyledTableRow key={use_case.name}>
-                            <StyledTableCell>{use_case.name}</StyledTableCell>
-                            <StyledTableCell>{use_case.instance_type}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_cpu_usage).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_rss) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_swap) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_data) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_vms) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_write_bytes).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_num_fds).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.net_bytes_sent).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.net_packets_sent).toFixed(2)}</StyledTableCell>
-                        </StyledTableRow>
-                    ))}
+                    {use_cases
+                        ?.filter((use_case) => use_case.data?.[data_rate])
+                        .map((use_case: UseCaseData, index) => {
+                            const metrics = use_case.data[data_rate];
+                            const memTotal = Number(metrics?.mem_total);
+
+                            const getFormattedValue = (value: number | undefined, divisor?: number) => {
+                                if (!value) {
+                                    return '0.00';
+                                }
+                                return (divisor ? value / divisor : value).toFixed(2);
+                            };
+
+                            return (
+                                <StyledTableRow key={`${use_case.name}-${index}`}>
+                                    <StyledTableCell>{use_case.name}</StyledTableCell>
+                                    <StyledTableCell>{use_case.instance_type}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_cpu_usage))}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_memory_rss), memTotal)}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_memory_swap), memTotal)}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_memory_data), memTotal)}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_memory_vms), memTotal)}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_write_bytes))}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.procstat_num_fds))}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.net_bytes_sent))}</StyledTableCell>
+                                    <StyledTableCell>{getFormattedValue(Number(metrics?.net_packets_sent))}</StyledTableCell>
+                                </StyledTableRow>
+                            );
+                        })}
                 </TableBody>
             </Table>
         </TableContainer>

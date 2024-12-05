@@ -1,19 +1,32 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-import { CircularProgress, Container, Link, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableRow, Typography } from '@mui/material';
+import { Button, CircularProgress, Container, Link, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableRow, Typography } from '@mui/material';
 import moment from 'moment';
 import * as React from 'react';
 import { TRANSACTION_PER_MINUTE } from '../../common/Constant';
 import { usePageEffect } from '../../core/page';
 import { PerformanceTable } from '../../core/table';
-import { UseCaseData } from './data';
-import { GetLatestPerformanceReports, GetServiceLatestVersion } from './service';
+import { ServicePRInformation, UseCaseData } from './data';
+import { createDefaultServicePRInformation, GetLatestPerformanceReports, GetServiceLatestVersion, GetServicePRInformation } from './service';
 import { PasswordDialog } from '../../common/Dialog';
+import { SelectChangeEvent } from '@mui/material/Select';
+import ReactMarkdown from 'react-markdown';
+
 export default function PerformanceReport(props: { password: string; password_is_set: boolean; set_password_state: any }): JSX.Element {
     usePageEffect({ title: 'Amazon CloudWatch Agent' });
     const { password, password_is_set, set_password_state } = props;
-    const [{ version, commit_date, commit_title, commit_hash, commit_url, use_cases, ami_id, collection_period }] = useStatePerformanceReport(password);
+    const [{ version, commit_date, commit_title, commit_hash, commit_url, use_cases, ami_id, collection_period, body }] = useStatePerformanceReport(password);
     const [{ data_type }, setDataTypeState] = useStateDataType();
+    const [isHidden, setIsHidden] = React.useState(true);
+
+    const handleDataTypeChange = (event: SelectChangeEvent) => {
+        setDataTypeState({ data_type: event.target.value });
+    };
+
+    const toggleContent = () => {
+        setIsHidden(!isHidden);
+    };
+    const selectedUseCaseData: UseCaseData[] = use_cases.filter((useCase: UseCaseData) => useCase?.data_type?.toLowerCase() === data_type.toLowerCase());
 
     return (
         <Container>
@@ -56,7 +69,7 @@ export default function PerformanceReport(props: { password: string; password_is
                                 aria-label="a dense table"
                             >
                                 <TableBody>
-                                    {['Version', 'Architectural', 'Collection Period', 'Testing AMI', 'Commit Hash', 'Commit Name', 'Commit Date', 'Data Type']?.map((name) => (
+                                    {['Version', 'Architectural', 'Collection Period', 'Testing AMI', 'Commit Hash', 'Commit Name', 'Commit Date', 'Data Type', 'Release Notes']?.map((name) => (
                                         <TableRow key={name}>
                                             <TableCell
                                                 sx={{
@@ -69,7 +82,6 @@ export default function PerformanceReport(props: { password: string; password_is
                                             <TableCell
                                                 sx={{
                                                     border: '1px solid #000',
-                                                    textAlign: 'center',
                                                 }}
                                             >
                                                 {name === 'Version' ? (
@@ -88,24 +100,33 @@ export default function PerformanceReport(props: { password: string; password_is
                                                     </Link>
                                                 ) : name === 'Commit Date' ? (
                                                     <Typography variant="h4">{commit_date}</Typography>
-                                                ) : (
-                                                    <Select
-                                                        sx={{ height: '41px' }}
-                                                        value={data_type}
-                                                        onChange={(e: {
-                                                            target: {
-                                                                value: string;
-                                                            };
-                                                        }) =>
-                                                            setDataTypeState({
-                                                                data_type: e.target.value,
-                                                            })
-                                                        }
-                                                    >
+                                                ) : name === 'Data Type' ? (
+                                                    <Select sx={{ height: '41px' }} value={data_type} onChange={handleDataTypeChange}>
                                                         <MenuItem value={'Metrics'}>Metric</MenuItem>
                                                         <MenuItem value={'Traces'}>Trace</MenuItem>
                                                         <MenuItem value={'Logs'}>Logs</MenuItem>
                                                     </Select>
+                                                ) : (
+                                                    <div>
+                                                        <Button
+                                                            onClick={toggleContent}
+                                                            className="toggle-button"
+                                                            variant="outlined"
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                backgroundColor: '#ffffff',
+                                                                borderColor: '#333333',
+                                                                color: '#333333',
+                                                                '&:hover': {
+                                                                    backgroundColor: '#f5f5f5',
+                                                                    borderColor: '#333333',
+                                                                },
+                                                            }}
+                                                        >
+                                                            {isHidden ? 'Show release notes' : 'Hide release notes'}
+                                                        </Button>
+                                                        {!isHidden && <ReactMarkdown className="markdown-content">{body}</ReactMarkdown>}
+                                                    </div>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -120,7 +141,7 @@ export default function PerformanceReport(props: { password: string; password_is
                             <Typography sx={{ mb: 2, fontWeight: 'bold' }} variant="h3">
                                 {data_type} (TPM: {tpm}){' '}
                             </Typography>
-                            <PerformanceTable data_rate={String(tpm)} use_cases={use_cases.filter((use_case: UseCaseData) => use_case?.data_type === data_type.toLowerCase())} />
+                            <PerformanceTable key={data_type} data_rate={String(tpm)} use_cases={selectedUseCaseData} />
                         </Container>
                     ))}
                 </Container>
@@ -140,6 +161,7 @@ function useStatePerformanceReport(password: string) {
         ami_id: undefined as string | undefined,
         collection_period: undefined as string | undefined,
         error: undefined as string | undefined,
+        body: undefined as string | undefined,
     });
 
     React.useEffect(() => {
@@ -155,8 +177,9 @@ function useStatePerformanceReport(password: string) {
 
             const use_cases: UseCaseData[] = [];
             // We only get the latest commit ID; therefore, only use case are different; however, general metadata
-            // information (e.g Commit_Hash, Commit_Date of the PR) would be the same for all datas.
+            // information (e.g Commit_Hash, Commit_Date of the PR) would be the same for all data.
             const commit_hash = performance_reports.at(0)?.CommitHash.S || '';
+            const commitHashes = performance_reports.map((report) => report.CommitHash?.S);
             const commit_date = performance_reports.at(0)?.CommitDate.N;
             const collection_period = performance_reports.at(0)?.CollectionPeriod.S;
             const ami_id = performance_reports.at(0)?.InstanceAMI.S;
@@ -166,11 +189,10 @@ function useStatePerformanceReport(password: string) {
                     name: pReport?.UseCase.S,
                     data_type: pReport?.DataType.S,
                     instance_type: pReport?.InstanceType.S,
-                    data: TRANSACTION_PER_MINUTE.reduce(
+                    data: Object.keys(pReport?.Results.M).reduce(
                         (accu, tpm) => ({
                             ...accu,
                             [tpm]: {
-                                cpu_usage: pReport?.Results.M[tpm]?.M?.cpu_usage?.M?.Average?.N,
                                 procstat_cpu_usage: pReport?.Results.M[tpm]?.M?.procstat_cpu_usage?.M?.Average?.N,
                                 procstat_memory_rss: pReport?.Results.M[tpm]?.M?.procstat_memory_rss?.M?.Average?.N,
                                 procstat_memory_swap: pReport?.Results.M[tpm]?.M?.procstat_memory_swap?.M?.Average?.N,
@@ -187,7 +209,8 @@ function useStatePerformanceReport(password: string) {
                     ),
                 });
             }
-            // const commit_info = await GetServicePRInformation(password, commit_hash);
+            const commit_info: ServicePRInformation[] = await GetServicePRInformation(password, commitHashes);
+            const commit_info_finalized = commit_info.find((value) => value !== undefined) ?? createDefaultServicePRInformation();
 
             setState((prev: any) => ({
                 ...prev,
@@ -195,17 +218,34 @@ function useStatePerformanceReport(password: string) {
                 ami_id: ami_id,
                 collection_period: collection_period,
                 use_cases: use_cases,
-                // commit_title: `${commit_info?.title} (#${commit_info?.number})`,
-                // commit_url: commit_info?.html_url,
-                commit_hash: commit_hash,
-                commit_title: `PlaceHolder`,
-                commit_url: `www.github.com/aws/amazon-cloudwatch-agent`,
-                commit_date: moment.unix(Number(commit_date)).format('dddd, MMMM Do, YYYY h:mm:ss A'),
+                commit_title: `${commit_info_finalized?.title} (#${commit_info_finalized?.number})`,
+                commit_url: commit_info_finalized?.html_url,
+                commit_hash: commit_info_finalized?.sha ?? commit_hash,
+                commit_date: formatUnixTimestamp(commit_date ?? 0),
+                body: service_info.body ?? 'Release notes unavailable',
             }));
         })();
     }, [password, setState]);
     return [state, setState] as const;
 }
+
+export const formatUnixTimestamp = (timestamp: string | number, format: string = 'dddd, MMMM Do, YYYY h:mm:ss A'): string => {
+    try {
+        // Handle string input
+        const unixTime = typeof timestamp === 'string' ? Number(timestamp) : timestamp;
+
+        // Validate timestamp
+        if (!Number.isFinite(unixTime) || unixTime < 0) {
+            console.log('invalid unix timestamp:');
+            return moment.unix(0).format(format);
+        }
+
+        return moment.unix(unixTime).format(format);
+    } catch (error) {
+        console.error('Error formatting unix timestamp:', error);
+        return moment.unix(0).format(format);
+    }
+};
 
 function useStateDataType() {
     const [state, setState] = React.useState({

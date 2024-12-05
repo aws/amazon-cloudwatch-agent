@@ -43,11 +43,12 @@ export interface PerformanceMetricReport {
     };
 
     UseCase: { S: string };
+    Service: { S: string };
+    UniqueID: { S: string };
 }
 
 // PerformanceMetric shows all collected metrics when running performance metrics
 export interface PerformanceMetric {
-    cpu_usage?: { M: PerformanceMetricStatistic };
     procstat_cpu_usage?: { M: PerformanceMetricStatistic };
     procstat_memory_rss?: { M: PerformanceMetricStatistic };
     procstat_memory_swap?: { M: PerformanceMetricStatistic };
@@ -72,6 +73,7 @@ export interface PerformanceMetricStatistic {
 export interface ServiceLatestVersion {
     // Release version for the service
     tag_name: string;
+    body: string;
 }
 
 export interface ServicePRInformation {
@@ -79,6 +81,7 @@ export interface ServicePRInformation {
     title: string;
     html_url: string;
     number: number;
+    sha: string;
 }
 
 export interface UseCaseData {
@@ -87,7 +90,6 @@ export interface UseCaseData {
     instance_type?: string;
     data: {
         [data_rate: string]: {
-            cpu_usage?: string;
             procstat_cpu_usage?: string;
             procstat_memory_rss?: string;
             procstat_memory_swap?: string;
