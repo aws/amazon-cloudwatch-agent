@@ -5,6 +5,7 @@ package agent
 
 import (
 	"encoding/json"
+	"log"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
@@ -81,26 +82,43 @@ func (s *Stats) Merge(other Stats) {
 	if other.EntityRejected != nil {
 		s.EntityRejected = other.EntityRejected
 	}
-	if other.StatusCodes == nil {
-		return
-	}
+	if other.StatusCodes != nil {
+		log.Println("Merging status codes from another source.")
 
-	if s.StatusCodes == nil {
-		s.StatusCodes = make(map[string][5]int)
-	}
-
-	for key, value := range other.StatusCodes {
-		if existing, ok := s.StatusCodes[key]; ok {
-			s.StatusCodes[key] = [5]int{
-				existing[0] + value[0], // 200
-				existing[1] + value[1], // 400
-				existing[2] + value[2], // 408
-				existing[3] + value[3], // 413
-				existing[4] + value[4], // 429
-			}
-		} else {
-			s.StatusCodes[key] = value
+		if s.StatusCodes == nil {
+			log.Println("Initializing status codes map as it was nil.")
+			s.StatusCodes = make(map[string][5]int)
 		}
+
+		for key, value := range other.StatusCodes {
+			log.Printf("Processing key: %s with value: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", key, value[0], value[1], value[2], value[3], value[4])
+
+			if existing, ok := s.StatusCodes[key]; ok {
+				log.Printf(
+					"Key %s already exists. Existing: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d. Merging with: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+					key, existing[0], existing[1], existing[2], existing[3], existing[4],
+					value[0], value[1], value[2], value[3], value[4],
+				)
+
+				//Merge the values for each status code
+				s.StatusCodes[key] = [5]int{
+					existing[0] + value[0], // 200
+					existing[1] + value[1], // 400
+					existing[2] + value[2], // 408
+					existing[3] + value[3], // 413
+					existing[4] + value[4], // 429
+				}
+
+				log.Printf(
+					"Updated key %s: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+					key, s.StatusCodes[key][0], s.StatusCodes[key][1], s.StatusCodes[key][2], s.StatusCodes[key][3], s.StatusCodes[key][4],
+				)
+			} else {
+				log.Printf("Key %s does not exist. Adding it with: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d", key, value[0], value[1], value[2], value[3], value[4])
+				s.StatusCodes[key] = value
+			}
+		}
+		log.Println("Merging of status codes completed.")
 	}
 
 }
@@ -127,26 +145,51 @@ func (of OperationsFilter) IsAllowed(operationName string) bool {
 	return of.allowAll || of.operations.Contains(operationName)
 }
 
+type StatsConfig struct {
+	// Operations are the allowed operation names to gather stats for.
+	Operations []string `mapstructure:"operations,omitempty"`
+	// UsageFlags are the usage flags to set on start up.
+	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
+}
+
 var StatusCodeOperations = []string{ // all the operations that are allowed
 	"PutRetentionPolicy",
 	"DescribeInstances",
 	"DescribeTags",
-	"DescribeTasks",
 	"DescribeVolumes",
 	"DescribeContainerInstances",
 	"DescribeServices",
 	"DescribeTaskDefinition",
 	"ListServices",
 	"ListTasks",
+	"DescribeTasks",
 	"CreateLogGroup",
 	"CreateLogStream",
+}
+
+func NewOperationsFilter(operations ...string) OperationsFilter {
+	allowed := collections.NewSet[string](operations...)
+	return OperationsFilter{
+		operations: allowed,
+		allowAll:   allowed.Contains(AllowAllOperations),
+	}
+}
+
+// NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
+func NewStatusCodeOperationsFilter() OperationsFilter {
+	allowed := collections.NewSet[string](StatusCodeOperations...)
+
+	return OperationsFilter{
+		operations: allowed,
+		allowAll:   allowed.Contains(AllowAllOperations),
+	}
 }
 
 // GetShortOperationName maps long operation names to short ones.
 func GetShortOperationName(operation string) string {
 	switch operation {
 	case "PutRetentionPolicy":
-		return "pmd"
+		return "prp"
 	case "DescribeInstances":
 		return "di"
 	case "DescribeTags":
@@ -172,24 +215,4 @@ func GetShortOperationName(operation string) string {
 	default:
 		return ""
 	}
-}
-
-type StatsConfig struct {
-	// Operations are the allowed operation names to gather stats for.
-	Operations []string `mapstructure:"operations,omitempty"`
-	// UsageFlags are the usage flags to set on start up.
-	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
-}
-
-func NewOperationsFilter(operations ...string) OperationsFilter {
-	allowed := collections.NewSet[string](operations...)
-	return OperationsFilter{
-		operations: allowed,
-		allowAll:   allowed.Contains(AllowAllOperations),
-	}
-}
-
-// NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
-func NewStatusCodeOperationsFilter() OperationsFilter {
-	return NewOperationsFilter(StatusCodeOperations...)
 }
