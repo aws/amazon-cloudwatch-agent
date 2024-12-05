@@ -100,6 +100,7 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 		stats = &[5]int{}
 		sp.statsByOperation[entry.operation] = stats
 	}
+	log.Println(entry.operation)
 	sp.updateStatusCodeCount(stats, entry.statusCode)
 }
 
@@ -120,6 +121,10 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 	default:
 		log.Printf("Unknown status code encountered: %d\n", statusCode)
 	}
+	log.Printf(
+		"Updated stats for operation ??: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+		stats[0], stats[1], stats[2], stats[3], stats[4],
+	)
 }
 
 // startResetTimer initializes a reset timer to clear stats periodically.
