@@ -32,7 +32,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 
 	if statusCodeEnabled {
 		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-		statusCodeStatsProvider := provider.GetStatsProvider(statusCodeFilter)
+		statusCodeStatsProvider := provider.GetStatusCodeStatsProvider(statusCodeFilter)
 		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider)
 		responseHandlers = append(responseHandlers, statusCodeHandler)
 		statsProviders = append(statsProviders, statusCodeStatsProvider)

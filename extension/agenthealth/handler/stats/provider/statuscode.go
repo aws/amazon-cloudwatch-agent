@@ -43,8 +43,8 @@ type statusCodeEntry struct {
 	statusCode int
 }
 
-// GetStatsProvider initializes and retrieves the singleton StatsProvider.
-func GetStatsProvider(filter interface{}) *StatsProvider {
+// GetStatusCodeStatsProvider initializes and retrieves the singleton StatsProvider.
+func GetStatusCodeStatsProvider(filter interface{}) *StatsProvider {
 	statsProviderOnce.Do(func() {
 		provider := &StatsProvider{
 			statsByOperation: make(map[string]*[5]int),
