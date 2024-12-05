@@ -57,6 +57,14 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
+
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
+
       - name: Echo Localstack Config
         run: echo repo name ${{inputs.test_repo_name}} repo branch ${{ inputs.test_repo_branch }} region ${{ inputs.region }}
 

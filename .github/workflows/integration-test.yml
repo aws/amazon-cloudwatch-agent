@@ -13,7 +13,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "remove-ssh"
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
@@ -154,6 +154,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: cf-integration-test
         uses: actions/cache@v2
@@ -183,6 +189,8 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      connection_port: ${{vars.LINUX_CONNECTION_PORT}}
+
 
   StartLocalStackITAR:
     name: 'StartLocalStackITAR'
@@ -244,6 +252,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: ec2-linux-integration-test
         uses: actions/cache@v3
@@ -544,6 +558,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: ec2-mac-integration-test
         uses: actions/cache@v3
@@ -604,7 +624,8 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    # needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest,  OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -617,6 +638,8 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      connection_port: ${{vars.LINUX_CONNECTION_PORT}}
+
 
   StopLocalStackITAR:
     name: 'StopLocalStackITAR'
@@ -675,7 +698,13 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
+          
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: ecs-ec2-integration-test
         uses: actions/cache@v3
@@ -759,6 +788,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: ecs-fargate-integration-test
         uses: actions/cache@v3
@@ -837,6 +872,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: eks-ec2-integration-test
         uses: actions/cache@v3
@@ -919,6 +960,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: eks-ec2-integration-test
         uses: actions/cache@v3
@@ -999,6 +1046,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: performance-tracking
         uses: actions/cache@v3
@@ -1067,6 +1120,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: performance-tracking
         uses: actions/cache@v3
@@ -1135,6 +1194,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: stress-tracking
         uses: actions/cache@v3
@@ -1205,6 +1270,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       - name: Cache if success
         id: ec2-win-stress-tracking-test
         uses: actions/cache@v3
@@ -1276,6 +1347,12 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
 
       - name: Verify Terraform version
         run: terraform --version

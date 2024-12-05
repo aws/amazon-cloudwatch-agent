@@ -26,7 +26,6 @@ on:
       s3_integration_bucket:
         type: string
 
-
 jobs:
   StopLocalStack:
     name: 'StopLocalStack'
@@ -49,6 +48,14 @@ jobs:
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
+
+
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
 
       - name: Copy state
         run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
