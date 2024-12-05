@@ -43,6 +43,8 @@ export interface PerformanceMetricReport {
     };
 
     UseCase: { S: string };
+    Service: { S: string };
+    UniqueID: { S: string };
 }
 
 // PerformanceMetric shows all collected metrics when running performance metrics
