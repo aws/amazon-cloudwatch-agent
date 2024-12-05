@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
@@ -66,7 +65,7 @@ type pusher struct {
 	wg                    *sync.WaitGroup
 }
 
-func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc, configurer *awsmiddleware.Configurer) *pusher {
+func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,

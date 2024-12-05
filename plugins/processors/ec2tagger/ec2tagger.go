@@ -324,12 +324,9 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
 		if client, ok := t.ec2API.(*ec2.EC2); ok {
-			if t.Config.MiddlewareID == nil {
-				TypeStr, _ = component.NewType("agenthealth")
-				defaultMiddlewareID := component.NewIDWithName(TypeStr, component.DataTypeMetrics.String())
-				t.Config.MiddlewareID = &defaultMiddlewareID
+			if t.Config.MiddlewareID != nil {
+				awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
 			}
-			awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
 		}
 
 		go func() { //Async start of initial retrieval to prevent block of agent start

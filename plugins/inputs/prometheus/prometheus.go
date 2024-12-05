@@ -8,7 +8,6 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"go.uber.org/zap"
 	"log"
 	"sync"
@@ -30,7 +29,6 @@ type Prometheus struct {
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
 	middleware           awsmiddleware.Middleware
-	Configurer           *awsmiddleware.Configurer
 }
 
 func (p *Prometheus) SampleConfig() string {
@@ -46,12 +44,8 @@ func (p *Prometheus) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
-	log.Println("Starting Prometheus")
-
-	// Initialize Metrics Type Handler
 	mth := NewMetricsTypeHandler()
 
-	// Initialize the Prometheus receiver and handler
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
 	handler := &metricsHandler{
 		mbCh:        p.mbCh,
@@ -68,13 +62,9 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 	if p.middleware != nil {
 		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
 		if configurer != nil {
-			log.Println("passed awsmiddleware configurer")
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
-
 		} else {
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
-			log.Println("failed awsmiddleware configurer")
-
 		}
 	}
 
@@ -108,7 +98,6 @@ func init() {
 				zap.NewNop(),
 				&agenthealth.Config{
 					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
-					Stats:               &agent.StatsConfig{Operations: []string{"PutMetricData"}},
 					IsStatusCodeEnabled: true,
 				},
 			),

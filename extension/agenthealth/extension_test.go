@@ -16,7 +16,7 @@ import (
 
 func TestExtension(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{"PutLogEvents"}}}
+	cfg := &Config{IsUsageDataEnabled: true, Stats: &agent.StatsConfig{Operations: []string{"PutLogEvents"}}}
 	extension := NewAgentHealth(zap.NewNop(), cfg)
 	assert.NotNil(t, extension)
 	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
