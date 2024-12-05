@@ -25,7 +25,9 @@ on:
         type: string
       s3_integration_bucket:
         type: string
-
+      connection_port:
+        type: number
+        required: true
 
 jobs:
   StopLocalStack:
@@ -50,6 +52,16 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
+
+      - name: Add Runner to Security Group
+        uses: mnavarrocarter/authorize-aws-security-group-ingress-action@v1.0.0
+        with:
+          aws-region: ${{inputs.region}} 
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID }}
+          protocol: 'tcp'
+          port: ${{ inputs.connection_port }}
       - name: Copy state
         run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
 

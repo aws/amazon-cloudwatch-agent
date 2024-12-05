@@ -183,6 +183,8 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      connection_port: ${{vars.LINUX_CONNECTION_PORT}}
+
 
   # StartLocalStackITAR:
   #   name: 'StartLocalStackITAR'
@@ -619,6 +621,8 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      connection_port: ${{vars.LINUX_CONNECTION_PORT}}
+
 
   # StopLocalStackITAR:
   #   name: 'StopLocalStackITAR'

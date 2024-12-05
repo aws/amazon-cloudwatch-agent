@@ -28,6 +28,9 @@ on:
         type: string
       s3_integration_bucket:
         type: string
+      connection_port:
+        type: number
+        required: true
     outputs:
       local_stack_host_name:
         value: ${{ jobs.StartLocalStack.outputs.local_stack_host_name }}
@@ -57,6 +60,16 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
+
+      - name: Add Runner to Security Group
+        uses: mnavarrocarter/authorize-aws-security-group-ingress-action@v1.0.0
+        with:
+          aws-region: ${{inputs.region}} 
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID }}
+          protocol: 'tcp'
+          port: ${{ inputs.connection_port }}
       - name: Echo Localstack Config
         run: echo repo name ${{inputs.test_repo_name}} repo branch ${{ inputs.test_repo_branch }} region ${{ inputs.region }}
 
