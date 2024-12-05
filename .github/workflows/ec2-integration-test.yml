@@ -40,9 +40,6 @@ on:
         type: string
       s3_integration_bucket:
         type: string
-      connection_port:
-        type: string
-        required: true
 
 jobs:
   EC2IntegrationTest:
@@ -71,9 +68,9 @@ jobs:
       - name: Add Runner to Security Group
         uses: twosense/add-ip-to-ec2-security-group@v1.2
         with:
-            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
-            port: ${{ inputs.connection_port }}
-
+          security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+          port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
 
       - name: Cache if success
         id: cache_if_success

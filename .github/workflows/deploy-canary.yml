@@ -33,7 +33,12 @@ jobs:
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+  
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:

@@ -28,9 +28,6 @@ on:
         type: string
       s3_integration_bucket:
         type: string
-      connection_port:
-        type: string
-        required: true
     outputs:
       local_stack_host_name:
         value: ${{ jobs.StartLocalStack.outputs.local_stack_host_name }}
@@ -65,7 +62,8 @@ jobs:
         uses: twosense/add-ip-to-ec2-security-group@v1.2
         with:
             security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
-            port: ${{ inputs.connection_port }}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
 
       - name: Echo Localstack Config
         run: echo repo name ${{inputs.test_repo_name}} repo branch ${{ inputs.test_repo_branch }} region ${{ inputs.region }}

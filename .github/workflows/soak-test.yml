@@ -78,7 +78,12 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
-
+      - name: Add Runner to Security Group
+        uses: twosense/add-ip-to-ec2-security-group@v1.2
+        with:
+            security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
       # @TODO we can add a matrix in the future but for for now, we will only deploy to AL2.
       - name: Terraform apply
         uses: nick-fields/retry@v2

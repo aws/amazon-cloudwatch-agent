@@ -25,9 +25,6 @@ on:
         type: string
       s3_integration_bucket:
         type: string
-      connection_port:
-        type: string
-        required: true
 
 jobs:
   StopLocalStack:
@@ -57,7 +54,8 @@ jobs:
         uses: twosense/add-ip-to-ec2-security-group@v1.2
         with:
             security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID}}
-            port: ${{ inputs.connection_port }}
+            port: ${{ runner.os == 'Windows' && vars.WIN_CONNECTION_PORT || vars.LINUX_CONNECTION_PORT }}
+    
 
       - name: Copy state
         run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
