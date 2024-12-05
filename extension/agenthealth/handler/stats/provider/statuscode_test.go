@@ -56,3 +56,20 @@ func TestNewHandlers(t *testing.T) {
 		assert.Nil(t, responseHandlers, "Response handlers should be nil")
 	})
 }
+
+func TestSingleton(t *testing.T) {
+	instance1 := provider.GetStatusCodeStatsProvider(nil)
+	instance2 := provider.GetStatusCodeStatsProvider(nil)
+
+	if instance1 != instance2 {
+		t.Errorf("Expected both instances to be the same, but they are different")
+	}
+
+	instance1.EnqueueStatusCode("DescribeInstances", 200)
+	stats1 := instance1.Stats("")
+	stats2 := instance2.Stats("")
+
+	if stats1.StatusCodes["DescribeInstances"][0] != stats2.StatusCodes["DescribeInstances"][0] {
+		t.Errorf("Expected the state to be the same across instances, but it differs")
+	}
+}
