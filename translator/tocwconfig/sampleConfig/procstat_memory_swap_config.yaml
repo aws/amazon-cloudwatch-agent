@@ -16,7 +16,10 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutMetricData
+            usage_flags:
+                mode: OP
+                region_type: ACJ
     entitystore:
         mode: onPremise
         profile: AmazonCloudWatchAgent

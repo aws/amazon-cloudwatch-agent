@@ -153,7 +153,6 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 	if containerInsightsRegexp.MatchString(t.Group) {
 		useragent.Get().SetContainerInsightsFlag()
 	}
-	var configurer *awsmiddleware.Configurer
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	if c.middleware != nil {
 		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {

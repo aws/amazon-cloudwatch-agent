@@ -156,7 +156,7 @@ receivers:
                   enable_http2: true
                   file_sd_configs:
                     - files:
-                        - /var/folders/1y/14rm33bx3fsgmk1gf2nw5_b40000gr/T/TestCombinedPrometheusConfig1851722263/001/ecs_sd_results.yaml
+                        - {ecsSdFileName}
                       refresh_interval: 5m
                   follow_redirects: true
                   honor_timestamps: true

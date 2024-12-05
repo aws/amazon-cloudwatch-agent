@@ -62,7 +62,10 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-west-2
@@ -126,11 +129,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx:
         error_mode: propagate
@@ -173,8 +176,8 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -182,8 +185,8 @@ service:
                 - awsentity/resource
                 - transform
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/jmx/amp:
             exporters:
                 - prometheusremotewrite/amp

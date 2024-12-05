@@ -39,7 +39,7 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 			slices.Contains(ah.cfg.Stats.Operations, "PutLogEvents") ||
 			slices.Contains(ah.cfg.Stats.Operations, "PutTraceSegment")
 
-	statsRequestHandlers, statsResponseHandlers := stats.NewHandlers(ah.logger, ah.cfg.Stats, statusCodeEnabled, agentStatsEnabled)
+	statsRequestHandlers, statsResponseHandlers := stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled, agentStatsEnabled)
 	requestHandlers = append(requestHandlers, statsRequestHandlers...)
 	responseHandlers = append(responseHandlers, statsResponseHandlers...)
 

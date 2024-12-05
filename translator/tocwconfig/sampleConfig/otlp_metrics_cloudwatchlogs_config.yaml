@@ -34,7 +34,10 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-west-2

@@ -16,7 +16,10 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         profile: AmazonCloudWatchAgent
@@ -40,9 +43,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 2
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
@@ -80,10 +83,10 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
                 - telegraf_cpu
+                - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
