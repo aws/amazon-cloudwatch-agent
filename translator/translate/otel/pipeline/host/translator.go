@@ -113,7 +113,6 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{"*"}, true))
 
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
