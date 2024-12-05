@@ -104,7 +104,6 @@ func (sp *StatsProvider) processStatusCode(entry statusCodeEntry) {
 
 // updateStatusCodeCount updates the count for the specific status code.
 func (sp *StatsProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
-	log.Printf("Updating stats for status code: %d\n", statusCode)
 	switch statusCode {
 	case 200:
 		stats[0]++
@@ -117,17 +116,15 @@ func (sp *StatsProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
 	case 429:
 		stats[4]++
 	default:
-		log.Printf("Ignored status code: %d\n", statusCode)
+
 	}
 }
 
 // startResetTimer initializes a reset timer to clear stats periodically.
 func (sp *StatsProvider) startResetTimer() {
-	log.Println("Starting stats reset timer...")
 	sp.resetTimer = time.AfterFunc(statusResetInterval, func() {
 		sp.mu.Lock()
 		defer sp.mu.Unlock()
-		log.Println("Resetting stats...")
 		for key := range sp.statsByOperation {
 			delete(sp.statsByOperation, key)
 		}
@@ -161,44 +158,12 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 		return
 	}
 
-	operation = GetShortOperationName(operation)
+	operation = agent.GetShortOperationName(operation)
 	if operation == "" {
 		return
 	}
 
 	h.statsProvider.EnqueueStatusCode(operation, r.StatusCode)
-}
-
-// GetShortOperationName maps long operation names to short ones.
-func GetShortOperationName(operation string) string {
-	switch operation {
-	case "PutRetentionPolicy":
-		return "pmd"
-	case "DescribeInstances":
-		return "di"
-	case "DescribeTags":
-		return "dt"
-	case "DescribeTasks":
-		return "dts"
-	case "DescribeVolumes":
-		return "dv"
-	case "DescribeContainerInstances":
-		return "dci"
-	case "DescribeServices":
-		return "ds"
-	case "DescribeTaskDefinition":
-		return "dtd"
-	case "ListServices":
-		return "ls"
-	case "ListTasks":
-		return "lt"
-	case "CreateLogGroup":
-		return "clg"
-	case "CreateLogStream":
-		return "cls"
-	default:
-		return ""
-	}
 }
 
 // Stats returns the aggregated stats for operations.

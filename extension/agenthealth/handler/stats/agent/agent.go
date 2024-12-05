@@ -142,6 +142,38 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"CreateLogStream",
 }
 
+// GetShortOperationName maps long operation names to short ones.
+func GetShortOperationName(operation string) string {
+	switch operation {
+	case "PutRetentionPolicy":
+		return "pmd"
+	case "DescribeInstances":
+		return "di"
+	case "DescribeTags":
+		return "dt"
+	case "DescribeTasks":
+		return "dts"
+	case "DescribeVolumes":
+		return "dv"
+	case "DescribeContainerInstances":
+		return "dci"
+	case "DescribeServices":
+		return "ds"
+	case "DescribeTaskDefinition":
+		return "dtd"
+	case "ListServices":
+		return "ls"
+	case "ListTasks":
+		return "lt"
+	case "CreateLogGroup":
+		return "clg"
+	case "CreateLogStream":
+		return "cls"
+	default:
+		return ""
+	}
+}
+
 type StatsConfig struct {
 	// Operations are the allowed operation names to gather stats for.
 	Operations []string `mapstructure:"operations,omitempty"`
