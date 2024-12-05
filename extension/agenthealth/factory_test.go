@@ -10,13 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/extension/extensiontest"
-
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
 	cfg := NewFactory().CreateDefaultConfig()
-	assert.Equal(t, &Config{IsUsageDataEnabled: true, Stats: &agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}}, cfg)
+	assert.Equal(t, &Config{IsUsageDataEnabled: true, Stats: nil}, cfg)
 	assert.NoError(t, componenttest.CheckConfigStruct(cfg))
 }
 

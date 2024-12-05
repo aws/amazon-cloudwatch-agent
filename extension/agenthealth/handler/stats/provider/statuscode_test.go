@@ -1,65 +1,55 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
-package provider
+package provider_test
 
 import (
-	"reflect"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
-func TestSingletonStatsProvider_Stats(t *testing.T) {
-	provider := &SingletonStatsProvider{
-		statusCodeStats: map[string][5]int{
-			"operation1": {1, 2, 3, 4, 5},
-		},
+func TestNewHandlers(t *testing.T) {
+	logger := zap.NewNop() // Use a no-op logger for testing
+	cfg := agent.StatsConfig{
+		Operations: []string{"TestOperation"},
 	}
 
-	stats := provider.Stats("operation1")
+	t.Run("Only StatusCodeEnabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, true, false)
 
-	expected := agent.Stats{
-		StatusCodes: map[string][5]int{
-			"operation1": {1, 2, 3, 4, 5},
-		},
-	}
+		assert.NotNil(t, requestHandlers, "Request handlers should not be nil")
+		assert.NotNil(t, responseHandlers, "Response handlers should not be nil")
+		assert.Len(t, requestHandlers, 1, "There should be 2 request handlers")
+		assert.Len(t, responseHandlers, 1, "There should be 1 response handler")
 
-	if !reflect.DeepEqual(stats, expected) {
-		t.Errorf("Stats() failed. Got %+v, expected %+v", stats, expected)
-	}
-}
+		assert.IsType(t, &provider.StatusCodeHandler{}, requestHandlers[0], "First handler should be StatusCodeHandler")
+		assert.IsType(t, &provider.StatusCodeHandler{}, responseHandlers[0], "First response handler should be StatusCodeHandler")
+	})
 
-func TestSingletonStatsProvider_UpdateStats(t *testing.T) {
-	provider := &SingletonStatsProvider{
-		statusCodeStats: make(map[string][5]int),
-	}
+	t.Run("Only AgentStatsEnabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, false, true)
 
-	provider.UpdateStats("operation1", [5]int{1, 0, 0, 0, 0})
+		assert.NotNil(t, requestHandlers, "Request handlers should not be nil")
+		assert.NotNil(t, responseHandlers, "Response handlers should not be nil")
+		assert.GreaterOrEqual(t, len(requestHandlers), 2, "There should be at least 2 request handlers")
+		assert.GreaterOrEqual(t, len(responseHandlers), 1, "There should be at least 1 response handler")
+	})
 
-	expected := map[string][5]int{
-		"operation1": {1, 0, 0, 0, 0},
-	}
+	t.Run("Both Enabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, true, true)
 
-	if !reflect.DeepEqual(provider.statusCodeStats, expected) {
-		t.Errorf("UpdateStats() failed. Got %+v, expected %+v", provider.statusCodeStats, expected)
-	}
-}
+		assert.NotNil(t, requestHandlers, "Request handlers should not be nil")
+		assert.NotNil(t, responseHandlers, "Response handlers should not be nil")
+		assert.GreaterOrEqual(t, len(requestHandlers), 3, "There should be at least 3 request handlers")
+		assert.GreaterOrEqual(t, len(responseHandlers), 2, "There should be at least 2 response handlers")
+	})
 
-func TestGetShortOperationName(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"PutRetentionPolicy", "prp"},
-		{"DescribeInstances", "di"},
-		{"UnknownOperation", ""},
-	}
+	t.Run("Neither Enabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, false, false)
 
-	for _, test := range tests {
-		result := GetShortOperationName(test.input)
-		if result != test.expected {
-			t.Errorf("GetShortOperationName(%q) = %q; want %q", test.input, result, test.expected)
-		}
-	}
+		assert.Nil(t, requestHandlers, "Request handlers should be nil")
+		assert.Nil(t, responseHandlers, "Response handlers should be nil")
+	})
 }

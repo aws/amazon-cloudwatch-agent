@@ -30,21 +30,18 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 		return nil, nil
 	}
 
-	// Create and configure the StatusCodeHandler if enabled
 	if statusCodeEnabled {
 		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 		statusCodeStatsProvider := provider.GetStatsProvider(statusCodeFilter)
 		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider)
 
-		// Add StatusCodeHandler to handlers
 		requestHandlers = append(requestHandlers, statusCodeHandler)
 		responseHandlers = append(responseHandlers, statusCodeHandler)
 		statsProviders = append(statsProviders, statusCodeStatsProvider)
 	}
 
-	// Create and configure the clientStats handler if agentStatsEnabled
 	if agentStatsEnabled {
-		clientStats := client.NewHandler(agent.NewOperationsFilter())
+		clientStats := client.NewHandler(agent.NewOperationsFilter(cfg.Operations...))
 		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
 		responseHandlers = append(responseHandlers, clientStats)
 		filter := agent.NewOperationsFilter(cfg.Operations...)
@@ -54,7 +51,6 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	}
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-
 	return requestHandlers, responseHandlers
 }
 
