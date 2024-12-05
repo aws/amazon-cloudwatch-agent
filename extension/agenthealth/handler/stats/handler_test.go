@@ -49,7 +49,7 @@ func TestStatsHandler(t *testing.T) {
 		zap.NewNop(),
 		agent.NewOperationsFilter(),
 		[]agent.StatsProvider{
-			newMockStatsProvider(&agent.Stats{CPUPercent: aws.Float64(1.2)}),
+			newMockStatsProvider(&agent.Stats{CpuPercent: aws.Float64(1.2)}),
 			newMockStatsProvider(&agent.Stats{MemoryBytes: aws.Uint64(123)}),
 			newMockStatsProvider(stats),
 		},
