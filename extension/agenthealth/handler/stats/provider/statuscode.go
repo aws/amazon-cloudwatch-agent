@@ -172,12 +172,14 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 // GetShortOperationName maps long operation names to short ones.
 func GetShortOperationName(operation string) string {
 	switch operation {
-	case "PutMetricData":
+	case "PutRetentionPolicy":
 		return "pmd"
 	case "DescribeInstances":
 		return "di"
 	case "DescribeTags":
 		return "dt"
+	case "DescribeTasks":
+		return "dts"
 	case "DescribeVolumes":
 		return "dv"
 	case "DescribeContainerInstances":
@@ -194,8 +196,6 @@ func GetShortOperationName(operation string) string {
 		return "clg"
 	case "CreateLogStream":
 		return "cls"
-	case "AssumeRole":
-		return "ar"
 	default:
 		return ""
 	}
