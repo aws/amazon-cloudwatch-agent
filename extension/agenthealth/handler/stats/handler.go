@@ -30,24 +30,22 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 		return nil, nil
 	}
 
-	statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-	statusCodeStats := provider.GetStatusCodeStats(statusCodeFilter)
 	if statusCodeEnabled {
-		requestHandlers = append(requestHandlers, statusCodeStats)
-		responseHandlers = append(responseHandlers, statusCodeStats)
-		statsProviders = append(statsProviders, statusCodeStats)
+		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
+		statusCodeStatsProvider := provider.GetStatusCodeStatsProvider()
+		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider, statusCodeFilter)
+		responseHandlers = append(responseHandlers, statusCodeHandler)
+		statsProviders = append(statsProviders, statusCodeStatsProvider)
 	}
 
 	if agentStatsEnabled {
-		clientStats := client.NewHandler(agent.NewOperationsFilter())
+		clientStats := client.NewHandler(agent.NewOperationsFilter(cfg.Operations...))
 		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
 		responseHandlers = append(responseHandlers, clientStats)
-		requestHandlers = append(requestHandlers, clientStats)
-
+		filter := agent.NewOperationsFilter(cfg.Operations...)
+		stats := newStatsHandler(logger, filter, statsProviders)
+		requestHandlers = append(requestHandlers, clientStats, stats)
 	}
-	filter := agent.NewOperationsFilter(cfg.Operations...)
-	stats := newStatsHandler(logger, filter, statsProviders)
-	requestHandlers = append(requestHandlers, stats)
 
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
 	return requestHandlers, responseHandlers
