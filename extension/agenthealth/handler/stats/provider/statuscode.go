@@ -145,6 +145,14 @@ type StatusCodeHandler struct {
 	statsProvider *StatsProvider
 }
 
+func (h *StatusCodeHandler) ID() string {
+	return statusHandlerID
+}
+
+func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
+	return awsmiddleware.After
+}
+
 // NewStatusCodeHandler creates a new handler with the given StatsProvider.
 func NewStatusCodeHandler(provider *StatsProvider) *StatusCodeHandler {
 	log.Println("Creating new StatusCodeHandler...")
@@ -218,14 +226,4 @@ func (sp *StatsProvider) Stats(operation string) agent.Stats {
 	return agent.Stats{
 		StatusCodes: statusCodeMap,
 	}
-}
-
-// ID returns the unique identifier for the handler.
-func (h *StatusCodeHandler) ID() string {
-	return statusHandlerID
-}
-
-// Position specifies the handler's position in the middleware chain.
-func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
-	return awsmiddleware.After
 }
