@@ -158,3 +158,10 @@ jobs:
       - name: Test data race
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
+
+  fast-run-integration-test:
+    uses: ./.github/workflows/fast-run-integration-test.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
