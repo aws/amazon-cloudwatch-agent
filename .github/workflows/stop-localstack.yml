@@ -26,7 +26,7 @@ on:
       s3_integration_bucket:
         type: string
       connection_port:
-        type: number
+        type: string
         required: true
 
 jobs:
