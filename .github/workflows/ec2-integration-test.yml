@@ -40,6 +40,9 @@ on:
         type: string
       s3_integration_bucket:
         type: string
+      connection_port:
+        type: number
+        required: true
 
 jobs:
   EC2IntegrationTest:
@@ -65,6 +68,16 @@ jobs:
           aws-region: ${{inputs.region}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Add Runner to Security Group
+        uses: mnavarrocarter/authorize-aws-security-group-ingress-action@v1.0.0
+        with:
+          aws-region: ${{inputs.region}} 
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-security-group-id: ${{ secrets.AWS_TERRAFORM_SECURITY_GROUP_ID }}
+          protocol: 'tcp'
+          port: ${{ inputs.connection_port }}
+          
       - name: Cache if success
         id: cache_if_success
         uses: actions/cache@v3
