@@ -15,7 +15,7 @@ const (
 )
 
 type Stats struct {
-	CpuPercent                *float64          `json:"cpu,omitempty"`
+	CPUPercent                *float64          `json:"cpu,omitempty"`
 	MemoryBytes               *uint64           `json:"mem,omitempty"`
 	FileDescriptorCount       *int32            `json:"fd,omitempty"`
 	ThreadCount               *int32            `json:"th,omitempty"`
@@ -36,8 +36,8 @@ type Stats struct {
 // Merge the other Stats into the current. If the field is not nil,
 // then it'll overwrite the existing one.
 func (s *Stats) Merge(other Stats) {
-	if other.CpuPercent != nil {
-		s.CpuPercent = other.CpuPercent
+	if other.CPUPercent != nil {
+		s.CPUPercent = other.CPUPercent
 	}
 	if other.MemoryBytes != nil {
 		s.MemoryBytes = other.MemoryBytes
@@ -131,6 +131,7 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"PutRetentionPolicy",
 	"DescribeInstances",
 	"DescribeTags",
+	"DescribeTasks",
 	"DescribeVolumes",
 	"DescribeContainerInstances",
 	"DescribeServices",
@@ -139,6 +140,38 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"ListTasks",
 	"CreateLogGroup",
 	"CreateLogStream",
+}
+
+// GetShortOperationName maps long operation names to short ones.
+func GetShortOperationName(operation string) string {
+	switch operation {
+	case "PutRetentionPolicy":
+		return "pmd"
+	case "DescribeInstances":
+		return "di"
+	case "DescribeTags":
+		return "dt"
+	case "DescribeTasks":
+		return "dts"
+	case "DescribeVolumes":
+		return "dv"
+	case "DescribeContainerInstances":
+		return "dci"
+	case "DescribeServices":
+		return "ds"
+	case "DescribeTaskDefinition":
+		return "dtd"
+	case "ListServices":
+		return "ls"
+	case "ListTasks":
+		return "lt"
+	case "CreateLogGroup":
+		return "clg"
+	case "CreateLogStream":
+		return "cls"
+	default:
+		return ""
+	}
 }
 
 type StatsConfig struct {

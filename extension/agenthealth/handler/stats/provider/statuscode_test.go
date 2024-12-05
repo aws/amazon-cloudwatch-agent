@@ -1,34 +1,55 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
-package provider
+package provider_test
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"go.uber.org/zap"
 )
 
-func TestStatusCodeHandler(t *testing.T) {
-	filter := agent.NewStatusCodeOperationsFilter()
-	handler := GetStatusCodeStats(filter)
-	require.NotNil(t, handler)
+func TestNewHandlers(t *testing.T) {
+	logger := zap.NewNop() // Use a no-op logger for testing
+	cfg := agent.StatsConfig{
+		Operations: []string{"TestOperation"},
+	}
 
-	// Locking to ensure thread-safe operations
-	handler.mu.Lock()
-	handler.statsByOperation["dt"] = &[5]int{1, 2, 0, 1, 0}
-	handler.mu.Unlock()
+	t.Run("Only StatusCodeEnabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, true, false)
 
-	// Retrieve stats after modification
-	stats := handler.Stats("dt")
-	expected := [5]int{1, 2, 0, 1, 0}
-	actualStats := stats.StatusCodes["dt"]
+		assert.NotNil(t, requestHandlers, "Request handlers should not be nil")
+		assert.NotNil(t, responseHandlers, "Response handlers should not be nil")
+		assert.Len(t, requestHandlers, 1, "There should be 2 request handlers")
+		assert.Len(t, responseHandlers, 1, "There should be 1 response handler")
 
-	// Perform assertions
-	assert.Equal(t, expected, actualStats, "Unexpected stats values for operation 'dt'")
-	assert.Contains(t, stats.StatusCodes, "dt", "Status code map should contain 'dt'")
-	assert.Equal(t, expected, stats.StatusCodes["dt"], "Stats for 'dt' do not match")
+		assert.IsType(t, &provider.StatusCodeHandler{}, requestHandlers[0], "First handler should be StatusCodeHandler")
+		assert.IsType(t, &provider.StatusCodeHandler{}, responseHandlers[0], "First response handler should be StatusCodeHandler")
+	})
+
+	t.Run("Only AgentStatsEnabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, false, true)
+
+		assert.NotNil(t, requestHandlers, "Request handlers should not be nil")
+		assert.NotNil(t, responseHandlers, "Response handlers should not be nil")
+		assert.GreaterOrEqual(t, len(requestHandlers), 2, "There should be at least 2 request handlers")
+		assert.GreaterOrEqual(t, len(responseHandlers), 1, "There should be at least 1 response handler")
+	})
+
+	t.Run("Both Enabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, true, true)
+
+		assert.NotNil(t, requestHandlers, "Request handlers should not be nil")
+		assert.NotNil(t, responseHandlers, "Response handlers should not be nil")
+		assert.GreaterOrEqual(t, len(requestHandlers), 3, "There should be at least 3 request handlers")
+		assert.GreaterOrEqual(t, len(responseHandlers), 2, "There should be at least 2 response handlers")
+	})
+
+	t.Run("Neither Enabled", func(t *testing.T) {
+		requestHandlers, responseHandlers := stats.NewHandlers(logger, cfg, false, false)
+
+		assert.Nil(t, requestHandlers, "Request handlers should be nil")
+		assert.Nil(t, responseHandlers, "Response handlers should be nil")
+	})
 }

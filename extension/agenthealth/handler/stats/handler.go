@@ -5,7 +5,6 @@ package stats
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 
@@ -31,40 +30,24 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 		return nil, nil
 	}
 
-	// Create and configure the StatusCodeHandler if enabled
 	if statusCodeEnabled {
-		log.Println("StatusCodeEnabled is true. Initializing StatusCodeHandler...")
 		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-		statusCodeStatsProvider := provider.GetStatsProvider(statusCodeFilter)
+		statusCodeStatsProvider := provider.GetStatusCodeStatsProvider(statusCodeFilter)
 		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider)
-
-		// Add StatusCodeHandler to handlers
-		requestHandlers = append(requestHandlers, statusCodeHandler)
 		responseHandlers = append(responseHandlers, statusCodeHandler)
 		statsProviders = append(statsProviders, statusCodeStatsProvider)
 	}
 
-	// Create and configure the clientStats handler if agentStatsEnabled
 	if agentStatsEnabled {
-		log.Println("AgentStatsEnabled is true. Initializing clientStats...")
-		clientStats := client.NewHandler(agent.NewOperationsFilter())
-
-		// Add clientStats and other providers to handlers and statsProviders
+		clientStats := client.NewHandler(agent.NewOperationsFilter(cfg.Operations...))
 		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
 		responseHandlers = append(responseHandlers, clientStats)
-		requestHandlers = append(requestHandlers, clientStats)
+		filter := agent.NewOperationsFilter(cfg.Operations...)
+		stats := newStatsHandler(logger, filter, statsProviders)
+		requestHandlers = append(requestHandlers, clientStats, stats)
 	}
 
-	// Create the primary stats handler with configured filters and providers
-	filter := agent.NewOperationsFilter(cfg.Operations...)
-	log.Println("Initializing primary stats handler...")
-	stats := newStatsHandler(logger, filter, statsProviders)
-	requestHandlers = append(requestHandlers, stats)
-
-	// Apply usage flags configuration
-	log.Println("Setting usage flags from configuration...")
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-
 	return requestHandlers, responseHandlers
 }
 
