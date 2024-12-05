@@ -128,6 +128,7 @@ func (of OperationsFilter) IsAllowed(operationName string) bool {
 }
 
 var StatusCodeOperations = []string{ // all the operations that are allowed
+	"PutRetentionPolicy",
 	"DescribeInstances",
 	"DescribeTags",
 	"DescribeTasks",
@@ -158,10 +159,5 @@ func NewOperationsFilter(operations ...string) OperationsFilter {
 
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
 func NewStatusCodeOperationsFilter() OperationsFilter {
-	allowed := make(map[string]struct{}, len(StatusCodeOperations))
-
-	return OperationsFilter{
-		operations: allowed,
-		allowAll:   false,
-	}
+	return NewOperationsFilter(StatusCodeOperations...)
 }
