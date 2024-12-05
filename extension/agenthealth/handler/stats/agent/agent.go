@@ -157,12 +157,7 @@ func NewOperationsFilter(operations ...string) OperationsFilter {
 
 // NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
 func NewStatusCodeOperationsFilter() OperationsFilter {
-	allowed := collections.NewSet[string](StatusCodeOperations...)
-
-	return OperationsFilter{
-		operations: allowed,
-		allowAll:   allowed.Contains(AllowAllOperations),
-	}
+	return NewOperationsFilter(StatusCodeOperations...)
 }
 
 // GetShortOperationName maps long operation names to short ones.
