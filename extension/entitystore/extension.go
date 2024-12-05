@@ -43,6 +43,7 @@ type serviceProviderInterface interface {
 	addEntryForLogGroup(LogGroupName, ServiceAttribute)
 	logFileServiceAttribute(LogFileGlob, LogGroupName) ServiceAttribute
 	getServiceNameAndSource() (string, string)
+	getAutoScalingGroup() string
 }
 
 type EntityStore struct {
@@ -173,6 +174,13 @@ func (e *EntityStore) GetServiceMetricAttributesMap() map[string]*string {
 	return e.createAttributeMap()
 }
 
+func (e *EntityStore) GetAutoScalingGroup() string {
+	if e.serviceprovider == nil {
+		return ""
+	}
+	return e.serviceprovider.getAutoScalingGroup()
+}
+
 // AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
 func (e *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
 	if e.serviceprovider != nil {
@@ -221,7 +229,7 @@ func (e *EntityStore) createAttributeMap() map[string]*string {
 
 	if e.mode == config.ModeEC2 {
 		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.GetInstanceID())
-		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.GetAutoScalingGroup())
+		addNonEmptyToMap(attributeMap, ASGKey, e.GetAutoScalingGroup())
 	}
 	switch e.mode {
 	case config.ModeEC2:

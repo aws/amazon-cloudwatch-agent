@@ -59,6 +59,7 @@ type serviceprovider struct {
 	metadataProvider ec2metadataprovider.MetadataProvider
 	iamRole          string
 	imdsServiceName  string
+    autoScalingGroup string
 	region           string
 	done             chan struct{}
 	logger           *zap.Logger
@@ -81,7 +82,7 @@ func (s *serviceprovider) startServiceProvider() {
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	limitedRetryer := NewRetryer(false, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
 	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
-	go limitedRetryer.refreshLoop(s.scrapeImdsServiceName)
+	go limitedRetryer.refreshLoop(s.scrapeImdsServiceNameAndASG)
 }
 
 func (s *serviceprovider) GetIAMRole() string {
@@ -94,6 +95,12 @@ func (s *serviceprovider) GetIMDSServiceName() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	return s.imdsServiceName
+}
+
+func (s *serviceprovider) getAutoScalingGroup() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.autoScalingGroup
 }
 
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
@@ -206,12 +213,12 @@ func (s *serviceprovider) serviceAttributeFromIamRole() ServiceAttribute {
 }
 
 func (s *serviceprovider) serviceAttributeFromAsg() ServiceAttribute {
-	if s.ec2Info == nil || s.ec2Info.GetAutoScalingGroup() == "" {
+	if s.getAutoScalingGroup() == "" {
 		return ServiceAttribute{}
 	}
 
 	return ServiceAttribute{
-		Environment: "ec2:" + s.ec2Info.GetAutoScalingGroup(),
+		Environment: "ec2:" + s.autoScalingGroup,
 	}
 }
 
@@ -237,7 +244,7 @@ func (s *serviceprovider) scrapeIAMRole() error {
 	s.mutex.Unlock()
 	return nil
 }
-func (s *serviceprovider) scrapeImdsServiceName() error {
+func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 	tags, err := s.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
 		s.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
@@ -257,8 +264,26 @@ func (s *serviceprovider) scrapeImdsServiceName() error {
 			break
 		}
 	}
+	if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
+		asg, err := s.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
+		if err != nil {
+			s.logger.Error("Failed to get AutoScalingGroup through metadata provider", zap.Error(err))
+		} else {
+			s.logger.Debug("AutoScalingGroup retrieved through IMDS")
+			s.mutex.Lock()
+			s.autoScalingGroup = asg
+			if asgLength := len(s.autoScalingGroup); asgLength > autoScalingGroupSizeMax {
+				s.logger.Warn("AutoScalingGroup length exceeds characters limit and will be ignored", zap.Int("length", asgLength), zap.Int("character limit", autoScalingGroupSizeMax))
+				s.autoScalingGroup = ""
+			}
+			s.mutex.Unlock()
+		}
+	}
 	if s.GetIMDSServiceName() == "" {
 		s.logger.Debug("Service name not found through IMDS")
+	}
+	if s.getAutoScalingGroup() == "" {
+		s.logger.Debug("AutoScalingGroup name not found through IMDS")
 	}
 	return nil
 }

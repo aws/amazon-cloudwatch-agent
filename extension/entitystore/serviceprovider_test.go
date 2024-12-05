@@ -4,6 +4,7 @@
 package entitystore
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -202,10 +203,10 @@ func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{ec2Info: &EC2Info{}}
+	s = &serviceprovider{autoScalingGroup: ""}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{ec2Info: &EC2Info{AutoScalingGroup: "test-asg"}}
+	s = &serviceprovider{autoScalingGroup: "test-asg"}
 	assert.Equal(t, ServiceAttribute{Environment: "ec2:test-asg"}, s.serviceAttributeFromAsg())
 }
 
@@ -230,7 +231,7 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:default"}, s.logFileServiceAttribute("glob", "group"))
 
-	s.ec2Info = &EC2Info{AutoScalingGroup: "test-asg"}
+	s.autoScalingGroup = "test-asg"
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 
 	s.iamRole = "test-role"
@@ -336,8 +337,77 @@ func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 				logger:           zap.NewExample(),
 				metadataProvider: tt.metadataProvider,
 			}
-			s.scrapeImdsServiceName()
+			s.scrapeImdsServiceNameAndASG()
 			assert.Equal(t, tt.wantTagServiceName, s.GetIMDSServiceName())
+		})
+	}
+}
+
+func TestRetrieveASGName(t *testing.T) {
+	type args struct {
+		metadataProvider ec2metadataprovider.MetadataProvider
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+		want    string
+	}{
+		{
+			name: "happy path",
+			args: args{
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
+			},
+			wantErr: false,
+			want:    tagVal3,
+		},
+		{
+			name: "happy path with multiple tags",
+			args: args{
+				metadataProvider: &mockMetadataProvider{
+					InstanceIdentityDocument: mockedInstanceIdentityDoc,
+					Tags: map[string]string{
+						"aws:autoscaling:groupName": tagVal3,
+						"env":                       "test-env",
+						"name":                      "test-name",
+					}},
+			},
+
+			wantErr: false,
+			want:    tagVal3,
+		},
+		{
+			name: "AutoScalingGroup too large",
+			args: args{
+				metadataProvider: &mockMetadataProvider{
+					InstanceIdentityDocument: mockedInstanceIdentityDoc,
+					Tags: map[string]string{
+						"aws:autoscaling:groupName": strings.Repeat("a", 256),
+						"env":                       "test-env",
+						"name":                      "test-name",
+					}},
+			},
+
+			wantErr: false,
+			want:    "",
+		},
+		{
+			name: "Success IMDS tags call but no ASG",
+			args: args{
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"name": tagVal3}},
+			},
+			wantErr: false,
+			want:    "",
+		},
+	}
+	for _, tt := range tests {
+		logger, _ := zap.NewDevelopment()
+		t.Run(tt.name, func(t *testing.T) {
+			sp := &serviceprovider{metadataProvider: tt.args.metadataProvider, logger: logger}
+			if err := sp.scrapeImdsServiceNameAndASG(); (err != nil) != tt.wantErr {
+				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			assert.Equal(t, tt.want, sp.getAutoScalingGroup())
 		})
 	}
 }
