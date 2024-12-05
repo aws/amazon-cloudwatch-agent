@@ -1,13 +1,17 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package provider_test
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 )
 
 func TestNewHandlers(t *testing.T) {

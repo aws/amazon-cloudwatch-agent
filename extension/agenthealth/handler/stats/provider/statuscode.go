@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package provider
 
 import (
@@ -8,6 +11,7 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
@@ -150,9 +154,6 @@ func NewStatusCodeHandler(provider *StatsProvider) *StatusCodeHandler {
 	return &StatusCodeHandler{statsProvider: provider}
 }
 
-// HandleRequest is a no-op for the StatusCodeHandler.
-func (h *StatusCodeHandler) HandleRequest(ctx context.Context, _ *http.Request) {}
-
 // HandleResponse enqueues the status code into the StatsProvider's channel.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
@@ -201,7 +202,7 @@ func GetShortOperationName(operation string) string {
 }
 
 // Stats returns the aggregated stats for operations.
-func (sp *StatsProvider) Stats(operation string) agent.Stats {
+func (sp *StatsProvider) Stats(_ string) agent.Stats {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 

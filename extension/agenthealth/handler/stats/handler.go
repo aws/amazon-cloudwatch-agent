@@ -35,7 +35,6 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 		statusCodeStatsProvider := provider.GetStatsProvider(statusCodeFilter)
 		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider)
 
-		requestHandlers = append(requestHandlers, statusCodeHandler)
 		responseHandlers = append(responseHandlers, statusCodeHandler)
 		statsProviders = append(statsProviders, statusCodeStatsProvider)
 	}
