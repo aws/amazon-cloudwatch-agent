@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -89,7 +88,6 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 		stats = &[5]int{}
 		sp.statsByOperation[entry.operation] = stats
 	}
-	log.Println(entry.operation)
 	sp.updateStatusCodeCount(stats, entry.statusCode)
 }
 

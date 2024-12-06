@@ -40,13 +40,13 @@ type translator struct {
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslatorWithStatusCode(name component.DataType, operations []string, statuscodeonly bool) common.Translator[component.Config] {
+func NewTranslatorWithStatusCode(name component.DataType, operations []string, isStatusCodeEnabled bool) common.Translator[component.Config] {
 	return &translator{
 		name:                name.String(),
 		operations:          operations,
 		factory:             agenthealth.NewFactory(),
 		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
-		isStatusCodeEnabled: statuscodeonly,
+		isStatusCodeEnabled: isStatusCodeEnabled,
 	}
 }
 
