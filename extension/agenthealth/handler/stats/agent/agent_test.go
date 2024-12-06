@@ -102,7 +102,7 @@ func TestMarshalWithStatusCodes(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, err := testCase.stats.Marshal()
 			assert.NoError(t, err)
-			assert.Contains(t, got, testCase.want)
+			assert.Contains(t, testCase.want, got)
 		})
 	}
 }

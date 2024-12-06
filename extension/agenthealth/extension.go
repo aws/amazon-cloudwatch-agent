@@ -26,14 +26,15 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	var responseHandlers []awsmiddleware.ResponseHandler
 	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
 
+	if ah.cfg == nil {
+		return nil, nil
+	}
+
 	if !ah.cfg.IsUsageDataEnabled {
 		ah.logger.Debug("Usage data is disabled, skipping stats handlers")
 		return requestHandlers, responseHandlers
 	}
 
-	if ah.cfg == nil {
-		return nil, nil
-	}
 	statusCodeEnabled := ah.cfg.IsStatusCodeEnabled
 
 	var statsResponseHandlers []awsmiddleware.ResponseHandler
