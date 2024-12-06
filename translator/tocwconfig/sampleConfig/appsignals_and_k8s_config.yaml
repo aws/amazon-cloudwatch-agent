@@ -275,6 +275,13 @@ extensions:
             usage_flags:
                 mode: K8E
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: K8E
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
@@ -1240,6 +1247,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
         - awsproxy/application_signals
         - agenthealth/traces
         - entitystore

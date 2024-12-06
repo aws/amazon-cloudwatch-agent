@@ -39,6 +39,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: ${ENV_REGION}
@@ -78,6 +85,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         logs/emf_logs:

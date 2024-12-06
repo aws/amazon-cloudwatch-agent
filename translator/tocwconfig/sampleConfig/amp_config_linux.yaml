@@ -64,11 +64,17 @@ exporters:
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
-        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -92,9 +98,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
@@ -128,6 +134,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - sigv4auth
         - entitystore
     pipelines:

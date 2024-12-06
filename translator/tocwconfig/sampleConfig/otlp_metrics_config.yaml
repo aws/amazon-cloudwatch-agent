@@ -10,11 +10,17 @@ exporters:
             enabled: true
 extensions:
     agenthealth/metrics:
-        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -82,6 +88,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         metrics/hostOtlpMetrics:

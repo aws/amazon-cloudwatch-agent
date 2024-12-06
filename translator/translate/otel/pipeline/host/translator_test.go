@@ -59,7 +59,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithDeltaMetrics": {
@@ -77,7 +77,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/resource", "cumulativetodelta/hostDeltaMetrics"},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithMetricsKeyStatsD": {
@@ -95,7 +95,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/service/telegraf"},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithMetricsKeyStatsDContainer": {
@@ -114,7 +114,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithMetricDecoration": {
@@ -139,7 +139,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/resource", "transform"},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithoutMetricDecoration": {
@@ -161,7 +161,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithAppendDimensions": {
@@ -177,7 +177,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/resource", "ec2tagger"},
 				exporters:  []string{"awscloudwatch"},
-				extensions: []string{"agenthealth/metrics"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
 		"WithPRWExporter/Aggregation": {

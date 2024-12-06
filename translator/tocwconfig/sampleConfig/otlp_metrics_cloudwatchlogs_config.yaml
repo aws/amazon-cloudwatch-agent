@@ -30,11 +30,17 @@ exporters:
         version: "0"
 extensions:
     agenthealth/logs:
-        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -97,6 +103,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         metrics/hostOtlpMetrics/cloudwatchlogs:

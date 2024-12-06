@@ -139,6 +139,13 @@ extensions:
             usage_flags:
                 mode: OP
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: OP
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
@@ -1059,6 +1066,7 @@ service:
     extensions:
         - awsproxy/application_signals
         - agenthealth/traces
+        - agenthealth/statuscode
         - agenthealth/logs
         - entitystore
     pipelines:
