@@ -72,11 +72,12 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 	p.wg.Add(1)
 	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
 
-	// Launch the Prometheus scraping process as a goroutine
+	// Start scraping prometheus metrics from prometheus endpoints
 	p.wg.Add(1)
 	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
 
-	// Launch the handler for filtering and converting Prometheus metrics as a goroutine
+	// Start filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
+	// and convert Prometheus metrics to Telegraf Metrics
 	p.wg.Add(1)
 	go handler.start(p.shutDownChan, &p.wg)
 
