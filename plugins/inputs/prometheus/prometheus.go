@@ -5,16 +5,16 @@ package prometheus
 
 import (
 	_ "embed"
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"go.uber.org/zap"
 	"log"
 	"sync"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
 )
 

@@ -27,6 +27,7 @@ processors:
         platform: ec2
     ec2tagger:
         imds_retries: 1
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
     telegraf_disk:
