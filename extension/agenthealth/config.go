@@ -10,8 +10,9 @@ import (
 )
 
 type Config struct {
-	IsUsageDataEnabled bool              `mapstructure:"is_usage_data_enabled"`
-	Stats              agent.StatsConfig `mapstructure:"stats"`
+	IsUsageDataEnabled  bool               `mapstructure:"is_usage_data_enabled"`
+	Stats               *agent.StatsConfig `mapstructure:"stats,omitempty"`
+	IsStatusCodeEnabled bool               `mapstructure:"is_status_code_enabled,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)

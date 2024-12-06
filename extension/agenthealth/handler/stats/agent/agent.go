@@ -15,28 +15,29 @@ const (
 )
 
 type Stats struct {
-	CpuPercent                *float64 `json:"cpu,omitempty"`
-	MemoryBytes               *uint64  `json:"mem,omitempty"`
-	FileDescriptorCount       *int32   `json:"fd,omitempty"`
-	ThreadCount               *int32   `json:"th,omitempty"`
-	LatencyMillis             *int64   `json:"lat,omitempty"`
-	PayloadBytes              *int     `json:"load,omitempty"`
-	StatusCode                *int     `json:"code,omitempty"`
-	SharedConfigFallback      *int     `json:"scfb,omitempty"`
-	ImdsFallbackSucceed       *int     `json:"ifs,omitempty"`
-	AppSignals                *int     `json:"as,omitempty"`
-	EnhancedContainerInsights *int     `json:"eci,omitempty"`
-	RunningInContainer        *int     `json:"ric,omitempty"`
-	RegionType                *string  `json:"rt,omitempty"`
-	Mode                      *string  `json:"m,omitempty"`
-	EntityRejected            *int     `json:"ent,omitempty"`
+	CPUPercent                *float64          `json:"cpu,omitempty"`
+	MemoryBytes               *uint64           `json:"mem,omitempty"`
+	FileDescriptorCount       *int32            `json:"fd,omitempty"`
+	ThreadCount               *int32            `json:"th,omitempty"`
+	LatencyMillis             *int64            `json:"lat,omitempty"`
+	PayloadBytes              *int              `json:"load,omitempty"`
+	StatusCode                *int              `json:"code,omitempty"`
+	SharedConfigFallback      *int              `json:"scfb,omitempty"`
+	ImdsFallbackSucceed       *int              `json:"ifs,omitempty"`
+	AppSignals                *int              `json:"as,omitempty"`
+	EnhancedContainerInsights *int              `json:"eci,omitempty"`
+	RunningInContainer        *int              `json:"ric,omitempty"`
+	RegionType                *string           `json:"rt,omitempty"`
+	Mode                      *string           `json:"m,omitempty"`
+	EntityRejected            *int              `json:"ent,omitempty"`
+	StatusCodes               map[string][5]int `json:"codes,omitempty"` //represents status codes 200,400,408,413,429,
 }
 
 // Merge the other Stats into the current. If the field is not nil,
 // then it'll overwrite the existing one.
 func (s *Stats) Merge(other Stats) {
-	if other.CpuPercent != nil {
-		s.CpuPercent = other.CpuPercent
+	if other.CPUPercent != nil {
+		s.CPUPercent = other.CPUPercent
 	}
 	if other.MemoryBytes != nil {
 		s.MemoryBytes = other.MemoryBytes
@@ -80,6 +81,26 @@ func (s *Stats) Merge(other Stats) {
 	if other.EntityRejected != nil {
 		s.EntityRejected = other.EntityRejected
 	}
+	if other.StatusCodes != nil {
+		if s.StatusCodes == nil {
+			s.StatusCodes = make(map[string][5]int)
+		}
+
+		for key, value := range other.StatusCodes {
+			if existing, ok := s.StatusCodes[key]; ok {
+				s.StatusCodes[key] = [5]int{
+					existing[0] + value[0], // 200
+					existing[1] + value[1], // 400
+					existing[2] + value[2], // 408
+					existing[3] + value[3], // 413
+					existing[4] + value[4], // 429
+				}
+			} else {
+				s.StatusCodes[key] = value
+			}
+		}
+	}
+
 }
 
 func (s *Stats) Marshal() (string, error) {
@@ -104,6 +125,29 @@ func (of OperationsFilter) IsAllowed(operationName string) bool {
 	return of.allowAll || of.operations.Contains(operationName)
 }
 
+type StatsConfig struct {
+	// Operations are the allowed operation names to gather stats for.
+	Operations []string `mapstructure:"operations,omitempty"`
+	// UsageFlags are the usage flags to set on start up.
+	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
+}
+
+var StatusCodeOperations = []string{ // all the operations that are allowed
+	"PutRetentionPolicy",
+	"DescribeInstances",
+	"DescribeTags",
+	"DescribeVolumes",
+	"DescribeContainerInstances",
+	"DescribeServices",
+	"DescribeTaskDefinition",
+	"ListServices",
+	"ListTasks",
+	"DescribeTasks",
+	"CreateLogGroup",
+	"CreateLogStream",
+	"AssumeRole",
+}
+
 func NewOperationsFilter(operations ...string) OperationsFilter {
 	allowed := collections.NewSet[string](operations...)
 	return OperationsFilter{
@@ -112,9 +156,41 @@ func NewOperationsFilter(operations ...string) OperationsFilter {
 	}
 }
 
-type StatsConfig struct {
-	// Operations are the allowed operation names to gather stats for.
-	Operations []string `mapstructure:"operations,omitempty"`
-	// UsageFlags are the usage flags to set on start up.
-	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
+// NewStatusCodeOperationsFilter creates a new filter for allowed operations and status codes.
+func NewStatusCodeOperationsFilter() OperationsFilter {
+	return NewOperationsFilter(StatusCodeOperations...)
+}
+
+// GetShortOperationName maps long operation names to short ones.
+func GetShortOperationName(operation string) string {
+	switch operation {
+	case "PutRetentionPolicy":
+		return "prp"
+	case "DescribeInstances":
+		return "di"
+	case "DescribeTags":
+		return "dt"
+	case "DescribeTasks":
+		return "dts"
+	case "DescribeVolumes":
+		return "dv"
+	case "DescribeContainerInstances":
+		return "dci"
+	case "DescribeServices":
+		return "ds"
+	case "DescribeTaskDefinition":
+		return "dtd"
+	case "ListServices":
+		return "ls"
+	case "ListTasks":
+		return "lt"
+	case "CreateLogGroup":
+		return "clg"
+	case "CreateLogStream":
+		return "cls"
+	case "AssumeRole":
+		return "ar"
+	default:
+		return ""
+	}
 }

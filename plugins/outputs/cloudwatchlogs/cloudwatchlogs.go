@@ -403,7 +403,7 @@ func init() {
 				zap.NewNop(),
 				&agenthealth.Config{
 					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					Stats:              agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+					Stats:              &agent.StatsConfig{Operations: []string{"PutLogEvents"}},
 				},
 			),
 		}

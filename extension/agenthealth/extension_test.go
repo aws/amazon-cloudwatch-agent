@@ -14,13 +14,13 @@ import (
 
 func TestExtension(t *testing.T) {
 	ctx := context.Background()
-	cfg := &Config{IsUsageDataEnabled: true}
+	cfg := &Config{IsUsageDataEnabled: true, IsStatusCodeEnabled: true}
 	extension := NewAgentHealth(zap.NewNop(), cfg)
 	assert.NotNil(t, extension)
 	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
 	requestHandlers, responseHandlers := extension.Handlers()
 	// user agent, client stats, stats
-	assert.Len(t, requestHandlers, 3)
+	assert.Len(t, requestHandlers, 1)
 	// client stats
 	assert.Len(t, responseHandlers, 1)
 	cfg.IsUsageDataEnabled = false
