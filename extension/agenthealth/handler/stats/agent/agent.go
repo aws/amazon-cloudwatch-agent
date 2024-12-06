@@ -145,6 +145,7 @@ var StatusCodeOperations = []string{ // all the operations that are allowed
 	"DescribeTasks",
 	"CreateLogGroup",
 	"CreateLogStream",
+	"AssumeRole",
 }
 
 func NewOperationsFilter(operations ...string) OperationsFilter {
@@ -187,6 +188,8 @@ func GetShortOperationName(operation string) string {
 		return "clg"
 	case "CreateLogStream":
 		return "cls"
+	case "AssumeRole":
+		return "ar"
 	default:
 		return ""
 	}
