@@ -43,7 +43,6 @@ func (r IMDSRetryer) ShouldRetry(req *request.Request) bool {
 	if awsError, ok := req.Error.(awserr.Error); r.DefaultRetryer.ShouldRetry(req) || (ok && awsError != nil && awsError.Code() == "EC2MetadataError") {
 		shouldRetry = true
 	}
-	fmt.Printf("D! should retry %t for imds error : %v", shouldRetry, req.Error)
 	return shouldRetry
 }
 

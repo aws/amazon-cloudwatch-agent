@@ -140,7 +140,7 @@ jobs:
       - name: Generate matrix
         id: set-matrix
         run: |
-          go run --tags=generator generator/test_case_generator.go
+          go run generator/test_case_generator.go -e2e
           echo "::set-output name=eks_e2e_matrix::$(echo $(cat generator/resources/eks_e2e_complete_test_matrix.json))"
 
       - name: Echo test plan matrix

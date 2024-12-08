@@ -32,6 +32,20 @@ exporters:
             - dimensions:
                   - - Environment
                     - Operation
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - Operation
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - Operation
                     - RemoteOperation
                     - RemoteResourceIdentifier
                     - RemoteResourceType
@@ -43,6 +57,22 @@ exporters:
                     - RemoteService
                     - Service
                   - - Environment
+                    - RemoteEnvironment
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteEnvironment
+                    - RemoteOperation
                     - RemoteService
                     - Service
                   - - Environment
