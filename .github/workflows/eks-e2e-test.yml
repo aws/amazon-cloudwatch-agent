@@ -118,7 +118,7 @@ jobs:
             fi
 
             terraform init
-            if terraform apply --auto-approve \
+            terraform apply --auto-approve \
               -var="region=${{ inputs.region }}" \
               -var="k8s_version=${{ matrix.arrays.k8s_version }}" \
               -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
@@ -132,23 +132,4 @@ jobs:
               -var="agent_config=${{ inputs.agent_config }}" \
               -var="prometheus_config=${{ inputs.prometheus_config }}" \
               -var="otel_config=${{ inputs.otel_config }}" \
-              -var="sample_app=${{ inputs.sample_app }}"; then
-              terraform destroy --auto-approve
-            else
-              terraform destroy --auto-approve && exit 1
-            fi
-            
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ inputs.terraform_dir }}" != "" ]; then
-              cd "${{ inputs.terraform_dir }}"
-            else
-              cd terraform/eks/e2e
-            fi
-            terraform destroy --auto-approve
+              -var="sample_app=${{ inputs.sample_app }}"
