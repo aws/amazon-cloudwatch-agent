@@ -639,6 +639,58 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	}
 }
 
+func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
+	type args struct {
+		mode           string
+		kubernetesMode string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "EC2inEKS",
+			args: args{
+				mode:           config.ModeEC2,
+				kubernetesMode: config.ModeEKS,
+			},
+		},
+		{
+			name: "EC2Only",
+			args: args{
+				mode: config.ModeEC2,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			esConfig := &Config{
+				Mode:           tt.args.mode,
+				KubernetesMode: tt.args.kubernetesMode,
+			}
+			getMetaDataProvider = mockMetadataProviderFunc
+			e := EntityStore{
+				logger: zap.NewNop(),
+				config: esConfig,
+			}
+			e.Start(context.TODO(), nil)
+			time.Sleep(3 * time.Second)
+
+			name, source := e.serviceprovider.getServiceNameAndSource()
+			if tt.args.mode == config.ModeEC2 && tt.args.kubernetesMode != "" {
+				assert.Equal(t, name, ServiceNameUnknown)
+				assert.Equal(t, source, ServiceNameSourceUnknown)
+			} else if tt.args.mode == config.ModeEC2 && tt.args.kubernetesMode == "" {
+				assert.Equal(t, name, "TestRole")
+				assert.Equal(t, source, ServiceNameSourceClientIamRole)
+			}
+
+		})
+	}
+
+}
+
 func assertIfNonEmpty(t *testing.T, message string, pattern string) {
 	if pattern != "" {
 		assert.NotContains(t, message, pattern)
