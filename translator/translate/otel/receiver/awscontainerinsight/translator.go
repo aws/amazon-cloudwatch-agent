@@ -120,6 +120,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
 
+	//cfg.MiddlewareID = &agenthealth.StatusCodeID  This is going to be added when contrib changes is made
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 	cfg.EnableAcceleratedComputeMetrics = cfg.EnableAcceleratedComputeMetrics || AcceleratedComputeMetricsEnabled(conf)
 
