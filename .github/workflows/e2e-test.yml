@@ -111,6 +111,7 @@ jobs:
           echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
           echo "::set-output name=ECR_INTEGRATION_TEST_REPO::cwagent-integration-test"
           echo "::set-output name=ECR_OPERATOR_REPO::$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
+          echo "::set-output name=ECR_TARGET_ALLOCATOR_REPO::$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
 
       - name: Echo test variables
         run: |
@@ -119,6 +120,7 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
           echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
           echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
+          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
 
   GenerateTestMatrix:
     needs: [BuildAgent, BuildOperator]
