@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
@@ -31,7 +30,6 @@ type EC2Info struct {
 
 	// region is used while making call to describeTags Ec2 API for AutoScalingGroup
 	Region         string
-	kubernetesMode string
 
 	metadataProvider ec2metadataprovider.MetadataProvider
 	logger           *zap.Logger
@@ -89,10 +87,9 @@ func (ei *EC2Info) setInstanceIDAccountID() error {
 	}
 }
 
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, kubernetesMode string, done chan struct{}, region string, logger *zap.Logger) *EC2Info {
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, done chan struct{}, region string, logger *zap.Logger) *EC2Info {
 	return &EC2Info{
 		metadataProvider: metadataProvider,
-		kubernetesMode:   kubernetesMode,
 		done:             done,
 		Region:           region,
 		logger:           logger,
