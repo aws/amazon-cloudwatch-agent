@@ -25,8 +25,8 @@ const (
 )
 
 type EC2Info struct {
-	InstanceID       string
-	AccountID        string
+	InstanceID string
+	AccountID  string
 
 	// region is used while making call to describeTags Ec2 API for AutoScalingGroup
 	Region string

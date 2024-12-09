@@ -59,7 +59,7 @@ type serviceprovider struct {
 	metadataProvider ec2metadataprovider.MetadataProvider
 	iamRole          string
 	imdsServiceName  string
-    autoScalingGroup string
+	autoScalingGroup string
 	region           string
 	done             chan struct{}
 	logger           *zap.Logger

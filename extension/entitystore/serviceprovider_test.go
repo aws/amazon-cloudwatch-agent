@@ -293,12 +293,13 @@ func Test_serviceprovider_getIAMRole(t *testing.T) {
 	}
 }
 
-func Test_serviceprovider_getImdsServiceName(t *testing.T) {
+func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 
 	tests := []struct {
 		name               string
 		metadataProvider   ec2metadataprovider.MetadataProvider
 		wantTagServiceName string
+		wantASGName        string
 	}{
 		{
 			name:               "HappyPath_ServiceExists",
@@ -330,6 +331,44 @@ func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"service": "test-service", "application": "test-application", "app": "test-app"}},
 			wantTagServiceName: "test-service",
 		},
+		{
+			name:             "happy path with Only ASG tag",
+			metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
+			wantASGName:      tagVal3,
+		},
+		{
+			name: "happy path with multiple tags",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupName": tagVal3,
+					"env":                       "test-env",
+					"name":                      "test-name",
+				}},
+			wantASGName: tagVal3,
+		},
+		{
+			name: "AutoScalingGroup too large",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupName": strings.Repeat("a", 256),
+					"env":                       "test-env",
+					"name":                      "test-name",
+				}},
+			wantASGName: "",
+		},
+		{
+			name:             "Success IMDS tags call with no ASG",
+			metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"name": tagVal3}},
+			wantASGName:      "",
+		},
+		{
+			name:               "Success IMDS tags call with both Service and ASG",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3, "service": "test-service", "application": "test-application", "app": "test-app"}},
+			wantTagServiceName: "test-service",
+			wantASGName:        tagVal3,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -339,75 +378,7 @@ func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 			}
 			s.scrapeImdsServiceNameAndASG()
 			assert.Equal(t, tt.wantTagServiceName, s.GetIMDSServiceName())
-		})
-	}
-}
-
-func TestRetrieveASGName(t *testing.T) {
-	type args struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		want    string
-	}{
-		{
-			name: "happy path",
-			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
-			},
-			wantErr: false,
-			want:    tagVal3,
-		},
-		{
-			name: "happy path with multiple tags",
-			args: args{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: mockedInstanceIdentityDoc,
-					Tags: map[string]string{
-						"aws:autoscaling:groupName": tagVal3,
-						"env":                       "test-env",
-						"name":                      "test-name",
-					}},
-			},
-
-			wantErr: false,
-			want:    tagVal3,
-		},
-		{
-			name: "AutoScalingGroup too large",
-			args: args{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: mockedInstanceIdentityDoc,
-					Tags: map[string]string{
-						"aws:autoscaling:groupName": strings.Repeat("a", 256),
-						"env":                       "test-env",
-						"name":                      "test-name",
-					}},
-			},
-
-			wantErr: false,
-			want:    "",
-		},
-		{
-			name: "Success IMDS tags call but no ASG",
-			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"name": tagVal3}},
-			},
-			wantErr: false,
-			want:    "",
-		},
-	}
-	for _, tt := range tests {
-		logger, _ := zap.NewDevelopment()
-		t.Run(tt.name, func(t *testing.T) {
-			sp := &serviceprovider{metadataProvider: tt.args.metadataProvider, logger: logger}
-			if err := sp.scrapeImdsServiceNameAndASG(); (err != nil) != tt.wantErr {
-				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			assert.Equal(t, tt.want, sp.getAutoScalingGroup())
+			assert.Equal(t, tt.wantASGName, s.getAutoScalingGroup())
 		})
 	}
 }
