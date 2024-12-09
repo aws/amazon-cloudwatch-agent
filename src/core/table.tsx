@@ -154,21 +154,24 @@ export function PerformanceTable(props: { use_cases: UseCaseData[]; data_rate: s
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {use_cases?.map((use_case) => (
-                        <StyledTableRow key={use_case.name}>
-                            <StyledTableCell>{use_case.name}</StyledTableCell>
-                            <StyledTableCell>{use_case.instance_type}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_cpu_usage).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_rss) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_swap) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_data) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_vms) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_write_bytes).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_num_fds).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.net_bytes_sent).toFixed(2)}</StyledTableCell>
-                            <StyledTableCell>{Number(use_case.data?.[data_rate]?.net_packets_sent).toFixed(2)}</StyledTableCell>
-                        </StyledTableRow>
-                    ))}
+                    {use_cases?.map((use_case: UseCaseData) => {
+                        const metrics = use_case.data?.[data_rate];
+                        return metrics ? (
+                            <StyledTableRow key={use_case.name}>
+                                <StyledTableCell>{use_case.name}</StyledTableCell>
+                                <StyledTableCell>{use_case.instance_type}</StyledTableCell>
+                                <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_cpu_usage).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_rss) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_swap) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_data) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{(Number(use_case.data?.[data_rate]?.procstat_memory_vms) / Number(use_case.data?.[data_rate]?.mem_total)).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_write_bytes).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{Number(use_case.data?.[data_rate]?.procstat_num_fds).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{Number(use_case.data?.[data_rate]?.net_bytes_sent).toFixed(2)}</StyledTableCell>
+                                <StyledTableCell>{Number(use_case.data?.[data_rate]?.net_packets_sent).toFixed(2)}</StyledTableCell>
+                            </StyledTableRow>
+                        ) : null;
+                    })}
                 </TableBody>
             </Table>
         </TableContainer>
