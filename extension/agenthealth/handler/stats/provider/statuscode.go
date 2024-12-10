@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -79,9 +78,8 @@ func (sp *StatusCodeProvider) startProcessing() {
 func (sp *StatusCodeProvider) EnqueueStatusCode(operation string, statusCode int) {
 	select {
 	case sp.statusCodeChan <- statusCodeEntry{operation: operation, statusCode: statusCode}:
-		log.Printf("Successfully enqueued status code %d for operation %s", statusCode, operation)
 	default:
-		log.Printf("Warning: StatusCode channel full, dropping status code %d for operation %s", statusCode, operation)
+		return
 	}
 }
 
