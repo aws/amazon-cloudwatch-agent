@@ -95,6 +95,9 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 
 // updateStatusCodeCount updates the count for the specific status code.
 func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
+	log.Println("Updating statuscode")
+	log.Println(stats)
+
 	switch statusCode {
 	case 200:
 		stats[0]++
