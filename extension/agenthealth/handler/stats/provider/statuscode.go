@@ -5,12 +5,11 @@ package provider
 
 import (
 	"context"
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"log"
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
@@ -89,15 +88,14 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 		stats = &[5]int{}
 		sp.statsByOperation[entry.operation] = stats
 	}
+	log.Println("Below is the operation")
 	log.Println(entry.operation)
 	sp.updateStatusCodeCount(stats, entry.statusCode)
 }
 
 // updateStatusCodeCount updates the count for the specific status code.
 func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
-	log.Println("Updating statuscode")
-	log.Println(stats)
-
+	log.Printf("Updating status code count: statusCode=%d\n", statusCode)
 	switch statusCode {
 	case 200:
 		stats[0]++
@@ -110,8 +108,12 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 	case 429:
 		stats[4]++
 	default:
-		return
+		log.Printf("Unknown status code encountered: %d\n", statusCode)
 	}
+	log.Printf(
+		"Updated stats for operation ??: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+		stats[0], stats[1], stats[2], stats[3], stats[4],
+	)
 }
 
 // startResetTimer initializes a reset timer to clear stats periodically.
