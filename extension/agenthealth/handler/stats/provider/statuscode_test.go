@@ -4,13 +4,15 @@
 package provider_test
 
 import (
+	"sync"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
-	"sync"
-	"testing"
 )
 
 func TestNewHandlers(t *testing.T) {
@@ -73,7 +75,7 @@ func TestSingleton(t *testing.T) {
 	}
 }
 
-func TestStatsResetRace(t *testing.T) {
+func TestStatsResetRace(_ *testing.T) {
 	sp := provider.GetStatusCodeStatsProvider()
 
 	// Initialize the map in a thread-safe manner
