@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 )
 
@@ -26,10 +25,6 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	var responseHandlers []awsmiddleware.ResponseHandler
 	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
 
-	if ah.cfg == nil {
-		return nil, nil
-	}
-
 	if !ah.cfg.IsUsageDataEnabled {
 		ah.logger.Debug("Usage data is disabled, skipping stats handlers")
 		return requestHandlers, responseHandlers
@@ -42,8 +37,6 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 
 	if ah.cfg.Stats != nil {
 		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled, true)
-	} else {
-		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, agent.StatsConfig{}, statusCodeEnabled, false)
 	}
 
 	requestHandlers = append(requestHandlers, statsRequestHandlers...)

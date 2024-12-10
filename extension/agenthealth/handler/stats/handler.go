@@ -39,10 +39,10 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	}
 
 	if agentStatsEnabled {
-		clientStats := client.NewHandler(agent.NewOperationsFilter(cfg.Operations...))
+		filter := agent.NewOperationsFilter(cfg.Operations...)
+		clientStats := client.NewHandler(filter)
 		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
 		responseHandlers = append(responseHandlers, clientStats)
-		filter := agent.NewOperationsFilter(cfg.Operations...)
 		stats := newStatsHandler(logger, filter, statsProviders)
 		requestHandlers = append(requestHandlers, clientStats, stats)
 	}

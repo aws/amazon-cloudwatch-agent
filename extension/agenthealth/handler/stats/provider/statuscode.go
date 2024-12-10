@@ -5,12 +5,12 @@ package provider
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
@@ -26,13 +26,12 @@ var (
 
 // StatusCodeProvider handles processing of status codes and maintains stats.
 type StatusCodeProvider struct {
-	statsByOperation map[string]*[5]int
-	resetTimer       *time.Timer
+	StatsByOperation map[string]*[5]int
+	ResetTimer       *time.Timer
 	statusCodeChan   chan statusCodeEntry
 	stopChan         chan struct{}
-	shouldResetStats bool
-	mu               sync.Mutex
-	wg               sync.WaitGroup
+	ShouldResetStats bool
+	Mu               sync.RWMutex
 }
 
 // statusCodeEntry represents a status code and its associated operation.
@@ -41,12 +40,19 @@ type statusCodeEntry struct {
 	statusCode int
 }
 
-// GetStatusCodeStatusCodeProvider initializes and retrieves the singleton StatusCodeProvider.
+// StatusCodeHandler is the handler that uses the StatusCodeProvider for processing.
+type StatusCodeHandler struct {
+	StatusCodeProvider *StatusCodeProvider
+	filter             agent.OperationsFilter
+}
+
+// StatusCodeProvider methods
+
 func GetStatusCodeStatsProvider() *StatusCodeProvider {
 	StatusCodeProviderOnce.Do(func() {
 		provider := &StatusCodeProvider{
-			statsByOperation: make(map[string]*[5]int),
-			statusCodeChan:   make(chan statusCodeEntry),
+			StatsByOperation: make(map[string]*[5]int),
+			statusCodeChan:   make(chan statusCodeEntry, 1000),
 			stopChan:         make(chan struct{}),
 		}
 
@@ -57,11 +63,8 @@ func GetStatusCodeStatsProvider() *StatusCodeProvider {
 	return statusCodeProviderSingleton
 }
 
-// startProcessing begins processing status codes from the channel.
 func (sp *StatusCodeProvider) startProcessing() {
-	sp.wg.Add(1)
 	go func() {
-		defer sp.wg.Done()
 		for {
 			select {
 			case entry := <-sp.statusCodeChan:
@@ -73,25 +76,27 @@ func (sp *StatusCodeProvider) startProcessing() {
 	}()
 }
 
-// EnqueueStatusCode adds a status code entry to the channel.
 func (sp *StatusCodeProvider) EnqueueStatusCode(operation string, statusCode int) {
-	sp.statusCodeChan <- statusCodeEntry{operation: operation, statusCode: statusCode}
+	select {
+	case sp.statusCodeChan <- statusCodeEntry{operation: operation, statusCode: statusCode}:
+		log.Printf("Successfully enqueued status code %d for operation %s", statusCode, operation)
+	default:
+		log.Printf("Warning: StatusCode channel full, dropping status code %d for operation %s", statusCode, operation)
+	}
 }
 
-// processStatusCode updates the stats map for the given status code entry.
 func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
-	sp.mu.Lock()
-	defer sp.mu.Unlock()
+	sp.Mu.Lock()
+	defer sp.Mu.Unlock()
 
-	stats, exists := sp.statsByOperation[entry.operation]
+	stats, exists := sp.StatsByOperation[entry.operation]
 	if !exists {
 		stats = &[5]int{}
-		sp.statsByOperation[entry.operation] = stats
+		sp.StatsByOperation[entry.operation] = stats
 	}
 	sp.updateStatusCodeCount(stats, entry.statusCode)
 }
 
-// updateStatusCodeCount updates the count for the specific status code.
 func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
 	switch statusCode {
 	case 200:
@@ -104,23 +109,43 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 		stats[3]++
 	case 429:
 		stats[4]++
-	default:
-		return
 	}
 }
 
-// startResetTimer initializes a reset timer to clear stats periodically.
 func (sp *StatusCodeProvider) startResetTimer() {
-	sp.resetTimer = time.AfterFunc(statusResetInterval, func() {
-		sp.shouldResetStats = true
-		sp.startResetTimer()
+	sp.ResetTimer = time.AfterFunc(statusResetInterval, func() {
+		sp.Mu.Lock()
+		sp.ShouldResetStats = true
+		sp.Mu.Unlock()
 	})
 }
 
-// StatusCodeHandler is the handler that uses the StatusCodeProvider for processing.
-type StatusCodeHandler struct {
-	StatusCodeProvider *StatusCodeProvider
-	filter             agent.OperationsFilter
+func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
+	sp.Mu.Lock()
+	defer sp.Mu.Unlock()
+
+	statusCodeMap := make(map[string][5]int)
+	if sp.ShouldResetStats {
+		for op, stats := range sp.StatsByOperation {
+			statusCodeMap[op] = *stats
+		}
+		sp.StatsByOperation = make(map[string]*[5]int)
+		sp.ShouldResetStats = false
+	} else {
+		for op, stats := range sp.StatsByOperation {
+			statusCodeMap[op] = *stats
+		}
+	}
+
+	return agent.Stats{
+		StatusCodes: statusCodeMap,
+	}
+}
+
+// StatusCodeHandler methods
+
+func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsFilter) *StatusCodeHandler {
+	return &StatusCodeHandler{StatusCodeProvider: provider, filter: filter}
 }
 
 func (h *StatusCodeHandler) ID() string {
@@ -131,12 +156,6 @@ func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
 	return awsmiddleware.After
 }
 
-// NewStatusCodeHandler creates a new handler with the given StatusCodeProvider.
-func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsFilter) *StatusCodeHandler {
-	return &StatusCodeHandler{StatusCodeProvider: provider, filter: filter}
-}
-
-// HandleResponse enqueues the status code into the StatusCodeProvider's channel.
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
 	if !h.filter.IsAllowed(operation) {
@@ -149,25 +168,4 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	}
 
 	h.StatusCodeProvider.EnqueueStatusCode(operation, r.StatusCode)
-}
-
-// Stats returns the aggregated stats for operations.
-func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
-	sp.mu.Lock()
-	defer sp.mu.Unlock()
-	statusCodeMap := make(map[string][5]int)
-	if sp.shouldResetStats {
-		for op, stats := range sp.statsByOperation {
-			statusCodeMap[op] = *stats
-		}
-		//Reset Stats
-		for key := range sp.statsByOperation {
-			delete(sp.statsByOperation, key)
-		}
-		sp.shouldResetStats = false
-	}
-
-	return agent.Stats{
-		StatusCodes: statusCodeMap,
-	}
 }

@@ -4,14 +4,13 @@
 package provider_test
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
-
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"sync"
+	"testing"
 )
 
 func TestNewHandlers(t *testing.T) {
@@ -72,4 +71,36 @@ func TestSingleton(t *testing.T) {
 	if stats1.StatusCodes["DescribeInstances"][0] != stats2.StatusCodes["DescribeInstances"][0] {
 		t.Errorf("Expected the state to be the same across instances, but it differs")
 	}
+}
+
+func TestStatsResetRace(t *testing.T) {
+	sp := provider.GetStatusCodeStatsProvider()
+
+	// Initialize the map in a thread-safe manner
+	sp.Mu.Lock()
+	sp.StatsByOperation = map[string]*[5]int{
+		"op1": {1, 2, 3, 4, 5},
+		"op2": {6, 7, 8, 9, 10},
+	}
+	sp.Mu.Unlock()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Goroutine 1: Continuously call the Stats method
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 1000; i++ {
+			_ = sp.Stats("")
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 1000; i++ {
+			sp.EnqueueStatusCode("op3", 200)
+		}
+	}()
+
+	wg.Wait()
 }
