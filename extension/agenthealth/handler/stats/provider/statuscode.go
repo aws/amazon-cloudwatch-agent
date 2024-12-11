@@ -111,12 +111,8 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 	case 429:
 		stats[4]++
 	default:
-		log.Printf("Unknown status code encountered: %d\n", statusCode)
+		return
 	}
-	log.Printf(
-		"Updated stats for operation --: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
-		stats[0], stats[1], stats[2], stats[3], stats[4],
-	)
 }
 
 func (sp *StatusCodeProvider) startResetTimer() {
@@ -151,14 +147,6 @@ func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsF
 	return &StatusCodeHandler{StatusCodeProvider: provider, filter: filter}
 }
 
-func (h *StatusCodeHandler) ID() string {
-	return statusHandlerID
-}
-
-func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
-	return awsmiddleware.After
-}
-
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
 	if !h.filter.IsAllowed(operation) {
@@ -171,4 +159,12 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 	}
 
 	h.StatusCodeProvider.EnqueueStatusCode(operation, r.StatusCode)
+}
+
+func (h *StatusCodeHandler) ID() string {
+	return statusHandlerID
+}
+
+func (h *StatusCodeHandler) Position() awsmiddleware.HandlerPosition {
+	return awsmiddleware.After
 }
