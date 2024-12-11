@@ -32,3 +32,22 @@ func TestExtension(t *testing.T) {
 	assert.Len(t, responseHandlers, 0)
 	assert.NoError(t, extension.Shutdown(ctx))
 }
+
+func TestExtensionStatusCodeOnly(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{IsUsageDataEnabled: true, IsStatusCodeEnabled: true}
+	extension := NewAgentHealth(zap.NewNop(), cfg)
+	assert.NotNil(t, extension)
+	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
+	requestHandlers, responseHandlers := extension.Handlers()
+	// user agent, client stats, stats
+	assert.Len(t, requestHandlers, 1)
+	// client stats
+	assert.Len(t, responseHandlers, 1)
+	cfg.IsUsageDataEnabled = false
+	requestHandlers, responseHandlers = extension.Handlers()
+	// user agent
+	assert.Len(t, requestHandlers, 1)
+	assert.Len(t, responseHandlers, 0)
+	assert.NoError(t, extension.Shutdown(ctx))
+}

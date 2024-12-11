@@ -5,6 +5,7 @@ package agenthealth
 
 import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
@@ -34,10 +35,17 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 
 	var statsResponseHandlers []awsmiddleware.ResponseHandler
 	var statsRequestHandlers []awsmiddleware.RequestHandler
+	var statsConfig agent.StatsConfig
+	var agentStatsEnabled bool
 
 	if ah.cfg.Stats != nil {
-		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled, true)
+		statsConfig = *ah.cfg.Stats
+		agentStatsEnabled = true
+	} else {
+		agentStatsEnabled = false
 	}
+
+	statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, statsConfig, statusCodeEnabled, agentStatsEnabled)
 
 	requestHandlers = append(requestHandlers, statsRequestHandlers...)
 	responseHandlers = append(responseHandlers, statsResponseHandlers...)
