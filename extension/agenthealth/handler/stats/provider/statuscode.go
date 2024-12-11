@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -98,7 +97,6 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 }
 
 func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
-	log.Printf("Updating status code count: statusCode=%d\n", statusCode)
 	switch statusCode {
 	case 200:
 		stats[0]++
