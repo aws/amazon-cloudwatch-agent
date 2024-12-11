@@ -4,6 +4,8 @@
   },
   "logs": {
     "metrics_collected": {
+      "emf": {
+      },
       "prometheus": {
         "cluster_name": "TestCluster",
         "log_group_name": "/aws/ecs/containerinsights/TestCluster/prometheus",
