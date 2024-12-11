@@ -111,7 +111,7 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 		log.Printf("Unknown status code encountered: %d\n", statusCode)
 	}
 	log.Printf(
-		"Updated stats for operation ??: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+		"Updated stats for operation --: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
 		stats[0], stats[1], stats[2], stats[3], stats[4],
 	)
 }
@@ -182,7 +182,7 @@ func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
 		log.Println(statusCodeMap)
 		log.Println("Reset Stats set to false")
 		sp.shouldResetStats = false
-	} else{
+	} else {
 		log.Println("Reset Stats set to FALSE")
 
 	}
