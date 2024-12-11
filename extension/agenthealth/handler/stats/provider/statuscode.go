@@ -167,7 +167,7 @@ func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
 
 	statusCodeMap := make(map[string][5]int)
 	if sp.shouldResetStats {
-		log.Println("Reset Stats set to TRUE")
+		log.Println("sReset Stats set to TRUE")
 
 		for op, stats := range sp.statsByOperation {
 			statusCodeMap[op] = *stats

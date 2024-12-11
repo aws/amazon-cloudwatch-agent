@@ -30,7 +30,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	log.Println("-------------------------")
 	log.Println("-------------------------")
 	log.Println("-------------------------")
-	log.Println("---------This is new 1----------------")
+	log.Println("---------This is new 2----------------")
 
 	if !statusCodeEnabled && !agentStatsEnabled {
 		return nil, nil
@@ -91,6 +91,8 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 		return
 	}
 	header := sh.Header(operation)
+	log.Println("Printing header")
+	log.Println(header)
 	if header != "" {
 		r.Header.Set(headerKeyAgentStats, header)
 	}
