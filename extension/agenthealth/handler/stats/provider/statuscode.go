@@ -118,7 +118,9 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 
 // startResetTimer initializes a reset timer to clear stats periodically.
 func (sp *StatusCodeProvider) startResetTimer() {
+	log.Println("Starting reset timer")
 	sp.resetTimer = time.AfterFunc(statusResetInterval, func() {
+		log.Println("Reset Stats set to true")
 		sp.shouldResetStats = true
 		sp.startResetTimer()
 	})
@@ -162,16 +164,27 @@ func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response
 func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
+
 	statusCodeMap := make(map[string][5]int)
 	if sp.shouldResetStats {
+		log.Println("Reset Stats set to TRUE")
+
 		for op, stats := range sp.statsByOperation {
 			statusCodeMap[op] = *stats
 		}
+		log.Println(statusCodeMap)
+
 		//Reset Stats
 		for key := range sp.statsByOperation {
 			delete(sp.statsByOperation, key)
 		}
+		log.Println("After deletion")
+		log.Println(statusCodeMap)
+		log.Println("Reset Stats set to false")
 		sp.shouldResetStats = false
+	} else{
+		log.Println("Reset Stats set to FALSE")
+
 	}
 
 	return agent.Stats{

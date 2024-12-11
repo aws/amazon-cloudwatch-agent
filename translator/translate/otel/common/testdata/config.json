@@ -1,47 +1,123 @@
 {
+  "agent": {
+    "debug": true,
+    "aws_sdk_log_level": "LogDebugWithHTTPBody",
+    "region": "us-west-2"
+  },
   "metrics": {
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
     "metrics_collected": {
-      "collectd": {
-        "drop_original_metrics": ["collectd_drop"]
-      },
       "cpu": {
-        "drop_original_metrics": ["cpu_usage_idle", "time_active"],
         "measurement": [
-          {
-            "name": "cpu_usage_idle",
-            "rename": "CPU_USAGE_IDLE",
-            "unit": "unit"
-          },
-          {
-            "name": "cpu_usage_nice",
-            "unit": "unit"
-          },
-          "cpu_usage_guest",
-          "time_active",
-          "usage_active"
-        ]
-      },
-      "disk": {},
-      "ethtool": {
-        "metrics_include": [
-          "rx_packets",
-          "tx_packets"
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_user",
+          "cpu_usage_system"
         ],
-        "drop_original_metrics": ["tx_packets"]
+        "totalcpu": false,
+        "metrics_collection_interval": 10
       },
-      "nvidia_gpu": {
-        "drop_original_metrics": ["utilization_gpu", "temperature_gpu"]
+      "disk": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "used_percent",
+          "inodes_free"
+        ],
+        "metrics_collection_interval": 60
       },
-      "statsd": {
-        "drop_original_metrics": ["statsd_drop"]
+      "diskio": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "io_time",
+          "write_bytes",
+          "read_bytes",
+          "writes",
+          "reads"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 10
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_established",
+          "tcp_time_wait"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "swap": {
+        "measurement": [
+          "swap_used_percent"
+        ],
+        "metrics_collection_interval": 10
+      },
+      "ethtool": {
+        "interface_include": [
+          "eth0",
+          "eth1"
+        ],
+        "metrics_include": [
+          "bw_in_allowance_exceeded",
+          "bw_out_allowance_exceeded",
+          "pps_allowance_exceeded",
+          "conntrack_allowance_exceeded",
+          "linklocal_allowance_exceeded"
+        ]
+      }
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "/etc/cwagent/prometheus-config.yml",
+        "log_group_name": "Prometheus",
+        "emf_processor": {
+          "metric_namespace": "CWAgent-Prometheus",
+          "metric_unit": {
+            "jvm_threads_current": "Count",
+            "jvm_gc_collection_seconds_sum": "Milliseconds"
+          }
+        },
+        "ecs_service_discovery": {
+          "sd_frequency": "30s",
+          "sd_target_cluster": "testCluster",
+          "sd_cluster_region": "us-west-2",
+          "sd_result_file": "/tmp/ecs-discovery.yml",
+          "docker_label": {
+            "sd_port_label": "ECS_PROMETHEUS_EXPORTER_PORT",
+            "sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH",
+            "sd_job_name_label": "job"
+          }
+        }
+      },
+      "kubernetes": {
+
       }
     },
-    "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"], []],
-    "namespace": "namespace",
-    "force_flush_interval": 30,
-    "credentials": {
-      "role_arn": "metrics_role_arn_value_test"
-    },
-    "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/syslog",
+            "log_group_name": "/aws/ec2/syslog",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 30
+          }
+        ]
+      }
+    }
   }
 }
