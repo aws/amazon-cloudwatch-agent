@@ -30,7 +30,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	log.Println("-------------------------")
 	log.Println("-------------------------")
 	log.Println("-------------------------")
-	log.Println("-------------------------")
+	log.Println("---------This is new 1----------------")
 
 	if !statusCodeEnabled && !agentStatsEnabled {
 		return nil, nil
