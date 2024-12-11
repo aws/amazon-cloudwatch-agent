@@ -94,6 +94,8 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 		stats = &[5]int{}
 		sp.StatsByOperation[entry.operation] = stats
 	}
+	log.Println("Below is the operation")
+	log.Println(entry.operation)
 	sp.updateStatusCodeCount(stats, entry.statusCode)
 }
 
