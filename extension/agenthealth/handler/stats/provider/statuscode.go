@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -97,6 +98,7 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 }
 
 func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode int) {
+	log.Printf("Updating status code count: statusCode=%d\n", statusCode)
 	switch statusCode {
 	case 200:
 		stats[0]++
@@ -108,7 +110,13 @@ func (sp *StatusCodeProvider) updateStatusCodeCount(stats *[5]int, statusCode in
 		stats[3]++
 	case 429:
 		stats[4]++
+	default:
+		log.Printf("Unknown status code encountered: %d\n", statusCode)
 	}
+	log.Printf(
+		"Updated stats for operation --: 200=%d, 400=%d, 408=%d, 413=%d, 429=%d",
+		stats[0], stats[1], stats[2], stats[3], stats[4],
+	)
 }
 
 func (sp *StatusCodeProvider) startResetTimer() {
@@ -130,10 +138,6 @@ func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
 		}
 		sp.StatsByOperation = make(map[string]*[5]int)
 		sp.ShouldResetStats = false
-	} else {
-		for op, stats := range sp.StatsByOperation {
-			statusCodeMap[op] = *stats
-		}
 	}
 
 	return agent.Stats{
