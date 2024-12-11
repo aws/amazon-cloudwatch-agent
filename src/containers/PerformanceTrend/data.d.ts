@@ -77,9 +77,13 @@ export interface ServiceCommitInformation {
     // Release version for the service
     author: {
         login: string;
-        date: string;
     };
-    commit: { message: string };
+    commit: {
+        message: string;
+        author: {
+            date: string;
+        };
+    };
     sha: string;
 }
 

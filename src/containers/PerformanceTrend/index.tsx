@@ -189,10 +189,10 @@ export default function PerformanceTrend(props: { password: string; password_is_
                                                             const selected_data = series[seriesIndex][dataPointIndex];
                                                             const selected_hash = w.globals.categoryLabels[dataPointIndex];
                                                             const selected_hash_information: ServiceCommitInformation | undefined = commits_information
-                                                                .filter((c: ServiceCommitInformation) => c.sha === selected_hash)
+                                                                .filter((c: ServiceCommitInformation) => c.sha.startsWith(selected_hash))
                                                                 .at(0);
                                                             const commit_history = selected_hash_information?.commit.message.replace(/\n\r*\n*/g, '<br />');
-                                                            const commited_by = `Committed by ${selected_hash_information?.author.login} on ${selected_hash_information?.author.date}`;
+                                                            const commited_by = `Committed by ${selected_hash_information?.author.login} on ${selected_hash_information?.commit?.author?.date}`;
                                                             const commit_data = `<b>${use_case}</b>: ${selected_data}`;
 
                                                             return (
