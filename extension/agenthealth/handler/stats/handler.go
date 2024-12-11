@@ -21,12 +21,34 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	filter := agent.NewOperationsFilter(cfg.Operations...)
-	clientStats := client.NewHandler(filter)
-	stats := newStatsHandler(logger, filter, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	var requestHandlers []awsmiddleware.RequestHandler
+	var responseHandlers []awsmiddleware.ResponseHandler
+	var statsProviders []agent.StatsProvider
+
+	if !statusCodeEnabled && !agentStatsEnabled {
+		return nil, nil
+	}
+
+	if statusCodeEnabled {
+		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
+		statusCodeStatsProvider := provider.GetStatusCodeStatsProvider()
+		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider, statusCodeFilter)
+		responseHandlers = append(responseHandlers, statusCodeHandler)
+		statsProviders = append(statsProviders, statusCodeStatsProvider)
+	}
+
+	if agentStatsEnabled {
+		filter := agent.NewOperationsFilter(cfg.Operations...)
+		clientStats := client.NewHandler(filter)
+		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
+		responseHandlers = append(responseHandlers, clientStats)
+		stats := newStatsHandler(logger, filter, statsProviders)
+		requestHandlers = append(requestHandlers, clientStats, stats)
+	}
+
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{clientStats}
+	return requestHandlers, responseHandlers
 }
 
 type statsHandler struct {
