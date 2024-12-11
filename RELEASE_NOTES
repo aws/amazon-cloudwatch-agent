@@ -1,4 +1,15 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300051.0 (2024-12-11)
+========================================================================
+Bug Fixes:
+* Fix Excessive IMDS related error logging
+* Set EKS.Cluster and K8s.Cluster without modifying global entity attribute map to prevent concurrent map writes
+
+Features:
+* Unify EMF export template in Application Signals to support adding RemoteEnvironment dimension for non-Kubernetes platforms.
+* Update OTel contrib components to v0.0.0-20241206205307-66e9942f29e0, downgrading log processing in EMF exporter and generating URL section in X-Ray segment when net.peer.name is available.
+
+========================================================================
 Amazon CloudWatch Agent 1.300050.0 (2024-11-18)
 ========================================================================
 Features:
