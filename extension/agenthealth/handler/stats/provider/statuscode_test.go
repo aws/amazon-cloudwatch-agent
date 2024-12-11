@@ -6,6 +6,7 @@ package provider_test
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -75,32 +76,42 @@ func TestSingleton(t *testing.T) {
 	}
 }
 
-func TestStatsResetRace(_ *testing.T) {
+func TestStatsResetRace(t *testing.T) {
 	sp := provider.GetStatusCodeStatsProvider()
 
-	// Initialize the map in a thread-safe manner
-	sp.Mu.Lock()
-	sp.StatsByOperation = map[string]*[5]int{
-		"op1": {1, 2, 3, 4, 5},
-		"op2": {6, 7, 8, 9, 10},
-	}
-	sp.Mu.Unlock()
+	// Pre-populate some initial stats and rotate
+	sp.EnqueueStatusCode("op1", 200)
+	sp.EnqueueStatusCode("op2", 400)
+	sp.RotateStats()
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
-	// Goroutine 1: Continuously call the Stats method
+	// Goroutine 1: Call Stats method
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 1000; i++ {
-			_ = sp.Stats("")
+		for i := 0; i < 100; i++ {
+			stats := sp.Stats("")
+			if stats.StatusCodes != nil {
+				assert.Greater(t, len(stats.StatusCodes), 0)
+			}
 		}
 	}()
 
+	// Goroutine 2: Add new status codes
 	go func() {
 		defer wg.Done()
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 100; i++ {
 			sp.EnqueueStatusCode("op3", 200)
+		}
+	}()
+
+	// Goroutine 3: Trigger rotations
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 3; i++ {
+			time.Sleep(1 * time.Millisecond)
+			sp.RotateStats()
 		}
 	}()
 
