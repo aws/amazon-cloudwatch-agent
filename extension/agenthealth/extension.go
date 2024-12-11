@@ -5,11 +5,11 @@ package agenthealth
 
 import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 )
 
@@ -31,19 +31,21 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 		return requestHandlers, responseHandlers
 	}
 
-	if ah.cfg == nil {
-		return nil, nil
-	}
 	statusCodeEnabled := ah.cfg.IsStatusCodeEnabled
 
 	var statsResponseHandlers []awsmiddleware.ResponseHandler
 	var statsRequestHandlers []awsmiddleware.RequestHandler
+	var statsConfig agent.StatsConfig
+	var agentStatsEnabled bool
 
 	if ah.cfg.Stats != nil {
-		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, *ah.cfg.Stats, statusCodeEnabled, true)
+		statsConfig = *ah.cfg.Stats
+		agentStatsEnabled = true
 	} else {
-		statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, agent.StatsConfig{}, statusCodeEnabled, false)
+		agentStatsEnabled = false
 	}
+
+	statsRequestHandlers, statsResponseHandlers = stats.NewHandlers(ah.logger, statsConfig, statusCodeEnabled, agentStatsEnabled)
 
 	requestHandlers = append(requestHandlers, statsRequestHandlers...)
 	responseHandlers = append(responseHandlers, statsResponseHandlers...)
