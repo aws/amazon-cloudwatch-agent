@@ -71,7 +71,7 @@ jobs:
 
   BuildOperator:
     needs: [GetLatestOperatorCommitSHA]
-    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@e2e-testing
+    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml
     concurrency:
       group: ${{ github.workflow }}-operator-${{ inputs.operator-branch}}
       cancel-in-progress: true
