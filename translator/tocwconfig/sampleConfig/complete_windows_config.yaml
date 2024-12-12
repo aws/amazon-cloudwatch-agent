@@ -75,6 +75,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/metrics:
         is_usage_data_enabled: true
         stats:
@@ -116,9 +123,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
@@ -128,10 +135,10 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "PERCENT") where name == "Processor % Idle Time"
-                - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
-                - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
-                - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
+                  - set(unit, "PERCENT") where name == "Processor % Idle Time"
+                  - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
+                  - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
+                  - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
         trace_statements: []
 receivers:
     awsxray:
@@ -243,6 +250,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - agenthealth/logs
         - agenthealth/traces
         - entitystore
@@ -262,14 +270,14 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_win_perf_counters/1063858558
                 - telegraf_nvidia_smi
+                - telegraf_win_perf_counters/1063858558
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/3081249416
-                - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/2402387132
-                - telegraf_win_perf_counters/3762679655
                 - telegraf_procstat/1340600742
+                - telegraf_win_perf_counters/3762679655
+
         metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch
