@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package provider
 
 import (
@@ -7,6 +10,7 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
@@ -27,7 +31,7 @@ type StatusCodeProvider struct {
 	statusCodeChan chan statusCodeEntry
 	stopChan       chan struct{}
 	resetTicker    *time.Ticker
-	completedStats chan agent.Stats // Changed to agent.Stats
+	completedStats chan agent.Stats
 }
 
 type statusCodeEntry struct {
@@ -40,8 +44,8 @@ func GetStatusCodeStatsProvider() *StatusCodeProvider {
 		provider := &StatusCodeProvider{
 			currentStats:   make(map[string]*[5]int),
 			statusCodeChan: make(chan statusCodeEntry, 1000),
-			stopChan:      make(chan struct{}),
-			resetTicker:   time.NewTicker(statusResetInterval),
+			stopChan:       make(chan struct{}),
+			resetTicker:    time.NewTicker(statusResetInterval),
 			completedStats: make(chan agent.Stats, 1), // buffered channel
 		}
 		provider.startProcessing()
@@ -129,13 +133,13 @@ func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
 
 type StatusCodeHandler struct {
 	StatusCodeProvider *StatusCodeProvider
-	filter            agent.OperationsFilter
+	filter             agent.OperationsFilter
 }
 
 func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsFilter) *StatusCodeHandler {
 	return &StatusCodeHandler{
 		StatusCodeProvider: provider,
-		filter:            filter,
+		filter:             filter,
 	}
 }
 
