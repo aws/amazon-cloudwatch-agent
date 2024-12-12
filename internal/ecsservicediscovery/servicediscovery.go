@@ -33,13 +33,21 @@ func (sd *ServiceDiscovery) init() {
 	}
 	configProvider := credentialConfig.Credentials()
 	sd.svcEcs = ecs.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
-	if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEcs.Handlers)); err != nil {
-		log.Printf("ERROR: Failed to configure ECS client: %v", err)
+
+	if sd.Configurer != nil {
+		if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEcs.Handlers)); err != nil {
+			log.Printf("ERROR: Failed to configure ECS client: %v", err)
+		}
 	}
+
 	sd.svcEc2 = ec2.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
-	if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEc2.Handlers)); err != nil {
-		log.Printf("ERROR: Failed to configure EC2 client: %v", err)
+
+	if sd.Configurer != nil {
+		if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEc2.Handlers)); err != nil {
+			log.Printf("ERROR: Failed to configure EC2 client: %v", err)
+		}
 	}
+
 	sd.initClusterProcessorPipeline()
 }
 

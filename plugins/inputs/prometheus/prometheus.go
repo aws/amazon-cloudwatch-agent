@@ -57,14 +57,17 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 
 	var configurer *awsmiddleware.Configurer
 	var ecssd *ecsservicediscovery.ServiceDiscovery
+	needEcssd := true
 
 	if p.middleware != nil {
 		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
 		if configurer != nil {
 			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
-		} else {
-			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+			needEcssd = false
 		}
+	}
+	if needEcssd {
+		ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
 	}
 
 	// Launch ECS Service Discovery as a goroutine
