@@ -43,7 +43,6 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 2
-        middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
         shared_credential_file: fake-path
@@ -86,11 +85,11 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
                 - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
+                - telegraf_win_perf_counters/1492679118
     telemetry:
         logs:
             development: false

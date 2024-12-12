@@ -5,6 +5,7 @@ package resourcedetection
 
 import (
 	_ "embed"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"

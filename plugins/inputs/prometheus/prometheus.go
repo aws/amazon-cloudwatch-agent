@@ -5,7 +5,6 @@ package prometheus
 
 import (
 	_ "embed"
-	"log"
 	"sync"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
@@ -90,7 +89,6 @@ func (p *Prometheus) Stop() {
 }
 
 func init() {
-	log.Println("Initializing Prometheus")
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),

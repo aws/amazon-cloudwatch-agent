@@ -150,7 +150,6 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 1
-        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
     filter/jmx/0:
         error_mode: propagate
@@ -198,11 +197,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx/0:
         error_mode: propagate
@@ -211,9 +210,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -392,12 +391,12 @@ service:
                 - transform
             receivers:
                 - telegraf_netstat
-                - telegraf_mem
-                - telegraf_swap
                 - telegraf_disk
-                - telegraf_cpu
-                - telegraf_procstat/1917393364
                 - telegraf_processes
+                - telegraf_cpu
+                - telegraf_mem
+                - telegraf_procstat/1917393364
+                - telegraf_swap
         metrics/hostCustomMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -406,8 +405,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -417,8 +416,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch

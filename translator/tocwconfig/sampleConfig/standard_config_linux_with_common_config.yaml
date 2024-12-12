@@ -53,7 +53,6 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 2
-        middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
         shared_credential_file: fake-path
@@ -91,10 +90,10 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
+                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
-                - telegraf_cpu
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

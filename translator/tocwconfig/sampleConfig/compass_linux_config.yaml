@@ -51,7 +51,6 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 1
-        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
     telegraf_socket_listener:
