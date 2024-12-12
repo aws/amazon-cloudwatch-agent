@@ -109,7 +109,6 @@ func (sp *StatusCodeProvider) RotateStats() {
 	sp.currentStats = make(map[string]*[5]int)
 	sp.mu.Unlock()
 
-	// Try to merge with existing stats
 	select {
 	case existingStats := <-sp.completedStats:
 		existingStats.Merge(newStats)
@@ -117,9 +116,7 @@ func (sp *StatusCodeProvider) RotateStats() {
 	default:
 	}
 
-	select {
-	case sp.completedStats <- newStats:
-	}
+	sp.completedStats <- newStats
 }
 
 func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
