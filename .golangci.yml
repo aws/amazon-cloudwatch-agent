@@ -29,9 +29,6 @@ output:
 
 # All available settings of specific linters
 linters-settings:
-  revive:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.7
   gofmt:
     # Simplify code: gofmt with `-s` option, true by default
     simplify: true
@@ -45,16 +42,21 @@ linters-settings:
     # Setting locale to US will correct the British spelling of 'colour' to 'color'.
     ignore-words:
       - performancetest
-    
+
 linters:
   disable:
     - errcheck
+  enable:
     - gofmt
     - goimports
-  enable:
-    - gosimple
     - gosec
-    - unused
+    - gosimple
+    - govet
+    - ineffassign
     - misspell
     - revive
+    - unused
     - nonamedreturns
+
+issues:
+  new-from-rev: 9af4477
