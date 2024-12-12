@@ -77,7 +77,7 @@ func (r *Retryer) refreshLoop(updateFunc func() error) int {
 
 		if err != nil {
 			retry++
-			r.logger.Debug("there was an error when retrieving service attribute.", zap.Error(err))
+			r.logger.Debug("there was an issue when retrieving entity attributes but will not affect agent functionality", zap.Error(err))
 		} else {
 			retry = 1
 		}

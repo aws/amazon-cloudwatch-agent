@@ -1,135 +1,164 @@
 exporters:
-    awsemf/application_signals:
-        certificate_file_path: ""
-        detailed_metrics: false
-        dimension_rollup_option: NoDimensionRollup
-        disable_metric_extraction: false
-        eks_fargate_container_insights_enabled: false
-        endpoint: https://fake_endpoint
-        enhanced_container_insights: false
-        imds_retries: 1
-        local_mode: true
-        log_group_name: /aws/application-signals/data
-        log_retention: 0
-        log_stream_name: ""
-        max_retries: 2
-        metric_declarations:
-            - dimensions:
-                - - Environment
-                  - Operation
-                  - Service
-                - - Environment
-                  - Service
-              label_matchers:
-                - label_names:
-                    - Telemetry.Source
-                  regex: ^(ServerSpan|LocalRootSpan)$
-                  separator: ;
-              metric_name_selectors:
-                - Latency
-                - Fault
-                - Error
-            - dimensions:
-                - - Environment
-                  - Operation
-                  - RemoteOperation
-                  - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - Operation
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteOperation
-                  - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                  - Service
-                - - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                - - RemoteService
-              label_matchers:
-                - label_names:
-                    - Telemetry.Source
-                  regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
-                  separator: ;
-              metric_name_selectors:
-                - Latency
-                - Fault
-                - Error
-            - dimensions:
-                - - Environment
-                  - Service
-              label_matchers:
-                - label_names:
-                    - Telemetry.Source
-                  regex: ^RuntimeMetric$
-                  separator: ;
-              metric_name_selectors:
-                - ^.*$
-        middleware: agenthealth/logs
-        namespace: ApplicationSignals
-        no_verify_ssl: false
-        num_workers: 8
-        output_destination: cloudwatch
-        profile: AmazonCloudWatchAgent
-        proxy_address: ""
-        region: us-east-1
-        request_timeout_seconds: 30
-        resource_arn: ""
-        resource_to_telemetry_conversion:
-            enabled: false
-        retain_initial_value_of_delta_metric: false
-        role_arn: ""
-        shared_credentials_file:
-            - fake-path
-        version: "1"
-    awsxray/application_signals:
-        certificate_file_path: ""
-        endpoint: https://fake_endpoint
-        imds_retries: 1
-        index_all_attributes: false
-        indexed_attributes:
-            - aws.local.service
-            - aws.local.operation
-            - aws.local.environment
-            - aws.remote.service
-            - aws.remote.operation
-            - aws.remote.environment
-            - aws.remote.resource.identifier
-            - aws.remote.resource.type
-        local_mode: true
-        max_retries: 2
-        middleware: agenthealth/traces
-        no_verify_ssl: false
-        num_workers: 8
-        profile: AmazonCloudWatchAgent
-        proxy_address: ""
-        region: us-east-1
-        request_timeout_seconds: 30
-        resource_arn: ""
-        role_arn: ""
-        shared_credentials_file:
-            - fake-path
-        telemetry:
-            enabled: true
-            include_metadata: true
+  awsemf/application_signals:
+    certificate_file_path: ""
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
+    eks_fargate_container_insights_enabled: false
+    endpoint: https://fake_endpoint
+    enhanced_container_insights: false
+    imds_retries: 1
+    local_mode: true
+    log_group_name: /aws/application-signals/data
+    log_retention: 0
+    log_stream_name: ""
+    max_retries: 2
+    metric_declarations:
+      - dimensions:
+          - - Environment
+            - Operation
+            - Service
+          - - Environment
+            - Service
+        label_matchers:
+          - label_names:
+              - Telemetry.Source
+            regex: ^(ServerSpan|LocalRootSpan)$
+            separator: ;
+        metric_name_selectors:
+          - Latency
+          - Fault
+          - Error
+      - dimensions:
+          - - Environment
+            - Operation
+            - RemoteEnvironment
+            - RemoteOperation
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - Environment
+            - Operation
+            - RemoteEnvironment
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - Environment
+            - Operation
+            - RemoteOperation
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - Environment
+            - Operation
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteEnvironment
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteEnvironment
+            - RemoteOperation
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteEnvironment
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteOperation
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+          - - RemoteService
+        label_matchers:
+          - label_names:
+              - Telemetry.Source
+            regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
+            separator: ;
+        metric_name_selectors:
+          - Latency
+          - Fault
+          - Error
+      - dimensions:
+          - [ Environment, Service ]
+        label_matchers:
+          - label_names:
+              - Telemetry.Source
+            regex: '^RuntimeMetric$'
+            separator: ;
+        metric_name_selectors:
+          - '^.*$'
+    middleware: agenthealth/logs
+    namespace: ApplicationSignals
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    profile: AmazonCloudWatchAgent
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: false
+    retain_initial_value_of_delta_metric: false
+    role_arn: ""
+    shared_credentials_file:
+      - fake-path
+    version: "1"
+  awsxray/application_signals:
+    certificate_file_path: ""
+    endpoint: https://fake_endpoint
+    imds_retries: 1
+    index_all_attributes: false
+    indexed_attributes:
+      - aws.local.service
+      - aws.local.operation
+      - aws.local.environment
+      - aws.remote.service
+      - aws.remote.operation
+      - aws.remote.environment
+      - aws.remote.resource.identifier
+      - aws.remote.resource.type
+    local_mode: true
+    max_retries: 2
+    middleware: agenthealth/traces
+    no_verify_ssl: false
+    num_workers: 8
+    profile: AmazonCloudWatchAgent
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    role_arn: ""
+    shared_credentials_file:
+      - fake-path
+    telemetry:
+      enabled: true
+      include_metadata: true
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true

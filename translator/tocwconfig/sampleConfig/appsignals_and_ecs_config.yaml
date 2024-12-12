@@ -30,40 +30,70 @@ exporters:
                 - Fault
                 - Error
             - dimensions:
-                - - Environment
-                  - Operation
-                  - RemoteOperation
-                  - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - Operation
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteOperation
-                  - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - Environment
-                  - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                  - Service
-                - - RemoteResourceIdentifier
-                  - RemoteResourceType
-                  - RemoteService
-                - - RemoteService
+                  - - Environment
+                    - Operation
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - Operation
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - Operation
+                    - RemoteOperation
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - Operation
+                    - RemoteOperation
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteEnvironment
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteEnvironment
+                    - RemoteOperation
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteOperation
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteOperation
+                    - RemoteService
+                    - Service
+                  - - Environment
+                    - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                    - Service
+                  - - RemoteResourceIdentifier
+                    - RemoteResourceType
+                    - RemoteService
+                  - - RemoteService
               label_matchers:
                 - label_names:
                     - Telemetry.Source
