@@ -27,7 +27,7 @@ type StatusCodeProvider struct {
 	statusCodeChan chan statusCodeEntry
 	stopChan       chan struct{}
 	resetTicker    *time.Ticker
-	completedStats chan map[string][5]int // unbuffered channel for completed stats
+	completedStats chan agent.Stats // Changed to agent.Stats
 }
 
 type statusCodeEntry struct {
@@ -40,9 +40,9 @@ func GetStatusCodeStatsProvider() *StatusCodeProvider {
 		provider := &StatusCodeProvider{
 			currentStats:   make(map[string]*[5]int),
 			statusCodeChan: make(chan statusCodeEntry, 1000),
-			stopChan:       make(chan struct{}),
-			resetTicker:    time.NewTicker(statusResetInterval),
-			completedStats: make(chan map[string][5]int),
+			stopChan:      make(chan struct{}),
+			resetTicker:   time.NewTicker(statusResetInterval),
+			completedStats: make(chan agent.Stats, 1), // buffered channel
 		}
 		provider.startProcessing()
 		statusCodeProviderSingleton = provider
@@ -96,61 +96,46 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 
 func (sp *StatusCodeProvider) RotateStats() {
 	sp.mu.Lock()
-	newStats := make(map[string][5]int, len(sp.currentStats))
+	newStats := agent.Stats{
+		StatusCodes: make(map[string][5]int, len(sp.currentStats)),
+	}
 	for op, stats := range sp.currentStats {
-		newStats[op] = *stats
+		newStats.StatusCodes[op] = *stats
 	}
 	sp.currentStats = make(map[string]*[5]int)
 	sp.mu.Unlock()
 
-	// Try to merge with existing stats with a timeout
+	// Try to merge with existing stats
 	select {
 	case existingStats := <-sp.completedStats:
-		// Merge existing stats with new stats
-		for op, stats := range existingStats {
-			if currentStats, exists := newStats[op]; !exists {
-				newStats[op] = stats
-			} else {
-				var mergedStats [5]int
-				for i := range stats {
-					mergedStats[i] = currentStats[i] + stats[i]
-				}
-				newStats[op] = mergedStats
-			}
-		}
-	case <-time.After(100 * time.Millisecond):
-		// Timeout if can't read from channel
+		existingStats.Merge(newStats)
+		newStats = existingStats
+	default:
 	}
 
-	// Try to write with timeout
 	select {
 	case sp.completedStats <- newStats:
-	case <-time.After(100 * time.Millisecond):
-		// If we can't write, log error or handle appropriately
 	}
 }
 
 func (sp *StatusCodeProvider) Stats(_ string) agent.Stats {
 	select {
 	case stats := <-sp.completedStats:
-		return agent.Stats{
-			StatusCodes: stats,
-		}
+		return stats
 	default:
 		return agent.Stats{}
 	}
 }
 
-// StatusCodeHandler implementation remains the same
 type StatusCodeHandler struct {
 	StatusCodeProvider *StatusCodeProvider
-	filter             agent.OperationsFilter
+	filter            agent.OperationsFilter
 }
 
 func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsFilter) *StatusCodeHandler {
 	return &StatusCodeHandler{
 		StatusCodeProvider: provider,
-		filter:             filter,
+		filter:            filter,
 	}
 }
 

@@ -79,21 +79,32 @@ func TestSingleton(t *testing.T) {
 func TestStatsResetRace(t *testing.T) {
 	sp := provider.GetStatusCodeStatsProvider()
 
-	// Pre-populate some initial stats and rotate
+	// Pre-populate some stats through the normal channel
 	sp.EnqueueStatusCode("op1", 200)
 	sp.EnqueueStatusCode("op2", 400)
+
+	// Give time for the stats to be processed
+	time.Sleep(10 * time.Millisecond)
+
+	// Trigger a rotation to get some stats in the completedStats channel
 	sp.RotateStats()
 
 	var wg sync.WaitGroup
 	wg.Add(3)
 
-	// Goroutine 1: Call Stats method
+	// Goroutine 1: Continuously call the Stats method
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 100; i++ {
 			stats := sp.Stats("")
 			if stats.StatusCodes != nil {
-				assert.Greater(t, len(stats.StatusCodes), 0)
+				total := 0
+				for _, counts := range stats.StatusCodes {
+					for _, count := range counts {
+						total += count
+					}
+				}
+				assert.Greater(t, total, 0, "Should have some status codes counted")
 			}
 		}
 	}()
