@@ -80,4 +80,5 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}
+	//cfg.MiddlewareID = &agenthealth.StatusCodeID //Add this when contrib changes merged.
 }

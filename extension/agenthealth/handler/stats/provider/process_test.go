@@ -11,6 +11,8 @@ import (
 
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 type mockProcessMetrics struct {
@@ -62,11 +64,11 @@ func TestProcessStats(t *testing.T) {
 	mock := &mockProcessMetrics{}
 	provider := newProcessStats(mock, time.Millisecond)
 	got := provider.getStats()
-	assert.NotNil(t, got.CPUPercent)
+	assert.NotNil(t, got.CpuPercent)
 	assert.NotNil(t, got.MemoryBytes)
 	assert.NotNil(t, got.FileDescriptorCount)
 	assert.NotNil(t, got.ThreadCount)
-	assert.EqualValues(t, 1, *got.CPUPercent)
+	assert.EqualValues(t, 1, *got.CpuPercent)
 	assert.EqualValues(t, 2, *got.MemoryBytes)
 	assert.EqualValues(t, 3, *got.FileDescriptorCount)
 	assert.EqualValues(t, 4, *got.ThreadCount)
@@ -75,6 +77,6 @@ func TestProcessStats(t *testing.T) {
 	mock.mu.Unlock()
 	provider.refresh()
 	assert.Eventually(t, func() bool {
-		return len(provider.getStats().StatusCodes) == 0 // map isn't comparable, so we check the length
+		return provider.getStats() == agent.Stats{}
 	}, 5*time.Millisecond, time.Millisecond)
 }

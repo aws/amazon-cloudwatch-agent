@@ -11,17 +11,17 @@ import (
 )
 
 func TestMerge(t *testing.T) {
-	stats := &Stats{CPUPercent: aws.Float64(1.2)}
-	assert.EqualValues(t, 1.2, *stats.CPUPercent)
+	stats := &Stats{CpuPercent: aws.Float64(1.2)}
+	assert.EqualValues(t, 1.2, *stats.CpuPercent)
 	assert.Nil(t, stats.MemoryBytes)
 	stats.Merge(Stats{
-		CPUPercent:  aws.Float64(1.3),
+		CpuPercent:  aws.Float64(1.3),
 		MemoryBytes: aws.Uint64(123),
 	})
-	assert.EqualValues(t, 1.3, *stats.CPUPercent)
+	assert.EqualValues(t, 1.3, *stats.CpuPercent)
 	assert.EqualValues(t, 123, *stats.MemoryBytes)
 	stats.Merge(Stats{
-		CPUPercent:                aws.Float64(1.5),
+		CpuPercent:                aws.Float64(1.5),
 		MemoryBytes:               aws.Uint64(133),
 		FileDescriptorCount:       aws.Int32(456),
 		ThreadCount:               aws.Int32(789),
@@ -36,7 +36,7 @@ func TestMerge(t *testing.T) {
 		RegionType:                aws.String("RegionType"),
 		Mode:                      aws.String("Mode"),
 	})
-	assert.EqualValues(t, 1.5, *stats.CPUPercent)
+	assert.EqualValues(t, 1.5, *stats.CpuPercent)
 	assert.EqualValues(t, 133, *stats.MemoryBytes)
 	assert.EqualValues(t, 456, *stats.FileDescriptorCount)
 	assert.EqualValues(t, 789, *stats.ThreadCount)
@@ -52,76 +52,6 @@ func TestMerge(t *testing.T) {
 	assert.EqualValues(t, "Mode", *stats.Mode)
 }
 
-func TestMergeWithStatusCodes(t *testing.T) {
-	stats := &Stats{
-		StatusCodes: map[string][5]int{
-			"operation1": {1, 2, 3, 4, 5},
-		},
-	}
-
-	stats.Merge(Stats{
-		StatusCodes: map[string][5]int{
-			"operation1": {2, 3, 4, 5, 6}, // Existing operation with new values
-			"operation2": {0, 1, 2, 3, 4}, // New operation
-		},
-	})
-
-	assert.Equal(t, [5]int{3, 5, 7, 9, 11}, stats.StatusCodes["operation1"]) // Values should sum
-	assert.Equal(t, [5]int{0, 1, 2, 3, 4}, stats.StatusCodes["operation2"])  // New operation added
-
-	stats.Merge(Stats{
-		StatusCodes: nil,
-	})
-
-	assert.Equal(t, [5]int{3, 5, 7, 9, 11}, stats.StatusCodes["operation1"])
-	assert.Equal(t, [5]int{0, 1, 2, 3, 4}, stats.StatusCodes["operation2"])
-}
-
-func TestMarshalWithStatusCodes(t *testing.T) {
-	testCases := map[string]struct {
-		stats *Stats
-		want  string
-	}{
-		"WithEmptyStatusCodes": {
-			stats: &Stats{
-				StatusCodes: map[string][5]int{},
-			},
-			want: "",
-		},
-		"WithStatusCodes": {
-			stats: &Stats{
-				StatusCodes: map[string][5]int{
-					"operation1": {1, 2, 3, 4, 5},
-					"operation2": {0, 1, 2, 3, 4},
-				},
-			},
-			want: `"codes":{"operation1":[1,2,3,4,5],"operation2":[0,1,2,3,4]}`,
-		},
-	}
-	for name, testCase := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got, err := testCase.stats.Marshal()
-			assert.NoError(t, err)
-			assert.Contains(t, got, testCase.want)
-		})
-	}
-}
-
-func TestMergeFullWithStatusCodes(t *testing.T) {
-	stats := &Stats{
-		CPUPercent:  aws.Float64(1.0),
-		StatusCodes: map[string][5]int{"operation1": {1, 0, 0, 0, 0}},
-	}
-	stats.Merge(Stats{
-		CPUPercent:  aws.Float64(2.0),
-		StatusCodes: map[string][5]int{"operation1": {0, 1, 0, 0, 0}, "operation2": {1, 1, 1, 1, 1}},
-	})
-
-	assert.Equal(t, 2.0, *stats.CPUPercent)
-	assert.Equal(t, [5]int{1, 1, 0, 0, 0}, stats.StatusCodes["operation1"])
-	assert.Equal(t, [5]int{1, 1, 1, 1, 1}, stats.StatusCodes["operation2"])
-}
-
 func TestMarshal(t *testing.T) {
 	testCases := map[string]struct {
 		stats *Stats
@@ -133,7 +63,7 @@ func TestMarshal(t *testing.T) {
 		},
 		"WithPartial": {
 			stats: &Stats{
-				CPUPercent:   aws.Float64(1.2),
+				CpuPercent:   aws.Float64(1.2),
 				MemoryBytes:  aws.Uint64(123),
 				ThreadCount:  aws.Int32(789),
 				PayloadBytes: aws.Int(5678),
@@ -142,7 +72,7 @@ func TestMarshal(t *testing.T) {
 		},
 		"WithFull": {
 			stats: &Stats{
-				CPUPercent:          aws.Float64(1.2),
+				CpuPercent:          aws.Float64(1.2),
 				MemoryBytes:         aws.Uint64(123),
 				FileDescriptorCount: aws.Int32(456),
 				ThreadCount:         aws.Int32(789),

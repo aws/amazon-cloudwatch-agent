@@ -5,7 +5,6 @@ package stats
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 
@@ -22,40 +21,12 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bool, agentStatsEnabled bool) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	var requestHandlers []awsmiddleware.RequestHandler
-	var responseHandlers []awsmiddleware.ResponseHandler
-	var statsProviders []agent.StatsProvider
-	log.Println("Inside the NewHandlers function")
-	log.Println("-------------------------")
-	log.Println("-------------------------")
-	log.Println("-------------------------")
-	log.Println("---------This is new 2----------------")
-
-	if !statusCodeEnabled && !agentStatsEnabled {
-		return nil, nil
-	}
-
-	if statusCodeEnabled {
-		log.Println("Status code is enabled")
-		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
-		statusCodeStatsProvider := provider.GetStatusCodeStatsProvider()
-		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider, statusCodeFilter)
-		responseHandlers = append(responseHandlers, statusCodeHandler)
-		statsProviders = append(statsProviders, statusCodeStatsProvider)
-	}
-
-	if agentStatsEnabled {
-		clientStats := client.NewHandler(agent.NewOperationsFilter(cfg.Operations...))
-		statsProviders = append(statsProviders, clientStats, provider.GetProcessStats(), provider.GetFlagsStats())
-		responseHandlers = append(responseHandlers, clientStats)
-		filter := agent.NewOperationsFilter(cfg.Operations...)
-		stats := newStatsHandler(logger, filter, statsProviders)
-		requestHandlers = append(requestHandlers, clientStats, stats)
-	}
-
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	filter := agent.NewOperationsFilter(cfg.Operations...)
+	clientStats := client.NewHandler(filter)
+	stats := newStatsHandler(logger, filter, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
 	agent.UsageFlags().SetValues(cfg.UsageFlags)
-	return requestHandlers, responseHandlers
+	return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{clientStats}
 }
 
 type statsHandler struct {
@@ -91,8 +62,6 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 		return
 	}
 	header := sh.Header(operation)
-	log.Println("Printing header")
-	log.Println(header)
 	if header != "" {
 		r.Header.Set(headerKeyAgentStats, header)
 	}

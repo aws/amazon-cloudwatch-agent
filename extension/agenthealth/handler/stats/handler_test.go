@@ -40,16 +40,12 @@ func TestStatsHandler(t *testing.T) {
 		StatusCode:           aws.Int(200),
 		ImdsFallbackSucceed:  aws.Int(1),
 		SharedConfigFallback: aws.Int(1),
-		StatusCodes: map[string][5]int{
-			"pmd": {1, 0, 0, 0, 0},
-			"di":  {0, 1, 0, 0, 0},
-		},
 	}
 	handler := newStatsHandler(
 		zap.NewNop(),
 		agent.NewOperationsFilter(),
 		[]agent.StatsProvider{
-			newMockStatsProvider(&agent.Stats{CPUPercent: aws.Float64(1.2)}),
+			newMockStatsProvider(&agent.Stats{CpuPercent: aws.Float64(1.2)}),
 			newMockStatsProvider(&agent.Stats{MemoryBytes: aws.Uint64(123)}),
 			newMockStatsProvider(stats),
 		},
@@ -63,31 +59,15 @@ func TestStatsHandler(t *testing.T) {
 	assert.Equal(t, "", req.Header.Get(headerKeyAgentStats))
 	handler.filter = agent.NewOperationsFilter(agent.AllowAllOperations)
 	handler.HandleRequest(ctx, req)
-	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"lat":1234,"load":5678,"code":200,"scfb":1,"ifs":1,"codes":{"di":[0,1,0,0,0],"pmd":[1,0,0,0,0]}`, req.Header.Get(headerKeyAgentStats))
+	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"lat":1234,"load":5678,"code":200,"scfb":1,"ifs":1`, req.Header.Get(headerKeyAgentStats))
 	stats.StatusCode = aws.Int(404)
 	stats.LatencyMillis = nil
 	handler.HandleRequest(ctx, req)
-	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"load":5678,"code":404,"scfb":1,"ifs":1,"codes":{"di":[0,1,0,0,0],"pmd":[1,0,0,0,0]}`, req.Header.Get(headerKeyAgentStats))
+	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"load":5678,"code":404,"scfb":1,"ifs":1`, req.Header.Get(headerKeyAgentStats))
 }
 
-func TestNewHandlersWithStatusCodeOnly(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, true, false)
-	assert.Len(t, requestHandlers, 0)
-	assert.Len(t, responseHandlers, 1)
-}
-func TestNewHandlersWithAgentStatsOnly(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, false, true)
+func TestNewHandlers(t *testing.T) {
+	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{})
 	assert.Len(t, requestHandlers, 2)
 	assert.Len(t, responseHandlers, 1)
-}
-
-func TestNewHandlersWithStatusCodeAndAgenthStats(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, true, true)
-	assert.Len(t, requestHandlers, 2)
-	assert.Len(t, responseHandlers, 2)
-}
-func TestNewHandlersWithoutStatusCodeAndAgenthStats(t *testing.T) {
-	requestHandlers, responseHandlers := NewHandlers(zap.NewNop(), agent.StatsConfig{}, false, false)
-	assert.Len(t, requestHandlers, 0)
-	assert.Len(t, responseHandlers, 0)
 }
