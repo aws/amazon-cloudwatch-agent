@@ -297,7 +297,8 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			Values: aws.StringSlice([]string{t.ec2MetadataRespond.instanceId}),
 		},
 	}
-
+	// if the customer said 'AutoScalingGroupName' (the CW dimension), do what they mean not what they said
+	// and filter for the EC2 tag name called 'aws:autoscaling:groupName'
 	useAllTags := len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*"
 	if !useAllTags && len(t.EC2InstanceTagKeys) > 0 {
 		for i, key := range t.EC2InstanceTagKeys {
