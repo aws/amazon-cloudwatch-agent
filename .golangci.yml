@@ -42,7 +42,7 @@ linters-settings:
     # Setting locale to US will correct the British spelling of 'colour' to 'color'.
     ignore-words:
       - performancetest
-
+    
 linters:
   disable:
     - errcheck
