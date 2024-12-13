@@ -54,6 +54,8 @@ jobs:
       - name: Check out code
         if: needs.changes.outputs.lint == 'true'
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Check format
         if: needs.changes.outputs.lint == 'true'
@@ -67,7 +69,7 @@ jobs:
 
       - name: Check license and imports
         if: needs.changes.outputs.lint == 'true'
-        run: make simple-lint
+        run: make lint
 
   build:
     needs: [lint, changes]
@@ -76,14 +78,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-12]
+        os: [ubuntu-latest, windows-2019, windows-latest, macos-13]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-12
+          - os: macos-13
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build
@@ -136,4 +138,23 @@ jobs:
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
-  
+
+  test-data-race:
+    needs: [lint, changes]
+    name: Test data race
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        if: needs.changes.outputs.build == 'true'
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+          cache: false
+
+      - name: Check out code
+        if: needs.changes.outputs.build == 'true'
+        uses: actions/checkout@v3
+
+      - name: Test data race
+        if: needs.changes.outputs.build == 'true'
+        run: make test-data-race

@@ -18,6 +18,12 @@ const (
 	SourcesKey              = "Sources"
 	GpuDeviceKey            = "GpuDevice"
 
+	ClusterQueueNameKey     = "ClusterQueue"
+	ClusterQueueStatusKey   = "Status"
+	ClusterQueueReasonKey   = "Reason"
+	ClusterQueueResourceKey = "Resource"
+	Flavor                  = "Flavor"
+
 	// metric collected
 	CpuTotal                   = "cpu_usage_total"
 	CpuUser                    = "cpu_usage_user"
@@ -102,10 +108,17 @@ const (
 	NeuronHardware                              = "neuron_hardware"
 	NeuronExecutionLatency                      = "neuron_execution_latency"
 
+	KueuePendingWorkloads          = "kueue_pending_workloads"
+	KueueEvictedWorkloadsTotal     = "kueue_evicted_workloads_total"
+	KueueAdmittedActiveWorkloads   = "kueue_admitted_active_workloads"
+	KueueClusterQueueResourceUsage = "kueue_cluster_queue_resource_usage"
+	KueueClusterQueueNominalUsage  = "kueue_cluster_queue_nominal_quota"
+
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"
 	TypeClusterNamespace = "ClusterNamespace"
 	TypeService          = "Service"
+	TypeClusterQueue     = "ClusterQueue"
 
 	// Both TypeInstance and TypeNode mean EC2 Instance, they are used in ECS and EKS separately
 	TypeInstance       = "Instance"

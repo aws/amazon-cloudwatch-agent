@@ -1,0 +1,14 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "/test/prom.yaml"
+      }
+    },
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "ws-1234"
+      }
+    }
+  }
+}

@@ -1,4 +1,25 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300051.0 (2024-12-11)
+========================================================================
+Bug Fixes:
+* Fix Excessive IMDS related error logging
+* Fixed a concurrency issue in entity attribute handling that was causing agent crashes due to simultaneous map writes.
+
+Enhancements:
+* [AppSignal] Support RemoteEnvironment dimension for non-Kubernetes platforms.
+* [Logs] Support exporting large exponential histograms as EMF logs
+* [Logs] Reduce EMF exporter verbose logging
+* [Traces] Generate URL section in X-Ray segment when net.peer.name attribute is available
+
+========================================================================
+Amazon CloudWatch Agent 1.300050.0 (2024-11-18)
+========================================================================
+Features:
+* [Prometheus] Introduce OTel Prometheus Receiver for publishing to AMP
+* [Prometheus] Support Target Allocator with Prometheus Receivers
+* [ContainerInsights] Introduce Kueue metrics for Container Insights
+
+========================================================================
 Amazon CloudWatch Agent 1.300049.1 (2024-11-06)
 ========================================================================
 Enhancements:
