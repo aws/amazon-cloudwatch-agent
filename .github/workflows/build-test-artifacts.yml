@@ -16,11 +16,6 @@ on:
       - '!.github/workflows/integration-test.yml'
       - '!.github/workflows/application-signals-e2e-test.yml'
   workflow_dispatch:
-    inputs:
-      test-image-before-upload:
-        description: "Run Test on the new container image"
-        default: true
-        type: boolean
   workflow_call:
     inputs:
       test-image-before-upload:
