@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prune
+package metrichandlers
 
 import (
 	"errors"
@@ -12,10 +12,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 )
 
-type MetricPruner struct {
+type Pruner struct {
 }
 
-func (p *MetricPruner) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
+func (p *Pruner) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
 	for _, attributeKey := range common.CWMetricAttributes {
 		if val, ok := attributes.Get(attributeKey); ok {
 			if !isAsciiPrintable(val.Str()) {
@@ -29,8 +29,8 @@ func (p *MetricPruner) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
 	return false, nil
 }
 
-func NewPruner() *MetricPruner {
-	return &MetricPruner{}
+func NewPruner() *Pruner {
+	return &Pruner{}
 }
 
 func isAsciiPrintable(val string) bool {

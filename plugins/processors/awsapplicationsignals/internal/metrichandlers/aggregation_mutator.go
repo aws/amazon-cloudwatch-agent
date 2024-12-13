@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package aggregation
+package metrichandlers
 
 import (
 	"context"
@@ -17,16 +17,16 @@ const (
 	lastValueAggregation
 )
 
-// AggregationMutator is used to convert predefined ObservableUpDownCounter metrics to use LastValue aggregation. This
+// AggregationMutator is used to convert predefined ObservableUpDownCounter metrics to use LastValue metrichandlers. This
 // is necessary for cases where metrics are instrumented as cumulative, yet reported with snapshot values.
 //
 // For example, metrics like DotNetGCGen0HeapSize may report values such as 1000, 2000, 1000, with cumulative temporality
 // When exporters, such as the EMF exporter, detect these as cumulative, they convert the values to deltas,
 // resulting in outputs like -, 1000, -1000, which misrepresent the data.
 //
-// Normally, this issue could be resolved by configuring a view with LastValue aggregation within the SDK.
+// Normally, this issue could be resolved by configuring a view with LastValue metrichandlers within the SDK.
 // However, since the view feature is not fully supported in .NET, this workaround implements the required
-// conversion to LastValue aggregation to ensure accurate metric reporting.
+// conversion to LastValue metrichandlers to ensure accurate metric reporting.
 // See https://github.com/open-telemetry/opentelemetry-dotnet/issues/2618.
 type AggregationMutator struct {
 	includes map[string]aggregationType
