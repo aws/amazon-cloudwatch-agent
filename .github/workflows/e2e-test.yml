@@ -163,10 +163,9 @@ jobs:
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
       cloudwatch_agent_tag: ${{ github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ inputs.operator-branch }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region }}
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/jvm_tomcat.json
       sample_app: resources/sample_apps/tomcat-deployment.yaml
     secrets: inherit
@@ -185,10 +184,9 @@ jobs:
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
       cloudwatch_agent_tag: ${{ github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ inputs.operator-branch }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region }}
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/kafka.json
       sample_app: resources/sample_apps/kafka-deployment.yaml
     secrets: inherit
@@ -207,10 +205,9 @@ jobs:
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
       cloudwatch_agent_tag: ${{ github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ inputs.operator-branch }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region }}
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/containerinsights.json
       sample_app: resources/sample_apps/tomcat-deployment.yaml
     secrets: inherit
