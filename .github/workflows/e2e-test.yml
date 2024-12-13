@@ -151,7 +151,7 @@ jobs:
           echo "eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}"
 
   EKSE2EJVMTomcatTest:
-    needs: [GenerateTestMatrix, OutputEnvVariables]
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EKSE2EJVMTomcatTest'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -173,7 +173,7 @@ jobs:
     secrets: inherit
 
   EKSE2EKafkaTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EKSE2EKafkaTest'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -195,7 +195,7 @@ jobs:
     secrets: inherit
 
   EKSE2EJMXContainerInsightsTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EKSE2EJMXContainerInsightsTest'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
