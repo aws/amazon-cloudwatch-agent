@@ -11,14 +11,16 @@ on:
     workflow_dispatch:
         inputs:
             operator-branch:
-                required: true
+                required: false
                 type: string
+                description: 'Branch of the operator to test'
                 default: 'main'
     workflow_call:
         inputs:
             operator-branch:
-                required: true
+                required: false
                 type: string
+                description: 'Branch of the operator to test'
                 default: 'main'
 
 jobs:
