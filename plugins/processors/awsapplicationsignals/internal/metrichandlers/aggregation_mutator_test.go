@@ -1,9 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package aggregation
+package metrichandlers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,12 +50,14 @@ func TestAggregationMutator_ProcessMetrics(t *testing.T) {
 			},
 		},
 	}
+
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t1 *testing.T) {
 			mutator := newAggregationMutatorWithConfig(tt.config)
 
 			for _, m := range tt.metrics {
-				mutator.ProcessMetrics(nil, m, pcommon.NewMap())
+				mutator.ProcessMetrics(ctx, m, pcommon.NewMap())
 				assert.Equal(t1, tt.expectedTemporality[m.Name()], m.Sum().AggregationTemporality())
 			}
 		})
@@ -63,13 +66,13 @@ func TestAggregationMutator_ProcessMetrics(t *testing.T) {
 	mutator := NewAggregationMutator()
 
 	m := generateMetricWithSumAggregation("DotNetGCGen0HeapSize", pmetric.AggregationTemporalityCumulative)
-	mutator.ProcessMetrics(nil, m, pcommon.NewMap())
+	mutator.ProcessMetrics(ctx, m, pcommon.NewMap())
 	assert.Equal(t, pmetric.MetricTypeSum, m.Type())
 	assert.Equal(t, pmetric.AggregationTemporalityDelta, m.Sum().AggregationTemporality())
 
 	m.SetEmptyHistogram()
 	m.Histogram().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-	mutator.ProcessMetrics(nil, m, pcommon.NewMap())
+	mutator.ProcessMetrics(ctx, m, pcommon.NewMap())
 	assert.Equal(t, pmetric.MetricTypeHistogram, m.Type())
 	assert.Equal(t, pmetric.AggregationTemporalityCumulative, m.Histogram().AggregationTemporality())
 

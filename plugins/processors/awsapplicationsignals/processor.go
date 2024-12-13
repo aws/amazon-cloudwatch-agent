@@ -16,10 +16,9 @@ import (
 	"golang.org/x/text/language"
 
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/aggregation"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/cardinalitycontrol"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/metrichandlers"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/normalizer"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/prune"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/resolver"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
 )
@@ -52,7 +51,7 @@ type awsapplicationsignalsprocessor struct {
 	metricMutators     []attributesMutator
 	traceMutators      []attributesMutator
 	limiter            cardinalitycontrol.Limiter
-	aggregationMutator aggregation.AggregationMutator
+	aggregationMutator metrichandlers.AggregationMutator
 	stoppers           []stopper
 }
 
@@ -78,12 +77,12 @@ func (ap *awsapplicationsignalsprocessor) StartMetrics(ctx context.Context, _ co
 
 	ap.replaceActions = rules.NewReplacer(ap.config.Rules, !limiterConfig.Disabled)
 
-	pruner := prune.NewPruner()
+	pruner := metrichandlers.NewPruner()
 	keeper := rules.NewKeeper(ap.config.Rules, !limiterConfig.Disabled)
 	dropper := rules.NewDropper(ap.config.Rules)
 	ap.allowlistMutators = []allowListMutator{pruner, keeper, dropper}
 
-	ap.aggregationMutator = aggregation.NewAggregationMutator()
+	ap.aggregationMutator = metrichandlers.NewAggregationMutator()
 
 	return nil
 }
