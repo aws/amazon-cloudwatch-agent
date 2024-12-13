@@ -92,6 +92,7 @@ jobs:
       CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
       ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
+      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
     steps:
       - uses: actions/checkout@v3
         with:
