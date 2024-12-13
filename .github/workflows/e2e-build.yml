@@ -4,9 +4,6 @@
 name: Build End-to-End Test Artifacts
 env:
     OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
-    ECR_TARGET_ALLOCATOR_STAGING_REPO: ${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO}}
-    ECR_OPERATOR_RELEASE_IMAGE: ${{ vars.ECR_TARGET_ALLOCATOR_TEST_OPERATOR_REPO}}
-
 on:
     workflow_dispatch:
         inputs:
@@ -56,7 +53,7 @@ jobs:
             test-image-before-upload: false            
     BuildOperator:
         needs: [GetLatestOperatorCommitSHA]
-        uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@e2e-testing
+        uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
         concurrency:
             group: ${{ github.workflow }}-operator-${{ inputs.operator-branch}}
             cancel-in-progress: true
