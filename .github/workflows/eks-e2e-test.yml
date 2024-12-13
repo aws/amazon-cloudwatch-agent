@@ -124,6 +124,7 @@ jobs:
             terraform apply --auto-approve \
               -var="region=${{ inputs.region }}" \
               -var="k8s_version=${{ matrix.arrays.k8s_version }}" \
+              -var="terraform_assume_role=${{ inputs.terraform_assume_role }}" \
               -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
               -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
               -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
