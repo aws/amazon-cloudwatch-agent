@@ -52,10 +52,11 @@ func NewTranslatorWithStatusCode(name component.DataType, operations []string, i
 
 func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
 	return &translator{
-		name:               name.String(),
-		operations:         operations,
-		factory:            agenthealth.NewFactory(),
-		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+		name:                name.String(),
+		operations:          operations,
+		factory:             agenthealth.NewFactory(),
+		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+		isStatusCodeEnabled: true,
 	}
 }
 
