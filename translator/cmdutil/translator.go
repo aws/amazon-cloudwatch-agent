@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package cmdutil
 
 import (
@@ -11,7 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	userutil "github.com/aws/amazon-cloudwatch-agent/internal/util/user"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -27,6 +29,22 @@ const (
 
 type ConfigTranslator struct {
 	ctx *context.Context
+}
+
+func RunTranslator(flags map[string]*string) error {
+	ct, err := NewConfigTranslator(
+		*flags["os"],
+		*flags["input"],
+		*flags["input-dir"],
+		*flags["output"],
+		*flags["mode"],
+		*flags["config"],
+		*flags["multi-config"],
+	)
+	if err != nil {
+		return err
+	}
+	return ct.Translate()
 }
 
 func NewConfigTranslator(inputOs, inputJsonFile, inputJsonDir, inputTomlFile, inputMode, inputConfig, multiConfig string) (*ConfigTranslator, error) {
