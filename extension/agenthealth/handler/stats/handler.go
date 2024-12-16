@@ -27,6 +27,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	var responseHandlers []awsmiddleware.ResponseHandler
 	var statsProviders []agent.StatsProvider
 
+	log.Println("In Handler ------------------- NE")
 	if !statusCodeEnabled && !agentStatsEnabled {
 		return nil, nil
 	}
