@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -77,6 +78,7 @@ func (sp *StatusCodeProvider) EnqueueStatusCode(operation string, statusCode int
 func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
+	log.Println("Processing status codes")
 
 	stats, exists := sp.currentStats[entry.operation]
 	if !exists {
@@ -96,6 +98,8 @@ func (sp *StatusCodeProvider) processStatusCode(entry statusCodeEntry) {
 	case 429:
 		stats[4]++
 	}
+	log.Println("updating entry: ", entry.operation, entry.statusCode)
+	log.Println("CurrentStats: \n---> ", sp.currentStats)
 }
 
 func (sp *StatusCodeProvider) RotateStats() {

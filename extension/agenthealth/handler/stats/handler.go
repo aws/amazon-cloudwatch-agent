@@ -5,6 +5,7 @@ package stats
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"sync"
 
@@ -31,6 +32,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	}
 
 	if statusCodeEnabled {
+		log.Println("StatusCode Enabled")
 		statusCodeFilter := agent.NewStatusCodeOperationsFilter()
 		statusCodeStatsProvider := provider.GetStatusCodeStatsProvider()
 		statusCodeHandler := provider.NewStatusCodeHandler(statusCodeStatsProvider, statusCodeFilter)
