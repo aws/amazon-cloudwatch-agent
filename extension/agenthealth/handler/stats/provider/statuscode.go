@@ -72,6 +72,7 @@ func (sp *StatusCodeProvider) startProcessing() {
 }
 
 func (sp *StatusCodeProvider) EnqueueStatusCode(operation string, statusCode int) {
+	log.Println("Enqueueing this operation: ", operation, statusCode)
 	sp.statusCodeChan <- statusCodeEntry{operation: operation, statusCode: statusCode}
 }
 
@@ -146,12 +147,16 @@ func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsF
 
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
+	log.Println("Operation:")
+	log.Println(operation)
+
 	if !h.filter.IsAllowed(operation) {
 		return
 	}
 
 	operation = agent.GetShortOperationName(operation)
 	if operation == "" {
+		log.Println("There is no short name for this operation")
 		return
 	}
 
