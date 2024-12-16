@@ -6,6 +6,7 @@ package ec2tagger
 import (
 	"context"
 	"hash/fnv"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -325,8 +326,11 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		}
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
+		log.Println("ec2 tagger start function")
 		if client, ok := t.ec2API.(*ec2.EC2); ok {
 			if t.Config.MiddlewareID != nil {
+				log.Println("MiddlewareID")
+				log.Println(*t.Config.MiddlewareID)
 				awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
 			}
 		}

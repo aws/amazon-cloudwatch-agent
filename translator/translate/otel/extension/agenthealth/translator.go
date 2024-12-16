@@ -28,6 +28,8 @@ var (
 	MetricsID = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
 	LogsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
 	TracesID  = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	StatusCodeID  = component.NewIDWithName(agenthealth.TypeStr, "statuscode")
+
 )
 
 type translator struct {

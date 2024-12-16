@@ -4,6 +4,7 @@
 package ec2taggerprocessor
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -63,7 +64,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.DiskDeviceTagKey = "device"
 	}
 
-	//cfg.MiddlewareID = &agenthealth.StatusCodeID
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	cfg.RefreshIntervalSeconds = time.Duration(0)
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
