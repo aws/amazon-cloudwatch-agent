@@ -53,6 +53,7 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 2
+        middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
         shared_credential_file: fake-path

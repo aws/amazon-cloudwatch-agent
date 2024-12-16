@@ -4,7 +4,6 @@
 package ec2taggerprocessor
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -15,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
 var Ec2taggerKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)
