@@ -1,0 +1,160 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Reusable EKS E2E Test
+
+env:
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+
+on:
+  workflow_call:
+    inputs:
+      terraform_dir:
+        required: true
+        type: string
+      job_id:
+        required: true
+        type: string
+      test_props:
+        required: true
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      cloudwatch_agent_repository:
+        required: true
+        type: string
+      cloudwatch_agent_tag:
+        required: true
+        type: string
+      cloudwatch_agent_operator_repository:
+        required: true
+        type: string
+      cloudwatch_agent_target_allocator_repository:
+        required: false
+        type: string
+      cloudwatch_agent_operator_tag:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      helm_charts_branch:
+        required: true
+        type: string
+      terraform_assume_role:
+        required: true
+        type: string
+      agent_config:
+        required: true
+        type: string
+      prometheus_config:
+        required: false
+        type: string
+        default: ""
+      otel_config:
+        required: false
+        type: string
+        default: ""
+      sample_app:
+        required: true
+        type: string
+
+jobs:
+  EKSE2ETest:
+    name: 'EKSE2ETest'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(inputs.test_props) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Cache if success
+        id: cache_if_success
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Login ECR
+        id: login-ecr
+        if: steps.cache_if_success.outputs.cache-hit != 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Verify Terraform version
+        if: steps.cache_if_success.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.cache_if_success.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/e2e
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="region=${{ inputs.region }}" \
+              -var="k8s_version=${{ matrix.arrays.k8s_version }}" \
+              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
+              -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
+              -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
+              -var="cloudwatch_agent_operator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}" \
+              -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
+              -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
+              -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="agent_config=${{ inputs.agent_config }}" \
+              -var="prometheus_config=${{ inputs.prometheus_config }}" \
+              -var="otel_config=${{ inputs.otel_config }}" \
+              -var="sample_app=${{ inputs.sample_app }}"; then
+              terraform destroy --auto-approve
+            else
+              terraform destroy --auto-approve && exit 1
+            fi
+            
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/e2e
+            fi
+            terraform destroy --auto-approve
