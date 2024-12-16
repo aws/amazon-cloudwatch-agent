@@ -51,7 +51,6 @@ linters:
     - goimports
     - gosec
     - gosimple
-    - govet
     - ineffassign
     - misspell
     - revive

@@ -405,6 +405,7 @@ func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 
 }
+
 func TestOtelPrometheusConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

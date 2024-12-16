@@ -7,9 +7,13 @@ import (
 	_ "embed"
 	"sync"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
 )
 
@@ -23,6 +27,7 @@ type Prometheus struct {
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
+	middleware           awsmiddleware.Middleware
 }
 
 func (p *Prometheus) SampleConfig() string {
@@ -39,8 +44,10 @@ func (p *Prometheus) Gather(_ telegraf.Accumulator) error {
 
 func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 	mth := NewMetricsTypeHandler()
+
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
-	handler := &metricsHandler{mbCh: p.mbCh,
+	handler := &metricsHandler{
+		mbCh:        p.mbCh,
 		acc:         accIn,
 		calculator:  NewCalculator(),
 		filter:      NewMetricsFilter(),
@@ -48,10 +55,22 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 		mtHandler:   mth,
 	}
 
-	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+	var configurer *awsmiddleware.Configurer
+	var ecssd *ecsservicediscovery.ServiceDiscovery
+	needEcssd := true
 
-	// Start ECS Service Discovery when in ECS
-	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus-Setup-autodiscovery-ecs.html
+	if p.middleware != nil {
+		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
+		if configurer != nil {
+			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
+			needEcssd = false
+		}
+	}
+	if needEcssd {
+		ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+	}
+
+	// Launch ECS Service Discovery as a goroutine
 	p.wg.Add(1)
 	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
 
@@ -77,6 +96,14 @@ func init() {
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),
 			shutDownChan: make(chan interface{}),
+			middleware: agenthealth.NewAgentHealth(
+				zap.NewNop(),
+				&agenthealth.Config{
+					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+					IsStatusCodeEnabled: true,
+				},
+			),
 		}
+
 	})
 }

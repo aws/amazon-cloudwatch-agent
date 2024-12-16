@@ -28,14 +28,21 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-west-2
 processors:
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -44,6 +51,7 @@ processors:
             - InstanceType
             - ImageId
         imds_retries: 1
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
     telegraf_socket_listener:
@@ -57,6 +65,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         metrics/hostCustomMetrics:

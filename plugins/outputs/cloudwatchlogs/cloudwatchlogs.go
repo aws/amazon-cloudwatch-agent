@@ -402,8 +402,9 @@ func init() {
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
-					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
-					Stats:              &agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+					IsUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+					Stats:               &agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+					IsStatusCodeEnabled: true,
 				},
 			),
 		}

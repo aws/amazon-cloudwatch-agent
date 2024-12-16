@@ -48,7 +48,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithStructuredLogKey": {
@@ -64,7 +64,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithUdpServiceAddress": {
@@ -82,7 +82,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithTcpServiceAddress": {
@@ -100,7 +100,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"tcplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}
