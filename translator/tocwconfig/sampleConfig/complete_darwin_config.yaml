@@ -83,6 +83,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
@@ -100,8 +107,8 @@ processors:
         platform: ec2
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -126,9 +133,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
@@ -138,11 +145,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "disk_free"
-                  - set(name, "DISK_FREE") where name == "disk_free"
-                  - set(unit, "unit") where name == "cpu_usage_idle"
-                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                  - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "cpu_usage_idle"
+                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
 receivers:
     awsxray:
@@ -256,6 +263,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - agenthealth/logs
         - agenthealth/traces
         - entitystore
@@ -275,13 +283,13 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_procstat/1917393364
-                - telegraf_cpu
-                - telegraf_mem
                 - telegraf_netstat
-                - telegraf_processes
-                - telegraf_swap
                 - telegraf_disk
+                - telegraf_processes
+                - telegraf_procstat/1917393364
+                - telegraf_mem
+                - telegraf_swap
+                - telegraf_cpu
         metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch

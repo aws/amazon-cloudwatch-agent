@@ -22,20 +22,27 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-west-2
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceId
             - InstanceType
             - ImageId
-            - InstanceId
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
@@ -45,9 +52,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "cpu_usage_idle"
-                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                  - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "cpu_usage_idle"
+                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                - set(unit, "unit") where name == "cpu_usage_nice"
         trace_statements: []
 receivers:
     telegraf_cpu:
@@ -65,6 +72,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         metrics/host:
@@ -75,9 +83,9 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_nvidia_smi
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_nvidia_smi
     telemetry:
         logs:
             development: false

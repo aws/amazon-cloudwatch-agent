@@ -63,6 +63,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.DiskDeviceTagKey = "device"
 	}
 
+	//cfg.MiddlewareID = &agenthealth.StatusCodeID
 	cfg.RefreshIntervalSeconds = time.Duration(0)
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
