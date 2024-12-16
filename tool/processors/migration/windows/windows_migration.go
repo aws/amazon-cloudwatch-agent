@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/ssm"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	wizardflags "github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
 )
 
 var Processor processors.Processor = &processor{}
@@ -21,9 +22,8 @@ var Processor processors.Processor = &processor{}
 type processor struct{}
 
 const (
-	anyExistingLinuxConfigQuestion      = "Do you have any existing CloudWatch Log Agent configuration file to import for migration?"
-	filePathWindowsConfigQuestion       = "What is the file path for the existing Windows CloudWatch log agent configuration file?"
-	DefaultFilePathWindowsConfiguration = "C:\\Program Files\\Amazon\\SSM\\Plugins\\awsCloudWatch\\AWS.EC2.Windows.CloudWatch.json"
+	anyExistingLinuxConfigQuestion = "Do you have any existing CloudWatch Log Agent configuration file to import for migration?"
+	filePathWindowsConfigQuestion  = "What is the file path for the existing Windows CloudWatch log agent configuration file?"
 )
 
 func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
@@ -40,7 +40,7 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 func migrateOldAgentConfig() {
 	// 1 - parse the old config
 	var oldConfig OldSsmCwConfig
-	absPath := util.AskWithDefault(filePathWindowsConfigQuestion, DefaultFilePathWindowsConfiguration)
+	absPath := util.AskWithDefault(filePathWindowsConfigQuestion, wizardflags.DefaultFilePathWindowsConfiguration)
 	if file, err := os.ReadFile(absPath); err == nil {
 		if err := json.Unmarshal(file, &oldConfig); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse the provided configuration file. Error details: %v", err)
