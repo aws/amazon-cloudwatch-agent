@@ -4,12 +4,12 @@
 package ecsservicediscovery
 
 import (
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/stretchr/testify/mock"
 	"sync"
 	"testing"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func Test_ServiceDiscovery_InitPipelines(t *testing.T) {
