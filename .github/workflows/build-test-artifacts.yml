@@ -16,6 +16,12 @@ on:
       - '!.github/workflows/integration-test.yml'
       - '!.github/workflows/application-signals-e2e-test.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      test-image-before-upload:
+        description: "Run Test on the new container image"
+        default: true
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -87,6 +93,7 @@ jobs:
 
   StartIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    if: ${{inputs.test-image-before-upload == null || inputs.test-image-before-upload}}
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
@@ -96,7 +103,7 @@ jobs:
   StartApplicationSignalsE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
     # Workflow only runs against main
-    if: ${{ contains(github.ref_name, 'main') }}
+    if: ${{ contains(github.ref_name, 'main')  && (inputs.test-image-before-upload == null ||inputs.test-image-before-upload) }}
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
