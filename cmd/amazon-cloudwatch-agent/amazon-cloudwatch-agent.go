@@ -21,7 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -42,13 +41,19 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
+	"github.com/aws/amazon-cloudwatch-agent/tool/downloader"
+	downloaderflags "github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/tool/wizard"
+	wizardflags "github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	translatorflags "github.com/aws/amazon-cloudwatch-agent/translator/flags"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 )
 
@@ -96,15 +101,10 @@ var fRunAsConsole = flag.Bool("console", false, "run as console application (win
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
 
-// config-translator
-var fConfigTranslator = flag.Bool("config-translator", false, "run in config-translator mode")
-var fTranslatorOs = flag.String("ct-os", "", "Please provide the os preference, valid value: windows/linux.")
-var fTranslatorInput = flag.String("ct-input", "", "Please provide the path of input agent json config file")
-var fTranslatorInputDir = flag.String("ct-input-dir", "", "Please provide the path of input agent json config directory.")
-var fTranslatorOutput = flag.String("ct-output", "", "Please provide the path of the output CWAgent config file")
-var fTranslatorMode = flag.String("ct-mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, onPrem, auto")
-var fTranslatorConfig = flag.String("ct-config", "", "Please provide the common-config file")
-var fTranslatorMultiConfig = flag.String("ct-multi-config", "remove", "valid values: default, append, remove")
+// sub-commands
+var fConfigTranslator = flag.Bool(translatorflags.TranslatorCommand, false, "run in config-translator mode")
+var fConfigDownloader = flag.Bool(downloaderflags.Command, false, "run in config-downloader mode")
+var fConfigWizard = flag.Bool(wizardflags.Command, false, "run in config-wizard mode")
 
 var stop chan struct{}
 
@@ -503,6 +503,10 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
+	translatorFlags := cmdwrapper.AddFlags(translatorflags.TranslatorCommand, translatorflags.TranslatorFlags)
+	downloaderFlags := cmdwrapper.AddFlags(downloaderflags.Command, downloaderflags.DownloaderFlags)
+	wizardFlags := cmdwrapper.AddFlags(wizardflags.Command, wizardflags.WizardFlags)
+
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
 		_ = fOtelConfigs.Set(getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath))
@@ -626,13 +630,21 @@ func main() {
 		}
 		return
 	case *fConfigTranslator:
-		ct, err := cmdutil.NewConfigTranslator(*fTranslatorOs, *fTranslatorInput, *fTranslatorInputDir, *fTranslatorOutput, *fTranslatorMode, *fTranslatorConfig, *fTranslatorMultiConfig)
+		err := cmdutil.RunTranslator(translatorFlags)
 		if err != nil {
 			log.Fatalf("E! Failed to initialize config translator: %v", err)
 		}
-		err = ct.Translate()
+		return
+	case *fConfigDownloader:
+		err := downloader.RunDownloaderFromFlags(downloaderFlags)
 		if err != nil {
-			log.Fatalf("E! Failed to translate config: %v", err)
+			log.Fatalf("E! Failed to initialize config downloader: %v", err)
+		}
+		return
+	case *fConfigWizard:
+		err := wizard.RunWizardFromFlags(wizardFlags)
+		if err != nil {
+			log.Fatalf("E! Failed to run config wizard: %v", err)
 		}
 		return
 	}
