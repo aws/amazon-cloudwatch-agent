@@ -10,10 +10,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {

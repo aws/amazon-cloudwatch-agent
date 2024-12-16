@@ -1,0 +1,220 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package downloader
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ssm"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	sdkutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
+)
+
+const (
+	locationDefault = "default"
+	locationSSM     = "ssm"
+	locationFile    = "file"
+
+	locationSeparator = ":"
+
+	exitErrorMessage = "Fail to fetch the config!"
+)
+
+func EscapeFilePath(filePath string) (escapedFilePath string) {
+	escapedFilePath = filepath.ToSlash(filePath)
+	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
+	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
+	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
+	return
+}
+
+func RunDownloaderFromFlags(flags map[string]*string) error {
+	return RunDownloader(
+		*flags["mode"],
+		*flags["download-source"],
+		*flags["output-dir"],
+		*flags["config"],
+		*flags["multi-config"],
+	)
+}
+
+/**
+ *	multi-config:
+ *			default, append: download config to the dir and append .tmp suffix
+ *			remove: remove the config from the dir
+ */
+func RunDownloader(
+	mode string,
+	downloadLocation string,
+	outputDir string,
+	inputConfig string,
+	multiConfig string,
+) error {
+	// Initialize common config
+	cc := commonconfig.New()
+	if inputConfig != "" {
+		f, err := os.Open(inputConfig)
+		if err != nil {
+			return fmt.Errorf("failed to open Common Config: %v", err)
+		}
+		defer f.Close()
+
+		if err := cc.Parse(f); err != nil {
+			return fmt.Errorf("failed to parse Common Config: %v", err)
+		}
+	}
+
+	// Set proxy and SSL environment
+	util.SetProxyEnv(cc.ProxyMap())
+	util.SetSSLEnv(cc.SSLMap())
+
+	// Validate required parameters
+	if downloadLocation == "" || outputDir == "" {
+		executable, err := os.Executable()
+		if err == nil {
+			return fmt.Errorf("usage: %s --output-dir <path> --download-source ssm:<parameter-store-name>",
+				filepath.Base(executable))
+		}
+		return fmt.Errorf("usage: --output-dir <path> --download-source ssm:<parameter-store-name>")
+	}
+
+	// Detect agent mode and region
+	mode = sdkutil.DetectAgentMode(mode)
+	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
+
+	// Validate region
+	if region == "" && downloadLocation != locationDefault {
+		if mode == config.ModeEC2 {
+			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
+		}
+		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
+	}
+
+	// Clean up output directory
+	err := filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("cannot access %v: %v", path, err)
+		}
+		if info.IsDir() {
+			if strings.EqualFold(path, outputDir) {
+				return nil
+			}
+			fmt.Printf("Sub dir %v will be ignored.", path)
+			return filepath.SkipDir
+		}
+		if filepath.Ext(path) == constants.FileSuffixTmp {
+			return os.Remove(path)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Parse download location
+	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
+	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
+		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
+	}
+
+	// Process configuration based on location type
+	var config, outputFilePath string
+	switch locationArray[0] {
+	case locationDefault:
+		outputFilePath = locationDefault
+		if multiConfig != "remove" {
+			config, err = defaultJsonConfig(mode)
+		}
+	case locationSSM:
+		outputFilePath = locationSSM + "_" + EscapeFilePath(locationArray[1])
+		if multiConfig != "remove" {
+			config, err = downloadFromSSM(region, locationArray[1], mode, cc.CredentialsMap())
+		}
+	case locationFile:
+		outputFilePath = locationFile + "_" + EscapeFilePath(filepath.Base(locationArray[1]))
+		if multiConfig != "remove" {
+			config, err = readFromFile(locationArray[1])
+		}
+	default:
+		return fmt.Errorf("location type %s is not supported", locationArray[0])
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Handle configuration based on multiConfig setting
+	if multiConfig == "remove" {
+		outputPath := filepath.Join(outputDir, outputFilePath)
+		if err := os.Remove(outputPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove file %s: %v", outputPath, err)
+		}
+	} else {
+		outputPath := filepath.Join(outputDir, outputFilePath+constants.FileSuffixTmp)
+		if err := os.WriteFile(outputPath, []byte(config), 0644); err != nil {
+			return fmt.Errorf("failed to write to file %s: %v", outputPath, err)
+		}
+	}
+
+	return nil
+}
+
+func defaultJsonConfig(mode string) (string, error) {
+	return config.DefaultJsonConfig(config.ToValidOs(""), mode), nil
+}
+
+func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[string]string) (string, error) {
+	fmt.Printf("Region: %v\n", region)
+	fmt.Printf("credsConfig: %v\n", credsConfig)
+	var ses *session.Session
+	credsMap := util.GetCredentials(mode, credsConfig)
+	profile, profileOk := credsMap[commonconfig.CredentialProfile]
+	sharedConfigFile, sharedConfigFileOk := credsMap[commonconfig.CredentialFile]
+	rootconfig := &aws.Config{
+		Region:   aws.String(region),
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
+	}
+	if profileOk || sharedConfigFileOk {
+		rootconfig.Credentials = credentials.NewCredentials(&credentials.SharedCredentialsProvider{
+			Filename: sharedConfigFile,
+			Profile:  profile,
+		})
+	}
+
+	ses, err := session.NewSession(rootconfig)
+	if err != nil {
+		fmt.Printf("Error in creating session: %v\n", err)
+		return "", err
+	}
+
+	ssmClient := ssm.New(ses)
+	input := ssm.GetParameterInput{
+		Name:           aws.String(parameterStoreName),
+		WithDecryption: aws.Bool(true),
+	}
+	output, err := ssmClient.GetParameter(&input)
+	if err != nil {
+		fmt.Printf("Error in retrieving parameter store content: %v\n", err)
+		return "", err
+	}
+
+	return *output.Parameter.Value, nil
+}
+
+func readFromFile(filePath string) (string, error) {
+	bytes, err := os.ReadFile(filePath)
+	return string(bytes), err
+}
