@@ -45,7 +45,7 @@ func NewTranslatorWithStatusCode(name component.DataType, operations []string, i
 		name:                name.String(),
 		operations:          operations,
 		factory:             agenthealth.NewFactory(),
-		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+		isUsageDataEnabled:  true,
 		isStatusCodeEnabled: isStatusCodeEnabled,
 	}
 }

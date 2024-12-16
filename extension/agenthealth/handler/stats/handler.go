@@ -28,6 +28,11 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	var statsProviders []agent.StatsProvider
 
 	log.Println("In Handler ------------------- NE")
+	log.Println("CFG below")
+	log.Println(cfg)
+	log.Println("agentStats below")
+	log.Println(agentStatsEnabled)
+
 	if !statusCodeEnabled && !agentStatsEnabled {
 		return nil, nil
 	}
