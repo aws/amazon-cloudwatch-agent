@@ -6,7 +6,6 @@ package awscontainerinsight
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"strings"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
