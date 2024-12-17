@@ -60,11 +60,11 @@ func newMockGetServiceNameAndSource(service, source string) func() (string, stri
 	}
 }
 
-func newMockGetEC2InfoFromEntityStore(instance, accountId string) func() entitystore.EC2Info {
+func newMockGetEC2InfoFromEntityStore(instance, accountID string) func() entitystore.EC2Info {
 	return func() entitystore.EC2Info {
 		return entitystore.EC2Info{
 			InstanceID: instance,
-			AccountID:  accountId,
+			AccountID:  accountID,
 		}
 	}
 }
