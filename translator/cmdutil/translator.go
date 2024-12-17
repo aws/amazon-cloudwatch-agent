@@ -47,17 +47,17 @@ func RunTranslator(flags map[string]*string) error {
 	return ct.Translate()
 }
 
-func NewConfigTranslator(inputOs, inputJsonFile, inputJsonDir, inputTomlFile, inputMode, inputConfig, multiConfig string) (*ConfigTranslator, error) {
+func NewConfigTranslator(inputOs, inputJSONFile, inputJSONDir, inputTOMLFile, inputMode, inputConfig, multiConfig string) (*ConfigTranslator, error) {
 
 	ct := ConfigTranslator{
 		ctx: context.CurrentContext(),
 	}
 
 	ct.ctx.SetOs(inputOs)
-	ct.ctx.SetInputJsonFilePath(inputJsonFile)
-	ct.ctx.SetInputJsonDirPath(inputJsonDir)
+	ct.ctx.SetInputJsonFilePath(inputJSONFile)
+	ct.ctx.SetInputJsonDirPath(inputJSONDir)
 	ct.ctx.SetMultiConfig(multiConfig)
-	ct.ctx.SetOutputTomlFilePath(inputTomlFile)
+	ct.ctx.SetOutputTomlFilePath(inputTOMLFile)
 
 	if inputConfig != "" {
 		f, err := os.Open(inputConfig)
@@ -97,7 +97,7 @@ func (ct *ConfigTranslator) Translate() error {
 		}
 	}()
 
-	mergedJsonConfigMap, err := GenerateMergedJsonConfigMap(ct.ctx)
+	mergedJSONConfigMap, err := GenerateMergedJsonConfigMap(ct.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to generate merged json config: %v", err)
 	}
@@ -105,7 +105,7 @@ func (ct *ConfigTranslator) Translate() error {
 	if !ct.ctx.RunInContainer() {
 		current, err := user.Current()
 		if err == nil && current.Name == "****" {
-			runAsUser, err := userutil.DetectRunAsUser(mergedJsonConfigMap)
+			runAsUser, err := userutil.DetectRunAsUser(mergedJSONConfigMap)
 			if err != nil {
 				return fmt.Errorf("failed to detectRunAsUser")
 			}
@@ -116,11 +116,11 @@ func (ct *ConfigTranslator) Translate() error {
 	tomlConfigPath := GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
 	tomlConfigDir := filepath.Dir(tomlConfigPath)
 	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
-	tomlConfig, err := TranslateJsonMapToTomlConfig(mergedJsonConfigMap)
+	tomlConfig, err := TranslateJsonMapToTomlConfig(mergedJSONConfigMap)
 	if err != nil {
 		return fmt.Errorf("failed to generate TOML configuration validation content: %v", err)
 	}
-	yamlConfig, err := TranslateJsonMapToYamlConfig(mergedJsonConfigMap)
+	yamlConfig, err := TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
 	if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
 		return fmt.Errorf("failed to generate YAML configuration validation content: %v", err)
 	}
@@ -133,7 +133,7 @@ func (ct *ConfigTranslator) Translate() error {
 	log.Println(exitSuccessMessage)
 
 	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
-	TranslateJsonMapToEnvConfigFile(mergedJsonConfigMap, envConfigPath)
+	TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
 
 	return nil
 }

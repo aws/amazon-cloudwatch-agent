@@ -15,7 +15,6 @@ import (
 )
 
 type Flag struct {
-	Name         string
 	DefaultValue string
 	Description  string
 }
@@ -28,7 +27,7 @@ var execCommand = exec.Command
 func AddFlags(prefix string, flagConfigs map[string]Flag) map[string]*string {
 	flags := make(map[string]*string)
 	for key, flagConfig := range flagConfigs {
-		flagName := flagConfig.Name
+		flagName := key
 		if prefix != "" {
 			flagName = prefix + delimiter + flagName
 		}
@@ -52,6 +51,7 @@ func ExecuteAgentCommand(command string, flags map[string]*string) error {
 	cmd := execCommand(paths.AgentBinaryPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError

@@ -22,7 +22,7 @@ import (
 )
 
 type IMainProcessor interface {
-	VerifyProcessor(processor interface{})
+	VerifyProcessor(_processor interface{})
 }
 
 type MainProcessorStruct struct{}
@@ -42,7 +42,10 @@ type Params struct {
 }
 
 func init() {
-	stdin.Scanln = func(a ...interface{}) (n int, err error) {
+	stdin.Scanln = func(a ...interface{}) (int, error) {
+		var n int
+		var err error
+
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
 		if len(a) > 0 {
@@ -50,7 +53,7 @@ func init() {
 			n = len(*a[0].(*string))
 		}
 		err = scanner.Err()
-		return
+		return n, err
 	}
 	processors.StartProcessor = basicInfo.Processor
 }
@@ -140,5 +143,5 @@ func startProcessing(configOutputPath string, isNonInteractiveWindowsMigration, 
 	}
 }
 
-func (p *MainProcessorStruct) VerifyProcessor(processor interface{}) {
+func (p *MainProcessorStruct) VerifyProcessor(interface{}) {
 }
