@@ -6,6 +6,7 @@ package awscontainerinsight
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"strings"
 	"time"
 
@@ -119,12 +120,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		t.setHostIP(conf, cfg)
 		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
-
-	// > [!WARNING]
-	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
-	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
-	// > This will be added when contrib changes are made.
-
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 	cfg.EnableAcceleratedComputeMetrics = cfg.EnableAcceleratedComputeMetrics || AcceleratedComputeMetricsEnabled(conf)
 
