@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -23,6 +24,7 @@ type ServiceDiscovery struct {
 
 	stats             ProcessorStats
 	clusterProcessors []Processor
+	Configurer        *awsmiddleware.Configurer
 }
 
 func (sd *ServiceDiscovery) init() {
@@ -31,7 +33,20 @@ func (sd *ServiceDiscovery) init() {
 	}
 	configProvider := credentialConfig.Credentials()
 	sd.svcEcs = ecs.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
+
+	if sd.Configurer != nil {
+		if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEcs.Handlers)); err != nil {
+			log.Printf("ERROR: Failed to configure ECS client: %v", err)
+		}
+	}
+
 	sd.svcEc2 = ec2.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
+
+	if sd.Configurer != nil {
+		if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEc2.Handlers)); err != nil {
+			log.Printf("ERROR: Failed to configure EC2 client: %v", err)
+		}
+	}
 
 	sd.initClusterProcessorPipeline()
 }
@@ -70,8 +85,8 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 
 func (sd *ServiceDiscovery) work() {
 	sd.stats.ResetStats()
-	var err error
 	var clusterTasks []*DecoratedTask
+	var err error
 	for _, p := range sd.clusterProcessors {
 		clusterTasks, err = p.Process(sd.Config.TargetCluster, clusterTasks)
 		// Ignore partial result to avoid overwriting existing targets
