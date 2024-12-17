@@ -54,19 +54,6 @@ func newAddToMockEntityStore(rs *mockEntityStore) func(entitystore.LogGroupName,
 	}
 }
 
-func newMockGetMetricAttributesFromEntityStore() func() map[string]*string {
-	mockPlatform := "AWS::EC2"
-	mockInstanceID := "i-123456789"
-	mockAutoScalingGroup := "auto-scaling"
-	return func() map[string]*string {
-		return map[string]*string{
-			entitystore.PlatformType:  &mockPlatform,
-			entitystore.InstanceIDKey: &mockInstanceID,
-			entitystore.ASGKey:        &mockAutoScalingGroup,
-		}
-	}
-}
-
 func newMockGetServiceNameAndSource(service, source string) func() (string, string) {
 	return func() (string, string) {
 		return service, source

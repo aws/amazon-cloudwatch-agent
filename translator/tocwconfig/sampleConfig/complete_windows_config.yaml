@@ -83,6 +83,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
@@ -97,11 +104,11 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -120,6 +127,7 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 1
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
     transform:
         error_mode: propagate
@@ -243,6 +251,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - agenthealth/logs
         - agenthealth/traces
         - entitystore
