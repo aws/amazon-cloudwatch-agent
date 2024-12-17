@@ -999,6 +999,7 @@ processors:
                 faas.version:
                     enabled: true
         max_idle_conns: 100
+        middleware: agenthealth/statuscode
         openshift:
             address: ""
             resource_attributes:
