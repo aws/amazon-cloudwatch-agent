@@ -5,6 +5,7 @@ package resourcedetection
 
 import (
 	_ "embed"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -63,10 +64,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-	// > [!WARNING]
-	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
-	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
-	// > This will be added when contrib changes are made.
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	mode := context.CurrentContext().KubernetesMode()
 	if mode == "" {
 		mode = context.CurrentContext().Mode()
@@ -76,15 +74,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			mode = config.ModeECS
 		}
 	}
-
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	switch mode {
 	case config.ModeECS:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsECSResourceDetectionConfig)
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}
-	// > [!WARNING]
-	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
-	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
-	// > This will be added when contrib changes are made.
+
 }
