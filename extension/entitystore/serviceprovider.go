@@ -80,9 +80,9 @@ func (s *serviceprovider) startServiceProvider() {
 		return
 	}
 	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
-	limitedRetryer := NewRetryer(false, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
+	unlimitedRetryerUntilSuccess := NewRetryer(true, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
 	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
-	go limitedRetryer.refreshLoop(s.scrapeImdsServiceNameAndASG)
+	go unlimitedRetryerUntilSuccess.refreshLoop(s.scrapeImdsServiceNameAndASG)
 }
 
 func (s *serviceprovider) GetIAMRole() string {
