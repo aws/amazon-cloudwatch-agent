@@ -95,6 +95,7 @@ func TestTranslate(t *testing.T) {
 						},
 					},
 				},
+				"middleware": "agenthealth/statuscode",
 			}),
 		},
 		"WithAppSignalsEnabledOnEC2": {
@@ -116,6 +117,7 @@ func TestTranslate(t *testing.T) {
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^kubernetes.io/cluster/.*$", "^aws:autoscaling:groupName"},
 				},
+				"middleware": "agenthealth/statuscode",
 			}),
 		},
 	}
