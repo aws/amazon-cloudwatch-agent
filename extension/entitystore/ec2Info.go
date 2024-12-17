@@ -29,7 +29,7 @@ type EC2Info struct {
 	AccountID  string
 
 	// region is used while making call to describeTags Ec2 API for AutoScalingGroup
-	Region         string
+	Region string
 
 	metadataProvider ec2metadataprovider.MetadataProvider
 	logger           *zap.Logger
