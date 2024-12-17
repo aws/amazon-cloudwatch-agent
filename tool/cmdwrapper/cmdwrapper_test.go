@@ -26,7 +26,6 @@ func TestAddFlags(t *testing.T) {
 			prefix: "",
 			flagConfigs: map[string]Flag{
 				"test": {
-					Name:         "test",
 					DefaultValue: "default",
 					Description:  "test description",
 				},
@@ -40,7 +39,6 @@ func TestAddFlags(t *testing.T) {
 			prefix: "prefix",
 			flagConfigs: map[string]Flag{
 				"test": {
-					Name:         "test",
 					DefaultValue: "default",
 					Description:  "test description",
 				},
