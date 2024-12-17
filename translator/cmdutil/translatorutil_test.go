@@ -223,7 +223,7 @@ func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldS
 			t.Logf("Type: %v \n", errorDetail.Type())
 			t.Logf("Value: %v \n", errorDetail.Value())
 			if _, ok := actualErrorMap[errorDetail.Type()]; ok {
-				actualErrorMap[errorDetail.Type()] += 1
+				actualErrorMap[errorDetail.Type()]++
 			} else {
 				actualErrorMap[errorDetail.Type()] = 1
 			}

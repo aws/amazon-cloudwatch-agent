@@ -28,17 +28,7 @@ const (
 	locationFile    = "file"
 
 	locationSeparator = ":"
-
-	exitErrorMessage = "Fail to fetch the config!"
 )
-
-func EscapeFilePath(filePath string) (escapedFilePath string) {
-	escapedFilePath = filepath.ToSlash(filePath)
-	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
-	return
-}
 
 func RunDownloaderFromFlags(flags map[string]*string) error {
 	return RunDownloader(
@@ -50,19 +40,14 @@ func RunDownloaderFromFlags(flags map[string]*string) error {
 	)
 }
 
-/**
- *	multi-config:
- *			default, append: download config to the dir and append .tmp suffix
- *			remove: remove the config from the dir
- */
-func RunDownloader(
-	mode string,
-	downloadLocation string,
-	outputDir string,
-	inputConfig string,
-	multiConfig string,
-) error {
-	// Initialize common config
+func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string) error {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Fail to fetch the config!")
+			os.Exit(1)
+		}
+	}()
+
 	cc := commonconfig.New()
 	if inputConfig != "" {
 		f, err := os.Open(inputConfig)
@@ -93,8 +78,6 @@ func RunDownloader(
 	// Detect agent mode and region
 	mode = sdkutil.DetectAgentMode(mode)
 	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
-
-	// Validate region
 	if region == "" && downloadLocation != locationDefault {
 		if mode == config.ModeEC2 {
 			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
@@ -102,40 +85,22 @@ func RunDownloader(
 		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
 	}
 
-	// Clean up output directory
-	err := filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("cannot access %v: %v", path, err)
-		}
-		if info.IsDir() {
-			if strings.EqualFold(path, outputDir) {
-				return nil
-			}
-			fmt.Printf("Sub dir %v will be ignored.", path)
-			return filepath.SkipDir
-		}
-		if filepath.Ext(path) == constants.FileSuffixTmp {
-			return os.Remove(path)
-		}
-		return nil
-	})
+	err := cleanupOutputDir(outputDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to clean up output directory: %v", err)
 	}
 
-	// Parse download location
 	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
 	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
 		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
 	}
 
-	// Process configuration based on location type
 	var config, outputFilePath string
 	switch locationArray[0] {
 	case locationDefault:
 		outputFilePath = locationDefault
 		if multiConfig != "remove" {
-			config, err = defaultJsonConfig(mode)
+			config, err = defaultJSONConfig(mode)
 		}
 	case locationSSM:
 		outputFilePath = locationSSM + "_" + EscapeFilePath(locationArray[1])
@@ -152,32 +117,29 @@ func RunDownloader(
 	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf("fail to fetch/remove json config: %v", err)
 	}
 
-	// Handle configuration based on multiConfig setting
-	if multiConfig == "remove" {
-		outputPath := filepath.Join(outputDir, outputFilePath)
-		if err := os.Remove(outputPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove file %s: %v", outputPath, err)
-		}
-	} else {
+	if multiConfig != "remove" {
 		outputPath := filepath.Join(outputDir, outputFilePath+constants.FileSuffixTmp)
 		if err := os.WriteFile(outputPath, []byte(config), 0644); err != nil {
-			return fmt.Errorf("failed to write to file %s: %v", outputPath, err)
+			return fmt.Errorf("failed to write the json file %v: %v", outputPath, err)
+		}
+	} else {
+		outputPath := filepath.Join(outputDir, outputFilePath)
+		if err := os.Remove(outputPath); err != nil {
+			return fmt.Errorf("failed to remove the json file %v: %v", outputPath, err)
 		}
 	}
 
 	return nil
 }
 
-func defaultJsonConfig(mode string) (string, error) {
+func defaultJSONConfig(mode string) (string, error) {
 	return config.DefaultJsonConfig(config.ToValidOs(""), mode), nil
 }
 
 func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[string]string) (string, error) {
-	fmt.Printf("Region: %v\n", region)
-	fmt.Printf("credsConfig: %v\n", credsConfig)
 	var ses *session.Session
 	credsMap := util.GetCredentials(mode, credsConfig)
 	profile, profileOk := credsMap[commonconfig.CredentialProfile]
@@ -196,8 +158,7 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 
 	ses, err := session.NewSession(rootconfig)
 	if err != nil {
-		fmt.Printf("Error in creating session: %v\n", err)
-		return "", err
+		return "", fmt.Errorf("error in creating session: %v", err)
 	}
 
 	ssmClient := ssm.New(ses)
@@ -207,8 +168,7 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 	}
 	output, err := ssmClient.GetParameter(&input)
 	if err != nil {
-		fmt.Printf("Error in retrieving parameter store content: %v\n", err)
-		return "", err
+		return "", fmt.Errorf("error in retrieving parameter store content: %v", err)
 	}
 
 	return *output.Parameter.Value, nil
@@ -217,4 +177,30 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 func readFromFile(filePath string) (string, error) {
 	bytes, err := os.ReadFile(filePath)
 	return string(bytes), err
+}
+
+func EscapeFilePath(filePath string) string {
+	escapedFilePath := filepath.ToSlash(filePath)
+	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
+	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
+	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
+	return escapedFilePath
+}
+
+func cleanupOutputDir(outputDir string) error {
+	return filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("cannot access %v: %v", path, err)
+		}
+		if info.IsDir() {
+			if strings.EqualFold(path, outputDir) {
+				return nil
+			}
+			return filepath.SkipDir
+		}
+		if filepath.Ext(path) == constants.FileSuffixTmp {
+			return os.Remove(path)
+		}
+		return nil
+	})
 }
