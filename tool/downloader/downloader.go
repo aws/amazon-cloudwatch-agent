@@ -122,6 +122,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 
 	if multiConfig != "remove" {
 		outputPath := filepath.Join(outputDir, outputFilePath+constants.FileSuffixTmp)
+		// #nosec G306 - customers may need to be able to read the config file that the downloader downloaded for them
 		if err := os.WriteFile(outputPath, []byte(config), 0644); err != nil {
 			return fmt.Errorf("failed to write the json file %v: %v", outputPath, err)
 		}
