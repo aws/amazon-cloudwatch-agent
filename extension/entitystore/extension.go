@@ -43,6 +43,7 @@ type serviceProviderInterface interface {
 	addEntryForLogGroup(LogGroupName, ServiceAttribute)
 	logFileServiceAttribute(LogFileGlob, LogGroupName) ServiceAttribute
 	getServiceNameAndSource() (string, string)
+	getAutoScalingGroup() string
 }
 
 type EntityStore struct {
@@ -94,7 +95,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
 	switch e.mode {
 	case config.ModeEC2:
-		e.ec2Info = *newEC2Info(e.metadataprovider, e.kubernetesMode, e.done, e.config.Region, e.logger)
+		e.ec2Info = *newEC2Info(e.metadataprovider, e.done, e.config.Region, e.logger)
 		go e.ec2Info.initEc2Info()
 		// Instance metadata tags is not usable for EKS nodes
 		// https://github.com/kubernetes/cloud-provider-aws/issues/762
@@ -177,6 +178,13 @@ func (e *EntityStore) GetServiceMetricAttributesMap() map[string]*string {
 	return e.createAttributeMap()
 }
 
+func (e *EntityStore) GetAutoScalingGroup() string {
+	if e.serviceprovider == nil {
+		return ""
+	}
+	return e.serviceprovider.getAutoScalingGroup()
+}
+
 // AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
 func (e *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
 	if e.serviceprovider != nil {
@@ -225,7 +233,7 @@ func (e *EntityStore) createAttributeMap() map[string]*string {
 
 	if e.mode == config.ModeEC2 {
 		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.GetInstanceID())
-		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.GetAutoScalingGroup())
+		addNonEmptyToMap(attributeMap, ASGKey, e.GetAutoScalingGroup())
 	}
 	switch e.mode {
 	case config.ModeEC2:

@@ -76,6 +76,15 @@ var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
 	return es.EC2Info()
 }
 
+var getAutoScalingGroupFromEntityStore = func() string {
+	// Get the following metric attributes from the EntityStore: EC2.AutoScalingGroup
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return ""
+	}
+	return es.GetAutoScalingGroup()
+}
+
 var getServiceNameSource = func() (string, string) {
 	es := entitystore.GetEntityStore()
 	if es == nil {
@@ -220,8 +229,8 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				ec2Info = getEC2InfoFromEntityStore()
 
 				if entityEnvironmentName == EMPTY {
-					if ec2Info.GetAutoScalingGroup() != EMPTY {
-						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + ec2Info.GetAutoScalingGroup()
+					if getAutoScalingGroupFromEntityStore() != EMPTY {
+						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + getAutoScalingGroupFromEntityStore()
 					} else {
 						entityEnvironmentName = entityattributes.DeploymentEnvironmentDefault
 					}
@@ -234,7 +243,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 
 				ec2Attributes := EC2ServiceAttributes{
 					InstanceId:        ec2Info.GetInstanceID(),
-					AutoScalingGroup:  ec2Info.GetAutoScalingGroup(),
+					AutoScalingGroup:  getAutoScalingGroupFromEntityStore(),
 					ServiceNameSource: entityServiceNameSource,
 				}
 				if err := validate.Struct(ec2Attributes); err == nil {
