@@ -8,7 +8,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "e2e-prometheus"
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
@@ -128,7 +128,8 @@ jobs:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
-      eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}
+      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
+      eks_e2e_prometheus_matrix: ${{ steps.set-matrix.outputs.eks_e2e_prometheus_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -144,11 +145,13 @@ jobs:
         id: set-matrix
         run: |
           go run generator/test_case_generator.go -e2e
-          echo "::set-output name=eks_e2e_matrix::$(echo $(cat generator/resources/eks_e2e_complete_test_matrix.json))"
+          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
+          echo "::set-output name=eks_e2e_prometheus_matrix::$(echo $(cat generator/resources/eks_e2e_prometheus_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
-          echo "eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}"
+          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
+          echo "eks_e2e_prometheus_matrix: ${{ steps.set-matrix.outputs.eks_e2e_prometheus_matrix }}"
 
   EKSE2EJVMTomcatTest:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
@@ -157,7 +160,7 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-jvm-tomcat-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -179,7 +182,7 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-kafka-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -201,7 +204,7 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-jmx-containerinsights-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -214,4 +217,28 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/containerinsights.json
       sample_app: resources/sample_apps/tomcat-deployment.yaml
+    secrets: inherit
+
+  EKSE2EPrometheusTest:
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EKSE2EPrometheusTest'
+    uses: ./.github/workflows/eks-e2e-test.yml
+    with:
+      terraform_dir: terraform/eks/e2e
+      job_id: eks-e2e-prometheus-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_prometheus_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_target_allocator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_TARGET_ALLOCATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      agent_config: resources/cwagent_configs/prometheus.json
+      prometheus_config: resources/prometheus_configs/prometheus.yaml
+      sample_app: resources/sample_apps/memcached-sample.yaml
     secrets: inherit
