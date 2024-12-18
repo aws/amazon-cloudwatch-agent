@@ -503,6 +503,7 @@ receivers:
         leader_lock_using_config_map_only: true
         local_mode: false
         max_retries: 0
+        middleware: agenthealth/statuscode
         no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: false
