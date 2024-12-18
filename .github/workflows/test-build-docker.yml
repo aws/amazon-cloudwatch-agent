@@ -251,7 +251,7 @@ jobs:
       - name: Build Windows Cloudwatch Agent Image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
+          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2025
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
         run: |
           Write-Output "$env:REGISTRY/$env:REPOSITORY"
@@ -377,21 +377,19 @@ jobs:
           OrigREPOSITORY: ${{ inputs.ContainerRepositoryNameAndTag }}
           REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}
           REPOSITORYWindows: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:windows
-          REPO2022: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
-          REPO2019: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
+          REPO2022: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2025
           REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
           REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
-          docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
+          docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2025
           docker manifest push $REGISTRY/$REPOSITORYWindows
 
           docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd | jq '.manifests[0]' > linux-amd.json
           docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm | jq '.manifests[0]' > linux-arm.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[0]' > 2019.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[1]' > 2022.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[1]' > 2025.json
 
-          docker buildx imagetools create -f linux-amd.json -f linux-arm.json -f 2019.json -f 2022.json --tag $REGISTRY/$OrigREPOSITORY
+          docker buildx imagetools create -f linux-amd.json -f linux-arm.json -f 2025.json --tag $REGISTRY/$OrigREPOSITORY
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignWindowsPackage:
