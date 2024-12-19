@@ -218,7 +218,7 @@ func (s *serviceprovider) serviceAttributeFromAsg() ServiceAttribute {
 	}
 
 	return ServiceAttribute{
-		Environment: "ec2:" + s.autoScalingGroup,
+		Environment: "ec2:" + s.getAutoScalingGroup(),
 	}
 }
 
@@ -266,9 +266,7 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 	}
 	if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
 		asg, err := s.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
-		if err != nil {
-			s.logger.Error("Failed to get AutoScalingGroup through metadata provider", zap.Error(err))
-		} else {
+		if err == nil {
 			s.logger.Debug("AutoScalingGroup retrieved through IMDS")
 			s.mutex.Lock()
 			s.autoScalingGroup = asg
