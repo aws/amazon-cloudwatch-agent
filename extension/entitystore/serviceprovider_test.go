@@ -307,6 +307,16 @@ func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 			wantTagServiceName: "test-service",
 		},
 		{
+			name:               "HappyPath_ServiceExistsCaseInsensitive",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"ServicE": "test-service"}},
+			wantTagServiceName: "test-service",
+		},
+		{
+			name:               "ServiceExistsRequiresExactMatch",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"sservicee": "test-service"}},
+			wantTagServiceName: "",
+		},
+		{
 			name:               "HappyPath_ApplicationExists",
 			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"application": "test-application"}},
 			wantTagServiceName: "test-application",
@@ -357,6 +367,28 @@ func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 					"name":                      "test-name",
 				}},
 			wantASGName: "",
+		},
+		{
+			name: "AutoScalingGroup case sensitive",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupname": tagVal3,
+					"env":                       "test-env",
+					"name":                      "test-name",
+				}},
+			wantASGName: tagVal3,
+		},
+		{
+			name: "AutoScalingGroup exact match",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupnamee": tagVal3,
+					"env":                        "test-env",
+					"name":                       "test-name",
+				}},
+			wantASGName: tagVal3,
 		},
 		{
 			name:             "Success IMDS tags call with no ASG",
