@@ -266,7 +266,7 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 		}
 	}
 	// case sensitive
-	if originalCaseKey, _ := lowerTagKeys[strings.ToLower(ec2tagger.Ec2InstanceTagKeyASG)]; originalCaseKey == ec2tagger.Ec2InstanceTagKeyASG {
+	if originalCaseKey := lowerTagKeys[strings.ToLower(ec2tagger.Ec2InstanceTagKeyASG)]; originalCaseKey == ec2tagger.Ec2InstanceTagKeyASG {
 		asg, err := s.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
 		if err == nil {
 			s.logger.Debug("AutoScalingGroup retrieved through IMDS")
@@ -279,6 +279,7 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 			s.mutex.Unlock()
 		}
 	}
+
 	if s.GetIMDSServiceName() == "" {
 		s.logger.Debug("Service name not found through IMDS")
 	}

@@ -144,7 +144,7 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceTags(ctx context.Context) ([]string, error) {
+func (m *mockMetadataProvider) InstanceTags(_ context.Context) ([]string, error) {
 	return []string{"MockInstanceTag"}, nil
 }
 

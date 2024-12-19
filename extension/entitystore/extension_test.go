@@ -109,7 +109,7 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceTags(ctx context.Context) ([]string, error) {
+func (m *mockMetadataProvider) InstanceTags(_ context.Context) ([]string, error) {
 	if m.InstanceTagError {
 		return nil, errors.New("an error occurred for instance tag retrieval")
 	}

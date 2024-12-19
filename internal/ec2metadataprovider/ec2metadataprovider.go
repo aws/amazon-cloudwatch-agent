@@ -69,13 +69,13 @@ func (c *metadataClient) ClientIAMRole(ctx context.Context) (string, error) {
 }
 
 func (c *metadataClient) InstanceTags(ctx context.Context) ([]string, error) {
-	if tags, err := withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+	tags, err := withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
 		return metadataClient.GetMetadataWithContext(ctx, "tags/instance")
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
-	} else {
-		return strings.Fields(tags), nil
 	}
+	return strings.Fields(tags), nil
 }
 
 func (c *metadataClient) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
