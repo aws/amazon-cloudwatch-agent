@@ -20,9 +20,9 @@ func TestCreateDefaultConfig(t *testing.T) {
 	assert.NoError(t, componenttest.CheckConfigStruct(cfg))
 }
 
-func TestCreateExtension(t *testing.T) {
+func TestCreate(t *testing.T) {
 	cfg := &Config{}
-	got, err := NewFactory().CreateExtension(context.Background(), extensiontest.NewNopCreateSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }
