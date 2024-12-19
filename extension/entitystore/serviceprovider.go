@@ -40,8 +40,8 @@ const (
 )
 
 var (
-	//priorityMap is ranking in how we prioritize which IMDS tag determines the service name
-	priorityMap = []string{SERVICE, APPLICATION, APP}
+	//serviceProviderPriorities is ranking in how we prioritize which IMDS tag determines the service name
+	serviceProviderPriorities = []string{SERVICE, APPLICATION, APP}
 )
 
 type ServiceAttribute struct {
@@ -253,8 +253,8 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 
 	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order (case insensitive)
 	lowerTagKeys := toLowerKeyMap(tagKeys)
-	for _, potentialServiceNameKey := range priorityMap {
-		if originalCaseKey, exists := lowerTagKeys[potentialServiceNameKey]; exists {
+	for _, potentialServiceProviderKey := range serviceProviderPriorities {
+		if originalCaseKey, exists := lowerTagKeys[potentialServiceProviderKey]; exists {
 			serviceName, err := s.metadataProvider.InstanceTagValue(context.Background(), originalCaseKey)
 			if err != nil {
 				continue

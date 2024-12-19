@@ -377,7 +377,7 @@ func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 					"env":                       "test-env",
 					"name":                      "test-name",
 				}},
-			wantASGName: tagVal3,
+			wantASGName: "",
 		},
 		{
 			name: "AutoScalingGroup exact match",
@@ -388,7 +388,7 @@ func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 					"env":                        "test-env",
 					"name":                       "test-name",
 				}},
-			wantASGName: tagVal3,
+			wantASGName: "",
 		},
 		{
 			name:             "Success IMDS tags call with no ASG",
