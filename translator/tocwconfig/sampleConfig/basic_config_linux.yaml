@@ -63,8 +63,8 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_disk
                 - telegraf_mem
+                - telegraf_disk
     telemetry:
         logs:
             development: false
