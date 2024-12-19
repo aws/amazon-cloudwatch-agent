@@ -169,7 +169,7 @@ jobs:
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat-app.yaml
+      sample_app: resources/sample_apps/tomcat.yaml
     secrets: inherit
 
   EKSE2EKafkaTest:
@@ -191,7 +191,7 @@ jobs:
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/kafka.json
-      sample_app: resources/sample_apps/kafka-app.yaml
+      sample_app: resources/sample_apps/kafka.yaml
     secrets: inherit
 
   EKSE2EJMXContainerInsightsTest:
@@ -213,5 +213,5 @@ jobs:
       helm_charts_branch: ${{ inputs.helm-charts-branch }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs/containerinsights.json
-      sample_app: resources/sample_apps/tomcat-app.yaml
+      sample_app: resources/sample_apps/tomcat.yaml
     secrets: inherit
