@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 
@@ -18,7 +17,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
-		translator common.Translator[component.Config]
+		translator common.ComponentTranslator
 		input      map[string]interface{}
 		want       *batchprocessor.Config
 		wantErr    error

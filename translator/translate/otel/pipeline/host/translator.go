@@ -10,6 +10,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -30,19 +31,19 @@ import (
 type translator struct {
 	name string
 	common.DestinationProvider
-	receivers common.TranslatorMap[component.Config]
+	receivers common.ComponentTranslatorMap
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
 // NewTranslator creates a new host pipeline translator. The receiver types
 // passed in are converted to config.ComponentIDs, sorted, and used directly
 // in the translated pipeline.
 func NewTranslator(
 	name string,
-	receivers common.TranslatorMap[component.Config],
+	receivers common.ComponentTranslatorMap,
 	opts ...common.TranslatorOption,
-) common.Translator[*common.ComponentTranslators] {
+) common.PipelineTranslator {
 	t := &translator{name: name, receivers: receivers}
 	for _, opt := range opts {
 		opt(t)
@@ -53,8 +54,8 @@ func NewTranslator(
 	return t
 }
 
-func (t translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, t.name)
+func (t translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, t.name)
 }
 
 // Translate creates a pipeline if metrics section exists.
@@ -62,7 +63,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if conf == nil || t.receivers.Len() == 0 {
 		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
-	var entityProcessor common.Translator[component.Config]
+	var entityProcessor common.ComponentTranslator
 	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		entityProcessor = nil
 	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
@@ -73,9 +74,9 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
-		Processors: common.NewTranslatorMap[component.Config](),
-		Exporters:  common.NewTranslatorMap[component.Config](),
-		Extensions: common.NewTranslatorMap[component.Config](),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 	currentContext := context.CurrentContext()
 	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
@@ -103,7 +104,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	switch t.Destination() {
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
+		translators.Extensions.Set(agenthealth.NewTranslator(pipeline.SignalMetrics, []string{agenthealth.OperationPutMetricData}))
 	case common.AMPKey:
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
 			translators.Processors.Set(rollupprocessor.NewTranslator())
@@ -114,7 +115,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
 		translators.Exporters.Set(awsemf.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
+		translators.Extensions.Set(agenthealth.NewTranslator(pipeline.SignalLogs, []string{agenthealth.OperationPutLogEvents}))
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}

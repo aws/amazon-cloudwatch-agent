@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -30,14 +31,14 @@ var (
 type translator struct {
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[*common.ComponentTranslators] {
+func NewTranslator() common.PipelineTranslator {
 	return &translator{}
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeTraces, pipelineName)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalTraces, pipelineName)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
@@ -45,17 +46,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(xrayKey, " or ", otlpKey)}
 	}
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config](),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
 		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory())),
 		Exporters:  common.NewTranslatorMap(awsxrayexporter.NewTranslator()),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeTraces, []string{agenthealth.OperationPutTraceSegments})),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(pipeline.SignalTraces, []string{agenthealth.OperationPutTraceSegments})),
 	}
 	if conf.IsSet(xrayKey) {
 		translators.Receivers.Set(awsxrayreceiver.NewTranslator())
 	}
 	if conf.IsSet(otlpKey) {
 		translators.Receivers.Set(otlp.NewTranslator(
-			otlp.WithDataType(component.DataTypeTraces),
+			otlp.WithSignal(pipeline.SignalTraces),
 			otlp.WithConfigKey(otlpKey)),
 		)
 	}

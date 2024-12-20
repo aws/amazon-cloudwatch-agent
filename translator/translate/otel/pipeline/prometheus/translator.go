@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -32,9 +32,9 @@ type translator struct {
 	common.DestinationProvider
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.ComponentTranslators] {
+func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
 	t := &translator{name: common.PipelineNamePrometheus}
 	for _, opt := range opts {
 		opt(t)
@@ -45,8 +45,8 @@ func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.Co
 	return t
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, t.name)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, t.name)
 }
 
 // Translate creates a pipeline for prometheus if the logs.metrics_collected.prometheus
@@ -71,7 +71,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
 			Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
-			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
+			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(pipeline.SignalLogs, []string{agenthealth.OperationPutLogEvents})),
 		}, nil
 	case common.AMPKey:
 		if !conf.IsSet(MetricsKey) {

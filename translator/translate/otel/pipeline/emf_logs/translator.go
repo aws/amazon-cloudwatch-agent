@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatchlogs"
@@ -24,18 +25,16 @@ var (
 	serviceAddressStructuredLogKey = common.ConfigKey(structuredLogKey, common.ServiceAddress)
 )
 
-type translator struct {
-	id component.ID
-}
+type translator struct{}
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[*common.ComponentTranslators] {
+func NewTranslator() common.PipelineTranslator {
 	return &translator{}
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeLogs, common.PipelineNameEmfLogs)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalLogs, common.PipelineNameEmfLogs)
 }
 
 // Translate creates a pipeline for emf if emf logs are collected
@@ -47,10 +46,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: emfKey}
 	}
 	translators := common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config](),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
 		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameEmfLogs, common.LogsKey)), // EMF logs sit under metrics_collected in "logs"
 		Exporters:  common.NewTranslatorMap(awscloudwatchlogs.NewTranslatorWithName(common.PipelineNameEmfLogs)),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(pipeline.SignalLogs, []string{agenthealth.OperationPutLogEvents})),
 	}
 	if serviceAddress, ok := common.GetString(conf, serviceAddressEMFKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {

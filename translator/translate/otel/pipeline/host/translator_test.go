@@ -21,7 +21,7 @@ type testTranslator struct {
 	id component.ID
 }
 
-var _ common.Translator[component.Config] = (*testTranslator)(nil)
+var _ common.ComponentTranslator = (*testTranslator)(nil)
 
 func (t testTranslator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return nil, nil

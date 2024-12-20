@@ -29,7 +29,7 @@ type ContextStatement struct {
 }
 
 type Translator interface {
-	common.Translator[component.Config]
+	common.ComponentTranslator
 	// IsSet determines whether the config has the fields needed for the translator.
 	IsSet(conf *confmap.Conf) bool
 }

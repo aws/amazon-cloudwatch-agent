@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
@@ -25,9 +26,9 @@ const (
 )
 
 var (
-	MetricsID = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
-	LogsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
-	TracesID  = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	MetricsID = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalMetrics.String())
+	LogsID    = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalLogs.String())
+	TracesID  = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalTraces.String())
 )
 
 type translator struct {
@@ -37,9 +38,9 @@ type translator struct {
 	factory            extension.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
+func NewTranslator(name pipeline.Signal, operations []string) common.ComponentTranslator {
 	return &translator{
 		name:               name.String(),
 		operations:         operations,

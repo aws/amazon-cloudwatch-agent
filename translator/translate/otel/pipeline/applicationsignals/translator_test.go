@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -26,7 +27,7 @@ func TestTranslatorTraces(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeTraces)
+	tt := NewTranslator(pipeline.SignalTraces)
 	assert.EqualValues(t, "traces/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
@@ -102,7 +103,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeMetrics)
+	tt := NewTranslator(pipeline.SignalMetrics)
 	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input          map[string]interface{}
@@ -202,7 +203,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeMetrics)
+	tt := NewTranslator(pipeline.SignalMetrics)
 	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
