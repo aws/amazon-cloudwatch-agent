@@ -128,7 +128,7 @@ jobs:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
-      eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}
+      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -144,11 +144,11 @@ jobs:
         id: set-matrix
         run: |
           go run generator/test_case_generator.go -e2e
-          echo "::set-output name=eks_e2e_matrix::$(echo $(cat generator/resources/eks_e2e_complete_test_matrix.json))"
+          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
-          echo "eks_e2e_matrix: ${{ steps.set-matrix.outputs.eks_e2e_matrix }}"
+          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
 
   EKSE2EJVMTomcatTest:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
@@ -157,7 +157,7 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-jvm-tomcat-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -179,7 +179,7 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-kafka-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -201,7 +201,7 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-jmx-containerinsights-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
