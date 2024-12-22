@@ -79,6 +79,13 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
+      - name: Configure SSH Keep Alive
+        run: |
+          mkdir -p ~/.ssh
+          echo "Host *
+              ServerAliveInterval 240" > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         if: steps.cache_if_success.outputs.cache-hit != 'true'
