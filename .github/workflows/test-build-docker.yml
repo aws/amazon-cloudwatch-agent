@@ -123,3 +123,55 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
           platforms: linux/arm64
+
+  CreateContainerManifest:
+    name: 'CreateManifest'
+    needs: ['MakeBinary']
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install rpm
+        run: sudo apt install rpm
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Login ECR
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get ECR Repo name
+        id: repo_name
+        env:
+          ContainerRepositoryNameAndTag: ${{ inputs.ContainerRepositoryNameAndTag }}
+        run: |
+          RepoName=`echo $ContainerRepositoryNameAndTag | awk -F: '{print $1}'`
+          echo "::set-output name=ContainerRepositoryName::$RepoName"
+
+      - name: Create manifest and push
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          OrigREPOSITORY: ${{ inputs.ContainerRepositoryNameAndTag }}
+          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}
+          REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
+          REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        run: |
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd | jq '.manifests[0]' > linux-amd.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm | jq '.manifests[0]' > linux-arm.json
+
+          docker buildx imagetools create -f linux-amd.json -f linux-arm.json --tag $REGISTRY/$OrigREPOSITORY
