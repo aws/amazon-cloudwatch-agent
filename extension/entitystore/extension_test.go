@@ -68,6 +68,10 @@ func (s *mockServiceProvider) getAutoScalingGroup() string {
 	return args.Get(0).(string)
 }
 
+func (s *mockServiceProvider) setAutoScalingGroup(asg string) {
+	s.Called(asg)
+}
+
 type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 	Tags                     map[string]string
@@ -688,6 +692,10 @@ func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
 
 		})
 	}
+
+}
+
+func TestEntityStore_SetAutoScalingGroup(t *testing.T) {
 
 }
 
