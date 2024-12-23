@@ -5,6 +5,7 @@ package awsentity
 
 import (
 	"context"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -108,6 +109,10 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
 		logger:     logger,
 	}
+}
+
+func (p *awsEntityProcessor) processLogs(_ context.Context, ld plog.Logs) (plog.Logs, error) {
+	return ld, nil
 }
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
