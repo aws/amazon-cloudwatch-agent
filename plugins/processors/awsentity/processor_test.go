@@ -188,13 +188,13 @@ func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 		{
 			name:    "WithPodNameAndServiceNameNoSource",
 			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceUnknown}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "eks:test-cluster/UnknownNamespace", ServiceNameSource: entitystore.ServiceNameSourceUnknown}},
 			k8sMode: config.ModeEKS,
 		},
 		{
 			name:    "WithPodNameAndServiceNameHasSource",
 			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "eks:test-cluster/UnknownNamespace", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
 			k8sMode: config.ModeEKS,
 		},
 		{
@@ -230,20 +230,20 @@ func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 		{
 			name:    "WithPodNameAndAttributeService",
 			metrics: generateMetrics(attributeService, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "k8s:test-cluster/UnknownNamespace", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
 			k8sMode: config.ModeK8sOnPrem,
 		},
 		{
 			name:    "WithPodNameAndWorkload",
 			metrics: generateMetrics(attributeServiceName, "cloudwatch-agent-adhgaf", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "K8sWorkload"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "cloudwatch-agent-adhgaf", ServiceNameSource: entitystore.ServiceNameSourceK8sWorkload}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "cloudwatch-agent-adhgaf", Environment: "eks:test-cluster/UnknownNamespace", ServiceNameSource: entitystore.ServiceNameSourceK8sWorkload}},
 			k8sMode: config.ModeEKS,
 		},
 		{
 			name:    "WithPodNameAndEmptyServiceAndEnvironmentName",
 			metrics: generateMetrics(semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
 			k8sMode: config.ModeEKS,
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "cloudwatch-agent-adhgaf", ServiceNameSource: entitystore.ServiceNameSourceK8sWorkload}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "cloudwatch-agent-adhgaf", Environment: "eks:test-cluster/UnknownNamespace", ServiceNameSource: entitystore.ServiceNameSourceK8sWorkload}},
 		},
 		{
 			name:    "WithEmptyPodName",
@@ -401,6 +401,25 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
 				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
 				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
+			},
+		},
+		{
+			name:           "ResourceAttributeWorkloadFallbackWithUnknownNameSpace",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-workload",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/" + unknownNameSpace,
+				entityattributes.AttributeEntityCluster:               "test-cluster",
+				entityattributes.AttributeEntityNamespace:             unknownNameSpace,
+				entityattributes.AttributeEntityNode:                  "test-node",
+				entityattributes.AttributeEntityWorkload:              "test-workload",
+				entityattributes.AttributeEntityServiceNameSource:     "K8sWorkload",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
+				semconv.AttributeK8SDeploymentName:                    "test-workload",
+				semconv.AttributeK8SNodeName:                          "test-node",
 			},
 		},
 	}
