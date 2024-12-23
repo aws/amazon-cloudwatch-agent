@@ -4,7 +4,6 @@
 package emf_logs
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/tcplog"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/udplog"
