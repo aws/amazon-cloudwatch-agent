@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
@@ -108,15 +109,11 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
+func (m *mockMetadataProvider) InstanceTags(_ context.Context) ([]string, error) {
 	if m.InstanceTagError {
-		return "", errors.New("an error occurred for instance tag retrieval")
+		return nil, errors.New("an error occurred for instance tag retrieval")
 	}
-	var tagsString string
-	for key, val := range m.Tags {
-		tagsString += key + "=" + val + ","
-	}
-	return tagsString, nil
+	return maps.Keys(m.Tags), nil
 }
 
 func (m *mockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
