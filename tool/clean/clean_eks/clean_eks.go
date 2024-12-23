@@ -25,6 +25,7 @@ var (
 		"cwagent-operator-helm-integ-",
 		"cwagent-helm-chart-integ-",
 		"cwagent-operator-eks-integ-",
+		"cwagent-monitoring-config-e2e-eks-",
 	}
 )
 
