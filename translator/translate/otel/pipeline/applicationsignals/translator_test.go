@@ -225,7 +225,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -245,7 +245,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
