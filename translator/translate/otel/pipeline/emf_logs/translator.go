@@ -4,6 +4,8 @@
 package emf_logs
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -49,11 +51,14 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 	translators := common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config](),
-		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameEmfLogs, common.LogsKey), awsentity.NewTranslatorWithEntityType(awsentity.Service, "emf", false)), // EMF logs sit under metrics_collected in "logs"
+		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameEmfLogs, common.LogsKey)), // EMF logs sit under metrics_collected in "logs"
 		Exporters:  common.NewTranslatorMap(awscloudwatchlogs.NewTranslatorWithName(common.PipelineNameEmfLogs)),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
 			agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
 		),
+	}
+	if !(context.CurrentContext().RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS()) {
+		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, "emf", false))
 	}
 	if serviceAddress, ok := common.GetString(conf, serviceAddressEMFKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {
