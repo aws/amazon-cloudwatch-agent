@@ -405,6 +405,9 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
+    awsentity/service/emf:
+        entity_type: Service
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -491,6 +494,7 @@ service:
             exporters:
                 - awscloudwatchlogs/emf_logs
             processors:
+                - awsentity/service/emf
                 - batch/emf_logs
             receivers:
                 - tcplog/emf_logs
