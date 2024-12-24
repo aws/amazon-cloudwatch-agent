@@ -5,6 +5,7 @@ package applicationsignals
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -61,7 +62,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithDataType(t.dataType)))
 
-	if t.dataType == component.DataTypeMetrics {
+	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+	isECS := ecsutil.GetECSUtilSingleton().IsECS()
+	if t.dataType == component.DataTypeMetrics && !isECS {
 		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
 	}
 

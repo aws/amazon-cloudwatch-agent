@@ -285,11 +285,9 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 	}
 	if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
 		asg, err := s.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
-		if err == nil {
-			if asg != "" {
-				s.logger.Debug("AutoScalingGroup retrieved through IMDS")
-				s.setAutoScalingGroup(asg)
-			}
+		if err == nil && asg != "" {
+			s.logger.Debug("AutoScalingGroup retrieved through IMDS")
+			s.setAutoScalingGroup(asg)
 		}
 	}
 	if s.GetIMDSServiceName() == "" {
