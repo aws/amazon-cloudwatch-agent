@@ -78,10 +78,13 @@ receivers:
           reload_interval: 0s
       http:
         endpoint: 0.0.0.0:2345
+        idle_timeout: 0s
         include_metadata: false
         logs_url_path: /v1/logs
         max_request_body_size: 0
         metrics_url_path: /v1/metrics
+        read_header_timeout: 0s
+        read_timeout: 0s
         traces_url_path: /v1/traces
         tls:
           ca_file: ""
@@ -93,6 +96,7 @@ receivers:
           max_version: ""
           min_version: ""
           reload_interval: 0s
+        write_timeout: 0s
 service:
   extensions:
     - agenthealth/logs
@@ -123,4 +127,5 @@ service:
     metrics:
       address: ""
       level: None
-    traces: { }
+    traces:
+      level: Basic

@@ -163,6 +163,7 @@ exporters:
         sampling_initial: 2
         sampling_thereafter: 500
         verbosity: Detailed
+        use_internal_logger: true
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -185,7 +186,7 @@ extensions:
         certificate_file_path: ""
         dialer:
             timeout: 0s
-        endpoint: 0.0.0.0:2000
+        endpoint: localhost:2000
         imds_retries: 1
         local_mode: true
         profile: AmazonCloudWatchAgent
@@ -424,7 +425,9 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
+        max_conns_per_host: 0
         max_idle_conns: 100
+        max_idle_conns_per_host: 0
         openshift:
             address: ""
             resource_attributes:
@@ -1071,11 +1074,15 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:4316
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - awsproxy/application_signals
@@ -1119,4 +1126,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: Basic
