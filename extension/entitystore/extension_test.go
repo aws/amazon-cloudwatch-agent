@@ -696,7 +696,14 @@ func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
 }
 
 func TestEntityStore_SetAutoScalingGroup(t *testing.T) {
+	e := &EntityStore{}
+	sp := new(mockServiceProvider)
+	sp.On("setAutoScalingGroup", "asg-name").Return()
+	e.serviceprovider = sp
 
+	e.SetAutoScalingGroup("asg-name")
+
+	sp.AssertExpectations(t)
 }
 
 func assertIfNonEmpty(t *testing.T, message string, pattern string) {
