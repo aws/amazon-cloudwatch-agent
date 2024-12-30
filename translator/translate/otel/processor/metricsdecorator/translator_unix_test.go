@@ -35,9 +35,9 @@ func TestTranslate(t *testing.T) {
 
 	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "unix", "config.json")))
 	translatedCfg, err := transl.Translate(conf)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	actualCfg, ok := translatedCfg.(*transformprocessor.Config)
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	// sort the statements for consistency
 	assert.Len(t, expectedCfg.MetricStatements, 1)
