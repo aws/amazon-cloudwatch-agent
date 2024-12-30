@@ -78,7 +78,7 @@ func TestTranslate(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			tt := NewTranslator(pipeline.SignalLogs, operations).(*translator)
-			assert.Equal(t, "agenthealth/test", tt.ID().String())
+			assert.Equal(t, "agenthealth/logs", tt.ID().String())
 			tt.isUsageDataEnabled = testCase.isEnvUsageData
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
