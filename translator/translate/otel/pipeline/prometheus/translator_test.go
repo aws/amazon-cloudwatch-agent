@@ -36,7 +36,7 @@ func TestTranslator(t *testing.T) {
 			input:       map[string]any{},
 			destination: common.AMPKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.MustNewType(pipeline.SignalMetrics.String()), "prometheus/amp"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/amp"),
 				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
@@ -44,7 +44,7 @@ func TestTranslator(t *testing.T) {
 			input:       map[string]any{},
 			destination: common.CloudWatchLogsKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.MustNewType(pipeline.SignalMetrics.String()), "prometheus/cloudwatchlogs"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/cloudwatchlogs"),
 				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
