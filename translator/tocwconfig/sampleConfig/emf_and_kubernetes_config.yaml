@@ -411,6 +411,9 @@ extensions:
         region: us-east-1
         shared_credential_file: /root/.aws/credentials
 processors:
+    awsentity/service/emf:
+        entity_type: Service
+        platform: onPremise
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -499,6 +502,7 @@ service:
             exporters:
                 - awscloudwatchlogs/emf_logs
             processors:
+                - awsentity/service/emf
                 - batch/emf_logs
             receivers:
                 - tcplog/emf_logs

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
@@ -108,6 +109,10 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
 		logger:     logger,
 	}
+}
+
+func (p *awsEntityProcessor) processLogs(_ context.Context, ld plog.Logs) (plog.Logs, error) {
+	return ld, nil
 }
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
