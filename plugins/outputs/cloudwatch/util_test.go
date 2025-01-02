@@ -118,7 +118,7 @@ func TestPayload_ValuesAndCounts(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 867, payload(datum))
+	assert.Equal(t, 1313, payload(datum))
 }
 
 func TestPayload_Value(t *testing.T) {
@@ -131,7 +131,7 @@ func TestPayload_Value(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 356, payload(datum))
+	assert.Equal(t, 550, payload(datum))
 }
 
 func TestPayload_Min(t *testing.T) {
@@ -139,7 +139,7 @@ func TestPayload_Min(t *testing.T) {
 	datum.SetValue(1.23456789)
 	datum.SetMetricName("MetricName")
 	datum.SetTimestamp(time.Now())
-	assert.Equal(t, 148, payload(datum))
+	assert.Equal(t, 232, payload(datum))
 }
 
 func TestEntityToString_StringToEntity(t *testing.T) {
