@@ -69,7 +69,9 @@ func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
 		return pmetric.Metrics{}, err
 	}
 
-	return r.accumulator.GetOtelMetrics(), nil
+	otelMetrics := r.accumulator.GetOtelMetrics()
+	r.logger.Info("Getting otel metrics", zap.Any("receiver", otelMetrics))
+	return otelMetrics, nil
 }
 
 func (r *AdaptedReceiver) shutdown(_ context.Context) error {
