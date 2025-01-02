@@ -71,6 +71,17 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 
 		common.SetIfUsed("float", fields, "power_draw", gpu.Power.PowerDraw)
 		acc.AddFields("nvidia_smi", fields, tags)
+
+		for _, process := range gpu.Processes.ProcessInfo {
+			tags := map[string]string{}
+			common.SetTagIfUsed(tags, "process_name", process.ProcessName)
+			common.SetTagIfUsed(tags, "process_id", process.Pid)
+
+			fields := map[string]interface{}{}
+			common.SetIfUsed("int", fields, "process_used_memory", process.UsedMemory)
+
+			acc.AddFields("nvidia_smi", fields, tags)
+		}
 	}
 
 	return nil
