@@ -6,6 +6,7 @@ package tcplog
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
@@ -65,6 +66,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprintf("missing %s or tcp service address", baseKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*tcplogreceiver.TCPLogConfig)
+    if context.CurrentContext().KubernetesMode() != "" {
+		cfg.InputConfig.BaseConfig.AddAttributes = true
+	}
 	if !conf.IsSet(common.ConfigKey(serviceAddressKey)) {
 		cfg.InputConfig.BaseConfig.ListenAddress = "0.0.0.0:25888"
 	} else {

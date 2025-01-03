@@ -213,6 +213,7 @@ func TestEmfAndKubernetesConfig(t *testing.T) {
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeOnPremise)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sOnPrem)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
@@ -225,6 +226,7 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeOnPremise)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sOnPrem)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
@@ -237,6 +239,7 @@ func TestEmfAndKubernetesWithKueueConfig(t *testing.T) {
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeOnPremise)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sOnPrem)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
