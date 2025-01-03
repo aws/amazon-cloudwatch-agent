@@ -63,21 +63,38 @@ export async function GetServiceLatestVersion(password: string): Promise<Service
         });
 }
 
-export async function GetServicePRInformation(password: string, commit_sha: string): Promise<ServicePRInformation> {
-    AxiosConfig.defaults.headers['x-api-key'] = password;
-    return AxiosConfig.post('/', {
-        Action: 'Github',
-        URL: 'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
-        Params: {
-            owner: OWNER_REPOSITORY,
-            repo: process.env.REACT_APP_GITHUB_REPOSITORY,
-            commit_sha: commit_sha,
-        },
-    })
-        .then(function (body: { data: any[] }) {
-            return Promise.resolve(body.data.at(0));
-        })
-        .catch(function (error: unknown) {
-            return Promise.reject(error);
+export async function GetServicePRInformation(password: string, commitHashes: string[]): Promise<ServicePRInformation[]> {
+    try {
+        AxiosConfig.defaults.headers['x-api-key'] = password;
+        const prInformation = commitHashes.map(async (commitHash) => {
+            const result = await AxiosConfig.post('/', {
+                Action: 'Github',
+                URL: 'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
+                Params: {
+                    owner: OWNER_REPOSITORY,
+                    repo: process.env.REACT_APP_GITHUB_REPOSITORY,
+                    commit_sha: commitHash,
+                },
+            });
+            if (result.data?.data?.length === undefined) {
+                console.log('PR Info not found for: ' + commitHash);
+                return undefined;
+            }
+
+            return result.data?.data?.at(0);
         });
+
+        return Promise.all(prInformation);
+    } catch (error) {
+        return Promise.reject(error);
+    }
+}
+
+export function createDefaultServicePRInformation(): ServicePRInformation {
+    return {
+        title: 'PR data unavailable',
+        html_url: 'https://github.com/aws/amazon-cloudwatch-agent/pulls',
+        number: 0,
+        sha: 'default-sha',
+    };
 }

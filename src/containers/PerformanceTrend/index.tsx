@@ -4,7 +4,6 @@ import { Box, CircularProgress, Container, MenuItem, Paper, Select, Table, Table
 import { SelectChangeEvent } from '@mui/material/Select';
 import { useTheme } from '@mui/material/styles';
 import merge from 'lodash/merge';
-import moment from 'moment';
 import * as React from 'react';
 import Chart from 'react-apexcharts';
 import { CONVERT_REPORTED_METRICS_NAME, REPORTED_METRICS, TRANSACTION_PER_MINUTE, USE_CASE } from '../../common/Constant';
@@ -13,6 +12,7 @@ import { PerformanceTrendData, ServiceCommitInformation, TrendData } from './dat
 import { GetPerformanceTrendData, GetServiceCommitInformation } from './service';
 import { PasswordDialog } from '../../common/Dialog';
 import { BasedOptionChart } from './styles';
+import { formatUnixTimestamp } from '../PerformanceReport';
 
 export default function PerformanceTrend(props: { password: string; password_is_set: boolean; set_password_state: any }): JSX.Element {
     usePageEffect({ title: 'Amazon CloudWatch Agent' });
@@ -188,20 +188,21 @@ export default function PerformanceTrend(props: { password: string; password_is_
                                                             const use_case = ctx.opts.series.at(seriesIndex)?.name;
                                                             const selected_data = series[seriesIndex][dataPointIndex];
                                                             const selected_hash = w.globals.categoryLabels[dataPointIndex];
-                                                            const selected_hash_information: ServiceCommitInformation | undefined = commits_information
-                                                                .filter((c: ServiceCommitInformation) => c.sha === selected_hash)
-                                                                .at(0);
-                                                            const commit_history = selected_hash_information?.commit.message.replace(/\n\r*\n*/g, '<br />');
-                                                            const commited_by = `Committed by ${selected_hash_information?.author.login} on ${selected_hash_information?.author.date}`;
+                                                            const selected_hash_information: ServiceCommitInformation | undefined = commits_information.find((c: ServiceCommitInformation) =>
+                                                                c?.sha?.startsWith(selected_hash)
+                                                            );
+                                                            const commit_sha = selected_hash_information?.sha ?? 'No commit available';
+                                                            const commit_history = selected_hash_information?.commit.message.replace(/\n\r*\n*/g, '<br />') ?? 'No commit information available';
+                                                            const committed_by = formatCommitInfo(selected_hash_information, { dateFormat: true });
                                                             const commit_data = `<b>${use_case}</b>: ${selected_data}`;
 
                                                             return (
                                                                 '<div class="commit_box"><div class="mb"><b>' +
-                                                                selected_hash_information?.sha +
+                                                                commit_sha +
                                                                 '</b></div><div class="mb bold"><b>' +
                                                                 commit_history +
                                                                 '</b></div><div class="mb bold"><b>' +
-                                                                commited_by +
+                                                                committed_by +
                                                                 '</b></div><div class="f">' +
                                                                 `<div style="width: 25px; height: 10px; border: solid #fff 1px; background: ${use_case_color}"><div/>` +
                                                                 `<div class="ml">${commit_data}</div>` +
@@ -250,9 +251,9 @@ function useStatePerformanceTrend(password: string) {
             // With ScanIndexForward being set to true, the trend data are being sorted descending based on the CommitDate.
             // Therefore, the first data that has commit date is the latest commit.
             const commit_date = performances.at(0)?.CommitDate.N || '';
-            const hash_categories = Array.from(new Set(performances.map((p) => p.CommitHash.S.substring(0, 7)))).reverse();
-            // Get all the information for the hash categories in order to get the commiter name, the commit message, and the releveant information
-            const commits_information = await Promise.all(hash_categories.map((hash) => GetServiceCommitInformation(password, hash)));
+            const hash_categories = Array.from(new Set(performances.map((p: PerformanceTrendData) => p.CommitHash.S.substring(0, 7)))).reverse();
+            // Get all the information for the hash categories in order to get the commiter name, the commit message, and the relevant information
+            const commits_information: ServiceCommitInformation[] = await Promise.all(hash_categories.map((hash) => GetServiceCommitInformation(password, hash)));
 
             /* Generate series of data that has the following format:
             data_rate: transaction per minute
@@ -321,7 +322,7 @@ function useStatePerformanceTrend(password: string) {
                 trend_data: trend_data,
                 hash_categories: hash_categories,
                 commits_information: commits_information,
-                last_update: moment.unix(Number(commit_date)).format('dddd, MMMM Do, YYYY h:mm:ss A'),
+                last_update: formatUnixTimestamp(commit_date ?? 0),
             }));
         })();
     }, [password, setState]);
@@ -344,3 +345,33 @@ function useStateSelectedMetrics() {
 
     return [state, setState] as const;
 }
+
+interface CommitFormatOptions {
+    dateFormat?: boolean; // Whether to format the date
+    fallback?: string;
+    includePrefix?: boolean; // Whether to include "Committed by" prefix
+}
+
+export const formatCommitInfo = (selected_hash_information: ServiceCommitInformation | undefined, options: CommitFormatOptions = {}): string => {
+    const { dateFormat = false, fallback = 'No commit information available', includePrefix = true } = options;
+
+    try {
+        if (!selected_hash_information?.author?.login || !selected_hash_information?.commit?.author?.date) {
+            return fallback;
+        }
+
+        const { login } = selected_hash_information?.author;
+        let { date } = selected_hash_information?.commit?.author;
+
+        // Optional date formatting
+        if (dateFormat) {
+            date = new Date(date).toLocaleDateString();
+        }
+
+        const prefix = includePrefix ? 'Committed by ' : '';
+        return `${prefix}${login} on ${date}`;
+    } catch (error) {
+        console.error('Error formatting commit info:', error);
+        return fallback;
+    }
+};

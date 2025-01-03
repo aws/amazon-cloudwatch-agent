@@ -47,21 +47,42 @@ async function GetPerformanceTrend(password: string, params: PerformanceTrendDat
         });
 }
 
-export async function GetServiceCommitInformation(password: string, commit_sha: string): Promise<ServiceCommitInformation> {
-    AxiosConfig.defaults.headers['x-api-key'] = password;
-    return AxiosConfig.post('/', {
-        Action: 'Github',
-        URL: 'GET /repos/{owner}/{repo}/commits/{ref}',
-        Params: {
-            owner: OWNER_REPOSITORY,
-            repo: process.env.REACT_APP_GITHUB_REPOSITORY,
-            ref: commit_sha,
-        },
-    })
-        .then(function (value: { data: any }) {
-            return Promise.resolve(value?.data);
-        })
-        .catch(function (error: unknown) {
-            return Promise.reject(error);
+export async function GetServiceCommitInformation(password: string, commitSha: string): Promise<ServiceCommitInformation> {
+    try {
+        AxiosConfig.defaults.headers['x-api-key'] = password;
+        const response = await AxiosConfig.post('/', {
+            Action: 'Github',
+            URL: 'GET /repos/{owner}/{repo}/commits/{ref}',
+            Params: {
+                owner: OWNER_REPOSITORY,
+                repo: process.env.REACT_APP_GITHUB_REPOSITORY,
+                ref: commitSha,
+            },
         });
+
+        // Validate response
+        if (!response?.data?.data) {
+            return createDefaultServiceCommitInformation();
+        }
+
+        return response.data.data;
+    } catch (error) {
+        console.error('Failed to fetch commit information:', error);
+        throw error; // Re-throw the error for handling by the caller
+    }
+}
+
+function createDefaultServiceCommitInformation(): ServiceCommitInformation {
+    return {
+        author: {
+            login: 'default-user',
+        },
+        commit: {
+            message: 'No commit message available',
+            author: {
+                date: new Date().toISOString(),
+            },
+        },
+        sha: 'default-sha',
+    };
 }
