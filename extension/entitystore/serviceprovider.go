@@ -64,6 +64,7 @@ type serviceprovider struct {
 	done             chan struct{}
 	logger           *zap.Logger
 	mutex            sync.RWMutex
+	logMutex         sync.RWMutex
 	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
 	// Example:
 	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "cloudwatch-agent"}
@@ -106,6 +107,8 @@ func (s *serviceprovider) getAutoScalingGroup() string {
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
 // CloudWatch Agent config.
 func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAttr ServiceAttribute) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
 	if s.logFiles == nil {
 		s.logFiles = make(map[LogFileGlob]ServiceAttribute)
 	}
@@ -115,6 +118,8 @@ func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAtt
 // addEntryForLogGroup adds an association between a log group name and a service attribute, as observed from incoming
 // telemetry received by CloudWatch Agent.
 func (s *serviceprovider) addEntryForLogGroup(logGroupName LogGroupName, serviceAttr ServiceAttribute) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
 	if s.logGroups == nil {
 		s.logGroups = make(map[LogGroupName]ServiceAttribute)
 	}
@@ -178,7 +183,8 @@ func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) Ser
 	if logGroup == "" || s.logGroups == nil {
 		return ServiceAttribute{}
 	}
-
+	s.logMutex.RLock()
+	defer s.logMutex.RUnlock()
 	return s.logGroups[logGroup]
 }
 
@@ -186,7 +192,8 @@ func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) Servic
 	if logFile == "" || s.logFiles == nil {
 		return ServiceAttribute{}
 	}
-
+	s.logMutex.RLock()
+	defer s.logMutex.RUnlock()
 	return s.logFiles[logFile]
 }
 
