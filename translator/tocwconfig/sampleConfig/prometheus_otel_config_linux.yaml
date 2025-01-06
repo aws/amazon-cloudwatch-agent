@@ -45,12 +45,12 @@ exporters:
             server_name_override: ""
         write_buffer_size: 524288
 extensions:
+    entitystore:
+        mode: ec2
+        region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
-        region: us-west-2
-    entitystore:
-        mode: ec2
         region: us-west-2
 processors:
     batch/prometheus/amp:
@@ -74,7 +74,7 @@ receivers:
                   enable_http2: true
                   file_sd_configs:
                     - files:
-                        - {ecsSdFileName}
+                      - {ecsSdFileName}
                       refresh_interval: 5m
                   follow_redirects: true
                   honor_timestamps: true

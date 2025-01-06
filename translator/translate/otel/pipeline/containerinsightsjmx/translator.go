@@ -70,6 +70,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		),
 		Extensions: common.NewTranslatorMap(
 			agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
+			agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
 		),
 	}
 

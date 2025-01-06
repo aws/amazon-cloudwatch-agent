@@ -226,6 +226,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-east-1
@@ -266,6 +273,7 @@ receivers:
         leader_lock_using_config_map_only: true
         local_mode: false
         max_retries: 0
+        middleware: agenthealth/statuscode
         no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: true
@@ -307,6 +315,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         logs/emf_logs:

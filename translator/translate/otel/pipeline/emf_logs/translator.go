@@ -50,7 +50,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Receivers:  common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameEmfLogs, common.LogsKey)), // EMF logs sit under metrics_collected in "logs"
 		Exporters:  common.NewTranslatorMap(awscloudwatchlogs.NewTranslatorWithName(common.PipelineNameEmfLogs)),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
+			agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
+		),
 	}
 	if serviceAddress, ok := common.GetString(conf, serviceAddressEMFKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {

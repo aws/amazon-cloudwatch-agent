@@ -6,7 +6,6 @@ package entitystore
 import (
 	"bytes"
 	"log"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
@@ -87,83 +85,6 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 	}
 }
 
-func TestRetrieveASGName(t *testing.T) {
-	type args struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		want    EC2Info
-	}{
-		{
-			name: "happy path",
-			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
-			},
-			wantErr: false,
-			want: EC2Info{
-				AutoScalingGroup: tagVal3,
-			},
-		},
-		{
-			name: "happy path with multiple tags",
-			args: args{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: mockedInstanceIdentityDoc,
-					Tags: map[string]string{
-						"aws:autoscaling:groupName": tagVal3,
-						"env":                       "test-env",
-						"name":                      "test-name",
-					}},
-			},
-
-			wantErr: false,
-			want: EC2Info{
-				AutoScalingGroup: tagVal3,
-			},
-		},
-		{
-			name: "AutoScalingGroup too large",
-			args: args{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: mockedInstanceIdentityDoc,
-					Tags: map[string]string{
-						"aws:autoscaling:groupName": strings.Repeat("a", 256),
-						"env":                       "test-env",
-						"name":                      "test-name",
-					}},
-			},
-
-			wantErr: false,
-			want: EC2Info{
-				AutoScalingGroup: "",
-			},
-		},
-		{
-			name: "Success IMDS tags call but no ASG",
-			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"name": tagVal3}},
-			},
-			wantErr: false,
-			want: EC2Info{
-				AutoScalingGroup: "",
-			},
-		},
-	}
-	for _, tt := range tests {
-		logger, _ := zap.NewDevelopment()
-		t.Run(tt.name, func(t *testing.T) {
-			ei := &EC2Info{metadataProvider: tt.args.metadataProvider, logger: logger}
-			if err := ei.retrieveAsgName(); (err != nil) != tt.wantErr {
-				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			assert.Equal(t, tt.want.AutoScalingGroup, ei.GetAutoScalingGroup())
-		})
-	}
-}
-
 func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -202,7 +123,6 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 			logOutput := buf.String()
 			log.Println(logOutput)
 			assert.NotContains(t, logOutput, ei.GetInstanceID())
-			assert.NotContains(t, logOutput, ei.GetAutoScalingGroup())
 		})
 	}
 }
@@ -234,38 +154,6 @@ func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
 			log.Println(logOutput)
 			assert.NotContains(t, logOutput, "Initializing EC2Info")
 			assert.NotContains(t, logOutput, "Finished initializing EC2Info")
-		})
-	}
-}
-
-func TestNoASGRetrievalInKubernetesMode(t *testing.T) {
-	type args struct {
-		metadataProvider ec2metadataprovider.MetadataProvider
-		kubernetesMode   string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		want    string
-	}{
-		{
-			name: "EKSNoASGFromEC2Info",
-			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
-				kubernetesMode:   config.ModeEKS,
-			},
-			wantErr: false,
-			want:    "",
-		},
-	}
-	for _, tt := range tests {
-		logger, _ := zap.NewDevelopment()
-		t.Run(tt.name, func(t *testing.T) {
-			ei := &EC2Info{metadataProvider: tt.args.metadataProvider, kubernetesMode: tt.args.kubernetesMode, logger: logger}
-			go ei.initEc2Info()
-			time.Sleep(3 * time.Second)
-			assert.Equal(t, tt.want, ei.GetAutoScalingGroup())
 		})
 	}
 }
