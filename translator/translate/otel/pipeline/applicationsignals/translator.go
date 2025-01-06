@@ -5,7 +5,6 @@ package applicationsignals
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -21,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 type translator struct {
