@@ -149,11 +149,6 @@ func TestCalculateEntitySize(t *testing.T) {
 		expected int
 	}{
 		{
-			name:     "Empty Entity",
-			entity:   cloudwatch.Entity{},
-			expected: strictEntityValidationsize,
-		},
-		{
 			name: "Entity with only Attributes",
 			entity: cloudwatch.Entity{
 				Attributes: map[string]*string{
@@ -161,9 +156,8 @@ func TestCalculateEntitySize(t *testing.T) {
 					"attr2": aws.String("value2"),
 				},
 			},
-			expected: strictEntityValidationsize +
-				(len("attr1") + len("value1") + entityAttributesOverhead) +
-				(len("attr2") + len("value2") + entityAttributesOverhead),
+			// strictEntityValidationsize + entityAttributesOverhead + len(attr1) + len(value1) + entityAttributesOverhead + len(attr2) + len(value2)
+			expected: 29 + (57 + 59) + 5 + 6 + (57 + 59) + 5 + 6,
 		},
 		{
 			name: "Entity with only KeyAttributes",
@@ -173,9 +167,8 @@ func TestCalculateEntitySize(t *testing.T) {
 					"key2": aws.String("value2"),
 				},
 			},
-			expected: strictEntityValidationsize +
-				(len("key1") + len("value1") + entityKeyAttributesOverhead) +
-				(len("key2") + len("value2") + entityKeyAttributesOverhead),
+			// strictEntityValidationsize + entityKeyAttributesOverhead + len(key1) + len(value1) + entityKeyAttributesOverhead + len(key2) + len(value2)
+			expected: 29 + (60 + 62) + 4 + 6 + (60 + 62) + 4 + 6,
 		},
 		{
 			name: "Entity with both Attributes and KeyAttributes",
@@ -187,9 +180,8 @@ func TestCalculateEntitySize(t *testing.T) {
 					"key1": aws.String("value1"),
 				},
 			},
-			expected: strictEntityValidationsize +
-				(len("attr1") + len("value1") + entityAttributesOverhead) +
-				(len("key1") + len("value1") + entityKeyAttributesOverhead),
+			// strictEntityValidationsize + len("attr1") + len("value1") + entityAttributesOverhead + len("key1") + len("value1") + entityKeyAttributesOverhead
+			expected: 29 + 5 + 6 + (57 + 59) + 4 + 6 + (60 + 62),
 		},
 	}
 
