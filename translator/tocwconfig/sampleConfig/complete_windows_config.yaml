@@ -237,6 +237,7 @@ receivers:
         initial_delay: 1s
         timeout: 0s
     udplog/emf_logs:
+        add_attributes: true
         encoding: utf-8
         id: udp_input
         listen_address: 127.0.0.1:25888
