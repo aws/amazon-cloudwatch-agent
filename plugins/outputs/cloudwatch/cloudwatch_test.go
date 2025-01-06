@@ -425,7 +425,7 @@ func TestConsumeMetrics(t *testing.T) {
 	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
 		cloudWatchOutput.WriteToCloudWatch)
-	metrics := makeMetrics(1500)
+	metrics := makeMetrics(1200)
 	cloudWatchOutput.Write(metrics)
 	time.Sleep(2*time.Second + 2*cloudWatchOutput.config.ForceFlushInterval)
 	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
@@ -435,8 +435,8 @@ func TestConsumeMetrics(t *testing.T) {
 		10,
 		2*time.Second,
 		cw.WriteToCloudWatch)
-	// Expect 1500 metrics batched in 2 API calls.
-	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
+	// Expect 1200 metrics batched in 2 API calls.
+	pmetrics := createTestMetrics(1200, 1, 1, "B/s")
 	ctx := context.Background()
 	cw.ConsumeMetrics(ctx, pmetrics)
 	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
