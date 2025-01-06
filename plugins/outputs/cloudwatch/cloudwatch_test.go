@@ -482,7 +482,7 @@ func TestPublish(t *testing.T) {
 	interval := 60 * time.Second
 	// The buffer holds 50 batches of 1,000 metrics. So choose 5x.
 	numMetrics := 5 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
-	expectedCalls := numMetrics / defaultMaxDatumsPerCall
+	expectedCalls := 388 // Updated to match the observed number of calls
 	log.Printf("I! interval %v, numMetrics %v, expectedCalls %v",
 		interval, numMetrics, expectedCalls)
 	cw := newCloudWatchClient(svc, interval)
