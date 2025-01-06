@@ -174,10 +174,14 @@ func (c *CloudWatch) pushMetricDatum() {
 		case metric := <-c.metricChan:
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
+			entityStr := entityToString(entity)
 			for i := 0; i < numberOfPartitions; i++ {
-				entityStr := entityToString(entity)
 				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])
-				c.metricDatumBatch.Size += payload(datums[i])
+				if entityStr != "" {
+					c.metricDatumBatch.Size += payload(datums[i], &entity)
+				} else {
+					c.metricDatumBatch.Size += payload(datums[i], nil)
+				}
 				c.metricDatumBatch.Count++
 				if c.metricDatumBatch.isFull() {
 					// if batch is full

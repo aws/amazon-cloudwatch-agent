@@ -118,7 +118,7 @@ func TestPayload_ValuesAndCounts(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 1313, payload(datum))
+	assert.Equal(t, 1313, payload(datum, nil))
 }
 
 func TestPayload_Value(t *testing.T) {
@@ -131,7 +131,7 @@ func TestPayload_Value(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 550, payload(datum))
+	assert.Equal(t, 550, payload(datum, nil))
 }
 
 func TestPayload_Min(t *testing.T) {
@@ -139,7 +139,68 @@ func TestPayload_Min(t *testing.T) {
 	datum.SetValue(1.23456789)
 	datum.SetMetricName("MetricName")
 	datum.SetTimestamp(time.Now())
-	assert.Equal(t, 232, payload(datum))
+	assert.Equal(t, 232, payload(datum, nil))
+}
+
+func TestCalculateEntitySize(t *testing.T) {
+	tests := []struct {
+		name     string
+		entity   cloudwatch.Entity
+		expected int
+	}{
+		{
+			name:     "Empty Entity",
+			entity:   cloudwatch.Entity{},
+			expected: strictEntityValidationsize,
+		},
+		{
+			name: "Entity with only Attributes",
+			entity: cloudwatch.Entity{
+				Attributes: map[string]*string{
+					"attr1": aws.String("value1"),
+					"attr2": aws.String("value2"),
+				},
+			},
+			expected: strictEntityValidationsize +
+				(len("attr1") + len("value1") + entityAttributesOverhead) +
+				(len("attr2") + len("value2") + entityAttributesOverhead),
+		},
+		{
+			name: "Entity with only KeyAttributes",
+			entity: cloudwatch.Entity{
+				KeyAttributes: map[string]*string{
+					"key1": aws.String("value1"),
+					"key2": aws.String("value2"),
+				},
+			},
+			expected: strictEntityValidationsize +
+				(len("key1") + len("value1") + entityKeyAttributesOverhead) +
+				(len("key2") + len("value2") + entityKeyAttributesOverhead),
+		},
+		{
+			name: "Entity with both Attributes and KeyAttributes",
+			entity: cloudwatch.Entity{
+				Attributes: map[string]*string{
+					"attr1": aws.String("value1"),
+				},
+				KeyAttributes: map[string]*string{
+					"key1": aws.String("value1"),
+				},
+			},
+			expected: strictEntityValidationsize +
+				(len("attr1") + len("value1") + entityAttributesOverhead) +
+				(len("key1") + len("value1") + entityKeyAttributesOverhead),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateEntitySize(tt.entity)
+			if result != tt.expected {
+				t.Errorf("calculateEntitySize() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
 }
 
 func TestEntityToString_StringToEntity(t *testing.T) {

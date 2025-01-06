@@ -29,6 +29,8 @@ const (
 	statisticsSize = 358
 	// &EntityMetricData.member.100.MetricData.member.100.Timestamp=2018-05-29T21%3A14%3A00Z
 	timestampSize = 85
+	// &StrictEntityValidation=false
+	strictEntityValidationsize = 29
 
 	overallConstPerRequestSize = pmdActionSize + versionSize
 	// &Namespace=, this is per request
@@ -46,6 +48,10 @@ const (
 	valueOverheads = 75
 	// &EntityMetricData.member.1.MetricData.member.1.Unit=Kilobytes/Second
 	unitOverheads = 68
+	// &EntityMetricData.member.1.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.1.Entity.KeyAttributes.entry.1.value=
+	entityKeyAttributesOverhead = 60 + 62
+	// &EntityMetricData.member.1.Entity.Attributes.entry.1.key= &EntityMetricData.member.1.Entity.Attributes.entry.1.value=
+	entityAttributesOverhead = 57 + 59
 )
 
 // Set seed once.
@@ -93,7 +99,11 @@ func resize(dist distribution.Distribution, listMaxSize int) (distList []distrib
 	return
 }
 
-func payload(datum *cloudwatch.MetricDatum) (size int) {
+func payload(datum *cloudwatch.MetricDatum, entity *cloudwatch.Entity) (size int) {
+	if entity != nil {
+		size += calculateEntitySize(*entity)
+	}
+
 	size += timestampSize
 
 	for _, dimension := range datum.Dimensions {
@@ -121,6 +131,20 @@ func payload(datum *cloudwatch.MetricDatum) (size int) {
 	}
 
 	return
+}
+
+func calculateEntitySize(entity cloudwatch.Entity) int {
+	size := strictEntityValidationsize
+
+	for k, v := range entity.Attributes {
+		size += len(k) + len(*v) + entityAttributesOverhead
+	}
+
+	for k, v := range entity.KeyAttributes {
+		size += len(k) + len(*v) + entityKeyAttributesOverhead
+	}
+
+	return size
 }
 
 func entityToString(entity cloudwatch.Entity) string {
