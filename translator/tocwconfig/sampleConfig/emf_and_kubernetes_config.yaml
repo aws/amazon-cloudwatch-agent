@@ -396,23 +396,30 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-                mode: OP
+                mode: K8OP
                 region_type: ACJ
     agenthealth/statuscode:
         is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             usage_flags:
-                mode: OP
+                mode: K8OP
                 region_type: ACJ
     entitystore:
+        kubernetes_mode: K8sOnPrem
         mode: onPremise
         profile: default
         region: us-east-1
         shared_credential_file: /root/.aws/credentials
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
 processors:
     awsentity/service/emf:
         entity_type: Service
+        kubernetes_mode: K8sOnPrem
         platform: onPremise
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -467,6 +474,7 @@ receivers:
         shared_credentials_file:
             - /root/.aws/credentials
     tcplog/emf_logs:
+        add_attributes: true
         encoding: utf-8
         id: tcp_input
         listen_address: 0.0.0.0:25888
@@ -478,6 +486,7 @@ receivers:
             max_interval: 0s
         type: tcp_input
     udplog/emf_logs:
+        add_attributes: true
         encoding: utf-8
         id: udp_input
         listen_address: 0.0.0.0:25888
@@ -497,6 +506,7 @@ service:
         - agenthealth/logs
         - agenthealth/statuscode
         - entitystore
+        - server
     pipelines:
         logs/emf_logs:
             exporters:

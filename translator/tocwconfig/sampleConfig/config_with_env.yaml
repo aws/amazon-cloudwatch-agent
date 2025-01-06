@@ -60,6 +60,7 @@ processors:
         timeout: 5s
 receivers:
     tcplog/emf_logs:
+        add_attributes: true
         encoding: utf-8
         id: tcp_input
         listen_address: 0.0.0.0:25888
@@ -71,6 +72,7 @@ receivers:
             max_interval: 0s
         type: tcp_input
     udplog/emf_logs:
+        add_attributes: true
         encoding: utf-8
         id: udp_input
         listen_address: 0.0.0.0:25888
