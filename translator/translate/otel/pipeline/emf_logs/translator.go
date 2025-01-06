@@ -9,12 +9,15 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/tcplog"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/udplog"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 var (
@@ -53,6 +56,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
 			agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
 		),
+	}
+	if !(context.CurrentContext().RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS()) {
+		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, "emf", false))
 	}
 	if serviceAddress, ok := common.GetString(conf, serviceAddressEMFKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {
