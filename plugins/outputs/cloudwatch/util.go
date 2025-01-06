@@ -99,8 +99,8 @@ func resize(dist distribution.Distribution, listMaxSize int) (distList []distrib
 	return
 }
 
-func payload(datum *cloudwatch.MetricDatum, entity *cloudwatch.Entity) (size int) {
-	size += timestampSize
+func payload(datum *cloudwatch.MetricDatum, entity *cloudwatch.Entity) int {
+	size := timestampSize
 
 	if entity != nil {
 		size += calculateEntitySize(*entity)
@@ -130,7 +130,7 @@ func payload(datum *cloudwatch.MetricDatum, entity *cloudwatch.Entity) (size int
 		size += unitOverheads
 	}
 
-	return
+	return size
 }
 
 func calculateEntitySize(entity cloudwatch.Entity) int {
