@@ -134,6 +134,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: 59cbb09ca57c1204b6c38e74a43a2b08d60b9dc2
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
