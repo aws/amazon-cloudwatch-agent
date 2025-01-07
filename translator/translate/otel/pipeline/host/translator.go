@@ -91,6 +91,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		}
 	}
 
+	currentContext := context.CurrentContext()
+
 	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		entityProcessor = nil
 	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
@@ -101,8 +103,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
 	}
 
-	currentContext := context.CurrentContext()
-	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
+	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.CloudWatchLogsKey || t.Destination() == common.DefaultDestination) {
 		translators.Processors.Set(entityProcessor)
 	}
 
