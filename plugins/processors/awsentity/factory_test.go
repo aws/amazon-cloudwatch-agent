@@ -40,6 +40,6 @@ func TestCreateProcessor(t *testing.T) {
 	assert.NotNil(t, mProcessor)
 
 	lProcessor, err := factory.CreateLogsProcessor(context.Background(), setting, cfg, consumertest.NewNop())
-	assert.NoError(t, err)
-	assert.NotNil(t, lProcessor)
+	assert.Equal(t, err, component.ErrDataTypeIsNotSupported)
+	assert.Nil(t, lProcessor)
 }
