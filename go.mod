@@ -7,19 +7,19 @@ replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.2024
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250106212614-3a9a8a0b5a33
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250106212614-3a9a8a0b5a33
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250107151238-7004c62fa782
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250107151238-7004c62fa782
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20241216205413-8e059f1441db
 )
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20241216205413-8e059f1441db
 
-replace github.com/amazon-contributing/opentelemetry-collector-contrib/sdk/service/cloudwatchlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/sdk/service/cloudwatchlogs v0.0.0-20250106212614-3a9a8a0b5a33
+replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/sdk/service/cloudwatchlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/override/sdk/service/cloudwatchlogs v0.0.0-20250107151238-7004c62fa782
 
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20241216205413-8e059f1441db
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20241216205413-8e059f1441db
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20241216205413-8e059f1441db
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250107151238-7004c62fa782
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20241216205413-8e059f1441db
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/proxy => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20241216205413-8e059f1441db
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20241216205413-8e059f1441db
@@ -237,7 +237,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9 // indirect
 	github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20241216205413-8e059f1441db // indirect
-	github.com/amazon-contributing/opentelemetry-collector-contrib/sdk/service/cloudwatchlogs v0.0.0-00010101000000-000000000000 // indirect
+	github.com/amazon-contributing/opentelemetry-collector-contrib/override/sdk/service/cloudwatchlogs v0.0.0-00010101000000-000000000000 // indirect
 	github.com/antchfx/jsonquery v1.1.5 // indirect
 	github.com/antchfx/xmlquery v1.3.9 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
