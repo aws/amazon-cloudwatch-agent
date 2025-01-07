@@ -22,6 +22,7 @@ import (
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
@@ -119,7 +120,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		t.setHostIP(conf, cfg)
 		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
-
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 	cfg.EnableAcceleratedComputeMetrics = cfg.EnableAcceleratedComputeMetrics || AcceleratedComputeMetricsEnabled(conf)
 

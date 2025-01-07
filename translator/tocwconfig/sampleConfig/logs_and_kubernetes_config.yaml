@@ -133,6 +133,8 @@ exporters:
                 - pod_memory_limit
                 - pod_cpu_limit
                 - pod_cpu_request
+                - pod_cpu_usage_total
+                - pod_memory_working_set
                 - pod_container_status_running
                 - pod_container_status_terminated
                 - pod_container_status_waiting
@@ -177,6 +179,10 @@ exporters:
                 - node_interface_network_tx_dropped
                 - node_diskio_io_service_bytes_total
                 - node_diskio_io_serviced_total
+                - hyperpod_node_health_status_schedulable
+                - hyperpod_node_health_status_unschedulable_pending_replacement
+                - hyperpod_node_health_status_unschedulable_pending_reboot
+                - hyperpod_node_health_status_unschedulable
             - dimensions:
                 - - ClusterName
                   - InstanceId
@@ -388,7 +394,20 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
 processors:
+    awsentity/service/emf:
+        entity_type: Service
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -429,6 +448,7 @@ receivers:
         leader_lock_using_config_map_only: true
         local_mode: false
         max_retries: 0
+        middleware: agenthealth/statuscode
         no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: true
@@ -467,11 +487,14 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:
                 - awscloudwatchlogs/emf_logs
             processors:
+                - awsentity/service/emf
                 - batch/emf_logs
             receivers:
                 - tcplog/emf_logs
@@ -480,8 +503,8 @@ service:
             exporters:
                 - awsemf/containerinsights
             processors:
-                - metricstransform/containerinsights
                 - batch/containerinsights
+                - metricstransform/containerinsights
             receivers:
                 - awscontainerinsightreceiver
     telemetry:

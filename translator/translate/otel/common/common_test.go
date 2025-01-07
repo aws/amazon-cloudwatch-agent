@@ -34,7 +34,7 @@ func TestConfigKeys(t *testing.T) {
 }
 
 func TestGetString(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"int": 10, "string": "test"})
+	conf := confmap.NewFromStringMap(map[string]any{"int": 10, "string": "test"})
 	got, ok := GetString(conf, "int")
 	require.True(t, ok)
 	// converts int to string
@@ -69,7 +69,7 @@ func TestGetArray(t *testing.T) {
 }
 
 func TestGetBool(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"int": 10, "string": "test", "bool1": false, "bool2": true})
+	conf := confmap.NewFromStringMap(map[string]any{"int": 10, "string": "test", "bool1": false, "bool2": true})
 	got, ok := GetBool(conf, "int")
 	require.False(t, ok)
 	require.False(t, got)
@@ -88,7 +88,7 @@ func TestGetBool(t *testing.T) {
 }
 
 func TestGetOrDefaultBool(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"int": 10, "string": "test", "bool1": false, "bool2": true})
+	conf := confmap.NewFromStringMap(map[string]any{"int": 10, "string": "test", "bool1": false, "bool2": true})
 	got := GetOrDefaultBool(conf, "int", false)
 	require.False(t, got)
 
@@ -106,10 +106,10 @@ func TestGetOrDefaultBool(t *testing.T) {
 }
 
 func TestGetNumber(t *testing.T) {
-	test := map[string]interface{}{"int": 10, "string": "test", "bool": false, "float": 1.3}
+	test := map[string]any{"int": 10, "string": "test", "bool": false, "float": 1.3}
 	marshalled, err := json.Marshal(test)
 	require.NoError(t, err)
-	var unmarshalled map[string]interface{}
+	var unmarshalled map[string]any
 	require.NoError(t, json.Unmarshal(marshalled, &unmarshalled))
 
 	conf := confmap.NewFromStringMap(unmarshalled)
@@ -131,7 +131,7 @@ func TestGetNumber(t *testing.T) {
 }
 
 func TestGetDuration(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"invalid": "invalid", "valid": 1, "zero": 0})
+	conf := confmap.NewFromStringMap(map[string]any{"invalid": "invalid", "valid": 1, "zero": 0})
 	got, ok := GetDuration(conf, "invalid")
 	require.False(t, ok)
 	require.Equal(t, time.Duration(0), got)
@@ -145,7 +145,7 @@ func TestGetDuration(t *testing.T) {
 
 func TestParseDuration(t *testing.T) {
 	testCases := map[string]struct {
-		input   interface{}
+		input   any
 		want    time.Duration
 		wantErr bool
 	}{
@@ -201,50 +201,50 @@ func TestMissingKeyError(t *testing.T) {
 func TestGetOrDefaultDuration(t *testing.T) {
 	sectionKeys := []string{"section::metrics_collection_interval", "backup::metrics_collection_interval"}
 	testCases := map[string]struct {
-		input map[string]interface{}
+		input map[string]any
 		want  time.Duration
 	}{
 		"WithDefault": {
-			input: map[string]interface{}{},
+			input: map[string]any{},
 			want:  time.Minute,
 		},
 		"WithZeroInterval": {
-			input: map[string]interface{}{
-				"backup": map[string]interface{}{
+			input: map[string]any{
+				"backup": map[string]any{
 					"metrics_collection_interval": 0,
 				},
-				"section": map[string]interface{}{
+				"section": map[string]any{
 					"metrics_collection_interval": 0,
 				},
 			},
 			want: time.Minute,
 		},
 		"WithoutSectionOverride": {
-			input: map[string]interface{}{
-				"backup": map[string]interface{}{
+			input: map[string]any{
+				"backup": map[string]any{
 					"metrics_collection_interval": 10,
 				},
-				"section": map[string]interface{}{},
+				"section": map[string]any{},
 			},
 			want: 10 * time.Second,
 		},
 		"WithInvalidSectionOverride": {
-			input: map[string]interface{}{
-				"backup": map[string]interface{}{
+			input: map[string]any{
+				"backup": map[string]any{
 					"metrics_collection_interval": 10,
 				},
-				"section": map[string]interface{}{
+				"section": map[string]any{
 					"metrics_collection_interval": "invalid",
 				},
 			},
 			want: 10 * time.Second,
 		},
 		"WithSectionOverride": {
-			input: map[string]interface{}{
-				"backup": map[string]interface{}{
+			input: map[string]any{
+				"backup": map[string]any{
 					"metrics_collection_interval": 10,
 				},
-				"section": map[string]interface{}{
+				"section": map[string]any{
 					"metrics_collection_interval": 120,
 				},
 			},
@@ -354,6 +354,33 @@ func TestGetMeasurements(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, testCase.want, GetMeasurements(testCase.input))
+		})
+	}
+}
+
+func TestIsAnySet(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"one": map[string]any{
+			"endpoint": "test",
+		},
+		"two": map[string]any{},
+	})
+	testCases := map[string]struct {
+		keys []string
+		want bool
+	}{
+		"NotSet": {
+			keys: []string{"test"},
+			want: false,
+		},
+		"Set": {
+			keys: []string{"test", "one::endpoint"},
+			want: true,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, testCase.want, IsAnySet(conf, testCase.keys))
 		})
 	}
 }

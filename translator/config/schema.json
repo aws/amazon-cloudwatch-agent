@@ -52,6 +52,18 @@
         "omit_hostname": {
           "description": "Hostname will be tagged by default unless you specifying append_dimensions, this flag allow you to omit hostname from tags without specifying append_dimensions",
           "type": "boolean"
+        },
+        "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 259
         }
       },
       "additionalProperties": true
@@ -92,6 +104,18 @@
             "minLength": 1,
             "maxLength": 1024
           }
+        },
+        "metrics_destinations": {
+          "type": "object",
+          "properties": {
+            "cloudwatch": {
+            },
+            "amp": {
+              "$ref": "#/definitions/metricsDefinition/definitions/ampDefinition"
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
         },
         "metrics_collected": {
           "type": "object",
@@ -137,6 +161,12 @@
             },
             "jmx": {
               "$ref": "#/definitions/metricsDefinition/definitions/jmxDefinitions"
+            },
+            "otlp": {
+              "$ref": "#/definitions/otlpDefinitions"
+            },
+            "prometheus": {
+             "$ref": "#/definitions/metricsDefinition/definitions/prometheusDefinitions"
             }
           },
           "minProperties": 1,
@@ -155,6 +185,16 @@
         "endpoint_override": {
           "description": "The override endpoint to use to access cloudwatch",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "service.name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "deployment.environment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         }
       },
       "additionalProperties": false,
@@ -230,6 +270,22 @@
             },
             "metrics_aggregation_interval": {
               "$ref": "#/definitions/timeIntervalWithZeroDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "service.name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "deployment.environment": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             }
           },
           "additionalProperties": false
@@ -337,32 +393,39 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 255
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "service.name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "deployment.environment": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             }
           },
           "additionalProperties": false
         },
-        "tlsDefinitions": {
+        "ampDefinition": {
           "type": "object",
           "properties": {
-            "ca_file": {
+            "workspace_id": {
               "type": "string",
               "minLength": 1,
               "maxLength": 255
-            },
-            "cert_file": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            },
-            "key_file": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            },
-            "insecure": {
-              "type": "boolean"
             }
-          }
+          },
+          "required": [
+            "workspace_id"
+          ],
+          "additionalProperties": false
         },
         "swapDefinitions": {
           "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
@@ -471,6 +534,12 @@
             },
             "append_dimensions": {
               "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
@@ -532,6 +601,20 @@
             ]
           },
           "uniqueItems": true
+        },
+        "prometheusDefinitions": {
+          "type": "object",
+          "properties": {
+            "prometheus_config_path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          "required": [
+            "prometheus_config_path"
+          ],
+          "additionalProperties": false
         }
       }
     },
@@ -635,7 +718,7 @@
                 }
               },
               "tls": {
-                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+                "$ref": "#/definitions/tlsDefinitions"
               },
               "additionalProperties": true
             },
@@ -719,7 +802,7 @@
                 }
               },
               "tls": {
-                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+                "$ref": "#/definitions/tlsDefinitions"
               },
               "additionalProperties": true
             },
@@ -744,6 +827,10 @@
                   "minLength": 1,
                   "maxLength": 512
                 },
+                "jmx_container_insights": {
+                  "description": "Enable JMX Container Insights metrics",
+                  "type": "boolean"
+                },
                 "metrics_collection_interval": {
                   "$ref": "#/definitions/timeIntervalDefinition"
                 },
@@ -754,7 +841,7 @@
               },
               "additionalProperties": true
             },
-            "prometheus":{
+            "prometheus": {
               "type": "object",
               "properties": {
                 "cluster_name": {
@@ -778,6 +865,9 @@
                 }
               },
               "additionalProperties": false
+            },
+            "otlp": {
+              "$ref": "#/definitions/otlpDefinitions"
             }
           },
           "additionalProperties": true
@@ -796,6 +886,18 @@
         "endpoint_override": {
           "description": "The override endpoint to use to access cloudwatch logs",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 259
         }
       },
       "additionalProperties": false,
@@ -876,6 +978,18 @@
                     "items": {
                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
                     }
+                  },
+                  "service.name": {
+                    "description": "The name of the service to associate with the telemetry produced by the agent.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "deployment.environment": {
+                    "description": "The name of the environment to associate with the telemetry produced by the agent.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 259
                   }
                 },
                 "required": [
@@ -1049,10 +1163,7 @@
               "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
             },
             "otlp": {
-              "tls": {
-                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
-              },
-              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinitions"
+              "$ref": "#/definitions/otlpDefinitions"
             }
           },
           "minProperties": 1,
@@ -1095,6 +1206,10 @@
         "region_override": {
           "description": "The override region",
           "type": "string"
+        },
+        "transit_spans_in_otlp_format": {
+          "description": "Export X-Ray to OTEL format. If not set then send spans as X-Ray format",
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
@@ -1115,21 +1230,6 @@
             }
           },
           "additionalProperties": false
-        },
-        "otlpDefinitions": {
-          "oneOf": [
-            {
-              "type": "array",
-              "minItems": 1,
-              "maxItems": 255,
-              "items": {
-                "$ref": "#/definitions/otlpObjectDefinition"
-              }
-            },
-            {
-              "$ref": "#/definitions/otlpObjectDefinition"
-            }
-          ]
         }
       }
     },
@@ -1185,6 +1285,44 @@
       },
       "additionalProperties": false
     },
+    "tlsDefinitions": {
+      "type": "object",
+      "properties": {
+        "ca_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "cert_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "key_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "insecure": {
+          "type": "boolean"
+        }
+      }
+    },
+    "otlpDefinitions": {
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 255,
+          "items": {
+            "$ref": "#/definitions/otlpObjectDefinition"
+          }
+        },
+        {
+          "$ref": "#/definitions/otlpObjectDefinition"
+        }
+      ]
+    },
     "otlpObjectDefinition": {
       "type": "object",
       "properties": {
@@ -1195,6 +1333,9 @@
         "http_endpoint": {
           "description": "HTTP endpoint to use to listen for OTLP JSON information",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsDefinitions"
         }
       },
       "additionalProperties": false
@@ -1269,9 +1410,6 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "endpoint"
-      ],
       "anyOf": [
         {
           "required": [
@@ -1413,7 +1551,7 @@
               "description": "Prometheus metrics port list of the exporters",
               "type": "string"
             },
-            "sd_service_name_pattern":{
+            "sd_service_name_pattern": {
               "description": "ECS service name pattern responsible for tasks which expose the Prometheus metrics",
               "type": "string"
             }

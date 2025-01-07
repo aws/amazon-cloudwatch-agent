@@ -4,6 +4,7 @@
 package prometheus
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,47 +18,128 @@ import (
 
 func TestTranslator(t *testing.T) {
 	type want struct {
+		pipelineID string
 		receivers  []string
 		processors []string
 		exporters  []string
 		extensions []string
 	}
-	cit := NewTranslator()
-	require.EqualValues(t, "metrics/prometheus", cit.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *want
-		wantErr error
+		input       map[string]any
+		index       int
+		destination string
+		want        *want
+		wantErr     error
 	}{
-		"WithoutPrometheusKey": {
-			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: "logs::metrics_collected::prometheus"},
+		"WithoutPrometheusMetrics": {
+			input:       map[string]any{},
+			destination: common.AMPKey,
+			wantErr: &common.MissingKeyError{
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/amp"),
+				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
+			},
 		},
-		"WithPrometheusKey": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": nil,
+		"WithoutPrometheusLogs": {
+			input:       map[string]any{},
+			destination: common.CloudWatchLogsKey,
+			wantErr: &common.MissingKeyError{
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/cloudwatchlogs"),
+				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
+			},
+		},
+		"WithMissingLogsConfiguration": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"prometheus_config_path": "test.yaml",
+						},
 					},
 				},
 			},
+			destination: common.CloudWatchLogsKey,
+			wantErr:     errors.New("pipeline (prometheus/cloudwatchlogs) is missing prometheus configuration under logs section with destination (cloudwatchlogs)"),
+		},
+		"WithMetricsWithCloudWatchDestination": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"prometheus_config_path": "test.yaml",
+						},
+					},
+				},
+			},
+			destination: common.CloudWatchLogsKey,
 			want: &want{
+				pipelineID: "metrics/prometheus/cloudwatchlogs",
 				receivers:  []string{"telegraf_prometheus"},
-				processors: []string{"batch/prometheus"},
+				processors: []string{"batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
-				extensions: []string{"agenthealth/logs"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+			},
+		},
+		"WithValidAMP": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws1234",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"prometheus_config_path": "test.yaml",
+						},
+					},
+				},
+			},
+			destination: common.AMPKey,
+			want: &want{
+				pipelineID: "metrics/prometheus/amp",
+				receivers:  []string{"prometheus"},
+				processors: []string{"batch/prometheus/amp"},
+				exporters:  []string{"prometheusremotewrite/amp"},
+				extensions: []string{"sigv4auth"},
+			},
+		},
+		"WithValidCloudWatch": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			destination: common.CloudWatchLogsKey,
+			want: &want{
+				pipelineID: "metrics/prometheus/cloudwatchlogs",
+				receivers:  []string{"telegraf_prometheus"},
+				processors: []string{"batch/prometheus/cloudwatchlogs"},
+				exporters:  []string{"awsemf/prometheus"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			tt := NewTranslator(common.WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cit.Translate(conf)
-			assert.Equal(t, testCase.wantErr, err)
+			got, err := tt.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
-				assert.Nil(t, got)
+				require.Nil(t, got)
 			} else {
 				require.NotNil(t, got)
+				require.EqualValues(t, testCase.want.pipelineID, tt.ID().String())
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))

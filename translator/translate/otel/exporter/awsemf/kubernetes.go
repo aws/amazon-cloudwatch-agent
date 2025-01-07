@@ -99,12 +99,14 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 		podMetricDeclarations[0].Dimensions = append(podMetricDeclarations[0].Dimensions, []string{"FullPodName", "PodName", "Namespace", "ClusterName"})
 		selectors = append(selectors, []string{"pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
 			"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
-			"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request",
+			"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request", "pod_cpu_usage_total", "pod_memory_working_set",
 			"pod_container_status_running", "pod_container_status_terminated", "pod_container_status_waiting", "pod_container_status_waiting_reason_crash_loop_back_off",
 			"pod_container_status_waiting_reason_image_pull_error", "pod_container_status_waiting_reason_start_error", "pod_container_status_waiting_reason_create_container_error",
 			"pod_container_status_waiting_reason_create_container_config_error", "pod_container_status_terminated_reason_oom_killed",
 		}...)
-
+		if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
+			selectors = append(selectors, "pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity")
+		}
 	}
 
 	metricDeclaration := awsemfexporter.MetricDeclaration{
@@ -138,20 +140,25 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 
 	return podMetricDeclarations
 }
+
 func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
+	nodeMetrics := []string{
+		"node_cpu_utilization", "node_memory_utilization", "node_network_total_bytes", "node_cpu_reserved_capacity",
+		"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
+		"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
+		"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
+		"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
+		"node_status_capacity_pods", "node_status_allocatable_pods",
+	}
+	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
+		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity")
+	}
 	if enhancedContainerInsightsEnabled {
 		return []*awsemfexporter.MetricDeclaration{
 			{
-				Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
-				MetricNameSelectors: []string{
-					"node_cpu_utilization", "node_memory_utilization", "node_network_total_bytes", "node_cpu_reserved_capacity",
-					"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
-					"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
-					"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-					"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
-					"node_status_capacity_pods", "node_status_allocatable_pods",
-				},
+				Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+				MetricNameSelectors: nodeMetrics,
 			},
 			{
 				Dimensions: [][]string{
@@ -161,6 +168,8 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 				MetricNameSelectors: []string{
 					"node_interface_network_rx_dropped", "node_interface_network_tx_dropped",
 					"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total",
+					"hyperpod_node_health_status_schedulable", "hyperpod_node_health_status_unschedulable_pending_replacement",
+					"hyperpod_node_health_status_unschedulable_pending_reboot", "hyperpod_node_health_status_unschedulable",
 				},
 			},
 		}
@@ -502,29 +511,6 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_gpu_memory_used",
 					"node_gpu_power_draw",
 					"node_gpu_temperature",
-				},
-			},
-			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
-				MetricNameSelectors: []string{
-					"pod_gpu_total",
-					"pod_gpu_request",
-					"pod_gpu_limit",
-				},
-			},
-			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType"}},
-				MetricNameSelectors: []string{
-					"node_gpu_total",
-					"node_gpu_request",
-					"node_gpu_limit",
-				},
-			},
-			{
-				Dimensions: [][]string{{"ClusterName"}},
-				MetricNameSelectors: []string{
-					"cluster_gpu_total",
-					"cluster_gpu_request",
 				},
 			},
 		}...)

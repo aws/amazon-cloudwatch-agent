@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -19,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
 	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -43,7 +45,7 @@ type Tagger struct {
 
 	logger           *zap.Logger
 	cancelFunc       context.CancelFunc
-	metadataProvider MetadataProvider
+	metadataProvider ec2metadataprovider.MetadataProvider
 	ec2Provider      ec2ProviderType
 
 	shutdownC          chan bool
@@ -55,6 +57,7 @@ type Tagger struct {
 	ec2API             ec2iface.EC2API
 	volumeSerialCache  volume.Cache
 
+	Configurer   *awsmiddleware.Configurer
 	sync.RWMutex //to protect ec2TagCache
 }
 
@@ -62,12 +65,11 @@ type Tagger struct {
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
-
 	p := &Tagger{
 		Config:           config,
 		logger:           logger,
 		cancelFunc:       cancel,
-		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
+		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
@@ -172,7 +174,7 @@ func (t *Tagger) updateTags() error {
 		}
 		for _, tag := range result.Tags {
 			key := *tag.Key
-			if ec2InstanceTagKeyASG == key {
+			if Ec2InstanceTagKeyASG == key {
 				// rename to match CW dimension as applied by AutoScaling service, not the EC2 tag
 				key = cwDimensionASG
 			}
@@ -246,7 +248,7 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	defer t.RUnlock()
 	if t.ec2TagCache != nil {
 		for _, key := range t.EC2InstanceTagKeys {
-			if key == ec2InstanceTagKeyASG {
+			if key == Ec2InstanceTagKeyASG {
 				key = cwDimensionASG
 			}
 			if key == "*" {
@@ -279,14 +281,12 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 
 // Start acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
 // It will be called when OTel is enabling each processor
-func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
+func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	t.shutdownC = make(chan bool)
 	t.ec2TagCache = map[string]string{}
-
 	if err := t.deriveEC2MetadataFromIMDS(ctx); err != nil {
 		return err
 	}
-
 	t.tagFilters = []*ec2.Filter{
 		{
 			Name:   aws.String("resource-type"),
@@ -297,15 +297,14 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 			Values: aws.StringSlice([]string{t.ec2MetadataRespond.instanceId}),
 		},
 	}
-
+	// if the customer said 'AutoScalingGroupName' (the CW dimension), do what they mean not what they said
+	// and filter for the EC2 tag name called 'aws:autoscaling:groupName'
 	useAllTags := len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*"
-
 	if !useAllTags && len(t.EC2InstanceTagKeys) > 0 {
 		// if the customer said 'AutoScalingGroupName' (the CW dimension), do what they mean not what they said
-		// and filter for the EC2 tag name called 'aws:autoscaling:groupName'
 		for i, key := range t.EC2InstanceTagKeys {
 			if cwDimensionASG == key {
-				t.EC2InstanceTagKeys[i] = ec2InstanceTagKeyASG
+				t.EC2InstanceTagKeys[i] = Ec2InstanceTagKeyASG
 			}
 		}
 
@@ -314,7 +313,6 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 			Values: aws.StringSlice(t.EC2InstanceTagKeys),
 		})
 	}
-
 	if len(t.EC2InstanceTagKeys) > 0 || len(t.EBSDeviceKeys) > 0 {
 		ec2CredentialConfig := &configaws.CredentialConfig{
 			AccessKey: t.AccessKey,
@@ -326,6 +324,13 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 			Region:    t.ec2MetadataRespond.region,
 		}
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
+
+		if client, ok := t.ec2API.(*ec2.EC2); ok {
+			if t.Config.MiddlewareID != nil {
+				awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
+			}
+		}
+
 		go func() { //Async start of initial retrieval to prevent block of agent start
 			t.initialRetrievalOfTagsAndVolumes()
 			t.refreshLoopToUpdateTagsAndVolumes()
@@ -335,7 +340,6 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 	} else {
 		t.setStarted()
 	}
-
 	return nil
 }
 
@@ -442,10 +446,10 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 	retry := 0
 	for {
 		var waitDuration time.Duration
-		if retry < len(backoffSleepArray) {
-			waitDuration = backoffSleepArray[retry]
+		if retry < len(BackoffSleepArray) {
+			waitDuration = BackoffSleepArray[retry]
 		} else {
-			waitDuration = backoffSleepArray[len(backoffSleepArray)-1]
+			waitDuration = BackoffSleepArray[len(BackoffSleepArray)-1]
 		}
 
 		wait := time.NewTimer(waitDuration)

@@ -103,6 +103,16 @@ exporters:
                 - Latency
                 - Fault
                 - Error
+            - dimensions:
+                - - Environment
+                  - Service
+              label_matchers:
+                - label_names:
+                    - Telemetry.Source
+                  regex: ^RuntimeMetric$
+                  separator: ;
+              metric_name_selectors:
+                - ^.*$
         middleware: agenthealth/logs
         namespace: ApplicationSignals
         no_verify_ssl: false
@@ -255,12 +265,20 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
+        transit_spans_in_otlp_format: true
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+                mode: K8E
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
             usage_flags:
                 mode: K8E
                 region_type: ACJ
@@ -276,15 +294,24 @@ extensions:
         aws_endpoint: ""
         certificate_file_path: ""
         dialer:
-          timeout: "0s"
+            timeout: 0s
         endpoint: 0.0.0.0:2000
         imds_retries: 1
         local_mode: false
         profile: ""
         proxy_address: ""
         region: us-east-1
-        service_name: ""
         role_arn: ""
+        service_name: ""
+    entitystore:
+        kubernetes_mode: K8sEC2
+        mode: ec2
+        region: us-east-1
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
 processors:
     awsapplicationsignals:
         limiter:
@@ -294,13 +321,594 @@ processors:
             log_dropped_metrics: true
             rotation_interval: 10m0s
         resolvers:
-          - name: TestCluster
-            platform: k8s
+            - name: TestCluster
+              platform: k8s
+    awsentity/service/application_signals:
+        cluster_name: TestCluster
+        entity_type: Service
+        kubernetes_mode: K8sEC2
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    metricstransform/application_signals:
+        transforms:
+            - action: update
+              aggregation_type: ""
+              include: jvm.cpu.recent_utilization
+              match_type: ""
+              new_name: JVMCpuRecentUtilization
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.cpu.time
+              match_type: ""
+              new_name: JVMCpuTime
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.classes.loaded
+              match_type: ""
+              new_name: JVMClassLoaded
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.threads.count
+              match_type: ""
+              new_name: JVMThreadCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.memory.nonheap.used
+              match_type: ""
+              new_name: JVMMemoryNonHeapUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.memory.pool.used_after_last_gc
+              match_type: ""
+              new_name: JVMMemoryUsedAfterLastGC
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: jvm.memory.heap.used
+              match_type: ""
+              new_name: JVMMemoryHeapUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: .*Old\sGen$
+              include: jvm.memory.pool.used
+              match_type: regexp
+              new_name: JVMMemoryOldGenUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: .*Survivor\sSpace$
+              include: jvm.memory.pool.used
+              match_type: regexp
+              new_name: JVMMemorySurvivorSpaceUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: .*Eden\sSpace$
+              include: jvm.memory.pool.used
+              match_type: regexp
+              new_name: JVMMemoryEdenSpaceUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: jvm.gc.collections.elapsed
+              match_type: ""
+              new_name: JVMGCDuration
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: jvm.gc.collections.count
+              match_type: ""
+              new_name: JVMGCCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: G1 Old Generation
+              include: jvm.gc.collections.elapsed
+              match_type: strict
+              new_name: JVMGCOldGenDuration
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: G1 Young Generation
+              include: jvm.gc.collections.elapsed
+              match_type: strict
+              new_name: JVMGCYoungGenDuration
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: G1 Old Generation
+              include: jvm.gc.collections.count
+              match_type: strict
+              new_name: JVMGCOldGenCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                name: G1 Young Generation
+              include: jvm.gc.collections.count
+              match_type: strict
+              new_name: JVMGCYoungGenCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: ^process\.runtime\.(.*)\.gc_count$$
+              match_type: regexp
+              new_name: PythonProcessGCCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                count: "0"
+              include: ^process\.runtime\.(.*)\.gc_count$$
+              match_type: regexp
+              new_name: PythonProcessGCGen0Count
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                count: "1"
+              include: ^process\.runtime\.(.*)\.gc_count$$
+              match_type: regexp
+              new_name: PythonProcessGCGen1Count
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                count: "2"
+              include: ^process\.runtime\.(.*)\.gc_count$$
+              match_type: regexp
+              new_name: PythonProcessGCGen2Count
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: ^process\.runtime\.(.*)\.thread_count$$
+              match_type: regexp
+              new_name: PythonProcessThreadCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: ^process\.runtime\.(.*)\.cpu_time$$
+              match_type: regexp
+              new_name: PythonProcessCpuTime
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: ^process\.runtime\.(.*)\.cpu\.utilization$$
+              match_type: regexp
+              new_name: PythonProcessCpuUtilization
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                type: vms
+              include: ^process\.runtime\.(.*)\.memory$$
+              match_type: regexp
+              new_name: PythonProcessVMSMemoryUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                type: rss
+              include: ^process\.runtime\.(.*)\.memory$$
+              match_type: regexp
+              new_name: PythonProcessRSSMemoryUsed
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
     resourcedetection:
         aks:
             resource_attributes:
@@ -309,7 +917,7 @@ processors:
                 cloud.provider:
                     enabled: true
                 k8s.cluster.name:
-                  enabled: false
+                    enabled: false
         azure:
             resource_attributes:
                 azure.resourcegroup.name:
@@ -332,6 +940,7 @@ processors:
                     enabled: true
                 host.name:
                     enabled: true
+            tags: []
         compression: ""
         consul:
             address: ""
@@ -389,10 +998,10 @@ processors:
                     enabled: true
                 aws.ecs.task.family:
                     enabled: true
+                aws.ecs.task.id:
+                    enabled: true
                 aws.ecs.task.revision:
                     enabled: true
-                aws.ecs.task.id:
-                  enabled: true
                 aws.log.group.arns:
                     enabled: true
                 aws.log.group.names:
@@ -418,7 +1027,7 @@ processors:
                 cloud.provider:
                     enabled: true
                 k8s.cluster.name:
-                  enabled: false
+                    enabled: false
         elasticbeanstalk:
             resource_attributes:
                 cloud.platform:
@@ -486,8 +1095,8 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
-        http2_ping_timeout: "0s"
-        http2_read_idle_timeout: "0s"
+        http2_ping_timeout: 0s
+        http2_read_idle_timeout: 0s
         idle_conn_timeout: 1m30s
         k8snode:
             auth_type: serviceAccount
@@ -520,6 +1129,7 @@ processors:
                 faas.version:
                     enabled: true
         max_idle_conns: 100
+        middleware: agenthealth/statuscode
         openshift:
             address: ""
             resource_attributes:
@@ -532,16 +1142,16 @@ processors:
                 k8s.cluster.name:
                     enabled: true
             tls:
-              ca_file: ""
-              cert_file: ""
-              include_system_ca_certs_pool: false
-              insecure: false
-              insecure_skip_verify: false
-              key_file: ""
-              max_version: ""
-              min_version: ""
-              reload_interval: "0s"
-              server_name_override: ""
+                ca_file: ""
+                cert_file: ""
+                include_system_ca_certs_pool: false
+                insecure: false
+                insecure_skip_verify: false
+                key_file: ""
+                max_version: ""
+                min_version: ""
+                reload_interval: 0s
+                server_name_override: ""
             token: ""
         override: true
         proxy_url: ""
@@ -565,9 +1175,9 @@ processors:
                 host.id:
                     enabled: false
                 host.ip:
-                  enabled: false
+                    enabled: false
                 host.mac:
-                  enabled: false
+                    enabled: false
                 host.name:
                     enabled: true
                 os.description:
@@ -576,16 +1186,16 @@ processors:
                     enabled: true
         timeout: 2s
         tls:
-          ca_file: ""
-          cert_file: ""
-          include_system_ca_certs_pool: false
-          insecure: false
-          insecure_skip_verify: false
-          key_file: ""
-          max_version: ""
-          min_version: ""
-          reload_interval: "0s"
-          server_name_override: ""
+            ca_file: ""
+            cert_file: ""
+            include_system_ca_certs_pool: false
+            insecure: false
+            insecure_skip_verify: false
+            key_file: ""
+            max_version: ""
+            min_version: ""
+            reload_interval: 0s
+            server_name_override: ""
         write_buffer_size: 0
 receivers:
     awscontainerinsightreceiver:
@@ -607,6 +1217,7 @@ receivers:
         leader_lock_using_config_map_only: true
         local_mode: false
         max_retries: 0
+        middleware: agenthealth/statuscode
         no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: false
@@ -619,9 +1230,9 @@ receivers:
     otlp/application_signals:
         protocols:
             grpc:
-                endpoint: 0.0.0.0:4315
                 dialer:
-                  timeout: "0s"
+                    timeout: 0s
+                endpoint: 0.0.0.0:4315
                 include_metadata: false
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
@@ -637,16 +1248,21 @@ receivers:
                 traces_url_path: /v1/traces
 service:
     extensions:
+        - agenthealth/logs
+        - agenthealth/statuscode
         - awsproxy/application_signals
         - agenthealth/traces
-        - agenthealth/logs
+        - entitystore
+        - server
     pipelines:
         metrics/application_signals:
             exporters:
                 - awsemf/application_signals
             processors:
+                - metricstransform/application_signals
                 - resourcedetection
                 - awsapplicationsignals
+                - awsentity/service/application_signals
             receivers:
                 - otlp/application_signals
         metrics/containerinsights:

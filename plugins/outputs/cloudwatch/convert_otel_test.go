@@ -9,12 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -51,6 +54,14 @@ func createTestMetrics(
 ) pmetric.Metrics {
 	metrics := pmetric.NewMetrics()
 	rm := metrics.ResourceMetrics().AppendEmpty()
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "MyEnvironment")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "MyServiceName")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityInstanceID, "i-123456789")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityAwsAccountId, "0123456789012")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityAutoScalingGroup, "asg-123")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EC2")
+
 	sm := rm.ScopeMetrics().AppendEmpty()
 
 	for i := 0; i < numMetrics; i++ {
@@ -210,9 +221,30 @@ func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 	}
 }
 
+func TestConvertOtelMetrics_Entity(t *testing.T) {
+	metrics := createTestMetrics(1, 1, 1, "s")
+	datums := ConvertOtelMetrics(metrics)
+	expectedEntity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			"Type":         aws.String("Service"),
+			"Environment":  aws.String("MyEnvironment"),
+			"Name":         aws.String("MyServiceName"),
+			"AwsAccountId": aws.String("0123456789012"),
+		},
+		Attributes: map[string]*string{
+			"EC2.InstanceId":       aws.String("i-123456789"),
+			"PlatformType":         aws.String("AWS::EC2"),
+			"EC2.AutoScalingGroup": aws.String("asg-123"),
+		},
+	}
+	assert.Equal(t, 1, len(datums))
+	assert.Equal(t, expectedEntity, datums[0].entity)
+
+}
+
 func TestInvalidMetric(t *testing.T) {
 	m := pmetric.NewMetric()
 	m.SetName("name")
 	m.SetUnit("unit")
-	assert.Empty(t, ConvertOtelMetric(m))
+	assert.Empty(t, ConvertOtelMetric(m, cloudwatch.Entity{}))
 }

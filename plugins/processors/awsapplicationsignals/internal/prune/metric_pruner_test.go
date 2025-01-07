@@ -44,7 +44,8 @@ func TestMetricPrunerWithIndexableAttribute(t *testing.T) {
 	p := &MetricPruner{}
 	for _, tt := range tests {
 		attributes := pcommon.NewMap()
-		attributes.PutStr(common.MetricAttributeLocalService, tt.val)
+		attributes.PutStr(common.MetricAttributeTelemetrySource, "UnitTest")
+		attributes.PutStr(common.CWMetricAttributeLocalService, tt.val)
 		t.Run(tt.name, func(t *testing.T) {
 			got, _ := p.ShouldBeDropped(attributes)
 			if got != tt.want {
@@ -68,6 +69,33 @@ func TestMetricPrunerWithNonIndexableAttribute(t *testing.T) {
 			"testShouldKeepEnglishWord",
 			"abcdefg-",
 			false,
+		},
+	}
+
+	p := &MetricPruner{}
+	for _, tt := range tests {
+		attributes := pcommon.NewMap()
+		attributes.PutStr(common.MetricAttributeTelemetrySource, "UnitTest")
+		attributes.PutStr(common.AttributeEC2InstanceId, tt.val)
+		t.Run(tt.name, func(t *testing.T) {
+			got, _ := p.ShouldBeDropped(attributes)
+			if got != tt.want {
+				t.Errorf("ShouldBeDropped() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMetricPrunerWithNoTelemetrySourceAttribute(t *testing.T) {
+	tests := []struct {
+		name string
+		val  string
+		want bool
+	}{
+		{
+			"testShouldDropValidChar",
+			"abc",
+			true,
 		},
 	}
 

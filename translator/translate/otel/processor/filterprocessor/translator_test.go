@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -110,16 +111,10 @@ func TestTranslator(t *testing.T) {
 				},
 			}),
 		},
-		"WithCompleteConfig": {
-			input:  testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			index:  -1,
-			wantID: "filter/jmx",
-			want:   testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
-		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tt := NewTranslator(WithName("jmx"), WithIndex(testCase.index))
+			tt := NewTranslator(common.WithName("jmx"), common.WithIndex(testCase.index))
 			require.EqualValues(t, testCase.wantID, tt.ID().String())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
@@ -129,9 +124,23 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*filterprocessor.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				require.Equal(t, wantCfg, gotCfg)
 			}
 		})
 	}
+}
+
+func TestContainerInsightsJmx(t *testing.T) {
+	transl := NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*filterprocessor.Config)
+	c := testutil.GetConf(t, "filter_jmx_config.yaml")
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*filterprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.Metrics.Include.MetricNames), len(actualCfg.Metrics.Include.MetricNames))
 }

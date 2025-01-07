@@ -11,24 +11,38 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
 		detector        func() (eksdetector.Detector, error)
 		isEKSDataStore  func() eksdetector.IsEKSCache
 	}{
-		"WithInvalidConfig": {
-			input:           "",
-			wantErrContains: "invalid json config",
+		"WithValidConfig": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"debug": true,
+				},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name":           "TestCluster",
+							"jmx_container_insights": true,
+						},
+					},
+				},
+			},
 		},
 		"WithEmptyConfig": {
 			input:           map[string]interface{}{},
@@ -162,6 +176,37 @@ func TestTranslator(t *testing.T) {
 			},
 			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAMPDestinationConfig": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{},
+					},
+				},
+			},
+		},
+		"WithOutValidatePrometheusConfig": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"prometheus_config": "missing.yaml",
+						},
+					},
+				},
+			},
+			wantErrContains: common.ConfigKey(prometheus.MetricsKey, common.PrometheusConfigPathKey),
 		},
 	}
 	for name, testCase := range testCases {

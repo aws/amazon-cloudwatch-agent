@@ -38,12 +38,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
 	prometheusFileNameToken = "prometheusFileName"
-	ecsSdFileNamToken       = "ecsSdFileName"
+	ecsSdFileNameToken      = "ecsSdFileName"
 )
 
 //go:embed sampleConfig/prometheus_config.yaml
@@ -79,6 +80,19 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{"CWAGENT_LOG_LEVEL": "DEBUG"}
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
+}
+func TestContainerInsightsJMX(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+
+	expectedEnvVars := map[string]string{
+		"CWAGENT_LOG_LEVEL": "DEBUG",
+	}
+
+	checkTranslation(t, "container_insights_jmx", "linux", expectedEnvVars, "")
 }
 
 func TestGenericAppSignalsFallbackConfig(t *testing.T) {
@@ -122,6 +136,35 @@ func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_fallback_and_eks_config", "windows", expectedEnvVars, "")
 }
 
+func TestStatsDAndEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_statsd_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "statsd_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "statsd_eks_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsAndECSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = "test-region"
+	ecsutil.GetECSUtilSingleton().TaskARN = "arn:aws:ecs:us-east-1:account_id:task/task_id"
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_and_ecs_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_ecs_config", "windows", expectedEnvVars, "")
+}
+
 func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -152,6 +195,19 @@ func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
 
+func TestCompassConfig(t *testing.T) {
+	resetContext(t)
+
+	//context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+
+	checkTranslation(t, "compass_linux_config", "linux", nil, "")
+	checkTranslation(t, "compass_linux_config", "darwin", nil, "")
+}
+
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
@@ -176,6 +232,18 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
 }
 
+func TestEmfAndKubernetesWithKueueConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "emf_and_kubernetes_with_kueue_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_with_kueue_config", "darwin", nil, "")
+}
+
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -184,6 +252,20 @@ func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "kubernetes_on_prem_config", "linux", expectedEnvVars, "")
+}
+
+func TestKueueContainerInsightsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/etc/test/ca_bundle.pem")
+	expectedEnvVars := map[string]string{
+		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
+	}
+	checkTranslation(t, "kueue_container_insights_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "kueue_container_insights_config", "darwin", nil, "")
 }
 
 func TestLogsAndKubernetesConfig(t *testing.T) {
@@ -201,6 +283,32 @@ func TestLogsAndKubernetesConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "logs_and_kubernetes_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")
+}
+
+func TestOtlpMetricsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
+}
+
+func TestOtlpMetricsEmfConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "windows", nil, "")
+}
+
+func TestProcstatMemorySwapConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	checkTranslation(t, "procstat_memory_swap_config", "linux", nil, "")
+	checkTranslation(t, "procstat_memory_swap_config", "darwin", nil, "")
 }
 
 func TestWindowsEventOnlyConfig(t *testing.T) {
@@ -260,18 +368,89 @@ func TestPrometheusConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	tokenReplacements := map[string]string{
 		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
-		ecsSdFileNamToken:       strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	prometheusConfig = strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNamToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
-	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusConfig), os.ModePerm)
+	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
 	// In the following checks, we first load the json and replace tokens with the temp files
 	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
 	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 }
+func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus_ta_config.yaml")
+	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
+	expectedEnvVars := map[string]string{}
+	tokenReplacements := map[string]string{
+		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+	}
+	// Load prometheus config and replace ecs sd results file name token with temp file name
+	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
+	require.NoError(t, err)
+	// In the following checks, we first load the json and replace tokens with the temp files
+	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
+	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
+
+}
+
+//func TestOtelPrometheusConfig(t *testing.T) {
+//	resetContext(t)
+//	context.CurrentContext().SetRunInContainer(true)
+//	context.CurrentContext().SetMode(config.ModeEC2)
+//	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+//	t.Setenv(config.HOST_NAME, "host_name_from_env")
+//	temp := t.TempDir()
+//	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+//	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
+//	expectedEnvVars := map[string]string{}
+//	tokenReplacements := map[string]string{
+//		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+//		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+//	}
+//	// Load prometheus config and replace ecs sd results file name token with temp file name
+//	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+//	// Write the modified prometheus config to temp prometheus config file
+//	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
+//	require.NoError(t, err)
+//	// In the following checks, we first load the json and replace tokens with the temp files
+//	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
+//	checkTranslation(t, "prometheus_otel_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+//}
+//
+//func TestCombinedPrometheusConfig(t *testing.T) {
+//	resetContext(t)
+//	context.CurrentContext().SetMode(config.ModeEC2)
+//	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+//	t.Setenv(config.HOST_NAME, "host_name_from_env")
+//	temp := t.TempDir()
+//	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+//	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
+//	expectedEnvVars := map[string]string{}
+//	tokenReplacements := map[string]string{
+//		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+//		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+//	}
+//	// Load prometheus config and replace ecs sd results file name token with temp file name
+//	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+//	// Write the modified prometheus config to temp prometheus config file
+//	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
+//	require.NoError(t, err)
+//	// In the following checks, we first load the json and replace tokens with the temp files
+//	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
+//	checkTranslation(t, "prometheus_combined_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+//}
 
 func TestBasicConfig(t *testing.T) {
 	testCases := map[string]testCase{
@@ -541,12 +720,33 @@ func TestECSNodeMetricConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsutil.GetECSUtilSingleton().TaskARN = "arn:aws:ecs:us-east-1:account_id:task/task_id"
+	ecsSingleton := ecsutil.GetECSUtilSingleton()
+	ecsSingleton.Region = "us-west-2"
 	t.Setenv("RUN_IN_CONTAINER", "True")
 	t.Setenv("HOST_NAME", "fake-host-name")
 	t.Setenv("HOST_IP", "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_ecs_metric_only", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_ecs_metric_only", "darwin", nil, "")
+	//Reset back to default value to not impact other tests
+	ecsSingleton.Region = ""
+}
+
+func TestECSNodeStatsDConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsSingleton := ecsutil.GetECSUtilSingleton()
+	ecsSingleton.Region = "us-west-2"
+	t.Setenv("RUN_IN_CONTAINER", "True")
+	t.Setenv("HOST_NAME", "fake-host-name")
+	t.Setenv("HOST_IP", "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "statsd_ecs_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "statsd_ecs_config", "darwin", nil, "")
+	//Reset back to default value to not impact other tests
+	ecsSingleton.Region = ""
 }
 
 func TestLogFilterConfig(t *testing.T) {
@@ -564,7 +764,7 @@ func TestIgnoreInvalidAppendDimensions(t *testing.T) {
 
 func TestTomlToTomlComparison(t *testing.T) {
 	resetContext(t)
-	var jsonFilePath = "./totomlconfig/tomlConfigTemplate/agentToml.json"
+	var jsonFilePath = "./totomlconfig/testdata/agentToml.json"
 	var input interface{}
 	x := os.Getenv("HOST_NAME")
 	require.Equal(t, "", x)
@@ -572,7 +772,7 @@ func TestTomlToTomlComparison(t *testing.T) {
 	content, err := os.ReadFile(jsonFilePath)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(content, &input))
-	verifyToTomlTranslation(t, input, "./totomlconfig/tomlConfigTemplate/agentToml.conf", map[string]string{})
+	verifyToTomlTranslation(t, input, "./totomlconfig/testdata/agentToml.conf", map[string]string{})
 }
 
 func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string, tokenReplacements ...map[string]string) {
@@ -618,6 +818,7 @@ func resetContext(t *testing.T) {
 	util.DetectCredentialsPath = func() string {
 		return "fake-path"
 	}
+	ecsutil.GetECSUtilSingleton().Region = ""
 	context.ResetContext()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
@@ -640,6 +841,9 @@ func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath st
 	var actual tomlConfigTemplate.TomlConfig
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
+
+	//assert.NoError(t, os.WriteFile(desiredTomlPath, []byte(tomlStr), 0644)) // useful for regenerating TOML
+
 	// This less function sort the content of string slice in alphabetical order so the
 	// cmp.Equal method will compare the two struct with slices in them, regardless the elements within the slices
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
@@ -670,6 +874,8 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)

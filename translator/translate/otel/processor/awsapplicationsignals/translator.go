@@ -100,7 +100,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	case config.ModeECS:
 		cfg.Resolvers = []appsignalsconfig.Resolver{
-			appsignalsconfig.NewGenericResolver(hostedIn),
+			appsignalsconfig.NewECSResolver(hostedIn),
 		}
 	default:
 		cfg.Resolvers = []appsignalsconfig.Resolver{

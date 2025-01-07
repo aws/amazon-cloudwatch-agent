@@ -46,9 +46,9 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "logs/emf_logs",
 				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
-				processors:   []string{"batch/emf_logs"},
+				processors:   []string{"batch/emf_logs", "awsentity/service/emf"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithStructuredLogKey": {
@@ -62,9 +62,9 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "logs/emf_logs",
 				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
-				processors:   []string{"batch/emf_logs"},
+				processors:   []string{"batch/emf_logs", "awsentity/service/emf"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithUdpServiceAddress": {
@@ -80,9 +80,9 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "logs/emf_logs",
 				receivers:    []string{"udplog/emf_logs"},
-				processors:   []string{"batch/emf_logs"},
+				processors:   []string{"batch/emf_logs", "awsentity/service/emf"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithTcpServiceAddress": {
@@ -98,9 +98,9 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "logs/emf_logs",
 				receivers:    []string{"tcplog/emf_logs"},
-				processors:   []string{"batch/emf_logs"},
+				processors:   []string{"batch/emf_logs", "awsentity/service/emf"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}

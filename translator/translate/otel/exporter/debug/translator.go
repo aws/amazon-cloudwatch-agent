@@ -13,20 +13,25 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+const defaultSamplingThereafter = 500
+
 type translator struct {
-	name    string
+	common.NameProvider
 	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
 	t := &translator{factory: debugexporter.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
 	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), common.AppSignals)
+	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
@@ -36,5 +41,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*debugexporter.Config)
 	cfg.Verbosity = configtelemetry.LevelDetailed
+	cfg.SamplingThereafter = defaultSamplingThereafter
 	return cfg, nil
 }

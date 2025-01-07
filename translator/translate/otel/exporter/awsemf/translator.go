@@ -22,8 +22,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
+
+const (
+	kueuePipelineName = "kueueContainerInsights"
+)
+
+//go:embed awsemf_default_generic.yaml
+var defaultGenericConfig string
 
 //go:embed awsemf_default_ecs.yaml
 var defaultEcsConfig string
@@ -31,25 +37,26 @@ var defaultEcsConfig string
 //go:embed awsemf_default_kubernetes.yaml
 var defaultKubernetesConfig string
 
+//go:embed awsemf_default_kubernetes_kueue.yaml
+var defaultKubernetesKueueConfig string
+
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
-//go:embed appsignals_config_eks.yaml
-var appSignalsConfigEks string
-
-//go:embed appsignals_config_k8s.yaml
-var appSignalsConfigK8s string
-
-//go:embed appsignals_config_generic.yaml
+//go:embed awsemf_default_appsignals.yaml
 var appSignalsConfigGeneric string
 
+//go:embed awsemf_jmx_config.yaml
+var defaultJmxConfig string
+
 var (
-	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
-	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
-	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
-	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
-	endpointOverrideKey     = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
-	roleARNPathKey          = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
+	ecsBasePathKey             = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
+	kubernetesBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
+	kubernetesKueueBasePathKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableKueueContainerInsights)
+	prometheusBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+	emfProcessorBasePathKey    = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
+	endpointOverrideKey        = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
+	roleARNPathKey             = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 )
 
 type translator struct {
@@ -76,18 +83,21 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
-	var defaultConfig string
+	defaultConfig := defaultGenericConfig
 	if t.isAppSignals(c) {
-		defaultConfig = getAppSignalsConfig()
+		defaultConfig = appSignalsConfigGeneric
+	} else if t.isCiJMX(c) {
+		defaultConfig = defaultJmxConfig
 	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
+	} else if isKubernetesKueue(c, t.name) {
+		defaultConfig = defaultKubernetesKueueConfig
 	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
 	} else if isPrometheus(c) {
 		defaultConfig = defaultPrometheusConfig
-	} else {
-		return cfg, nil
 	}
+
 	if defaultConfig != "" {
 		var rawConf map[string]interface{}
 		if err := yaml.Unmarshal([]byte(defaultConfig), &rawConf); err != nil {
@@ -122,8 +132,16 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setAppSignalsFields(c, cfg); err != nil {
 			return nil, err
 		}
+	} else if t.isCiJMX(c) {
+		if err := setCiJmxFields(); err != nil {
+			return nil, err
+		}
 	} else if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
+			return nil, err
+		}
+	} else if isKubernetesKueue(c, t.name) {
+		if err := setKubernetesKueueFields(c, cfg); err != nil {
 			return nil, err
 		}
 	} else if isKubernetes(c) {
@@ -138,33 +156,11 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func getAppSignalsConfig() string {
-	ctx := context.CurrentContext()
-
-	mode := ctx.KubernetesMode()
-	if mode == "" {
-		mode = ctx.Mode()
-	}
-	if mode == config.ModeEC2 {
-		if ecsutil.GetECSUtilSingleton().IsECS() {
-			mode = config.ModeECS
-		}
-	}
-
-	switch mode {
-	case config.ModeEKS:
-		return appSignalsConfigEks
-	case config.ModeK8sEC2, config.ModeK8sOnPrem:
-		return appSignalsConfigK8s
-	case config.ModeEC2, config.ModeECS:
-		return appSignalsConfigGeneric
-	default:
-		return appSignalsConfigGeneric
-	}
-}
-
 func (t *translator) isAppSignals(conf *confmap.Conf) bool {
 	return (t.name == common.AppSignals || t.name == common.AppSignalsFallback) && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsMetricsFallback) || conf.IsSet(common.AppSignalsTracesFallback))
+}
+func (t *translator) isCiJMX(conf *confmap.Conf) bool {
+	return (t.name == common.PipelineNameContainerInsightsJmx) && (conf.IsSet(common.ContainerInsightsConfigKey))
 }
 
 func isEcs(conf *confmap.Conf) bool {
@@ -173,6 +169,11 @@ func isEcs(conf *confmap.Conf) bool {
 
 func isKubernetes(conf *confmap.Conf) bool {
 	return conf.IsSet(kubernetesBasePathKey)
+}
+
+// `kueue_container_insights` is a child of `kubernetes` in config spec.
+func isKubernetesKueue(conf *confmap.Conf, pipelineName string) bool {
+	return isKubernetes(conf) && pipelineName == kueuePipelineName && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
 }
 
 func isPrometheus(conf *confmap.Conf) bool {
@@ -197,6 +198,19 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 
 	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
 		cfg.EnhancedContainerInsights = true
+	}
+
+	return nil
+}
+
+func setCiJmxFields() error {
+	return nil
+}
+func setKubernetesKueueFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	setDisableMetricExtraction(kubernetesKueueBasePathKey, conf, cfg)
+
+	if err := setKubernetesKueueMetricDeclaration(conf, cfg); err != nil {
+		return err
 	}
 
 	return nil

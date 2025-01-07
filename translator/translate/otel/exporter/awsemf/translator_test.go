@@ -11,7 +11,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -307,10 +306,11 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
 							"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request",
+							"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request", "pod_cpu_usage_total", "pod_memory_working_set",
 							"pod_container_status_running", "pod_container_status_terminated", "pod_container_status_waiting", "pod_container_status_waiting_reason_crash_loop_back_off",
 							"pod_container_status_waiting_reason_image_pull_error", "pod_container_status_waiting_reason_start_error", "pod_container_status_waiting_reason_create_container_error",
 							"pod_container_status_waiting_reason_create_container_config_error", "pod_container_status_terminated_reason_oom_killed",
+							"pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity",
 						},
 					},
 					{
@@ -320,7 +320,7 @@ func TestTranslator(t *testing.T) {
 							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
 							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
-							"node_status_capacity_pods", "node_status_allocatable_pods"},
+							"node_status_capacity_pods", "node_status_allocatable_pods", "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity"},
 					},
 					{
 						Dimensions: [][]string{
@@ -329,7 +329,10 @@ func TestTranslator(t *testing.T) {
 						},
 						MetricNameSelectors: []string{
 							"node_interface_network_rx_dropped", "node_interface_network_tx_dropped",
-							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
+							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total",
+							"hyperpod_node_health_status_schedulable", "hyperpod_node_health_status_unschedulable_pending_replacement",
+							"hyperpod_node_health_status_unschedulable_pending_reboot",
+							"hyperpod_node_health_status_unschedulable"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -415,24 +418,6 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
 						MetricNameSelectors: []string{
 							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature",
-						},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
-						MetricNameSelectors: []string{
-							"pod_gpu_total", "pod_gpu_request", "pod_gpu_limit",
-						},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType"}},
-						MetricNameSelectors: []string{
-							"node_gpu_total", "node_gpu_request", "node_gpu_limit",
-						},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{
-							"cluster_gpu_total", "cluster_gpu_request",
 						},
 					},
 					{
@@ -823,6 +808,106 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
+func TestTranslatorForKueue(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
+	tt := NewTranslatorWithName("kueueContainerInsights")
+	require.EqualValues(t, "awsemf/kueueContainerInsights", tt.ID().String())
+	testCases := map[string]struct {
+		env     map[string]string
+		input   map[string]any
+		want    map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
+		wantErr error
+	}{
+		"GenerateAwsEmfExporterConfigForKubernetesKueueMetrics": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{
+							"kueue_container_insights": true,
+						},
+					},
+				},
+			},
+			want: map[string]any{
+				"namespace":                              "ContainerInsights/Prometheus",
+				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
+				"log_stream_name":                        "kubernetes-kueue",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}, {"ClusterName", "ClusterQueue", "Status"}, {"ClusterName", "Status"}},
+						MetricNameSelectors: []string{
+							"kueue_pending_workloads",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}, {"ClusterName", "ClusterQueue", "Reason"}, {"ClusterName", "Reason"}},
+						MetricNameSelectors: []string{
+							"kueue_evicted_workloads_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}},
+						MetricNameSelectors: []string{
+							"kueue_admitted_active_workloads",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "ClusterQueue"}, {"ClusterName", "ClusterQueue", "Resource"}, {"ClusterName", "ClusterQueue", "Resource", "Flavor"}, {"ClusterName", "ClusterQueue", "Flavor"}},
+						MetricNameSelectors: []string{
+							"kueue_cluster_queue_resource_usage",
+							"kueue_cluster_queue_nominal_quota",
+						},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
+			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*awsemfexporter.Config)
+				require.True(t, ok)
+				assert.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
+				assert.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
+				assert.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
+				assert.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
+				assert.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
+				assert.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
+				assert.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
+				assert.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
+				assert.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
+				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
+				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
+				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
+				assert.Equal(t, "global_arn", gotCfg.RoleARN)
+				assert.Equal(t, "us-east-1", gotCfg.Region)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
+			}
+		})
+	}
+}
+
 func TestTranslateAppSignals(t *testing.T) {
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
@@ -843,7 +928,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"application_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -859,7 +944,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"application_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "true",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -875,7 +960,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"application_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "true",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -891,7 +976,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"application_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -907,7 +992,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -923,7 +1008,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "true",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -939,7 +1024,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "true",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -955,7 +1040,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
 				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
@@ -978,7 +1063,7 @@ func TestTranslateAppSignals(t *testing.T) {
 				gotCfg, ok := got.(*awsemfexporter.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 )
@@ -26,13 +28,13 @@ func TestConfigProvider(t *testing.T) {
 	t.Setenv("ENV_REGION", envRegion)
 	factories, err := defaultcomponents.Factories()
 	require.NoError(t, err)
-
-	actualProvider, err := Get(filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml"))
+	providerSettings := GetSettings([]string{filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml")}, zap.NewNop())
+	provider, err := otelcol.NewConfigProvider(providerSettings)
 	assert.NoError(t, err)
-	actualCfg, err := actualProvider.Get(context.Background(), factories)
+	actualCfg, err := provider.Get(context.Background(), factories)
 	assert.NoError(t, err)
-	cloudwatchType, _ := component.NewType("awscloudwatchlogs")
-	got, ok := actualCfg.Exporters[component.NewIDWithName(cloudwatchType, "emf_logs")]
+	id := component.MustNewIDWithName("awscloudwatchlogs", "emf_logs")
+	got, ok := actualCfg.Exporters[id]
 	require.True(t, ok)
 	gotCfg, ok := got.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)

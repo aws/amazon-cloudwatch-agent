@@ -20,14 +20,19 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsightsjmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
@@ -50,21 +55,41 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	translators, err := host.NewTranslators(conf, os)
+	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+	metricsHostTranslators, err := host.NewTranslators(conf, host.MetricsKey, os)
 	if err != nil {
 		return nil, err
 	}
+	translators.Merge(metricsHostTranslators)
+	logsHostTranslators, err := host.NewTranslators(conf, host.LogsKey, os)
+	if err != nil {
+		return nil, err
+	}
+	translators.Merge(logsHostTranslators)
+	containerInsightsTranslators := containerinsights.NewTranslators(conf)
+	translators.Merge(containerInsightsTranslators)
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
 	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
-	translators.Set(containerinsights.NewTranslator())
-	translators.Set(prometheus.NewTranslator())
+	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())
+	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
-	if err != nil {
-		return nil, err
+	if pipelines == nil {
+		translators.Set(nop.NewTranslator())
+		pipelines, err = pipeline.NewTranslator(translators).Translate(conf)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms
+	if !ecsutil.GetECSUtilSingleton().IsECS() {
+		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
+	}
+	if context.CurrentContext().KubernetesMode() != "" {
+		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},

@@ -17,7 +17,20 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -25,6 +38,7 @@ processors:
             - ImageId
             - InstanceId
             - InstanceType
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
     telegraf_win_perf_counters/1492679118:
@@ -55,18 +69,21 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
     pipelines:
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/3610923661
-                - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/3610923661
+                - telegraf_win_perf_counters/3446270237
     telemetry:
         logs:
             development: false

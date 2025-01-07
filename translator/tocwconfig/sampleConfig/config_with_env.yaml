@@ -39,7 +39,20 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: ${ENV_REGION}
 processors:
+    awsentity/service/emf:
+        entity_type: Service
+        platform: ec2
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -75,11 +88,14 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:
                 - awscloudwatchlogs/emf_logs
             processors:
+                - awsentity/service/emf
                 - batch/emf_logs
             receivers:
                 - tcplog/emf_logs

@@ -5,6 +5,7 @@ package prune
 
 import (
 	"errors"
+	"fmt"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -15,11 +16,14 @@ type MetricPruner struct {
 }
 
 func (p *MetricPruner) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
-	for _, attributeKey := range common.IndexableMetricAttributes {
+	for _, attributeKey := range common.CWMetricAttributes {
 		if val, ok := attributes.Get(attributeKey); ok {
 			if !isAsciiPrintable(val.Str()) {
 				return true, errors.New("Metric attribute " + attributeKey + " must contain only ASCII characters.")
 			}
+		}
+		if _, ok := attributes.Get(common.MetricAttributeTelemetrySource); !ok {
+			return true, errors.New(fmt.Sprintf("Metric must contain %s.", common.MetricAttributeTelemetrySource))
 		}
 	}
 	return false, nil

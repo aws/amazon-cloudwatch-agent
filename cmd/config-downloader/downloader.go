@@ -17,9 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	sdkutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
@@ -173,7 +173,7 @@ func main() {
 					return filepath.SkipDir
 				}
 			}
-			if filepath.Ext(path) == context.TmpFileSuffix {
+			if filepath.Ext(path) == constants.FileSuffixTmp {
 				return os.Remove(path)
 			}
 			return nil
@@ -211,7 +211,7 @@ func main() {
 	}
 
 	if multiConfig != "remove" {
-		outputFilePath = filepath.Join(outputDir, outputFilePath+context.TmpFileSuffix)
+		outputFilePath = filepath.Join(outputDir, outputFilePath+constants.FileSuffixTmp)
 		err = os.WriteFile(outputFilePath, []byte(config), 0644)
 		if err != nil {
 			log.Panicf("E! Failed to write the json file %v: %v", outputFilePath, err)

@@ -14,6 +14,10 @@
     "omit_hostname": true
   },
   "metrics": {
+    "metrics_destinations": {
+      "cloudwatch": {
+      }
+    },
     "metrics_collected": {
       "jmx": [
         {
@@ -82,7 +86,10 @@
         "collectd_typesdb": [
           "/usr/share/collectd/types.db"
         ],
-        "metrics_aggregation_interval": 60
+        "metrics_aggregation_interval": 60,
+        "drop_original_metrics":  [
+          "collectd_drop"
+        ]
       },
       "cpu": {
         "resources": [
@@ -155,7 +162,10 @@
         "service_address": ":8125",
         "metrics_collection_interval": 10,
         "metrics_aggregation_interval": 60,
-        "metric_separator": "_"
+        "metric_separator": "_",
+        "drop_original_metrics":  [
+          "statsd_drop"
+        ]
       },
       "swap": {
         "measurement": [

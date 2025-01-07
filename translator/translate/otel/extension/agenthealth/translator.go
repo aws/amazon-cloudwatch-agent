@@ -25,19 +25,31 @@ const (
 )
 
 var (
-	MetricsID = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
-	LogsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
-	TracesID  = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	MetricsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
+	LogsID       = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
+	TracesID     = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	StatusCodeID = component.NewIDWithName(agenthealth.TypeStr, "statuscode")
 )
 
 type translator struct {
-	name               string
-	operations         []string
-	isUsageDataEnabled bool
-	factory            extension.Factory
+	name                string
+	operations          []string
+	isUsageDataEnabled  bool
+	factory             extension.Factory
+	isStatusCodeEnabled bool
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
+
+func NewTranslatorWithStatusCode(name component.DataType, operations []string, isStatusCodeEnabled bool) common.Translator[component.Config] {
+	return &translator{
+		name:                name.String(),
+		operations:          operations,
+		factory:             agenthealth.NewFactory(),
+		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+		isStatusCodeEnabled: isStatusCodeEnabled,
+	}
+}
 
 func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
 	return &translator{
@@ -59,7 +71,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
-	cfg.Stats = agent.StatsConfig{
+	cfg.IsStatusCodeEnabled = t.isStatusCodeEnabled
+	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
 			agent.FlagMode:       context.CurrentContext().ShortMode(),

@@ -94,7 +94,7 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
-amazon-cloudwatch-agent-windows:
+amazon-cloudwatch-agent-windows: copy-version-file
 	@echo Building CloudWatchAgent for Windows with AMD64
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(WIN_BUILD)/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
@@ -158,7 +158,7 @@ install-addlicense:
 install-golangci-lint:
 	#Install from source for golangci-lint is not recommended based on https://golangci-lint.run/usage/install/#install-from-source so using binary
 	#installation
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.50.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.62.2
 
 fmt: install-goimports addlicense
 	go fmt ./...
@@ -200,6 +200,23 @@ lint: install-golangci-lint simple-lint
 
 test:
 	CGO_ENABLED=0 go test -timeout 15m -coverprofile coverage.txt -failfast ./...
+
+# List of existing packages with data races
+# TODO: Fix each
+PKG_WITH_DATA_RACE := extension/entitystore
+PKG_WITH_DATA_RACE += extension/server
+PKG_WITH_DATA_RACE += internal/publisher
+PKG_WITH_DATA_RACE += internal/retryer
+PKG_WITH_DATA_RACE += internal/tls
+PKG_WITH_DATA_RACE += plugins/inputs/logfile
+PKG_WITH_DATA_RACE += plugins/inputs/logfile/tail
+PKG_WITH_DATA_RACE += plugins/outputs/cloudwatch
+PKG_WITH_DATA_RACE += plugins/outputs/cloudwatchlogs
+PKG_WITH_DATA_RACE += plugins/processors/awsapplicationsignals
+PKG_WITH_DATA_RACE += plugins/processors/ec2tagger
+PKG_WITH_DATA_RACE_PATTERN := $(shell echo '$(PKG_WITH_DATA_RACE)' | tr ' ' '|')
+test-data-race:
+	CGO_ENABLED=1 go test -timeout 15m -race -parallel 4 $(shell go list ./... | grep -v -E '$(PKG_WITH_DATA_RACE_PATTERN)')
 
 clean::
 	rm -rf release/ build/

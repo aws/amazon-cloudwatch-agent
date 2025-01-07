@@ -48,7 +48,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithKubernetesKey": {
@@ -64,26 +64,63 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
-		"WithKubernetes/WithEnhancedContainerInsights": {
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := cit.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
+			if testCase.want == nil {
+				require.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
+			}
+		})
+	}
+}
+
+func TestKueueTranslator(t *testing.T) {
+	type want struct {
+		pipelineType string
+		receivers    []string
+		processors   []string
+		exporters    []string
+		extensions   []string
+	}
+	cit := NewTranslatorWithName(kueuePipelineName)
+	require.EqualValues(t, "metrics/kueueContainerInsights", cit.ID().String())
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *want
+		wantErr error
+	}{
+		"WithKueueContainerInsights": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
-							"enhanced_container_insights": true,
-							"cluster_name":                "TestCluster",
+							"kueue_container_insights": true,
+							"cluster_name":             "TestCluster",
 						},
 					},
 				},
 			},
 			want: &want{
-				pipelineType: "metrics/containerinsights",
-				receivers:    []string{"awscontainerinsightreceiver"},
-				processors:   []string{"metricstransform/containerinsights", "gpuattributes/containerinsights", "batch/containerinsights"},
-				exporters:    []string{"awsemf/containerinsights"},
-				extensions:   []string{"agenthealth/logs"},
+				pipelineType: "metrics/kueueContainerInsights",
+				receivers:    []string{"awscontainerinsightskueuereceiver"},
+				processors: []string{
+					"batch/kueueContainerInsights",
+					"kueueattributes/kueueContainerInsights",
+				},
+				exporters:  []string{"awsemf/kueueContainerInsights"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}

@@ -22,6 +22,7 @@
     },
     "endpoint_override": "https://endpoint.us-west-2.amazonaws.com",
     "region_override": "us-west-2",
-    "proxy_override": "https://proxy.proxy.com"
+    "proxy_override": "https://proxy.proxy.com",
+    "transit_spans_in_otlp_format": true
   }
 }

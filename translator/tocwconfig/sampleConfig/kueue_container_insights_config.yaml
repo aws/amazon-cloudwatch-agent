@@ -1,0 +1,363 @@
+exporters:
+    awscloudwatchlogs/emf_logs:
+        certificate_file_path: /etc/test/ca_bundle.pem
+        emf_only: true
+        endpoint: https://fake_endpoint
+        imds_retries: 1
+        local_mode: false
+        log_group_name: emf/logs/default
+        log_retention: 0
+        log_stream_name: host_name_from_env
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-east-1
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+    awsemf/containerinsights:
+        certificate_file_path: /etc/test/ca_bundle.pem
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: true
+        eks_fargate_container_insights_enabled: false
+        endpoint: https://fake_endpoint
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/containerinsights/{ClusterName}/performance
+        log_retention: 0
+        log_stream_name: '{NodeName}'
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                  - Service
+                - - ClusterName
+                  - Namespace
+              metric_name_selectors:
+                - pod_cpu_utilization
+                - pod_memory_utilization
+                - pod_network_rx_bytes
+                - pod_network_tx_bytes
+                - pod_cpu_utilization_over_pod_limit
+                - pod_memory_utilization_over_pod_limit
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+              metric_name_selectors:
+                - pod_number_of_container_restarts
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+              metric_name_selectors:
+                - pod_cpu_reserved_capacity
+                - pod_memory_reserved_capacity
+            - dimensions:
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+              metric_name_selectors:
+                - node_cpu_utilization
+                - node_memory_utilization
+                - node_network_total_bytes
+                - node_cpu_reserved_capacity
+                - node_memory_reserved_capacity
+                - node_number_of_running_pods
+                - node_number_of_running_containers
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - node_cpu_usage_total
+                - node_cpu_limit
+                - node_memory_working_set
+                - node_memory_limit
+            - dimensions:
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+              metric_name_selectors:
+                - node_filesystem_utilization
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                  - Service
+                - - ClusterName
+              metric_name_selectors:
+                - service_number_of_running_pods
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+                - - ClusterName
+              metric_name_selectors:
+                - namespace_number_of_running_pods
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - cluster_node_count
+                - cluster_failed_node_count
+        middleware: agenthealth/logs
+        namespace: ContainerInsights
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        parse_json_encoded_attr_values:
+            - Sources
+            - kubernetes
+        profile: ""
+        proxy_address: ""
+        region: us-east-1
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
+    awsemf/kueueContainerInsights:
+        certificate_file_path: /etc/test/ca_bundle.pem
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: https://fake_endpoint
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/containerinsights/{ClusterName}/performance
+        log_retention: 0
+        log_stream_name: kubernetes-kueue
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Status
+                - - ClusterName
+                  - Status
+              metric_name_selectors:
+                - kueue_pending_workloads
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Reason
+                - - ClusterName
+                  - Reason
+              metric_name_selectors:
+                - kueue_evicted_workloads_total
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+              metric_name_selectors:
+                - kueue_admitted_active_workloads
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - ClusterQueue
+                - - ClusterName
+                  - ClusterQueue
+                  - Resource
+                - - ClusterName
+                  - ClusterQueue
+                  - Flavor
+                  - Resource
+                - - ClusterName
+                  - ClusterQueue
+                  - Flavor
+              metric_name_selectors:
+                - kueue_cluster_queue_resource_usage
+                - kueue_cluster_queue_nominal_quota
+        middleware: agenthealth/logs
+        namespace: ContainerInsights/Prometheus
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        parse_json_encoded_attr_values:
+            - Sources
+            - kubernetes
+        profile: ""
+        proxy_address: ""
+        region: us-east-1
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
+processors:
+    awsentity/service/emf:
+        entity_type: Service
+        platform: ec2
+    batch/containerinsights:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/kueueContainerInsights:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    kueueattributes/kueueContainerInsights: {}
+receivers:
+    awscontainerinsightreceiver:
+        accelerated_compute_metrics: false
+        add_container_name_metric_label: false
+        add_full_pod_name_metric_label: false
+        add_service_as_attribute: true
+        certificate_file_path: ""
+        cluster_name: TestCluster
+        collection_interval: 30s
+        container_orchestrator: eks
+        enable_control_plane_metrics: false
+        endpoint: ""
+        host_ip: ""
+        host_name: ""
+        imds_retries: 1
+        kube_config_path: ""
+        leader_lock_name: cwagent-clusterleader
+        leader_lock_using_config_map_only: true
+        local_mode: false
+        max_retries: 0
+        middleware: agenthealth/statuscode
+        no_verify_ssl: false
+        num_workers: 0
+        prefer_full_pod_name: true
+        profile: ""
+        proxy_address: ""
+        region: us-east-1
+        request_timeout_seconds: 0
+        resource_arn: ""
+        role_arn: ""
+    awscontainerinsightskueuereceiver:
+        cluster_name: TestCluster
+        collection_interval: 1m0s
+    tcplog/emf_logs:
+        encoding: utf-8
+        id: tcp_input
+        listen_address: 0.0.0.0:25888
+        operators: []
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
+        type: tcp_input
+    udplog/emf_logs:
+        encoding: utf-8
+        id: udp_input
+        listen_address: 0.0.0.0:25888
+        multiline:
+            line_end_pattern: .^
+            line_start_pattern: ""
+            omit_pattern: false
+        operators: []
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
+        type: udp_input
+service:
+    extensions:
+        - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        logs/emf_logs:
+            exporters:
+                - awscloudwatchlogs/emf_logs
+            processors:
+                - awsentity/service/emf
+                - batch/emf_logs
+            receivers:
+                - tcplog/emf_logs
+                - udplog/emf_logs
+        metrics/containerinsights:
+            exporters:
+                - awsemf/containerinsights
+            processors:
+                - batch/containerinsights
+            receivers:
+                - awscontainerinsightreceiver
+        metrics/kueueContainerInsights:
+            exporters:
+                - awsemf/kueueContainerInsights
+            processors:
+                - batch/kueueContainerInsights
+                - kueueattributes/kueueContainerInsights
+            receivers:
+                - awscontainerinsightskueuereceiver
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            level: info
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            address: ""
+            level: None
+        traces: {}

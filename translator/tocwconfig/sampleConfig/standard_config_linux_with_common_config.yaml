@@ -19,7 +19,22 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        profile: AmazonCloudWatchAgent
+        region: us-west-2
+        shared_credential_file: fake-path
 processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -28,7 +43,7 @@ processors:
                 - diskio_iops_in_progress
         include:
             match_type: ""
-        initial_value: 0
+        initial_value: 2
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
@@ -38,6 +53,7 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 2
+        middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
         shared_credential_file: fake-path
@@ -65,21 +81,25 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
     pipelines:
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - ec2tagger
             receivers:
-                - telegraf_mem
-                - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_mem
+                - telegraf_swap
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

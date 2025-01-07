@@ -77,8 +77,18 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
 processors:
-    batch/prometheus:
+    batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -91,12 +101,14 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
     pipelines:
-        metrics/prometheus:
+        metrics/prometheus/cloudwatchlogs:
             exporters:
                 - awsemf/prometheus
             processors:
-                - batch/prometheus
+                - batch/prometheus/cloudwatchlogs
             receivers:
                 - telegraf_prometheus
     telemetry:

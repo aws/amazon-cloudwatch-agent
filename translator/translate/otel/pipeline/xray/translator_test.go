@@ -46,7 +46,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"awsxray"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
-				extensions: []string{"agenthealth/traces"},
+				extensions: []string{"agenthealth/traces", "agenthealth/statuscode"},
 			},
 		},
 		"WithOtlpKey": {
@@ -61,7 +61,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"otlp/traces"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
-				extensions: []string{"agenthealth/traces"},
+				extensions: []string{"agenthealth/traces", "agenthealth/statuscode"},
 			},
 		},
 		"WithXrayAndOtlpKey": {
@@ -77,7 +77,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"awsxray", "otlp/traces"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
-				extensions: []string{"agenthealth/traces"},
+				extensions: []string{"agenthealth/traces", "agenthealth/statuscode"},
 			},
 		},
 	}

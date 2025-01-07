@@ -48,13 +48,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Receivers:  common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory())),
 		Exporters:  common.NewTranslatorMap(awsxrayexporter.NewTranslator()),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeTraces, []string{agenthealth.OperationPutTraceSegments})),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeTraces, []string{agenthealth.OperationPutTraceSegments}),
+			agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true)),
 	}
 	if conf.IsSet(xrayKey) {
 		translators.Receivers.Set(awsxrayreceiver.NewTranslator())
 	}
 	if conf.IsSet(otlpKey) {
-		translators.Receivers.Set(otlp.NewTranslator(otlp.WithDataType(component.DataTypeTraces)))
+		translators.Receivers.Set(otlp.NewTranslator(
+			otlp.WithDataType(component.DataTypeTraces),
+			otlp.WithConfigKey(otlpKey)),
+		)
 	}
 	return translators, nil
 }

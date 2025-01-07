@@ -5,6 +5,7 @@
       },
       "xray": {
       }
-    }
+    },
+    "transit_spans_in_otlp_format": true
   }
 }

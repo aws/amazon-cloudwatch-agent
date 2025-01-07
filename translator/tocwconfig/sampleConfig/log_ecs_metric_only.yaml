@@ -7,7 +7,7 @@ exporters:
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
-        log_stream_name: fake-host-name
+        log_stream_name: arn_aws_ecs_us-east-1_account_id_task/task_id
         max_retries: 2
         middleware: agenthealth/logs
         no_verify_ssl: false
@@ -97,6 +97,13 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -128,6 +135,7 @@ receivers:
         leader_lock_using_config_map_only: false
         local_mode: false
         max_retries: 0
+        middleware: agenthealth/statuscode
         no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: false
@@ -166,6 +174,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
     pipelines:
         logs/emf_logs:
             exporters:

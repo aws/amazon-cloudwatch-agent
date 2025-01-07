@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -30,13 +29,15 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
+	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -47,6 +48,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 )
 
 const (
@@ -63,7 +65,7 @@ var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print th
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fTomlConfig = flag.String("config", "", "configuration file to load")
-var fOtelConfig = flag.String("otelconfig", paths.YamlConfigPath, "YAML configuration file to run OTel pipeline")
+var fOtelConfigs configprovider.OtelConfigFlags
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -185,7 +187,7 @@ func reloadLoop(
 					_ = f.Close()
 				}
 			}
-			log.Fatalf("E! [telegraf] Error running agent: %v", err)
+			log.Fatalf("E! Error running agent: %v", err)
 		}
 	}
 }
@@ -242,6 +244,7 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
+	c.AllowUnusedFields = true
 
 	err = loadTomlConfigIntoAgent(c)
 	if err != nil {
@@ -289,7 +292,6 @@ func runAgent(ctx context.Context,
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, testWaitDuration)
 	}
-
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -314,27 +316,44 @@ func runAgent(ctx context.Context,
 		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
 		go logAgent.Run(ctx)
 
-		// If OTEL config does not exist, then ASSUME just monitoring logs.
+		// If only a single YAML is provided and does not exist, then ASSUME the agent is
+		// just monitoring logs since this is the default when no OTEL config flag is provided.
 		// So just start Telegraf.
-		_, err = os.Stat(*fOtelConfig)
-		if errors.Is(err, os.ErrNotExist) {
-			useragent.Get().SetComponents(&otelcol.Config{}, c)
-			return ag.Run(ctx)
+		if len(fOtelConfigs) == 1 {
+			_, err = os.Stat(fOtelConfigs[0])
+			if errors.Is(err, os.ErrNotExist) {
+				log.Println("I! running in logs-only mode")
+				useragent.Get().SetComponents(&otelcol.Config{}, c)
+				return ag.Run(ctx)
+			}
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
 
-	yamlConfigPath := *fOtelConfig
-	provider, err := configprovider.Get(yamlConfigPath)
+	otelConfigs := fOtelConfigs
+	// try merging configs together, will return nil if nothing to merge
+	merged, err := mergeConfigs(otelConfigs)
 	if err != nil {
-		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
+	}
+	if merged != nil {
+		_ = os.Setenv(envconfig.CWAgentMergedOtelConfig, toyamlconfig.ToYamlConfig(merged.ToStringMap()))
+		otelConfigs = []string{"env:" + envconfig.CWAgentMergedOtelConfig}
+	} else {
+		_ = os.Unsetenv(envconfig.CWAgentMergedOtelConfig)
+	}
+
+	providerSettings := configprovider.GetSettings(otelConfigs, logger)
+	provider, err := otelcol.NewConfigProvider(providerSettings)
+	if err != nil {
+		return fmt.Errorf("error while initializing config provider: %v", err)
 	}
 
 	factories, err := components(c)
 	if err != nil {
-		log.Printf("E! Error while adapting telegraf input plugins: %v\n", err)
-		return err
+		return fmt.Errorf("error while adapting telegraf input plugins: %v", err)
 	}
 
 	cfg, err := provider.Get(ctx, factories)
@@ -342,30 +361,39 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
+	if _, ok := os.LookupEnv(envconfig.CWAgentMergedOtelConfig); ok {
+		result, err := mapstructure.Marshal(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal OTEL configuration: %v", err)
+		}
+		log.Printf("I! Merged OTEL configuration: \n%s\n", toyamlconfig.ToYamlConfig(result))
+	}
+
 	useragent.Get().SetComponents(cfg, c)
 
-	params := getCollectorParams(factories, provider, writer)
-
-	_ = featuregate.GlobalRegistry().Set("exporter.xray.allowDot", true)
+	params := getCollectorParams(factories, providerSettings, loggerOptions)
 	cmd := otelcol.NewCommand(params)
-
-	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
-	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
-	// path below here is actually used and it still respects what was set in the settings above.
-	e := []string{"--config=" + yamlConfigPath + " --feature-gates=exporter.xray.allowDot"}
+	// *************************************************************************************************
+	// ⚠️ WARNING ⚠️
+	// Noticed that args of parent process get passed here to otel collector which causes failures
+	// complaining about unrecognized args. So below change overwrites the args.
+	// The config path below here is actually used that was set in the settings above.
+	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/93cbae436ae61b832279dbbb18a0d99214b7d305/otelcol/command.go#L63
+	// *************************************************************************************************
+	var e []string
+	for _, uri := range otelConfigs {
+		e = append(e, "--config="+uri)
+	}
 	cmd.SetArgs(e)
-
 	return cmd.Execute()
 }
 
-func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider, writer io.Writer) otelcol.CollectorSettings {
-	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
-	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
+func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.ConfigProviderSettings, loggingOptions []zap.Option) otelcol.CollectorSettings {
 	return otelcol.CollectorSettings{
 		Factories: func() (otelcol.Factories, error) {
 			return factories, nil
 		},
-		ConfigProvider: provider,
+		ConfigProviderSettings: providerSettings,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
 		BuildInfo: component.BuildInfo{
 			Command:     "CWAgent",
@@ -374,6 +402,37 @@ func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProv
 		},
 		LoggingOptions: loggingOptions,
 	}
+}
+
+// mergeConfigs tries to merge configurations together. If nothing to merge, returns nil without an error.
+func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
+	var loaders []confmap.Loader
+	if envconfig.IsRunningInContainer() {
+		content, ok := os.LookupEnv(envconfig.CWOtelConfigContent)
+		if ok && len(content) > 0 {
+			log.Printf("D! Merging OTEL configuration from: %s", envconfig.CWOtelConfigContent)
+			loaders = append(loaders, confmap.NewByteLoader(envconfig.CWOtelConfigContent, []byte(content)))
+		}
+	}
+	// If using environment variable or passing in more than one config
+	if len(loaders) > 0 || len(configPaths) > 1 {
+		log.Printf("D! Merging OTEL configurations from: %s", configPaths)
+		for _, configPath := range configPaths {
+			loaders = append(loaders, confmap.NewFileLoader(configPath))
+		}
+		result := confmap.New()
+		for _, loader := range loaders {
+			conf, err := loader.Load()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
+			}
+			if err = result.Merge(conf); err != nil {
+				return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
+			}
+		}
+		return result, nil
+	}
+	return nil, nil
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
@@ -425,9 +484,12 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
+	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
 	flag.Parse()
+	if len(fOtelConfigs) == 0 {
+		_ = fOtelConfigs.Set(paths.YamlConfigPath)
+	}
 	args := flag.Args()
-
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
 		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
@@ -448,7 +510,6 @@ func main() {
 	}
 
 	logger.SetupLogging(logger.LogConfig{})
-
 	if *pprofAddr != "" {
 		go func() {
 			pprofHostPort := *pprofAddr

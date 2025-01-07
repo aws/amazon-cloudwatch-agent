@@ -26,11 +26,11 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "1"),
-			want: &Config{IsUsageDataEnabled: false, Stats: agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}},
+			want: &Config{IsUsageDataEnabled: false, Stats: nil},
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "2"),
-			want: &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{"ListBuckets"}}},
+			want: &Config{IsUsageDataEnabled: true, Stats: &agent.StatsConfig{Operations: []string{"ListBuckets"}}},
 		},
 	}
 	for _, testCase := range testCases {
@@ -39,7 +39,7 @@ func TestLoadConfig(t *testing.T) {
 		cfg := NewFactory().CreateDefaultConfig()
 		sub, err := conf.Sub(testCase.id.String())
 		require.NoError(t, err)
-		require.NoError(t, component.UnmarshalConfig(sub, cfg))
+		require.NoError(t, sub.Unmarshal(cfg))
 
 		assert.NoError(t, component.ValidateConfig(cfg))
 		assert.Equal(t, testCase.want, cfg)
