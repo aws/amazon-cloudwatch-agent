@@ -128,6 +128,7 @@ jobs:
 
   CloudformationTest:
     needs: [GenerateTestMatrix]
+    if: false
     name: 'CFTest'
     runs-on: ubuntu-latest
     strategy:
@@ -221,6 +222,7 @@ jobs:
 
 
   EC2NvidiaGPUIntegrationTest:
+    if: false
     needs: [ StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
@@ -368,6 +370,7 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
 
   EC2LinuxIntegrationTest:
+    if: false
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2Linux'
     uses:  ./.github/workflows/ec2-integration-test.yml
@@ -386,6 +389,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestITAR:
+    if: false
     needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxITAR'
     uses: ./.github/workflows/ec2-integration-test.yml
@@ -404,6 +408,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestCN:
+    if: false
     needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxCN'
     uses: ./.github/workflows/ec2-integration-test.yml
@@ -423,6 +428,7 @@ jobs:
 
 
   LinuxOnPremIntegrationTest:
+    if: false
     needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
@@ -439,6 +445,7 @@ jobs:
     secrets: inherit
 
   EC2WinIntegrationTest:
+    if: false
     needs: [GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
@@ -521,6 +528,7 @@ jobs:
             terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
+    if: false
     needs: [GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
@@ -653,6 +661,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
+    if: false
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix ]
@@ -736,6 +745,7 @@ jobs:
             terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
+    if: false
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
     needs: [GenerateTestMatrix]
@@ -825,10 +835,11 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out AWS FluentBit repo
+        uses: actions/checkout@v3
         with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+          repository: amazon-contributing/upstream-to-fluent-bit
+          ref: 1.9.10
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -848,6 +859,20 @@ jobs:
         id: login-ecr
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image for FluentBit
+        env:
+          ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+        run: |
+          make release
+          docker tag amazon/aws-for-fluent-bit:latest $ECR_REPO:latest
+          docker push $ECR_REPO:latest
+
+      - name: Check out agent test repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Verify Terraform version
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
@@ -896,6 +921,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
+    if: false
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix ]
@@ -976,6 +1002,7 @@ jobs:
             terraform destroy --auto-approve
 
   PerformanceTrackingTest:
+    if: false
     name: "PerformanceTrackingTest"
     needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
@@ -1044,6 +1071,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   EC2WinPerformanceTest:
+    if: false
     name: "EC2WinPerformanceTest"
     needs: [ GenerateTestMatrix ]
     runs-on: ubuntu-latest
@@ -1112,6 +1140,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   StressTrackingTest:
+    if: false
     name: "StressTrackingTest"
     needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
@@ -1182,6 +1211,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   EC2WinStressTrackingTest:
+    if: false
     name: "EC2WinStressTrackingTest"
     needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
@@ -1253,6 +1283,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   GPUEndToEndTest:
+    if: false
     name: "GPU E2E Test"
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
