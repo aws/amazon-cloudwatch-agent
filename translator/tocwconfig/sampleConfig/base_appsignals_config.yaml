@@ -789,6 +789,264 @@ processors:
                   new_label: Telemetry.Source
                   new_value: RuntimeMetric
               submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: gen0
+              include: process.runtime.dotnet.gc.collections.count
+              match_type: ""
+              new_name: DotNetGCGen0Count
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: gen1
+              include: process.runtime.dotnet.gc.collections.count
+              match_type: ""
+              new_name: DotNetGCGen1Count
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: gen2
+              include: process.runtime.dotnet.gc.collections.count
+              match_type: ""
+              new_name: DotNetGCGen2Count
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: process.runtime.dotnet.gc.duration
+              match_type: ""
+              new_name: DotNetGCDuration
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: gen0
+              include: process.runtime.dotnet.gc.heap.size
+              match_type: ""
+              new_name: DotNetGCGen0HeapSize
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: gen1
+              include: process.runtime.dotnet.gc.heap.size
+              match_type: ""
+              new_name: DotNetGCGen1HeapSize
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: gen2
+              include: process.runtime.dotnet.gc.heap.size
+              match_type: ""
+              new_name: DotNetGCGen2HeapSize
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: loh
+              include: process.runtime.dotnet.gc.heap.size
+              match_type: ""
+              new_name: DotNetGCLOHHeapSize
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              experimental_match_labels:
+                generation: poh
+              include: process.runtime.dotnet.gc.heap.size
+              match_type: ""
+              new_name: DotNetGCPOHHeapSize
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: process.runtime.dotnet.thread_pool.threads.count
+              match_type: ""
+              new_name: DotNetThreadCount
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: process.runtime.dotnet.thread_pool.queue.length
+              match_type: ""
+              new_name: DotNetThreadQueueLength
+              operations:
+                - action: aggregate_labels
+                  aggregation_type: sum
+                  experimental_scale: 0
+                  label: ""
+                  label_set: []
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Telemetry.Source
+                  new_value: RuntimeMetric
+              submatch_case: ""
     resourcedetection:
         aks:
             resource_attributes:
