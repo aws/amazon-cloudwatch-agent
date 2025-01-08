@@ -26,9 +26,7 @@ func NewFactory() processor.Factory {
 	return processor.NewFactory(
 		TypeStr,
 		createDefaultConfig,
-		processor.WithMetrics(createMetricsProcessor, stability),
-		processor.WithLogs(createLogsProcessor, stability),
-	)
+		processor.WithMetrics(createMetricsProcessor, stability))
 }
 
 func createDefaultConfig() component.Config {
@@ -53,25 +51,5 @@ func createMetricsProcessor(
 		cfg,
 		nextConsumer,
 		metricsProcessor.processMetrics,
-		processorhelper.WithCapabilities(processorCapabilities))
-}
-
-func createLogsProcessor(
-	ctx context.Context,
-	set processor.Settings,
-	cfg component.Config,
-	nextConsumer consumer.Logs,
-) (processor.Logs, error) {
-	processorConfig, ok := cfg.(*Config)
-	if !ok {
-		return nil, errors.New("configuration parsing error")
-	}
-	logProcessor := newAwsEntityProcessor(processorConfig, set.Logger)
-	return processorhelper.NewLogsProcessor(
-		ctx,
-		set,
-		cfg,
-		nextConsumer,
-		logProcessor.processLogs,
 		processorhelper.WithCapabilities(processorCapabilities))
 }
