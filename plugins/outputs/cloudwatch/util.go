@@ -32,7 +32,7 @@ const (
 	// &StrictEntityValidation=false
 	strictEntityValidationsize = 29
 
-	overallConstPerRequestSize = pmdActionSize + versionSize
+	overallConstPerRequestSize = pmdActionSize + versionSize + strictEntityValidationsize
 	// &Namespace=, this is per request
 	namespaceOverheads = 11
 
@@ -99,12 +99,8 @@ func resize(dist distribution.Distribution, listMaxSize int) (distList []distrib
 	return
 }
 
-func payload(datum *cloudwatch.MetricDatum, entity *cloudwatch.Entity) int {
+func payload(datum *cloudwatch.MetricDatum) int {
 	size := timestampSize
-
-	if entity != nil {
-		size += calculateEntitySize(*entity)
-	}
 
 	for _, dimension := range datum.Dimensions {
 		size += len(*dimension.Name) + len(*dimension.Value) + dimensionOverheads

@@ -797,7 +797,7 @@ func createLargeTestMetrics(numMetrics int, entity *cloudwatch.Entity) pmetric.M
 			dp := gauge.DataPoints().AppendEmpty()
 			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 			dp.SetDoubleValue(float64(i * 100))
-			addDimensions(dp.Attributes(), 10) // 10 large dimensions
+			addDimensions(dp.Attributes(), 10)
 		} else {
 			sum := m.SetEmptySum()
 			sum.SetIsMonotonic(true)
@@ -805,7 +805,7 @@ func createLargeTestMetrics(numMetrics int, entity *cloudwatch.Entity) pmetric.M
 			dp := sum.DataPoints().AppendEmpty()
 			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 			dp.SetDoubleValue(float64(i * 100))
-			addDimensions(dp.Attributes(), 10) // 10 large dimensions
+			addDimensions(dp.Attributes(), 10)
 		}
 	}
 
@@ -819,8 +819,11 @@ func (c *CloudWatch) calculateTotalPayloadSize(metrics pmetric.Metrics, entity *
 	for _, agg := range aggregations {
 		_, datums := c.BuildMetricDatum(agg)
 		for _, datum := range datums {
-			totalSize += payload(datum, entity)
+			totalSize += payload(datum)
 		}
+	}
+	if entity != nil {
+		totalSize += calculateEntitySize(*entity)
 	}
 	return totalSize
 }
