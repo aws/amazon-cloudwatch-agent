@@ -862,7 +862,7 @@ jobs:
 
       - name: Build and push Docker image for FluentBit
         env:
-          ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/fluent-bit-test
         run: |
           make release
           docker tag amazon/aws-for-fluent-bit:latest $ECR_REPO:latest
