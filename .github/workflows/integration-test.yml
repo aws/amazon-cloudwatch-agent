@@ -837,9 +837,10 @@ jobs:
     steps:
       - name: Check out AWS FluentBit repo
         uses: actions/checkout@v3
+        if: ${{ matrix.arrays.terraform_dir }} == 'terraform/eks/daemon/fluent/bit'
         with:
-          repository: amazon-contributing/upstream-to-fluent-bit
-          ref: 1.9.10
+          repository: aws/aws-for-fluent-bit
+          ref: mainline
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -861,9 +862,11 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image for FluentBit
+        if: ${{ matrix.arrays.terraform_dir }} == 'terraform/eks/daemon/fluent/bit'
         env:
           ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/fluent-bit-test
         run: |
+          cd fluent-bit
           make release
           docker tag amazon/aws-for-fluent-bit:latest $ECR_REPO:latest
           docker push $ECR_REPO:latest
