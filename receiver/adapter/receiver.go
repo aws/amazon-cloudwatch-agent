@@ -70,7 +70,13 @@ func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
 	}
 
 	otelMetrics := r.accumulator.GetOtelMetrics()
-	r.logger.Info("Getting otel metrics", zap.Any("receiver", otelMetrics))
+	marshaler := pmetric.JSONMarshaler{}
+	otelMetricsJSON, err := marshaler.MarshalMetrics(otelMetrics)
+	if err != nil {
+		return pmetric.Metrics{}, err
+	}
+
+	r.logger.Info("Getting otel metrics", zap.Any("receiver", otelMetricsJSON))
 	return otelMetrics, nil
 }
 
