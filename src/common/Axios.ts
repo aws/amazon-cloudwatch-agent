@@ -5,7 +5,8 @@ import axios from 'axios';
 
 export const AxiosConfig = axios.create({
     baseURL: process.env.REACT_APP_LAMBDA_URL,
-    timeout: 3000,
+    // timeout in milliseconds; increased from 3000ms due to large number of commit data requests
+    timeout: 4000,
     headers: {
         'Content-Type': 'application/json',
     },
