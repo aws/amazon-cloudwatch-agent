@@ -81,10 +81,18 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -102,11 +110,11 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     awsentity/service/telegraf:
         entity_type: Service
-        scrape_datapoint_attribute: true
         platform: ec2
+        scrape_datapoint_attribute: true
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -138,10 +146,11 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
     filter/jmx/0:
         error_mode: propagate
@@ -189,11 +198,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "cpu_usage_idle"
-                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                  - set(unit, "unit") where name == "cpu_usage_nice"
-                  - set(unit, "unit") where name == "disk_free"
-                  - set(name, "DISK_FREE") where name == "disk_free"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
+                - set(unit, "unit") where name == "cpu_usage_idle"
+                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                - set(unit, "unit") where name == "cpu_usage_nice"
         trace_statements: []
     transform/jmx/0:
         error_mode: propagate
@@ -202,9 +211,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
-                  - set(unit, "unit") where name == "jvm.memory.heap.used"
-                  - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(unit, "unit") where name == "jvm.memory.heap.used"
+                - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -213,7 +222,7 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(name, "TC_ERR") where name == "tomcat.errors"
+                - set(name, "TC_ERR") where name == "tomcat.errors"
         trace_statements: []
 receivers:
     awsxray:
@@ -362,6 +371,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - agenthealth/logs
         - agenthealth/traces
         - entitystore
@@ -381,11 +391,11 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_mem
-                - telegraf_netstat
-                - telegraf_procstat/1917393364
                 - telegraf_swap
                 - telegraf_cpu
+                - telegraf_netstat
+                - telegraf_procstat/1917393364
+                - telegraf_mem
                 - telegraf_disk
                 - telegraf_processes
         metrics/hostCustomMetrics/cloudwatch:
@@ -396,8 +406,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -407,8 +417,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch

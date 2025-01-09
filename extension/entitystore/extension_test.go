@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
@@ -63,6 +64,11 @@ func (s *mockServiceProvider) getServiceNameAndSource() (string, string) {
 	return "test-service-name", "UserConfiguration"
 }
 
+func (s *mockServiceProvider) getAutoScalingGroup() string {
+	args := s.Called()
+	return args.Get(0).(string)
+}
+
 type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 	Tags                     map[string]string
@@ -103,15 +109,11 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
+func (m *mockMetadataProvider) InstanceTags(_ context.Context) ([]string, error) {
 	if m.InstanceTagError {
-		return "", errors.New("an error occurred for instance tag retrieval")
+		return nil, errors.New("an error occurred for instance tag retrieval")
 	}
-	var tagsString string
-	for key, val := range m.Tags {
-		tagsString += key + "=" + val + ","
-	}
-	return tagsString, nil
+	return maps.Keys(m.Tags), nil
 }
 
 func (m *mockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
@@ -135,12 +137,10 @@ func TestEntityStore_EC2Info(t *testing.T) {
 		{
 			name: "happypath",
 			ec2InfoInput: EC2Info{
-				InstanceID:       "i-1234567890",
-				AutoScalingGroup: "test-asg",
+				InstanceID: "i-1234567890",
 			},
 			want: EC2Info{
-				InstanceID:       "i-1234567890",
-				AutoScalingGroup: "test-asg",
+				InstanceID: "i-1234567890",
 			},
 		},
 	}
@@ -200,8 +200,9 @@ func TestEntityStore_KubernetesMode(t *testing.T) {
 
 func TestEntityStore_createAttributeMaps(t *testing.T) {
 	type fields struct {
-		ec2Info EC2Info
-		mode    string
+		ec2Info  EC2Info
+		mode     string
+		emptyASG bool
 	}
 	tests := []struct {
 		name   string
@@ -212,13 +213,12 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 			name: "HappyPath",
 			fields: fields{
 				ec2Info: EC2Info{
-					InstanceID:       "i-123456789",
-					AutoScalingGroup: "test-asg",
+					InstanceID: "i-123456789",
 				},
 				mode: config.ModeEC2,
 			},
 			want: map[string]*string{
-				ASGKey:        aws.String("test-asg"),
+				ASGKey:        aws.String("ASG-1"),
 				InstanceIDKey: aws.String("i-123456789"),
 				PlatformType:  aws.String(EC2PlatForm),
 			},
@@ -229,7 +229,8 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				ec2Info: EC2Info{
 					InstanceID: "i-123456789",
 				},
-				mode: config.ModeEC2,
+				mode:     config.ModeEC2,
+				emptyASG: true,
 			},
 			want: map[string]*string{
 				InstanceIDKey: aws.String("i-123456789"),
@@ -239,7 +240,8 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 		{
 			name: "HappyPath_InstanceIdAndAsgMissing",
 			fields: fields{
-				mode: config.ModeEC2,
+				mode:     config.ModeEC2,
+				emptyASG: true,
 			},
 			want: map[string]*string{
 				PlatformType: aws.String(EC2PlatForm),
@@ -249,8 +251,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 			name: "NonEC2",
 			fields: fields{
 				ec2Info: EC2Info{
-					InstanceID:       "i-123456789",
-					AutoScalingGroup: "test-asg",
+					InstanceID: "i-123456789",
 				},
 				mode: config.ModeOnPrem,
 			},
@@ -263,6 +264,13 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				ec2Info: tt.fields.ec2Info,
 				mode:    tt.fields.mode,
 			}
+			sp := new(mockServiceProvider)
+			if tt.fields.emptyASG {
+				sp.On("getAutoScalingGroup").Return("")
+			} else {
+				sp.On("getAutoScalingGroup").Return("ASG-1")
+			}
+			e.serviceprovider = sp
 			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(e.createAttributeMap()), "createAttributeMap()")
 		})
 	}
@@ -320,6 +328,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	}
 	sp := new(mockServiceProvider)
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
+	sp.On("getAutoScalingGroup").Return("ASG-1")
 	e := EntityStore{
 		mode:             config.ModeEC2,
 		ec2Info:          EC2Info{InstanceID: instanceId, AccountID: accountId},
@@ -337,9 +346,10 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 			entityattributes.AwsAccountId:          aws.String(accountId),
 		},
 		Attributes: map[string]*string{
-			InstanceIDKey:        aws.String(instanceId),
-			ServiceNameSourceKey: aws.String(ServiceNameSourceUserConfiguration),
-			PlatformType:         aws.String(EC2PlatForm),
+			InstanceIDKey:                     aws.String(instanceId),
+			ServiceNameSourceKey:              aws.String(ServiceNameSourceUserConfiguration),
+			PlatformType:                      aws.String(EC2PlatForm),
+			entityattributes.AutoscalingGroup: aws.String("ASG-1"),
 		},
 	}
 	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
@@ -619,7 +629,7 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 			logOutput := buf.String()
 			log.Println(logOutput)
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetInstanceID())
-			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAutoScalingGroup())
+			assertIfNonEmpty(t, logOutput, es.GetAutoScalingGroup())
 			assertIfNonEmpty(t, logOutput, es.ec2Info.GetAccountID())
 			assert.True(t, es.ready.Load(), "EntityStore should be ready")
 		})

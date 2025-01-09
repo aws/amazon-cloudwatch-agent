@@ -6,6 +6,7 @@ package ec2metadataprovider
 import (
 	"context"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -20,7 +21,7 @@ type MetadataProvider interface {
 	Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error)
 	Hostname(ctx context.Context) (string, error)
 	InstanceID(ctx context.Context) (string, error)
-	InstanceTags(ctx context.Context) (string, error)
+	InstanceTags(ctx context.Context) ([]string, error)
 	ClientIAMRole(ctx context.Context) (string, error)
 	InstanceTagValue(ctx context.Context, tagKey string) (string, error)
 }
@@ -67,10 +68,14 @@ func (c *metadataClient) ClientIAMRole(ctx context.Context) (string, error) {
 	})
 }
 
-func (c *metadataClient) InstanceTags(ctx context.Context) (string, error) {
-	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+func (c *metadataClient) InstanceTags(ctx context.Context) ([]string, error) {
+	tags, err := withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
 		return metadataClient.GetMetadataWithContext(ctx, "tags/instance")
 	})
+	if err != nil {
+		return nil, err
+	}
+	return strings.Fields(tags), nil
 }
 
 func (c *metadataClient) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {

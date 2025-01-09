@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -63,7 +64,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	mode := context.CurrentContext().KubernetesMode()
 	if mode == "" {
 		mode = context.CurrentContext().Mode()
@@ -80,4 +81,5 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}
+
 }

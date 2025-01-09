@@ -17,13 +17,20 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-east-1
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: ""
@@ -35,10 +42,11 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
     telegraf_net:
@@ -48,6 +56,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         metrics/hostDeltaMetrics:

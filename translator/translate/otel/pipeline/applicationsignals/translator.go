@@ -75,9 +75,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
 		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
 		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeTraces, []string{agenthealth.OperationPutTraceSegments}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true))
+
 	} else {
 		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
 		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true))
 	}
 	return translators, nil
 }
