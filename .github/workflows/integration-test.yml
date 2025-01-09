@@ -866,7 +866,6 @@ jobs:
         env:
           ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/fluent-bit-test
         run: |
-          cd fluent-bit
           make release
           docker tag amazon/aws-for-fluent-bit:latest $ECR_REPO:latest
           docker push $ECR_REPO:latest
