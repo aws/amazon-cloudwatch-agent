@@ -5,7 +5,6 @@ package adapter
 
 import (
 	"context"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/component"
@@ -76,7 +75,7 @@ func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
 		return pmetric.Metrics{}, err
 	}
 
-	r.logger.Info("Getting otel metrics", zap.String("receiver", string(otelMetricsJSON)))
+	r.logger.Info("Getting otel metrics", zap.ByteString("receiver", otelMetricsJSON))
 	return otelMetrics, nil
 }
 
