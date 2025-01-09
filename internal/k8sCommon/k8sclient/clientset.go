@@ -36,7 +36,6 @@ type K8sClient struct {
 	ClientSet *kubernetes.Clientset
 
 	Ep   EpClient
-	Pod  PodClient
 	Node NodeClient
 
 	ReplicaSet ReplicaSetClient
@@ -65,7 +64,6 @@ func (c *K8sClient) init() {
 	}
 	c.ClientSet = client
 	c.Ep = new(epClient)
-	c.Pod = new(podClient)
 	c.Node = new(nodeClient)
 	c.ReplicaSet = new(replicaSetClient)
 	c.inited = true
@@ -79,9 +77,6 @@ func (c *K8sClient) shutdown() {
 	}
 	if c.Ep != nil {
 		c.Ep.Shutdown()
-	}
-	if c.Pod != nil {
-		c.Pod.Shutdown()
 	}
 	if c.Node != nil {
 		c.Node.Shutdown()
