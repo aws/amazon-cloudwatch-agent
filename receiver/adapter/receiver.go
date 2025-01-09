@@ -75,7 +75,7 @@ func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
 		return pmetric.Metrics{}, err
 	}
 
-	r.logger.Info("Getting otel metrics", zap.ByteString("receiver", otelMetricsJSON))
+	r.logger.Info("Getting otel metrics", zap.String("receiver", string(otelMetricsJSON)))
 	return otelMetrics, nil
 }
 
