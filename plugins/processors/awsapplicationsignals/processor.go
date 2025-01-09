@@ -17,8 +17,8 @@ import (
 
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/cardinalitycontrol"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/metrichandlers"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/normalizer"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/prune"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/resolver"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
 )
@@ -44,14 +44,15 @@ type stopper interface {
 }
 
 type awsapplicationsignalsprocessor struct {
-	logger            *zap.Logger
-	config            *appsignalsconfig.Config
-	replaceActions    *rules.ReplaceActions
-	allowlistMutators []allowListMutator
-	metricMutators    []attributesMutator
-	traceMutators     []attributesMutator
-	limiter           cardinalitycontrol.Limiter
-	stoppers          []stopper
+	logger             *zap.Logger
+	config             *appsignalsconfig.Config
+	replaceActions     *rules.ReplaceActions
+	allowlistMutators  []allowListMutator
+	metricMutators     []attributesMutator
+	traceMutators      []attributesMutator
+	limiter            cardinalitycontrol.Limiter
+	aggregationMutator metrichandlers.AggregationMutator
+	stoppers           []stopper
 }
 
 func (ap *awsapplicationsignalsprocessor) StartMetrics(ctx context.Context, _ component.Host) error {
@@ -76,10 +77,12 @@ func (ap *awsapplicationsignalsprocessor) StartMetrics(ctx context.Context, _ co
 
 	ap.replaceActions = rules.NewReplacer(ap.config.Rules, !limiterConfig.Disabled)
 
-	pruner := prune.NewPruner()
+	pruner := metrichandlers.NewPruner()
 	keeper := rules.NewKeeper(ap.config.Rules, !limiterConfig.Disabled)
 	dropper := rules.NewDropper(ap.config.Rules)
 	ap.allowlistMutators = []allowListMutator{pruner, keeper, dropper}
+
+	ap.aggregationMutator = metrichandlers.NewAggregationMutator()
 
 	return nil
 }
@@ -143,6 +146,7 @@ func (ap *awsapplicationsignalsprocessor) processMetrics(ctx context.Context, md
 					m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
 				}
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
+				ap.aggregationMutator.ProcessMetrics(ctx, m, resourceAttributes)
 			}
 		}
 	}

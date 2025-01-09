@@ -40,8 +40,8 @@ const (
 )
 
 var (
-	//priorityMap is ranking in how we prioritize which IMDS tag determines the service name
-	priorityMap = []string{SERVICE, APPLICATION, APP}
+	//serviceProviderPriorities is ranking in how we prioritize which IMDS tag determines the service name
+	serviceProviderPriorities = []string{SERVICE, APPLICATION, APP}
 )
 
 type ServiceAttribute struct {
@@ -69,6 +69,7 @@ type serviceprovider struct {
 	done             chan struct{}
 	logger           *zap.Logger
 	mutex            sync.RWMutex
+	logMutex         sync.RWMutex
 	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
 	// Example:
 	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "cloudwatch-agent"}
@@ -125,6 +126,8 @@ func (s *serviceprovider) setAutoScalingGroup(asg string) {
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
 // CloudWatch Agent config.
 func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAttr ServiceAttribute) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
 	if s.logFiles == nil {
 		s.logFiles = make(map[LogFileGlob]ServiceAttribute)
 	}
@@ -134,6 +137,8 @@ func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAtt
 // addEntryForLogGroup adds an association between a log group name and a service attribute, as observed from incoming
 // telemetry received by CloudWatch Agent.
 func (s *serviceprovider) addEntryForLogGroup(logGroupName LogGroupName, serviceAttr ServiceAttribute) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
 	if s.logGroups == nil {
 		s.logGroups = make(map[LogGroupName]ServiceAttribute)
 	}
@@ -197,7 +202,8 @@ func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) Ser
 	if logGroup == "" || s.logGroups == nil {
 		return ServiceAttribute{}
 	}
-
+	s.logMutex.RLock()
+	defer s.logMutex.RUnlock()
 	return s.logGroups[logGroup]
 }
 
@@ -205,7 +211,8 @@ func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) Servic
 	if logFile == "" || s.logFiles == nil {
 		return ServiceAttribute{}
 	}
-
+	s.logMutex.RLock()
+	defer s.logMutex.RUnlock()
 	return s.logFiles[logFile]
 }
 
@@ -264,32 +271,35 @@ func (s *serviceprovider) scrapeIAMRole() error {
 	return nil
 }
 func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
-	tags, err := s.metadataProvider.InstanceTags(context.Background())
+	tagKeys, err := s.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
 		s.logger.Debug("Failed to get service name from instance tags. This is likely because instance tag is not enabled for IMDS but will not affect agent functionality.")
 		return err
 	}
-	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order.
-	for _, value := range priorityMap {
-		if strings.Contains(tags, value) {
-			serviceName, err := s.metadataProvider.InstanceTagValue(context.Background(), value)
+
+	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order (case insensitive)
+	lowerTagKeys := toLowerKeyMap(tagKeys)
+	for _, potentialServiceProviderKey := range serviceProviderPriorities {
+		if originalCaseKey, exists := lowerTagKeys[potentialServiceProviderKey]; exists {
+			serviceName, err := s.metadataProvider.InstanceTagValue(context.Background(), originalCaseKey)
 			if err != nil {
 				continue
-			} else {
-				s.mutex.Lock()
-				s.imdsServiceName = serviceName
-				s.mutex.Unlock()
 			}
+			s.mutex.Lock()
+			s.imdsServiceName = serviceName
+			s.mutex.Unlock()
 			break
 		}
 	}
-	if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
+	// case sensitive
+	if originalCaseKey := lowerTagKeys[strings.ToLower(ec2tagger.Ec2InstanceTagKeyASG)]; originalCaseKey == ec2tagger.Ec2InstanceTagKeyASG {
 		asg, err := s.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
 		if err == nil && asg != "" {
 			s.logger.Debug("AutoScalingGroup retrieved through IMDS")
 			s.setAutoScalingGroup(asg)
 		}
 	}
+
 	if s.GetIMDSServiceName() == "" {
 		s.logger.Debug("Service name not found through IMDS")
 	}
@@ -297,6 +307,14 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 		s.logger.Debug("AutoScalingGroup name not found through IMDS")
 	}
 	return nil
+}
+
+func toLowerKeyMap(values []string) map[string]string {
+	set := make(map[string]string, len(values))
+	for _, v := range values {
+		set[strings.ToLower(v)] = v
+	}
+	return set
 }
 
 func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, logger *zap.Logger) serviceProviderInterface {
