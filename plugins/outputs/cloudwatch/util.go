@@ -25,29 +25,29 @@ const (
 	pmdActionSize = 20
 	// &Version=2010-08-01
 	versionSize = 19
-	// &EntityMetricData.member.100.MetricData.member.100.StatisticValues.Maximum=1558.3086995967291&EntityMetricData.member.100.MetricData.member.100.StatisticValues.Minimum=1558.3086995967291&EntityMetricData.member.100.MetricData.member.100.StatisticValues.SampleCount=1000&EntityMetricData.member.100.MetricData.member.100.StatisticValues.Sum=1558.3086995967291
-	statisticsSize = 358
-	// &EntityMetricData.member.100.MetricData.member.100.Timestamp=2018-05-29T21%3A14%3A00Z
-	timestampSize = 85
+	// &MetricData.member.100.StatisticValues.Maximum=1558.3086995967291&MetricData.member.100.StatisticValues.Minimum=1558.3086995967291&MetricData.member.100.StatisticValues.SampleCount=1000&MetricData.member.100.StatisticValues.Sum=1558.3086995967291
+	statisticsSize = 246
+	// &MetricData.member.100.Timestamp=2018-05-29T21%3A14%3A00Z
+	timestampSize = 57
 	// &StrictEntityValidation=false
 	strictEntityValidationSize = 29
 
-	overallConstPerRequestSize = pmdActionSize + versionSize + strictEntityValidationSize
+	overallConstPerRequestSize = pmdActionSize + versionSize
 	// &Namespace=, this is per request
 	namespaceOverheads = 11
 
-	// &EntityMetricData.member.100.MetricData.member.100.Dimensions.member.1.Name= &EntityMetricData.member.100.MetricData.member.100.Dimensions.member.1.Value=
-	dimensionOverheads = 76 + 77
-	// &EntityMetricData.member.100.MetricData.member.100.MetricName=
-	metricNameOverheads = 62
-	// &EntityMetricData.member.100.MetricData.member.100.StorageResolution=1
-	highResolutionOverheads = 70
-	// &EntityMetricData.member.100.MetricData.member.100.Values.member.100=1558.3086995967291 &EntityMetricData.member.100.MetricData.member.100.Counts.member.100=1000
-	valuesCountsOverheads = 87 + 73
-	// &EntityMetricData.member.100.MetricData.member.100.Value=1558.3086995967291
-	valueOverheads = 75
-	// &EntityMetricData.member.1.MetricData.member.1.Unit=Kilobytes/Second
-	unitOverheads = 68
+	// &MetricData.member.100.Dimensions.member.1.Name= &MetricData.member.100.Dimensions.member.1.Value=
+	dimensionOverheads = 48 + 49
+	// &MetricData.member.100.MetricName=
+	metricNameOverheads = 34
+	// &MetricData.member.100.StorageResolution=1
+	highResolutionOverheads = 42
+	// &MetricData.member.100.Values.member.100=1558.3086995967291 &MetricData.member.100.Counts.member.100=1000
+	valuesCountsOverheads = 59 + 45
+	// &MetricData.member.100.Value=1558.3086995967291
+	valueOverheads = 47
+	// &MetricData.member.1.Unit=Kilobytes/Second
+	unitOverheads = 42
 	// &EntityMetricData.member.1.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.1.Entity.KeyAttributes.entry.1.value=
 	entityKeyAttributesOverhead = 60 + 62
 	// &EntityMetricData.member.1.Entity.Attributes.entry.1.key= &EntityMetricData.member.1.Entity.Attributes.entry.1.value=
