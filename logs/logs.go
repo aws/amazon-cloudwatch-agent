@@ -30,9 +30,14 @@ type LogEvent interface {
 	Done()
 }
 
+type LogEntityProvider interface {
+	Entity() *cloudwatchlogs.Entity
+}
+
 // A LogSrc is a single source where log events are generated
 // e.g. a single log file
 type LogSrc interface {
+	LogEntityProvider
 	SetOutput(func(LogEvent))
 	Group() string
 	Stream() string
@@ -40,7 +45,6 @@ type LogSrc interface {
 	Description() string
 	Retention() int
 	Class() string
-	Entity() *cloudwatchlogs.Entity
 	Stop()
 }
 
