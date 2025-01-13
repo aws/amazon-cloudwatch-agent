@@ -69,9 +69,10 @@ func TestWorkerPool(t *testing.T) {
 
 	t.Run("MultipleStops", func(t *testing.T) {
 		pool := NewWorkerPool(3)
-		pool.Stop()
 		assert.NotPanics(t, func() {
-			pool.Stop()
+			for i := 0; i < 10; i++ {
+				pool.Stop()
+			}
 		})
 	})
 

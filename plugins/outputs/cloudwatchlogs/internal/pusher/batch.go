@@ -13,7 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
-// CloudWatch Logs API limits
+// CloudWatch Logs PutLogEvents API limits
 // Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 const (
 	// The maximum batch size in bytes. This size is calculated as the sum of all event messages in UTF-8,

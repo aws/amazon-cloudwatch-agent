@@ -12,12 +12,10 @@ import (
 )
 
 const (
-	// Each log event can be no larger than 256 KB. When truncating the message, assume this is the limit for
-	// message length.
+	// Each log event can be no larger than 256 KB. When truncating the message, this is the limit for message length.
 	msgSizeLimit = 256*1024 - perEventHeaderBytes
 	// The suffix to add to truncated log lines.
 	truncatedSuffix = "[Truncated...]"
-
 	// The duration until a timestamp is considered old.
 	warnOldTimeStamp = 24 * time.Hour
 	// The minimum interval between logs warning about the old timestamps.
@@ -39,7 +37,8 @@ func newConverter(logger telegraf.Logger, target Target) *converter {
 	}
 }
 
-// Handles message truncation and timestamp
+// convert handles message truncation to remain within PutLogEvents limits and sets a timestamp if not set in the
+// logs.LogEvent.
 func (c *converter) convert(e logs.LogEvent) *logEvent {
 	message := e.Message()
 
