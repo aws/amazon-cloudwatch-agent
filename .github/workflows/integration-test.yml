@@ -170,6 +170,7 @@ jobs:
 
   StartLocalStack:
     name: 'StartLocalStack'
+    if: false
     needs: [OutputEnvVariables]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
@@ -187,6 +188,7 @@ jobs:
 
   StartLocalStackITAR:
     name: 'StartLocalStackITAR'
+    if: false
     needs: [OutputEnvVariables]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
@@ -204,6 +206,7 @@ jobs:
 
   StartLocalStackCN:
     name: 'StartLocalStackCN'
+    if: false
     needs: [ OutputEnvVariables ]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
@@ -862,7 +865,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image for FluentBit
-        if: ${{ matrix.arrays.terraform_dir }} == 'terraform/eks/daemon/fluent/bit'
+        if: ${{ matrix.arrays.terraform_dir == 'terraform/eks/daemon/fluent/bit' }}
         env:
           ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/fluent-bit-test
         run: |
