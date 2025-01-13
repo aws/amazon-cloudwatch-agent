@@ -752,7 +752,7 @@ func TestEntityInfoPayloadBatching(t *testing.T) {
 	// this is just for payload calculation purposes
 	metricsWithEntityForCalculation := createLargeTestMetrics(numMetrics, &entity)
 	payloadSizeWithEntity := cw.calculateTotalPayloadSize(metricsWithEntityForCalculation, &entity)
-	log.Printf("Payload size without entity info: %d bytes\n", payloadSizeWithEntity)
+	log.Printf("Payload size with entity info: %d bytes\n", payloadSizeWithEntity)
 
 	// actual metrics used in call
 	metricsWithEntity := createLargeTestMetrics(numMetrics, &entity)
