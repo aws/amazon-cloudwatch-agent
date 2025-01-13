@@ -819,7 +819,7 @@ func (c *CloudWatch) calculateTotalPayloadSize(metrics pmetric.Metrics, entity *
 	for _, agg := range aggregations {
 		_, datums := c.BuildMetricDatum(agg)
 		for _, datum := range datums {
-			totalSize += payload(datum)
+			totalSize += payload(datum, false)
 		}
 	}
 	if entity != nil {
