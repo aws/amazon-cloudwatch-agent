@@ -30,9 +30,9 @@ const (
 	// &EntityMetricData.member.100.MetricData.member.100.Timestamp=2018-05-29T21%3A14%3A00Z
 	timestampSize = 85
 	// &StrictEntityValidation=false
-	strictEntityValidationsize = 29
+	strictEntityValidationSize = 29
 
-	overallConstPerRequestSize = pmdActionSize + versionSize + strictEntityValidationsize
+	overallConstPerRequestSize = pmdActionSize + versionSize + strictEntityValidationSize
 	// &Namespace=, this is per request
 	namespaceOverheads = 11
 
@@ -130,7 +130,7 @@ func payload(datum *cloudwatch.MetricDatum) int {
 }
 
 func calculateEntitySize(entity cloudwatch.Entity) int {
-	size := strictEntityValidationsize
+	size := strictEntityValidationSize
 
 	for k, v := range entity.Attributes {
 		size += len(k) + len(*v) + entityAttributesOverhead
