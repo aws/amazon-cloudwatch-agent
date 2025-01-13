@@ -118,7 +118,7 @@ func TestPayload_ValuesAndCounts(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 1313, payload(datum))
+	assert.Equal(t, 867, payload(datum))
 }
 
 func TestPayload_Value(t *testing.T) {
@@ -131,7 +131,7 @@ func TestPayload_Value(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 550, payload(datum))
+	assert.Equal(t, 356, payload(datum))
 }
 
 func TestPayload_Min(t *testing.T) {
@@ -139,7 +139,7 @@ func TestPayload_Min(t *testing.T) {
 	datum.SetValue(1.23456789)
 	datum.SetMetricName("MetricName")
 	datum.SetTimestamp(time.Now())
-	assert.Equal(t, 232, payload(datum))
+	assert.Equal(t, 148, payload(datum))
 }
 
 func TestCalculateEntitySize(t *testing.T) {
@@ -157,7 +157,8 @@ func TestCalculateEntitySize(t *testing.T) {
 				},
 			},
 			// strictEntityValidationsize + entityAttributesOverhead + len(attr1) + len(value1) + entityAttributesOverhead + len(attr2) + len(value2)
-			expected: 29 + (57 + 59) + 5 + 6 + (57 + 59) + 5 + 6,
+			// 29 + (59 + 61) + 5 + 6 + (59 + 61) + 5 + 6
+			expected: 291,
 		},
 		{
 			name: "Entity with only KeyAttributes",
@@ -168,7 +169,8 @@ func TestCalculateEntitySize(t *testing.T) {
 				},
 			},
 			// strictEntityValidationsize + entityKeyAttributesOverhead + len(key1) + len(value1) + entityKeyAttributesOverhead + len(key2) + len(value2)
-			expected: 29 + (60 + 62) + 4 + 6 + (60 + 62) + 4 + 6,
+			// 29 + (62 + 64) + 4 + 6 + (62 + 64) + 4 + 6
+			expected: 301,
 		},
 		{
 			name: "Entity with both Attributes and KeyAttributes",
@@ -181,7 +183,8 @@ func TestCalculateEntitySize(t *testing.T) {
 				},
 			},
 			// strictEntityValidationsize + len("attr1") + len("value1") + entityAttributesOverhead + len("key1") + len("value1") + entityKeyAttributesOverhead
-			expected: 29 + 5 + 6 + (57 + 59) + 4 + 6 + (60 + 62),
+			// 29 + 5 + 6 + (59 + 61) + 4 + 6 + (62 + 64)
+			expected: 296,
 		},
 	}
 
