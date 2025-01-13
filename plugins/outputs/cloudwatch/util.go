@@ -48,10 +48,12 @@ const (
 	valueOverheads = 47
 	// &MetricData.member.1.Unit=Kilobytes/Second
 	unitOverheads = 42
-	// &EntityMetricData.member.1.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.1.Entity.KeyAttributes.entry.1.value=
-	entityKeyAttributesOverhead = 60 + 62
-	// &EntityMetricData.member.1.Entity.Attributes.entry.1.key= &EntityMetricData.member.1.Entity.Attributes.entry.1.value=
-	entityAttributesOverhead = 57 + 59
+	// &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.value=
+	entityKeyAttributesOverhead = 62 + 64
+	// &EntityMetricData.member.100.Entity.Attributes.entry.1.key= &EntityMetricData.member.100.Entity.Attributes.entry.1.value=
+	entityAttributesOverhead = 59 + 61
+	// EntityMetricData.member.100.
+	entityMetricDataPrefixOverhead = 28
 )
 
 // Set seed once.
