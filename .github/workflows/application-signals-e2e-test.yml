@@ -180,3 +180,21 @@ jobs:
     with:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
+
+  dotnet-ec2-default-v8-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-default-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+      dotnet-version: '8.0'
+
+  dotnet-ec2-default-v6-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-default-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+      dotnet-version: '6.0'
