@@ -117,14 +117,14 @@ func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
 		size += highResolutionOverheads
 	}
 
-	entityValueMultipler := 0
+	entityValueMultiplier := 0
 	valuesCountsLen := len(datum.Values)
 	if valuesCountsLen != 0 {
 		size += valuesCountsLen*valuesCountsOverheads + statisticsSize
-		entityValueMultipler += 2*valuesCountsLen + 4
+		entityValueMultiplier += 2*valuesCountsLen + 4
 	} else {
 		size += valueOverheads
-		entityValueMultipler += 1
+		entityValueMultiplier++
 	}
 
 	if datum.Unit != nil {
@@ -136,7 +136,7 @@ func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
 			2*len(datum.Dimensions) + // dimensions
 			1 + // metric name
 			1 + // storage resolution
-			entityValueMultipler + // values
+			entityValueMultiplier + // values
 			1 // unit
 		size += entityPrefixMultiplier * entityMetricDataPrefixOverhead
 	}
