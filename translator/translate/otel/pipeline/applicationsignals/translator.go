@@ -9,7 +9,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
@@ -21,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 type translator struct {
@@ -59,11 +59,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.AppSignals))
 	}
 
-	mode := context.CurrentContext().KubernetesMode()
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithDataType(t.dataType)))
 
-	if t.dataType == component.DataTypeMetrics && mode != "" {
+	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+	isECS := ecsutil.GetECSUtilSingleton().IsECS()
+	if t.dataType == component.DataTypeMetrics && !isECS {
 		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
 	}
 
