@@ -1,28 +1,52 @@
 {
+  "agent": {
+    "debug": true,
+    "metrics_collection_interval": 60
+  },
   "metrics": {
+    "namespace": "SELinux",
+    "force_flush_interval": 5,
+    "aggregation_dimensions": [
+      [
+        "InstanceId"
+      ]
+    ],
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
     "metrics_collected": {
       "jmx": [
         {
-          "endpoint": "localhost:8080",
-          "jvm": {
-            "measurement": [
-              "jvm.classes.loaded"
-            ]
-          },
+          "endpoint": "localhost:2030",
           "tomcat": {
             "measurement": [
-              {
-                "name": "tomcat.sessions",
-                "rename": "TOMCAT_SESSIONS"
-              }
+              "tomcat.traffic",
+              "tomcat.threads",
+              "tomcat.sessions",
+              "tomcat.request_count",
+              "tomcat.processing_time",
+              "tomcat.max_time",
+              "tomcat.errors"
             ]
-          }
-        },
-        {
-          "endpoint": "localhost:8081",
-          "kafka": {
+          },
+          "jvm": {
             "measurement": [
-              "kafka.message.count"
+              "jvm.threads.count",
+              "jvm.memory.pool.used",
+              "jvm.memory.pool.max",
+              "jvm.memory.pool.init",
+              "jvm.memory.pool.committed",
+              "jvm.memory.nonheap.used",
+              "jvm.memory.nonheap.max",
+              "jvm.memory.nonheap.init",
+              "jvm.memory.nonheap.committed",
+              "jvm.memory.heap.used",
+              "jvm.memory.heap.max",
+              "jvm.memory.heap.init",
+              "jvm.memory.heap.committed",
+              "jvm.gc.collections.elapsed",
+              "jvm.gc.collections.count",
+              "jvm.classes.loaded"
             ]
           }
         }

@@ -1,67 +1,60 @@
-#!/usr/bin/env bash
-set -e
-set -u
-set -x
-set -o pipefail
-echo "****************************************"
-echo "Creating tar file for Mac OS X ${ARCH}  "
-echo "****************************************"
+#!/bin/bash
 
-AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
-echo "BUILD_SPACE: ${BUILD_SPACE}    agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
+#File Paths
+CONFIG_JSON="/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+CONFIG_TOML="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
+CONFIG_YAML="/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml"
+LOG_FILE="/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+STATUS_CMD="amazon-cloudwatch-agent-ctl -a status"
+OUTPUT_FILE="debug-output.txt"
+TARBALL="debug-files.tar.gz"
 
-mkdir -p ${BUILD_SPACE}/bin/darwin/${ARCH}/
+echo "==== CloudWatch Agent Debug Information ====" > $OUTPUT_FILE
+echo "" >> $OUTPUT_FILE
 
-echo "Creating darwin folders"
-MACHINE_ROOT="/opt/aws/amazon-cloudwatch-agent/"
-BUILD_ROOT="${BUILD_SPACE}/private/darwin_${ARCH}"
-TAR_NAME="amazon-cloudwatch-agent.tar.gz"
+tar -cf $TARBALL --files-from /dev/null
 
-echo "Creating darwin workspace"
-mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}logs
-mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}bin
-mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}etc
-mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}etc/amazon-cloudwatch-agent.d
-mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}var
-mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}doc
-mkdir -p ${BUILD_ROOT}/Library/LaunchDaemons
+#Collect configuration files and include them in the tarball
+for CONFIG_FILE in "$CONFIG_JSON" "$CONFIG_TOML" "$CONFIG_YAML"; do
+    if [ -f "$CONFIG_FILE" ]; then
+        echo "==== Contents of $CONFIG_FILE ====" >> $OUTPUT_FILE
+        cat "$CONFIG_FILE" >> $OUTPUT_FILE
+        echo "" >> $OUTPUT_FILE
+        # Use -C to change to the base directory and add files relative to it
+        tar -C /opt/aws/amazon-cloudwatch-agent -rf $TARBALL "${CONFIG_FILE#/opt/aws/amazon-cloudwatch-agent/}"
+    else
+        echo "==== $CONFIG_FILE not found ====" >> $OUTPUT_FILE
+        echo "" >> $OUTPUT_FILE
+    fi
+done
 
-############################# create the symbolic links
-# log
-mkdir -p ${BUILD_ROOT}/var/log/amazon
-ln -f -s /opt/aws/amazon-cloudwatch-agent/logs ${BUILD_ROOT}/var/log/amazon/amazon-cloudwatch-agent
+#Collect agent status and add it to the output file
+echo "==== CloudWatch Agent Status ====" >> $OUTPUT_FILE
+if $STATUS_CMD &>/dev/null; then
+    $STATUS_CMD >> $OUTPUT_FILE
+else
+    echo "Status command failed or is unavailable." >> $OUTPUT_FILE
+fi
+echo "" >> $OUTPUT_FILE
 
-echo "Copying application files"
-cp ${PREPKGPATH}/LICENSE ${BUILD_ROOT}${MACHINE_ROOT}
-cp ${PREPKGPATH}/NOTICE ${BUILD_ROOT}${MACHINE_ROOT}
-cp ${PREPKGPATH}/THIRD-PARTY-LICENSES ${BUILD_ROOT}${MACHINE_ROOT}
-cp ${PREPKGPATH}/RELEASE_NOTES ${BUILD_ROOT}${MACHINE_ROOT}
-cp ${PREPKGPATH}/CWAGENT_VERSION ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/amazon-cloudwatch-agent ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/amazon-cloudwatch-agent-ctl ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/config-translator ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/config-downloader ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/start-amazon-cloudwatch-agent ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}${MACHINE_ROOT}bin/
-cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}${MACHINE_ROOT}etc/
-cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}${MACHINE_ROOT}doc/
-cp ${PREPKGPATH}/com.amazon.cloudwatch.agent.plist ${BUILD_ROOT}/Library/LaunchDaemons/
+#Handle the log file
+if [ -f "$LOG_FILE" ]; then
+    echo "Log file found: $LOG_FILE" >> $OUTPUT_FILE
+    echo "Please share the log file separately or use the generated tarball." >> $OUTPUT_FILE
+    # Use -C to change to the base directory and add the log file relative to it
+    tar -C /opt/aws/amazon-cloudwatch-agent -rf $TARBALL "${LOG_FILE#/opt/aws/amazon-cloudwatch-agent/}"
+else
+    echo "Log file not found: $LOG_FILE" >> $OUTPUT_FILE
+fi
 
-echo "Setting permissions as required by launchd"
-chmod 600 ${BUILD_ROOT}/Library/LaunchDaemons/*
-chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/amazon-cloudwatch-agent
-chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/amazon-cloudwatch-agent-ctl
-chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/start-amazon-cloudwatch-agent
+#Compress the tarball
+gzip -f $TARBALL
 
-echo "Creating tar"
-(
-     cd ${BUILD_ROOT}
-     tar -czf $TAR_NAME *
-)
+#Notify the user
+echo "Debugging information collected:"
+echo "- All configurations and logs (if available) are in $TARBALL.gz"
+echo "- Summary information is in $OUTPUT_FILE"
+echo ""
+echo "Please share the contents of $OUTPUT_FILE by copying and pasting it."
+echo "Alternatively, upload $TARBALL.gz to a file-sharing platform and share the link."
 
-echo "Archive created at ${BUILD_ROOT}/${TAR_NAME}"
-
-echo "Copying tarball to bin"
-mv ${BUILD_ROOT}/${TAR_NAME} ${BUILD_SPACE}/bin/darwin/${ARCH}/${TAR_NAME}
-ls -ltr ${BUILD_SPACE}/bin/darwin/${ARCH}/*.tar.gz
