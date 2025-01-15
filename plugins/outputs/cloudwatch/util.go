@@ -103,41 +103,39 @@ func resize(dist distribution.Distribution, listMaxSize int) (distList []distrib
 
 func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
 	size := timestampSize
+	entityPrefixMultiplier := 1
 
 	for _, dimension := range datum.Dimensions {
 		size += len(*dimension.Name) + len(*dimension.Value) + dimensionOverheads
+		entityPrefixMultiplier+=2
 	}
 
 	if datum.MetricName != nil {
 		// The metric name won't be nil, but it should fail in the validation instead of panic here.
 		size += len(*datum.MetricName) + metricNameOverheads
+		entityPrefixMultiplier++
 	}
 
 	if datum.StorageResolution != nil {
 		size += highResolutionOverheads
+		entityPrefixMultiplier++
 	}
 
-	entityValueMultiplier := 0
 	valuesCountsLen := len(datum.Values)
 	if valuesCountsLen != 0 {
 		size += valuesCountsLen*valuesCountsOverheads + statisticsSize
-		entityValueMultiplier += 2*valuesCountsLen + 4
+		entityPrefixMultiplier += 2*valuesCountsLen + 4
 	} else {
 		size += valueOverheads
-		entityValueMultiplier++
+		entityPrefixMultiplier++
 	}
 
 	if datum.Unit != nil {
 		size += unitOverheads
+		entityPrefixMultiplier++
 	}
 
 	if entityPresent {
-		entityPrefixMultiplier := 1 + // timestamp
-			2*len(datum.Dimensions) + // dimensions
-			1 + // metric name
-			1 + // storage resolution
-			entityValueMultiplier + // values
-			1 // unit
 		size += entityPrefixMultiplier * entityMetricDataPrefixOverhead
 	}
 
