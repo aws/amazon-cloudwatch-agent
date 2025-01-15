@@ -107,7 +107,7 @@ func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
 
 	for _, dimension := range datum.Dimensions {
 		size += len(*dimension.Name) + len(*dimension.Value) + dimensionOverheads
-		entityPrefixMultiplier+=2
+		entityPrefixMultiplier += 2
 	}
 
 	if datum.MetricName != nil {

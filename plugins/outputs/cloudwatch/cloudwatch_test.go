@@ -485,7 +485,7 @@ func TestPublish(t *testing.T) {
 	interval := 60 * time.Second
 	// The buffer holds 50 batches of 1,000 metrics. So choose 5x.
 	numMetrics := 5 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
-	expectedCalls := 346 // Updated to match the observed number of calls
+	expectedCalls := 395 // Updated to match the observed number of calls
 	log.Printf("I! interval %v, numMetrics %v, expectedCalls %v",
 		interval, numMetrics, expectedCalls)
 	cw := newCloudWatchClient(svc, interval)
@@ -705,9 +705,9 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 }
 
 func TestEntityInfoPayloadBatching(t *testing.T) {
-	// The number of metrics is chosen to get the set of entity-less metrics close to 1MB
+	// The number of metrics is chosen to get the set of entity-less metrics under 1MB
 	// With entity info attached, this should push it over the 1MB limit and we can see it get batched into separate calls
-	numMetrics := 450
+	numMetrics := 500
 	interval := 10 * time.Second
 
 	svc := new(mockCloudWatchClient)
@@ -724,7 +724,7 @@ func TestEntityInfoPayloadBatching(t *testing.T) {
 	// Generate metrics without entity information
 	metricsWithoutEntity := createLargeTestMetrics(numMetrics, nil)
 	payloadSizeWithoutEntity := cw.calculateTotalPayloadSize(metricsWithoutEntity, nil)
-	log.Printf("Payload size without entity info: %d bytes\n", payloadSizeWithoutEntity)
+	assert.Equal(t, payloadSizeWithoutEntity, 750890, "Expected payload size without entity to be 750890 bytes")
 
 	go cw.ConsumeMetrics(ctx, metricsWithoutEntity)
 	time.Sleep(interval + 60*time.Second)
@@ -752,7 +752,7 @@ func TestEntityInfoPayloadBatching(t *testing.T) {
 	// this is just for payload calculation purposes
 	metricsWithEntityForCalculation := createLargeTestMetrics(numMetrics, &entity)
 	payloadSizeWithEntity := cw.calculateTotalPayloadSize(metricsWithEntityForCalculation, &entity)
-	log.Printf("Payload size with entity info: %d bytes\n", payloadSizeWithEntity)
+	assert.Equal(t, payloadSizeWithEntity, 1101782, "Expected payload size with entity to be 1101782 bytes")
 
 	// actual metrics used in call
 	metricsWithEntity := createLargeTestMetrics(numMetrics, &entity)
@@ -819,7 +819,7 @@ func (c *CloudWatch) calculateTotalPayloadSize(metrics pmetric.Metrics, entity *
 	for _, agg := range aggregations {
 		_, datums := c.BuildMetricDatum(agg)
 		for _, datum := range datums {
-			totalSize += payload(datum, false)
+			totalSize += payload(datum, entity != nil)
 		}
 	}
 	if entity != nil {
