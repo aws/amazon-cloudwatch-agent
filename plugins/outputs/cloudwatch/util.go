@@ -103,11 +103,12 @@ func resize(dist distribution.Distribution, listMaxSize int) (distList []distrib
 
 func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
 	size := timestampSize
+	// this multiplier keeps track of how many times we should be adding "EntityMetricData.member.100." to our payload
 	entityPrefixMultiplier := 1
 
 	for _, dimension := range datum.Dimensions {
 		size += len(*dimension.Name) + len(*dimension.Value) + dimensionOverheads
-		entityPrefixMultiplier += 2
+		entityPrefixMultiplier += 2 // Each dimension has Name/Value so we add the entity string twice
 	}
 
 	if datum.MetricName != nil {
@@ -124,6 +125,7 @@ func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
 	valuesCountsLen := len(datum.Values)
 	if valuesCountsLen != 0 {
 		size += valuesCountsLen*valuesCountsOverheads + statisticsSize
+		// Add the entity string twice for each Value/Count and then 4 more times for the statistic
 		entityPrefixMultiplier += 2*valuesCountsLen + 4
 	} else {
 		size += valueOverheads
