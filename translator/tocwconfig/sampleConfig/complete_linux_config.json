@@ -245,11 +245,6 @@
     "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
   },
   "logs": {
-    "metrics_collected": {
-      "emf": {
-        "service_address": "udp://127.0.0.1:25888"
-      }
-    },
     "logs_collected": {
       "files": {
         "collect_list": [
@@ -259,13 +254,6 @@
             "log_stream_name": "amazon-cloudwatch-agent.log",
             "timezone": "UTC",
             "retention_in_days": 5
-          },
-          {
-            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
-            "log_group_name": "test.log",
-            "log_stream_name": "test.log",
-            "timezone": "UTC",
-            "auto_removal": true
           }
         ]
       }

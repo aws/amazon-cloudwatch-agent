@@ -82,7 +82,6 @@ jobs:
       # nick-fields/retry@v2 starts at base dir
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
