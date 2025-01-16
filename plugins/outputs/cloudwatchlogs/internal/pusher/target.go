@@ -4,12 +4,11 @@
 package pusher
 
 import (
-	"fmt"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -17,10 +16,6 @@ import (
 type Target struct {
 	Group, Stream, Class string
 	Retention            int
-}
-
-func (t Target) String() string {
-	return fmt.Sprintf("%s:%s:%s:%v", t.Group, t.Stream, t.Class, t.Retention)
 }
 
 type TargetManager interface {
@@ -33,7 +28,7 @@ type targetManager struct {
 	service cloudWatchLogsService
 	// cache of initialized targets
 	cache map[Target]struct{}
-	group singleflight.Group
+	mu    sync.Mutex
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) TargetManager {
@@ -46,18 +41,17 @@ func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) Tar
 
 // InitTarget initializes a Target if it hasn't been initialized before.
 func (m *targetManager) InitTarget(target Target) error {
-	_, err, _ := m.group.Do(target.String(), func() (any, error) {
-		if _, ok := m.cache[target]; !ok {
-			err := m.createLogGroupAndStream(target)
-			if err != nil {
-				return nil, err
-			}
-			m.PutRetentionPolicy(target)
-			m.cache[target] = struct{}{}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.cache[target]; !ok {
+		err := m.createLogGroupAndStream(target)
+		if err != nil {
+			return err
 		}
-		return nil, nil
-	})
-	return err
+		m.PutRetentionPolicy(target)
+		m.cache[target] = struct{}{}
+	}
+	return nil
 }
 
 func (m *targetManager) createLogGroupAndStream(t Target) error {

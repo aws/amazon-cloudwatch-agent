@@ -54,22 +54,22 @@ func TestConverter(t *testing.T) {
 		conv := newConverter(logger, target)
 		le := conv.convert(newStubLogEvent("Test message", now))
 
-		assert.Equal(t, now.UnixMilli(), *le.event.Timestamp)
-		assert.Equal(t, "Test message", *le.event.Message)
+		assert.Equal(t, now, le.timestamp)
+		assert.Equal(t, "Test message", le.message)
 		assert.Equal(t, now, conv.lastValidTime)
 	})
 
 	t.Run("WithNoTimestamp", func(t *testing.T) {
 		t.Parallel()
-		testTimestampMs := int64(12345678)
+		testTimestampMs := time.UnixMilli(12345678)
 
 		conv := newConverter(logger, target)
-		conv.lastValidTime = time.UnixMilli(testTimestampMs)
+		conv.lastValidTime = testTimestampMs
 
 		le := conv.convert(newStubLogEvent("Test message", time.Time{}))
 
-		assert.Equal(t, testTimestampMs, *le.event.Timestamp)
-		assert.Equal(t, "Test message", *le.event.Message)
+		assert.Equal(t, testTimestampMs, le.timestamp)
+		assert.Equal(t, "Test message", le.message)
 	})
 
 	t.Run("TruncateMessage", func(t *testing.T) {
@@ -80,8 +80,8 @@ func TestConverter(t *testing.T) {
 		conv := newConverter(logger, target)
 		le := conv.convert(event)
 
-		assert.Equal(t, msgSizeLimit, len(*le.event.Message))
-		assert.Equal(t, truncatedSuffix, (*le.event.Message)[len(*le.event.Message)-len(truncatedSuffix):])
+		assert.Equal(t, msgSizeLimit, len(le.message))
+		assert.Equal(t, truncatedSuffix, (le.message)[len(le.message)-len(truncatedSuffix):])
 	})
 
 	t.Run("WithOldTimestampWarning", func(t *testing.T) {
@@ -94,8 +94,8 @@ func TestConverter(t *testing.T) {
 		log.SetOutput(io.MultiWriter(&logbuf, os.Stdout))
 		le := conv.convert(newStubLogEvent("Test message", time.Time{}))
 
-		assert.Equal(t, oldTime.UnixMilli(), *le.event.Timestamp)
-		assert.Equal(t, "Test message", *le.event.Message)
+		assert.Equal(t, oldTime, le.timestamp)
+		assert.Equal(t, "Test message", le.message)
 		loglines := strings.Split(strings.TrimSpace(logbuf.String()), "\n")
 		assert.Len(t, loglines, 1)
 		logline := loglines[0]

@@ -32,6 +32,14 @@ func newMockEntityProvider(entity *cloudwatchlogs.Entity) *mockEntityProvider {
 	return ep
 }
 
+func TestLogEvent(t *testing.T) {
+	now := time.Now()
+	e := newLogEvent(now, "test message", nil)
+	inputLogEvent := e.build()
+	assert.EqualValues(t, now.UnixMilli(), *inputLogEvent.Timestamp)
+	assert.EqualValues(t, "test message", *inputLogEvent.Message)
+}
+
 func TestLogEventBatch(t *testing.T) {
 	t.Run("Append", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)

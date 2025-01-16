@@ -121,7 +121,10 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("ConcurrentInit", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S"}
+		targets := []Target{
+			{Group: "G1", Stream: "S1"},
+			{Group: "G2", Stream: "S2"},
+		}
 
 		var count atomic.Int32
 		service := new(stubLogsService)
@@ -133,16 +136,16 @@ func TestTargetManager(t *testing.T) {
 
 		manager := NewTargetManager(logger, service)
 		var wg sync.WaitGroup
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 50; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := manager.InitTarget(target)
+				err := manager.InitTarget(targets[i%len(targets)])
 				assert.NoError(t, err)
 			}()
 		}
 
 		wg.Wait()
-		assert.Equal(t, int32(1), count.Load())
+		assert.EqualValues(t, len(targets), count.Load())
 	})
 }

@@ -29,21 +29,27 @@ const (
 
 // logEvent represents a single cloudwatchlogs.InputLogEvent with some metadata for processing
 type logEvent struct {
-	event        *cloudwatchlogs.InputLogEvent
-	eventBytes   int
 	timestamp    time.Time
+	message      string
+	eventBytes   int
 	doneCallback func()
 }
 
 func newLogEvent(timestamp time.Time, message string, doneCallback func()) *logEvent {
 	return &logEvent{
-		event: &cloudwatchlogs.InputLogEvent{
-			Timestamp: aws.Int64(timestamp.UnixMilli()),
-			Message:   aws.String(message),
-		},
-		eventBytes:   len(message) + perEventHeaderBytes,
+		message:      message,
 		timestamp:    timestamp,
+		eventBytes:   len(message) + perEventHeaderBytes,
 		doneCallback: doneCallback,
+	}
+}
+
+// batch builds a cloudwatchlogs.InputLogEvent from the timestamp and message stored. Converts the timestamp to
+// milliseconds to match the PutLogEvents specifications.
+func (e *logEvent) build() *cloudwatchlogs.InputLogEvent {
+	return &cloudwatchlogs.InputLogEvent{
+		Timestamp: aws.Int64(e.timestamp.UnixMilli()),
+		Message:   aws.String(e.message),
 	}
 }
 
@@ -85,10 +91,11 @@ func (b *logEventBatch) hasSpace(size int) bool {
 
 // append adds a log event to the batch.
 func (b *logEventBatch) append(e *logEvent) {
-	if len(b.events) > 0 && *e.event.Timestamp < *b.events[len(b.events)-1].Timestamp {
+	event := e.build()
+	if len(b.events) > 0 && *event.Timestamp < *b.events[len(b.events)-1].Timestamp {
 		b.needSort = true
 	}
-	b.events = append(b.events, e.event)
+	b.events = append(b.events, event)
 	b.addDoneCallback(e.doneCallback)
 	b.bufferedSize += e.eventBytes
 	if b.minT.IsZero() || b.minT.After(e.timestamp) {

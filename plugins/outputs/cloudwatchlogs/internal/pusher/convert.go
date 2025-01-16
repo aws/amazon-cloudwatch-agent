@@ -45,6 +45,7 @@ func (c *converter) convert(e logs.LogEvent) *logEvent {
 	if len(message) > msgSizeLimit {
 		message = message[:msgSizeLimit-len(truncatedSuffix)] + truncatedSuffix
 	}
+	now := time.Now()
 	var t time.Time
 	if e.Time().IsZero() {
 		if !c.lastValidTime.IsZero() {
@@ -54,18 +55,18 @@ func (c *converter) convert(e logs.LogEvent) *logEvent {
 			t = c.lastValidTime
 			if !c.lastUpdateTime.IsZero() {
 				// Check when timestamp has an interval of 1 day.
-				if time.Since(c.lastUpdateTime) > warnOldTimeStamp && time.Since(c.lastWarnMessage) > warnOldTimeStampLogInterval {
+				if now.Sub(c.lastUpdateTime) > warnOldTimeStamp && now.Sub(c.lastWarnMessage) > warnOldTimeStampLogInterval {
 					c.logger.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", c.lastValidTime, c.Group)
-					c.lastWarnMessage = time.Now()
+					c.lastWarnMessage = now
 				}
 			}
 		} else {
-			t = time.Now()
+			t = now
 		}
 	} else {
 		t = e.Time()
 		c.lastValidTime = t
-		c.lastUpdateTime = time.Now()
+		c.lastUpdateTime = now
 		c.lastWarnMessage = time.Time{}
 	}
 	return newLogEvent(t, message, e.Done)

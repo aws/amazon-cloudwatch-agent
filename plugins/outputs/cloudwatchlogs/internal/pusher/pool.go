@@ -24,7 +24,7 @@ type workerPool struct {
 // NewWorkerPool creates a pool of workers of the specified size.
 func NewWorkerPool(size int) WorkerPool {
 	p := &workerPool{
-		tasks:  make(chan func(), size),
+		tasks:  make(chan func(), size*2),
 		stopCh: make(chan struct{}),
 	}
 	for i := 0; i < size; i++ {
@@ -40,6 +40,7 @@ func (p *workerPool) addWorker() {
 	go p.worker()
 }
 
+// worker receives tasks from the channel and executes them.
 func (p *workerPool) worker() {
 	defer func() {
 		p.workerCount.Add(-1)
