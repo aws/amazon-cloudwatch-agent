@@ -53,13 +53,18 @@ type ServiceAttribute struct {
 type LogGroupName string
 type LogFileGlob string
 
+type autoscalinggroup struct {
+	name string
+	once sync.Once
+}
+
 type serviceprovider struct {
 	mode             string
 	ec2Info          *EC2Info
 	metadataProvider ec2metadataprovider.MetadataProvider
 	iamRole          string
 	imdsServiceName  string
-	autoScalingGroup string
+	autoScalingGroup autoscalinggroup
 	region           string
 	done             chan struct{}
 	logger           *zap.Logger
@@ -101,7 +106,21 @@ func (s *serviceprovider) GetIMDSServiceName() string {
 func (s *serviceprovider) getAutoScalingGroup() string {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.autoScalingGroup
+	return s.autoScalingGroup.name
+}
+
+func (s *serviceprovider) setAutoScalingGroup(asg string) {
+	s.autoScalingGroup.once.Do(func() {
+		s.mutex.Lock()
+		defer s.mutex.Unlock()
+
+		if asgLength := len(asg); asgLength > autoScalingGroupSizeMax {
+			s.logger.Warn("AutoScalingGroup length exceeds characters limit and will be ignored", zap.Int("length", asgLength), zap.Int("character limit", autoScalingGroupSizeMax))
+			s.autoScalingGroup.name = ""
+		} else {
+			s.autoScalingGroup.name = asg
+		}
+	})
 }
 
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
@@ -275,15 +294,9 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 	// case sensitive
 	if originalCaseKey := lowerTagKeys[strings.ToLower(ec2tagger.Ec2InstanceTagKeyASG)]; originalCaseKey == ec2tagger.Ec2InstanceTagKeyASG {
 		asg, err := s.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
-		if err == nil {
+		if err == nil && asg != "" {
 			s.logger.Debug("AutoScalingGroup retrieved through IMDS")
-			s.mutex.Lock()
-			s.autoScalingGroup = asg
-			if asgLength := len(s.autoScalingGroup); asgLength > autoScalingGroupSizeMax {
-				s.logger.Warn("AutoScalingGroup length exceeds characters limit and will be ignored", zap.Int("length", asgLength), zap.Int("character limit", autoScalingGroupSizeMax))
-				s.autoScalingGroup = ""
-			}
-			s.mutex.Unlock()
+			s.setAutoScalingGroup(asg)
 		}
 	}
 

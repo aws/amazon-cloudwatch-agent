@@ -213,6 +213,9 @@ processors:
         resolvers:
             - name: ""
               platform: generic
+    awsentity/service/application_signals:
+        entity_type: Service
+        platform: onPremise
     metricstransform/application_signals:
         transforms:
             - action: update
@@ -1371,6 +1374,7 @@ service:
                 - metricstransform/application_signals
                 - resourcedetection
                 - awsapplicationsignals
+                - awsentity/service/application_signals
             receivers:
                 - otlp/application_signals
         traces/application_signals:
