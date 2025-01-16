@@ -5,7 +5,6 @@ package server
 
 import (
 	"context"
-	"crypto/tls"
 	"net/http"
 	"time"
 
@@ -13,11 +12,11 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/extension"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
-	tlsInternal "github.com/aws/amazon-cloudwatch-agent/internal/tls"
 )
 
 type Server struct {
@@ -25,8 +24,8 @@ type Server struct {
 	config         *Config
 	jsonMarshaller jsoniter.API
 	httpsServer    *http.Server
+	serverConfig   configtls.ServerConfig
 	ctx            context.Context
-	watcher        *tlsInternal.CertWatcher
 }
 
 var _ extension.Extension = (*Server)(nil)
@@ -48,34 +47,30 @@ func NewServer(logger *zap.Logger, config *Config) *Server {
 	}
 	gin.SetMode(gin.ReleaseMode)
 
-	// Initialize a new cert watcher with cert/key pair
-	watcher, err := tlsInternal.NewCertWatcher(config.TLSCertPath, config.TLSKeyPath, config.TLSCAPath, logger)
-	if err != nil {
-		s.logger.Error("failed to initialize cert watcher", zap.Error(err))
-		return s
+	s.serverConfig = configtls.ServerConfig{
+		Config: configtls.Config{
+			CertFile: s.config.TLSCertPath,
+			KeyFile:  s.config.TLSKeyPath,
+		},
+		ClientCAFile:       s.config.TLSCAPath,
+		ReloadClientCAFile: true,
 	}
 
-	s.watcher = watcher
-
-	watcher.RegisterCallback(func() {
-		s.logger.Debug("Calling registered callback, reloading TLS server")
-		if err := s.reloadServer(watcher.GetTLSConfig()); err != nil {
-			s.logger.Error("Failed to reload TLS server", zap.Error(err))
-		}
-	})
-
-	// Start goroutine with certwatcher running fsnotify against supplied certdir
-	go func() {
-		if err := watcher.Start(s.ctx); err != nil {
-			s.logger.Error("failed to start cert watcher", zap.Error(err))
-			return
-		}
-	}()
+	tlsConfig, err := s.serverConfig.LoadTLSConfig(context.Background())
+	if err != nil {
+		s.logger.Error("failed to load TLS config", zap.Error(err))
+		return s
+	}
 
 	httpsRouter := gin.New()
 	s.setRouter(httpsRouter)
 
-	s.httpsServer = &http.Server{Addr: config.ListenAddress, Handler: httpsRouter, ReadHeaderTimeout: 90 * time.Second, TLSConfig: watcher.GetTLSConfig()}
+	s.httpsServer = &http.Server{
+		Addr:              config.ListenAddress,
+		Handler:           httpsRouter,
+		ReadHeaderTimeout: 90 * time.Second,
+		TLSConfig:         tlsConfig,
+	}
 
 	return s
 }
@@ -99,34 +94,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.logger.Debug("Shutting down HTTPS server...")
 		return s.httpsServer.Shutdown(ctx)
 	}
-	return nil
-}
-
-func (s *Server) reloadServer(config *tls.Config) error {
-	s.logger.Debug("Reloading TLS Server...")
-	// close the current server
-	if s.httpsServer != nil {
-		// closing the server gracefully
-		if err := s.httpsServer.Close(); err != nil {
-			s.logger.Error("Failed to shutdown HTTPS server", zap.Error(err))
-		}
-	}
-	// Create a new HTTP server with the new router and updated TLS config
-	httpsRouter := gin.New()
-	s.setRouter(httpsRouter)
-	s.httpsServer = &http.Server{
-		Addr:              s.config.ListenAddress,
-		Handler:           httpsRouter,
-		TLSConfig:         config,
-		ReadHeaderTimeout: 90 * time.Second,
-	}
-
-	go func() {
-		err := s.httpsServer.ListenAndServeTLS("", "")
-		if err != nil {
-			s.logger.Error("failed to serve and listen", zap.Error(err))
-		}
-	}()
 	return nil
 }
 
