@@ -78,6 +78,7 @@ jobs:
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
     steps:
+
       - uses: actions/checkout@v3
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
@@ -87,6 +88,11 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ~1.22.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
+
 
       - name: Generate matrix
         id: set-matrix
@@ -146,6 +152,10 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ~1.22.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -254,6 +264,10 @@ jobs:
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'linux' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
@@ -350,6 +364,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ~1.22.2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
 
       - name: SetOutputs
         id: set-outputs
@@ -469,7 +487,10 @@ jobs:
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
 
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         if: steps.ec2-win-integration-test.outputs.cache-hit != 'true'
@@ -548,7 +569,10 @@ jobs:
 
       - name: Echo OS
         run: echo run on ec2 instance os ${{ matrix.arrays.os }}
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         if: steps.ec2-mac-integration-test.outputs.cache-hit != 'true'
@@ -679,7 +703,10 @@ jobs:
         id: login-ecr
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       - name: Terraform apply
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
@@ -758,7 +785,10 @@ jobs:
         id: login-ecr
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       - name: Terraform apply
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
@@ -833,7 +863,10 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       - name: Terraform apply
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
@@ -912,7 +945,10 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       - name: Terraform apply
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
@@ -984,7 +1020,10 @@ jobs:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
 
       - name: Terraform apply
         if: steps.performance-tracking.outputs.cache-hit != 'true'
@@ -1049,7 +1088,10 @@ jobs:
         with:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
 
 
       - name: Terraform apply
@@ -1116,7 +1158,10 @@ jobs:
           path: go.mod
           key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
@@ -1184,7 +1229,10 @@ jobs:
           path: go.mod
           key: ec2-win-stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
@@ -1245,9 +1293,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-
-
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       - name: Terraform apply and setup
         run: |
           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then

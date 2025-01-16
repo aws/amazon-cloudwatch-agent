@@ -76,7 +76,10 @@ jobs:
         run: |
           echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
           echo localstack input ${{ inputs.localstack_host }}
-
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.10.4
       # nick-fields/retry@v2 starts at base dir
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
