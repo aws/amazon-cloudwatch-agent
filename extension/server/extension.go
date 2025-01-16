@@ -47,6 +47,11 @@ func NewServer(logger *zap.Logger, config *Config) *Server {
 	}
 	gin.SetMode(gin.ReleaseMode)
 
+	if s.config.TLSCertPath == "" || s.config.TLSKeyPath == "" || s.config.TLSCAPath == "" {
+		s.logger.Error("cert, key, and ca paths are required")
+		return s
+	}
+
 	s.serverConfig = configtls.ServerConfig{
 		Config: configtls.Config{
 			CertFile: s.config.TLSCertPath,

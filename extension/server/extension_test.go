@@ -158,7 +158,6 @@ func TestNewServer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			server := NewServer(logger, tt.config)
 			assert.NotNil(t, server)
 			assert.Equal(t, tt.config, server.config)
@@ -167,12 +166,12 @@ func TestNewServer(t *testing.T) {
 				assert.NotNil(t, server.httpsServer)
 				assert.Equal(t, ":8080", server.httpsServer.Addr)
 				assert.NotNil(t, server.httpsServer.TLSConfig)
+				assert.NotNil(t, server.httpsServer.TLSConfig.GetCertificate)
+				assert.NotNil(t, server.httpsServer.TLSConfig.ClientCAs)
 				assert.Equal(t, uint16(tls.VersionTLS12), server.httpsServer.TLSConfig.MinVersion)
 				assert.Equal(t, tls.RequireAndVerifyClientCert, server.httpsServer.TLSConfig.ClientAuth)
 				assert.NotNil(t, server.httpsServer.Handler)
 				assert.Equal(t, 90*time.Second, server.httpsServer.ReadHeaderTimeout)
-				assert.NotNil(t, server.watcher)
-				assert.Equal(t, server.watcher.GetTLSConfig(), server.httpsServer.TLSConfig)
 			} else {
 				assert.Nil(t, server.httpsServer)
 			}
