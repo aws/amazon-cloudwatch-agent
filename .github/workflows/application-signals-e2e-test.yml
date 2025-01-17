@@ -216,3 +216,10 @@ jobs:
       test-cluster-name: 'e2e-cw-agent-test'
       caller-workflow-name: 'main-build'
 
+  dotnet-k8s-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-k8s-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
