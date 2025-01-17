@@ -79,6 +79,12 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Verify Terraform version
+        run: terraform --version
+
       # @TODO we can add a matrix in the future but for for now, we will only deploy to AL2.
       - name: Terraform apply
         uses: nick-fields/retry@v2
