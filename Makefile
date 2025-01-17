@@ -38,6 +38,8 @@ TOOLS_BIN_DIR := $(abspath ./build/tools)
 
 GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 
+PROHIBITED_LICENSES=",LGPL-|,GPL-"
+GOLICENSES = $(TOOLS_BIN_DIR)/go-licenses
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
@@ -141,6 +143,9 @@ build-for-docker-fast-windows-amd64: build-for-docker-windows-amd64
 	docker build --platform windows/amd64 -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile.Windows . -t amazon-cloudwatch-agent
 	rm -rf tmp
 
+install-golicenses:
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/google/go-licenses@latest
+
 install-goimports:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 
@@ -193,7 +198,10 @@ checklicense: install-addlicense
     			echo "Check License finished successfully"; \
     		fi
 
-simple-lint: checklicense impi
+checklicense-dependencies: install-golicenses
+	! $(GOLICENSES) csv ./... 2>/dev/null | grep -E $(PROHIBITED_LICENSES)
+
+simple-lint: checklicense checklicense-dependencies impi
 
 lint: install-golangci-lint simple-lint
 	${LINTER} run ./...
