@@ -80,9 +80,9 @@ func TestTranslator(t *testing.T) {
 					ClientConfig: confighttp.ClientConfig{
 						TLSSetting: configtls.ClientConfig{
 							Config: configtls.Config{
-								CAFile:         defaultTlsCaPath,
-								CertFile:       defaultTlsCertPath,
-								KeyFile:        defaultTlsKeyPath,
+								CAFile:         defaultTLSCaPath,
+								CertFile:       defaultTLSCertPath,
+								KeyFile:        defaultTLSKeyPath,
 								ReloadInterval: 10 * time.Second,
 							},
 						},
