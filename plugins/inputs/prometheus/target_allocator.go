@@ -30,9 +30,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-var DEFAULT_TLS_CA_FILE_PATH = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
-var DEFAULT_TLS_CERT_FILE_PATH = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-outbound-cert", "client.crt")
-var DEFAULT_TLS_KEY_FILE_PATH = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-outbound-cert", "client.key")
+var (
+	DefaultTlsCaFilePath   = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
+	DefaultTlsCertFilePath = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-outbound-cert", "client.crt")
+	DefaultTlsKeyFilePath  = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-outbound-cert", "client.key")
+)
 
 const DEFAULT_TLS_RELOAD_INTERVAL_SECONDS = 10 * time.Second
 
@@ -152,9 +154,9 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 		return nil // no target allocator return
 	}
 	//has target allocator
-	tam.config.TargetAllocator.TLSSetting.CAFile = DEFAULT_TLS_CA_FILE_PATH
-	tam.config.TargetAllocator.TLSSetting.CertFile = DEFAULT_TLS_CERT_FILE_PATH
-	tam.config.TargetAllocator.TLSSetting.KeyFile = DEFAULT_TLS_KEY_FILE_PATH
+	tam.config.TargetAllocator.TLSSetting.CAFile = DefaultTlsCaFilePath
+	tam.config.TargetAllocator.TLSSetting.CertFile = DefaultTlsCertFilePath
+	tam.config.TargetAllocator.TLSSetting.KeyFile = DefaultTlsKeyFilePath
 	tam.config.TargetAllocator.TLSSetting.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
 	return nil
 }
