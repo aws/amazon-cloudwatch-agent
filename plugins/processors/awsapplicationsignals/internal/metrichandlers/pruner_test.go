@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prune
+package metrichandlers
 
 import (
 	"testing"
@@ -41,7 +41,7 @@ func TestMetricPrunerWithIndexableAttribute(t *testing.T) {
 		},
 	}
 
-	p := &MetricPruner{}
+	p := &Pruner{}
 	for _, tt := range tests {
 		attributes := pcommon.NewMap()
 		attributes.PutStr(common.MetricAttributeTelemetrySource, "UnitTest")
@@ -72,7 +72,7 @@ func TestMetricPrunerWithNonIndexableAttribute(t *testing.T) {
 		},
 	}
 
-	p := &MetricPruner{}
+	p := &Pruner{}
 	for _, tt := range tests {
 		attributes := pcommon.NewMap()
 		attributes.PutStr(common.MetricAttributeTelemetrySource, "UnitTest")
@@ -99,7 +99,7 @@ func TestMetricPrunerWithNoTelemetrySourceAttribute(t *testing.T) {
 		},
 	}
 
-	p := &MetricPruner{}
+	p := &Pruner{}
 	for _, tt := range tests {
 		attributes := pcommon.NewMap()
 		attributes.PutStr(common.AttributeEC2InstanceId, tt.val)
