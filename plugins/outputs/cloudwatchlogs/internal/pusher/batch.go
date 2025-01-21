@@ -22,7 +22,7 @@ const (
 	// The maximum number of log events in a batch.
 	reqEventsLimit = 10000
 	// The bytes required for metadata for each log event.
-	perEventHeaderBytes = 26
+	perEventHeaderBytes = 200
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
 )
