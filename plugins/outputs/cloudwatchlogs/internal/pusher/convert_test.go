@@ -45,7 +45,7 @@ func newStubLogEvent(message string, timestamp time.Time) *stubLogEvent {
 
 func TestConverter(t *testing.T) {
 	logger := testutil.Logger{Name: "converter"}
-	target := Target{Group: "testGroup", Stream: "testStream"}
+	target := &Target{Group: "testGroup", Stream: "testStream"}
 
 	t.Run("WithValidTimestamp", func(t *testing.T) {
 		t.Parallel()

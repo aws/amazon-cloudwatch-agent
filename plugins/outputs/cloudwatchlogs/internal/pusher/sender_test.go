@@ -44,20 +44,21 @@ type mockTargetManager struct {
 	mock.Mock
 }
 
-func (m *mockTargetManager) InitTarget(target Target) error {
+func (m *mockTargetManager) InitTarget(target *Target) error {
 	args := m.Called(target)
 	return args.Error(0)
 }
 
-func (m *mockTargetManager) PutRetentionPolicy(target Target) {
+func (m *mockTargetManager) PutRetentionPolicy(target *Target) {
 	m.Called(target)
 }
 
 func TestSender(t *testing.T) {
 	logger := testutil.Logger{Name: "test"}
+	target := &Target{Group: "G", Stream: "S"}
 
 	t.Run("Send/RejectedLogEvents", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		rejectedInfo := &cloudwatchlogs.RejectedLogEventsInfo{
@@ -77,7 +78,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("Send/ResourceNotFound", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)
@@ -96,7 +97,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("Error/InvalidParameter", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)
@@ -111,7 +112,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("Error/DataAlreadyAccepted", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)
@@ -126,7 +127,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("Error/DropOnGeneric", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)
@@ -141,7 +142,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("Error/RetryOnGenericAWS", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)
@@ -158,7 +159,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("DropOnRetryExhaustion", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)
@@ -173,7 +174,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("StopChannelClosed", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
 		mockService := new(mockLogsService)

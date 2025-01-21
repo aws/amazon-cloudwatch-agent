@@ -14,7 +14,7 @@ import (
 
 // Pusher connects the Queue to the Sender.
 type Pusher struct {
-	Target
+	*Target
 	Queue
 	Service        cloudWatchLogsService
 	TargetManager  TargetManager
@@ -26,7 +26,7 @@ type Pusher struct {
 // TargetManager.
 func NewPusher(
 	logger telegraf.Logger,
-	target Target,
+	target *Target,
 	service cloudWatchLogsService,
 	targetManager TargetManager,
 	entityProvider logs.LogEntityProvider,

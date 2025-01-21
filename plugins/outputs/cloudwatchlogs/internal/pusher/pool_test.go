@@ -126,7 +126,7 @@ func TestSenderPool(t *testing.T) {
 	}
 
 	for _, evt := range evts {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(&Target{Group: "G", Stream: "S"}, nil)
 		batch.append(evt)
 		sp.Send(batch)
 	}

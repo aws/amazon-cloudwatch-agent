@@ -41,8 +41,9 @@ func TestLogEvent(t *testing.T) {
 }
 
 func TestLogEventBatch(t *testing.T) {
+	target := &Target{Group: "G", Stream: "S"}
 	t.Run("Append", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 
 		event1 := newLogEvent(time.Now(), "Test message 1", nil)
 		event2 := newLogEvent(time.Now(), "Test message 2", nil)
@@ -55,7 +56,7 @@ func TestLogEventBatch(t *testing.T) {
 	})
 
 	t.Run("InTimeRange", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 
 		now := time.Now()
 		assert.True(t, batch.inTimeRange(now))
@@ -68,26 +69,26 @@ func TestLogEventBatch(t *testing.T) {
 	})
 
 	t.Run("HasSpace", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
+
+		event := newLogEvent(time.Now(), "Test message", nil)
+		maxEvents := reqSizeLimit / event.size()
 
 		// Add events until close to the limit
-		for i := 0; i < reqEventsLimit-1; i++ {
-			event := newLogEvent(time.Now(), "Test message", nil)
+		for i := 0; i < maxEvents-1; i++ {
 			batch.append(event)
 		}
 
-		assert.True(t, batch.hasSpace(100), "Batch should have space for one more small event")
-		assert.False(t, batch.hasSpace(reqSizeLimit), "Batch should not have space for an event that exceeds the size limit")
+		assert.True(t, batch.hasSpace(event.size()))
 
 		// Add one more event to reach the limit
-		event := newLogEvent(time.Now(), "Last message", nil)
 		batch.append(event)
 
-		assert.False(t, batch.hasSpace(1), "Batch should not have space after reaching event limit")
+		assert.False(t, batch.hasSpace(event.size()))
 	})
 
 	t.Run("Build", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 
 		event1 := newLogEvent(time.Now(), "Test message 1", nil)
 		event2 := newLogEvent(time.Now(), "Test message 2", nil)
@@ -102,7 +103,7 @@ func TestLogEventBatch(t *testing.T) {
 	})
 
 	t.Run("EventSort", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 
 		now := time.Now()
 		event1 := newLogEvent(now.Add(1*time.Second), "Test message 1", nil)
@@ -122,7 +123,7 @@ func TestLogEventBatch(t *testing.T) {
 	})
 
 	t.Run("DoneCallback", func(t *testing.T) {
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch := newLogEventBatch(target, nil)
 
 		callbackCalled := false
 		callback := func() {
@@ -151,7 +152,7 @@ func TestLogEventBatch(t *testing.T) {
 			},
 		}
 		mockProvider := newMockEntityProvider(testEntity)
-		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, mockProvider)
+		batch := newLogEventBatch(target, mockProvider)
 
 		event := newLogEvent(time.Now(), "Test message", nil)
 		batch.append(event)

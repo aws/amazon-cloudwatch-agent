@@ -66,7 +66,7 @@ func generateEvents(t *testing.T, pusher *Pusher, completed *atomic.Int32) {
 func setupPusher(t *testing.T, name string, workerPool WorkerPool, stop chan struct{}, wg *sync.WaitGroup) *Pusher {
 	t.Helper()
 	logger := testutil.Logger{Name: name}
-	target := Target{Group: "G", Stream: "S", Retention: 7}
+	target := &Target{Group: "G", Stream: "S", Retention: 7}
 	service := new(stubLogsService)
 	service.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		// add latency

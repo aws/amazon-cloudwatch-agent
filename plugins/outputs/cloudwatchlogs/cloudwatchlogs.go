@@ -146,7 +146,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
+	p := pusher.NewPusher(c.Log, &t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd

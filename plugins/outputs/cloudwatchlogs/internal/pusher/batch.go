@@ -31,7 +31,6 @@ const (
 type logEvent struct {
 	timestamp    time.Time
 	message      string
-	eventBytes   int
 	doneCallback func()
 }
 
@@ -39,9 +38,12 @@ func newLogEvent(timestamp time.Time, message string, doneCallback func()) *logE
 	return &logEvent{
 		message:      message,
 		timestamp:    timestamp,
-		eventBytes:   len(message) + perEventHeaderBytes,
 		doneCallback: doneCallback,
 	}
+}
+
+func (e *logEvent) size() int {
+	return len(e.message) + perEventHeaderBytes
 }
 
 // batch builds a cloudwatchlogs.InputLogEvent from the timestamp and message stored. Converts the timestamp to
@@ -54,7 +56,7 @@ func (e *logEvent) build() *cloudwatchlogs.InputLogEvent {
 }
 
 type logEventBatch struct {
-	Target
+	*Target
 	events         []*cloudwatchlogs.InputLogEvent
 	entityProvider logs.LogEntityProvider
 	// Total size of all events in the batch.
@@ -67,7 +69,7 @@ type logEventBatch struct {
 	doneCallbacks []func()
 }
 
-func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
+func newLogEventBatch(target *Target, entityProvider logs.LogEntityProvider) *logEventBatch {
 	return &logEventBatch{
 		Target:         target,
 		events:         make([]*cloudwatchlogs.InputLogEvent, 0),
@@ -97,7 +99,7 @@ func (b *logEventBatch) append(e *logEvent) {
 	}
 	b.events = append(b.events, event)
 	b.addDoneCallback(e.doneCallback)
-	b.bufferedSize += e.eventBytes
+	b.bufferedSize += e.size()
 	if b.minT.IsZero() || b.minT.After(e.timestamp) {
 		b.minT = e.timestamp
 	}

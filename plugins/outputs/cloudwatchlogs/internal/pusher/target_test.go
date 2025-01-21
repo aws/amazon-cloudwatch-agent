@@ -21,7 +21,7 @@ func TestTargetManager(t *testing.T) {
 	logger := testutil.Logger{Name: "test"}
 
 	t.Run("CreateLogStream", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S"}
+		target := &Target{Group: "G", Stream: "S"}
 
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
@@ -34,7 +34,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroupAndStream", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Class: "newClass"}
+		target := &Target{Group: "G", Stream: "S", Class: "newClass"}
 
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).
@@ -50,7 +50,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroup/Error", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S"}
+		target := &Target{Group: "G", Stream: "S"}
 
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).
@@ -66,7 +66,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("SetRetentionPolicy", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Retention: 7}
+		target := &Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
@@ -80,7 +80,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("SetRetentionPolicy/LogGroupNotFound", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Retention: 7}
+		target := &Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
@@ -95,7 +95,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("SetRetentionPolicy/Error", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Retention: 7}
+		target := &Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
@@ -110,7 +110,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("SetRetentionPolicy/Negative", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Retention: -1}
+		target := &Target{Group: "G", Stream: "S", Retention: -1}
 
 		mockService := new(mockLogsService)
 
@@ -121,7 +121,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("ConcurrentInit", func(t *testing.T) {
-		targets := []Target{
+		targets := []*Target{
 			{Group: "G1", Stream: "S1"},
 			{Group: "G2", Stream: "S2"},
 		}

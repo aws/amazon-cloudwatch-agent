@@ -652,7 +652,7 @@ func testPreparation(
 	s := newSender(logger, service, tm, retryDuration, stop)
 	q := newQueue(
 		logger,
-		Target{"G", "S", util.StandardLogGroupClass, retention},
+		&Target{"G", "S", util.StandardLogGroupClass, retention},
 		flushTimeout,
 		entityProvider,
 		s,

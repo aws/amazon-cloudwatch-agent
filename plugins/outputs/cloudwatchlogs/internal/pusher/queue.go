@@ -20,7 +20,7 @@ type Queue interface {
 }
 
 type queue struct {
-	target Target
+	target *Target
 	logger telegraf.Logger
 
 	entityProvider      logs.LogEntityProvider
@@ -44,7 +44,7 @@ type queue struct {
 
 func newQueue(
 	logger telegraf.Logger,
-	target Target,
+	target *Target,
 	flushTimeout time.Duration,
 	entityProvider logs.LogEntityProvider,
 	sender Sender,
@@ -135,7 +135,7 @@ func (q *queue) start() {
 				q.resetFlushTimer()
 			}
 			event := q.converter.convert(e)
-			if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.eventBytes) {
+			if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.size()) {
 				q.send()
 			}
 			q.batch.append(event)

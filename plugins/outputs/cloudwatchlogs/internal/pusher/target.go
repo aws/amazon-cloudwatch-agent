@@ -19,15 +19,15 @@ type Target struct {
 }
 
 type TargetManager interface {
-	InitTarget(target Target) error
-	PutRetentionPolicy(target Target)
+	InitTarget(target *Target) error
+	PutRetentionPolicy(target *Target)
 }
 
 type targetManager struct {
 	logger  telegraf.Logger
 	service cloudWatchLogsService
 	// cache of initialized targets
-	cache map[Target]struct{}
+	cache map[*Target]struct{}
 	mu    sync.Mutex
 }
 
@@ -35,12 +35,12 @@ func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) Tar
 	return &targetManager{
 		logger:  logger,
 		service: service,
-		cache:   make(map[Target]struct{}),
+		cache:   make(map[*Target]struct{}),
 	}
 }
 
 // InitTarget initializes a Target if it hasn't been initialized before.
-func (m *targetManager) InitTarget(target Target) error {
+func (m *targetManager) InitTarget(target *Target) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.cache[target]; !ok {
@@ -54,7 +54,7 @@ func (m *targetManager) InitTarget(target Target) error {
 	return nil
 }
 
-func (m *targetManager) createLogGroupAndStream(t Target) error {
+func (m *targetManager) createLogGroupAndStream(t *Target) error {
 	err := m.createLogStream(t)
 	if err == nil {
 		return nil
@@ -81,7 +81,7 @@ func (m *targetManager) createLogGroupAndStream(t Target) error {
 	return err
 }
 
-func (m *targetManager) createLogGroup(t Target) error {
+func (m *targetManager) createLogGroup(t *Target) error {
 	var err error
 	if t.Class != "" {
 		_, err = m.service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
@@ -96,7 +96,7 @@ func (m *targetManager) createLogGroup(t Target) error {
 	return err
 }
 
-func (m *targetManager) createLogStream(t Target) error {
+func (m *targetManager) createLogStream(t *Target) error {
 	_, err := m.service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &t.Group,
 		LogStreamName: &t.Stream,
@@ -110,7 +110,7 @@ func (m *targetManager) createLogStream(t Target) error {
 }
 
 // PutRetentionPolicy tries to set the retention policy for a log group. Does not retry on failure.
-func (m *targetManager) PutRetentionPolicy(t Target) {
+func (m *targetManager) PutRetentionPolicy(t *Target) {
 	if t.Retention > 0 {
 		i := aws.Int64(int64(t.Retention))
 		putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{

@@ -23,14 +23,14 @@ const (
 )
 
 type converter struct {
-	Target
+	*Target
 	logger          telegraf.Logger
 	lastValidTime   time.Time
 	lastUpdateTime  time.Time
 	lastWarnMessage time.Time
 }
 
-func newConverter(logger telegraf.Logger, target Target) *converter {
+func newConverter(logger telegraf.Logger, target *Target) *converter {
 	return &converter{
 		logger: logger,
 		Target: target,
