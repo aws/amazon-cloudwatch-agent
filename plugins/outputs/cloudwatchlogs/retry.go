@@ -1,11 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package pusher
+package cloudwatchlogs
 
 import (
-	"errors"
-	"math/rand"
 	"net"
 	"strings"
 	"time"
@@ -32,10 +30,6 @@ const (
 
 	// maxRetryDelay is the maximum retry delay for the either retry strategy
 	maxRetryDelay = 1 * time.Minute
-)
-
-var (
-	seededRand = rand.New(rand.NewSource(time.Now().UnixNano())) // nolint:gosec
 )
 
 type retryWaitStrategy int
@@ -81,8 +75,7 @@ func chooseRetryWaitStrategy(err error) retryWaitStrategy {
 	}
 
 	// Check AWS Error codes if available
-	var awsErr awserr.Error
-	if errors.As(err, &awsErr) {
+	if awsErr, ok := err.(awserr.Error); ok {
 		switch awsErr.Code() {
 		case
 			cloudwatchlogs.ErrCodeServiceUnavailableException,
@@ -93,8 +86,7 @@ func chooseRetryWaitStrategy(err error) retryWaitStrategy {
 		}
 
 		// Check HTTP status codes if available
-		var requestFailure awserr.RequestFailure
-		if errors.As(err, &requestFailure) {
+		if requestFailure, ok := err.(awserr.RequestFailure); ok {
 			switch requestFailure.StatusCode() {
 			case
 				500, // internal failure
@@ -109,19 +101,22 @@ func chooseRetryWaitStrategy(err error) retryWaitStrategy {
 }
 
 func isErrConnectionTimeout(err error) bool {
-	var netErr net.Error
-	return errors.As(err, &netErr) && netErr.Timeout()
+	netErr, ok := err.(net.Error)
+	return ok && netErr.Timeout()
 }
 
 func isErrConnectionReset(err error) bool {
-	errStr := err.Error()
-	if strings.Contains(errStr, "read: connection reset") {
+	if strings.Contains(err.Error(), "read: connection reset") {
 		return false
 	}
 
-	return strings.Contains(errStr, "use of closed network connection") ||
-		strings.Contains(errStr, "connection reset") ||
-		strings.Contains(errStr, "broken pipe")
+	if strings.Contains(err.Error(), "use of closed network connection") ||
+		strings.Contains(err.Error(), "connection reset") ||
+		strings.Contains(err.Error(), "broken pipe") {
+		return true
+	}
+
+	return false
 }
 
 func isErrConnectionRefused(err error) bool {

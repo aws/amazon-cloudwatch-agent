@@ -13,6 +13,7 @@ import (
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go.uber.org/zap"
@@ -26,7 +27,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
@@ -39,6 +39,9 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
+	eventHeaderSize     = 200
+	truncatedSuffix     = "[Truncated...]"
+	msgSizeLimit        = 256*1024 - eventHeaderSize
 
 	maxRetryTimeout    = 14*24*time.Hour + 10*time.Minute
 	metricRetryTimeout = 2 * time.Minute
@@ -68,7 +71,6 @@ type CloudWatchLogs struct {
 
 	// Retention for log group
 	RetentionInDays int `toml:"retention_in_days"`
-	Concurrency     int `toml:"concurrency"`
 
 	ForceFlushInterval internal.Duration `toml:"force_flush_interval"` // unit is second
 
@@ -76,10 +78,7 @@ type CloudWatchLogs struct {
 
 	pusherStopChan  chan struct{}
 	pusherWaitGroup sync.WaitGroup
-	cwDests         map[pusher.Target]*cwDest
-	workerPool      pusher.WorkerPool
-	targetManager   pusher.TargetManager
-	once            sync.Once
+	cwDests         map[Target]*cwDest
 	middleware      awsmiddleware.Middleware
 }
 
@@ -93,9 +92,6 @@ func (c *CloudWatchLogs) Close() error {
 
 	for _, d := range c.cwDests {
 		d.Stop()
-	}
-	if c.workerPool != nil {
-		c.workerPool.Stop()
 	}
 
 	return nil
@@ -119,7 +115,7 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 		retention = -1
 	}
 
-	t := pusher.Target{
+	t := Target{
 		Group:     group,
 		Stream:    stream,
 		Retention: retention,
@@ -128,31 +124,11 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 	return c.getDest(t, logSrc)
 }
 
-func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
+func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd
 	}
 
-	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
-	client := c.createClient(logThrottleRetryer)
-	agent.UsageFlags().SetValue(agent.FlagRegionType, c.RegionType)
-	agent.UsageFlags().SetValue(agent.FlagMode, c.Mode)
-	if containerInsightsRegexp.MatchString(t.Group) {
-		useragent.Get().SetContainerInsightsFlag()
-	}
-	c.once.Do(func() {
-		if c.Concurrency > 0 {
-			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
-		}
-		c.targetManager = pusher.NewTargetManager(c.Log, client)
-	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
-	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
-	c.cwDests[t] = cwd
-	return cwd
-}
-
-func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlogs.CloudWatchLogs {
 	credentialConfig := &configaws.CredentialConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
@@ -162,24 +138,34 @@ func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlog
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
+
+	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{
 			Endpoint: aws.String(c.EndpointOverride),
-			Retryer:  retryer,
+			Retryer:  logThrottleRetryer,
 			LogLevel: configaws.SDKLogLevel(),
 			Logger:   configaws.SDKLogger{},
 		},
 	)
+	agent.UsageFlags().SetValue(agent.FlagRegionType, c.RegionType)
+	agent.UsageFlags().SetValue(agent.FlagMode, c.Mode)
+	if containerInsightsRegexp.MatchString(t.Group) {
+		useragent.Get().SetContainerInsightsFlag()
+	}
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	if c.middleware != nil {
 		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
 			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
 		} else {
-			c.Log.Debug("Configured middleware on AWS client")
+			c.Log.Info("Configured middleware on AWS client")
 		}
 	}
-	return client
+	pusher := NewPusher(c.Region, t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, logSrc)
+	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
+	c.cwDests[t] = cwd
+	return cwd
 }
 
 func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
@@ -193,7 +179,7 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 		return
 	}
 	cwd.switchToEMF()
-	cwd.pusher.Sender.SetRetryDuration(metricRetryTimeout)
+	cwd.pusher.RetryDuration = metricRetryTimeout
 
 	e := c.getLogEventFromMetric(m)
 	if e == nil {
@@ -203,11 +189,11 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 	cwd.AddEvent(e)
 }
 
-func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (pusher.Target, error) {
+func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) {
 	tags := m.Tags()
 	logGroup, ok := tags[LogGroupNameTag]
 	if !ok {
-		return pusher.Target{}, fmt.Errorf("structuredlog receive a metric with name '%v' without log group name", m.Name())
+		return Target{}, fmt.Errorf("structuredlog receive a metric with name '%v' without log group name", m.Name())
 	} else {
 		m.RemoveTag(LogGroupNameTag)
 	}
@@ -219,7 +205,7 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (pusher.Target, 
 		logStream = c.LogStreamName
 	}
 
-	return pusher.Target{Group: logGroup, Stream: logStream, Class: util.StandardLogGroupClass, Retention: -1}, nil
+	return Target{logGroup, logStream, util.StandardLogGroupClass, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {
@@ -313,7 +299,7 @@ func (e *structuredLogEvent) Time() time.Time {
 func (e *structuredLogEvent) Done() {}
 
 type cwDest struct {
-	pusher *pusher.Pusher
+	*pusher
 	sync.Mutex
 	isEMF   bool
 	stopped bool
@@ -355,11 +341,23 @@ func (cd *cwDest) switchToEMF() {
 	defer cd.Unlock()
 	if !cd.isEMF {
 		cd.isEMF = true
-		cwl, ok := cd.pusher.Service.(*cloudwatchlogs.CloudWatchLogs)
+		cwl, ok := cd.Service.(*cloudwatchlogs.CloudWatchLogs)
 		if ok {
 			cwl.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("x-amzn-logs-format", "json/emf"))
 		}
 	}
+}
+
+func (cd *cwDest) setRetryer(r request.Retryer) {
+	cwl, ok := cd.Service.(*cloudwatchlogs.CloudWatchLogs)
+	if ok {
+		cwl.Retryer = r
+	}
+}
+
+type Target struct {
+	Group, Stream, Class string
+	Retention            int
 }
 
 // Description returns a one-sentence description on the Output
@@ -400,7 +398,7 @@ func init() {
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),
-			cwDests:            make(map[pusher.Target]*cwDest),
+			cwDests:            make(map[Target]*cwDest),
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
