@@ -76,6 +76,10 @@ jobs:
         run: |
           echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
           echo localstack input ${{ inputs.localstack_host }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         run: terraform --version
 
@@ -93,7 +97,7 @@ jobs:
             else
               cd ${{inputs.test_dir}}
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" -var="github_test_repo=${{ inputs.test_repo_url }}" \
