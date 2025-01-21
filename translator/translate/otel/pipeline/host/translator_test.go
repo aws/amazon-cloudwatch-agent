@@ -44,6 +44,7 @@ func TestTranslator(t *testing.T) {
 		pipelineName   string
 		destination    string
 		mode           string
+		kubernetesMode string
 		runInContainer bool
 		want           *want
 		wantErr        error
@@ -98,6 +99,43 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
 		},
+		"WithOtlpMetricsKubernetes": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName:   common.PipelineNameHostOtlpMetrics,
+			kubernetesMode: config.ModeK8sEC2,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"awsentity/service/otlp", "cumulativetodelta/hostOtlpMetrics"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
+			},
+		},
+		"WithOtlpMetricsKubernetesInContainer": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName:   common.PipelineNameHostOtlpMetrics,
+			kubernetesMode: config.ModeK8sEC2,
+			runInContainer: true,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
+			},
+		},
 		"WithOtlpMetrics/CloudWatchLogs": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
@@ -113,6 +151,45 @@ func TestTranslator(t *testing.T) {
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/service/otlp", "cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				exporters:  []string{"awsemf"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+			},
+		},
+		"WithOtlpMetrics/CloudWatchLogsKubernetes": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName:   common.PipelineNameHostOtlpMetrics,
+			destination:    common.CloudWatchLogsKey,
+			kubernetesMode: config.ModeK8sEC2,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"awsentity/service/otlp", "cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				exporters:  []string{"awsemf"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+			},
+		},
+		"WithOtlpMetrics/CloudWatchLogsKubernetesInContainer": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName:   common.PipelineNameHostOtlpMetrics,
+			destination:    common.CloudWatchLogsKey,
+			kubernetesMode: config.ModeK8sEC2,
+			runInContainer: true,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -252,7 +329,12 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			context.CurrentContext().SetMode(testCase.mode)
+			if testCase.mode != "" {
+				context.CurrentContext().SetMode(testCase.mode)
+			}
+			if testCase.kubernetesMode != "" {
+				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			}
 			context.CurrentContext().SetRunInContainer(testCase.runInContainer)
 			ht := NewTranslator(
 				testCase.pipelineName,

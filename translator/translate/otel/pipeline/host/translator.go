@@ -6,6 +6,7 @@ package host
 import (
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -31,6 +32,12 @@ type translator struct {
 	name string
 	common.DestinationProvider
 	receivers common.TranslatorMap[component.Config]
+}
+
+var supportedEntityProcessorDestinations = [...]string{
+	common.DefaultDestination,
+	common.CloudWatchKey,
+	common.CloudWatchLogsKey,
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
@@ -72,6 +79,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
+	currentContext := context.CurrentContext()
+
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
@@ -91,8 +100,6 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		}
 	}
 
-	currentContext := context.CurrentContext()
-
 	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		entityProcessor = nil
 	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
@@ -103,9 +110,12 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
 	}
 
-	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.CloudWatchLogsKey || t.Destination() == common.DefaultDestination) {
+	validDestination := slices.Contains(supportedEntityProcessorDestinations[:], t.Destination())
+	validMode := currentContext.Mode() == config.ModeEC2 || currentContext.KubernetesMode() != ""
+	if entityProcessor != nil && !currentContext.RunInContainer() && validMode && validDestination {
 		translators.Processors.Set(entityProcessor)
 	}
+
 
 	switch t.Destination() {
 	case common.DefaultDestination, common.CloudWatchKey:
