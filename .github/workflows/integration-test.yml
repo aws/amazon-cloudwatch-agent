@@ -260,10 +260,10 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-      # nick-fields/retry@v2 starts at base dir
+      # nick-fields/retry@v3 starts at base dir
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'linux' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 30
@@ -296,7 +296,7 @@ jobs:
             fi
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'window' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 30
@@ -323,7 +323,7 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -481,10 +481,10 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-        # nick-fields/retry@v2 starts at base dir
+        # nick-fields/retry@v3 starts at base dir
       - name: Terraform apply
         if: steps.ec2-win-integration-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 30
@@ -513,7 +513,7 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -566,10 +566,10 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-        # nick-fields/retry@v2 starts at base dir
+        # nick-fields/retry@v3 starts at base dir
       - name: Terraform apply
         if: steps.ec2-mac-integration-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -597,7 +597,7 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -707,7 +707,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 15
@@ -735,7 +735,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -794,7 +794,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 15
@@ -817,7 +817,7 @@ jobs:
             fi
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -876,7 +876,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 2
           timeout_minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
@@ -903,7 +903,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -962,7 +962,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
@@ -987,7 +987,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -1041,7 +1041,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.performance-tracking.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 1
           timeout_minutes: 60
@@ -1065,7 +1065,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -1113,7 +1113,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.performance-tracking.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 1
           timeout_minutes: 60
@@ -1137,7 +1137,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -1188,7 +1188,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.stress-tracking.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 1
           timeout_minutes: 60
@@ -1211,7 +1211,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -1262,7 +1262,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 1
           timeout_minutes: 60
@@ -1286,7 +1286,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -1353,7 +1353,7 @@ jobs:
           fi
 
       - name: Run Go tests with retry
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 5
           timeout_minutes: 60
@@ -1377,7 +1377,7 @@ jobs:
 
       - name: Terraform destroy
         if: always()
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8

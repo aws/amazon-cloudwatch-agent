@@ -60,7 +60,7 @@ jobs:
 
       # @TODO we can add a matrix in the future but for alpha we will only deploy to al2
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -87,7 +87,7 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 8
