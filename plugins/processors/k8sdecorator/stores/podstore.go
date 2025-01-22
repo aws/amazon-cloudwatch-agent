@@ -75,7 +75,7 @@ func NewPodStore(hostIP string, prefFullPodName bool) *PodStore {
 	}
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		_, err := podStore.kubeClient.GetNodeInfo()
+		_, err := podStore.kubeClient.ListPods()
 		if err == nil {
 			return podStore
 		}
