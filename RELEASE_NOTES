@@ -5,11 +5,11 @@ Amazon CloudWatch Agent 1.300052.0 (2024-01-21)
 Bug Fixes:
 * Fix concurrent map read/write error causing agent crashes in entity store
 * Fix disk usage metrics collection on macOS
-* Address security vulnerabilities by upgrading golang.org/x/crypto and golang.org/x/net
+* Fix service startup failures on Windows by updating network depenencies
 
 Enhancements:
 * [Logs] Improve performance with multi-threaded log pusher implementation 
-* [Related Telemetry] Use case insensitive service provider
+* [Related Telemetry] Add case insensitive  metadata support for EC2 tags
 * [Related Telemetry] Reduce number of entities in explore experience by retrieving instance tags simultaneously
 * [Related Telemetry] Add fallback to use application signals for entity population when IMDS tags are not enabled
 * [ApplicationSignals] Add support for .NET runtime metrics exporting
