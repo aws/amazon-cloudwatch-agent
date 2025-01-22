@@ -67,7 +67,7 @@ jobs:
 
       - name: Cache if success
         id: cache_if_success
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: go.mod
           key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
