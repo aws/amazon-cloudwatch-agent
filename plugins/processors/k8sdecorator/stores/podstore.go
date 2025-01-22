@@ -29,6 +29,8 @@ const (
 	splitRegexStr      = "\\.|-"
 	kubeProxy          = "kube-proxy"
 	ignoreAnnotation   = "aws.amazon.com/cloudwatch-agent-ignore"
+	maxRetries         = 5
+	retryInterval      = 5 * time.Second
 )
 
 var (
@@ -72,12 +74,21 @@ func NewPodStore(hostIP string, prefFullPodName bool) *PodStore {
 		prefFullPodName:  prefFullPodName,
 	}
 
-	// Try to detect kubelet permission issue here
-	if _, err := podStore.kubeClient.ListPods(); err != nil {
-		log.Panicf("Cannot get pod from kubelet, err: %v", err)
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		_, err := podStore.kubeClient.GetNodeInfo()
+		if err == nil {
+			return podStore
+		}
+		log.Printf("Attempt %d: Failed to get pods from kubelet, err: %v", attempt+1, err)
+		if attempt < maxRetries-1 {
+			log.Printf("Sleeping and retrying in %v seconds", retryInterval)
+			time.Sleep(retryInterval)
+		} else {
+			log.Panicf("Cannot get pod from kubelet after %d attempts, err: %v", maxRetries, err)
+		}
 	}
 
-	return podStore
+	return nil
 }
 
 func (p *PodStore) getPrevMeasurement(metricType, metricKey string) (interface{}, bool) {
