@@ -26,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 type translator struct {
@@ -69,6 +70,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if conf == nil || t.receivers.Len() == 0 {
 		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
+
 	var entityProcessor common.Translator[component.Config]
 	var ec2TaggerEnabled bool
 
@@ -78,8 +80,6 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
-
-	currentContext := context.CurrentContext()
 
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
@@ -100,22 +100,31 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		}
 	}
 
-	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
-		entityProcessor = nil
-	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
-	} else if (strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics)) && ec2TaggerEnabled {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", true)
-	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+	currentContext := context.CurrentContext()
+
+	switch determinePipeline(t.name) {
+	case common.PipelineNameHostOtlpMetrics:
+		// TODO: For OTLP, the entity processor is only on K8S for now. Eventually this should be added to EC2
+		if currentContext.KubernetesMode() != "" {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
+		}
+	case common.PipelineNameHostCustomMetrics:
+		if !currentContext.RunInContainer() {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+		}
+	case common.PipelineNameHost, common.PipelineNameHostDeltaMetrics:
+		if !currentContext.RunInContainer() && ec2TaggerEnabled {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+		}
 	}
+
 
 	validDestination := slices.Contains(supportedEntityProcessorDestinations[:], t.Destination())
-	validMode := currentContext.Mode() == config.ModeEC2 || currentContext.KubernetesMode() != ""
-	if entityProcessor != nil && !currentContext.RunInContainer() && validMode && validDestination {
+	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+	isECS := ecsutil.GetECSUtilSingleton().IsECS()
+	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !isECS && validDestination {
 		translators.Processors.Set(entityProcessor)
 	}
-
 
 	switch t.Destination() {
 	case common.DefaultDestination, common.CloudWatchKey:
@@ -139,4 +148,19 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	}
 
 	return &translators, nil
+}
+
+func determinePipeline(name string) string {
+	// The conditionals have to be done in a certain order because PipelineNameHost is just "host", whereas
+	// the other constants are prefixed with "host"
+	if strings.HasPrefix(name, common.PipelineNameHostDeltaMetrics) {
+		return common.PipelineNameHostDeltaMetrics
+	} else if strings.HasPrefix(name, common.PipelineNameHostOtlpMetrics) {
+		return common.PipelineNameHostOtlpMetrics
+	} else if strings.HasPrefix(name, common.PipelineNameHostCustomMetrics) {
+		return common.PipelineNameHostCustomMetrics
+	} else if strings.HasPrefix(name, common.PipelineNameHost) {
+		return common.PipelineNameHost
+	}
+	return ""
 }
