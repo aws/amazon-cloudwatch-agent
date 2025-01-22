@@ -60,6 +60,9 @@ jobs:
       - name: Echo Localstack Config
         run: echo repo name ${{inputs.test_repo_name}} repo branch ${{ inputs.test_repo_branch }} region ${{ inputs.region }}
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         run: terraform --version
 
