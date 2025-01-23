@@ -15,19 +15,29 @@ extensions:
             operations:
                 - PutMetricData
             usage_flags:
-                mode: EC2
+                mode: K8E
                 region_type: ACJ
     agenthealth/statuscode:
         is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             usage_flags:
-                mode: EC2
+                mode: K8E
                 region_type: ACJ
     entitystore:
+        kubernetes_mode: K8sEC2
         mode: ec2
         region: us-west-2
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
 processors:
+    awsentity/service/otlp:
+        entity_type: Service
+        kubernetes_mode: K8sEC2
+        platform: ec2
     cumulativetodelta/hostOtlpMetrics:
         exclude:
             match_type: ""
@@ -90,11 +100,13 @@ service:
         - agenthealth/metrics
         - agenthealth/statuscode
         - entitystore
+        - server
     pipelines:
         metrics/hostOtlpMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity/service/otlp
                 - cumulativetodelta/hostOtlpMetrics
                 - ec2tagger
             receivers:
@@ -106,8 +118,6 @@ service:
             disable_stacktrace: false
             encoding: console
             level: info
-            output_paths:
-                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2

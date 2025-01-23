@@ -1,50 +1,75 @@
 exporters:
-    awscloudwatch:
-        force_flush_interval: 1m0s
-        max_datums_per_call: 1000
-        max_values_per_datum: 150
-        middleware: agenthealth/metrics
+    awsemf:
+        certificate_file_path: ""
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/cwagent
+        log_retention: 0
+        log_stream_name: ""
+        max_retries: 2
+        middleware: agenthealth/logs
         namespace: CWAgent
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        profile: ""
+        proxy_address: ""
         region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
 extensions:
-    agenthealth/metrics:
+    agenthealth/logs:
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
+                - PutLogEvents
             usage_flags:
-                mode: EC2
+                mode: K8E
                 region_type: ACJ
     agenthealth/statuscode:
         is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             usage_flags:
-                mode: EC2
+                mode: K8E
                 region_type: ACJ
     entitystore:
+        kubernetes_mode: K8sEC2
         mode: ec2
         region: us-west-2
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
 processors:
-    cumulativetodelta/hostOtlpMetrics:
+    awsentity/service/otlp:
+        entity_type: Service
+        kubernetes_mode: K8sEC2
+        platform: ec2
+    batch/hostOtlpMetrics/cloudwatchlogs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 30s
+    cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
         exclude:
             match_type: ""
         include:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
-    ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
-        ec2_metadata_tags:
-            - ImageId
-            - InstanceId
-            - InstanceType
-        imds_retries: 1
-        middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
 receivers:
     otlp/metrics:
         protocols:
@@ -87,16 +112,18 @@ receivers:
                 traces_url_path: /v1/traces
 service:
     extensions:
-        - agenthealth/metrics
+        - agenthealth/logs
         - agenthealth/statuscode
         - entitystore
+        - server
     pipelines:
-        metrics/hostOtlpMetrics:
+        metrics/hostOtlpMetrics/cloudwatchlogs:
             exporters:
-                - awscloudwatch
+                - awsemf
             processors:
-                - cumulativetodelta/hostOtlpMetrics
-                - ec2tagger
+                - awsentity/service/otlp
+                - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
                 - otlp/metrics
     telemetry:
@@ -106,8 +133,6 @@ service:
             disable_stacktrace: false
             encoding: console
             level: info
-            output_paths:
-                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2

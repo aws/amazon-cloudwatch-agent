@@ -48,9 +48,6 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
-    awsentity/service/otlp:
-        entity_type: Service
-        platform: ec2
     batch/hostOtlpMetrics/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -113,7 +110,6 @@ service:
             exporters:
                 - awsemf
             processors:
-                - awsentity/service/otlp
                 - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
