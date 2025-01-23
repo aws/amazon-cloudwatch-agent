@@ -127,10 +127,12 @@ func TestMetricsTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
+						"endpoint":         "127.0.0.1:4317",
+						"include_metadata": true,
 					},
 					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
+						"endpoint":         "127.0.0.1:4318",
+						"include_metadata": true,
 					},
 				},
 			}),
@@ -141,10 +143,12 @@ func TestMetricsTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
+						"endpoint":         "127.0.0.1:4317",
+						"include_metadata": true,
 					},
 					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
+						"endpoint":         "127.0.0.1:4318",
+						"include_metadata": true,
 					},
 				},
 			}),
@@ -155,10 +159,12 @@ func TestMetricsTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:1234",
+						"endpoint":         "127.0.0.1:1234",
+						"include_metadata": true,
 					},
 					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:2345",
+						"endpoint":         "127.0.0.1:2345",
+						"include_metadata": true,
 					},
 				},
 			}),
@@ -224,10 +230,12 @@ func TestMetricsEmfTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
+						"endpoint":         "127.0.0.1:4317",
+						"include_metadata": true,
 					},
 					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
+						"endpoint":         "127.0.0.1:4318",
+						"include_metadata": true,
 					},
 				},
 			}),
@@ -238,10 +246,12 @@ func TestMetricsEmfTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
+						"endpoint":         "127.0.0.1:4317",
+						"include_metadata": true,
 					},
 					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
+						"endpoint":         "127.0.0.1:4318",
+						"include_metadata": true,
 					},
 				},
 			}),
@@ -252,10 +262,12 @@ func TestMetricsEmfTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:1234",
+						"endpoint":         "127.0.0.1:1234",
+						"include_metadata": true,
 					},
 					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:2345",
+						"endpoint":         "127.0.0.1:2345",
+						"include_metadata": true,
 					},
 				},
 			}),

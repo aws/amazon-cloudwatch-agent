@@ -100,6 +100,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
 	}
 
+	if t.Name() != common.AppSignals && !conf.IsSet(common.TracesKey) {
+		cfg.GRPC.IncludeMetadata = true
+		cfg.HTTP.IncludeMetadata = true
+	}
+
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
