@@ -952,6 +952,10 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Install Terraform
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
