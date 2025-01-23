@@ -6,6 +6,7 @@ package otlp
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"strconv"
 
 	"go.opentelemetry.io/collector/component"
@@ -100,7 +101,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
 	}
 
-	if t.Name() != common.AppSignals && !conf.IsSet(common.TracesKey) {
+	if t.Name() != common.AppSignals && !conf.IsSet(common.TracesKey) && context.CurrentContext().KubernetesMode() != "" {
 		cfg.GRPC.IncludeMetadata = true
 		cfg.HTTP.IncludeMetadata = true
 	}

@@ -67,7 +67,7 @@ receivers:
                 dialer:
                     timeout: 0s
                 endpoint: 0.0.0.0:1234
-                include_metadata: true
+                include_metadata: false
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
@@ -85,7 +85,7 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:2345
-                include_metadata: true
+                include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
