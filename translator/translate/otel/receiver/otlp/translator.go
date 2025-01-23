@@ -101,16 +101,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
 	}
 
-	if t.Name() != common.AppSignals && !conf.IsSet(common.TracesKey) && context.CurrentContext().KubernetesMode() != "" {
-		cfg.GRPC.IncludeMetadata = true
-		cfg.HTTP.IncludeMetadata = true
-	}
-
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
 
 	otlpMap := common.GetIndexedMap(conf, configKey, t.Index())
+	if t.Name() != common.AppSignals && !conf.IsSet(common.TracesKey) && context.CurrentContext().KubernetesMode() != "" {
+		includeMetadata := otlpMap["include_metadata"]
+		cfg.GRPC.IncludeMetadata = includeMetadata.(bool)
+		cfg.HTTP.IncludeMetadata = includeMetadata.(bool)
+	}
+
 	var tlsSettings *configtls.ServerConfig
 	if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
 		tlsSettings = &configtls.ServerConfig{}
