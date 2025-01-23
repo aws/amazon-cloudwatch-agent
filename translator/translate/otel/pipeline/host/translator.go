@@ -122,8 +122,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
 
-	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled && context.CurrentContext().KubernetesMode() != "" {
-		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
+	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled && context.CurrentContext().KubernetesMode() != "" && strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+		translators.Exporters.Set(debug.NewTranslator(common.WithName(t.name)))
 	}
 
 	return &translators, nil
