@@ -154,15 +154,7 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: cf-integration-test
-        uses: actions/cache@v2
-        with:
-          path: go.mod
-          key: "cf-integration-${{ github.sha }}-test"
-
       - name: Test cf
-        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
         run: |
           cd test/test/cloudformation
           go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
@@ -244,13 +236,6 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: ec2-linux-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ec2-nvidia-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
@@ -262,7 +247,7 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: ${{ matrix.arrays.family == 'linux' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ matrix.arrays.family == 'linux' }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -295,7 +280,7 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
       - name: Terraform apply
-        if: ${{ matrix.arrays.family == 'window' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ matrix.arrays.family == 'window' }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -465,13 +450,6 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: ec2-win-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
 
@@ -483,7 +461,6 @@ jobs:
 
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.ec2-win-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -550,13 +527,6 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: ec2-mac-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Echo OS
         run: echo run on ec2 instance os ${{ matrix.arrays.os }}
 
@@ -568,7 +538,6 @@ jobs:
 
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.ec2-mac-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -706,7 +675,6 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -793,7 +761,6 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -875,7 +842,6 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
@@ -961,7 +927,6 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -1040,7 +1005,6 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1112,7 +1076,6 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1187,7 +1150,6 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
       - name: Terraform apply
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1261,7 +1223,6 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
       - name: Terraform apply
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
