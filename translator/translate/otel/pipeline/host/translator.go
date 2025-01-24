@@ -5,7 +5,6 @@ package host
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"log"
 	"strings"
 
@@ -120,10 +119,6 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true))
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
-	}
-
-	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled && context.CurrentContext().KubernetesMode() != "" && strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
-		translators.Exporters.Set(debug.NewTranslator(common.WithName(t.name)))
 	}
 
 	return &translators, nil
