@@ -855,12 +855,10 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: Check out AWS FluentBit repo
-        uses: actions/checkout@v3
-        if: ${{ matrix.arrays.terraform_dir }} == 'terraform/eks/daemon/fluent/bit'
+      - uses: actions/checkout@v3
         with:
-          repository: aws/aws-for-fluent-bit
-          ref: mainline
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
