@@ -68,6 +68,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return &common.ComponentTranslators{
 			Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, LogsKey, time.Minute)),
 			Processors: common.NewTranslatorMap(
+				k8sattributesprocessor.NewTransl
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
