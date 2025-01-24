@@ -32,9 +32,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*attributesprocessor.Config)
 	actions := []map[string]interface{}{
 		{
-			"key":          "http.client_id",
-			"from_context": "X-Forwarded-For",
-			"action":       "upsert",
+			"key":    "otel.metadata.*",
+			"action": "insert",
 		},
 	}
 
