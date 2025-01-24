@@ -90,24 +90,14 @@ jobs:
           aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: cache_if_success
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply

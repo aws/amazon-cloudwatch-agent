@@ -65,13 +65,6 @@ jobs:
           aws-region: ${{inputs.region}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: cache_if_success
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Echo Test Info
         run: |
           echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}

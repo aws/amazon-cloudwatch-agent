@@ -654,24 +654,14 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: ecs-ec2-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ecs-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
@@ -740,24 +730,14 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: ecs-fargate-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
@@ -821,24 +801,14 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: eks-ec2-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8sVersion }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
@@ -906,24 +876,14 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: eks-ec2-integration-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
@@ -989,19 +949,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: performance-tracking
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Install Terraform
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
@@ -1060,19 +1011,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: performance-tracking
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Install Terraform
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
@@ -1131,19 +1073,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: stress-tracking
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Install Terraform
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Echo Test Info
@@ -1204,19 +1137,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: ec2-win-stress-tracking-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ec2-win-stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Install Terraform
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Echo Test Info
