@@ -23,6 +23,7 @@ import (
 type mockEntityStore struct {
 	entries                    []entityStoreEntry
 	podToServiceEnvironmentMap map[string]entitystore.ServiceEnvironment
+	autoScalingGroup           string
 }
 
 type entityStoreEntry struct {
@@ -72,6 +73,12 @@ func newMockGetEC2InfoFromEntityStore(instance, accountID string) func() entitys
 func newMockGetAutoScalingGroupFromEntityStore(asg string) func() string {
 	return func() string {
 		return asg
+	}
+}
+
+func newMockSetAutoScalingGroup(es *mockEntityStore) func(string) {
+	return func(asg string) {
+		es.autoScalingGroup = asg
 	}
 }
 
@@ -547,6 +554,58 @@ func TestAWSEntityProcessorNoSensitiveInfoInLogs(t *testing.T) {
 
 			logOutput := buf.String()
 			assertNoSensitiveInfo(t, logOutput, md, asgName)
+		})
+	}
+}
+
+func TestAWSEntityProcessorSetAutoScalingGroup(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name          string
+		resourceAttrs []string
+		want          string
+	}{
+		{
+			name:          "ASGPopulatedFromResourceDetection",
+			resourceAttrs: []string{attributeEC2TagAwsAutoscalingGroupName, "test-asg"},
+			want:          "test-asg",
+		},
+		{
+			name:          "MultipleResourceAttributes",
+			resourceAttrs: []string{attributeEC2TagAwsAutoscalingGroupName, "test-asg", attributeAwsLogGroupNames, "log-group"},
+			want:          "test-asg",
+		},
+		{
+			name:          "ASGNotPopulated",
+			resourceAttrs: []string{attributeAwsLogGroupNames, "log-group"},
+			want:          "",
+		},
+		{
+			name:          "ResourceAttributesEmpty",
+			resourceAttrs: []string{},
+			want:          "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetSetAutoScalingGroup := setAutoScalingGroup
+			defer func() {
+				setAutoScalingGroup = resetSetAutoScalingGroup
+			}()
+
+			es := newMockEntityStore()
+			setAutoScalingGroup = newMockSetAutoScalingGroup(es)
+			metrics := generateMetrics(tt.resourceAttrs...)
+
+			p := newAwsEntityProcessor(&Config{EntityType: attributeService}, zap.NewNop())
+			_, err := p.processMetrics(ctx, metrics)
+			assert.NoError(t, err)
+
+			if len(tt.resourceAttrs) > 0 {
+				assert.Equal(t, tt.want, es.autoScalingGroup)
+			}
 		})
 	}
 }

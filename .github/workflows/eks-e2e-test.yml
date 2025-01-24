@@ -102,6 +102,10 @@ jobs:
         if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Install Terraform
+        if: steps.cache_if_success.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.cache_if_success.outputs.cache-hit != 'true'
         run: terraform --version
@@ -144,7 +148,7 @@ jobs:
             else
               terraform destroy --auto-approve && exit 1
             fi
-            
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2

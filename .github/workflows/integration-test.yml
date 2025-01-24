@@ -259,6 +259,9 @@ jobs:
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         run: terraform --version
 
@@ -482,6 +485,9 @@ jobs:
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         run: terraform --version
 
@@ -564,6 +570,9 @@ jobs:
 
       - name: Echo OS
         run: echo run on ec2 instance os ${{ matrix.arrays.os }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
         run: terraform --version
@@ -700,6 +709,10 @@ jobs:
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Install Terraform
+        if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
@@ -717,7 +730,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-            
+
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -784,6 +797,10 @@ jobs:
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Install Terraform
+        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
@@ -801,7 +818,7 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-            
+
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -864,20 +881,9 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image for FluentBit
-        if: ${{ matrix.arrays.terraform_dir == 'terraform/eks/daemon/fluent/bit' }}
-        env:
-          ECR_REPO: ${{ steps.login-ecr.outputs.registry }}/fluent-bit-test
-        run: |
-          make release
-          docker tag amazon/aws-for-fluent-bit:latest $ECR_REPO:latest
-          docker push $ECR_REPO:latest
-
-      - name: Check out agent test repo
-        uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+      - name: Install Terraform
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
@@ -962,6 +968,10 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Install Terraform
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
@@ -1038,6 +1048,10 @@ jobs:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
+      - name: Install Terraform
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
@@ -1107,6 +1121,10 @@ jobs:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
+      - name: Install Terraform
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
@@ -1175,6 +1193,10 @@ jobs:
         with:
           path: go.mod
           key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
         if: steps.stress-tracking.outputs.cache-hit != 'true'
@@ -1247,6 +1269,10 @@ jobs:
           path: go.mod
           key: ec2-win-stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
+      - name: Install Terraform
+        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
         run: terraform --version
@@ -1312,10 +1338,11 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
       - name: Verify Terraform version
         run: terraform --version
-
 
       - name: Terraform apply and setup
         run: |
@@ -1324,7 +1351,7 @@ jobs:
           else
             cd terraform/eks/addon/gpu
           fi
-          
+
           terraform init
           if terraform apply --auto-approve \
             -var="beta=true" \
@@ -1332,7 +1359,7 @@ jobs:
             -var="instance_type=${{ matrix.arrays.instanceType }}" \
             -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
             echo "Terraform apply successful."
-          
+
             # Capture the output
             echo "Getting EKS cluster name"
             EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
