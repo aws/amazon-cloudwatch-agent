@@ -6,7 +6,6 @@ package host
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributesprocessor"
 	"log"
 	"strings"
 
