@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
@@ -21,11 +20,12 @@ import (
 )
 
 const (
-	attributeAwsLogGroupNames      = "aws.log.group.names"
-	attributeDeploymentEnvironment = "deployment.environment"
-	attributeServiceName           = "service.name"
-	attributeService               = "Service"
-	EMPTY                          = ""
+	attributeAwsLogGroupNames              = "aws.log.group.names"
+	attributeDeploymentEnvironment         = "deployment.environment"
+	attributeServiceName                   = "service.name"
+	attributeService                       = "Service"
+	attributeEC2TagAwsAutoscalingGroupName = "ec2.tag.aws:autoscaling:groupName"
+	EMPTY                                  = ""
 )
 
 type scraper interface {
@@ -66,6 +66,14 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 		return
 	}
 	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
+}
+
+var setAutoScalingGroup = func(asg string) {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return
+	}
+	es.SetAutoScalingGroup(asg)
 }
 
 var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
@@ -111,10 +119,6 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 	}
 }
 
-func (p *awsEntityProcessor) processLogs(_ context.Context, ld plog.Logs) (plog.Logs, error) {
-	return ld, nil
-}
-
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
 
@@ -147,6 +151,10 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			}
 			if serviceNameSource, sourceExists := resourceAttrs.Get(entityattributes.AttributeEntityServiceNameSource); sourceExists {
 				entityServiceNameSource = serviceNameSource.Str()
+			}
+			// resourcedetection processor may have picked up the ASG name from an ec2:DescribeTags call
+			if autoScalingGroupNameAttr, ok := resourceAttrs.Get(attributeEC2TagAwsAutoscalingGroupName); ok {
+				setAutoScalingGroup(autoScalingGroupNameAttr.Str())
 			}
 
 			entityServiceName := getServiceAttributes(resourceAttrs)

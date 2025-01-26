@@ -44,6 +44,7 @@ type serviceProviderInterface interface {
 	logFileServiceAttribute(LogFileGlob, LogGroupName) ServiceAttribute
 	getServiceNameAndSource() (string, string)
 	getAutoScalingGroup() string
+	setAutoScalingGroup(string)
 }
 
 type EntityStore struct {
@@ -183,6 +184,12 @@ func (e *EntityStore) GetAutoScalingGroup() string {
 		return ""
 	}
 	return e.serviceprovider.getAutoScalingGroup()
+}
+
+func (e *EntityStore) SetAutoScalingGroup(asg string) {
+	if e.serviceprovider != nil {
+		e.serviceprovider.setAutoScalingGroup(asg)
+	}
 }
 
 // AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
