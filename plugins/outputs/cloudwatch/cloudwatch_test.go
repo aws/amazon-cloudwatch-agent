@@ -428,7 +428,7 @@ func TestConsumeMetrics(t *testing.T) {
 	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
 		cloudWatchOutput.WriteToCloudWatch)
-	metrics := makeMetrics(1200)
+	metrics := makeMetrics(1500)
 	cloudWatchOutput.Write(metrics)
 	time.Sleep(2*time.Second + 2*cloudWatchOutput.config.ForceFlushInterval)
 	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
@@ -438,8 +438,8 @@ func TestConsumeMetrics(t *testing.T) {
 		10,
 		2*time.Second,
 		cw.WriteToCloudWatch)
-	// Expect 1200 metrics batched in 2 API calls.
-	pmetrics := createTestMetrics(1200, 1, 1, "B/s")
+	// Expect 1500 metrics batched in 2 API calls.
+	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	ctx := context.Background()
 	cw.ConsumeMetrics(ctx, pmetrics)
 	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
@@ -485,7 +485,7 @@ func TestPublish(t *testing.T) {
 	interval := 60 * time.Second
 	// The buffer holds 50 batches of 1,000 metrics. So choose 5x.
 	numMetrics := 5 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
-	expectedCalls := 395 // Updated to match the observed number of calls
+	expectedCalls := numMetrics / defaultMaxDatumsPerCall
 	log.Printf("I! interval %v, numMetrics %v, expectedCalls %v",
 		interval, numMetrics, expectedCalls)
 	cw := newCloudWatchClient(svc, interval)

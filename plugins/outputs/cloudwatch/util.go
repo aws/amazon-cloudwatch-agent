@@ -29,8 +29,6 @@ const (
 	statisticsSize = 246
 	// &MetricData.member.100.Timestamp=2018-05-29T21%3A14%3A00Z
 	timestampSize = 57
-	// &StrictEntityValidation=false
-	strictEntityValidationSize = 29
 
 	overallConstPerRequestSize = pmdActionSize + versionSize
 	// &Namespace=, this is per request
@@ -48,12 +46,16 @@ const (
 	valueOverheads = 47
 	// &MetricData.member.1.Unit=Kilobytes/Second
 	unitOverheads = 42
-	// &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.value=
-	entityKeyAttributesOverhead = 62 + 64
-	// &EntityMetricData.member.100.Entity.Attributes.entry.1.key= &EntityMetricData.member.100.Entity.Attributes.entry.1.value=
-	entityAttributesOverhead = 59 + 61
-	// EntityMetricData.member.100.
-	entityMetricDataPrefixOverhead = 28
+
+	// Entity overheads
+	// // &StrictEntityValidation=false
+	// strictEntityValidationSize = 29
+	// // &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.value=
+	// entityKeyAttributesOverhead = 62 + 64
+	// // &EntityMetricData.member.100.Entity.Attributes.entry.1.key= &EntityMetricData.member.100.Entity.Attributes.entry.1.value=
+	// entityAttributesOverhead = 59 + 61
+	// // EntityMetricData.member.100.
+	// entityMetricDataPrefixOverhead = 28
 )
 
 // Set seed once.
