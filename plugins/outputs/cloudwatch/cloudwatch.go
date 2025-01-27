@@ -174,16 +174,16 @@ func (c *CloudWatch) pushMetricDatum() {
 		case metric := <-c.metricChan:
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
-			// We currently do not account for entity information as a part of the payload size.
-			// This is by design and should be revisited once the sdk protocol changes.
-			// In the meantime there has been a payload limit increase applied in the background to accomodate this decision
+			/* We currently do not account for entity information as a part of the payload size.
+			This is by design and should be revisited once the sdk protocol changes.
+			In the meantime there has been a payload limit increase applied in the background to accomodate this decision
 
-			// Otherwise to include entity size you would do something like this:
-			// entityPresent := false
-			// if entityStr != "" {
-			// 	c.metricDatumBatch.Size += calculateEntitySize(entity)
-			// 	entityPresent = true
-			// }
+			Otherwise to include entity size you would do something like this:
+			entityPresent := false
+			if entityStr != "" {
+				c.metricDatumBatch.Size += calculateEntitySize(entity)
+				entityPresent = true
+			} */
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
 				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])

@@ -47,15 +47,18 @@ const (
 	// &MetricData.member.1.Unit=Kilobytes/Second
 	unitOverheads = 42
 
-	// Entity overheads
-	// // &StrictEntityValidation=false
-	// strictEntityValidationSize = 29
-	// // &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.value=
-	// entityKeyAttributesOverhead = 62 + 64
-	// // &EntityMetricData.member.100.Entity.Attributes.entry.1.key= &EntityMetricData.member.100.Entity.Attributes.entry.1.value=
-	// entityAttributesOverhead = 59 + 61
-	// // EntityMetricData.member.100.
-	// entityMetricDataPrefixOverhead = 28
+	/* Entity overheads - these would be used to calculate and include entity size as a part of the payload.
+	The three main components are the KeyAttributes key/value pair, Attributes key/value pair, and StrictEntityValidation
+
+	// &StrictEntityValidation=false
+	strictEntityValidationSize = 29
+	// &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.value=
+	entityKeyAttributesOverhead = 62 + 64
+	// &EntityMetricData.member.100.Entity.Attributes.entry.1.key= &EntityMetricData.member.100.Entity.Attributes.entry.1.value=
+	entityAttributesOverhead = 59 + 61
+	// EntityMetricData.member.100.
+	entityMetricDataPrefixOverhead = 28
+	*/ 
 )
 
 // Set seed once.
@@ -103,61 +106,34 @@ func resize(dist distribution.Distribution, listMaxSize int) (distList []distrib
 	return
 }
 
-func payload(datum *cloudwatch.MetricDatum, entityPresent bool) int {
-	size := timestampSize
-	// this multiplier keeps track of how many times we should be adding "EntityMetricData.member.100." to our payload
-	entityPrefixMultiplier := 1
+func payload(datum *cloudwatch.MetricDatum) (size int) {
+	size += timestampSize
 
 	for _, dimension := range datum.Dimensions {
 		size += len(*dimension.Name) + len(*dimension.Value) + dimensionOverheads
-		entityPrefixMultiplier += 2 // Each dimension has Name/Value so we add the entity string twice
 	}
 
 	if datum.MetricName != nil {
 		// The metric name won't be nil, but it should fail in the validation instead of panic here.
 		size += len(*datum.MetricName) + metricNameOverheads
-		entityPrefixMultiplier++
 	}
 
 	if datum.StorageResolution != nil {
 		size += highResolutionOverheads
-		entityPrefixMultiplier++
 	}
 
 	valuesCountsLen := len(datum.Values)
 	if valuesCountsLen != 0 {
 		size += valuesCountsLen*valuesCountsOverheads + statisticsSize
-		// Add the entity string twice for each Value/Count and then 4 more times for the statistic
-		entityPrefixMultiplier += 2*valuesCountsLen + 4
 	} else {
 		size += valueOverheads
-		entityPrefixMultiplier++
 	}
 
 	if datum.Unit != nil {
 		size += unitOverheads
-		entityPrefixMultiplier++
 	}
 
-	if entityPresent {
-		size += entityPrefixMultiplier * entityMetricDataPrefixOverhead
-	}
-
-	return size
-}
-
-func calculateEntitySize(entity cloudwatch.Entity) int {
-	size := strictEntityValidationSize
-
-	for k, v := range entity.Attributes {
-		size += len(k) + len(*v) + entityAttributesOverhead
-	}
-
-	for k, v := range entity.KeyAttributes {
-		size += len(k) + len(*v) + entityKeyAttributesOverhead
-	}
-
-	return size
+	return
 }
 
 func entityToString(entity cloudwatch.Entity) string {
