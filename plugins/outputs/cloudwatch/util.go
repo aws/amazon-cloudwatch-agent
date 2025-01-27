@@ -58,7 +58,7 @@ const (
 	entityAttributesOverhead = 59 + 61
 	// EntityMetricData.member.100.
 	entityMetricDataPrefixOverhead = 28
-	*/ 
+	*/
 )
 
 // Set seed once.
