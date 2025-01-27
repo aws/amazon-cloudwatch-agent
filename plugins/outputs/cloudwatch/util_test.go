@@ -118,7 +118,7 @@ func TestPayload_ValuesAndCounts(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 867, payload(datum, false))
+	assert.Equal(t, 867, payload(datum))
 }
 
 func TestPayload_Value(t *testing.T) {
@@ -131,7 +131,7 @@ func TestPayload_Value(t *testing.T) {
 	datum.SetStorageResolution(1)
 	datum.SetTimestamp(time.Now())
 	datum.SetUnit("None")
-	assert.Equal(t, 356, payload(datum, false))
+	assert.Equal(t, 356, payload(datum))
 }
 
 func TestPayload_Min(t *testing.T) {
@@ -139,63 +139,7 @@ func TestPayload_Min(t *testing.T) {
 	datum.SetValue(1.23456789)
 	datum.SetMetricName("MetricName")
 	datum.SetTimestamp(time.Now())
-	assert.Equal(t, 148, payload(datum, false))
-}
-
-func TestCalculateEntitySize(t *testing.T) {
-	tests := []struct {
-		name     string
-		entity   cloudwatch.Entity
-		expected int
-	}{
-		{
-			name: "Entity with only Attributes",
-			entity: cloudwatch.Entity{
-				Attributes: map[string]*string{
-					"attr1": aws.String("value1"),
-					"attr2": aws.String("value2"),
-				},
-			},
-			// strictEntityValidationsize + entityAttributesOverhead + len(attr1) + len(value1) + entityAttributesOverhead + len(attr2) + len(value2)
-			// 29 + (59 + 61) + 5 + 6 + (59 + 61) + 5 + 6
-			expected: 291,
-		},
-		{
-			name: "Entity with only KeyAttributes",
-			entity: cloudwatch.Entity{
-				KeyAttributes: map[string]*string{
-					"key1": aws.String("value1"),
-					"key2": aws.String("value2"),
-				},
-			},
-			// strictEntityValidationsize + entityKeyAttributesOverhead + len(key1) + len(value1) + entityKeyAttributesOverhead + len(key2) + len(value2)
-			// 29 + (62 + 64) + 4 + 6 + (62 + 64) + 4 + 6
-			expected: 301,
-		},
-		{
-			name: "Entity with both Attributes and KeyAttributes",
-			entity: cloudwatch.Entity{
-				Attributes: map[string]*string{
-					"attr1": aws.String("value1"),
-				},
-				KeyAttributes: map[string]*string{
-					"key1": aws.String("value1"),
-				},
-			},
-			// strictEntityValidationsize + len("attr1") + len("value1") + entityAttributesOverhead + len("key1") + len("value1") + entityKeyAttributesOverhead
-			// 29 + 5 + 6 + (59 + 61) + 4 + 6 + (62 + 64)
-			expected: 296,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := calculateEntitySize(tt.entity)
-			if result != tt.expected {
-				t.Errorf("calculateEntitySize() = %v, want %v", result, tt.expected)
-			}
-		})
-	}
+	assert.Equal(t, 148, payload(datum))
 }
 
 func TestEntityToString_StringToEntity(t *testing.T) {
