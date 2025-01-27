@@ -179,15 +179,16 @@ func (c *CloudWatch) pushMetricDatum() {
 			In the meantime there has been a payload limit increase applied in the background to accomodate this decision
 
 			Otherwise to include entity size you would do something like this:
-			entityPresent := false
-			if entityStr != "" {
-				c.metricDatumBatch.Size += calculateEntitySize(entity)
-				entityPresent = true
-			} */
+			c.metricDatumBatch.Size += calculateEntitySize(entity) 
+			
+			In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get 
+			added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
+			c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
+			*/
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
 				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])
-				c.metricDatumBatch.Size += payload(datums[i]) // possibly need to pass a variable indicating whether this metric has an entity attached - depends on how the sdk protocol changes
+				c.metricDatumBatch.Size += payload(datums[i])
 				c.metricDatumBatch.Count++
 				if c.metricDatumBatch.isFull() {
 					// if batch is full

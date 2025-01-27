@@ -47,7 +47,7 @@ const (
 	// &MetricData.member.1.Unit=Kilobytes/Second
 	unitOverheads = 42
 
-	/* Entity overheads - these would be used to calculate and include entity size as a part of the payload.
+	/* Entity overheads - these would be used to calculate entity size if we decide to include it as a part of the payload.
 	The three main components are the KeyAttributes key/value pair, Attributes key/value pair, and StrictEntityValidation
 
 	// &StrictEntityValidation=false
