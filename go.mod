@@ -2,7 +2,7 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.22.5
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20241003164222-69e43c131d55
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d
 
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
@@ -47,7 +47,7 @@ replace (
 )
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
-replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20231109213610-a8c21c54a2be // indirect
+replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d // indirect
 
 //pin consul to a newer version to fix the ambiguous import issue
 //see https://github.com/hashicorp/consul/issues/6019 and https://github.com/hashicorp/consul/issues/6414
@@ -197,7 +197,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-	golang.org/x/net v0.27.0
+	golang.org/x/net v0.33.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.28.0
 	golang.org/x/text v0.21.0
