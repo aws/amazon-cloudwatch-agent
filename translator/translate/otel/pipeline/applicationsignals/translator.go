@@ -75,10 +75,13 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if t.signal == pipeline.SignalTraces {
 		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
 		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(agenthealth.NewTranslator(pipeline.SignalTraces, []string{agenthealth.OperationPutTraceSegments}))
+		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.TracesID, []string{agenthealth.OperationPutTraceSegments}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true))
+
 	} else {
 		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(agenthealth.NewTranslator(pipeline.SignalLogs, []string{agenthealth.OperationPutLogEvents}))
+		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsID, []string{agenthealth.OperationPutLogEvents}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true))
 	}
 	return translators, nil
 }

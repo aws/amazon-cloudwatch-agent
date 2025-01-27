@@ -17,13 +17,20 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-west-2
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -41,6 +48,7 @@ processors:
             - ImageId
             - InstanceId
             - InstanceType
+        middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
     telegraf_cpu:
@@ -66,6 +74,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - entitystore
     pipelines:
         metrics/host:
@@ -75,10 +84,10 @@ service:
                 - awsentity/resource
                 - ec2tagger
             receivers:
+                - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
-                - telegraf_swap
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

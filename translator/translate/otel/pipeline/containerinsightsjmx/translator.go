@@ -69,7 +69,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			awsemf.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),
 		),
 		Extensions: common.NewTranslatorMap(
-			agenthealth.NewTranslator(pipeline.SignalLogs, []string{agenthealth.OperationPutLogEvents}),
+			agenthealth.NewTranslator(agenthealth.LogsID, []string{agenthealth.OperationPutLogEvents}),
+			agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true),
 		),
 	}
 

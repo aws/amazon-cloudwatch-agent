@@ -62,7 +62,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name
-	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(pipeline.SignalLogs, []string{agenthealth.OperationPutLogEvents}))
+	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsID, []string{agenthealth.OperationPutLogEvents}),
+		agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true),
+	)
+
 	// create variable for receivers, use switch block below to assign
 	var receivers common.TranslatorMap[component.Config, component.ID]
 

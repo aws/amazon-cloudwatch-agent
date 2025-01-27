@@ -85,7 +85,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"telegraf_prometheus"},
 				processors: []string{"batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
-				extensions: []string{"agenthealth/logs"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithValidAMP": {
@@ -126,7 +126,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"telegraf_prometheus"},
 				processors: []string{"batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
-				extensions: []string{"agenthealth/logs"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}

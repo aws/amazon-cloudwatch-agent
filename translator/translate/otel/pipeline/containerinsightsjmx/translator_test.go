@@ -52,7 +52,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"otlp/jmx"},
 				processors:   []string{"filter/containerinsightsjmx", "resource/containerinsightsjmx", "transform/containerinsightsjmx", "metricstransform/containerinsightsjmx", "cumulativetodelta/containerinsightsjmx"},
 				exporters:    []string{"awsemf/containerinsightsjmx"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}

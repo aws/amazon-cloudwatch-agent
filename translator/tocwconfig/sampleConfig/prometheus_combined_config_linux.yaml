@@ -126,12 +126,19 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
-        region: us-west-2
-    entitystore:
-        mode: ec2
         region: us-west-2
 processors:
     batch/prometheus/amp:
@@ -160,7 +167,7 @@ receivers:
                   enable_http2: true
                   file_sd_configs:
                     - files:
-                        - {ecsSdFileName}
+                      - {ecsSdFileName}
                       refresh_interval: 5m
                   follow_redirects: true
                   honor_timestamps: true
@@ -186,6 +193,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - agenthealth/statuscode
         - sigv4auth
         - entitystore
     pipelines:

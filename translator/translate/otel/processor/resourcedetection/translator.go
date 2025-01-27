@@ -64,7 +64,10 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-
+	// > [!WARNING]
+	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
+	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
+	// > This will be added when contrib changes are made.
 	mode := context.CurrentContext().KubernetesMode()
 	if mode == "" {
 		mode = context.CurrentContext().Mode()
@@ -81,4 +84,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}
+	// > [!WARNING]
+	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
+	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
+	// > This will be added when contrib changes are made.
 }

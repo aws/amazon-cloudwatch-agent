@@ -114,7 +114,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)))
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslator(pipeline.SignalMetrics, []string{agenthealth.OperationPutMetricData}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.MetricsID, []string{agenthealth.OperationPutMetricData}, true))
 	case common.AMPKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {

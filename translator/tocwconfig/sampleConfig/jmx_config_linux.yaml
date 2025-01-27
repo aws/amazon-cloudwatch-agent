@@ -62,6 +62,7 @@ exporters:
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
@@ -69,9 +70,16 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
-      mode: ec2
-      region: us-west-2
+        mode: ec2
+        region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
@@ -79,7 +87,7 @@ extensions:
 processors:
     awsentity/resource:
         entity_type: Resource
-        platform:  ec2
+        platform: ec2
     batch/host/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -169,6 +177,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - agenthealth/statuscode
         - sigv4auth
         - entitystore
     pipelines:
@@ -179,8 +188,8 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -188,8 +197,8 @@ service:
                 - awsentity/resource
                 - transform
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/jmx/amp:
             exporters:
                 - prometheusremotewrite/amp

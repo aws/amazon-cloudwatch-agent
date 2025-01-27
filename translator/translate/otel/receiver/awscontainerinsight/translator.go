@@ -120,6 +120,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
 
+	// > [!WARNING]
+	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
+	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
+	// > This will be added when contrib changes are made.
+
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 	cfg.EnableAcceleratedComputeMetrics = cfg.EnableAcceleratedComputeMetrics || AcceleratedComputeMetricsEnabled(conf)
 

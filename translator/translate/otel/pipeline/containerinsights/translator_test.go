@@ -48,7 +48,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 		"WithKubernetesKey": {
@@ -64,7 +64,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
-				extensions:   []string{"agenthealth/logs"},
+				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}
@@ -120,7 +120,7 @@ func TestKueueTranslator(t *testing.T) {
 					"kueueattributes/kueueContainerInsights",
 				},
 				exporters:  []string{"awsemf/kueueContainerInsights"},
-				extensions: []string{"agenthealth/logs"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}

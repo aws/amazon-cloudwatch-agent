@@ -38,6 +38,8 @@ type Config struct {
 	Filename    string `mapstructure:"shared_credential_file,omitempty"`
 	Token       string `mapstructure:"token,omitempty"`
 	IMDSRetries int    `mapstructure:"imds_retries,omitempty"`
+
+	MiddlewareID *component.ID `mapstructure:"middleware,omitempty"`
 }
 
 // Verify Config implements Processor interface.

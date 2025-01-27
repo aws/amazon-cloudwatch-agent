@@ -26,21 +26,33 @@ const (
 )
 
 var (
-	MetricsID = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalMetrics.String())
-	LogsID    = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalLogs.String())
-	TracesID  = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalTraces.String())
+	MetricsID    = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalMetrics.String())
+	LogsID       = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalLogs.String())
+	TracesID     = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalTraces.String())
+	StatusCodeID = component.NewIDWithName(agenthealth.TypeStr, "statuscode")
 )
 
 type translator struct {
-	name               string
-	operations         []string
-	isUsageDataEnabled bool
-	factory            extension.Factory
+	name                string
+	operations          []string
+	isUsageDataEnabled  bool
+	factory             extension.Factory
+	isStatusCodeEnabled bool
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(name pipeline.Signal, operations []string) common.ComponentTranslator {
+func NewTranslatorWithStatusCode(name component.ID, operations []string, isStatusCodeEnabled bool) common.ComponentTranslator {
+	return &translator{
+		name:                name.String(),
+		operations:          operations,
+		factory:             agenthealth.NewFactory(),
+		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
+		isStatusCodeEnabled: isStatusCodeEnabled,
+	}
+}
+
+func NewTranslator(name component.ID, operations []string) common.ComponentTranslator {
 	return &translator{
 		name:               name.String(),
 		operations:         operations,
@@ -60,7 +72,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
-	cfg.Stats = agent.StatsConfig{
+	cfg.IsStatusCodeEnabled = t.isStatusCodeEnabled
+	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
 			agent.FlagMode:       context.CurrentContext().ShortMode(),
