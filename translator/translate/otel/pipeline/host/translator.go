@@ -6,6 +6,7 @@ package host
 import (
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -23,14 +25,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 type translator struct {
 	name string
 	common.DestinationProvider
 	receivers common.TranslatorMap[component.Config]
+}
+
+var supportedEntityProcessorDestinations = [...]string{
+	common.DefaultDestination,
+	common.CloudWatchKey,
+	common.CloudWatchLogsKey,
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
@@ -62,13 +72,25 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if conf == nil || t.receivers.Len() == 0 {
 		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
+
+	currentContext := context.CurrentContext()
+
 	var entityProcessor common.Translator[component.Config]
-	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
-		entityProcessor = nil
-	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
-	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+
+	switch determinePipeline(t.name) {
+	case common.PipelineNameHostOtlpMetrics:
+		// TODO: For OTLP, the entity processor is only on K8S for now. Eventually this should be added to EC2
+		if currentContext.KubernetesMode() != "" {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
+		}
+	case common.PipelineNameHostCustomMetrics:
+		if !currentContext.RunInContainer() {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+		}
+	case common.PipelineNameHost, common.PipelineNameHostDeltaMetrics:
+		if !currentContext.RunInContainer() {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+		}
 	}
 
 	translators := common.ComponentTranslators{
@@ -77,8 +99,18 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
-	currentContext := context.CurrentContext()
-	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
+
+	if currentContext.KubernetesMode() != "" && strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+		translators.Processors.Set(k8sattributesprocessor.NewTranslatorWithName(t.name))
+		if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
+			translators.Exporters.Set(debug.NewTranslator(common.WithName(t.name)))
+		}
+	}
+
+	validDestination := slices.Contains(supportedEntityProcessorDestinations[:], t.Destination())
+	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+	isECS := ecsutil.GetECSUtilSingleton().IsECS()
+	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !isECS && validDestination {
 		translators.Processors.Set(entityProcessor)
 	}
 
@@ -122,4 +154,19 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	}
 
 	return &translators, nil
+}
+
+func determinePipeline(name string) string {
+	// The conditionals have to be done in a certain order because PipelineNameHost is just "host", whereas
+	// the other constants are prefixed with "host"
+	if strings.HasPrefix(name, common.PipelineNameHostDeltaMetrics) {
+		return common.PipelineNameHostDeltaMetrics
+	} else if strings.HasPrefix(name, common.PipelineNameHostOtlpMetrics) {
+		return common.PipelineNameHostOtlpMetrics
+	} else if strings.HasPrefix(name, common.PipelineNameHostCustomMetrics) {
+		return common.PipelineNameHostCustomMetrics
+	} else if strings.HasPrefix(name, common.PipelineNameHost) {
+		return common.PipelineNameHost
+	}
+	return ""
 }

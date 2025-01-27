@@ -20,6 +20,7 @@ func TestTranslate(t *testing.T) {
 		input          map[string]interface{}
 		mode           string
 		kubernetesMode string
+		envClusterName string
 		want           *awsentity.Config
 	}{
 		"OnlyProfile": {
@@ -44,6 +45,53 @@ func TestTranslate(t *testing.T) {
 			mode:  config.ModeECS,
 			want:  nil,
 		},
+		"OTLPUnderLogs": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{
+							"cluster_name": "otlp-logs",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			want: &awsentity.Config{
+				ClusterName:    "otlp-logs",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"OTLPUnderMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{
+							"cluster_name": "otlp-metrics",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			want: &awsentity.Config{
+				ClusterName:    "otlp-metrics",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"EnvVarFallback": {
+			input:          map[string]interface{}{},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			envClusterName: "env-cluster",
+			want: &awsentity.Config{
+				ClusterName:    "env-cluster",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -55,6 +103,11 @@ func TestTranslate(t *testing.T) {
 				ecsutil.GetECSUtilSingleton().Region = ""
 				context.CurrentContext().SetMode(testCase.mode)
 				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			}
+			if testCase.envClusterName != "" {
+				t.Setenv("K8S_CLUSTER_NAME", testCase.envClusterName)
+			} else {
+				t.Setenv("K8S_CLUSTER_NAME", "")
 			}
 			tt := NewTranslator()
 			assert.Equal(t, "awsentity", tt.ID().String())

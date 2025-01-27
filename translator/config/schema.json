@@ -1331,6 +1331,11 @@
     "otlpObjectDefinition": {
       "type": "object",
       "properties": {
+        "cluster_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
         "grpc_endpoint": {
           "description": "gRPC endpoint to use to listen for OTLP protobuf information",
           "$ref": "#/definitions/endpointOverrideDefinition"
