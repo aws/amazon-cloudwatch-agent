@@ -53,7 +53,6 @@ jobs:
       id-token: write
       contents: read
     steps:
-      # Increase Git timeout and buffer size
       - name: Increase Git timeout and buffer size
         run: |
           git config --global http.postBuffer 524288000
@@ -64,11 +63,6 @@ jobs:
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
-          ssh-key: ${{secrets.KEY_NAME}}
-
-      - name: Clone repo using SSH
-        run: |
-          git clone --branch ${{inputs.test_repo_branch}} git@github.com:${{inputs.test_repo_name}}.git
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
