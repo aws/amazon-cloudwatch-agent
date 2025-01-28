@@ -57,7 +57,7 @@ jobs:
         run: |
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 0
-          git config --global http.lowSpeedTime 999999
+          git config --global http.lowSpeedTime 3600
 
       - uses: actions/checkout@v3
         with:
