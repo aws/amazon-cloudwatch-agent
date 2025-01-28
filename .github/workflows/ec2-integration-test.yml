@@ -63,7 +63,7 @@ jobs:
       # Clone repo using SSH (more reliable in China than HTTP)
       - name: Clone repo using SSH
         run: |
-          git clone --branch ${var.github_test_repo_branch} git@github.com:${var.github_test_repo}.git
+          git clone --branch ${{inputs.test_repo_branch}} git@github.com:${{inputs.test_repo_name}}.git
       - uses: actions/checkout@v3
         with:
           repository: ${{inputs.test_repo_name}}
@@ -76,13 +76,6 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{inputs.region}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
-      - name: Cache if success
-        id: cache_if_success
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: |
