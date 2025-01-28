@@ -53,10 +53,45 @@ jobs:
       id-token: write
       contents: read
     steps:
+      # Check for proxy environment variables
+      - name: Check for proxy environment variables
+        run: |
+          echo "http_proxy: $http_proxy"
+          echo "https_proxy: $https_proxy"
+          echo "HTTP_PROXY: $HTTP_PROXY"
+          echo "HTTPS_PROXY: $HTTPS_PROXY"
+          echo "no_proxy: $no_proxy"
+
+      # Test connectivity to GitHub (will help identify network or proxy issues)
+      - name: Test GitHub connectivity
+        run: |
+          if ! curl -I https://github.com; then
+            echo "GitHub unreachable"
+            exit 1
+          fi
+
+      # Check Git proxy settings
+      - name: Check Git proxy settings
+        run: |
+          git config --global --get http.proxy
+          git config --global --get https.proxy
+
+      # Increase Git timeout and buffer size
+      - name: Increase Git timeout and buffer size
+        run: |
+          git config --global http.postBuffer 524288000  # Increase post buffer size
+          git config --global http.lowSpeedLimit 0       # Disables speed limit
+          git config --global http.lowSpeedTime 999999   # Allow long time for low-speed transfers
+
+      # Clone repo using SSH (more reliable in China than HTTP)
+      - name: Clone repo using SSH
+        run: |
+          git clone --branch ${var.github_test_repo_branch} git@github.com:${var.github_test_repo}.git
       - uses: actions/checkout@v3
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
+          ssh-key: $${{secrets.KEY_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -64,6 +99,13 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{inputs.region}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Cache if success
+        id: cache_if_success
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: |
@@ -78,6 +120,7 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
+        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
