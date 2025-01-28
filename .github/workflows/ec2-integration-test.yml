@@ -60,15 +60,15 @@ jobs:
           git config --global http.lowSpeedLimit 0
           git config --global http.lowSpeedTime 999999
 
-      # Clone repo using SSH (more reliable in China than HTTP)
-      - name: Clone repo using SSH
-        run: |
-          git clone --branch ${{inputs.test_repo_branch}} git@github.com:${{inputs.test_repo_name}}.git
       - uses: actions/checkout@v3
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
           ssh-key: $${{secrets.KEY_NAME}}
+
+      - name: Clone repo using SSH
+        run: |
+          git clone --branch ${{inputs.test_repo_branch}} git@github.com:${{inputs.test_repo_name}}.git
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -90,7 +90,6 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
