@@ -64,7 +64,7 @@ jobs:
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
-          ssh-key: $${{secrets.KEY_NAME}}
+          ssh-key: ${{secrets.KEY_NAME}}
 
       - name: Clone repo using SSH
         run: |
