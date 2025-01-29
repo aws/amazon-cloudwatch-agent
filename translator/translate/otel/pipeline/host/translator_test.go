@@ -75,7 +75,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostDeltaMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity/resource", "cumulativetodelta/hostDeltaMetrics"},
+				processors: []string{"cumulativetodelta/hostDeltaMetrics", "awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -137,7 +137,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity/resource", "transform"},
+				processors: []string{"transform", "awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -175,7 +175,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity/resource", "ec2tagger"},
+				processors: []string{"ec2tagger", "awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},

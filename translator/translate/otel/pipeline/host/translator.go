@@ -63,23 +63,13 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		return nil, fmt.Errorf("no receivers configured in pipeline %s", t.name)
 	}
 	var entityProcessor common.Translator[component.Config]
-	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
-		entityProcessor = nil
-	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
-	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
-		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
-	}
+	var ec2TaggerEnabled bool
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
-	}
-	currentContext := context.CurrentContext()
-	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
-		translators.Processors.Set(entityProcessor)
 	}
 
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
@@ -91,6 +81,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 			log.Printf("D! ec2tagger processor required because append_dimensions is set")
 			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+			ec2TaggerEnabled = true
 		}
 
 		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
@@ -98,6 +89,21 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 			log.Printf("D! metric decorator required because measurement fields are set")
 			translators.Processors.Set(mdt)
 		}
+	}
+
+	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+		entityProcessor = nil
+	} else if strings.HasPrefix(t.name, common.PipelineNameHostCustomMetrics) {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+	} else if (strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics)) && ec2TaggerEnabled {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", true)
+	} else if strings.HasPrefix(t.name, common.PipelineNameHost) || strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+	}
+
+	currentContext := context.CurrentContext()
+	if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() && (t.Destination() == common.CloudWatchKey || t.Destination() == common.DefaultDestination) {
+		translators.Processors.Set(entityProcessor)
 	}
 
 	switch t.Destination() {
