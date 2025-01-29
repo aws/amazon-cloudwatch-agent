@@ -210,11 +210,6 @@ const (
 	SourceAccountHeaderKey = "x-amz-source-account"
 )
 
-var (
-	sourceAccount = os.Getenv(envconfig.AmzSourceAccount) // populates the "x-amz-source-account" header
-	sourceArn     = os.Getenv(envconfig.AmzSourceArn)     // populates the "x-amz-source-arn" header
-)
-
 // newStsClient creates a new STS client with the provided config and options.
 // Additionally, if specific environment variables are set, it also appends the confused deputy headers to requests
 // made by the client. These headers allow resource-based policies to limit the permissions that a service has to
@@ -223,6 +218,10 @@ var (
 //
 // See https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html#cross-service-confused-deputy-prevention
 func newStsClient(p client.ConfigProvider, cfgs ...*aws.Config) *sts.STS {
+
+	sourceAccount := os.Getenv(envconfig.AmzSourceAccount)
+	sourceArn := os.Getenv(envconfig.AmzSourceArn)
+
 	client := sts.New(p, cfgs...)
 	if sourceAccount != "" && sourceArn != "" {
 		client.Handlers.Sign.PushFront(func(r *request.Request) {

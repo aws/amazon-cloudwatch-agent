@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func TestConfusedDeputyHeaders(t *testing.T) {
@@ -53,9 +55,9 @@ func TestConfusedDeputyHeaders(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set global variables which will get picked up by newStsClient
-			sourceArn = tt.envSourceArn
-			sourceAccount = tt.envSourceAccount
+
+			t.Setenv(envconfig.AmzSourceAccount, tt.envSourceAccount)
+			t.Setenv(envconfig.AmzSourceArn, tt.envSourceArn)
 
 			client := newStsClient(mock.Session, &aws.Config{
 				// These are examples credentials pulled from:
@@ -76,14 +78,12 @@ func TestConfusedDeputyHeaders(t *testing.T) {
 			err := request.Sign()
 			require.NoError(t, err)
 
-			headerSourceArn := request.HTTPRequest.Header.Get("x-amz-source-arn")
+			headerSourceArn := request.HTTPRequest.Header.Get(SourceArnHeaderKey)
 			assert.Equal(t, tt.expectedHeaderArn, headerSourceArn)
 
-			headerSourceAccount := request.HTTPRequest.Header.Get("x-amz-source-account")
+			headerSourceAccount := request.HTTPRequest.Header.Get(SourceAccountHeaderKey)
 			assert.Equal(t, tt.expectedHeaderAccount, headerSourceAccount)
 		})
 	}
 
-	sourceArn = ""
-	sourceAccount = ""
 }
