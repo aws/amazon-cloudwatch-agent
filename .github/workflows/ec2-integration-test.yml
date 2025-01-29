@@ -59,6 +59,10 @@ jobs:
           git config --global http.lowSpeedLimit 0
           git config --global http.lowSpeedTime 3600
 
+      - name: Set proxy to CN
+        run: |
+          go env -w GOPROXY=https://goproxy.cn
+          
       - uses: actions/checkout@v3
         with:
           repository: ${{inputs.test_repo_name}}
