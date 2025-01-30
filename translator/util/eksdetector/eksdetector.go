@@ -98,11 +98,11 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 }
 
 func (d *EksDetector) getWorkloadType() (string, error) {
-	podName := os.Getenv("POD_NAME")
-	namespace := os.Getenv("POD_NAMESPACE")
+	podName := os.Getenv("K8S_POD_NAME")
+	namespace := os.Getenv("K8S_POD_NAMESPACE")
 
 	if podName == "" || namespace == "" {
-		return "", fmt.Errorf("POD_NAME/POD_NAMESPACE environment variables not set")
+		return "", fmt.Errorf("K8S_POD_NAME/K8S_POD_NAMESPACE environment variables not set")
 	}
 
 	pod, err := d.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
@@ -116,7 +116,8 @@ func (d *EksDetector) getWorkloadType() (string, error) {
 			return "DaemonSet", nil
 		case "StatefulSet":
 			return "StatefulSet", nil
-		case "ReplicaSet": return "Deployment", nil
+		case "ReplicaSet":
+			return "Deployment", nil
 		}
 	}
 
