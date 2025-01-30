@@ -6,6 +6,7 @@ package eksdetector
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,7 @@ import (
 
 type Detector interface {
 	getConfigMap(namespace string, name string) (map[string]string, error)
+	getWorkloadType() (string, error)
 }
 
 type EksDetector struct {
@@ -22,8 +24,9 @@ type EksDetector struct {
 }
 
 type IsEKSCache struct {
-	Value bool
-	Err   error
+	Value    bool
+	Err      error
+	Workload string
 }
 
 const (
@@ -60,6 +63,7 @@ var (
 		once.Do(func() {
 			var errors error
 			var value bool
+			var workloadType string
 			// Create eks detector
 			eksDetector, err := NewDetector()
 			if err != nil {
@@ -72,8 +76,11 @@ var (
 				if err == nil {
 					value = awsAuth != nil
 				}
+
+				// Get workload type
+				workloadType, err = eksDetector.getWorkloadType()
 			}
-			isEKSCacheSingleton = IsEKSCache{Value: value, Err: errors}
+			isEKSCacheSingleton = IsEKSCache{Value: value, Workload: workloadType, Err: errors}
 		})
 
 		return isEKSCacheSingleton
@@ -88,6 +95,32 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 	}
 
 	return configMap.Data, nil
+}
+
+func (d *EksDetector) getWorkloadType() (string, error) {
+	podName := os.Getenv("POD_NAME")
+	namespace := os.Getenv("POD_NAMESPACE")
+
+	if podName == "" || namespace == "" {
+		return "", fmt.Errorf("POD_NAME/POD_NAMESPACE environment variables not set")
+	}
+
+	pod, err := d.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get pod: %v", err)
+	}
+
+	for _, owner := range pod.OwnerReferences {
+		switch owner.Kind {
+		case "DaemonSet":
+			return "DaemonSet", nil
+		case "StatefulSet":
+			return "StatefulSet", nil
+		case "ReplicaSet": return "Deployment", nil
+		}
+	}
+
+	return "Unknown", nil
 }
 
 func getClient() (kubernetes.Interface, error) {

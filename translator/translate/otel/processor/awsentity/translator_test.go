@@ -45,12 +45,12 @@ func TestTranslate(t *testing.T) {
 			mode:  config.ModeECS,
 			want:  nil,
 		},
-		"OTLPUnderLogs": {
+		"KubernetesUnderLogs": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"otlp": map[string]interface{}{
-							"cluster_name": "otlp-logs",
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "ci-logs",
 						},
 					},
 				},
@@ -58,30 +58,12 @@ func TestTranslate(t *testing.T) {
 			mode:           config.ModeEC2,
 			kubernetesMode: config.ModeEKS,
 			want: &awsentity.Config{
-				ClusterName:    "otlp-logs",
+				ClusterName:    "ci-logs",
 				KubernetesMode: config.ModeEKS,
 				Platform:       config.ModeEC2,
 			},
 		},
-		"OTLPUnderMetrics": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"otlp": map[string]interface{}{
-							"cluster_name": "otlp-metrics",
-						},
-					},
-				},
-			},
-			mode:           config.ModeEC2,
-			kubernetesMode: config.ModeEKS,
-			want: &awsentity.Config{
-				ClusterName:    "otlp-metrics",
-				KubernetesMode: config.ModeEKS,
-				Platform:       config.ModeEC2,
-			},
-		},
-		"EnvVarFallback": {
+		"EnvVar": {
 			input:          map[string]interface{}{},
 			mode:           config.ModeEC2,
 			kubernetesMode: config.ModeEKS,

@@ -46,6 +46,7 @@ type Context struct {
 	runInContainer      bool
 	agentLogFile        string
 	omitHostname        bool
+	workloadType        string
 }
 
 func (ctx *Context) Os() string {
@@ -97,6 +98,10 @@ func (ctx *Context) Mode() string {
 
 func (ctx *Context) KubernetesMode() string {
 	return ctx.kubernetesMode
+}
+
+func (ctx *Context) WorkloadType() string {
+	return ctx.workloadType
 }
 
 func (ctx *Context) ShortMode() string {
@@ -192,4 +197,8 @@ func (ctx *Context) GetOmitHostname() bool {
 
 func (ctx *Context) SetOmitHostname(omitHostname bool) {
 	ctx.omitHostname = omitHostname
+}
+
+func (ctx *Context) SetWorkloadType(workloadType string) {
+	ctx.workloadType = workloadType
 }

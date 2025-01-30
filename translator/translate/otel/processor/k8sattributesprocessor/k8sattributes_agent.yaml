@@ -12,3 +12,5 @@ extract:
     - k8s.cronjob.name
     - k8s.job.name
     - k8s.node.name
+filter:
+  node_from_env_var: K8S_NODE_NAME

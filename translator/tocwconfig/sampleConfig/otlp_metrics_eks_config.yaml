@@ -35,7 +35,6 @@ extensions:
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
 processors:
     awsentity/service/otlp:
-        cluster_name: TestCluster
         entity_type: Service
         kubernetes_mode: K8sEC2
         platform: ec2
@@ -50,9 +49,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
@@ -77,7 +76,7 @@ processors:
         filter:
             namespace: ""
             node: ""
-            node_from_env_var: ""
+            node_from_env_var: K8S_NODE_NAME
         kube_config_path: ""
         passthrough: false
         pod_association:

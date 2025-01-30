@@ -74,8 +74,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	searchKeys := []string{
 		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in"),
 		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in"),
-		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey, "cluster_name"),
-		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey, "cluster_name"),
+		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "cluster_name"),
 	}
 
 	var clusterName string

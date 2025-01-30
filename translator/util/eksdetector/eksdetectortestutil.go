@@ -40,6 +40,11 @@ type MockDetector struct {
 	mock.Mock
 }
 
+func (detector *MockDetector) getWorkloadType() (string, error) {
+	args := detector.Called()
+	return args.Get(0).(string), args.Error(1)
+}
+
 func (detector *MockDetector) getConfigMap(namespace string, name string) (map[string]string, error) {
 	args := detector.Called(namespace, name)
 	return args.Get(0).(map[string]string), args.Error(1)
