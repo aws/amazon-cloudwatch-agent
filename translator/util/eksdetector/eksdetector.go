@@ -79,6 +79,7 @@ var (
 
 				// Get workload type
 				workloadType, _ = eksDetector.getWorkloadType()
+				fmt.Printf("SHOULD PRINT WORKLOAD TYPE " + workloadType + "\n")
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Workload: workloadType, Err: errors}
 		})
@@ -109,6 +110,9 @@ func (d *EksDetector) getWorkloadType() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get pod: %v", err)
 	}
+
+	fmt.Printf("SHOULD PRINT POD NAME " + podName + "\n")
+	fmt.Printf("SHOULD PRINT NAMESPACE " + namespace + "\n")
 
 	for _, owner := range pod.OwnerReferences {
 		switch owner.Kind {

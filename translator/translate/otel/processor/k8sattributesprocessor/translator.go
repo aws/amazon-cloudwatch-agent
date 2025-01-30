@@ -42,11 +42,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	ctx := context.CurrentContext()
 	if ctx.KubernetesMode() != "" {
 		workloadType := ctx.WorkloadType()
-		fmt.Printf("workloadType:" + workloadType)
+		fmt.Printf("workloadType:" + workloadType + "\n")
 		if workloadType == "Deployment" || workloadType == "StatefulSet" {
 			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
 		}
-		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
+		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig)
 	}
 	return nil, fmt.Errorf("k8sattributesprocessor is not supported in this context")
 }
