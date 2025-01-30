@@ -113,11 +113,10 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
 		}
 	case common.PipelineNameHost, common.PipelineNameHostDeltaMetrics:
-		if !currentContext.RunInContainer() && ec2TaggerEnabled {
-			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", false)
+		if !currentContext.RunInContainer() {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", ec2TaggerEnabled)
 		}
 	}
-
 
 	validDestination := slices.Contains(supportedEntityProcessorDestinations[:], t.Destination())
 	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
