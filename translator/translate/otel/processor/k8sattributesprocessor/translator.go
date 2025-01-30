@@ -5,6 +5,7 @@ package k8sattributesprocessor
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -38,9 +39,14 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*k8sattributesprocessor.Config)
-	workloadType := context.CurrentContext().WorkloadType()
-	if workloadType == "Deployment" || workloadType == "StatefulSet" {
+	ctx := context.CurrentContext()
+	if ctx.KubernetesMode() != "" {
+		workloadType := ctx.WorkloadType()
+		fmt.Printf("workloadType:" + workloadType)
+		if workloadType == "Deployment" || workloadType == "StatefulSet" {
+			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
+		}
 		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
 	}
-	return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig) // default to filter logic as we don't want to do a full /pods call
+	return nil, fmt.Errorf("k8sattributesprocessor is not supported in this context")
 }

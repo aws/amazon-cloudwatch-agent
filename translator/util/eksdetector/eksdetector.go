@@ -78,7 +78,7 @@ var (
 				}
 
 				// Get workload type
-				workloadType, err = eksDetector.getWorkloadType()
+				workloadType, _ = eksDetector.getWorkloadType()
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Workload: workloadType, Err: errors}
 		})
