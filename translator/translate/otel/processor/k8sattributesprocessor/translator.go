@@ -39,13 +39,13 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*k8sattributesprocessor.Config)
-	ctx := context.CurrentContext()
-	if ctx.KubernetesMode() != "" {
-		workloadType := ctx.WorkloadType()
-		if workloadType == "Deployment" || workloadType == "StatefulSet" {
-			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
-		} else if workloadType == "DaemonSet" {
+	currentContext := context.CurrentContext()
+	if currentContext.KubernetesMode() != "" {
+		workloadType := currentContext.WorkloadType()
+		if workloadType == "DaemonSet" {
 			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig)
+		} else if workloadType == "Deployment" || workloadType == "StatefulSet" {
+			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
 		}
 		return nil, fmt.Errorf("k8sattributesprocessor is not supported for this workload type")
 	}
