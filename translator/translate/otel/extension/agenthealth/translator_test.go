@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
@@ -77,7 +76,7 @@ func TestTranslate(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tt := NewTranslator(pipeline.SignalLogs, operations).(*translator)
+			tt := NewTranslator(LogsName, operations).(*translator)
 			assert.Equal(t, "agenthealth/logs", tt.ID().String())
 			tt.isUsageDataEnabled = testCase.isEnvUsageData
 			conf := confmap.NewFromStringMap(testCase.input)

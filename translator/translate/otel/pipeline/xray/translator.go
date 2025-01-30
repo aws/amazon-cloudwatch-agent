@@ -49,8 +49,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
 		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory())),
 		Exporters:  common.NewTranslatorMap(awsxrayexporter.NewTranslator()),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.TracesID, []string{agenthealth.OperationPutTraceSegments}),
-			agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true)),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.TracesName, []string{agenthealth.OperationPutTraceSegments}),
+			agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 	}
 	if conf.IsSet(xrayKey) {
 		translators.Receivers.Set(awsxrayreceiver.NewTranslator())

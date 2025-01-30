@@ -32,6 +32,15 @@ var (
 	StatusCodeID = component.NewIDWithName(agenthealth.TypeStr, "statuscode")
 )
 
+type Name string
+
+var (
+	MetricsName    Name = Name(pipeline.SignalMetrics.String())
+	LogsName       Name = Name(pipeline.SignalLogs.String())
+	TracesName     Name = Name(pipeline.SignalTraces.String())
+	StatusCodeName Name = Name("statuscode")
+)
+
 type translator struct {
 	name                string
 	operations          []string
@@ -42,9 +51,9 @@ type translator struct {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithStatusCode(name component.ID, operations []string, isStatusCodeEnabled bool) common.ComponentTranslator {
+func NewTranslatorWithStatusCode(name Name, operations []string, isStatusCodeEnabled bool) common.ComponentTranslator {
 	return &translator{
-		name:                name.String(),
+		name:                string(name),
 		operations:          operations,
 		factory:             agenthealth.NewFactory(),
 		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
@@ -52,9 +61,9 @@ func NewTranslatorWithStatusCode(name component.ID, operations []string, isStatu
 	}
 }
 
-func NewTranslator(name component.ID, operations []string) common.ComponentTranslator {
+func NewTranslator(name Name, operations []string) common.ComponentTranslator {
 	return &translator{
-		name:               name.String(),
+		name:               string(name),
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),

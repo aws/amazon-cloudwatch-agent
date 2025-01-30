@@ -134,6 +134,8 @@ func TestTranslate(t *testing.T) {
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*resourcedetectionprocessor.Config)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				gotCfg.MiddlewareID = nil
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
 				require.NoError(t, testCase.want.Unmarshal(&wantCfg))

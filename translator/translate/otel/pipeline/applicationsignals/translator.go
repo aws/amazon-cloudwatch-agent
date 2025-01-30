@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
@@ -22,6 +21,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 type translator struct {
@@ -60,11 +60,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.AppSignals))
 	}
 
-	mode := context.CurrentContext().KubernetesMode()
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithSignal(t.signal)))
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithSignal(t.signal)))
 
-	if t.signal == pipeline.SignalMetrics && mode != "" {
+	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+	isECS := ecsutil.GetECSUtilSingleton().IsECS()
+	if t.signal == pipeline.SignalMetrics && !isECS {
 		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
 	}
 
@@ -75,13 +76,13 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if t.signal == pipeline.SignalTraces {
 		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
 		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.TracesID, []string{agenthealth.OperationPutTraceSegments}))
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true))
+		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.TracesName, []string{agenthealth.OperationPutTraceSegments}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
 
 	} else {
 		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsID, []string{agenthealth.OperationPutLogEvents}))
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true))
+		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
 	}
 	return translators, nil
 }

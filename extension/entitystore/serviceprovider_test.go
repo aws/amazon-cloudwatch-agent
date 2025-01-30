@@ -4,6 +4,7 @@
 package entitystore
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -202,10 +203,10 @@ func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{ec2Info: &EC2Info{}}
+	s = &serviceprovider{autoScalingGroup: autoscalinggroup{name: ""}}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{ec2Info: &EC2Info{AutoScalingGroup: "test-asg"}}
+	s = &serviceprovider{autoScalingGroup: autoscalinggroup{name: "test-asg"}}
 	assert.Equal(t, ServiceAttribute{Environment: "ec2:test-asg"}, s.serviceAttributeFromAsg())
 }
 
@@ -230,7 +231,7 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:default"}, s.logFileServiceAttribute("glob", "group"))
 
-	s.ec2Info = &EC2Info{AutoScalingGroup: "test-asg"}
+	s.autoScalingGroup = autoscalinggroup{name: "test-asg"}
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 
 	s.iamRole = "test-role"
@@ -292,17 +293,28 @@ func Test_serviceprovider_getIAMRole(t *testing.T) {
 	}
 }
 
-func Test_serviceprovider_getImdsServiceName(t *testing.T) {
+func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 
 	tests := []struct {
 		name               string
 		metadataProvider   ec2metadataprovider.MetadataProvider
 		wantTagServiceName string
+		wantASGName        string
 	}{
 		{
 			name:               "HappyPath_ServiceExists",
 			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"service": "test-service"}},
 			wantTagServiceName: "test-service",
+		},
+		{
+			name:               "HappyPath_ServiceExistsCaseInsensitive",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"ServicE": "test-service"}},
+			wantTagServiceName: "test-service",
+		},
+		{
+			name:               "ServiceExistsRequiresExactMatch",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"sservicee": "test-service"}},
+			wantTagServiceName: "",
 		},
 		{
 			name:               "HappyPath_ApplicationExists",
@@ -329,6 +341,66 @@ func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"service": "test-service", "application": "test-application", "app": "test-app"}},
 			wantTagServiceName: "test-service",
 		},
+		{
+			name:             "happy path with Only ASG tag",
+			metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
+			wantASGName:      tagVal3,
+		},
+		{
+			name: "happy path with multiple tags",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupName": tagVal3,
+					"env":                       "test-env",
+					"name":                      "test-name",
+				}},
+			wantASGName: tagVal3,
+		},
+		{
+			name: "AutoScalingGroup too large",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupName": strings.Repeat("a", 256),
+					"env":                       "test-env",
+					"name":                      "test-name",
+				}},
+			wantASGName: "",
+		},
+		{
+			name: "AutoScalingGroup case sensitive",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupname": tagVal3,
+					"env":                       "test-env",
+					"name":                      "test-name",
+				}},
+			wantASGName: "",
+		},
+		{
+			name: "AutoScalingGroup exact match",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: mockedInstanceIdentityDoc,
+				Tags: map[string]string{
+					"aws:autoscaling:groupnamee": tagVal3,
+					"env":                        "test-env",
+					"name":                       "test-name",
+				}},
+			wantASGName: "",
+		},
+		{
+			name:             "Success IMDS tags call with no ASG",
+			metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"name": tagVal3}},
+			wantASGName:      "",
+		},
+		{
+			name:               "Success IMDS tags call with both Service and ASG",
+			metadataProvider:   &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3, "service": "test-service", "application": "test-application", "app": "test-app"}},
+			wantTagServiceName: "test-service",
+			wantASGName:        tagVal3,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -336,8 +408,42 @@ func Test_serviceprovider_getImdsServiceName(t *testing.T) {
 				logger:           zap.NewExample(),
 				metadataProvider: tt.metadataProvider,
 			}
-			s.scrapeImdsServiceName()
+			s.scrapeImdsServiceNameAndASG()
 			assert.Equal(t, tt.wantTagServiceName, s.GetIMDSServiceName())
+			assert.Equal(t, tt.wantASGName, s.getAutoScalingGroup())
+		})
+	}
+}
+
+func Test_serviceprovider_setAutoScalingGroup(t *testing.T) {
+	tests := []struct {
+		name string
+		asgs []string
+		want string
+	}{
+		{
+			name: "setAutoScalingGroup called once",
+			asgs: []string{"test-asg"},
+			want: "test-asg",
+		},
+		{
+			name: "setAutoScalingGroup called multiple times",
+			asgs: []string{"test-asg", "test-asg2", "test-asg3", "test-asg4"},
+			want: "test-asg",
+		},
+		{
+			name: "setAutoScalingGroup not called",
+			asgs: []string{},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &serviceprovider{}
+			for _, asg := range tt.asgs {
+				s.setAutoScalingGroup(asg)
+			}
+			assert.Equal(t, tt.want, s.getAutoScalingGroup())
 		})
 	}
 }

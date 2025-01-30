@@ -20,11 +20,12 @@ import (
 )
 
 const (
-	attributeAwsLogGroupNames      = "aws.log.group.names"
-	attributeDeploymentEnvironment = "deployment.environment"
-	attributeServiceName           = "service.name"
-	attributeService               = "Service"
-	EMPTY                          = ""
+	attributeAwsLogGroupNames              = "aws.log.group.names"
+	attributeDeploymentEnvironment         = "deployment.environment"
+	attributeServiceName                   = "service.name"
+	attributeService                       = "Service"
+	attributeEC2TagAwsAutoscalingGroupName = "ec2.tag.aws:autoscaling:groupName"
+	EMPTY                                  = ""
 )
 
 type scraper interface {
@@ -67,6 +68,14 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
 }
 
+var setAutoScalingGroup = func(asg string) {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return
+	}
+	es.SetAutoScalingGroup(asg)
+}
+
 var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
 	es := entitystore.GetEntityStore()
 	if es == nil {
@@ -74,6 +83,15 @@ var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
 	}
 
 	return es.EC2Info()
+}
+
+var getAutoScalingGroupFromEntityStore = func() string {
+	// Get the following metric attributes from the EntityStore: EC2.AutoScalingGroup
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return ""
+	}
+	return es.GetAutoScalingGroup()
 }
 
 var getServiceNameSource = func() (string, string) {
@@ -133,6 +151,10 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			}
 			if serviceNameSource, sourceExists := resourceAttrs.Get(entityattributes.AttributeEntityServiceNameSource); sourceExists {
 				entityServiceNameSource = serviceNameSource.Str()
+			}
+			// resourcedetection processor may have picked up the ASG name from an ec2:DescribeTags call
+			if autoScalingGroupNameAttr, ok := resourceAttrs.Get(attributeEC2TagAwsAutoscalingGroupName); ok {
+				setAutoScalingGroup(autoScalingGroupNameAttr.Str())
 			}
 
 			entityServiceName := getServiceAttributes(resourceAttrs)
@@ -220,8 +242,8 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				ec2Info = getEC2InfoFromEntityStore()
 
 				if entityEnvironmentName == EMPTY {
-					if ec2Info.GetAutoScalingGroup() != EMPTY {
-						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + ec2Info.GetAutoScalingGroup()
+					if getAutoScalingGroupFromEntityStore() != EMPTY {
+						entityEnvironmentName = entityattributes.DeploymentEnvironmentFallbackPrefix + getAutoScalingGroupFromEntityStore()
 					} else {
 						entityEnvironmentName = entityattributes.DeploymentEnvironmentDefault
 					}
@@ -234,7 +256,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 
 				ec2Attributes := EC2ServiceAttributes{
 					InstanceId:        ec2Info.GetInstanceID(),
-					AutoScalingGroup:  ec2Info.GetAutoScalingGroup(),
+					AutoScalingGroup:  getAutoScalingGroupFromEntityStore(),
 					ServiceNameSource: entityServiceNameSource,
 				}
 				if err := validate.Struct(ec2Attributes); err == nil {

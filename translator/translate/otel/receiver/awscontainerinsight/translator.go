@@ -22,6 +22,7 @@ import (
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
@@ -119,12 +120,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		t.setHostIP(conf, cfg)
 		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
-
-	// > [!WARNING]
-	// > Only uncomment the following line when this PR is merged: https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/265
-	// > cfg.MiddlewareID = &agenthealth.StatusCodeID
-	// > This will be added when contrib changes are made.
-
+	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 	cfg.EnableAcceleratedComputeMetrics = cfg.EnableAcceleratedComputeMetrics || AcceleratedComputeMetricsEnabled(conf)
 

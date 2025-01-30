@@ -71,8 +71,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
-			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsID, []string{agenthealth.OperationPutLogEvents}),
-				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeID, nil, true)),
+			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
+				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 		}, nil
 	case common.AMPKey:
 		if !conf.IsSet(MetricsKey) {
