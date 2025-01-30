@@ -44,8 +44,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		workloadType := ctx.WorkloadType()
 		if workloadType == "Deployment" || workloadType == "StatefulSet" {
 			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
+		} else if workloadType == "DaemonSet" {
+			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig)
 		}
-		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig)
+		return nil, fmt.Errorf("k8sattributesprocessor is not supported for this workload type")
 	}
 	return nil, fmt.Errorf("k8sattributesprocessor is not supported in this context")
 }
