@@ -79,7 +79,6 @@ var (
 
 				// Get workload type
 				workloadType, _ = eksDetector.getWorkloadType()
-				fmt.Printf("SHOULD PRINT WORKLOAD TYPE " + workloadType + "\n")
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Workload: workloadType, Err: errors}
 		})
@@ -100,7 +99,7 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 
 func (d *EksDetector) getWorkloadType() (string, error) {
 	podName := os.Getenv("K8S_POD_NAME")
-	namespace := os.Getenv("K8S_POD_NAMESPACE")
+	namespace := os.Getenv("K8S_NAMESPACE")
 
 	if podName == "" || namespace == "" {
 		return "", fmt.Errorf("K8S_POD_NAME/K8S_POD_NAMESPACE environment variables not set")
@@ -110,9 +109,6 @@ func (d *EksDetector) getWorkloadType() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get pod: %v", err)
 	}
-
-	fmt.Printf("SHOULD PRINT POD NAME " + podName + "\n")
-	fmt.Printf("SHOULD PRINT NAMESPACE " + namespace + "\n")
 
 	for _, owner := range pod.OwnerReferences {
 		switch owner.Kind {

@@ -42,7 +42,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	ctx := context.CurrentContext()
 	if ctx.KubernetesMode() != "" {
 		workloadType := ctx.WorkloadType()
-		fmt.Printf("workloadType:" + workloadType + "\n")
 		if workloadType == "Deployment" || workloadType == "StatefulSet" {
 			return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
 		}
