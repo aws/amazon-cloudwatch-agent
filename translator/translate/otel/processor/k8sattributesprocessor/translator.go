@@ -48,7 +48,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			Sources: []k8sattributesprocessor.PodAssociationSourceConfig{
 				k8sattributesprocessor.PodAssociationSourceConfig{
 					From: "resource_attribute",
-					Name: "k8s_pod_ip",
+					Name: "cwagent_saved_scrape_instance",
 				},
 			},
 		},
