@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
+	conventions "go.opentelemetry.io/collector/semconv/v1.22.0"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -42,12 +43,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*k8sattributesprocessor.Config)
 	// TODO: make metadata configurable
 	cfg.Extract.Metadata = []string{
-		"k8s.pod.namespace",
-		"k8s.node.name",
-		"k8s.deployment.name",
-		"k8s.replicaset.name",
-		"k8s.daemonset.name",
-		"k8s.statefulset.name",
+		conventions.AttributeK8SNamespaceName,
+		conventions.AttributeK8SNodeName,
+		conventions.AttributeK8SDeploymentName,
+		conventions.AttributeK8SReplicaSetName,
+		conventions.AttributeK8SDaemonSetName,
+		conventions.AttributeK8SStatefulSetName,
 	}
 	return cfg, nil
 }
