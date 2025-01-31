@@ -4,7 +4,7 @@
 package k8sattributesprocessor
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
+	k8sattributesprocessor "github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
@@ -42,6 +42,17 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*k8sattributesprocessor.Config)
 	// TODO: make metadata configurable
+
+	cfg.Association = []k8sattributesprocessor.PodAssociationConfig{
+		k8sattributesprocessor.PodAssociationConfig{
+			Sources: []k8sattributesprocessor.PodAssociationSourceConfig{
+				k8sattributesprocessor.PodAssociationSourceConfig{
+					From: "resource_attribute",
+					Name: "k8s_pod_ip",
+				},
+			},
+		},
+	}
 	cfg.Extract.Metadata = []string{
 		conventions.AttributeK8SNamespaceName,
 		conventions.AttributeK8SNodeName,
