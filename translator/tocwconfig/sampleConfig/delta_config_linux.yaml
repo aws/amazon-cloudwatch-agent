@@ -31,6 +31,7 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -80,10 +81,10 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
                 - telegraf_diskio
     telemetry:

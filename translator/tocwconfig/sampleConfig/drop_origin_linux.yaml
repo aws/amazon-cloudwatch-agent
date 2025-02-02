@@ -36,6 +36,7 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -80,9 +81,9 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
                 - telegraf_cpu
                 - telegraf_disk

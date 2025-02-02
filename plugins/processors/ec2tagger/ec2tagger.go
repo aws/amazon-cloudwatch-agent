@@ -176,7 +176,7 @@ func (t *Tagger) updateTags() error {
 			key := *tag.Key
 			if Ec2InstanceTagKeyASG == key {
 				// rename to match CW dimension as applied by AutoScaling service, not the EC2 tag
-				key = cwDimensionASG
+				key = CWDimensionASG
 			}
 			tags[key] = *tag.Value
 		}
@@ -249,7 +249,7 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	if t.ec2TagCache != nil {
 		for _, key := range t.EC2InstanceTagKeys {
 			if key == Ec2InstanceTagKeyASG {
-				key = cwDimensionASG
+				key = CWDimensionASG
 			}
 			if key == "*" {
 				continue
@@ -303,7 +303,7 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	if !useAllTags && len(t.EC2InstanceTagKeys) > 0 {
 		// if the customer said 'AutoScalingGroupName' (the CW dimension), do what they mean not what they said
 		for i, key := range t.EC2InstanceTagKeys {
-			if cwDimensionASG == key {
+			if CWDimensionASG == key {
 				t.EC2InstanceTagKeys[i] = Ec2InstanceTagKeyASG
 			}
 		}

@@ -1,0 +1,134 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: K8E
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: K8E
+                region_type: ACJ
+    entitystore:
+        kubernetes_mode: K8sEC2
+        mode: ec2
+        region: us-west-2
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
+processors:
+    awsentity/service/otlp:
+        entity_type: Service
+        kubernetes_mode: K8sEC2
+        platform: ec2
+    cumulativetodelta/hostOtlpMetrics:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_interval_seconds: 0s
+receivers:
+    otlp/metrics:
+        protocols:
+            grpc:
+                dialer:
+                    timeout: 0s
+                endpoint: 0.0.0.0:1234
+                include_metadata: false
+                max_concurrent_streams: 0
+                max_recv_msg_size_mib: 0
+                read_buffer_size: 524288
+                tls:
+                    ca_file: ""
+                    cert_file: /path/to/cert.pem
+                    client_ca_file: ""
+                    client_ca_file_reload: false
+                    include_system_ca_certs_pool: false
+                    key_file: /path/to/key.pem
+                    max_version: ""
+                    min_version: ""
+                    reload_interval: 0s
+                transport: tcp
+                write_buffer_size: 0
+            http:
+                endpoint: 0.0.0.0:2345
+                include_metadata: false
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                max_request_body_size: 0
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
+                tls:
+                    ca_file: ""
+                    cert_file: /path/to/cert.pem
+                    client_ca_file: ""
+                    client_ca_file_reload: false
+                    include_system_ca_certs_pool: false
+                    key_file: /path/to/key.pem
+                    max_version: ""
+                    min_version: ""
+                    reload_interval: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
+        - server
+    pipelines:
+        metrics/hostOtlpMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - awsentity/service/otlp
+                - cumulativetodelta/hostOtlpMetrics
+                - ec2tagger
+            receivers:
+                - otlp/metrics
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            level: info
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            address: ""
+            level: None
+        traces:
+            level: Basic

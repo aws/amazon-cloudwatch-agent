@@ -105,6 +105,7 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     awsentity/service/telegraf:
         entity_type: Service
         platform: ec2
@@ -284,9 +285,9 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
                 - telegraf_disk
                 - telegraf_swap
@@ -309,10 +310,10 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
                 - telegraf_diskio
                 - telegraf_net

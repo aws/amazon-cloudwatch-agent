@@ -93,6 +93,7 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     batch/host/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -156,9 +157,9 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
                 - telegraf_cpu
     telemetry:
