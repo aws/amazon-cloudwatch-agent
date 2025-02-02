@@ -46,7 +46,7 @@ func TestTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]any{
 				"certificate_file_path": "/ca/bundle",
 				"region":                "us-east-1",
-				"local_mode":            "true",
+				"local_mode":            true,
 				"role_arn":              "global_arn",
 				"imds_retries":          1,
 				"telemetry": map[string]any{

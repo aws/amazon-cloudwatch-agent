@@ -19,9 +19,9 @@ type translator struct {
 	factory extension.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return &translator{
 		factory: entitystore.NewFactory(),
 	}

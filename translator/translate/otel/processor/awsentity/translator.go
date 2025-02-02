@@ -30,13 +30,13 @@ type translator struct {
 	scrapeDatapointAttribute bool
 }
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return &translator{
 		factory: awsentity.NewFactory(),
 	}
 }
 
-func NewTranslatorWithEntityType(entityType string, name string, scrapeDatapointAttribute bool) common.Translator[component.Config] {
+func NewTranslatorWithEntityType(entityType string, name string, scrapeDatapointAttribute bool) common.ComponentTranslator {
 	pipelineName := strings.ToLower(entityType)
 	if name != "" {
 		pipelineName = pipelineName + "/" + name

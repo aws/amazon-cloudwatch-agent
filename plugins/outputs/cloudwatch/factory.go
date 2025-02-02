@@ -43,14 +43,14 @@ func createDefaultConfig() component.Config {
 
 func createMetricsExporter(
 	ctx context.Context,
-	settings exporter.CreateSettings,
+	settings exporter.Settings,
 	config component.Config,
 ) (exporter.Metrics, error) {
 	cw := &CloudWatch{
 		config: config.(*Config),
 		logger: settings.Logger,
 	}
-	exp, err := exporterhelper.NewMetricsExporter(
+	exp, err := exporterhelper.NewMetrics(
 		ctx,
 		settings,
 		config,

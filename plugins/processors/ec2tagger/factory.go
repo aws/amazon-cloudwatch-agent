@@ -35,7 +35,7 @@ func NewFactory() processor.Factory {
 
 func createMetricsProcessor(
 	ctx context.Context,
-	set processor.CreateSettings,
+	set processor.Settings,
 	cfg component.Config,
 	nextConsumer consumer.Metrics,
 ) (processor.Metrics, error) {
@@ -46,7 +46,7 @@ func createMetricsProcessor(
 
 	metricsProcessor := newTagger(processorConfig, set.Logger)
 
-	return processorhelper.NewMetricsProcessor(ctx, set, cfg, nextConsumer,
+	return processorhelper.NewMetrics(ctx, set, cfg, nextConsumer,
 		metricsProcessor.processMetrics,
 		processorhelper.WithCapabilities(processorCapabilities),
 		processorhelper.WithStart(metricsProcessor.Start),

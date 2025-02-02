@@ -33,14 +33,14 @@ type translator struct {
 	defaultMetricCollectionInterval time.Duration
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 // NewTranslator creates a new adapter receiver translator.
-func NewTranslator(inputName, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
+func NewTranslator(inputName, cfgKey string, defaultMetricCollectionInterval time.Duration) common.ComponentTranslator {
 	return NewTranslatorWithName("", inputName, cfgKey, time.Duration(0), defaultMetricCollectionInterval)
 }
 
-func NewTranslatorWithName(name, inputName, cfgKey string, preferMetricCollectionInterval, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
+func NewTranslatorWithName(name, inputName, cfgKey string, preferMetricCollectionInterval, defaultMetricCollectionInterval time.Duration) common.ComponentTranslator {
 	return &translator{name, adapter.Type(inputName), cfgKey, preferMetricCollectionInterval, defaultMetricCollectionInterval}
 }
 

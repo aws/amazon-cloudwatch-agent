@@ -45,7 +45,6 @@ import (
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
 	"go.opentelemetry.io/collector/extension"
-	"go.opentelemetry.io/collector/extension/ballastextension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
@@ -135,7 +134,6 @@ func Factories() (otelcol.Factories, error) {
 		awsproxy.NewFactory(),
 		entitystore.NewFactory(),
 		server.NewFactory(),
-		ballastextension.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),
 		healthcheckextension.NewFactory(),

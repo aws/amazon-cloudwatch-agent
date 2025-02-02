@@ -16,11 +16,11 @@ type translator struct {
 	factory receiver.Factory
 }
 
-func NewDefaultTranslator(factory receiver.Factory) common.Translator[component.Config] {
+func NewDefaultTranslator(factory receiver.Factory) common.ComponentTranslator {
 	return NewDefaultTranslatorWithName("", factory)
 }
 
-func NewDefaultTranslatorWithName(name string, factory receiver.Factory) common.Translator[component.Config] {
+func NewDefaultTranslatorWithName(name string, factory receiver.Factory) common.ComponentTranslator {
 	return &translator{name, factory}
 }
 

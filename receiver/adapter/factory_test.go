@@ -61,10 +61,10 @@ func Test_CreateMetricsReceiver(t *testing.T) {
 	adapter := NewAdapter(c)
 	factory := adapter.NewReceiverFactory("cpu")
 
-	set := receivertest.NewNopCreateSettings()
+	set := receivertest.NewNopSettings()
 	set.ID = component.NewIDWithName(factory.Type(), "cpu")
 
-	metricsReceiver, err := factory.CreateMetricsReceiver(
+	metricsReceiver, err := factory.CreateMetrics(
 		context.Background(),
 		set,
 		&Config{
@@ -90,9 +90,9 @@ func Test_CreateInvalidMetricsReceiver(t *testing.T) {
 	adapter := NewAdapter(c)
 
 	factory := adapter.NewReceiverFactory("mem")
-	metricsReceiver, err := factory.CreateMetricsReceiver(
+	metricsReceiver, err := factory.CreateMetrics(
 		context.Background(),
-		receivertest.NewNopCreateSettings(),
+		receivertest.NewNopSettings(),
 		&Config{
 			ControllerConfig: scraperhelper.ControllerConfig{
 				CollectionInterval: time.Minute,

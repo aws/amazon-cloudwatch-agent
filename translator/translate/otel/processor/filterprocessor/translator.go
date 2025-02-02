@@ -29,9 +29,9 @@ type translator struct {
 	factory processor.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: filterprocessor.NewFactory()}
 	t.SetIndex(-1)
 	for _, opt := range opts {
@@ -43,7 +43,7 @@ func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.
 	return t
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())

@@ -19,7 +19,7 @@ type testTranslator struct {
 	result  int
 }
 
-var _ Translator[int] = (*testTranslator)(nil)
+var _ Translator[int, component.ID] = (*testTranslator)(nil)
 
 func (t testTranslator) Translate(_ *confmap.Conf) (int, error) {
 	return t.result, nil

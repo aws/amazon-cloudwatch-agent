@@ -5,13 +5,13 @@ package prometheus
 
 import (
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 )
 
-func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
-	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
+	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	var destinations []string
 	if conf.IsSet(LogsKey) {
 		destinations = append(destinations, common.CloudWatchLogsKey)

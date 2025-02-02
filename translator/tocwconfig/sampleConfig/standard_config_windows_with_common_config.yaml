@@ -109,4 +109,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: Basic
