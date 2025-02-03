@@ -466,6 +466,7 @@ func GetClusterName(conf *confmap.Conf) string {
 
 	envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
 	if envVarClusterName != "" {
+		fmt.Printf("I! Successfully retrieved cluster name: %s", envVarClusterName)
 		return envVarClusterName
 	}
 
