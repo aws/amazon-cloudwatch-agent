@@ -8,7 +8,8 @@ _How does this change address the problem?_
 By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of your choice.
 
 # Tests
-_Describe what tests you have done._
+1. [Run integration tests](https://github.com/aws/amazon-cloudwatch-agent/actions/workflows/integration-test.yml) and provide the link. Compare it to the last revision on `main` to ensure no new tests are failing.
+2. Describe any additional testing you've completed.
 
 # Requirements
 _Before commit the code, please do the following steps._
