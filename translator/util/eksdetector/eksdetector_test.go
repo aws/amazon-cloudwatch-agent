@@ -89,12 +89,12 @@ func Test_getWorkloadType_EnvNotSet(t *testing.T) {
 
 	workloadType, err := testDetector.getWorkloadType()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "K8S_POD_NAME/K8S_NAMESPACE environment variables not set")
+	assert.Contains(t, err.Error(), "POD_NAME/K8S_NAMESPACE environment variables not set")
 	assert.Equal(t, "", workloadType)
 }
 
 func Test_getWorkloadType_PodNotFound(t *testing.T) {
-	os.Setenv("K8S_POD_NAME", "nonexistent-pod")
+	os.Setenv("POD_NAME", "nonexistent-pod")
 	os.Setenv("K8S_NAMESPACE", "default")
 
 	client := fake.NewSimpleClientset()
@@ -108,7 +108,7 @@ func Test_getWorkloadType_PodNotFound(t *testing.T) {
 func Test_getWorkloadType_DaemonSet(t *testing.T) {
 	podName := "test-pod"
 	namespace := "default"
-	os.Setenv("K8S_POD_NAME", podName)
+	os.Setenv("POD_NAME", podName)
 	os.Setenv("K8S_NAMESPACE", namespace)
 
 	// Create a pod with an OwnerReference of kind DaemonSet
@@ -136,7 +136,7 @@ func Test_getWorkloadType_DaemonSet(t *testing.T) {
 func Test_getWorkloadType_StatefulSet(t *testing.T) {
 	podName := "test-pod"
 	namespace := "default"
-	os.Setenv("K8S_POD_NAME", podName)
+	os.Setenv("POD_NAME", podName)
 	os.Setenv("K8S_NAMESPACE", namespace)
 
 	// Create a pod with an OwnerReference of kind StatefulSet
@@ -164,7 +164,7 @@ func Test_getWorkloadType_StatefulSet(t *testing.T) {
 func Test_getWorkloadType_ReplicaSet(t *testing.T) {
 	podName := "test-pod"
 	namespace := "default"
-	os.Setenv("K8S_POD_NAME", podName)
+	os.Setenv("POD_NAME", podName)
 	os.Setenv("K8S_NAMESPACE", namespace)
 
 	// Create a pod with an OwnerReference of kind ReplicaSet
@@ -192,7 +192,7 @@ func Test_getWorkloadType_ReplicaSet(t *testing.T) {
 func Test_getWorkloadType_Unknown(t *testing.T) {
 	podName := "test-pod"
 	namespace := "default"
-	os.Setenv("K8S_POD_NAME", podName)
+	os.Setenv("POD_NAME", podName)
 	os.Setenv("K8S_NAMESPACE", namespace)
 
 	// Create a pod with no OwnerReferences
