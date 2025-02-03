@@ -4,7 +4,6 @@
 package awsentity
 
 import (
-	"os"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -56,10 +55,8 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	ctx := context.CurrentContext()
-
 	// Do not send entity for ECS
-	if ctx.RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS() {
+	if context.CurrentContext().RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS() {
 		return nil, nil
 	}
 
@@ -73,47 +70,32 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ScrapeDatapointAttribute = true
 	}
 
-	cfg.KubernetesMode = ctx.KubernetesMode()
+	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
+	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
+	if !hostedInConfigured {
+		hostedInConfigKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in")
+		hostedIn, hostedInConfigured = common.GetString(conf, hostedInConfigKey)
+	}
+	if common.IsAppSignalsKubernetes() {
+		if !hostedInConfigured {
+			hostedIn = util.GetClusterNameFromEc2Tagger()
+		}
+	}
 
 	//TODO: This logic is more or less identical to what AppSignals does. This should be moved to a common place for reuse
+	ctx := context.CurrentContext()
+	mode := ctx.KubernetesMode()
+	cfg.KubernetesMode = mode
+
+	mode = ctx.Mode()
 	if cfg.KubernetesMode != "" {
-		searchKeys := []string{
-			common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in"),
-			common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in"),
-			common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "cluster_name"),
-		}
-
-		var clusterName string
-		var found bool
-
-		for _, path := range searchKeys {
-			val, ok := common.GetString(conf, path)
-			if ok && val != "" {
-				clusterName = val
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
-			if envVarClusterName != "" {
-				clusterName = envVarClusterName
-				found = true
-			}
-		}
-
-		if !found {
-			clusterName = util.GetClusterNameFromEc2Tagger()
-		}
-
-		cfg.ClusterName = clusterName
+		cfg.ClusterName = hostedIn
 	}
 
 	// We want to keep platform config variable to be
 	// anything that is non-Kubernetes related so the
 	// processor can perform different logics for EKS
 	// in EC2 or Non-EC2
-	cfg.Platform = ctx.Mode()
+	cfg.Platform = mode
 	return cfg, nil
 }
