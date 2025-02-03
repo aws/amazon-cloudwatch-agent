@@ -5,7 +5,6 @@ package host
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"log"
 	"slices"
 	"strings"
@@ -110,9 +109,6 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		if currentContext.KubernetesMode() != "" {
 			translators.Processors.Set(k8sattributesprocessor.NewTranslatorWithName(t.name))
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
-			if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
-				translators.Exporters.Set(debug.NewTranslator(common.WithName(t.name)))
-			}
 		}
 	case common.PipelineNameHostCustomMetrics:
 		if !currentContext.RunInContainer() {
