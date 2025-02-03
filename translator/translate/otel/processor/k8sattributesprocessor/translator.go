@@ -38,7 +38,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*k8sattributesprocessor.Config)
 	currentContext := context.CurrentContext()
 
