@@ -80,6 +80,16 @@ func DetectKubernetesMode(configuredMode string) string {
 
 }
 
+func DetectWorkloadType() string {
+	isEKS := IsEKS()
+
+	if isEKS.Err != nil {
+		return ""
+	}
+
+	return isEKS.Workload
+}
+
 func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region string) {
 
 	credsMap := GetCredentials(mode, credsConfig)
