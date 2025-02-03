@@ -70,6 +70,34 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
+    k8sattributes/hostOtlpMetrics/cloudwatchlogs:
+        auth_type: serviceAccount
+        context: ""
+        exclude:
+            pods:
+                - name: jaeger-agent
+                - name: jaeger-collector
+        extract:
+            metadata:
+                - k8s.namespace.name
+                - k8s.pod.name
+                - k8s.replicaset.name
+                - k8s.deployment.name
+                - k8s.daemonset.name
+                - k8s.statefulset.name
+                - k8s.cronjob.name
+                - k8s.job.name
+                - k8s.node.name
+        filter:
+            namespace: ""
+            node: ""
+            node_from_env_var: K8S_NODE_NAME
+        kube_config_path: ""
+        passthrough: false
+        pod_association:
+            - sources:
+                - from: connection
+                  name: ""
 receivers:
     otlp/metrics:
         protocols:
@@ -121,8 +149,9 @@ service:
             exporters:
                 - awsemf
             processors:
-                - awsentity/service/otlp
                 - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - k8sattributes/hostOtlpMetrics/cloudwatchlogs
+                - awsentity/service/otlp
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
                 - otlp/metrics

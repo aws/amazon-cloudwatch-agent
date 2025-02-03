@@ -28,3 +28,9 @@ const (
 	ShortModeK8sEC2    = "K8E"
 	ShortModeK8sOnPrem = "K8OP"
 )
+
+const (
+	DaemonSet   = "DaemonSet"
+	Deployment  = "Deployment"
+	StatefulSet = "StatefulSet"
+)

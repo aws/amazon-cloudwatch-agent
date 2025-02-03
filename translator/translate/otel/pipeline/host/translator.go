@@ -24,6 +24,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
@@ -106,6 +107,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.PipelineNameHostOtlpMetrics:
 		// TODO: For OTLP, the entity processor is only on K8S for now. Eventually this should be added to EC2
 		if currentContext.KubernetesMode() != "" {
+			translators.Processors.Set(k8sattributesprocessor.NewTranslatorWithName(t.name))
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
 		}
 	case common.PipelineNameHostCustomMetrics:

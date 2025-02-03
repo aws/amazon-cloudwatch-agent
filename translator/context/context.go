@@ -38,6 +38,7 @@ type Context struct {
 	outputTomlFilePath  string
 	mode                string
 	kubernetesMode      string
+	workloadType        string
 	shortMode           string
 	credentials         map[string]string
 	proxy               map[string]string
@@ -99,6 +100,10 @@ func (ctx *Context) KubernetesMode() string {
 	return ctx.kubernetesMode
 }
 
+func (ctx *Context) WorkloadType() string {
+	return ctx.workloadType
+}
+
 func (ctx *Context) ShortMode() string {
 	return ctx.shortMode
 }
@@ -148,6 +153,10 @@ func (ctx *Context) SetKubernetesMode(mode string) {
 	default:
 		ctx.kubernetesMode = ""
 	}
+}
+
+func (ctx *Context) SetWorkloadType(workloadType string) {
+	ctx.workloadType = workloadType
 }
 
 func (ctx *Context) SetCredentials(creds map[string]string) {
