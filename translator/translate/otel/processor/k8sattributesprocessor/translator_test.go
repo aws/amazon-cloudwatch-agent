@@ -28,7 +28,7 @@ func TestTranslate(t *testing.T) {
 			input:          map[string]interface{}{},
 			mode:           config.ModeEC2,
 			kubernetesMode: config.ModeEKS,
-			workloadType:   "DaemonSet",
+			workloadType:   config.DaemonSet,
 			want: &k8sattributesprocessor.Config{
 				Association: []k8sattributesprocessor.PodAssociationConfig{
 					{
@@ -51,7 +51,7 @@ func TestTranslate(t *testing.T) {
 			input:          map[string]interface{}{},
 			mode:           config.ModeEC2,
 			kubernetesMode: config.ModeEKS,
-			workloadType:   "Deployment",
+			workloadType:   config.Deployment,
 			want: &k8sattributesprocessor.Config{
 				Association: []k8sattributesprocessor.PodAssociationConfig{
 					{
@@ -74,7 +74,7 @@ func TestTranslate(t *testing.T) {
 			input:          map[string]interface{}{},
 			mode:           config.ModeEC2,
 			kubernetesMode: config.ModeEKS,
-			workloadType:   "StatefulSet",
+			workloadType:   config.StatefulSet,
 			want: &k8sattributesprocessor.Config{
 				Association: []k8sattributesprocessor.PodAssociationConfig{
 					{

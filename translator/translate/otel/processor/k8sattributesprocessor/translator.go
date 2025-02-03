@@ -6,6 +6,7 @@ package k8sattributesprocessor
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -46,9 +47,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	switch workloadType := currentContext.WorkloadType(); workloadType {
-	case "DaemonSet":
+	case config.DaemonSet:
 		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig)
-	case "Deployment", "StatefulSet":
+	case config.Deployment, config.StatefulSet:
 		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
 	default:
 		return nil, fmt.Errorf("k8sattributesprocessor is not supported for workload type: %s", workloadType)
