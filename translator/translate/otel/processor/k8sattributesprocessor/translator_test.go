@@ -105,7 +105,7 @@ func TestTranslate(t *testing.T) {
 			mode:           config.ModeEC2,
 			kubernetesMode: config.ModeEKS,
 			workloadType:   "Unknown",
-			wantErr:        fmt.Errorf("k8sattributesprocessor is not supported for workload type: Unknown"),
+			wantErr:        fmt.Errorf("k8sattributesprocessor is not supported for workload type: "),
 		},
 	}
 	for name, testCase := range testCases {

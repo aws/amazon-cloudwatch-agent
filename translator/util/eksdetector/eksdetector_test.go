@@ -189,7 +189,7 @@ func Test_getWorkloadType_ReplicaSet(t *testing.T) {
 	assert.Equal(t, "Deployment", workloadType)
 }
 
-func Test_getWorkloadType_Unknown(t *testing.T) {
+func Test_getWorkloadType_Empty(t *testing.T) {
 	podName := "test-pod"
 	namespace := "default"
 	os.Setenv("POD_NAME", podName)
@@ -208,7 +208,7 @@ func Test_getWorkloadType_Unknown(t *testing.T) {
 
 	workloadType, err := testDetector.getWorkloadType()
 	assert.NoError(t, err)
-	assert.Equal(t, "Unknown", workloadType)
+	assert.Equal(t, "", workloadType)
 }
 
 func Test_getClientError(t *testing.T) {

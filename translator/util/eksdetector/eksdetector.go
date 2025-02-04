@@ -6,6 +6,7 @@ package eksdetector
 import (
 	"context"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"os"
 	"sync"
 
@@ -113,15 +114,15 @@ func (d *EksDetector) getWorkloadType() (string, error) {
 	for _, owner := range pod.OwnerReferences {
 		switch owner.Kind {
 		case "DaemonSet":
-			return "DaemonSet", nil
+			return config.DaemonSet, nil
 		case "StatefulSet":
-			return "StatefulSet", nil
+			return config.StatefulSet, nil
 		case "ReplicaSet":
-			return "Deployment", nil
+			return config.Deployment, nil
 		}
 	}
 
-	return "Unknown", nil
+	return "", nil
 }
 
 func getClient() (kubernetes.Interface, error) {

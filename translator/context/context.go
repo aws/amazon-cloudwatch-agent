@@ -156,7 +156,16 @@ func (ctx *Context) SetKubernetesMode(mode string) {
 }
 
 func (ctx *Context) SetWorkloadType(workloadType string) {
-	ctx.workloadType = workloadType
+	switch workloadType {
+	case config.DaemonSet:
+		ctx.workloadType = config.DaemonSet
+	case config.Deployment:
+		ctx.workloadType = config.Deployment
+	case config.StatefulSet:
+		ctx.workloadType = config.StatefulSet
+	default:
+		ctx.workloadType = ""
+	}
 }
 
 func (ctx *Context) SetCredentials(creds map[string]string) {
