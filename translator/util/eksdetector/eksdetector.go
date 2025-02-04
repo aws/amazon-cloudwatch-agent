@@ -6,13 +6,14 @@ package eksdetector
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"os"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 type Detector interface {
