@@ -40,7 +40,7 @@ func setPrometheusLogGroup(conf *confmap.Conf, cfg *awsemfexporter.Config) error
 			}
 		} else {
 
-			if clusterName := util.GetClusterNameFromEc2Tagger(); clusterName != "" {
+			if clusterName := common.GetClusterName(conf); clusterName != "" {
 				cfg.LogGroupName = fmt.Sprintf(eksDefaultLogGroupFormat, clusterName)
 			}
 		}
