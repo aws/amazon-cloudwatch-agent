@@ -69,6 +69,45 @@ func TestTranslate(t *testing.T) {
 				Platform:       config.ModeEC2,
 			},
 		},
+		"AppSignalsPrecedence": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "ci-logs",
+						},
+					},
+				}},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			want: &awsentity.Config{
+				ClusterName:    "test",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"KubernetesPrecedence": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "ci-logs",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			envClusterName: "env-cluster",
+			want: &awsentity.Config{
+				ClusterName:    "ci-logs",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
 		"ECS": {
 			input: map[string]interface{}{},
 			mode:  config.ModeECS,
