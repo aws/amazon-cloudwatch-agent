@@ -526,6 +526,12 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
+                - - ClusterName
+                  - ContainerName
+                  - ElasticNetworkInterfaceId
+                  - FullPodName
+                  - Namespace
+                  - PodName
               metric_name_selectors:
                 - container_efa_rx_bytes
                 - container_efa_tx_bytes
@@ -547,6 +553,11 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
+                - - ClusterName
+                  - ElasticNetworkInterfaceId
+                  - FullPodName
+                  - Namespace
+                  - PodName
               metric_name_selectors:
                 - pod_efa_rx_bytes
                 - pod_efa_tx_bytes
@@ -557,6 +568,10 @@ exporters:
             - dimensions:
                 - - ClusterName
                 - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+                  - ElasticNetworkInterfaceId
                   - InstanceId
                   - NodeName
               metric_name_selectors:
