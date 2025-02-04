@@ -122,8 +122,8 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/bin/linux_arm64/opentelemetry-jmx-metrics.jar
 
-docker-build: build-for-docker-amd64 build-for-docker-arm64
-	docker buildx build --platform linux/amd64,linux/arm64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t $(IMAGE)
+docker-build: build-for-docker-amd64
+	docker buildx build --platform linux/amd64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t $(IMAGE)
 
 docker-build-amd64: build-for-docker-amd64
 	docker buildx build --platform linux/amd64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t $(IMAGE) --load

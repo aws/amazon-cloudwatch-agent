@@ -599,6 +599,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					{"ClusterName"},
 					{"ClusterName", "Namespace", "PodName", "ContainerName"},
 					{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "ElasticNetworkInterfaceId"},
 				},
 				MetricNameSelectors: []string{
 					"container_efa_rx_bytes",
@@ -616,6 +617,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					{"ClusterName", "Namespace", "Service"},
 					{"ClusterName", "Namespace", "PodName"},
 					{"ClusterName", "Namespace", "PodName", "FullPodName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "ElasticNetworkInterfaceId"},
 				},
 				MetricNameSelectors: []string{
 					"pod_efa_rx_bytes",
@@ -630,6 +632,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				Dimensions: [][]string{
 					{"ClusterName"},
 					{"ClusterName", "NodeName", "InstanceId"},
+					{"ClusterName", "NodeName", "InstanceId", "ElasticNetworkInterfaceId"},
 				},
 				MetricNameSelectors: []string{
 					"node_efa_rx_bytes",
