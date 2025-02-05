@@ -135,4 +135,4 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+            cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
