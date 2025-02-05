@@ -77,10 +77,10 @@ var (
 				awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 				if err == nil {
 					value = awsAuth != nil
-
-					// Get workload type
-					workloadType = eksDetector.getWorkloadType()
 				}
+
+				// Get workload type
+				workloadType = eksDetector.getWorkloadType()
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Workload: workloadType, Err: errors}
 		})
