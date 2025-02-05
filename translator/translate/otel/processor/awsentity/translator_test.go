@@ -20,6 +20,7 @@ func TestTranslate(t *testing.T) {
 		input          map[string]interface{}
 		mode           string
 		kubernetesMode string
+		envClusterName string
 		want           *awsentity.Config
 	}{
 		"OnlyProfile": {
@@ -35,6 +36,74 @@ func TestTranslate(t *testing.T) {
 			kubernetesMode: config.ModeEKS,
 			want: &awsentity.Config{
 				ClusterName:    "test",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"KubernetesUnderLogs": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "ci-logs",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			want: &awsentity.Config{
+				ClusterName:    "ci-logs",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"EnvVar": {
+			input:          map[string]interface{}{},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			envClusterName: "env-cluster",
+			want: &awsentity.Config{
+				ClusterName:    "env-cluster",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"AppSignalsPrecedence": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "ci-logs",
+						},
+					},
+				}},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			want: &awsentity.Config{
+				ClusterName:    "test",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"KubernetesPrecedence": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "ci-logs",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			envClusterName: "env-cluster",
+			want: &awsentity.Config{
+				ClusterName:    "ci-logs",
 				KubernetesMode: config.ModeEKS,
 				Platform:       config.ModeEC2,
 			},
@@ -55,6 +124,11 @@ func TestTranslate(t *testing.T) {
 				ecsutil.GetECSUtilSingleton().Region = ""
 				context.CurrentContext().SetMode(testCase.mode)
 				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			}
+			if testCase.envClusterName != "" {
+				t.Setenv("K8S_CLUSTER_NAME", testCase.envClusterName)
+			} else {
+				t.Setenv("K8S_CLUSTER_NAME", "")
 			}
 			tt := NewTranslator()
 			assert.Equal(t, "awsentity", tt.ID().String())
