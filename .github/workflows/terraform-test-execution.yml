@@ -1,0 +1,112 @@
+name: Terraform Test Execution
+env:
+    PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+    TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+    TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+    S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+    KEY_NAME: ${{ secrets.KEY_NAME }}
+    ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+    CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+    CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+    CWA_GITHUB_TEST_REPO_BRANCH: "main"
+    TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+    S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+    TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+    S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+on:
+  workflow_call:
+    inputs:
+      terraform_vars:
+        required: true
+        type: string
+        description: 'JSON string of terraform variables from GenerateTestMatrix'
+      terraform_dir:
+        required: false
+        type: string
+        description: 'Override path to terraform directory. If not set, uses terraform_dir from matrix'
+      needs_ecr:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether ECR login is needed'
+      max_attempts:
+        required: false
+        type: number
+        default: 3
+        description: 'Maximum number of retry attempts'
+      timeout_minutes:
+        required: false
+        type: number
+        default: 30
+        description: 'Timeout in minutes'
+      retry_wait_seconds:
+        required: false
+        type: number
+        default: 5
+        description: 'Wait time between retries in seconds'
+
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(inputs.terraform_vars) }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: 14400
+
+      - name: Setup ECR
+        if: inputs.needs_ecr
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Operations
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: ${{ inputs.max_attempts }}
+          timeout_minutes: ${{ inputs.timeout_minutes }}
+          retry_wait_seconds: ${{ inputs.retry_wait_seconds }}
+          command: |
+            # Use terraform_dir from input if provided, otherwise from matrix
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            elif [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/deployment
+            fi
+            
+            terraform init
+            
+            # Build all vars from matrix
+            VARS=$(echo '${{ toJSON(matrix.arrays) }}' | jq -r 'to_entries | map("-var=\"\(.key)=\(.value)\"") | join(" ")')
+            
+            if terraform apply --auto-approve $VARS; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve
+              exit 1
+            fi
+
+      - name: Cleanup on failure
+        if: failure() || cancelled()
+        run: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            elif [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/deployment
+            fi
+            terraform destroy --auto-approve
