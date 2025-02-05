@@ -87,9 +87,7 @@ func Test_getWorkloadType_EnvNotSet(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	testDetector := &EksDetector{Clientset: client}
 
-	workloadType, err := testDetector.getWorkloadType()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "POD_NAME/K8S_NAMESPACE environment variables not set")
+	workloadType := testDetector.getWorkloadType()
 	assert.Equal(t, "", workloadType)
 }
 
@@ -100,8 +98,7 @@ func Test_getWorkloadType_PodNotFound(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	testDetector := &EksDetector{Clientset: client}
 
-	workloadType, err := testDetector.getWorkloadType()
-	assert.Error(t, err)
+	workloadType := testDetector.getWorkloadType()
 	assert.Equal(t, "", workloadType)
 }
 
@@ -128,8 +125,7 @@ func Test_getWorkloadType_DaemonSet(t *testing.T) {
 	client := fake.NewSimpleClientset(pod)
 	testDetector := &EksDetector{Clientset: client}
 
-	workloadType, err := testDetector.getWorkloadType()
-	assert.NoError(t, err)
+	workloadType := testDetector.getWorkloadType()
 	assert.Equal(t, "DaemonSet", workloadType)
 }
 
@@ -156,8 +152,7 @@ func Test_getWorkloadType_StatefulSet(t *testing.T) {
 	client := fake.NewSimpleClientset(pod)
 	testDetector := &EksDetector{Clientset: client}
 
-	workloadType, err := testDetector.getWorkloadType()
-	assert.NoError(t, err)
+	workloadType := testDetector.getWorkloadType()
 	assert.Equal(t, "StatefulSet", workloadType)
 }
 
@@ -184,8 +179,7 @@ func Test_getWorkloadType_ReplicaSet(t *testing.T) {
 	client := fake.NewSimpleClientset(pod)
 	testDetector := &EksDetector{Clientset: client}
 
-	workloadType, err := testDetector.getWorkloadType()
-	assert.NoError(t, err)
+	workloadType := testDetector.getWorkloadType()
 	assert.Equal(t, "Deployment", workloadType)
 }
 
@@ -206,8 +200,7 @@ func Test_getWorkloadType_Empty(t *testing.T) {
 	client := fake.NewSimpleClientset(pod)
 	testDetector := &EksDetector{Clientset: client}
 
-	workloadType, err := testDetector.getWorkloadType()
-	assert.NoError(t, err)
+	workloadType := testDetector.getWorkloadType()
 	assert.Equal(t, "", workloadType)
 }
 

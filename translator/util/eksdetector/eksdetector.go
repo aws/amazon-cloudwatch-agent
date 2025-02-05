@@ -18,7 +18,7 @@ import (
 
 type Detector interface {
 	getConfigMap(namespace string, name string) (map[string]string, error)
-	getWorkloadType() (string, error)
+	getWorkloadType() string
 }
 
 type EksDetector struct {
@@ -77,10 +77,10 @@ var (
 				awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 				if err == nil {
 					value = awsAuth != nil
-				}
 
-				// Get workload type
-				workloadType, _ = eksDetector.getWorkloadType()
+					// Get workload type
+					workloadType = eksDetector.getWorkloadType()
+				}
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Workload: workloadType, Err: errors}
 		})
@@ -99,31 +99,33 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 	return configMap.Data, nil
 }
 
-func (d *EksDetector) getWorkloadType() (string, error) {
+func (d *EksDetector) getWorkloadType() string {
 	podName := os.Getenv("POD_NAME")
 	namespace := os.Getenv("K8S_NAMESPACE")
 
 	if podName == "" || namespace == "" {
-		return "", fmt.Errorf("POD_NAME/K8S_NAMESPACE environment variables not set")
+		fmt.Println(fmt.Errorf("POD_NAME/K8S_NAMESPACE environment variables not set").Error())
+		return ""
 	}
 
 	pod, err := d.Clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to get pod: %v", err)
+		fmt.Println(fmt.Errorf("failed to get pod for workload type detection: %v", err).Error())
+		return ""
 	}
 
 	for _, owner := range pod.OwnerReferences {
 		switch owner.Kind {
 		case "DaemonSet":
-			return config.DaemonSet, nil
+			return config.DaemonSet
 		case "StatefulSet":
-			return config.StatefulSet, nil
+			return config.StatefulSet
 		case "ReplicaSet":
-			return config.Deployment, nil
+			return config.Deployment
 		}
 	}
 
-	return "", nil
+	return ""
 }
 
 func getClient() (kubernetes.Interface, error) {
