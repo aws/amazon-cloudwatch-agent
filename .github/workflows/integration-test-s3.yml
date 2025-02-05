@@ -26,7 +26,7 @@ on:
         description: 'The base s3 path for the RPM to run the integration tests for'
         type: string
         required: true
-      test_repo_branch_override:
+      test_repo_branch:
         description: 'Override for the test repo branch (default is main)'
         type: string
 
@@ -59,21 +59,17 @@ jobs:
       - name: SetOutputs
         id: set-outputs
         run: |
-          CWA_GITHUB_TEST_REPO_BRANCH=${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
-          if [ "${{ inputs.test_repo_branch_override }}" != "" ]; then
-            CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch_override }}
-          fi
-
           AGENT_S3_PATH_LINUX=${{ inputs.agent_s3_path }}
           AGENT_S3_PATH_WINDOWS=${AGENT_S3_PATH_LINUX/binary/packaging}
           AGENT_S3_PATH_MAC=${AGENT_S3_PATH_LINUX/binary/packaging}
+          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
 
           echo "AGENT_S3_PATH_LINUX=$AGENT_S3_PATH_LINUX" >> "$GITHUB_OUTPUT"
           echo "AGENT_S3_PATH_WINDOWS=$AGENT_S3_PATH_WINDOWS" >> "$GITHUB_OUTPUT"
           echo "AGENT_S3_PATH_MAC=$AGENT_S3_PATH_MAC" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH=$CWA_GITHUB_TEST_REPO_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_URL }}}" >> "$GITHUB_OUTPUT"
 
       - name: Echo test variables
         run: |
