@@ -42,6 +42,7 @@ func TestEksResolver(t *testing.T) {
 			podToWorkloadAndNamespace: &sync.Map{},
 			ipToServiceAndNamespace:   &sync.Map{},
 			serviceToWorkload:         &sync.Map{},
+			useListPod:                true,
 		}
 
 		ip := "1.2.3.4"
@@ -117,6 +118,7 @@ func TestEksResolver(t *testing.T) {
 			podToWorkloadAndNamespace: &sync.Map{},
 			ipToServiceAndNamespace:   &sync.Map{},
 			serviceToWorkload:         &sync.Map{},
+			useListPod:                true,
 		}
 
 		// Test case 1: "aws.remote.service" contains IP:Port

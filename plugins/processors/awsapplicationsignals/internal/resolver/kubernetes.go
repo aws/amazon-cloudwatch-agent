@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 
@@ -39,18 +40,30 @@ const (
 )
 
 type kubernetesResolver struct {
-	logger                         *zap.Logger
-	clientset                      kubernetes.Interface
-	clusterName                    string
-	platformCode                   string
-	ipToPod                        *sync.Map
-	podToWorkloadAndNamespace      *sync.Map
+	logger       *zap.Logger
+	clientset    kubernetes.Interface
+	clusterName  string
+	platformCode string
+	// if ListPod api is used, the following maps are needed
+	ipToPod                      *sync.Map
+	podToWorkloadAndNamespace    *sync.Map
+	workloadAndNamespaceToLabels *sync.Map
+	workloadPodCount             map[string]int
+
+	// if ListEndpointSlice api is used, the following maps are needed
+	ipToWorkloadAndNamespace *sync.Map
+
+	// if ListService api is used, the following maps are needed
 	ipToServiceAndNamespace        *sync.Map
 	serviceAndNamespaceToSelectors *sync.Map
-	workloadAndNamespaceToLabels   *sync.Map
-	serviceToWorkload              *sync.Map // computed from serviceAndNamespaceToSelectors and workloadAndNamespaceToLabels every 1 min
-	workloadPodCount               map[string]int
-	safeStopCh                     *safeChannel // trace and metric processors share the same kubernetesResolver and might close the same channel separately
+
+	// if ListPod and ListService apis are used, the serviceToWorkload map is computed by ServiceToWorkloadMapper
+	// from serviceAndNamespaceToSelectors and workloadAndNamespaceToLabels every 1 min
+	// if ListEndpointSlice is used, we can get serviceToWorkload directly from endpointSlice watcher
+	serviceToWorkload *sync.Map //
+
+	safeStopCh *safeChannel // trace and metric processors share the same kubernetesResolver and might close the same channel separately
+	useListPod bool
 }
 
 var (
@@ -78,47 +91,89 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 		// jitter calls to the kubernetes api
 		jitterSleep(jitterKubernetesAPISeconds)
 
-		sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-		podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
-		err = podInformer.SetTransform(minimizePod)
-		if err != nil {
-			logger.Error("failed to minimize Pod objects", zap.Error(err))
-		}
-		serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
-		err = serviceInformer.SetTransform(minimizeService)
-		if err != nil {
-			logger.Error("failed to minimize Service objects", zap.Error(err))
-		}
+		useListPod := (os.Getenv("USE_LIST_POD") == "true")
 
-		timedDeleter := &TimedDeleter{Delay: deletionDelay}
-		poWatcher := newPodWatcher(logger, podInformer, timedDeleter)
-		svcWatcher := newServiceWatcher(logger, serviceInformer, timedDeleter)
+		if useListPod {
+			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
+			podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
+			err = podInformer.SetTransform(minimizePod)
+			if err != nil {
+				logger.Error("failed to minimize Pod objects", zap.Error(err))
+			}
+			serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
+			err = serviceInformer.SetTransform(minimizeService)
+			if err != nil {
+				logger.Error("failed to minimize Service objects", zap.Error(err))
+			}
 
-		safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
-		// initialize the pod and service watchers for the cluster
-		poWatcher.run(safeStopCh.ch)
-		svcWatcher.Run(safeStopCh.ch)
-		// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
-		poWatcher.waitForCacheSync(safeStopCh.ch)
-		svcWatcher.waitForCacheSync(safeStopCh.ch)
+			timedDeleter := &TimedDeleter{Delay: deletionDelay}
+			poWatcher := newPodWatcher(logger, podInformer, timedDeleter)
+			svcWatcher := newServiceWatcher(logger, serviceInformer, timedDeleter)
 
-		serviceToWorkload := &sync.Map{}
-		svcToWorkloadMapper := newServiceToWorkloadMapper(svcWatcher.serviceAndNamespaceToSelectors, poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
-		svcToWorkloadMapper.Start(safeStopCh.ch)
+			safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
+			// initialize the pod and service watchers for the cluster
+			poWatcher.run(safeStopCh.ch)
+			svcWatcher.Run(safeStopCh.ch)
+			// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
+			poWatcher.waitForCacheSync(safeStopCh.ch)
+			svcWatcher.waitForCacheSync(safeStopCh.ch)
 
-		instance = &kubernetesResolver{
-			logger:                         logger,
-			clientset:                      clientset,
-			clusterName:                    clusterName,
-			platformCode:                   platformCode,
-			ipToServiceAndNamespace:        svcWatcher.ipToServiceAndNamespace,
-			serviceAndNamespaceToSelectors: svcWatcher.serviceAndNamespaceToSelectors,
-			ipToPod:                        poWatcher.ipToPod,
-			podToWorkloadAndNamespace:      poWatcher.podToWorkloadAndNamespace,
-			workloadAndNamespaceToLabels:   poWatcher.workloadAndNamespaceToLabels,
-			serviceToWorkload:              serviceToWorkload,
-			workloadPodCount:               poWatcher.workloadPodCount,
-			safeStopCh:                     safeStopCh,
+			serviceToWorkload := &sync.Map{}
+			svcToWorkloadMapper := newServiceToWorkloadMapper(svcWatcher.serviceAndNamespaceToSelectors, poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
+			svcToWorkloadMapper.Start(safeStopCh.ch)
+
+			instance = &kubernetesResolver{
+				logger:                         logger,
+				clientset:                      clientset,
+				clusterName:                    clusterName,
+				platformCode:                   platformCode,
+				ipToServiceAndNamespace:        svcWatcher.ipToServiceAndNamespace,
+				serviceAndNamespaceToSelectors: svcWatcher.serviceAndNamespaceToSelectors,
+				ipToPod:                        poWatcher.ipToPod,
+				podToWorkloadAndNamespace:      poWatcher.podToWorkloadAndNamespace,
+				workloadAndNamespaceToLabels:   poWatcher.workloadAndNamespaceToLabels,
+				serviceToWorkload:              serviceToWorkload,
+				workloadPodCount:               poWatcher.workloadPodCount,
+				ipToWorkloadAndNamespace:       nil,
+				safeStopCh:                     safeStopCh,
+				useListPod:                     useListPod,
+			}
+		} else {
+			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
+			serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
+			err = serviceInformer.SetTransform(minimizeService)
+			if err != nil {
+				logger.Error("failed to minimize Service objects", zap.Error(err))
+			}
+
+			timedDeleter := &TimedDeleter{Delay: deletionDelay}
+			svcWatcher := newServiceWatcher(logger, serviceInformer, timedDeleter)
+
+			endptSliceWatcher := newEndpointSliceWatcher(logger, sharedInformerFactory, timedDeleter)
+			safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
+			// initialize the pod and service watchers for the cluster
+			svcWatcher.Run(safeStopCh.ch)
+			endptSliceWatcher.Run(safeStopCh.ch)
+			// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
+			svcWatcher.waitForCacheSync(safeStopCh.ch)
+			endptSliceWatcher.waitForCacheSync(safeStopCh.ch)
+
+			instance = &kubernetesResolver{
+				logger:                       logger,
+				clientset:                    clientset,
+				clusterName:                  clusterName,
+				platformCode:                 platformCode,
+				ipToWorkloadAndNamespace:     endptSliceWatcher.ipToWorkload, // endpointSlice provides pod IP → workload mapping
+				ipToPod:                      nil,
+				podToWorkloadAndNamespace:    nil,
+				workloadAndNamespaceToLabels: nil,
+				workloadPodCount:             nil,
+				ipToServiceAndNamespace:      svcWatcher.ipToServiceAndNamespace,
+				serviceToWorkload:            endptSliceWatcher.serviceToWorkload, // endpointSlice also provides service → workload mapping
+				safeStopCh:                   safeStopCh,
+				useListPod:                   useListPod,
+			}
+
 		}
 	})
 
@@ -133,9 +188,19 @@ func (e *kubernetesResolver) Stop(_ context.Context) error {
 // add a method to kubernetesResolver
 func (e *kubernetesResolver) getWorkloadAndNamespaceByIP(ip string) (string, string, error) {
 	var workload, namespace string
-	if podKey, ok := e.ipToPod.Load(ip); ok {
-		pod := podKey.(string)
-		if workloadKey, ok := e.podToWorkloadAndNamespace.Load(pod); ok {
+
+	if e.useListPod {
+		// use results from pod watcher
+		if podKey, ok := e.ipToPod.Load(ip); ok {
+			pod := podKey.(string)
+			if workloadKey, ok := e.podToWorkloadAndNamespace.Load(pod); ok {
+				workload, namespace = extractResourceAndNamespace(workloadKey.(string))
+				return workload, namespace, nil
+			}
+		}
+	} else {
+		// use results from endpoint slice watcher
+		if workloadKey, ok := e.ipToWorkloadAndNamespace.Load(ip); ok {
 			workload, namespace = extractResourceAndNamespace(workloadKey.(string))
 			return workload, namespace, nil
 		}
@@ -148,7 +213,6 @@ func (e *kubernetesResolver) getWorkloadAndNamespaceByIP(ip string) (string, str
 			return workload, namespace, nil
 		}
 	}
-
 	return "", "", errors.New("no kubernetes workload found for ip: " + ip)
 }
 
