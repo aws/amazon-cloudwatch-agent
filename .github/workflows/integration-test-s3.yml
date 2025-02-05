@@ -28,6 +28,7 @@ on:
       test_repo_branch_override:
         description: 'Override for the test repo branch'
         type: string
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
