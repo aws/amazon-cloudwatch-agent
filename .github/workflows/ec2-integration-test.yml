@@ -40,6 +40,12 @@ on:
         type: string
       s3_integration_bucket:
         type: string
+      agent_s3_path_linux:
+        type: string
+      agent_s3_path_windows:
+        type: string
+      agent_s3_path_mac:
+        type: string
 
 jobs:
   EC2IntegrationTest:
@@ -111,7 +117,12 @@ jobs:
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+              -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
+              -var="agent_s3_path_linux=${{ inputs.agent_s3_path_linux }} \
+              -var="agent_s3_path_windows=${{ inputs.agent_s3_path_windows }} \
+              -var="agent_s3_path_mac=${{ inputs.agent_s3_path_mac }}"; then
+
+              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
             fi
@@ -123,4 +134,5 @@ jobs:
           max_attempts: 2
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+          command: |
+            command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
