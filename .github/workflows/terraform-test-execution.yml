@@ -16,6 +16,10 @@ env:
 on:
   workflow_call:
     inputs:
+      terraform_assume_role:
+        required: true
+        type: string
+        description: 'Terraform assume role to configure creds'
       terraform_vars:
         required: true
         type: string
@@ -59,7 +63,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: us-west-2
           role-duration-seconds: 14400
 

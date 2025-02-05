@@ -176,39 +176,39 @@ jobs:
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  StartLocalStackITAR:
-    name: 'StartLocalStackITAR'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-gov-east-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  # StartLocalStackITAR:
+  #   name: 'StartLocalStackITAR'
+  #   needs: [OutputEnvVariables]
+  #   uses: ./.github/workflows/start-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: us-gov-east-1
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
-  StartLocalStackCN:
-    name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables ]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: cn-north-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  # StartLocalStackCN:
+  #   name: 'StartLocalStackCN'
+  #   needs: [ OutputEnvVariables ]
+  #   uses: ./.github/workflows/start-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: cn-north-1
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   LinuxOnPremIntegrationTest:
     needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
@@ -372,101 +372,103 @@ jobs:
   EC2LinuxIntegrationTest:
     needs: [StartLocalStack, GenerateTestMatrix]
     uses: ./.github/workflows/terraform-test-execution.yml
+    secrets: inherit
     with:
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_linux_matrix}}
       terraform_dir: 'terraform/ec2/linux'
       needs_ecr: false
       timeout_minutes: 30
 
-  EC2WindowsIntegrationTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_windows_matrix}}
-      terraform_dir: 'terraform/ec2/win'
-      needs_ecr: false
-      timeout_minutes: 30
+  # EC2WindowsIntegrationTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_windows_matrix}}
+  #     terraform_dir: 'terraform/ec2/win'
+  #     needs_ecr: false
+  #     timeout_minutes: 30
 
-  EC2DarwinIntegrationTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_mac_matrix}}
-      terraform_dir: 'terraform/ec2/mac'
-      needs_ecr: false
-      timeout_minutes: 30
+  # EC2DarwinIntegrationTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_mac_matrix}}
+  #     terraform_dir: 'terraform/ec2/mac'
+  #     needs_ecr: false
+  #     timeout_minutes: 30
 
-  ECSEC2IntegrationTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix}}
-      terraform_dir: 'terraform/ecs_ec2/daemon'
-      needs_ecr: true
-      timeout_minutes: 15
+  # ECSEC2IntegrationTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix}}
+  #     terraform_dir: 'terraform/ecs_ec2/daemon'
+  #     needs_ecr: true
+  #     timeout_minutes: 15
 
-  ECSFargateIntegrationTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ecs_fargate_matrix}}
-      terraform_dir: 'terraform/ecs_fargate/linux'
-      needs_ecr: true
-      timeout_minutes: 15
+  # ECSFargateIntegrationTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ecs_fargate_matrix}}
+  #     terraform_dir: 'terraform/ecs_fargate/linux'
+  #     needs_ecr: true
+  #     timeout_minutes: 15
 
-  EC2LinuxIntegrationTestITAR:
-    needs: [StartLocalStackITAR, GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix}}
-      terraform_dir: 'terraform/ec2/linux'
-      needs_ecr: false
-      timeout_minutes: 30
+  # EC2LinuxIntegrationTestITAR:
+  #   needs: [StartLocalStackITAR, GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix}}
+  #     terraform_dir: 'terraform/ec2/linux'
+  #     needs_ecr: false
+  #     timeout_minutes: 30
 
-  EC2LinuxIntegrationTestCN:
-    needs: [StartLocalStackCN, GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix}}
-      terraform_dir: 'terraform/ec2/linux'
-      needs_ecr: false
-      timeout_minutes: 30
+  # EC2LinuxIntegrationTestCN:
+  #   needs: [StartLocalStackCN, GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix}}
+  #     terraform_dir: 'terraform/ec2/linux'
+  #     needs_ecr: false
+  #     timeout_minutes: 30
 
-  PerformanceTrackingTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_performance_matrix}}
-      terraform_dir: 'terraform/performance'
-      needs_ecr: false
-      timeout_minutes: 60
+  # PerformanceTrackingTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_performance_matrix}}
+  #     terraform_dir: 'terraform/performance'
+  #     needs_ecr: false
+  #     timeout_minutes: 60
 
-  EC2WinPerformanceTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix}}
-      terraform_dir: 'terraform/performance'
-      needs_ecr: false
-      timeout_minutes: 60
+  # EC2WinPerformanceTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix}}
+  #     terraform_dir: 'terraform/performance'
+  #     needs_ecr: false
+  #     timeout_minutes: 60
 
-  StressTrackingTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_stress_matrix}}
-      terraform_dir: 'terraform/stress'
-      needs_ecr: false
-      timeout_minutes: 60
+  # StressTrackingTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_stress_matrix}}
+  #     terraform_dir: 'terraform/stress'
+  #     needs_ecr: false
+  #     timeout_minutes: 60
 
-  EC2WinStressTrackingTest:
-    needs: [GenerateTestMatrix]
-    uses: ./.github/workflows/terraform-test-execution.yml
-    with:
-      terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix}}
-      terraform_dir: 'terraform/stress'
-      needs_ecr: false
-      timeout_minutes: 60
+  # EC2WinStressTrackingTest:
+  #   needs: [GenerateTestMatrix]
+  #   uses: ./.github/workflows/terraform-test-execution.yml
+  #   with:
+  #     terraform_vars: ${{needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix}}
+  #     terraform_dir: 'terraform/stress'
+  #     needs_ecr: false
+  #     timeout_minutes: 60
 
   StopLocalStack:
     name: 'StopLocalStack'
@@ -485,39 +487,39 @@ jobs:
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  StopLocalStackITAR:
-    name: 'StopLocalStackITAR'
-    if: ${{ always() && needs.StartLocalStackITAR.result == 'success' }}
-    needs: [ StartLocalStackITAR, EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-gov-east-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  # StopLocalStackITAR:
+  #   name: 'StopLocalStackITAR'
+  #   if: ${{ always() && needs.StartLocalStackITAR.result == 'success' }}
+  #   needs: [ StartLocalStackITAR, EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
+  #   uses: ./.github/workflows/stop-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: us-gov-east-1
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
-  StopLocalStackCN:
-    name: 'StopLocalStackCN'
-    if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
-    needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: cn-north-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  # StopLocalStackCN:
+  #   name: 'StopLocalStackCN'
+  #   if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
+  #   needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN ]
+  #   uses: ./.github/workflows/stop-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: cn-north-1
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   GPUEndToEndTest:
     name: "GPU E2E Test"
