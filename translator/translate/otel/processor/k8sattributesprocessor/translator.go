@@ -52,6 +52,6 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	case config.Deployment, config.StatefulSet:
 		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesConfig)
 	default:
-		return nil, fmt.Errorf("k8sattributesprocessor is not supported for workload type: %s", workloadType)
+		return nil, fmt.Errorf("k8sattributesprocessor is not supported for this workload type")
 	}
 }
