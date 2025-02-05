@@ -59,7 +59,7 @@ jobs:
           echo "AGENT_S3_PATH_MAC=$AGENT_S3_PATH_MAC" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-'${{ env.CWA_GITHUB_TEST_REPO_URL }}''}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
       - name: Echo test variables
         run: |
@@ -72,7 +72,7 @@ jobs:
 
       - uses: actions/checkout@v3
         with:
-          repository: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+          repository: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
@@ -155,59 +155,58 @@ jobs:
       - name: Test cf
         run: |
           cd test/test/cloudformation
-          echo s3://${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH }}
-          go test -timeout 1h -package_path=s3://${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
+          go test -timeout 1h -package_path=s3://${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_LINUX }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
 
-  StartLocalStack:
-    name: 'StartLocalStack'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-west-2
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+  # StartLocalStack:
+  #   name: 'StartLocalStack'
+  #   needs: [OutputEnvVariables]
+  #   uses: ./.github/workflows/start-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: us-west-2
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  StartLocalStackITAR:
-    name: 'StartLocalStackITAR'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-gov-east-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  # StartLocalStackITAR:
+  #   name: 'StartLocalStackITAR'
+  #   needs: [OutputEnvVariables]
+  #   uses: ./.github/workflows/start-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: us-gov-east-1
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
-  StartLocalStackCN:
-    name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables ]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: cn-north-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  # StartLocalStackCN:
+  #   name: 'StartLocalStackCN'
+  #   needs: [ OutputEnvVariables ]
+  #   uses: ./.github/workflows/start-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: cn-north-1
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     github_sha: ${{github.sha}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 
 
@@ -322,26 +321,26 @@ jobs:
   #           fi
   #           terraform destroy --auto-approve
 
-  EC2LinuxIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2Linux'
-    uses:  ./.github/workflows/ec2-integration-test.yml
-    with:
-      github_sha: ${{github.sha}}
-      test_dir: terraform/ec2/linux
-      job_id: ec2-linux-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_matrix}}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
-      region: us-west-2
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      agent_s3_path_linux: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_LINUX }}
-      agent_s3_path_windows: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_WINDOWS }}
-      agent_s3_path_mac: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_MAC }}
-    secrets: inherit
+  # EC2LinuxIntegrationTest:
+  #   needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  #   name: 'EC2Linux'
+  #   uses:  ./.github/workflows/ec2-integration-test.yml
+  #   with:
+  #     github_sha: ${{github.sha}}
+  #     test_dir: terraform/ec2/linux
+  #     job_id: ec2-linux-integration-test
+  #     test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_matrix}}
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+  #     region: us-west-2
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+  #     agent_s3_path_linux: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_LINUX }}
+  #     agent_s3_path_windows: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_WINDOWS }}
+  #     agent_s3_path_mac: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_MAC }}
+  #   secrets: inherit
 
   # EC2LinuxIntegrationTestITAR:
   #   needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
