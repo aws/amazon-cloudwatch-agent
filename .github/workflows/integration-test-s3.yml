@@ -39,6 +39,7 @@ jobs:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
+      AGENT_S3_PATH : ${{ steps.set-outputs.outputs.AGENT_S3_PATH }}
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
       CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -173,9 +174,9 @@ jobs:
         run: |
           cd test/test/cloudformation
           echo s3://${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH }}
-  #        go test -timeout 1h -package_path=s3://${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
+          go test -timeout 1h -package_path=s3://${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
 
-  # StartLocalStack:
+ # StartLocalStack:
   #   name: 'StartLocalStack'
   #   needs: [OutputEnvVariables]
   #   uses: ./.github/workflows/start-localstack.yml
