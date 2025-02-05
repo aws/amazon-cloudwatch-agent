@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
@@ -55,8 +54,10 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	ctx := context.CurrentContext()
+
 	// Do not send entity for ECS
-	if context.CurrentContext().RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS() {
+	if ctx.RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS() {
 		return nil, nil
 	}
 
@@ -70,32 +71,22 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ScrapeDatapointAttribute = true
 	}
 
-	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
-	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
-	if !hostedInConfigured {
-		hostedInConfigKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in")
-		hostedIn, hostedInConfigured = common.GetString(conf, hostedInConfigKey)
-	}
-	if common.IsAppSignalsKubernetes() {
-		if !hostedInConfigured {
-			hostedIn = util.GetClusterNameFromEc2Tagger()
-		}
-	}
+	cfg.KubernetesMode = ctx.KubernetesMode()
 
-	//TODO: This logic is more or less identical to what AppSignals does. This should be moved to a common place for reuse
-	ctx := context.CurrentContext()
-	mode := ctx.KubernetesMode()
-	cfg.KubernetesMode = mode
-
-	mode = ctx.Mode()
 	if cfg.KubernetesMode != "" {
-		cfg.ClusterName = hostedIn
+		clusterName, clusterNameConfigured := common.GetHostedIn(conf)
+
+		if !clusterNameConfigured {
+			clusterName = common.GetClusterName(conf)
+		}
+
+		cfg.ClusterName = clusterName
 	}
 
 	// We want to keep platform config variable to be
 	// anything that is non-Kubernetes related so the
 	// processor can perform different logics for EKS
 	// in EC2 or Non-EC2
-	cfg.Platform = mode
+	cfg.Platform = ctx.Mode()
 	return cfg, nil
 }
