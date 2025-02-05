@@ -57,18 +57,18 @@ func TestDetectKubernetesMode(t *testing.T) {
 	}
 }
 
-func TestDetectWorkloadType(t *testing.T) {
+func TestGetWorkloadType(t *testing.T) {
 	t.Run("IsEKS returns an error", func(t *testing.T) {
 		IsEKS = func() eksdetector.IsEKSCache {
 			return eksdetector.IsEKSCache{Err: fmt.Errorf("test error")}
 		}
-		require.Equal(t, "", DetectWorkloadType(), "Expected empty workload when IsEKS returns an error")
+		require.Equal(t, "", GetWorkloadType(), "Expected empty workload when IsEKS returns an error")
 	})
 
 	t.Run("IsEKS returns a valid workload", func(t *testing.T) {
 		IsEKS = func() eksdetector.IsEKSCache {
 			return eksdetector.IsEKSCache{Err: nil, Workload: "DaemonSet"}
 		}
-		require.Equal(t, "DaemonSet", DetectWorkloadType(), "Expected workload 'DaemonSet' when IsEKS returns no error")
+		require.Equal(t, "DaemonSet", GetWorkloadType(), "Expected workload 'DaemonSet' when IsEKS returns no error")
 	})
 }

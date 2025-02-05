@@ -66,7 +66,7 @@ func initFlags() {
 	mode := translatorUtil.DetectAgentMode(*inputMode)
 	ctx.SetMode(mode)
 	ctx.SetKubernetesMode(translatorUtil.DetectKubernetesMode(mode))
-	ctx.SetWorkloadType(translatorUtil.DetectWorkloadType())
+	ctx.SetWorkloadType(translatorUtil.GetWorkloadType())
 }
 
 /**

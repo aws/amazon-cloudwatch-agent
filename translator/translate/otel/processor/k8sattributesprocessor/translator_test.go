@@ -98,7 +98,7 @@ func TestTranslate(t *testing.T) {
 			mode:           config.ModeEC2,
 			kubernetesMode: "",
 			workloadType:   "Unknown",
-			wantErr:        fmt.Errorf("k8sattributesprocessor is not supported in this context"),
+			wantErr:        fmt.Errorf("k8sattributesprocessor is only supported on kubernetes"),
 		},
 		"Unknown": {
 			input:          map[string]interface{}{},

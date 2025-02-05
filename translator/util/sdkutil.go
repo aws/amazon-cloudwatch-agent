@@ -80,7 +80,7 @@ func DetectKubernetesMode(configuredMode string) string {
 
 }
 
-func DetectWorkloadType() string {
+func GetWorkloadType() string {
 	isEKS := IsEKS()
 
 	if isEKS.Err != nil {

@@ -17,11 +17,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-//go:embed k8sattributes_agent.yaml
-var k8sAttributesAgentConfig string
+//go:embed k8sattributes_nodefilter.yaml
+var k8sAttributesNodeFilterConfig string
 
-//go:embed k8sattributes_gateway.yaml
-var k8sAttributesGatewayConfig string
+//go:embed k8sattributes.yaml
+var k8sAttributesConfig string
 
 type translator struct {
 	name    string
@@ -43,14 +43,14 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	currentContext := context.CurrentContext()
 
 	if currentContext.KubernetesMode() == "" {
-		return nil, fmt.Errorf("k8sattributesprocessor is not supported in this context")
+		return nil, fmt.Errorf("k8sattributesprocessor is only supported on kubernetes")
 	}
 
 	switch workloadType := currentContext.WorkloadType(); workloadType {
 	case config.DaemonSet:
-		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesAgentConfig)
+		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesNodeFilterConfig)
 	case config.Deployment, config.StatefulSet:
-		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesGatewayConfig)
+		return common.GetYamlFileToYamlConfig(cfg, k8sAttributesConfig)
 	default:
 		return nil, fmt.Errorf("k8sattributesprocessor is not supported for workload type: %s", workloadType)
 	}
