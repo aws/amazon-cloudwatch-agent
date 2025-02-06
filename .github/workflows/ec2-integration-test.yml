@@ -121,7 +121,6 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="user=${{ matrix.arrays.username }}"; then
-
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1

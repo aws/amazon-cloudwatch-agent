@@ -210,116 +210,119 @@ jobs:
 
 
 
-  # EC2NvidiaGPUIntegrationTest:
-  #   needs: [ StartLocalStack, GenerateTestMatrix ]
-  #   name: 'EC2NVIDIAGPUIntegrationTest'
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_gpu_matrix) }}
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-  #         ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+  EC2NvidiaGPUIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2NVIDIAGPUIntegrationTest'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_gpu_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-  #         aws-region: us-west-2
-  #         role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-  #     - name: Echo Test Info
-  #       run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
-  #     - name: Install Terraform
-  #       uses: hashicorp/setup-terraform@v3
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
-  #     - name: Verify Terraform version
-  #       run: terraform --version
+      - name: Verify Terraform version
+        run: terraform --version
 
-  #     # nick-fields/retry@v2 starts at base dir
-  #     - name: Terraform apply
-  #       if: ${{ matrix.arrays.family == 'linux' }}
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 30
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/ec2/linux
-  #           fi
+      # nick-fields/retry@v2 starts at base dir
+      - name: Terraform apply
+        if: ${{ matrix.arrays.family == 'linux' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
 
-  #           terraform init
-  #           if terraform apply --auto-approve \
-  #             -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-  #             -var="test_name=${{ matrix.arrays.os }}" \
-  #             -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-  #             -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
-  #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-  #             -var="user=${{ matrix.arrays.username }}" \
-  #             -var="ami=${{ matrix.arrays.ami }}" \
-  #             -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-  #             -var="arc=${{ matrix.arrays.arc }}" \
-  #             -var="binary_name=${{ matrix.arrays.binaryName }}" \
-  #             -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
-  #             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-  #             -var="ssh_key_name=${KEY_NAME}" \
-  #             -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-  #           else
-  #             terraform destroy -auto-approve && exit 1
-  #           fi
-  #     - name: Terraform apply
-  #       if: ${{ matrix.arrays.family == 'window' }}
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 30
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/ec2/win
-  #           fi
-  #           terraform init
-  #           if terraform apply --auto-approve \
-  #             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
-  #             -var="github_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-  #             -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
-  #             -var="test_dir=${{ matrix.arrays.test_dir }}" \
-  #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-  #             -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-  #             -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
-  #             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
-  #           else
-  #             terraform destroy -auto-approve && exit 1
-  #           fi
-  #     #This is here just in case workflow cancel
-  #     - name: Terraform destroy
-  #       if: ${{ cancelled() || failure() }}
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 8
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           elif if "${{ matrix.arrays.os }}" == window; then
-  #             cd terraform/ec2/win
-  #           else
-  #             cd terraform/ec2/linux
-  #           fi
-  #           terraform destroy --auto-approve
+            terraform init
+            if terraform apply --auto-approve \
+              -var="agent_s3_path_linux=${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_LINUX }}" \
+              -var="agent_s3_path_mac=${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_MAC }}" \
+              -var="agent_s3_path_windows=${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_WINDOWS }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      - name: Terraform apply
+        if: ${{ matrix.arrays.family == 'window' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
+              -var="github_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            elif if "${{ matrix.arrays.os }}" == window; then
+              cd terraform/ec2/win
+            else
+              cd terraform/ec2/linux
+            fi
+            terraform destroy --auto-approve
 
   EC2LinuxIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
@@ -379,98 +382,103 @@ jobs:
   #   secrets: inherit
 
 
-  # LinuxOnPremIntegrationTest:
-  #   needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
-  #   name: 'OnpremLinux'
-  #   uses: ./.github/workflows/ec2-integration-test.yml
-  #   with:
-  #     github_sha: ${{github.sha}}
-  #     test_dir: terraform/ec2/linux_onprem
-  #     job_id: linux-onprem-integration-test
-  #     test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
-  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-  #     localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
-  #     region: us-west-2
-  #   secrets: inherit
+  LinuxOnPremIntegrationTest:
+    needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
+    name: 'OnpremLinux'
+    uses: ./.github/workflows/ec2-integration-test.yml
+    with:
+      github_sha: ${{github.sha}}
+      test_dir: terraform/ec2/linux_onprem
+      job_id: linux-onprem-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      agent_s3_path_linux: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_LINUX }}
+      agent_s3_path_windows: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_WINDOWS }}
+      agent_s3_path_mac: ${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_MAC }}
+    secrets: inherit
 
-  # EC2WinIntegrationTest:
-  #   needs: [GenerateTestMatrix]
-  #   name: 'EC2WinIntegrationTest'
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-  #         ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+  EC2WinIntegrationTest:
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    name: 'EC2WinIntegrationTest'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-  #         aws-region: us-west-2
-  #         role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-  #     - name: Echo Test Info
-  #       run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
 
-  #     - name: Install Terraform
-  #       uses: hashicorp/setup-terraform@v3
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
-  #     - name: Verify Terraform version
-  #       run: terraform --version
+      - name: Verify Terraform version
+        run: terraform --version
 
-  #       # nick-fields/retry@v2 starts at base dir
-  #     - name: Terraform apply
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 30
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/ec2/win
-  #           fi
-  #           terraform init
-  #           if terraform apply --auto-approve \
-  #           -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-  #           -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
-  #           -var="test_name=${{ matrix.arrays.os }}" \
-  #           -var="cwa_github_sha=${GITHUB_SHA}"  \
-  #           -var="test_dir=${{ matrix.arrays.test_dir }}" \
-  #           -var="ami=${{ matrix.arrays.ami }}" \
-  #           -var="use_ssm=${{ matrix.arrays.useSSM }}" \
-  #           -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
-  #             terraform destroy -auto-approve
-  #           else
-  #             terraform destroy -auto-approve && exit 1
-  #           fi
+        # nick-fields/retry@v2 starts at base dir
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${GITHUB_SHA}"  \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="use_ssm=${{ matrix.arrays.useSSM }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="agent_s3_path_windows=${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_WINDOWS }}"; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
 
-  #     #This is here just in case workflow cancel
-  #     - name: Terraform destroy
-  #       if: ${{ cancelled() || failure() }}
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 8
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/ec2/win
-  #           fi
-  #           terraform destroy --auto-approve
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+            terraform destroy --auto-approve
 
   # EC2DarwinIntegrationTest:
   #   needs: [GenerateTestMatrix]
@@ -1147,99 +1155,99 @@ jobs:
   #         retry_wait_seconds: 5
   #         command: cd terraform/stress && terraform destroy --auto-approve
 
-  # GPUEndToEndTest:
-  #   name: "GPU E2E Test"
-  #   needs: [ GenerateTestMatrix, OutputEnvVariables ]
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_addon_matrix) }}
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-  #         ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+  GPUEndToEndTest:
+    name: "GPU E2E Test"
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_addon_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-  #         aws-region: us-west-2
-  #         role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-  #     - name: Install Terraform
-  #       uses: hashicorp/setup-terraform@v3
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
-  #     - name: Verify Terraform version
-  #       run: terraform --version
+      - name: Verify Terraform version
+        run: terraform --version
 
-  #     - name: Terraform apply and setup
-  #       run: |
-  #         if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #           cd "${{ matrix.arrays.terraform_dir }}"
-  #         else
-  #           cd terraform/eks/addon/gpu
-  #         fi
+      - name: Terraform apply and setup
+        run: |
+          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+            cd "${{ matrix.arrays.terraform_dir }}"
+          else
+            cd terraform/eks/addon/gpu
+          fi
 
-  #         terraform init
-  #         if terraform apply --auto-approve \
-  #           -var="beta=true" \
-  #           -var="ami_type=${{ matrix.arrays.ami }}" \
-  #           -var="instance_type=${{ matrix.arrays.instanceType }}" \
-  #           -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
-  #           echo "Terraform apply successful."
+          terraform init
+          if terraform apply --auto-approve \
+            -var="beta=true" \
+            -var="ami_type=${{ matrix.arrays.ami }}" \
+            -var="instance_type=${{ matrix.arrays.instanceType }}" \
+            -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
+            echo "Terraform apply successful."
 
-  #           # Capture the output
-  #           echo "Getting EKS cluster name"
-  #           EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
-  #           echo "Cluster name is ${EKS_CLUSTER_NAME}"
-  #           kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml
-  #           kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
-  #           # wait nvidia device plugin to be ready
-  #           sleep 10
-  #           kubectl apply -f ./gpuBurner.yaml
-  #         else
-  #           terraform destroy -auto-approve && exit 1
-  #         fi
+            # Capture the output
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
+            kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml
+            kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
+            # wait nvidia device plugin to be ready
+            sleep 10
+            kubectl apply -f ./gpuBurner.yaml
+          else
+            terraform destroy -auto-approve && exit 1
+          fi
 
-  #     - name: Run Go tests with retry
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 5
-  #         timeout_minutes: 60
-  #         retry_wait_seconds: 30
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/eks/addon/gpu
-  #           fi
-  #           echo "Getting EKS cluster name"
-  #           EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
-  #           echo "Cluster name is ${EKS_CLUSTER_NAME}"
+      - name: Run Go tests with retry
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 5
+          timeout_minutes: 60
+          retry_wait_seconds: 30
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/addon/gpu
+            fi
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
 
-  #           if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia -useE2EMetrics; then
-  #             echo "Tests passed"
-  #           else
-  #             echo "Tests failed"
-  #             exit 1
-  #           fi
+            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia -useE2EMetrics; then
+              echo "Tests passed"
+            else
+              echo "Tests failed"
+              exit 1
+            fi
 
-  #     - name: Terraform destroy
-  #       if: always()
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 8
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/eks/addon/gpu
-  #           fi
-  #           terraform destroy -auto-approve
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/addon/gpu
+            fi
+            terraform destroy -auto-approve
