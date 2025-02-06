@@ -152,6 +152,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			}
 			if serviceNameAttr, ok := resourceAttrs.Get(attributeServiceName); ok {
 				serviceName = serviceNameAttr.Str()
+				entityServiceNameSource = entitystore.ServiceNameSourceInstrumentation
 			}
 			if environmentNameAttr, ok := resourceAttrs.Get(attributeDeploymentEnvironment); ok {
 				environmentName = environmentNameAttr.Str()
