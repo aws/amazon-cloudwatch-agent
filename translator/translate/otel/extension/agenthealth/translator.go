@@ -35,10 +35,10 @@ var (
 type Name string
 
 var (
-	MetricsName    Name = Name(pipeline.SignalMetrics.String())
-	LogsName       Name = Name(pipeline.SignalLogs.String())
-	TracesName     Name = Name(pipeline.SignalTraces.String())
-	StatusCodeName Name = Name("statuscode")
+	MetricsName    = Name(pipeline.SignalMetrics.String())
+	LogsName       = Name(pipeline.SignalLogs.String())
+	TracesName     = Name(pipeline.SignalTraces.String())
+	StatusCodeName = Name("statuscode")
 )
 
 type translator struct {
