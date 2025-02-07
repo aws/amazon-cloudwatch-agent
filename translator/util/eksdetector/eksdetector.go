@@ -6,6 +6,7 @@ package eksdetector
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,7 @@ import (
 
 type Detector interface {
 	getConfigMap(namespace string, name string) (map[string]string, error)
+	getServerVersion() (string, error)
 }
 
 type EksDetector struct {
@@ -67,10 +69,17 @@ var (
 			}
 
 			if eksDetector != nil {
-				// Make HTTP GET request
-				awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
+				// Check server version
+				serverVersion, err := eksDetector.getServerVersion()
 				if err == nil {
-					value = awsAuth != nil
+					fmt.Println("Server version: ", serverVersion)
+					value = strings.Contains(strings.ToLower(serverVersion), "eks")
+				} else {
+					// Make HTTP GET request
+					awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
+					if err == nil {
+						value = awsAuth != nil
+					}
 				}
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Err: errors}
@@ -88,6 +97,15 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 	}
 
 	return configMap.Data, nil
+}
+
+func (d *EksDetector) getServerVersion() (string, error) {
+	version, err := d.Clientset.Discovery().ServerVersion()
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve server version: %w", err)
+	}
+
+	return version.GitVersion, nil
 }
 
 func getClient() (kubernetes.Interface, error) {
