@@ -11,7 +11,7 @@ env:
 on:
   workflow_call:
     inputs:
-      github_sha:
+      build_id:
         required: true
         type: string
       test_repo_name:
@@ -39,12 +39,6 @@ on:
       terraform_assume_role:
         type: string
       s3_integration_bucket:
-        type: string
-      agent_s3_path_linux:
-        type: string
-      agent_s3_path_windows:
-        type: string
-      agent_s3_path_mac:
         type: string
 
 jobs:
@@ -98,15 +92,12 @@ jobs:
 
             terraform init
             if terraform apply --auto-approve \
-              -var="agent_s3_path_linux=${{ inputs.agent_s3_path_linux }}" \
-              -var="agent_s3_path_mac=${{ inputs.agent_s3_path_mac }}" \
-              -var="agent_s3_path_windows=${{ inputs.agent_s3_path_windows }}" \
               -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-              -var="cwa_github_sha=${{inputs.github_sha}}" \
+              -var="cwa_github_sha=${{inputs.build_id}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="github_test_repo=${{ inputs.test_repo_url }}" \

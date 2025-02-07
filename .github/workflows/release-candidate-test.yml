@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run Integration Tests on S3
+name: Run Integration Tests for Release Candidate
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -29,6 +29,7 @@ on:
       test_repo_branch:
         description: 'Override for the test repo branch (default is main)'
         type: string
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -54,6 +55,9 @@ jobs:
 
       - name: Echo test variables
         run: |
+          echo "AGENT_S3_PATH_LINUX: ${{ steps.set-outputs.outputs.AGENT_S3_PATH_LINUX }}"
+          echo "AGENT_S3_PATH_WINDOWS: ${{ steps.set-outputs.outputs.AGENT_S3_PATH_WINDOWS }}"
+          echo "AGENT_S3_PATH_MAC: ${{ steps.set-outputs.outputs.AGENT_S3_PATH_MAC }}"
           echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
           echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
@@ -149,7 +153,7 @@ jobs:
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{inputs.build_id}}
+      github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   # StartLocalStackITAR:
@@ -166,7 +170,7 @@ jobs:
   #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
   #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   # StartLocalStackCN:
@@ -183,7 +187,7 @@ jobs:
   #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
   #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
   #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 
@@ -325,7 +329,7 @@ jobs:
   #   name: 'EC2LinuxITAR'
   #   uses: ./.github/workflows/ec2-integration-test.yml
   #   with:
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     test_dir: terraform/ec2/linux
   #     job_id: ec2-linux-integration-test
   #     test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix}}
@@ -343,7 +347,7 @@ jobs:
   #   name: 'EC2LinuxCN'
   #   uses: ./.github/workflows/ec2-integration-test.yml
   #   with:
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     test_dir: terraform/ec2/linux
   #     job_id: ec2-linux-integration-test
   #     test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix}}
@@ -362,7 +366,7 @@ jobs:
   #   name: 'OnpremLinux'
   #   uses: ./.github/workflows/ec2-integration-test.yml
   #   with:
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     test_dir: terraform/ec2/linux_onprem
   #     job_id: linux-onprem-integration-test
   #     test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
@@ -534,7 +538,7 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -545,7 +549,7 @@ jobs:
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      github_sha: ${{inputs.build_id}}
+      github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   # StopLocalStackITAR:
@@ -562,7 +566,7 @@ jobs:
   #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
   #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
   #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   # StopLocalStackCN:
@@ -579,7 +583,7 @@ jobs:
   #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
   #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
   #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  #     github_sha: ${{inputs.build_id}}
+  #     github_sha: ${{github.sha}}
   #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   # ECSEC2IntegrationTest:
@@ -634,7 +638,7 @@ jobs:
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
   #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
   #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
-  #             -var="cwagent_image_tag=${{ inputs.build_id }}"\
+  #             -var="cwagent_image_tag=${{ github.sha }}"\
   #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
   #             -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
   #             -var="ami=${{ matrix.arrays.ami }}" ; then
@@ -709,7 +713,7 @@ jobs:
   #           if terraform apply --auto-approve\
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
   #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
-  #             -var="cwagent_image_tag=${{ inputs.build_id }}"; then
+  #             -var="cwagent_image_tag=${{ github.sha }}"; then
   #             terraform destroy -auto-approve
   #           else
   #             terraform destroy -auto-approve && exit 1
@@ -780,7 +784,7 @@ jobs:
   #           if terraform apply --auto-approve \
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
   #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-  #             -var="cwagent_image_tag=${{ inputs.build_id }}" \
+  #             -var="cwagent_image_tag=${{ github.sha }}" \
   #             -var="ami_type=${{ matrix.arrays.ami }}" \
   #             -var="instance_type=${{ matrix.arrays.instanceType }}" \
   #             -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
@@ -855,7 +859,7 @@ jobs:
   #           if terraform apply --auto-approve \
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
   #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-  #             -var="cwagent_image_tag=${{ inputs.build_id }}" \
+  #             -var="cwagent_image_tag=${{ github.sha }}" \
   #             -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
   #             terraform destroy -auto-approve
   #           else
@@ -1184,7 +1188,7 @@ jobs:
   #           EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
   #           echo "Cluster name is ${EKS_CLUSTER_NAME}"
   #           kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml
-  #           kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ inputs.build_id }}}]'
+  #           kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
   #           # wait nvidia device plugin to be ready
   #           sleep 10
   #           kubectl apply -f ./gpuBurner.yaml
