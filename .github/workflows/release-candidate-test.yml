@@ -94,6 +94,14 @@ jobs:
       - name: Download Artifacts
         id: download-artifacts
         run: |
-          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/windows/amd64/${{ inputs.build_id }} .
-          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/linux/amd64/${{ inputs.build_id }} .
-          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/darwin/amd64/${{ inputs.build_id }} .
+          mkdir -p windows/amd64/
+          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/windows/amd64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./windows/amd64/
+
+          mkdir -p linux/amd64
+          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/linux/amd64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./linux/amd64
+
+          mkdir -p linux/arm64
+          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/linux/arm64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./linux/arm64
+
+          mkdir -p darwin/amd64
+          aws s3 cp --no-progress s3://amazon-cloud-watch-agent/darwin/amd64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./darwin/amd64
