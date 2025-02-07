@@ -127,7 +127,7 @@ jobs:
           pushd linux/arm64
           unzip AmazonCloudWatchAgent.zip
           aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
           popd
 
           pushd darwin/amd64
