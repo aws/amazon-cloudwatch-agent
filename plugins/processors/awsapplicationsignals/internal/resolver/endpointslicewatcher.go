@@ -91,14 +91,15 @@ func (w *endpointSliceWatcher) waitForCacheSync(stopCh chan struct{}) {
 func (w *endpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.EndpointSlice) []kvPair {
 	var pairs []kvPair
 
+	isFirstPod := true
 	for _, endpoint := range slice.Endpoints {
-		podName := ""
-		ns := ""
 		if endpoint.TargetRef != nil {
-			if endpoint.TargetRef.Kind == "Pod" {
-				podName = endpoint.TargetRef.Name
+			if endpoint.TargetRef.Kind != "Pod" {
+				continue
 			}
-			ns = endpoint.TargetRef.Namespace
+
+			podName := endpoint.TargetRef.Name
+			ns := endpoint.TargetRef.Namespace
 
 			derivedWorkload := inferWorkloadName(podName)
 			if derivedWorkload == "" {
@@ -128,31 +129,21 @@ func (w *endpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 					}
 				}
 			}
-		}
 
-	}
-
-	// Service reference: "kubernetes.io/service-name"
-	svcName := slice.Labels["kubernetes.io/service-name"]
-	if svcName != "" {
-		svcFull := svcName + "@" + slice.Namespace
-
-		// If there's at least one endpoint, derive the workload from it
-		if len(slice.Endpoints) > 0 {
-			if endpoint := slice.Endpoints[0]; endpoint.TargetRef != nil {
-				derived := inferWorkloadName(endpoint.TargetRef.Name)
-				if derived == "" {
-					w.logger.Warn("failed to infer workload name from Pod name", zap.String("podName", endpoint.TargetRef.Name))
-				} else {
-					firstWl := derived + "@" + endpoint.TargetRef.Namespace
+			// Build service name -> "workload@namespace" pair from the first pod
+			if isFirstPod {
+				svcName := slice.Labels["kubernetes.io/service-name"]
+				if svcName != "" {
+					isFirstPod = false
 					pairs = append(pairs, kvPair{
-						key:       svcFull,
-						value:     firstWl,
+						key:       svcName + "@" + ns,
+						value:     fullWl,
 						isService: true,
 					})
 				}
 			}
 		}
+
 	}
 
 	return pairs
@@ -169,7 +160,7 @@ func (w *endpointSliceWatcher) handleSliceAdd(obj interface{}) {
 	pairs := w.extractEndpointSliceKeyValuePairs(newSlice)
 
 	// Insert them into our ipToWorkload / serviceToWorkload, and track the keys.
-	var keys []string
+	keys := make([]string, 0, len(pairs))
 	for _, kv := range pairs {
 		if kv.isService {
 			w.serviceToWorkload.Store(kv.key, kv.value)

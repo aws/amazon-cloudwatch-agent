@@ -95,20 +95,10 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 
 		if useListPod {
 			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-			podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
-			err = podInformer.SetTransform(minimizePod)
-			if err != nil {
-				logger.Error("failed to minimize Pod objects", zap.Error(err))
-			}
-			serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
-			err = serviceInformer.SetTransform(minimizeService)
-			if err != nil {
-				logger.Error("failed to minimize Service objects", zap.Error(err))
-			}
-
 			timedDeleter := &TimedDeleter{Delay: deletionDelay}
-			poWatcher := newPodWatcher(logger, podInformer, timedDeleter)
-			svcWatcher := newServiceWatcher(logger, serviceInformer, timedDeleter)
+
+			poWatcher := newPodWatcher(logger, sharedInformerFactory, timedDeleter)
+			svcWatcher := newServiceWatcher(logger, sharedInformerFactory, timedDeleter)
 
 			safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
 			// initialize the pod and service watchers for the cluster
@@ -140,16 +130,11 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 			}
 		} else {
 			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-			serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
-			err = serviceInformer.SetTransform(minimizeService)
-			if err != nil {
-				logger.Error("failed to minimize Service objects", zap.Error(err))
-			}
-
 			timedDeleter := &TimedDeleter{Delay: deletionDelay}
-			svcWatcher := newServiceWatcher(logger, serviceInformer, timedDeleter)
 
+			svcWatcher := newServiceWatcher(logger, sharedInformerFactory, timedDeleter)
 			endptSliceWatcher := newEndpointSliceWatcher(logger, sharedInformerFactory, timedDeleter)
+
 			safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
 			// initialize the pod and service watchers for the cluster
 			svcWatcher.Run(safeStopCh.ch)
