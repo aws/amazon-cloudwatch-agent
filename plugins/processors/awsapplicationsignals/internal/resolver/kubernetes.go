@@ -91,7 +91,7 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 		// jitter calls to the kubernetes api
 		jitterSleep(jitterKubernetesAPISeconds)
 
-		useListPod := (os.Getenv("USE_LIST_POD") == "true")
+		useListPod := (os.Getenv("APP_SIGNALS_USE_LIST_POD") == "true")
 
 		if useListPod {
 			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
