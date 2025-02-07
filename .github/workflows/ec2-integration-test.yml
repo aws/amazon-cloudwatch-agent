@@ -65,13 +65,6 @@ jobs:
           aws-region: ${{inputs.region}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: cache_if_success
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Echo Test Info
         run: |
           echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
@@ -92,7 +85,6 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
@@ -107,9 +99,11 @@ jobs:
 
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${{env.PRIVATE_KEY}}" -var="github_test_repo=${{ inputs.test_repo_url }}" \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
+              -var="github_test_repo=${{ inputs.test_repo_url }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="cwa_github_sha=${{inputs.github_sha}}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="cwa_github_sha=${{inputs.github_sha}}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
