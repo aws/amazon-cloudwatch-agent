@@ -51,7 +51,7 @@ func NewServer(logger *zap.Logger, config *Config) *Server {
 	// Initialize a new cert watcher with cert/key pair
 	watcher, err := tlsInternal.NewCertWatcher(config.TLSCertPath, config.TLSKeyPath, config.TLSCAPath, logger)
 	if err != nil {
-		s.logger.Error("failed to initialize cert watcher", zap.Error(err))
+		s.logger.Debug("failed to initialize cert watcher", zap.Error(err))
 		return s
 	}
 
@@ -86,7 +86,7 @@ func (s *Server) Start(context.Context, component.Host) error {
 		go func() {
 			err := s.httpsServer.ListenAndServeTLS("", "")
 			if err != nil {
-				s.logger.Error("failed to serve and listen", zap.Error(err))
+				s.logger.Debug("failed to serve and listen", zap.Error(err))
 			}
 		}()
 	}

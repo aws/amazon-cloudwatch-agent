@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -139,4 +141,39 @@ func getHostNetworkPorts(pod *corev1.Pod) []string {
 func isIP(ipString string) bool {
 	ip := net.ParseIP(ipString)
 	return ip != nil
+}
+
+// a safe channel which can be closed multiple times
+type safeChannel struct {
+	sync.Mutex
+
+	ch     chan struct{}
+	closed bool
+}
+
+func (sc *safeChannel) Close() {
+	sc.Lock()
+	defer sc.Unlock()
+
+	if !sc.closed {
+		close(sc.ch)
+		sc.closed = true
+	}
+}
+
+// Deleter represents a type that can delete a key from a map after a certain delay.
+type Deleter interface {
+	DeleteWithDelay(m *sync.Map, key interface{})
+}
+
+// TimedDeleter deletes a key after a specified delay.
+type TimedDeleter struct {
+	Delay time.Duration
+}
+
+func (td *TimedDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
+	go func() {
+		time.Sleep(td.Delay)
+		m.Delete(key)
+	}()
 }
