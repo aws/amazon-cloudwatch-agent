@@ -115,27 +115,27 @@ jobs:
         run: |
           pushd windows/amd64/
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp ./amazon-cloudwatch-agent.msi s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/amazon-cloudwatch-agent.msi
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.msi s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/amazon-cloudwatch-agent.msi
           popd
 
           pushd linux/amd64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
-          aws s3 cp ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
           popd
 
           pushd linux/arm64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
-          aws s3 cp ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
           popd
 
           pushd darwin/amd64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
           popd
 
           pushd darwin/arm64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
           popd
