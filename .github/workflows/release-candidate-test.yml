@@ -72,6 +72,11 @@ jobs:
   RepackageReleaseCandidate:
     name: 'RepackageReleaseCandidate'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
