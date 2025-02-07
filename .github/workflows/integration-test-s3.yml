@@ -70,6 +70,7 @@ jobs:
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
+    needs: [OutputEnvVariables]
     runs-on: ubuntu-latest
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
@@ -88,6 +89,16 @@ jobs:
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
     steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
       - name: Generate matrix
         id: set-matrix
         run: |
