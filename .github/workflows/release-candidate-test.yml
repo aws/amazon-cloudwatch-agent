@@ -538,7 +538,8 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    #needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
