@@ -3,22 +3,11 @@
 
 name: Run Integration Tests for Release Candidate
 env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
   S3_RELEASE_BUCKET: amazon-cloud-watch-agent
-  KEY_NAME: ${{ secrets.KEY_NAME }}
-  CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
-  CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
-  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  S3_RELEASE_REPO: cloudwatch-agent
 
 on:
   workflow_dispatch:
@@ -37,39 +26,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  OutputEnvVariables:
-    name: 'OutputEnvVariables'
-    runs-on: ubuntu-latest
-    outputs:
-      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-    steps:
-      - name: SetOutputs
-        id: set-outputs
-        run: |
-          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
-
-          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
-          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
-
-      - name: Echo test variables
-        run: |
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
   RepackageReleaseCandidate:
     name: 'RepackageReleaseCandidate'
     runs-on: ubuntu-latest
@@ -79,12 +35,6 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-          path: test
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -139,3 +89,11 @@ jobs:
           unzip AmazonCloudWatchAgent.zip
           aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
           popd
+
+  StartIntegrationTests:
+    needs: [ RepackageReleaseCandidate ]
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run integration-test-s3.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_id=${{ inputs.build_id }} -f ecr_rest_repo=${{ env.S3_RELEASE_REPO }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

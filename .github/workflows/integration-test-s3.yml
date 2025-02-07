@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run Integration Tests on S3
+name: Run Integration Tests for Artifacts
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -26,8 +26,14 @@ on:
         description: 'The build ID (release candidate build number or GitHub commit SHA)'
         type: string
         required: true
+      artifacts_ecr_registry:
+        description: 'Override for the ECR repository which holds the agent image'
+        type: string
+      artifacts_ecr_repo:
+        description: 'Override for the ECR repository which holds the agent image'
+        type: string
       test_repo_branch:
-        description: 'Override for the test repo branch (default is main)'
+        description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
 
 concurrency:
@@ -47,16 +53,20 @@ jobs:
         id: set-outputs
         run: |
           CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
+          ARTIFACTS_ECR_REPO=${{ inputs.artifacts_ecr_repo
+           }}
 
           echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
+          echo "ARTIFACTS_ECR_REPO=${ARTIFACTS_ECR_REPO:-${{ env.ECR_INTEGRATION_TEST_REPO }}}" >> "$GITHUB_OUTPUT"
 
       - name: Echo test variables
         run: |
           echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
           echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "ARTIFACTS_ECR_REPO: ${{ steps.set-outputs.outputs.ARTIFACTS_ECR_REPO }}"
 
       - uses: actions/checkout@v3
         with:
@@ -617,81 +627,83 @@ jobs:
   #     github_sha: ${{inputs.build_id}}
   #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
-  # ECSEC2IntegrationTest:
-  #   name: 'ECSEC2IntegrationTest'
-  #   runs-on: ubuntu-latest
-  #   needs: [ GenerateTestMatrix ]
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix) }}
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-  #         ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  ECSEC2IntegrationTest:
+    name: 'ECSEC2IntegrationTest'
+    runs-on: ubuntu-latest
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v2
-  #       with:
-  #         role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-  #         aws-region: us-west-2
-  #         role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-  #     - name: Login ECR
-  #       id: login-ecr
-  #       uses: aws-actions/amazon-ecr-login@v2
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registries: ${{ vars.RELEASE_ARTIFACTS_ACCOUNT_ID }}
 
-  #     - name: Install Terraform
-  #       uses: hashicorp/setup-terraform@v3
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
 
-  #     - name: Verify Terraform version
-  #       run: terraform --version
+      - name: Verify Terraform version
+        run: terraform --version
 
-  #     - name: Terraform apply
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 15
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/ecs_ec2/daemon
-  #           fi
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 15
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ecs_ec2/daemon
+            fi
 
-  #           terraform init
-  #           if terraform apply --auto-approve\
-  #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
-  #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
-  #             -var="cwagent_image_tag=${{ inputs.build_id }}"\
-  #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-  #             -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
-  #             -var="ami=${{ matrix.arrays.ami }}" ; then
-  #             terraform destroy -auto-approve
-  #           else
-  #             terraform destroy -auto-approve && exit 1
-  #           fi
+            terraform init
+            if terraform apply --auto-approve\
+              -var="test_dir=${{ matrix.arrays.test_dir }}"\
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ needs.OutputEnvVariables.outputs.ARTIFACTS_ECR_REPO }}"\
+              -var="cwagent_image_tag=${{ inputs.build_id }}"\
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
+              -var="ami=${{ matrix.arrays.ami }}" ; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
 
-  #     - name: Terraform destroy
-  #       if: ${{ cancelled() || failure() }}
-  #       uses: nick-fields/retry@v2
-  #       with:
-  #         max_attempts: 3
-  #         timeout_minutes: 8
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-  #             cd "${{ matrix.arrays.terraform_dir }}"
-  #           else
-  #             cd terraform/ecs_ec2/daemon
-  #           fi
-  #           terraform destroy --auto-approve
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ecs_ec2/daemon
+            fi
+            terraform destroy --auto-approve
 
   # ECSFargateIntegrationTest:
   #   name: 'ECSFargateIntegrationTest'
@@ -743,7 +755,7 @@ jobs:
   #           terraform init
   #           if terraform apply --auto-approve\
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
-  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
+  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ARTIFACTS_ECR_REPO }}"\
   #             -var="cwagent_image_tag=${{ inputs.build_id }}"; then
   #             terraform destroy -auto-approve
   #           else
@@ -814,7 +826,7 @@ jobs:
   #           terraform init
   #           if terraform apply --auto-approve \
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
-  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ARTIFACTS_ECR_REPO }}" \
   #             -var="cwagent_image_tag=${{ inputs.build_id }}" \
   #             -var="ami_type=${{ matrix.arrays.ami }}" \
   #             -var="instance_type=${{ matrix.arrays.instanceType }}" \
@@ -889,7 +901,7 @@ jobs:
   #           terraform init
   #           if terraform apply --auto-approve \
   #             -var="test_dir=${{ matrix.arrays.test_dir }}"\
-  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+  #             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ARTIFACTS_ECR_REPO }}" \
   #             -var="cwagent_image_tag=${{ inputs.build_id }}" \
   #             -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
   #             terraform destroy -auto-approve
@@ -1219,7 +1231,7 @@ jobs:
   #           EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
   #           echo "Cluster name is ${EKS_CLUSTER_NAME}"
   #           kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml
-  #           kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ inputs.build_id }}}]'
+  #           kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ARTIFACTS_ECR_REPO }}:${{ inputs.build_id }}}]'
   #           # wait nvidia device plugin to be ready
   #           sleep 10
   #           kubectl apply -f ./gpuBurner.yaml

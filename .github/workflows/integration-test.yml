@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
+          if [[ ${{ inputs.build_id }} == ${{ github.sha }} ]]; then
             echo "Build SHA matches test SHA"
           else
             echo "Build SHA does not match test SHA"
@@ -157,7 +157,7 @@ jobs:
       - name: Test cf
         run: |
           cd test/test/cloudformation
-          go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ inputs.build_sha }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
+          go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
 
   StartLocalStack:
     name: 'StartLocalStack'
