@@ -1,13 +1,17 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run Integration Tests for Release Candidate
+name: Test Release Candidate
 env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
   S3_RELEASE_BUCKET: amazon-cloud-watch-agent
   S3_RELEASE_REPO: cloudwatch-agent
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
   workflow_dispatch:
@@ -61,7 +65,7 @@ jobs:
           aws s3 cp --no-progress s3://${{ env.S3_RELEASE_BUCKET }}/darwin/arm64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./darwin/arm64
 
       - name: Re-upload Artifacts
-        id: uncompress-artifacts
+        id: upload-artifacts
         run: |
           pushd windows/amd64/
           unzip AmazonCloudWatchAgent.zip
@@ -88,6 +92,46 @@ jobs:
           pushd darwin/arm64
           unzip AmazonCloudWatchAgent.zip
           aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
+          popd
+
+      - name: Configure AWS Credentials (CN)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Re-upload Artifacts (CN)
+        id: upload-artifacts-cn
+        run: |
+          pushd linux/amd64
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          popd
+
+          pushd linux/arm64
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
+          popd
+
+      - name: Configure AWS Credentials (ITAR)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Re-upload Artifacts (ITAR)
+        id: upload-artifacts-itar
+        run: |
+          pushd linux/amd64
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          popd
+
+          pushd linux/arm64
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
           popd
 
   StartIntegrationTests:
