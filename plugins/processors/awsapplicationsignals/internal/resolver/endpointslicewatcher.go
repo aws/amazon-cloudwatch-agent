@@ -132,9 +132,9 @@ func (w *endpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 
 			// Build service name -> "workload@namespace" pair from the first pod
 			if isFirstPod {
+				isFirstPod = false
 				svcName := slice.Labels["kubernetes.io/service-name"]
 				if svcName != "" {
-					isFirstPod = false
 					pairs = append(pairs, kvPair{
 						key:       svcName + "@" + ns,
 						value:     fullWl,
@@ -283,6 +283,8 @@ func minimizeEndpointSlice(obj interface{}) (interface{}, error) {
 		eps.Endpoints[i].Hostname = nil
 		eps.Endpoints[i].NodeName = nil
 		eps.Endpoints[i].Zone = nil
+		eps.Endpoints[i].DeprecatedTopology = nil
+		eps.Endpoints[i].Hints = nil
 	}
 
 	// No transformation is needed for eps.Ports because we use them directly.

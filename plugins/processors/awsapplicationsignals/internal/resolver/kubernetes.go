@@ -37,6 +37,11 @@ const (
 	deletionDelay = 2 * time.Minute
 
 	jitterKubernetesAPISeconds = 10
+
+	// this is an environmental variable that might deprecate in future
+	// when it's "true", we will use list pods API to get ip to workload mapping
+	// otherwise, we will use list endpoint slices API instead
+	appSignalsUseListPod = "APP_SIGNALS_USE_LIST_POD"
 )
 
 type kubernetesResolver struct {
@@ -91,7 +96,7 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 		// jitter calls to the kubernetes api
 		jitterSleep(jitterKubernetesAPISeconds)
 
-		useListPod := (os.Getenv("APP_SIGNALS_USE_LIST_POD") == "true")
+		useListPod := (os.Getenv(appSignalsUseListPod) == "true")
 
 		if useListPod {
 			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
