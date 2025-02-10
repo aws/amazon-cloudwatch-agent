@@ -29,6 +29,7 @@ on:
       test_repo_branch:
         description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
