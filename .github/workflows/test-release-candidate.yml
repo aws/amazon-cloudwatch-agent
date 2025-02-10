@@ -23,6 +23,7 @@ on:
       test_repo_branch:
         description: 'Override for the test repo branch (default is main)'
         type: string
+  pull_request:
 
 jobs:
   RepackageArtifacts:
