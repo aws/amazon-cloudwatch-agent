@@ -40,7 +40,7 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -95,10 +95,10 @@ jobs:
           popd
 
       - name: Configure AWS Credentials (CN)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-          aws-region: us-west-2
+          aws-region: cn-north-1
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Re-upload Artifacts (CN)
@@ -115,10 +115,10 @@ jobs:
           popd
 
       - name: Configure AWS Credentials (ITAR)
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-          aws-region: us-west-2
+          aws-region: us-gov-east-1
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Re-upload Artifacts (ITAR)
