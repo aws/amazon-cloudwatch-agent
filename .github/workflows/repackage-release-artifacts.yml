@@ -154,17 +154,18 @@ jobs:
           REGISTRY: ${{ steps.login-artifacts-ecr.outputs.registry }}
         run: |
           docker pull ${{ env.REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
+          docker tag cloudwatch-agent:${{ inputs.build_id }} 506463145083.dkr.ecr.us-west-2.amazonaws.com/cwagent-integration-test:${{ inputs.build_id }}
 
       - name: Login to Integ Test Amazon ECR
-        id: login-integt-test-ecr
+        id: login-integ-test-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push Image
         id: push-image
         env:
-          REGISTRY: ${{ steps.login-integt-test-ecr.outputs.registry }}
+          REGISTRY: ${{ steps.login-artifacts-ecr.outputs.registry }}
         run: |
-          docker tag cloudwatch-agent:${{ inputs.build_id }} ${{ env.REGISTRY }}/cwagent-integration-test:${{ inputs.build_id }}
-          docker tag ${{ env.REGISTRY }}/cwagent-integration-test:${{ inputs.build_id }}
+
+          docker push ${{ env.REGISTRY }}/cwagent-integration-test:${{ inputs.build_id }}
 
 
