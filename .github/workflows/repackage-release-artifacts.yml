@@ -146,13 +146,13 @@ jobs:
         id: login-artifacts-ecr
         uses: aws-actions/amazon-ecr-login@v2
         with:
-          registries: ${{ vars.RELEASE_ARTIFACTS_ACCOUNT_ID }}
+          registries: ${{ secrets.RELEASE_ARTIFACTS_ACCOUNT_ID }}
 
       - name: Pull Image
         id: pull-image
         run: |
-          docker pull ${{ vars.RELEASE_ARTIFACTS_ACCOUNT_ID }}.dkr.ecr.us-west-2.amazonaws.com/cloudwatch-agent:${{ inputs.build_id }}
-          docker tag cloudwatch-agent:${{ inputs.build_id }} ${{ vars.AWS_ECR_PRIVATE_REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
+          docker pull ${{ secrets.RELEASE_ARTIFACTS_ACCOUNT_ID }}.dkr.ecr.us-west-2.amazonaws.com/cloudwatch-agent:${{ inputs.build_id }}
+          docker tag cloudwatch-agent:${{ inputs.build_id }} ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
 
       - name: Login to Integ Test Amazon ECR
         id: login-integt-test-ecr
@@ -161,6 +161,6 @@ jobs:
       - name: Push Image
         id: push-image
         run: |
-          docker tag ${{ vars.AWS_ECR_PRIVATE_REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
+          docker tag ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
 
 
