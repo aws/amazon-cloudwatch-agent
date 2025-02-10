@@ -182,8 +182,8 @@ github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrc
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20241216205413-8e059f1441db h1:M3mCeHB5pVhpGdFkx9qJlBtUURxkg6fEQUNNJdYLk3I=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20241216205413-8e059f1441db/go.mod h1:f9JwM/LQdKH8ZbYoH9TO35rmjM6WoTNlhWtYJ3YZucc=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20241216205413-8e059f1441db h1:N0An6pXgyPzUIwzqyiO2u6U2SwedbIR25ntcf4KoU3g=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20241216205413-8e059f1441db/go.mod h1:LPWBVdTSNbZkk80v6aCUthS59cnR4VauVRdAIE3ifaY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250116001040-07637c7e4577 h1:+OuAFQweLKuerVx77Z4zACf/qFITKdJWXO55K3Y6vAY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250116001040-07637c7e4577/go.mod h1:LPWBVdTSNbZkk80v6aCUthS59cnR4VauVRdAIE3ifaY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20241216205413-8e059f1441db h1:L+xPXimFZAtTgougLt59HvivqCyBgh066rv/XbenHUM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20241216205413-8e059f1441db/go.mod h1:GNeNylfr5KMt55XowzSdgbP7z8CkIAfIHtWSd+xxtws=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20241216205413-8e059f1441db h1:rdQRfKoW60Aomz9Tc8fF0Ld5x/Q96vNz8idPQF/qG9Q=
@@ -328,10 +328,10 @@ github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.6/go.mod h1:akrYtxss2
 github.com/aws/smithy-go v1.8.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.20.2 h1:tbp628ireGtzcHDDmLT/6ADHidqnwgF57XOXZe6tp4Q=
 github.com/aws/smithy-go v1.20.2/go.mod h1:krry+ya/rV9RDcV/Q16kpu6ypI4K2czasz0NC3qS14E=
-github.com/aws/telegraf v0.10.2-0.20241003164222-69e43c131d55 h1:jZcQmduv+lpJnwfWd/kkd3jiqeCJHfgYY6/om99e3BE=
-github.com/aws/telegraf v0.10.2-0.20241003164222-69e43c131d55/go.mod h1:EuipXfoVhMPIMfNPLyHP9X2IQGwOXhwysPXUuosAFts=
-github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20231109213610-a8c21c54a2be h1:sF6OUdk1hpuX7lf74vn+zBUFtQRe+hky0jmMYyFp5Kk=
-github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20231109213610-a8c21c54a2be/go.mod h1:1W1wnODUDv+FBSAtAa878Kxto5kj8eV+kI0AF4LIjq4=
+github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d h1:WQ+YwEMyIpKQOGtAtUyqq18RhERiAQGPYSXsSckRrsg=
+github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d/go.mod h1:jrcGlkX91pXbwi4r7gpfd7UPQGMJDdv6tw1mCrzmIOE=
+github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d h1:nCzziuk/prBwzhbEyP9onARem7LriIxqGrTFB9D532g=
+github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d/go.mod h1:1W1wnODUDv+FBSAtAa878Kxto5kj8eV+kI0AF4LIjq4=
 github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f h1:Pf0BjJDga7C98f0vhw+Ip5EaiE07S3lTKpIYPNS0nMo=
 github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f/go.mod h1:SghidfnxvX7ribW6nHI7T+IBbc9puZ9kk5Tx/88h8P4=
 github.com/bboreham/go-loser v0.0.0-20230920113527-fcc2c21820a3 h1:6df1vn4bBlDDo4tARvBm7l6KA9iVMnE3NWizDeWSrps=

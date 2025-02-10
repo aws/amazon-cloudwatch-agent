@@ -16,15 +16,17 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/k8sattributescraper"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
-	attributeAwsLogGroupNames      = "aws.log.group.names"
-	attributeDeploymentEnvironment = "deployment.environment"
-	attributeServiceName           = "service.name"
-	attributeService               = "Service"
-	EMPTY                          = ""
+	attributeAwsLogGroupNames              = "aws.log.group.names"
+	attributeDeploymentEnvironment         = "deployment.environment"
+	attributeServiceName                   = "service.name"
+	attributeService                       = "Service"
+	attributeEC2TagAwsAutoscalingGroupName = "ec2.tag.aws:autoscaling:groupName"
+	EMPTY                                  = ""
 )
 
 type scraper interface {
@@ -65,6 +67,14 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 		return
 	}
 	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
+}
+
+var setAutoScalingGroup = func(asg string) {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return
+	}
+	es.SetAutoScalingGroup(asg)
 }
 
 var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
@@ -122,6 +132,12 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 		switch p.config.EntityType {
 		case entityattributes.Resource:
 			if p.config.Platform == config.ModeEC2 {
+				// ec2tagger processor may have picked up the ASG name from an ec2:DescribeTags call
+				if getAutoScalingGroupFromEntityStore() == EMPTY && p.config.ScrapeDatapointAttribute {
+					if autoScalingGroup := p.scrapeResourceEntityAttribute(rm.At(i).ScopeMetrics()); autoScalingGroup != EMPTY {
+						setAutoScalingGroup(autoScalingGroup)
+					}
+				}
 				ec2Info = getEC2InfoFromEntityStore()
 				if ec2Info.GetInstanceID() != EMPTY {
 					resourceAttrs.PutStr(entityattributes.AttributeEntityType, entityattributes.AttributeEntityAWSResource)
@@ -142,6 +158,10 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			}
 			if serviceNameSource, sourceExists := resourceAttrs.Get(entityattributes.AttributeEntityServiceNameSource); sourceExists {
 				entityServiceNameSource = serviceNameSource.Str()
+			}
+			// resourcedetection processor may have picked up the ASG name from an ec2:DescribeTags call
+			if autoScalingGroupNameAttr, ok := resourceAttrs.Get(attributeEC2TagAwsAutoscalingGroupName); ok {
+				setAutoScalingGroup(autoScalingGroupNameAttr.Str())
 			}
 
 			entityServiceName := getServiceAttributes(resourceAttrs)
@@ -272,7 +292,8 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 
 // scrapeServiceAttribute expands the datapoint attributes and search for
 // service name and environment attributes. This is only used for components
-// that only emit attributes on datapoint level.
+// that only emit attributes on datapoint level. This code block contains a lot
+// of repeated code because OTEL metrics type do not have a common interface.
 func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMetricsSlice) (string, string, string) {
 	entityServiceName := EMPTY
 	entityServiceNameSource := EMPTY
@@ -393,6 +414,64 @@ func (p *awsEntityProcessor) scrapeServiceAttribute(scopeMetric pmetric.ScopeMet
 		}
 	}
 	return entityServiceName, entityEnvironmentName, entityServiceNameSource
+}
+
+// scrapeResourceEntityAttribute expands the datapoint attributes and search for
+// resource entity related attributes. This is only used for components
+// that only emit attributes on datapoint level. This code block contains a lot
+// of repeated code because OTEL metrics type do not have a common interface.
+func (p *awsEntityProcessor) scrapeResourceEntityAttribute(scopeMetric pmetric.ScopeMetricsSlice) string {
+	autoScalingGroup := EMPTY
+	for j := 0; j < scopeMetric.Len(); j++ {
+		metric := scopeMetric.At(j).Metrics()
+		for k := 0; k < metric.Len(); k++ {
+			if autoScalingGroup != EMPTY {
+				return autoScalingGroup
+			}
+			m := metric.At(k)
+			switch m.Type() {
+			case pmetric.MetricTypeGauge:
+				dps := m.Gauge().DataPoints()
+				for l := 0; l < dps.Len(); l++ {
+					if dpAutoScalingGroup, ok := dps.At(l).Attributes().Get(ec2tagger.CWDimensionASG); ok {
+						autoScalingGroup = dpAutoScalingGroup.Str()
+					}
+				}
+			case pmetric.MetricTypeSum:
+				dps := m.Sum().DataPoints()
+				for l := 0; l < dps.Len(); l++ {
+					if dpAutoScalingGroup, ok := dps.At(l).Attributes().Get(ec2tagger.CWDimensionASG); ok {
+						autoScalingGroup = dpAutoScalingGroup.Str()
+					}
+				}
+			case pmetric.MetricTypeHistogram:
+				dps := m.Histogram().DataPoints()
+				for l := 0; l < dps.Len(); l++ {
+					if dpAutoScalingGroup, ok := dps.At(l).Attributes().Get(ec2tagger.CWDimensionASG); ok {
+						autoScalingGroup = dpAutoScalingGroup.Str()
+					}
+				}
+			case pmetric.MetricTypeExponentialHistogram:
+				dps := m.ExponentialHistogram().DataPoints()
+				for l := 0; l < dps.Len(); l++ {
+					if dpAutoScalingGroup, ok := dps.At(l).Attributes().Get(ec2tagger.CWDimensionASG); ok {
+						autoScalingGroup = dpAutoScalingGroup.Str()
+					}
+				}
+			case pmetric.MetricTypeSummary:
+				dps := m.Sum().DataPoints()
+				for l := 0; l < dps.Len(); l++ {
+					if dpAutoScalingGroup, ok := dps.At(l).Attributes().Get(ec2tagger.CWDimensionASG); ok {
+						autoScalingGroup = dpAutoScalingGroup.Str()
+					}
+				}
+			default:
+				p.logger.Debug("Ignore unknown metric type", zap.String("type", m.Type().String()))
+			}
+
+		}
+	}
+	return autoScalingGroup
 }
 
 // getServiceAttributes prioritize service name retrieval based on

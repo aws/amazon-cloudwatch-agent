@@ -203,10 +203,10 @@ func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{autoScalingGroup: ""}
+	s = &serviceprovider{autoScalingGroup: autoscalinggroup{name: ""}}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{autoScalingGroup: "test-asg"}
+	s = &serviceprovider{autoScalingGroup: autoscalinggroup{name: "test-asg"}}
 	assert.Equal(t, ServiceAttribute{Environment: "ec2:test-asg"}, s.serviceAttributeFromAsg())
 }
 
@@ -231,7 +231,7 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:default"}, s.logFileServiceAttribute("glob", "group"))
 
-	s.autoScalingGroup = "test-asg"
+	s.autoScalingGroup = autoscalinggroup{name: "test-asg"}
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 
 	s.iamRole = "test-role"
@@ -411,6 +411,39 @@ func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 			s.scrapeImdsServiceNameAndASG()
 			assert.Equal(t, tt.wantTagServiceName, s.GetIMDSServiceName())
 			assert.Equal(t, tt.wantASGName, s.getAutoScalingGroup())
+		})
+	}
+}
+
+func Test_serviceprovider_setAutoScalingGroup(t *testing.T) {
+	tests := []struct {
+		name string
+		asgs []string
+		want string
+	}{
+		{
+			name: "setAutoScalingGroup called once",
+			asgs: []string{"test-asg"},
+			want: "test-asg",
+		},
+		{
+			name: "setAutoScalingGroup called multiple times",
+			asgs: []string{"test-asg", "test-asg2", "test-asg3", "test-asg4"},
+			want: "test-asg",
+		},
+		{
+			name: "setAutoScalingGroup not called",
+			asgs: []string{},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &serviceprovider{}
+			for _, asg := range tt.asgs {
+				s.setAutoScalingGroup(asg)
+			}
+			assert.Equal(t, tt.want, s.getAutoScalingGroup())
 		})
 	}
 }

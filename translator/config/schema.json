@@ -898,6 +898,11 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 259
+        },
+        "concurrency": {
+          "description": "The number of concurrent workers available for cloudwatch logs export",
+          "type": "integer",
+          "minimum": 1
         }
       },
       "additionalProperties": false,

@@ -2,13 +2,13 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.22.5
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20241003164222-69e43c131d55
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d
 
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20241216205413-8e059f1441db
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20241216205413-8e059f1441db
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250116001040-07637c7e4577
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20241216205413-8e059f1441db
 )
 
@@ -47,7 +47,7 @@ replace (
 )
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
-replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20231109213610-a8c21c54a2be // indirect
+replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d // indirect
 
 //pin consul to a newer version to fix the ambiguous import issue
 //see https://github.com/hashicorp/consul/issues/6019 and https://github.com/hashicorp/consul/issues/6414

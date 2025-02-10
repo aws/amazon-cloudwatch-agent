@@ -293,12 +293,33 @@ func TestOtlpMetricsConfig(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
 }
 
+func TestOtlpMetricsConfigKubernetes(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sEC2)
+	context.CurrentContext().SetRunInContainer(true)
+	checkTranslation(t, "otlp_metrics_eks_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_eks_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_eks_config", "windows", nil, "")
+}
+
 func TestOtlpMetricsEmfConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "linux", nil, "")
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "darwin", nil, "")
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_config", "windows", nil, "")
+}
+
+func TestOtlpMetricsEmfConfigKubernetes(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sEC2)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "linux", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "darwin", nil, "")
+	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "windows", nil, "")
 }
 
 func TestProcstatMemorySwapConfig(t *testing.T) {

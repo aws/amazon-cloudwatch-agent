@@ -40,6 +40,9 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terminate Last Canary
         run: |
           if aws s3api wait object-exists --bucket ${S3_INTEGRATION_BUCKET} --key canary/al2/terraform.tfstate ;
@@ -51,6 +54,10 @@ jobs:
             terraform destroy -auto-approve
             aws s3api delete-object --bucket ${S3_INTEGRATION_BUCKET} --key canary/al2/terraform.tfstate
           fi
+
+      - name: Verify Terraform version
+        run: terraform --version
+
       # @TODO we can add a matrix in the future but for alpha we will only deploy to al2
       - name: Terraform apply
         uses: nick-fields/retry@v2
