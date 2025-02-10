@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Test Release Candidate
+name: Repackage Release Artifacts
 env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
@@ -14,24 +14,16 @@ env:
   S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       build_id:
         description: 'The build ID (release candidate build number or GitHub commit SHA)'
         type: string
         required: true
-      test_repo_branch:
-        description: 'Override for the test repo branch (default is main)'
-        type: string
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
 
 jobs:
-  RepackageReleaseCandidate:
-    name: 'RepackageReleaseCandidate'
+  RepackageReleaseArtifcats:
+    name: 'RepackageReleaseArtifcats'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -134,10 +126,40 @@ jobs:
           aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
           popd
 
-  StartIntegrationTests:
-    needs: [ RepackageReleaseCandidate ]
+  RepackageUploadImage:
+    name: 'RepackageUploadImage'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - run: gh workflow run integration-test-s3.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_id=${{ inputs.build_id }} -f ecr_rest_repo=${{ env.S3_RELEASE_REPO }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login to Release Artifacts Amazon ECR
+        id: login-artifacts-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registries: ${{ vars.RELEASE_ARTIFACTS_ACCOUNT_ID }}
+
+      - name: Pull Image
+        id: pull-image
+        run: |
+          docker pull ${{ vars.RELEASE_ARTIFACTS_ACCOUNT_ID }}.dkr.ecr.us-west-2.amazonaws.com/cloudwatch-agent:${{ inputs.build_id }}
+
+      - name: Login to Integ Test Amazon ECR
+        id: login-integt-test-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push Image
+        id: push-image
+        run: |
+          docker tag cloudwatch-agent:${{ inputs.build_id }} ${{ vars.AWS_ECR_PRIVATE_REGISTRY}}/cloudwatch-agent:${{ inputs.build_id }}
+
+
