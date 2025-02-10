@@ -463,7 +463,7 @@ jobs:
               -var="ssh_key_value=${PRIVATE_KEY}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="cwa_github_sha= ${{ inputs.build_id }}"  \
+              -var="cwa_github_sha=${{ inputs.build_id }}"  \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="use_ssm=${{ matrix.arrays.useSSM }}" \
@@ -537,14 +537,15 @@ jobs:
             fi
             terraform init
             if terraform apply --auto-approve \
-            -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
+            -var="ssh_key_value=${PRIVATE_KEY}" \
+            -var="ssh_key_name=${KEY_NAME}"  \
             -var="arc=${{ matrix.arrays.arc }}" \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+            -var="cwa_github_sha=${{ inputs.build_id }}" \
+            -var="ami=${{ matrix.arrays.ami }}" \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="license_manager_arn=${{ env.LICENSE_MANAGER_ARN }}" \
-            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-            -var="agent_s3_path_mac=${{ needs.OutputEnvVariables.outputs.AGENT_S3_PATH_MAC }}; then
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
