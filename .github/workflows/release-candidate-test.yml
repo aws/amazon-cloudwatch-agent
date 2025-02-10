@@ -35,6 +35,7 @@ jobs:
       - name: SetOutputs
         id: set-outputs
         run: |
+          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
       - name: Echo test variables
