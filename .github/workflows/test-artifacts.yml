@@ -464,7 +464,7 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="use_ssm=${{ matrix.arrays.useSSM }}" \
-              -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
