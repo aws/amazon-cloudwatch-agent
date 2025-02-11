@@ -208,6 +208,52 @@ func TestTargetManager(t *testing.T) {
 		mockService.AssertNotCalled(t, "DescribeLogGroups")
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
 	})
+
+	t.Run("NewLogGroup/SetRetention", func(t *testing.T) {
+		target := Target{Group: "G", Stream: "S", Retention: 7}
+
+		mockService := new(mockLogsService)
+		// fails with ResourceNotFound
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group not found", nil)).Once()
+		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		// should be called directly without DescribeLogGroups
+		mockService.On("PutRetentionPolicy", mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
+			return *input.LogGroupName == target.Group && *input.RetentionInDays == int64(target.Retention)
+		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+
+		// Small wait to ensure async operations complete
+		time.Sleep(100 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
+		// Verify DescribeLogGroups was never called
+		mockService.AssertNotCalled(t, "DescribeLogGroups")
+	})
+
+	t.Run("NewLogGroup/RetentionError", func(t *testing.T) {
+		target := Target{Group: "G", Stream: "S", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group not found", nil)).Once()
+		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		// fails but should retry
+		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, awserr.New("InternalError", "Internal error", nil)).Times(maxAttempts)
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err) // Overall operation should succeed even if retention update fails
+
+		// Wait for retries to complete
+		time.Sleep(time.Duration(maxAttempts) * time.Second)
+
+		mockService.AssertExpectations(t)
+		mockService.AssertNotCalled(t, "DescribeLogGroups")
+	})
 }
 
 func TestCalculateBackoff(t *testing.T) {
@@ -222,7 +268,7 @@ func TestCalculateBackoff(t *testing.T) {
 	etd = expectedBaseDelay + time.Duration(float64(expectedBaseDelay)*jitterFactor)
 	assert.True(t, delay >= expectedBaseDelay && delay <= etd)
 
-	// we should never exceed 30sec of total wait time
+	// never exceed 30sec of total wait time
 	totalDelay := time.Duration(0)
 	for i := 0; i < maxAttempts; i++ {
 		delay := manager.calculateBackoff(i)
