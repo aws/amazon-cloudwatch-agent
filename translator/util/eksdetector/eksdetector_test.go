@@ -61,7 +61,7 @@ func TestEKS(t *testing.T) {
 	assert.NoError(t, isEks.Err)
 
 	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(nil, fmt.Errorf("configmap not found"))
-	testDetector.On("getIssuer").Return("https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE", nil)
+	testDetector.On("getIssuer").Return("https://oidc.eks.us-west-2.amazonaws.com/id/someid", nil)
 
 	isEks = IsEKS()
 	assert.True(t, isEks.Value)
