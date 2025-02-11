@@ -4,27 +4,21 @@
 package eksdetector
 
 import (
-	"encoding/base64"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
 
-func resetTestState() {
-	once = sync.Once{}
-	isEKSCacheSingleton = IsEKSCache{}
-}
-
 func TestNewDetector(t *testing.T) {
-	resetTestState()
-
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{BearerToken: "header.payload.signature"}, nil
+		return &rest.Config{}, nil
 	}
 
 	testDetector1, err := NewDetector()
@@ -39,10 +33,8 @@ func TestNewDetector(t *testing.T) {
 }
 
 func TestIsEKSSingleton(t *testing.T) {
-	resetTestState()
-
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{BearerToken: "header.payload.signature"}, nil
+		return &rest.Config{}, nil
 	}
 
 	NewDetector = TestEKSDetector
@@ -50,44 +42,47 @@ func TestIsEKSSingleton(t *testing.T) {
 	assert.NoError(t, value1.Err)
 	value2 := IsEKS()
 	assert.NoError(t, value2.Err)
+
 	assert.True(t, value1 == value2)
 }
 
 // Tests EKS resource detector running in EKS environment
 func TestEKS(t *testing.T) {
-	resetTestState()
 	testDetector := new(MockDetector)
 	NewDetector = func() (Detector, error) {
 		return testDetector, nil
 	}
 
-	testDetector.On("getIssuer").Return("https://oidc.eks.us-west-2.amazonaws.com/id/someid", nil)
+	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{conventions.AttributeK8SClusterName: "my-cluster"}, nil)
 	isEks := IsEKS()
 	assert.True(t, isEks.Value)
 	assert.NoError(t, isEks.Err)
 }
 
-func Test_getIssuer(t *testing.T) {
-	resetTestState()
+func Test_getConfigMap(t *testing.T) {
+	// No matching configmap
 	client := fake.NewSimpleClientset()
 	testDetector := &EksDetector{Clientset: client}
+	res, err := testDetector.getConfigMap("test", "test")
+	assert.Error(t, err)
+	assert.Nil(t, res)
 
-	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
-	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
-	dummyToken := "header." + encodedPayload + ".signature"
-
-	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{BearerToken: dummyToken}, nil
+	// matching configmap
+	cm := &v1.ConfigMap{
+		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: authConfigNamespace, Name: authConfigConfigMap},
+		Data:       make(map[string]string),
 	}
 
-	issuer, err := testDetector.getIssuer()
+	client = fake.NewSimpleClientset(cm)
+	testDetector = &EksDetector{Clientset: client}
+
+	res, err = testDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 	assert.NoError(t, err)
-	assert.Equal(t, "https://oidc.eks.us-west-2.amazonaws.com/id/someid", issuer)
+	assert.NotNil(t, res)
 }
 
 func Test_getClientError(t *testing.T) {
-	resetTestState()
-
 	//InClusterConfig error
 	getInClusterConfig = func() (*rest.Config, error) {
 		return nil, fmt.Errorf("test error")
@@ -95,11 +90,10 @@ func Test_getClientError(t *testing.T) {
 
 	_, err := getClient()
 	assert.Error(t, err)
-	resetTestState()
 
 	//Getting Kubernetes client error
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{BearerToken: "header.payload.signature"}, nil
+		return &rest.Config{}, nil
 	}
 	getKubernetesClient = func(confs *rest.Config) (kubernetes.Interface, error) {
 		return nil, fmt.Errorf("test error")
