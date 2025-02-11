@@ -4,13 +4,26 @@
 package pusher
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+)
+
+const (
+	retentionChannel = 100
+	// max wait time with backoff and jittering:
+	// 0 + 2.4 + 4.8 + 9.6 + 10 ~= 26.8 sec
+	baseDelay    = 1 * time.Second  // Increased to 1s
+	maxDelay     = 10 * time.Second // Keep at 10s
+	maxAttempts  = 5                // Keep at 5
+	jitterFactor = 0.2
 )
 
 type Target struct {
@@ -27,16 +40,21 @@ type targetManager struct {
 	logger  telegraf.Logger
 	service cloudWatchLogsService
 	// cache of initialized targets
-	cache map[Target]struct{}
-	mu    sync.Mutex
+	cache                  map[Target]struct{}
+	mu                     sync.Mutex
+	retentionPolicyUpdates chan Target
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) TargetManager {
-	return &targetManager{
-		logger:  logger,
-		service: service,
-		cache:   make(map[Target]struct{}),
+	tm := &targetManager{
+		logger:                 logger,
+		service:                service,
+		cache:                  make(map[Target]struct{}),
+		retentionPolicyUpdates: make(chan Target, retentionChannel),
 	}
+
+	go tm.processRetentionUpdates()
+	return tm
 }
 
 // InitTarget initializes a Target if it hasn't been initialized before.
@@ -52,6 +70,13 @@ func (m *targetManager) InitTarget(target Target) error {
 		m.cache[target] = struct{}{}
 	}
 	return nil
+}
+
+func (m *targetManager) PutRetentionPolicy(target Target) {
+	if target.Retention > 0 {
+		// use blocking channel send to not drop any updates when it's full
+		m.retentionPolicyUpdates <- target
+	}
 }
 
 func (m *targetManager) createLogGroupAndStream(t Target) error {
@@ -109,26 +134,86 @@ func (m *targetManager) createLogStream(t Target) error {
 	return err
 }
 
-// PutRetentionPolicy tries to set the retention policy for a log group. Does not retry on failure.
-func (m *targetManager) PutRetentionPolicy(t Target) {
-	if t.Retention > 0 {
-		i := aws.Int64(int64(t.Retention))
-		putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
-			LogGroupName:    &t.Group,
-			RetentionInDays: i,
-		}
-		_, err := m.service.PutRetentionPolicy(putRetentionInput)
+func (m *targetManager) processRetentionUpdates() {
+	for target := range m.retentionPolicyUpdates {
+		err := m.processWithRetry(target)
 		if err != nil {
-			// since this gets called both before we start pushing logs, and after we first attempt
-			// to push a log to a non-existent log group, we don't want to dirty the log with an error
-			// if the error is that the log group doesn't exist (yet).
-			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-				m.logger.Debugf("Log group %v not created yet: %v", t.Group, err)
-			} else {
-				m.logger.Errorf("Unable to put retention policy for log group %v: %v ", t.Group, err)
-			}
-		} else {
-			m.logger.Debugf("successfully updated log retention policy for log group %v", t.Group)
+			m.logger.Errorf("Failed to update retention policy for target %v: %v", target, err)
 		}
 	}
+}
+
+func (m *targetManager) processWithRetry(target Target) error {
+	var err error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		err = m.checkAndUpdate(target)
+		if err == nil {
+			return nil
+		}
+
+		m.logger.Debugf("retrying to update retention policy for target (%v) %v: %v", attempt, target, err)
+		delay := m.calculateBackoff(attempt)
+		time.Sleep(delay)
+	}
+	return fmt.Errorf("failed to update retention policy after %d attempts: %w", maxAttempts, err)
+}
+
+func (m *targetManager) checkAndUpdate(target Target) error {
+	currentRetention, err := m.describeLogGroupRetention(target)
+	if err != nil {
+		return err
+	}
+
+	if currentRetention != target.Retention {
+		m.logger.Debugf("updating retention policy for target %v: %v", target, err)
+		return m.updateRetentionPolicy(target)
+	}
+
+	return nil
+}
+
+func (m *targetManager) describeLogGroupRetention(target Target) (int, error) {
+	input := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: aws.String(target.Group),
+	}
+
+	output, err := m.service.DescribeLogGroups(input)
+	if err != nil {
+		return 0, fmt.Errorf("describe log groups failed: %w", err)
+	}
+
+	for _, group := range output.LogGroups {
+		if *group.LogGroupName == target.Group {
+			if group.RetentionInDays == nil {
+				return 0, nil
+			}
+			return int(*group.RetentionInDays), nil
+		}
+	}
+
+	return 0, fmt.Errorf("log group %v not found", target.Group)
+}
+
+func (m *targetManager) updateRetentionPolicy(target Target) error {
+	input := &cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(target.Group),
+		RetentionInDays: aws.Int64(int64(target.Retention)),
+	}
+
+	_, err := m.service.PutRetentionPolicy(input)
+	if err != nil {
+		return fmt.Errorf("put retention policy failed: %w", err)
+	}
+
+	return nil
+}
+
+func (m *targetManager) calculateBackoff(attempt int) time.Duration {
+	delay := baseDelay * time.Duration(1<<uint(attempt))
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+
+	jitter := time.Duration(rand.Float64() * float64(delay) * jitterFactor)
+	return delay + jitter
 }
