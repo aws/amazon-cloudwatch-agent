@@ -70,6 +70,9 @@ jobs:
           echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
           echo localstack input ${{ inputs.localstack_host }}
 
+      - name: Debug test_props
+        run: echo '${{ inputs.test_props }}'
+
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
 
