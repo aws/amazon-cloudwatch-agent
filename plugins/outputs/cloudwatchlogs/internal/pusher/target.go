@@ -5,7 +5,6 @@ package pusher
 
 import (
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -209,11 +208,14 @@ func (m *targetManager) updateRetentionPolicy(target Target) error {
 }
 
 func (m *targetManager) calculateBackoff(attempt int) time.Duration {
-	delay := baseDelay * time.Duration(1<<uint(attempt))
+	delay := baseDelay
+	for i := 0; i < attempt && delay < maxDelay; i++ {
+		delay *= 2
+	}
 	if delay > maxDelay {
 		delay = maxDelay
 	}
 
-	jitter := time.Duration(rand.Float64() * float64(delay) * jitterFactor)
+	jitter := time.Duration(float64(delay) * (float64(time.Now().UnixNano()%100) / 500.0 * jitterFactor))
 	return delay + jitter
 }
