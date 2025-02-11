@@ -60,7 +60,7 @@ var (
 
 	// IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
 	// configmap exists in the kube-system namespace or by extracting the "iss" field from the service account token and
-	// checking if it contains "eks" as a fall-back.
+	// checking if it contains "eks" as a fall-back
 	IsEKS = func() IsEKSCache {
 		once.Do(func() {
 			var errors error
@@ -101,7 +101,7 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 	return configMap.Data, nil
 }
 
-// getIssuer retrieves the issuer ("iss") from the service account token.
+// getIssuer retrieves the issuer ("iss") from the service account token
 func (d *EksDetector) getIssuer() (string, error) {
 	conf, err := getInClusterConfig()
 	if err != nil {

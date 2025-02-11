@@ -47,5 +47,5 @@ func (detector *MockDetector) getConfigMap(namespace string, name string) (map[s
 
 func (detector *MockDetector) getIssuer() (string, error) {
 	args := detector.Called()
-	return args.String(0), args.Error(1)
+	return args.Get(0).(string), args.Error(1)
 }
