@@ -46,6 +46,19 @@ const (
 	valueOverheads = 47
 	// &MetricData.member.1.Unit=Kilobytes/Second
 	unitOverheads = 42
+
+	/* Entity overheads - these would be used to calculate entity size if we decide to include it as a part of the payload.
+	The three main components are the KeyAttributes key/value pair, Attributes key/value pair, and StrictEntityValidation
+
+	// &StrictEntityValidation=false
+	strictEntityValidationSize = 29
+	// &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.key= &EntityMetricData.member.100.Entity.KeyAttributes.entry.1.value=
+	entityKeyAttributesOverhead = 62 + 64
+	// &EntityMetricData.member.100.Entity.Attributes.entry.1.key= &EntityMetricData.member.100.Entity.Attributes.entry.1.value=
+	entityAttributesOverhead = 59 + 61
+	// EntityMetricData.member.100.
+	entityMetricDataPrefixOverhead = 28
+	*/
 )
 
 // Set seed once.
