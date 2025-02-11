@@ -4,6 +4,7 @@
 package eksdetector
 
 import (
+	"encoding/base64"
 	"fmt"
 	"sync"
 	"testing"
@@ -23,7 +24,7 @@ func TestNewDetector(t *testing.T) {
 	resetTestState()
 
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{}, nil
+		return &rest.Config{BearerToken: "header.payload.signature"}, nil
 	}
 
 	testDetector1, err := NewDetector()
@@ -41,7 +42,7 @@ func TestIsEKSSingleton(t *testing.T) {
 	resetTestState()
 
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{}, nil
+		return &rest.Config{BearerToken: "header.payload.signature"}, nil
 	}
 
 	NewDetector = TestEKSDetector
@@ -60,19 +61,28 @@ func TestEKS(t *testing.T) {
 		return testDetector, nil
 	}
 
-	testDetector.On("getServerVersion").Return("v1.23-eks", nil)
+	testDetector.On("getIssuer").Return("https://oidc.eks.us-west-2.amazonaws.com/id/someid", nil)
 	isEks := IsEKS()
 	assert.True(t, isEks.Value)
 	assert.NoError(t, isEks.Err)
 }
 
-func Test_getServerVersion(t *testing.T) {
+func Test_getIssuer(t *testing.T) {
 	resetTestState()
 	client := fake.NewSimpleClientset()
 	testDetector := &EksDetector{Clientset: client}
-	res, err := testDetector.getServerVersion()
+
+	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	issuer, err := testDetector.getIssuer()
 	assert.NoError(t, err)
-	assert.NotEmpty(t, res)
+	assert.Equal(t, "https://oidc.eks.us-west-2.amazonaws.com/id/someid", issuer)
 }
 
 func Test_getClientError(t *testing.T) {
@@ -89,7 +99,7 @@ func Test_getClientError(t *testing.T) {
 
 	//Getting Kubernetes client error
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{}, nil
+		return &rest.Config{BearerToken: "header.payload.signature"}, nil
 	}
 	getKubernetesClient = func(confs *rest.Config) (kubernetes.Interface, error) {
 		return nil, fmt.Errorf("test error")

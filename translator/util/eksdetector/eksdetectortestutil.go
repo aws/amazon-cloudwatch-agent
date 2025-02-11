@@ -33,7 +33,7 @@ type MockDetector struct {
 	mock.Mock
 }
 
-func (detector *MockDetector) getServerVersion() (string, error) {
+func (detector *MockDetector) getIssuer() (string, error) {
 	args := detector.Called()
 	return args.Get(0).(string), args.Error(1)
 }
