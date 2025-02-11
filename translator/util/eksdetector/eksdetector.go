@@ -78,7 +78,6 @@ var (
 					value = awsAuth != nil
 				} else {
 					issuer, err := eksDetector.getIssuer()
-					fmt.Println("fallback issuer: ", issuer)
 					if err == nil {
 						value = strings.Contains(strings.ToLower(issuer), "eks")
 					}
