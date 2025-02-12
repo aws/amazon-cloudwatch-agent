@@ -163,8 +163,8 @@ exporters:
     debug/application_signals:
         sampling_initial: 2
         sampling_thereafter: 500
-        verbosity: Detailed
         use_internal_logger: true
+        verbosity: Detailed
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -194,7 +194,7 @@ extensions:
         certificate_file_path: ""
         dialer:
             timeout: 0s
-        endpoint: localhost:2000
+        endpoint: 0.0.0.0:2000
         imds_retries: 1
         local_mode: true
         profile: AmazonCloudWatchAgent
@@ -1411,4 +1411,4 @@ service:
             address: ""
             level: None
         traces:
-            level: Basic
+            level: None

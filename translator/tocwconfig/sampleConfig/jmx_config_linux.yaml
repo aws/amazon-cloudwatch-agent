@@ -140,11 +140,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx:
         error_mode: propagate
@@ -188,17 +188,17 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
+                - telegraf_cpu
         metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - transform
+                - awsentity/resource
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
+                - telegraf_cpu
         metrics/jmx/amp:
             exporters:
                 - prometheusremotewrite/amp
@@ -237,4 +237,4 @@ service:
             address: ""
             level: None
         traces:
-            level: Basic
+            level: None

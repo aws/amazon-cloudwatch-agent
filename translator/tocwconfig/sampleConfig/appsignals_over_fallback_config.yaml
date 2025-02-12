@@ -294,7 +294,7 @@ extensions:
         certificate_file_path: ""
         dialer:
             timeout: 0s
-        endpoint: localhost:2000
+        endpoint: 0.0.0.0:2000
         imds_retries: 1
         local_mode: false
         profile: ""
@@ -1579,4 +1579,4 @@ service:
             address: ""
             level: None
         traces:
-            level: Basic
+            level: None

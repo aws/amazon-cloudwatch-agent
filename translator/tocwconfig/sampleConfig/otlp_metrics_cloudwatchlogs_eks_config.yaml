@@ -125,8 +125,8 @@ service:
             exporters:
                 - awsemf
             processors:
-                - awsentity/service/otlp
                 - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - awsentity/service/otlp
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
                 - otlp/metrics
@@ -146,4 +146,4 @@ service:
             address: ""
             level: None
         traces:
-            level: Basic
+            level: None

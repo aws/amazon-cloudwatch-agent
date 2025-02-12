@@ -64,8 +64,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             development: false
@@ -84,4 +84,4 @@ service:
             address: ""
             level: None
         traces:
-            level: Basic
+            level: None

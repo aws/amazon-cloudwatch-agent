@@ -102,6 +102,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			Telemetry: telemetry.Config{
 				Logs:    getLoggingConfig(conf),
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
+				Traces:  telemetry.TracesConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines.Pipelines,
 			Extensions: pipelines.Translators.Extensions.Keys(),
