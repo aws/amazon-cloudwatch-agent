@@ -343,4 +343,4 @@ service:
             address: ""
             level: None
         traces:
-            level: Basic
+            level: None
