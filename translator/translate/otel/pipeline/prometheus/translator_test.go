@@ -14,6 +14,8 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -26,11 +28,12 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testCases := map[string]struct {
-		input       map[string]any
-		index       int
-		destination string
-		want        *want
-		wantErr     error
+		input          map[string]any
+		index          int
+		destination    string
+		kubernetesMode string
+		want           *want
+		wantErr        error
 	}{
 		"WithoutPrometheusMetrics": {
 			input:       map[string]any{},
@@ -129,9 +132,32 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
+		"WithValidCloudWatchKubernetes": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			destination:    common.CloudWatchLogsKey,
+			kubernetesMode: config.ModeK8sEC2,
+			want: &want{
+				pipelineID: "metrics/prometheus/cloudwatchlogs",
+				receivers:  []string{"telegraf_prometheus"},
+				processors: []string{"awsentity/service/prometheus", "batch/prometheus/cloudwatchlogs"},
+				exporters:  []string{"awsemf/prometheus"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			context.ResetContext()
+			if testCase.kubernetesMode != "" {
+				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+				context.CurrentContext().SetRunInContainer(true)
+			}
 			tt := NewTranslator(common.WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)

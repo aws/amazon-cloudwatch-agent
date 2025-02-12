@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
@@ -65,12 +68,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		if !conf.IsSet(LogsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under logs section with destination (%s)", t.name, t.Destination())
 		}
+		currentContext := context.CurrentContext()
+		processors := common.NewTranslatorMap[component.Config, component.ID]()
+		if currentContext.KubernetesMode() != "" {
+			processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.PrometheusKey, false))
+		}
+		processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey)) // prometheus sits under metrics_collected in "logs"
+
 		return &common.ComponentTranslators{
-			Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, LogsKey, time.Minute)),
-			Processors: common.NewTranslatorMap(
-				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
-			),
-			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
+			Receivers:  common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, LogsKey, time.Minute)),
+			Processors: processors,
+			Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 		}, nil
@@ -78,6 +86,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		if !conf.IsSet(MetricsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
+
 		translators := &common.ComponentTranslators{
 			Receivers:  common.NewTranslatorMap(otelprom.NewTranslator()),
 			Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey)),
