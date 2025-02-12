@@ -106,7 +106,6 @@ func TestTargetManager(t *testing.T) {
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
-		// Wait for async operations to complete
 		time.Sleep(100 * time.Millisecond)
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
@@ -118,12 +117,11 @@ func TestTargetManager(t *testing.T) {
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 		mockService.On("DescribeLogGroups", mock.Anything).
-			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(maxAttempts)
+			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
-		assert.NoError(t, err) // The overall operation should still succeed even if setting retention policy fails
-		// Wait for async operations to complete
+		assert.NoError(t, err)
 		time.Sleep(30 * time.Second)
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
@@ -141,15 +139,14 @@ func TestTargetManager(t *testing.T) {
 					RetentionInDays: aws.Int64(0),
 				},
 			},
-		}, nil).Times(maxAttempts) // Should be called for each retry attempt
+		}, nil).Once()
 		mockService.On("PutRetentionPolicy", mock.Anything).
 			Return(&cloudwatchlogs.PutRetentionPolicyOutput{},
-				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(maxAttempts) // Should be called for each retry attempt
+				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
-		assert.NoError(t, err) // The overall operation should still succeed even if setting retention policy fails
-		// Wait for async operations to complete
+		assert.NoError(t, err)
 		time.Sleep(30 * time.Second)
 		mockService.AssertExpectations(t)
 	})
@@ -226,11 +223,8 @@ func TestTargetManager(t *testing.T) {
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 
-		// Small wait to ensure async operations complete
 		time.Sleep(100 * time.Millisecond)
-
 		mockService.AssertExpectations(t)
-		// Verify DescribeLogGroups was never called
 		mockService.AssertNotCalled(t, "DescribeLogGroups")
 	})
 
@@ -242,14 +236,13 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 		// fails but should retry
-		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, awserr.New("InternalError", "Internal error", nil)).Times(maxAttempts)
+		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, awserr.New("InternalError", "Internal error", nil)).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
-		assert.NoError(t, err) // Overall operation should succeed even if retention update fails
+		assert.NoError(t, err)
 
-		// Wait for retries to complete
-		time.Sleep(time.Duration(maxAttempts) * time.Second)
+		time.Sleep(30 * time.Second)
 
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "DescribeLogGroups")
@@ -258,19 +251,9 @@ func TestTargetManager(t *testing.T) {
 
 func TestCalculateBackoff(t *testing.T) {
 	manager := &targetManager{}
-
-	delay := manager.calculateBackoff(0)
-	etd := baseDelay + time.Duration(float64(baseDelay)*jitterFactor)
-	assert.True(t, delay >= baseDelay && delay <= etd)
-
-	delay = manager.calculateBackoff(2)
-	expectedBaseDelay := 4 * time.Second
-	etd = expectedBaseDelay + time.Duration(float64(expectedBaseDelay)*jitterFactor)
-	assert.True(t, delay >= expectedBaseDelay && delay <= etd)
-
-	// never exceed 30sec of total wait time
+	// should never exceed 30sec of total wait time
 	totalDelay := time.Duration(0)
-	for i := 0; i < maxAttempts; i++ {
+	for i := 0; i < numBackoffRetries; i++ {
 		delay := manager.calculateBackoff(i)
 		totalDelay += delay
 	}
