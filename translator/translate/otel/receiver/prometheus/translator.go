@@ -22,8 +22,8 @@ import (
 const (
 	otelConfigParsingError = "has invalid keys: global"
 	defaultTLSCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
-	defaultTLSCertPath     = "/etc/amazon-cloudwatch-observability-agent-outbound-cert/client.crt"
-	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-outbound-cert/client.key"
+	defaultTLSCertPath     = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.crt"
+	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
 )
 
 var (

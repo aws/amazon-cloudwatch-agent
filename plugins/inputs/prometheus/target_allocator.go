@@ -32,8 +32,8 @@ import (
 
 var (
 	DefaultTLSCaFilePath   = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
-	DefaultTLSCertFilePath = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-outbound-cert", "client.crt")
-	DefaultTLSKeyFilePath  = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-outbound-cert", "client.key")
+	DefaultTLSCertFilePath = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-ta-client-cert", "client.crt")
+	DefaultTLSKeyFilePath  = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-ta-client-cert", "client.key")
 )
 
 const DEFAULT_TLS_RELOAD_INTERVAL_SECONDS = 10 * time.Second
