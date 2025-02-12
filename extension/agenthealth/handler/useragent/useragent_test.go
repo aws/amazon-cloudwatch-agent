@@ -169,10 +169,10 @@ func TestJmx(t *testing.T) {
 	jmxOther := "jmxOther"
 	nopType, _ := component.NewType("nop")
 	jmxType, _ := component.NewType(jmx)
-	pipelineId := pipeline.NewIDWithName(pipeline.SignalMetrics, "pipeline")
-	pipelineIdOther := pipeline.NewIDWithName(pipeline.SignalMetrics, "pipelineOther")
+	pipelineID := pipeline.NewIDWithName(pipeline.SignalMetrics, "pipeline")
+	pipelineIDOther := pipeline.NewIDWithName(pipeline.SignalMetrics, "pipelineOther")
 	pls := make(pipelines.Config)
-	pls[pipelineId] = &pipelines.PipelineConfig{
+	pls[pipelineID] = &pipelines.PipelineConfig{
 		Receivers: []component.ID{
 			component.NewIDWithName(jmxType, jmx),
 		},
@@ -180,7 +180,7 @@ func TestJmx(t *testing.T) {
 			component.NewID(nopType),
 		},
 	}
-	pls[pipelineIdOther] = &pipelines.PipelineConfig{
+	pls[pipelineIDOther] = &pipelines.PipelineConfig{
 		Receivers: []component.ID{
 			component.NewIDWithName(jmxType, jmxOther),
 		},

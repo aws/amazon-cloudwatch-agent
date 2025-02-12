@@ -219,7 +219,7 @@ func (t translatorMap[C, ID]) Len() int {
 }
 
 // NewTranslatorMap creates a TranslatorMap from the translators.
-func NewTranslatorMap[C any, ID TranslatorID](translators ...Translator[C, ID]) translatorMap[C, ID] {
+func NewTranslatorMap[C any, ID TranslatorID](translators ...Translator[C, ID]) TranslatorMap[C, ID] {
 	t := translatorMap[C, ID]{
 		list:   list.New(),
 		lookup: make(map[ID]*list.Element, len(translators)),
