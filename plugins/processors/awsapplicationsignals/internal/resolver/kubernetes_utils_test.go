@@ -227,3 +227,32 @@ func TestExtractIPPort(t *testing.T) {
 	assert.Equal(t, "", port)
 	assert.False(t, ok)
 }
+
+func TestInferWorkloadName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"StatefulSet single digit", "mysql-0", "mysql"},
+		{"StatefulSet multiple digits", "mysql-10", "mysql"},
+		{"ReplicaSet bare pod", "nginx-b2dfg", "nginx"},
+		{"Deployment-based ReplicaSet pod", "nginx-76977669dc-lwx64", "nginx"},
+		{"Non matching", "simplepod", "simplepod"},
+		{"ReplicaSet name with number suffix", "nginx-123-d9stt", "nginx-123"},
+		// in this case, the correct value should be "nginx-123456", but unfortunately the workload name matching the pattern, so we will get "nginx" instead
+		// however we think it's an edge case that we have to live with because we don't have any extra info for the pod to tell us the correct workload name
+		{"Some confusing case with a replicaSet/daemonset name matching the pattern", "nginx-245678-d9stt", "nginx"},
+		{"Some confusing case with a replicaSet/daemonset name not matching the pattern", "nginx-123456-d9stt", "nginx-123456"},
+		{"Empty", "", ""},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := inferWorkloadName(tc.input)
+			if got != tc.expected {
+				t.Errorf("inferWorkloadName(%q) = %q; expected %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}

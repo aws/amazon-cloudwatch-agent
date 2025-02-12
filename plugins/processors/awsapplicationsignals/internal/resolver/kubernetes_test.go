@@ -42,6 +42,7 @@ func TestEksResolver(t *testing.T) {
 			podToWorkloadAndNamespace: &sync.Map{},
 			ipToServiceAndNamespace:   &sync.Map{},
 			serviceToWorkload:         &sync.Map{},
+			useListPod:                true,
 		}
 
 		ip := "1.2.3.4"
@@ -97,7 +98,7 @@ func TestEksResolver(t *testing.T) {
 		}
 	})
 
-	t.Run("Test Process", func(t *testing.T) {
+	t.Run("Test Process when useListPod is true", func(t *testing.T) {
 		// helper function to get string values from the attributes
 		getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 			if value, ok := attributes.Get(key); ok {
@@ -117,6 +118,7 @@ func TestEksResolver(t *testing.T) {
 			podToWorkloadAndNamespace: &sync.Map{},
 			ipToServiceAndNamespace:   &sync.Map{},
 			serviceToWorkload:         &sync.Map{},
+			useListPod:                true,
 		}
 
 		// Test case 1: "aws.remote.service" contains IP:Port
@@ -157,6 +159,67 @@ func TestEksResolver(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "192.168.1.2", getStrAttr(attributes, attr.AWSRemoteService, t))
 	})
+
+	t.Run("Test Process when useListPod is false", func(t *testing.T) {
+		// helper function to get string values from the attributes
+		getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
+			if value, ok := attributes.Get(key); ok {
+				return value.AsString()
+			}
+			t.Errorf("Failed to get value for key: %s", key)
+			return ""
+		}
+
+		logger, _ := zap.NewProduction()
+		resolver := &kubernetesResolver{
+			logger:                   logger,
+			clusterName:              "test",
+			platformCode:             config.PlatformEKS,
+			ipToWorkloadAndNamespace: &sync.Map{},
+			ipToServiceAndNamespace:  &sync.Map{},
+			serviceToWorkload:        &sync.Map{},
+			useListPod:               false,
+		}
+
+		// Test case 1: "aws.remote.service" contains IP:Port
+		attributes := pcommon.NewMap()
+		attributes.PutStr(attr.AWSRemoteService, "192.0.2.1:8080")
+		resourceAttributes := pcommon.NewMap()
+		resolver.ipToWorkloadAndNamespace.Store("192.0.2.1:8080", "test-deployment@test-namespace")
+		err := resolver.Process(attributes, resourceAttributes)
+		assert.NoError(t, err)
+		assert.Equal(t, "test-deployment", getStrAttr(attributes, attr.AWSRemoteService, t))
+		assert.Equal(t, "eks:test/test-namespace", getStrAttr(attributes, attr.AWSRemoteEnvironment, t))
+
+		// Test case 2: "aws.remote.service" contains only IP
+		attributes = pcommon.NewMap()
+		attributes.PutStr(attr.AWSRemoteService, "192.0.2.2")
+		resourceAttributes = pcommon.NewMap()
+		resolver.ipToWorkloadAndNamespace.Store("192.0.2.2", "test-deployment-2@test-namespace-2")
+		err = resolver.Process(attributes, resourceAttributes)
+		assert.NoError(t, err)
+		assert.Equal(t, "test-deployment-2", getStrAttr(attributes, attr.AWSRemoteService, t))
+		assert.Equal(t, "eks:test/test-namespace-2", getStrAttr(attributes, attr.AWSRemoteEnvironment, t))
+
+		// Test case 3: "aws.remote.service" contains non-ip string
+		attributes = pcommon.NewMap()
+		attributes.PutStr(attr.AWSRemoteService, "not-an-ip")
+		resourceAttributes = pcommon.NewMap()
+		err = resolver.Process(attributes, resourceAttributes)
+		assert.NoError(t, err)
+		assert.Equal(t, "not-an-ip", getStrAttr(attributes, attr.AWSRemoteService, t))
+
+		// Test case 4: Process with cluster ip
+		attributes = pcommon.NewMap()
+		attributes.PutStr(attr.AWSRemoteService, "192.168.1.2")
+		resourceAttributes = pcommon.NewMap()
+		resolver.ipToServiceAndNamespace.Store("192.168.1.2", "service1@test-namespace-3")
+		resolver.serviceToWorkload.Store("service1@test-namespace-3", "service1-deployment@test-namespace-3")
+		err = resolver.Process(attributes, resourceAttributes)
+		assert.NoError(t, err)
+		assert.Equal(t, "service1-deployment", getStrAttr(attributes, attr.AWSRemoteService, t))
+		assert.Equal(t, "eks:test/test-namespace-3", getStrAttr(attributes, attr.AWSRemoteEnvironment, t))
+	})
 }
 
 func TestK8sResourceAttributesResolverOnEKS(t *testing.T) {
@@ -166,10 +229,9 @@ func TestK8sResourceAttributesResolverOnEKS(t *testing.T) {
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
 			return value.AsString()
-		} else {
-			t.Errorf("Failed to get value for key: %s", key)
-			return ""
 		}
+		t.Errorf("Failed to get value for key: %s", key)
+		return ""
 	}
 
 	resolver := newKubernetesResourceAttributesResolver(config.PlatformEKS, "test-cluster")
