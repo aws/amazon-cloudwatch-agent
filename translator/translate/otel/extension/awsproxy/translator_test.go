@@ -22,6 +22,8 @@ func TestTranslate(t *testing.T) {
 		require.True(t, ok)
 		wantCfg := awsproxy.NewFactory().CreateDefaultConfig().(*awsproxy.Config)
 		wantCfg.ProxyConfig.IMDSRetries = 1
+		// Upstream defaults to localhost but we want to stick with 0.0.0.0 as the default for AppSignals
+		wantCfg.ProxyConfig.Endpoint = "0.0.0.0:2000"
 		assert.Equal(t, wantCfg, gotCfg)
 	}
 }
