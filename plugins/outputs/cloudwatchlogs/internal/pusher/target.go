@@ -166,6 +166,7 @@ func (m *targetManager) processDescribeLogGroup() {
 				m.prp <- target
 				break
 			}
+			break // no change in retention
 		}
 	}
 }
