@@ -37,9 +37,9 @@ type translator struct {
 
 type Option func(any)
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
+func NewTranslator(opts ...Option) common.ComponentTranslator {
 	t := &translator{factory: prometheusreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)

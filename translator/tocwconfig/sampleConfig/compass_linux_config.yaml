@@ -72,11 +72,11 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/service/telegraf
                 - ec2tagger
+                - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
     telemetry:
         logs:
             development: false
@@ -94,4 +94,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

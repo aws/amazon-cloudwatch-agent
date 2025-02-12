@@ -26,9 +26,9 @@ type translator struct {
 	factory             processor.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithNameAndSection(name string, telemetrySectionKey string) common.Translator[component.Config] {
+func NewTranslatorWithNameAndSection(name string, telemetrySectionKey string) common.ComponentTranslator {
 	return &translator{name, telemetrySectionKey, batchprocessor.NewFactory()}
 }
 

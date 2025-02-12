@@ -138,7 +138,6 @@ func (tam *TargetAllocatorManager) loadManager(logLevel *promlog.AllowedLevel) {
 			MeterProvider:  nil,
 			MetricsLevel:   0,
 			Resource:       pcommon.Resource{},
-			ReportStatus:   nil,
 		},
 	}
 

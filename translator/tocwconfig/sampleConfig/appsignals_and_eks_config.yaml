@@ -1385,7 +1385,9 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
+        max_conns_per_host: 0
         max_idle_conns: 100
+        max_idle_conns_per_host: 0
         middleware: agenthealth/statuscode
         openshift:
             address: ""
@@ -1508,10 +1510,13 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:4316
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 tls:
                     ca_file: ""
                     cert_file: path/to/cert.crt
@@ -1523,6 +1528,7 @@ receivers:
                     min_version: ""
                     reload_interval: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -1572,4 +1578,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

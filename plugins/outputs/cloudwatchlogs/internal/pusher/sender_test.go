@@ -40,6 +40,11 @@ func (m *mockLogsService) PutRetentionPolicy(input *cloudwatchlogs.PutRetentionP
 	return args.Get(0).(*cloudwatchlogs.PutRetentionPolicyOutput), args.Error(1)
 }
 
+func (m *mockLogsService) DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	args := m.Called(input)
+	return args.Get(0).(*cloudwatchlogs.DescribeLogGroupsOutput), args.Error(1)
+}
+
 type mockTargetManager struct {
 	mock.Mock
 }

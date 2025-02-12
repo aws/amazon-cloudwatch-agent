@@ -39,9 +39,9 @@ type translator struct {
 	factory exporter.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, awscloudwatchlogsexporter.NewFactory()}
 }
 
