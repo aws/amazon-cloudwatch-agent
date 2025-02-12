@@ -246,18 +246,24 @@ func (e *MissingKeyError) Error() string {
 	return fmt.Sprintf("%q missing key in JSON: %q", e.ID, e.JsonKey)
 }
 
+// ComponentTranslator is a Translator that converts a JSON config into a component
+type ComponentTranslator = Translator[component.Config, component.ID]
+
+// ComponentTranslatorMap is a map-like container which stores ComponentTranslators
+type ComponentTranslatorMap = TranslatorMap[component.Config, component.ID]
+
 // ComponentTranslators is a component ID and respective service pipeline.
 type ComponentTranslators struct {
-	Receivers  TranslatorMap[component.Config, component.ID]
-	Processors TranslatorMap[component.Config, component.ID]
-	Exporters  TranslatorMap[component.Config, component.ID]
-	Extensions TranslatorMap[component.Config, component.ID]
+	Receivers  ComponentTranslatorMap
+	Processors ComponentTranslatorMap
+	Exporters  ComponentTranslatorMap
+	Extensions ComponentTranslatorMap
 }
 
-// ComponentTranslator is a translator that
-type ComponentTranslator = Translator[component.Config, component.ID]
-type ComponentTranslatorMap = TranslatorMap[component.Config, component.ID]
+// PipelineTranslator is a Translator that converts a JSON config into a pipeline
 type PipelineTranslator = Translator[*ComponentTranslators, pipeline.ID]
+
+// PipelineTranslatorMap is a map-like container which stores PipelineTranslators
 type PipelineTranslatorMap = TranslatorMap[*ComponentTranslators, pipeline.ID]
 
 // ConfigKey joins the keys separated by confmap.KeyDelimiter.
