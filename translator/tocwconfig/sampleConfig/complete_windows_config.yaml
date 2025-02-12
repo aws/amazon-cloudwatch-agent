@@ -179,22 +179,22 @@ receivers:
                     timeout: 0s
                 endpoint: 0.0.0.0:1111
                 include_metadata: false
-                idle_timeout: 0s
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
-                read_header_timeout: 0s
-                read_timeout: 0s
                 transport: tcp
                 write_buffer_size: 0
-                write_timeout: 0s
             http:
                 endpoint: 0.0.0.0:2222
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
         initial_delay: 1s
