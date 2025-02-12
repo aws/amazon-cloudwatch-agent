@@ -103,7 +103,7 @@ func (m *targetManager) createLogGroupAndStream(t Target) (bool, error) {
 
 		// attempt to create stream again if group created successfully.
 		if err == nil {
-			m.logger.Debugf("successfully created log group %v. Retrying log stream %v", t.Group, t.Stream)
+			m.logger.Debugf("retrying log stream %v", t.Stream)
 			err = m.createLogStream(t)
 		} else {
 			m.logger.Debugf("creating group fail due to : %v", err)
@@ -164,7 +164,6 @@ func (m *targetManager) processDescribeLogGroup() {
 			if currentRetention != target.Retention && target.Retention > 0 {
 				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
 				m.prp <- target
-				break
 			}
 			break // no change in retention
 		}

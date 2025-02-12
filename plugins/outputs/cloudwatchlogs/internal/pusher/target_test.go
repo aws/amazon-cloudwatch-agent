@@ -112,6 +112,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("SetRetentionPolicy/LogGroupNotFound", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
@@ -128,6 +129,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("SetRetentionPolicy/Error", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
@@ -229,6 +231,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("NewLogGroup/RetentionError", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
