@@ -692,48 +692,6 @@ processors:
               submatch_case: ""
             - action: insert
               aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: container_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: ContainerGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: pod_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: PodGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: node_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
               include: DCGM_FI_DEV_GPU_UTIL
               match_type: ""
               new_name: container_gpu_utilization
@@ -1005,32 +963,53 @@ processors:
                   new_label: Type
                   new_value: NodeGPU
               submatch_case: ""
-            - action: update
+            - action: insert
               aggregation_type: ""
-              include: execution_errors_total
+              include: DCGM_FI_DEV_POWER_USAGE
               match_type: ""
-              new_name: neuron_execution_errors
-              operations: []
+              new_name: container_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: pod_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: node_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuroncore_memory_usage_model_code
+              include: neuroncore_memory_usage_constants
               match_type: ""
-              new_name: neuroncore_memory_usage_model_code
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_runtime_memory
-              match_type: ""
-              new_name: neuroncore_memory_usage_runtime_memory
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: instance_info
-              match_type: ""
-              new_name: instance_info
+              new_name: neuroncore_memory_usage_constants
               operations: []
               submatch_case: ""
             - action: update
@@ -1049,23 +1028,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_status_total
+              include: execution_latency_seconds
               match_type: ""
-              new_name: neuron_execution_status
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuron_runtime_memory_used_bytes
-              match_type: ""
-              new_name: neurondevice_runtime_memory_used_bytes
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_constants
-              match_type: ""
-              new_name: neuroncore_memory_usage_constants
+              new_name: neuron_execution_latency
               operations: []
               submatch_case: ""
             - action: update
@@ -1073,6 +1038,13 @@ processors:
               include: neuroncore_memory_usage_model_shared_scratchpad
               match_type: ""
               new_name: neuroncore_memory_usage_model_shared_scratchpad
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_runtime_memory
+              match_type: ""
+              new_name: neuroncore_memory_usage_runtime_memory
               operations: []
               submatch_case: ""
             - action: update
@@ -1098,9 +1070,37 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_latency_seconds
+              include: execution_errors_total
               match_type: ""
-              new_name: neuron_execution_latency
+              new_name: neuron_execution_errors
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: execution_status_total
+              match_type: ""
+              new_name: neuron_execution_status
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuron_runtime_memory_used_bytes
+              match_type: ""
+              new_name: neurondevice_runtime_memory_used_bytes
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_model_code
+              match_type: ""
+              new_name: neuroncore_memory_usage_model_code
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: instance_info
+              match_type: ""
+              new_name: instance_info
               operations: []
               submatch_case: ""
 receivers:
@@ -1199,4 +1199,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

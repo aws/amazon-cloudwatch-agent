@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 )
@@ -17,11 +17,11 @@ import (
 func TestTranslators(t *testing.T) {
 	testCases := map[string]struct {
 		input map[string]any
-		want  []component.ID
+		want  []pipeline.ID
 	}{
 		"WithEmpty": {
 			input: map[string]any{},
-			want:  []component.ID{},
+			want:  []pipeline.ID{},
 		},
 		"WithSingle": {
 			input: map[string]any{
@@ -31,8 +31,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "jmx"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "jmx"),
 			},
 		},
 		"WithSingle/Destinations": {
@@ -48,8 +48,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "jmx/amp"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "jmx/amp"),
 			},
 		},
 		"WithMultiple": {
@@ -63,9 +63,9 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "jmx/0"),
-				component.MustNewIDWithName("metrics", "jmx/1"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "jmx/0"),
+				pipeline.MustNewIDWithName("metrics", "jmx/1"),
 			},
 		},
 		"WithMultiple/Destinations": {
@@ -85,11 +85,11 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "jmx/cloudwatch/0"),
-				component.MustNewIDWithName("metrics", "jmx/amp/0"),
-				component.MustNewIDWithName("metrics", "jmx/cloudwatch/1"),
-				component.MustNewIDWithName("metrics", "jmx/amp/1"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "jmx/cloudwatch/0"),
+				pipeline.MustNewIDWithName("metrics", "jmx/amp/0"),
+				pipeline.MustNewIDWithName("metrics", "jmx/cloudwatch/1"),
+				pipeline.MustNewIDWithName("metrics", "jmx/amp/1"),
 			},
 		},
 	}
