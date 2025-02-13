@@ -42,14 +42,14 @@ type translator struct {
 	services []*collections.Pair[string, string]
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 // NewTranslator creates a new aws container insight receiver translator.
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	baseKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	return &translator{
 		name:    name,

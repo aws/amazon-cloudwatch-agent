@@ -186,11 +186,15 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:2222
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -314,4 +318,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/exporter/exportertest"
+	"go.opentelemetry.io/collector/pipeline"
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
@@ -24,16 +24,16 @@ func TestCreateExporter(t *testing.T) {
 	factory := NewFactory()
 
 	cfg := factory.CreateDefaultConfig()
-	creationSet := exportertest.NewNopCreateSettings()
-	tExporter, err := factory.CreateTracesExporter(context.Background(), creationSet, cfg)
-	assert.Equal(t, err, component.ErrDataTypeIsNotSupported)
+	creationSet := exportertest.NewNopSettings()
+	tExporter, err := factory.CreateTraces(context.Background(), creationSet, cfg)
+	assert.Equal(t, err, pipeline.ErrSignalNotSupported)
 	assert.Nil(t, tExporter)
 
-	mExporter, err := factory.CreateMetricsExporter(context.Background(), creationSet, cfg)
+	mExporter, err := factory.CreateMetrics(context.Background(), creationSet, cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, mExporter)
 
-	tLogs, err := factory.CreateLogsExporter(context.Background(), creationSet, cfg)
-	assert.Equal(t, err, component.ErrDataTypeIsNotSupported)
+	tLogs, err := factory.CreateLogs(context.Background(), creationSet, cfg)
+	assert.Equal(t, err, pipeline.ErrSignalNotSupported)
 	assert.Nil(t, tLogs)
 }
