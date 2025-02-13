@@ -234,5 +234,5 @@ func (m *targetManager) calculateBackoff(retryCount int) time.Duration {
 	if delay > maxRetryDelayTarget {
 		delay = maxRetryDelayTarget
 	}
-	return time.Duration(seededRand.Int63n(int64(delay/2)) + int64(delay/2))
+	return withJitter(delay)
 }
