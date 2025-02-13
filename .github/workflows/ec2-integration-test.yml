@@ -111,7 +111,8 @@ jobs:
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then
+              echo "terraform apply done"
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
             fi
