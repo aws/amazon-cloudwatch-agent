@@ -24,13 +24,13 @@ type translator struct {
 	factory exporter.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, prometheusremotewriteexporter.NewFactory()}
 }
 

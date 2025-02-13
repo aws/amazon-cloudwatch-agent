@@ -9,8 +9,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -18,7 +18,7 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
-	tt := NewTranslator(WithDataType(component.DataTypeTraces))
+	tt := NewTranslator(WithSignal(pipeline.SignalTraces))
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		mode    string

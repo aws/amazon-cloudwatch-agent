@@ -30,6 +30,7 @@ type stubLogsService struct {
 	clg func(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
 	cls func(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
 	prp func(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
+	dlg func(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
 }
 
 func (s *stubLogsService) PutLogEvents(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
@@ -56,6 +57,13 @@ func (s *stubLogsService) CreateLogStream(in *cloudwatchlogs.CreateLogStreamInpu
 func (s *stubLogsService) PutRetentionPolicy(in *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
 	if s.prp != nil {
 		return s.prp(in)
+	}
+	return nil, nil
+}
+
+func (s *stubLogsService) DescribeLogGroups(in *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	if s.dlg != nil {
+		return s.dlg(in)
 	}
 	return nil, nil
 }
