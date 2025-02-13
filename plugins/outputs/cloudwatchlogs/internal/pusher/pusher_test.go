@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 const eventCount = 100000
@@ -22,7 +22,7 @@ func TestPusher(t *testing.T) {
 		t.Parallel()
 		stop := make(chan struct{})
 		var wg sync.WaitGroup
-		pusher := setupPusher(t, "single", nil, stop, &wg)
+		pusher := setupPusher(t, nil, stop, &wg)
 
 		var completed atomic.Int32
 		generateEvents(t, pusher, &completed)
@@ -36,7 +36,7 @@ func TestPusher(t *testing.T) {
 		stop := make(chan struct{})
 		var wg sync.WaitGroup
 		wp := NewWorkerPool(5)
-		pusher := setupPusher(t, "pool", wp, stop, &wg)
+		pusher := setupPusher(t, wp, stop, &wg)
 
 		_, isSenderPool := pusher.Sender.(*senderPool)
 		assert.True(t, isSenderPool)
@@ -63,9 +63,9 @@ func generateEvents(t *testing.T, pusher *Pusher, completed *atomic.Int32) {
 	}
 }
 
-func setupPusher(t *testing.T, name string, workerPool WorkerPool, stop chan struct{}, wg *sync.WaitGroup) *Pusher {
+func setupPusher(t *testing.T, workerPool WorkerPool, stop chan struct{}, wg *sync.WaitGroup) *Pusher {
 	t.Helper()
-	logger := testutil.Logger{Name: name}
+	logger := testutil.NewNopLogger()
 	target := Target{Group: "G", Stream: "S", Retention: 7}
 	service := new(stubLogsService)
 	service.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
