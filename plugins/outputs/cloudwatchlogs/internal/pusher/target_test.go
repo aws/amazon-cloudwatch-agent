@@ -11,15 +11,15 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 func TestTargetManager(t *testing.T) {
-	logger := testutil.Logger{Name: "test"}
+	logger := testutil.NewNopLogger()
 
 	t.Run("CreateLogStream", func(t *testing.T) {
 		target := Target{Group: "G", Stream: "S"}
