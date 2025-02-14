@@ -519,7 +519,7 @@ func TestEntityStore_ClearTerminatedPodsFromServiceMap(t *testing.T) {
 func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	e := EntityStore{eksInfo: newEKSInfo(zap.NewExample())}
 	e.done = make(chan struct{})
-	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Microsecond)
+	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, 500*time.Millisecond)
 
 	go e.StartPodToServiceEnvironmentMappingTtlCache()
 	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
@@ -546,9 +546,9 @@ func TestEntityStore_StopPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
 
 	time.Sleep(time.Millisecond)
-	assert.NoError(t, e.Shutdown(nil))
+	assert.NoError(t, e.Shutdown(context.TODO()))
 	//cache should be cleared
-	time.Sleep(time.Second)
+	time.Sleep(500 * time.Millisecond)
 	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
 }
 
@@ -627,7 +627,7 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 				metadataprovider: tt.args.metadataProvider,
 				config:           config,
 			}
-			go es.Start(nil, nil)
+			go es.Start(context.TODO(), nil)
 			time.Sleep(2 * time.Second)
 
 			logOutput := buf.String()

@@ -9,6 +9,7 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -20,12 +21,18 @@ type serviceWatcher struct {
 	deleter                        Deleter
 }
 
-func newServiceWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, deleter Deleter) *serviceWatcher {
+func newServiceWatcher(logger *zap.Logger, sharedInformerFactory informers.SharedInformerFactory, deleter Deleter) *serviceWatcher {
+	serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
+	err := serviceInformer.SetTransform(minimizeService)
+	if err != nil {
+		logger.Error("failed to minimize Service objects", zap.Error(err))
+	}
+
 	return &serviceWatcher{
 		ipToServiceAndNamespace:        &sync.Map{},
 		serviceAndNamespaceToSelectors: &sync.Map{},
 		logger:                         logger,
-		informer:                       informer,
+		informer:                       serviceInformer,
 		deleter:                        deleter,
 	}
 }
