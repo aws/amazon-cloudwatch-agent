@@ -34,10 +34,6 @@ const (
 	maxRetryDelay = 1 * time.Minute
 )
 
-var (
-	seededRand = rand.New(rand.NewSource(time.Now().UnixNano())) // nolint:gosec
-)
-
 type retryWaitStrategy int
 
 const (
@@ -61,7 +57,11 @@ func retryWait(baseRetryDelay time.Duration, maxBackoffRetries int, retryCount i
 	if retryCount < maxBackoffRetries {
 		d = baseRetryDelay * time.Duration(1<<int64(retryCount))
 	}
-	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
+	return withJitter(d)
+}
+
+func withJitter(d time.Duration) time.Duration {
+	return time.Duration(rand.Int63n(int64(d/2)) + int64(d/2)) // nolint:gosec
 }
 
 // chooseRetryWaitStrategy decides if a "long" or "short" retry strategy should be used when the PutLogEvents API call

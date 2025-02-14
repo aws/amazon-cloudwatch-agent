@@ -70,34 +70,6 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
-    k8sattributes/hostOtlpMetrics/cloudwatchlogs:
-        auth_type: serviceAccount
-        context: ""
-        exclude:
-            pods:
-                - name: jaeger-agent
-                - name: jaeger-collector
-        extract:
-            metadata:
-                - k8s.namespace.name
-                - k8s.pod.name
-                - k8s.replicaset.name
-                - k8s.deployment.name
-                - k8s.daemonset.name
-                - k8s.statefulset.name
-                - k8s.cronjob.name
-                - k8s.job.name
-                - k8s.node.name
-        filter:
-            namespace: ""
-            node: ""
-            node_from_env_var: K8S_NODE_NAME
-        kube_config_path: ""
-        passthrough: false
-        pod_association:
-            - sources:
-                - from: connection
-                  name: ""
 receivers:
     otlp/metrics:
         protocols:
@@ -123,10 +95,13 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:2345
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 tls:
                     ca_file: ""
                     cert_file: /path/to/cert.pem
@@ -138,6 +113,7 @@ receivers:
                     min_version: ""
                     reload_interval: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -150,7 +126,6 @@ service:
                 - awsemf
             processors:
                 - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
-                - k8sattributes/hostOtlpMetrics/cloudwatchlogs
                 - awsentity/service/otlp
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
@@ -170,4 +145,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

@@ -35,9 +35,9 @@ func TestTranslate(t *testing.T) {
 
 	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "unix", "config.json")))
 	translatedCfg, err := transl.Translate(conf)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	actualCfg, ok := translatedCfg.(*transformprocessor.Config)
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	// sort the statements for consistency
 	assert.Len(t, expectedCfg.MetricStatements, 1)
@@ -64,7 +64,7 @@ func TestMetricDecoration(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("other_metric", "none", 0.0, 0, 0, nil)
 
 	ctx := context.Background()
-	proc, err := transl.factory.CreateMetricsProcessor(ctx, processortest.NewNopCreateSettings(), cfg, sink)
+	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(), cfg, sink)
 	require.NotNil(t, proc)
 	require.NoError(t, err)
 	actualMetrics := pmetric.NewMetrics()

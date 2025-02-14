@@ -4,8 +4,8 @@
 package containerinsightsjmx
 
 import (
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -28,14 +28,14 @@ var (
 type translator struct {
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[*common.ComponentTranslators] {
+func NewTranslator() common.PipelineTranslator {
 	return &translator{}
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, common.PipelineNameContainerInsightsJmx)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, common.PipelineNameContainerInsightsJmx)
 }
 
 // Translate creates a pipeline for container insights jmx if the logs.metrics_collected.kubernetes
@@ -69,8 +69,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			awsemf.NewTranslatorWithName(common.PipelineNameContainerInsightsJmx),
 		),
 		Extensions: common.NewTranslatorMap(
-			agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
-			agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
+			agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
+			agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
 		),
 	}
 

@@ -25,7 +25,7 @@ var (
 		return &EksDetector{Clientset: fake.NewSimpleClientset()}, nil
 	}
 
-	// TestIsEKSCacheEKS os used for unit testing EKS route
+	// TestIsEKSCacheEKS is used for unit testing EKS route
 	TestIsEKSCacheEKS = func() IsEKSCache {
 		return IsEKSCache{Value: true, Err: nil}
 	}
@@ -45,7 +45,7 @@ func (detector *MockDetector) getConfigMap(namespace string, name string) (map[s
 	return args.Get(0).(map[string]string), args.Error(1)
 }
 
-func (detector *MockDetector) getServerVersion() (string, error) {
+func (detector *MockDetector) getIssuer() (string, error) {
 	args := detector.Called()
 	return args.Get(0).(string), args.Error(1)
 }

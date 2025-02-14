@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service/pipelines"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -17,23 +18,23 @@ var (
 	ErrNoPipelines = errors.New("no valid pipelines")
 )
 
-type Translator = common.Translator[*common.ComponentTranslators]
+type Translator = common.PipelineTranslator
 
-type TranslatorMap = common.TranslatorMap[*common.ComponentTranslators]
+type TranslatorMap = common.TranslatorMap[*common.ComponentTranslators, pipeline.ID]
 
 type Translation struct {
-	// Pipelines is a map of component IDs to service pipelines.
+	// Pipelines is a map of pipeline IDs to service pipelines.
 	Pipelines   pipelines.Config
 	Translators common.ComponentTranslators
 }
 
 type translator struct {
-	translators common.TranslatorMap[*common.ComponentTranslators]
+	translators common.TranslatorMap[*common.ComponentTranslators, pipeline.ID]
 }
 
-var _ common.Translator[*Translation] = (*translator)(nil)
+var _ common.Translator[*Translation, component.ID] = (*translator)(nil) // ID doesn't really matter
 
-func NewTranslator(translators common.TranslatorMap[*common.ComponentTranslators]) common.Translator[*Translation] {
+func NewTranslator(translators common.TranslatorMap[*common.ComponentTranslators, pipeline.ID]) common.Translator[*Translation, component.ID] {
 	return &translator{translators: translators}
 }
 
@@ -47,13 +48,13 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 	translation := Translation{
 		Pipelines: make(pipelines.Config),
 		Translators: common.ComponentTranslators{
-			Receivers:  common.NewTranslatorMap[component.Config](),
-			Processors: common.NewTranslatorMap[component.Config](),
-			Exporters:  common.NewTranslatorMap[component.Config](),
-			Extensions: common.NewTranslatorMap[component.Config](),
+			Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
+			Processors: common.NewTranslatorMap[component.Config, component.ID](),
+			Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+			Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		},
 	}
-	t.translators.Range(func(pt common.Translator[*common.ComponentTranslators]) {
+	t.translators.Range(func(pt common.PipelineTranslator) {
 		if pipeline, _ := pt.Translate(conf); pipeline != nil {
 			translation.Pipelines[pt.ID()] = &pipelines.PipelineConfig{
 				Receivers:  pipeline.Receivers.Keys(),
