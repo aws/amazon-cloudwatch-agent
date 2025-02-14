@@ -15,13 +15,17 @@ remote_write_queue:
   enabled: true
   queue_size: 10000
   num_consumers: 5
-external_labels: []
+external_labels: {}
 write_buffer_size: 524288
 endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
-headers: []
+headers: {}
 target_info:
   enabled: true
 export_created_metric:
   enabled: false
 add_metric_suffixes: true
 max_batch_size_bytes: 3000000
+max_conns_per_host: 0
+max_idle_conns: 100
+max_idle_conns_per_host: 0
+idle_conn_timeout: 90000000000

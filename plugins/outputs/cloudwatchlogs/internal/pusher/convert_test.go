@@ -4,16 +4,13 @@
 package pusher
 
 import (
-	"bytes"
-	"io"
-	"log"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 type stubLogEvent struct {
@@ -44,7 +41,7 @@ func newStubLogEvent(message string, timestamp time.Time) *stubLogEvent {
 }
 
 func TestConverter(t *testing.T) {
-	logger := testutil.Logger{Name: "converter"}
+	logger := testutil.NewNopLogger()
 	target := Target{Group: "testGroup", Stream: "testStream"}
 
 	t.Run("WithValidTimestamp", func(t *testing.T) {
@@ -86,20 +83,19 @@ func TestConverter(t *testing.T) {
 
 	t.Run("WithOldTimestampWarning", func(t *testing.T) {
 		oldTime := time.Now().Add(-25 * time.Hour)
-		conv := newConverter(logger, target)
+		logSink := testutil.NewLogSink()
+		conv := newConverter(logSink, target)
 		conv.lastValidTime = oldTime
 		conv.lastUpdateTime = oldTime
 
-		var logbuf bytes.Buffer
-		log.SetOutput(io.MultiWriter(&logbuf, os.Stdout))
 		le := conv.convert(newStubLogEvent("Test message", time.Time{}))
 
 		assert.Equal(t, oldTime, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
-		loglines := strings.Split(strings.TrimSpace(logbuf.String()), "\n")
-		assert.Len(t, loglines, 1)
-		logline := loglines[0]
-		assert.True(t, strings.Contains(logline, "W!"))
-		assert.True(t, strings.Contains(logline, "Unable to parse timestamp"))
+		logLines := logSink.Lines()
+		assert.Len(t, logLines, 1)
+		logLine := logLines[0]
+		assert.True(t, strings.Contains(logLine, "W!"))
+		assert.True(t, strings.Contains(logLine, "Unable to parse timestamp"))
 	})
 }

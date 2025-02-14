@@ -27,12 +27,12 @@ type translator struct {
 }
 
 var (
-	baseKey                                     = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	k8sKey                                      = common.ConfigKey(baseKey, common.KubernetesKey)
-	_       common.Translator[component.Config] = (*translator)(nil)
+	baseKey                            = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
+	k8sKey                             = common.ConfigKey(baseKey, common.KubernetesKey)
+	_       common.ComponentTranslator = (*translator)(nil)
 )
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: resourceprocessor.NewFactory()}
 	t.SetIndex(-1)
 	for _, opt := range opts {
@@ -44,7 +44,7 @@ func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.
 	return t
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())

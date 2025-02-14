@@ -227,3 +227,32 @@ func TestExtractIPPort(t *testing.T) {
 	assert.Equal(t, "", port)
 	assert.False(t, ok)
 }
+
+func TestInferWorkloadName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    string
+		service  string
+		expected string
+	}{
+		{"StatefulSet single digit", "mysql-0", "service", "mysql"},
+		{"StatefulSet multiple digits", "mysql-10", "service", "mysql"},
+		{"ReplicaSet bare pod", "nginx-b2dfg", "service", "nginx"},
+		{"Deployment-based ReplicaSet pod", "nginx-76977669dc-lwx64", "service", "nginx"},
+		{"Non matching", "simplepod", "service", "service"},
+		{"ReplicaSet name with number suffix", "nginx-123-d9stt", "service", "nginx-123"},
+		{"Some confusing case with a replicaSet/daemonset name matching the pattern", "nginx-245678-d9stt", "nginx-service", "nginx"},
+		// when the regex pattern doesn't matter, we just fall back to service name to handle all the edge cases
+		{"Some confusing case with a replicaSet/daemonset name not matching the pattern", "nginx-123456-d9stt", "nginx-service", "nginx-123456"},
+		{"Empty", "", "service", "service"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := inferWorkloadName(tc.input, tc.service)
+			if got != tc.expected {
+				t.Errorf("inferWorkloadName(%q) = %q; expected %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}

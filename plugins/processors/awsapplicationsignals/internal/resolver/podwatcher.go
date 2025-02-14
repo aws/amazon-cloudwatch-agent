@@ -9,6 +9,7 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -112,14 +113,20 @@ type podWatcher struct {
 	deleter                      Deleter
 }
 
-func newPodWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, deleter Deleter) *podWatcher {
+func newPodWatcher(logger *zap.Logger, sharedInformerFactory informers.SharedInformerFactory, deleter Deleter) *podWatcher {
+	podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
+	err := podInformer.SetTransform(minimizePod)
+	if err != nil {
+		logger.Error("failed to minimize Pod objects", zap.Error(err))
+	}
+
 	return &podWatcher{
 		ipToPod:                      &sync.Map{},
 		podToWorkloadAndNamespace:    &sync.Map{},
 		workloadAndNamespaceToLabels: &sync.Map{},
 		workloadPodCount:             make(map[string]int),
 		logger:                       logger,
-		informer:                     informer,
+		informer:                     podInformer,
 		deleter:                      deleter,
 	}
 }
