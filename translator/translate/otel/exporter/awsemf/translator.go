@@ -153,6 +153,8 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, err
 		}
 	}
+
+	cfg.AddEntity = true
 	return cfg, nil
 }
 
