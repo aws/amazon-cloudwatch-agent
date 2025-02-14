@@ -99,6 +99,7 @@ jobs:
               -var="github_test_repo=${{ inputs.test_repo_url }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="is_selinux_test=true" \
+              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
               -var="cwa_github_sha=${{inputs.github_sha}}" \
               -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
