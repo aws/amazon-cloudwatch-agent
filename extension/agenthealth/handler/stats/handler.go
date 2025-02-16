@@ -5,7 +5,6 @@ package stats
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -28,10 +27,10 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	var responseHandlers []awsmiddleware.ResponseHandler
 	var statsProviders []agent.StatsProvider
 
-	fmt.Println("Printing-StatusCodeHandler operations:")
-	fmt.Println(cfg.Operations)
-	fmt.Println("Below is statuscodeEnabled and then agentStatsEnabled")
-	fmt.Println(statusCodeEnabled, agentStatsEnabled)
+	log.Println("Printing-StatusCodeHandler operations:")
+	log.Println(cfg.Operations)
+	log.Println("Below is statuscodeEnabled and then agentStatsEnabled")
+	log.Println(statusCodeEnabled, agentStatsEnabled)
 
 	if !statusCodeEnabled && !agentStatsEnabled {
 		return nil, nil
