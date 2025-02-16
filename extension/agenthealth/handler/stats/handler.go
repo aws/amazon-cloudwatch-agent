@@ -5,6 +5,7 @@ package stats
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -25,6 +26,11 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	var requestHandlers []awsmiddleware.RequestHandler
 	var responseHandlers []awsmiddleware.ResponseHandler
 	var statsProviders []agent.StatsProvider
+
+	fmt.Println("Printing-StatusCodeHandler operations:")
+	fmt.Println(cfg.Operations)
+	fmt.Println("Below is statuscodeEnabled and then agentStatsEnabled")
+	fmt.Println(statusCodeEnabled, agentStatsEnabled)
 
 	if !statusCodeEnabled && !agentStatsEnabled {
 		return nil, nil
@@ -80,6 +86,7 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := awsmiddleware.GetOperationName(ctx)
+	fmt.Println("This is the handler request Operation name", operation)
 	if !sh.filter.IsAllowed(operation) {
 		return
 	}
@@ -95,6 +102,7 @@ func (sh *statsHandler) Header(operation string) string {
 		stats.Merge(p.Stats(operation))
 	}
 	header, err := stats.Marshal()
+	fmt.Println("This is the header for statuscode***:", header)
 	if err != nil {
 		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}
