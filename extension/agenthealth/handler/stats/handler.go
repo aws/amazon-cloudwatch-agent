@@ -26,6 +26,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig, statusCodeEnabled bo
 	var requestHandlers []awsmiddleware.RequestHandler
 	var responseHandlers []awsmiddleware.ResponseHandler
 	var statsProviders []agent.StatsProvider
+	statusCodeEnabled = true
 
 	log.Println("Printing-StatusCodeHandler operations:")
 	log.Println(cfg.Operations)
