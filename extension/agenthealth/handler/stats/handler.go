@@ -6,6 +6,7 @@ package stats
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 
@@ -86,7 +87,7 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := awsmiddleware.GetOperationName(ctx)
-	fmt.Println("This is the handler request Operation name", operation)
+	log.Println("This is the handler request Operation name", operation)
 	if !sh.filter.IsAllowed(operation) {
 		return
 	}
@@ -102,7 +103,7 @@ func (sh *statsHandler) Header(operation string) string {
 		stats.Merge(p.Stats(operation))
 	}
 	header, err := stats.Marshal()
-	fmt.Println("This is the header for statuscode***:", header)
+	log.Println("This is the header for statuscode***:", header)
 	if err != nil {
 		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}

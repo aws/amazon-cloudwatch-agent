@@ -5,7 +5,7 @@ package provider
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -72,8 +72,8 @@ func (sp *StatusCodeProvider) startProcessing() {
 }
 
 func (sp *StatusCodeProvider) EnqueueStatusCode(operation string, statusCode int) {
-	fmt.Println("Below is the operation name we are enqueueing for statuscode and its code")
-	fmt.Println(operation, statusCode)
+	log.Println("Below is the operation name we are enqueueing for statuscode and its code")
+	log.Println(operation, statusCode)
 	sp.statusCodeChan <- statusCodeEntry{operation: operation, statusCode: statusCode}
 }
 
@@ -145,13 +145,13 @@ func NewStatusCodeHandler(provider *StatusCodeProvider, filter agent.OperationsF
 
 func (h *StatusCodeHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := awsmiddleware.GetOperationName(ctx)
-	fmt.Println("Thissss-----here is the statuscode:")
-	fmt.Println(operation)
+	log.Println("Thissss-----here is the statuscode:")
+	log.Println(operation)
 	if !h.filter.IsAllowed(operation) {
-		fmt.Println("This operation is not allowed!!!!!!!!!")
+		log.Println("This operation is not allowed!!!!!!!!!")
 		return
 	}
-	fmt.Println("This operation is allowed!!!!!")
+	log.Println("This operation is allowed!!!!!")
 
 	operation = agent.GetShortOperationName(operation)
 	if operation == "" {
