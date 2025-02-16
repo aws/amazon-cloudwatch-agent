@@ -6,6 +6,7 @@ package common
 import (
 	"container/list"
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 )
 
 const (
@@ -476,4 +479,18 @@ func IsAnySet(conf *confmap.Conf, keys []string) bool {
 
 func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
 	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
+}
+
+func GetClusterName(conf *confmap.Conf) string {
+	val, ok := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
+	if ok && val != "" {
+		return val
+	}
+
+	envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
+	if envVarClusterName != "" {
+		return envVarClusterName
+	}
+
+	return util.GetClusterNameFromEc2Tagger()
 }
