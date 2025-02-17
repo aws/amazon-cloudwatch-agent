@@ -1,9 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run E2E Tests
+name: Run ROSA E2E Tests
 env:
-  TERRAFORM_AWS_ASSUME_ROLE: "arn:aws:iam::956457624121:role/Terraform-Test-Role-1KVXLJHXGQ52P"
+  TERRAFORM_AWS_ASSUME_ROLE:  ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
