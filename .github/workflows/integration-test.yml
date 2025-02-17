@@ -374,12 +374,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
     secrets: inherit
 
   EC2SELinuxIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2SELinux'
-    uses:  ./.github/workflows/ec2-selinux-integration-test.yml
+    uses:  ./.github/workflows/ec2-integration-test.yml
     with:
       github_sha: ${{github.sha}}
       test_dir: terraform/ec2/linux
@@ -392,6 +393,7 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
     secrets: inherit
 
   EC2LinuxIntegrationTestITAR:
