@@ -145,7 +145,7 @@ jobs:
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{env.TERRAFORM_AWS_ASSUME_ROLE}}
+      terraform_assume_role: ${{vars.TERRAFORM_AWS_ASSUME_ROLE}}
       agent_config: resources/cwagent_configs/jvm_tomcat.json
       sample_app: resources/sample_apps/tomcat.yaml
 #  GenerateTestMatrix:
