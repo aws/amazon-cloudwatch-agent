@@ -1,4 +1,9 @@
 {
+  "agent": {
+    "debug": true,
+    "aws_sdk_log_level": "LogDebugWithHTTPBody"
+  },
+
   "metrics": {
     "append_dimensions": {
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
