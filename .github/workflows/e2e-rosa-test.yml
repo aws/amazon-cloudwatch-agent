@@ -5,7 +5,7 @@ name: Reusable ROSA E2E Test
 
 env:
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  CLUSTER_NAME: ${{var.ROSA_CLUSTER_NAME}}
+  CLUSTER_NAME: ${{vars.ROSA_CLUSTER_NAME}}
 
 on:
   workflow_call:
