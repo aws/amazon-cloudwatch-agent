@@ -402,10 +402,12 @@ func TestPrometheusConfig(t *testing.T) {
 	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 }
-func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
+
+func TestPrometheusConfigWithTargetAllocator(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus_ta_config.yaml")
@@ -422,8 +424,8 @@ func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
 	require.NoError(t, err)
 	// In the following checks, we first load the json and replace tokens with the temp files
 	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
-	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
-	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
+	checkTranslation(t, "prometheus_config_kubernetes_linux", "linux", expectedEnvVars, "", tokenReplacements)
+	checkTranslation(t, "prometheus_config_kubernetes_windows", "windows", nil, "", tokenReplacements)
 
 }
 
@@ -897,7 +899,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
-		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
