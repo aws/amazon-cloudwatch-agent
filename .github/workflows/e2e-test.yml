@@ -224,7 +224,7 @@ jobs:
   RosaBaseTest:
     needs: [ OutputEnvVariables ]
     name: 'Rosa Base Test'
-    uses: ./.github/workflows/e2e-rosa-test.yml
+    uses: ./e2e-rosa-test.yml
     with:
       terraform_dir: terraform/rosa/e2e
       job_id: eks-e2e-jvm-tomcat-test
