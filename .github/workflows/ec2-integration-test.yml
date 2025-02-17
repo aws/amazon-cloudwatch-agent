@@ -81,6 +81,7 @@ jobs:
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 0
           git config --global http.lowSpeedTime 3600
+          
       - name: Set proxy to CN
 	      run: |
           go env -w GO111MODULE=on
