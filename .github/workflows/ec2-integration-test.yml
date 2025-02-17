@@ -35,6 +35,7 @@ on:
       localstack_host:
         type: string
       region:
+        required: true
         type: string
       terraform_assume_role:
         type: string
@@ -77,12 +78,14 @@ jobs:
         run: terraform --version
       
       - name: Increase Git timeout and buffer size
+        if: ${{ inputs.region == 'cn-north-1' }}
         run: |
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 0
           git config --global http.lowSpeedTime 3600
 
-      - name: Set proxy to CN
+      - name: Set proxy for dependencies in CN region
+        if: ${{ inputs.region == 'cn-north-1' }}
         run: |
           go env -w GO111MODULE=on
           go env -w GOPROXY=https://goproxy.cn,direct
