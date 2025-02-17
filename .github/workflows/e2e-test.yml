@@ -16,6 +16,8 @@ env:
 on:
   schedule:
     - cron: '0 17 * * 1'
+  branches:
+    - rosa
   workflow_dispatch:
     inputs:
       region:
@@ -39,125 +41,191 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  GetLatestOperatorCommitSHA:
-    runs-on: ubuntu-latest
-    outputs:
-      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
-      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-    steps:
-      - name: Checkout the target repo
-        uses: actions/checkout@v3
-        with:
-          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-          ref: ${{ inputs.operator-branch || 'main' }}
-          path: operator-repo
+#  GetLatestOperatorCommitSHA:
+#    runs-on: ubuntu-latest
+#    outputs:
+#      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
+#      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+#    steps:
+#      - name: Checkout the target repo
+#        uses: actions/checkout@v3
+#        with:
+#          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+#          ref: ${{ inputs.operator-branch || 'main' }}
+#          path: operator-repo
+#
+#      - name: Get latest commit SHA
+#        id: get_latest_sha
+#        run: |
+#          cd operator-repo
+#          latest_sha=$(git rev-parse HEAD)
+#          echo "::set-output name=operator_sha::$latest_sha"
+#
+#  BuildAgent:
+#    uses: ./.github/workflows/build-test-artifacts.yml
+#    concurrency:
+#      group: "Build-Test-Artifacts-${{github.ref_name}}"
+#      cancel-in-progress: true
+#    secrets: inherit
+#    permissions:
+#      id-token: write
+#      contents: read
+#    with:
+#      test-image-before-upload: false
+#
+#  BuildOperator:
+#    needs: [GetLatestOperatorCommitSHA]
+#    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
+#    concurrency:
+#      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
+#      cancel-in-progress: true
+#    secrets: inherit
+#    with:
+#      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+#      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+#      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
+#      test-image-before-upload: false
+#
+#  OutputEnvVariables:
+#    needs: [ BuildAgent, BuildOperator ]
+#    name: 'OutputEnvVariables'
+#    runs-on: ubuntu-latest
+#    outputs:
+#      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+#      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+#      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+#      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
+#      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
+#      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+#          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+#
+#      - name: Set up Go 1.x
+#        uses: actions/setup-go@v4
+#        with:
+#          go-version: ~1.22.2
+#
+#      - name: SetOutputs
+#        id: set-outputs
+#        run: |
+#          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
+#          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
+#          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
+#          echo "::set-output name=ECR_INTEGRATION_TEST_REPO::cwagent-integration-test"
+#          echo "::set-output name=ECR_OPERATOR_REPO::$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
+#          echo "::set-output name=ECR_TARGET_ALLOCATOR_REPO::$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
+#
+#      - name: Echo test variables
+#        run: |
+#          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+#          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+#          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+#          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
+#          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
+#          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
+#
+#  GenerateTestMatrix:
+#    needs: [BuildAgent, BuildOperator]
+#    name: 'GenerateTestMatrix'
+#    runs-on: ubuntu-latest
+#    outputs:
+#      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+#          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+#
+#      - name: Set up Go 1.x
+#        uses: actions/setup-go@v4
+#        with:
+#          go-version: ~1.22.2
+#
+#      - name: Generate matrix
+#        id: set-matrix
+#        run: |
+#          go run generator/test_case_generator.go -e2e
+#          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
+#
+#      - name: Echo test plan matrix
+#        run: |
+#          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
+#
+#  EKSE2EJVMTomcatTest:
+#    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+#    name: 'EKSE2EJVMTomcatTest'
+#    uses: ./.github/workflows/eks-e2e-test.yml
+#    with:
+#      terraform_dir: terraform/eks/e2e
+#      job_id: eks-e2e-jvm-tomcat-test
+#      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+#      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+#      cloudwatch_agent_tag: ${{ github.sha }}
+#      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+#      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+#      region: ${{ inputs.region || 'us-west-2' }}
+#      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+#      agent_config: resources/cwagent_configs/jvm_tomcat.json
+#      sample_app: resources/sample_apps/tomcat.yaml
+#    secrets: inherit
+#
+#  EKSE2EKafkaTest:
+#    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+#    name: 'EKSE2EKafkaTest'
+#    uses: ./.github/workflows/eks-e2e-test.yml
+#    with:
+#      terraform_dir: terraform/eks/e2e
+#      job_id: eks-e2e-kafka-test
+#      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+#      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+#      cloudwatch_agent_tag: ${{ github.sha }}
+#      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+#      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+#      region: ${{ inputs.region || 'us-west-2' }}
+#      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+#      agent_config: resources/cwagent_configs/kafka.json
+#      sample_app: resources/sample_apps/kafka.yaml
+#    secrets: inherit
+#
+#  EKSE2EJMXContainerInsightsTest:
+#    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+#    name: 'EKSE2EJMXContainerInsightsTest'
+#    uses: ./.github/workflows/eks-e2e-test.yml
+#    with:
+#      terraform_dir: terraform/eks/e2e
+#      job_id: eks-e2e-jmx-containerinsights-test
+#      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+#      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+#      cloudwatch_agent_tag: ${{ github.sha }}
+#      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+#      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+#      region: ${{ inputs.region || 'us-west-2' }}
+#      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+#      agent_config: resources/cwagent_configs/containerinsights.json
+#      sample_app: resources/sample_apps/tomcat.yaml
+#    secrets: inherit
 
-      - name: Get latest commit SHA
-        id: get_latest_sha
-        run: |
-          cd operator-repo
-          latest_sha=$(git rev-parse HEAD)
-          echo "::set-output name=operator_sha::$latest_sha"
-
-  BuildAgent:
-    uses: ./.github/workflows/build-test-artifacts.yml
-    concurrency:
-      group: "Build-Test-Artifacts-${{github.ref_name}}"
-      cancel-in-progress: true
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
+  RosaBaseTest:
+    needs: [ OutputEnvVariables ]
+    name: 'Rosa Base Test'
+    uses: ./.github/workflows/e2e/e2e-rosa-test.yml
     with:
-      test-image-before-upload: false
-
-  BuildOperator:
-    needs: [GetLatestOperatorCommitSHA]
-    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
-    concurrency:
-      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
-      cancel-in-progress: true
-    secrets: inherit
-    with:
-      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
-      test-image-before-upload: false
-
-  OutputEnvVariables:
-    needs: [ BuildAgent, BuildOperator ]
-    name: 'OutputEnvVariables'
-    runs-on: ubuntu-latest
-    outputs:
-      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
-      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
-      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
-      - name: SetOutputs
-        id: set-outputs
-        run: |
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "::set-output name=ECR_INTEGRATION_TEST_REPO::cwagent-integration-test"
-          echo "::set-output name=ECR_OPERATOR_REPO::$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
-          echo "::set-output name=ECR_TARGET_ALLOCATOR_REPO::$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
-
-      - name: Echo test variables
-        run: |
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
-          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
-          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
-
-  GenerateTestMatrix:
-    needs: [BuildAgent, BuildOperator]
-    name: 'GenerateTestMatrix'
-    runs-on: ubuntu-latest
-    outputs:
-      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
-      - name: Generate matrix
-        id: set-matrix
-        run: |
-          go run generator/test_case_generator.go -e2e
-          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
-
-      - name: Echo test plan matrix
-        run: |
-          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
-
-  EKSE2EJVMTomcatTest:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTest'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
+      terraform_dir: terraform/rosa/e2e
       job_id: eks-e2e-jvm-tomcat-test
       test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
@@ -169,51 +237,7 @@ jobs:
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      terraform_assume_role: "arn:aws:iam::956457624121:role/Terraform-Test-Role-1KVXLJHXGQ52P"
       agent_config: resources/cwagent_configs/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-    secrets: inherit
-
-  EKSE2EKafkaTest:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTest'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTest:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTest'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs/containerinsights.json
       sample_app: resources/sample_apps/tomcat.yaml
     secrets: inherit
