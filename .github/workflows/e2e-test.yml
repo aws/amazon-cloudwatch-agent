@@ -12,6 +12,11 @@ env:
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 on:
+  schedule:
+    - cron: '0 17 * * 1'
+  push:
+    branches:
+      - rosa
   workflow_dispatch:
     inputs:
       region:
@@ -305,6 +310,8 @@ jobs:
     with:
       terraform_dir: terraform/eks/e2e
       job_id: eks-e2e-jmx-containerinsights-test-addon
+      terraform_dir: terraform/rosa/e2e
+      job_id: eks-e2e-jvm-tomcat-test
       test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
