@@ -80,7 +80,7 @@ jobs:
       - name: Increase Git timeout and buffer size
         if: ${{ inputs.region == 'cn-north-1' }}
         run: |
-          git config --global http.sslBackend openssl
+          git config --global http.sslBackend gnutls
           git config --global http.postBuffer 524288000
           git config --global http.lowSpeedLimit 0
           git config --global http.lowSpeedTime 3600
