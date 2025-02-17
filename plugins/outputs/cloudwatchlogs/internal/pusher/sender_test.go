@@ -10,10 +10,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 type mockLogsService struct {
@@ -59,7 +59,7 @@ func (m *mockTargetManager) PutRetentionPolicy(target Target) {
 }
 
 func TestSender(t *testing.T) {
-	logger := testutil.Logger{Name: "test"}
+	logger := testutil.NewNopLogger()
 
 	t.Run("Send/RejectedLogEvents", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
