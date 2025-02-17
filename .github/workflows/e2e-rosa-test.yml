@@ -118,11 +118,11 @@ jobs:
           openshift_username: ${{ env.OPENSHIFT_USERNAME }}
           openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
 
-      - name: ClusterTest
-        with:
-          command: |
-            cd ./test/e2e/rosa
-            go test --cluster-name ${{env.CLUSTER_NAME}} -v 
+      - name: Run cluster test
+        working-directory: ./test/e2e/rosa
+        env:
+          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
+        run: go test --cluster-name ${{env.CLUSTER_NAME}} -v
 
 #
 #      - name: Terraform apply

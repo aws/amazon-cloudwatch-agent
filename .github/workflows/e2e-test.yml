@@ -127,7 +127,27 @@ jobs:
           echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
           echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
           echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
-
+  RosaBaseTest:
+    needs: [ OutputEnvVariables ]
+    name: 'Rosa Base Test'
+    uses: ./.github/workflows/e2e-rosa-test.yml
+    secrets: inherit
+    with:
+      terraform_dir: terraform/rosa/e2e
+      job_id: rosa-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region || 'us-west-2' }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: ${{env.TERRAFORM_AWS_ASSUME_ROLE}}
+      agent_config: resources/cwagent_configs/jvm_tomcat.json
+      sample_app: resources/sample_apps/tomcat.yaml
 #  GenerateTestMatrix:
 #    needs: [BuildAgent, BuildOperator]
 #    name: 'GenerateTestMatrix'
@@ -220,25 +240,3 @@ jobs:
 #      agent_config: resources/cwagent_configs/containerinsights.json
 #      sample_app: resources/sample_apps/tomcat.yaml
 #    secrets: inherit
-
-  RosaBaseTest:
-    needs: [ OutputEnvVariables ]
-    name: 'Rosa Base Test'
-    uses: ./.github/workflows/e2e-rosa-test.yml
-    with:
-      terraform_dir: terraform/rosa/e2e
-      job_id: eks-e2e-jvm-tomcat-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: "arn:aws:iam::956457624121:role/Terraform-Test-Role-1KVXLJHXGQ52P"
-      agent_config: resources/cwagent_configs/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-    secrets: inherit
