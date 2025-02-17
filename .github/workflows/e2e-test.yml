@@ -16,8 +16,9 @@ env:
 on:
   schedule:
     - cron: '0 17 * * 1'
-  branches:
-    - rosa
+  push:
+    branches:
+      - rosa
   workflow_dispatch:
     inputs:
       region:
