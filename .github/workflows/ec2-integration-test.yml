@@ -39,7 +39,7 @@ on:
       terraform_assume_role:
         type: string
       is_selinux_test:
-        type: bool
+        type: boolean
       s3_integration_bucket:
         type: string
 
