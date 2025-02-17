@@ -75,6 +75,16 @@ jobs:
 
       - name: Verify Terraform version
         run: terraform --version
+      
+      - name: Increase Git timeout and buffer size
+        run: |
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 3600
+      - name: Set proxy to CN
+	      run: |
+          go env -w GO111MODULE=on
+          go env -w GOPROXY=https://goproxy.cn,direct
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
