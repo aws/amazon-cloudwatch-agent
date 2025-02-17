@@ -1,0 +1,144 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Run E2E Tests
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: "arn:aws:iam::956457624121:role/Terraform-Test-Role-1KVXLJHXGQ52P"
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "e2e-rosa"
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
+
+on:
+#  schedule:
+#    - cron: '0 17 * * 1'
+  push:
+    branches:
+      - rosa
+
+  workflow_dispatch:
+    inputs:
+      region:
+        required: false
+        type: string
+        description: 'AWS Region to run tests in'
+        default: 'us-west-2'
+      operator-branch:
+        required: false
+        type: string
+        description: 'Branch of the operator to test'
+        default: 'main'
+      helm-charts-branch:
+        required: false
+        type: string
+        description: 'Branch of the helm charts to test'
+        default: 'main'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-parent
+  cancel-in-progress: true
+
+jobs:
+#  GetLatestOperatorCommitSHA:
+#    runs-on: ubuntu-latest
+#    outputs:
+#      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
+#      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+#    steps:
+#      - name: Checkout the target repo
+#        uses: actions/checkout@v3
+#        with:
+#          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+#          ref: ${{ inputs.operator-branch || 'main' }}
+#          path: operator-repo
+#
+#      - name: Get latest commit SHA
+#        id: get_latest_sha
+#        run: |
+#          cd operator-repo
+#          latest_sha=$(git rev-parse HEAD)
+#          echo "::set-output name=operator_sha::$latest_sha"
+
+#  BuildAgent:
+#    uses: ./.github/workflows/build-test-artifacts.yml
+#    concurrency:
+#      group: "Build-Test-Artifacts-${{github.ref_name}}"
+#      cancel-in-progress: true
+#    secrets: inherit
+#    permissions:
+#      id-token: write
+#      contents: read
+#    with:
+#      test-image-before-upload: false
+#
+#  BuildOperator:
+#    needs: [GetLatestOperatorCommitSHA]
+#    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
+#    concurrency:
+#      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
+#      cancel-in-progress: true
+#    secrets: inherit
+#    with:
+#      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+#      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+#      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
+#      test-image-before-upload: false
+#
+  OutputEnvVariables:
+#    needs: [ BuildAgent, BuildOperator ]
+    name: 'OutputEnvVariables'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
+      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
+      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
+    steps:
+
+      - name: Set output variables
+        id: set-outputs
+        run: |
+          {
+            echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
+            echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}"
+            echo "CWA_GITHUB_TEST_REPO_BRANCH=${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
+            echo "ECR_INTEGRATION_TEST_REPO=cwagent-integration-test"
+            echo "ECR_OPERATOR_REPO=$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
+            echo "ECR_TARGET_ALLOCATOR_REPO=$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+      - name: Echo test variables
+        run: |
+          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
+          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
+          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
+  RosaBaseTest:
+    needs: [ OutputEnvVariables ]
+    name: 'Rosa Base Test'
+    uses: ./.github/workflows/e2e/e2e-rosa-test.yml
+    with:
+      terraform_dir: terraform/rosa/e2e
+      job_id: eks-e2e-jvm-tomcat-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region || 'us-west-2' }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: "arn:aws:iam::956457624121:role/Terraform-Test-Role-1KVXLJHXGQ52P"
+      agent_config: resources/cwagent_configs/jvm_tomcat.json
+      sample_app: resources/sample_apps/tomcat.yaml
+    secrets: inherit
