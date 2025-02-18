@@ -134,6 +134,12 @@ jobs:
           CLUSTER_NAME: ${{env.CLUSTER_NAME}}
         run: go test --cluster-name ${{env.CLUSTER_NAME}} -v
 
+      - name: Run Container Insights Test
+        working-directory: test/e2e/container_insights
+        env:
+          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
+        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -v
+
 #
 #      - name: Terraform apply
 #        uses: nick-fields/retry@v2
