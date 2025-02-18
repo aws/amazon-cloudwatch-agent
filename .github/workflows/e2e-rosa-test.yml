@@ -83,7 +83,11 @@ jobs:
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
-
+      - uses: actions/checkout@v3
+        with:
+          repository: "aws-observability/helm-charts"
+          ref: ${{inputs.helm_charts_branch}}
+          path: "terraform/eks/e2e/helm-charts"# have to fix this later
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
