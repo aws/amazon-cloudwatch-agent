@@ -1,0 +1,90 @@
+name: new-integ-test
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      eks:
+        description: 'Run EKS Tests'
+        required: false
+        type: boolean
+      ecs:
+        description: 'Run ECS Tests'
+        required: false
+        type: boolean
+      windows:
+        description: 'Run Windows Tests'
+        required: false
+        type: boolean
+      linux:
+        description: 'Run Linux Tests'
+        required: false
+        type: boolean
+      macos:
+        description: 'Run MacOS Tests'
+        required: false
+        type: boolean
+
+jobs:
+  determine-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      eks: ${{ steps.set-matrix.outputs.eks }}
+      ecs: ${{ steps.set-matrix.outputs.ecs }}
+      windows: ${{ steps.set-matrix.outputs.windows }}
+      linux: ${{ steps.set-matrix.outputs.linux }}
+      macos: ${{ steps.set-matrix.outputs.macos }}
+    steps:
+      - name: Check for PR Labels
+        if: github.event_name == 'pull_request'
+        id: pr-labels
+        run: |
+          LABELS=$(jq -r '[.pull_request.labels[].name] | @csv' "$GITHUB_EVENT_PATH")
+          echo "Labels found: $LABELS"
+          echo "labels=$LABELS" >> $GITHUB_ENV
+
+      - name: Set Test Matrix
+        id: set-matrix
+        run: |
+          set_boolean() {
+            LABELS="${{ env.labels }}"
+            INPUT="${{ github.event.inputs[$1] }}"
+            if [[ "$LABELS" == *"$2"* || "$INPUT" == 'true' ]]; then
+              echo "$1=true" >> $GITHUB_ENV
+              echo "$1=true" >> $GITHUB_OUTPUT
+            else
+              echo "$1=false" >> $GITHUB_ENV
+              echo "$1=false" >> $GITHUB_OUTPUT
+            fi
+          }
+
+          set_boolean eks "EKS"
+          set_boolean ecs "ECS"
+          set_boolean windows "Win"
+          set_boolean linux "Linux"
+          set_boolean macos "MacOS"
+
+  run-tests:
+    needs: determine-tests
+    strategy:
+      matrix:
+        environment: 
+          - ${{ needs.determine-tests.outputs.eks == 'true' && 'EKS' || '' }}
+          - ${{ needs.determine-tests.outputs.ecs == 'true' && 'ECS' || '' }}
+          - ${{ needs.determine-tests.outputs.windows == 'true' && 'Windows' || '' }}
+          - ${{ needs.determine-tests.outputs.linux == 'true' && 'Linux' || '' }}
+          - ${{ needs.determine-tests.outputs.macos == 'true' && 'MacOS' || '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Tests
+        run: echo "Running tests for ${{ matrix.environment }}"
+
+  trigger-other-tests:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Next Workflow
+        run: |
+          echo "Triggering next set of tests..."
+          # You can use `gh workflow run another-workflow.yml` or `curl` to trigger another workflow
