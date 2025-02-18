@@ -108,7 +108,7 @@ jobs:
         with:
           parse-json-secrets: true
           secret-ids: |
-            ,${{env.CLUSTER_NAME}}-htpasswd
+            ,${{env.CLUSTER_NAME}}-*
 
       - name: Login to OpenShift
         uses: redhat-actions/oc-login@v1
