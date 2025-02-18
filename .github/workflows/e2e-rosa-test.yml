@@ -88,7 +88,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ inputs.terraform_assume_role}}
-          aws-region:  "us-east-1"
+          aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
       - name: Login ECR
         id: login-ecr
