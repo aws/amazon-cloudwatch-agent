@@ -97,8 +97,8 @@ jobs:
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
               -var="github_test_repo=${{ inputs.test_repo_url }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="is_selinux_test=${{ inputs.is_selinux_test }} \
-              -var="selinux_branch=${{ matrix.arrays.selinux_branch }} \
+              -var="is_selinux_test=${{ inputs.is_selinux_test }}" \
+              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
               -var="cwa_github_sha=${{inputs.github_sha}}" \
               -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
