@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
@@ -35,18 +36,18 @@ type translator struct {
 	pipelineName string
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[*common.ComponentTranslators] {
+func NewTranslator() common.PipelineTranslator {
 	return NewTranslatorWithName(ciPipelineName)
 }
 
-func NewTranslatorWithName(pipelineName string) common.Translator[*common.ComponentTranslators] {
+func NewTranslatorWithName(pipelineName string) common.PipelineTranslator {
 	return &translator{pipelineName: pipelineName}
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, t.pipelineName)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, t.pipelineName)
 }
 
 // Translate creates a pipeline for container insights if the logs.metrics_collected.ecs or logs.metrics_collected.kubernetes
@@ -61,12 +62,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name
-	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
-		agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
+	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
+		agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
 	)
 
 	// create variable for receivers, use switch block below to assign
-	var receivers common.TranslatorMap[component.Config]
+	var receivers common.TranslatorMap[component.Config, component.ID]
 
 	switch t.pipelineName {
 	case ciPipelineName:

@@ -85,9 +85,9 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
+                - telegraf_nvidia_smi
                 - telegraf_cpu
                 - telegraf_disk
-                - telegraf_nvidia_smi
     telemetry:
         logs:
             development: false
@@ -105,4 +105,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

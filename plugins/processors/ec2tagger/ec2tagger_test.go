@@ -268,7 +268,7 @@ func TestStartFailWithNoMetadata(t *testing.T) {
 	_, cancel := context.WithCancel(context.Background())
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: nil},
 		volumeSerialCache: &mockVolumeCache{cache: make(map[string]string)},
@@ -302,7 +302,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -346,7 +346,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -401,7 +401,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -446,7 +446,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -539,7 +539,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -603,7 +603,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	defaultRefreshInterval = 180 * time.Second
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -634,7 +634,7 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopCreateSettings().Logger,
+		logger:            processortest.NewNopSettings().Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		volumeSerialCache: &mockVolumeCache{cache: make(map[string]string)},

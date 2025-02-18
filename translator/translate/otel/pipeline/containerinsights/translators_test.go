@@ -92,7 +92,7 @@ func TestTranslators(t *testing.T) {
 			} else {
 				require.NotNil(t, got)
 				assert.Equal(t, len(testCase.want), got.Len())
-				got.Range(func(tr common.Translator[*common.ComponentTranslators]) {
+				got.Range(func(tr common.PipelineTranslator) {
 					w, ok := testCase.want[tr.ID().String()]
 					require.True(t, ok)
 					g, err := tr.Translate(conf)
