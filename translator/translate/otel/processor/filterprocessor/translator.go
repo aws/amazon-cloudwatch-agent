@@ -23,6 +23,9 @@ const (
 //go:embed filter_jmx_config.yaml
 var containerInsightsJmxConfig string
 
+//go:embed filter_containerinsights_config.yaml
+var containerInsightsConfig string
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
@@ -62,24 +65,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
 	}
 	if t.Name() == common.PipelineNameContainerInsights {
-		c := confmap.NewFromStringMap(map[string]interface{}{
-			"metrics": map[string]any{
-				"exclude": map[string]any{
-					"match_type": matchTypeStrict,
-					"metric_names": []string{
-						"up",
-						"scrape_duration_seconds",
-						"scrape_samples_scraped",
-						"scrape_series_added",
-						"scrape_samples_post_metric_relabeling",
-					},
-				},
-			},
-		})
-		if err := c.Unmarshal(&cfg); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal filter processor (%s): %w", t.ID(), err)
-		}
-		return cfg, nil
+		return common.GetYamlFileToYamlConfig(cfg, containerInsightsConfig)
 	}
 
 	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
