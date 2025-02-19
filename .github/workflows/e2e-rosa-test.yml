@@ -142,7 +142,7 @@ jobs:
         working-directory: test/e2e/container_insights
         env:
           CLUSTER_NAME: ${{env.CLUSTER_NAME}}
-        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -v
+        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
 
 #
 #      - name: Terraform apply
