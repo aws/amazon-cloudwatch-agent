@@ -64,7 +64,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if t.Name() == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
 	}
-	if t.Name() == common.PipelineNameContainerInsights {
+	if t.Name() == common.PipelineNameContainerInsights || t.Name() == common.PipelineNameKueue {
 		return common.GetYamlFileToYamlConfig(cfg, containerInsightsConfig)
 	}
 

@@ -270,9 +270,14 @@ processors:
         error_mode: propagate
         logs: {}
         metrics:
-            include:
+            exclude:
                 match_type: strict
-                metric_names: []
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
         spans: {}
         traces: {}
     kueueattributes/kueueContainerInsights: {}

@@ -706,90 +706,6 @@ processors:
               submatch_case: ""
             - action: insert
               aggregation_type: ""
-              include: DCGM_FI_DEV_GPU_TEMP
-              match_type: ""
-              new_name: container_gpu_temperature
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: ContainerGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_GPU_TEMP
-              match_type: ""
-              new_name: pod_gpu_temperature
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: PodGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_GPU_TEMP
-              match_type: ""
-              new_name: node_gpu_temperature
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: container_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: ContainerGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: pod_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: PodGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: node_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
               include: DCGM_FI_DEV_GPU_UTIL
               match_type: ""
               new_name: container_gpu_utilization
@@ -1019,33 +935,89 @@ processors:
                   new_label: ""
                   new_value: ""
               submatch_case: ""
-            - action: update
+            - action: insert
               aggregation_type: ""
-              include: neuroncore_utilization_ratio
+              include: DCGM_FI_DEV_GPU_TEMP
               match_type: ""
-              new_name: neuroncore_utilization
+              new_name: container_gpu_temperature
               operations:
-                - action: experimental_scale_value
+                - action: add_label
                   aggregation_type: ""
-                  experimental_scale: 100
+                  experimental_scale: 0
                   label: ""
                   label_value: ""
-                  new_label: ""
-                  new_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
               submatch_case: ""
-            - action: update
+            - action: insert
               aggregation_type: ""
-              include: instance_info
+              include: DCGM_FI_DEV_GPU_TEMP
               match_type: ""
-              new_name: instance_info
-              operations: []
+              new_name: pod_gpu_temperature
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
               submatch_case: ""
-            - action: update
+            - action: insert
               aggregation_type: ""
-              include: neuron_hardware
+              include: DCGM_FI_DEV_GPU_TEMP
               match_type: ""
-              new_name: neuron_hardware
-              operations: []
+              new_name: node_gpu_temperature
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: container_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: pod_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: node_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -1056,9 +1028,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuron_runtime_memory_used_bytes
+              include: execution_status_total
               match_type: ""
-              new_name: neurondevice_runtime_memory_used_bytes
+              new_name: neuron_execution_status
               operations: []
               submatch_case: ""
             - action: update
@@ -1077,9 +1049,23 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuroncore_memory_usage_model_shared_scratchpad
+              include: neuroncore_memory_usage_runtime_memory
               match_type: ""
-              new_name: neuroncore_memory_usage_model_shared_scratchpad
+              new_name: neuroncore_memory_usage_runtime_memory
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: instance_info
+              match_type: ""
+              new_name: instance_info
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuron_hardware
+              match_type: ""
+              new_name: neuron_hardware
               operations: []
               submatch_case: ""
             - action: update
@@ -1091,16 +1077,16 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_status_total
+              include: neuron_runtime_memory_used_bytes
               match_type: ""
-              new_name: neuron_execution_status
+              new_name: neurondevice_runtime_memory_used_bytes
               operations: []
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuroncore_memory_usage_runtime_memory
+              include: neuroncore_memory_usage_model_shared_scratchpad
               match_type: ""
-              new_name: neuroncore_memory_usage_runtime_memory
+              new_name: neuroncore_memory_usage_model_shared_scratchpad
               operations: []
               submatch_case: ""
             - action: update
@@ -1109,6 +1095,20 @@ processors:
               match_type: ""
               new_name: neuroncore_memory_usage_tensors
               operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_utilization_ratio
+              match_type: ""
+              new_name: neuroncore_utilization
+              operations:
+                - action: experimental_scale_value
+                  aggregation_type: ""
+                  experimental_scale: 100
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
               submatch_case: ""
             - action: update
               aggregation_type: ""
