@@ -6,6 +6,7 @@ package containerinsights
 import (
 	"fmt"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -58,7 +59,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	// create processor map with default batch processor based on pipeline name
-	processors := common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey))
+	processors := common.NewTranslatorMap(
+		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
+		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
+	)
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name

@@ -52,13 +52,33 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
+	if conf == nil || (t.Name() != common.PipelineNameContainerInsights && !conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 	if t.Name() == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
+	}
+	if t.Name() == common.PipelineNameContainerInsights {
+		c := confmap.NewFromStringMap(map[string]interface{}{
+			"metrics": map[string]any{
+				"exclude": map[string]any{
+					"match_type": "strict",
+					"metric_names": []string{
+						"up",
+						"scrape_duration_seconds",
+						"scrape_samples_scraped",
+						"scrape_series_added",
+						"scrape_samples_post_metric_relabeling",
+					},
+				},
+			},
+		})
+		if err := c.Unmarshal(&cfg); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal filter processor (%s): %w", t.ID(), err)
+		}
+		return cfg, nil
 	}
 
 	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
