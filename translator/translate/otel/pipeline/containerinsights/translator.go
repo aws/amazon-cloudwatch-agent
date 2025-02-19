@@ -58,7 +58,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 
-	// create processor map with default batch processor based on pipeline name
+	// create processor map with
+	// - default batch processor
+	// - filter processor to drop prometheus metadata
 	processors := common.NewTranslatorMap(
 		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
 		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
