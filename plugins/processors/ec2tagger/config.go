@@ -19,6 +19,8 @@ var SupportedAppendDimensions = map[string]string{
 const (
 	AttributeVolumeId            = "VolumeId"
 	ValueAppendDimensionVolumeId = "${aws:VolumeId}"
+
+	RefreshIntervalKey = "RefreshInterval"
 )
 
 type Config struct {

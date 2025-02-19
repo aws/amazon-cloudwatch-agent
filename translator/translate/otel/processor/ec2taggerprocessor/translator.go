@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
 var Ec2taggerKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)
@@ -64,8 +63,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.DiskDeviceTagKey = "device"
 	}
 
-	cfg.MiddlewareID = &agenthealth.StatusCodeID
-	cfg.RefreshIntervalSeconds = time.Duration(0)
+	intervalKeyChain := []string{
+		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.AppendDimensionsKey, ec2tagger.RefreshIntervalKey),
+	}
+	cfg.RefreshIntervalSeconds = common.GetOrDefaultDuration(conf, intervalKeyChain, time.Duration(0))
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil

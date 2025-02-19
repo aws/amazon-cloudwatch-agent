@@ -348,6 +348,8 @@ func (t *Tagger) refreshLoopToUpdateTagsAndVolumes() {
 	stopAfterFirstSuccess := false
 	refreshInterval := t.RefreshIntervalSeconds
 
+	t.logger.Info("ec2tagger: checking refresh", zap.Duration("refresh_interval", t.RefreshIntervalSeconds))
+
 	if t.RefreshIntervalSeconds.Seconds() == 0 {
 		//when the refresh interval is 0, this means that customer don't want to
 		//update tags/volumes values once they are retrieved successfully. In this case,
