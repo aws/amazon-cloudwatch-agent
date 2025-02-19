@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	ciPipelineName    = common.PipelineNameContainerInsights
-	kueuePipelineName = "kueueContainerInsights"
+	ciPipelineName = common.PipelineNameContainerInsights
 )
 
 var (
@@ -89,10 +88,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				processors.Set(gpu.NewTranslatorWithName(t.pipelineName))
 			}
 		}
-	case kueuePipelineName:
+	case common.PipelineNameKueue:
 		// add prometheus receiver for kueue
 		receivers = common.NewTranslatorMap((awscontainerinsightskueue.NewTranslator()))
 		processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
+
 	default:
 		return nil, fmt.Errorf("unknown container insights pipeline name: %s", t.pipelineName)
 	}

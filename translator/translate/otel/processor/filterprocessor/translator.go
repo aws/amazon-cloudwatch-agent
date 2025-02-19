@@ -56,7 +56,7 @@ func (t *translator) ID() component.ID {
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	// also checking for container insights pipeline to add default filtering for prometheus metadata
-	if conf == nil || (t.Name() != common.PipelineNameContainerInsights && t.Name() != common.PipelineNameContainerInsightsJmx && !conf.IsSet(common.JmxConfigKey)) {
+	if conf == nil || (t.Name() != common.PipelineNameContainerInsights && t.Name() != common.PipelineNameKueue && t.Name() != common.PipelineNameContainerInsightsJmx && !conf.IsSet(common.JmxConfigKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 

@@ -46,9 +46,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         middleware: agenthealth/statuscode
         refresh_interval_seconds: 0s
 receivers:
@@ -85,10 +85,10 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
+                - telegraf_swap
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

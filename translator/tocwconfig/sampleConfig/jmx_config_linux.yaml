@@ -153,9 +153,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
 receivers:
     jmx:
@@ -188,8 +188,8 @@ service:
                 - transform
                 - batch/host/amp
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/host/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -197,8 +197,8 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_disk
         metrics/jmx/amp:
             exporters:
                 - prometheusremotewrite/amp
