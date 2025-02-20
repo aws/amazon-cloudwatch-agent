@@ -75,7 +75,7 @@ jobs:
 
       - name: Verify Terraform version
         run: terraform --version
-      
+
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         uses: nick-fields/retry@v2
