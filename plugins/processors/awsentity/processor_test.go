@@ -199,6 +199,12 @@ func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 			k8sMode: config.ModeEKS,
 		},
 		{
+			name:    "WithPodNameAndServiceNameNoSourceWithTelemetryEnabled",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			k8sMode: config.ModeEKS,
+		},
+		{
 			name:    "WithPodNameAndServiceNameHasSource",
 			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
 			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
