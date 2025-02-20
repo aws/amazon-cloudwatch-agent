@@ -27,6 +27,7 @@ const (
 	attributeService                       = "Service"
 	attributeEC2TagAwsAutoscalingGroupName = "ec2.tag.aws:autoscaling:groupName"
 	EMPTY                                  = ""
+	unknownService                         = "unknown_service"
 )
 
 type scraper interface {
@@ -189,7 +190,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
 				// Perform fallback mechanism for service and environment name if they
 				// are empty
-				if (entityServiceName == EMPTY || strings.HasPrefix(entityServiceName, "unknown_service")) && ok && podInfo != nil && podInfo.Workload != EMPTY {
+				if (entityServiceName == EMPTY || strings.HasPrefix(entityServiceName, unknownService)) && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}

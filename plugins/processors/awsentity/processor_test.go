@@ -438,6 +438,20 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			},
 		},
 		{
+			name:           "ResourceAttributeWorkloadFallbackForUnknownServiceJava",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeServiceName, "unknown_service:java"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "unknown_service:java",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SNodeName:                          "test-node",
+				attributeServiceName:                                  "unknown_service:java",
+			},
+		},
+		{
 			name:                          "ResourceAttributeEnvironmentFallbackToASG",
 			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(),
