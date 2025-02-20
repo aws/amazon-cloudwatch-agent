@@ -63,10 +63,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.DiskDeviceTagKey = "device"
 	}
 
-	intervalKeyChain := []string{
-		common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.AppendDimensionsKey, ec2tagger.RefreshIntervalKey),
-	}
-	cfg.RefreshIntervalSeconds = common.GetOrDefaultDuration(conf, intervalKeyChain, time.Duration(0))
+	cfg.RefreshIntervalSeconds = time.Minute
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil
