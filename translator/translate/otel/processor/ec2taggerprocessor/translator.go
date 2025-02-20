@@ -65,7 +65,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.MiddlewareID = &agenthealth.StatusCodeID
-	cfg.RefreshIntervalSeconds = time.Duration(0)
+	cfg.RefreshIntervalSeconds = time.Minute
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil
