@@ -35,7 +35,6 @@ on:
       localstack_host:
         type: string
       region:
-        required: true
         type: string
       terraform_assume_role:
         type: string
@@ -77,36 +76,6 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
       
-      - name: Increase Git timeout and buffer size
-        if: ${{ inputs.region == 'cn-north-1' }}
-        run: |
-          git config --global http.sslBackend gnutls
-          git config --global http.postBuffer 524288000
-          git config --global http.lowSpeedLimit 0
-          git config --global http.lowSpeedTime 3600
-          git config --global pack.window 1
-          git config --global pack.depth 1
-          git config --global pack.packSizeLimit 1g
-          git config --global pack.deltaCacheSize 1g
-          git config --global pack.windowMemory 1g
-          git config --global core.packedGitLimit 1g
-          git config --global core.packedGitWindowSize 1g
-          
-          git config --global http.postBuffer 10g
-          git config --global http.maxRequestBuffer 10g
-          git config --global https.postBuffer 10g
-          git config --global https.maxRequestBuffer 10g
-          
-          git config --global pack.window 1
-          git config --global pack.depth 1
-          git config --global pack.threads 128
-
-      - name: Set proxy for dependencies in CN region
-        if: ${{ inputs.region == 'cn-north-1' }}
-        run: |
-          go env -w GO111MODULE=on
-          go env -w GOPROXY=https://goproxy.cn,direct
-
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         uses: nick-fields/retry@v2
