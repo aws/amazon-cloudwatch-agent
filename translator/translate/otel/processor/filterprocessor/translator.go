@@ -23,6 +23,9 @@ const (
 //go:embed filter_jmx_config.yaml
 var containerInsightsJmxConfig string
 
+//go:embed filter_containerinsights_config.yaml
+var containerInsightsConfig string
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
@@ -52,13 +55,17 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
+	// also checking for container insights pipeline to add default filtering for prometheus metadata
+	if conf == nil || (t.Name() != common.PipelineNameContainerInsights && t.Name() != common.PipelineNameKueue && t.Name() != common.PipelineNameContainerInsightsJmx && !conf.IsSet(common.JmxConfigKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 	if t.Name() == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, containerInsightsJmxConfig)
+	}
+	if t.Name() == common.PipelineNameContainerInsights || t.Name() == common.PipelineNameKueue {
+		return common.GetYamlFileToYamlConfig(cfg, containerInsightsConfig)
 	}
 
 	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.Index())
