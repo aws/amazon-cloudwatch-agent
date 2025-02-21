@@ -952,6 +952,12 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Set Commit Date to Terraform Variable
+        id: set_commit_date
+        run: |
+          echo "commit_date=$(git show -s --format=%ci ${{ github.sha }})" >> $GITHUB_OUTPUT
+  
+
       - name: Verify Terraform version
         run: terraform --version
 
@@ -967,6 +973,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="cwa_github_sha_date=${{steps.set_commit_date.outputs.commit_date}}" \ 
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
