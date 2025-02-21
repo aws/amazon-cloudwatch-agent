@@ -23,6 +23,8 @@ on:
       s3_integration_bucket:
         required: true
         type: string
+      terraform_assume_role:
+        type: string
 
 jobs:
   upload_dependencies:
@@ -37,7 +39,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
       - name: Set up Go
