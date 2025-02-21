@@ -193,9 +193,23 @@ jobs:
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
+  UploadDependenciesCN:
+    name: 'UploadDependenciesCN'
+    needs: [ OutputEnvVariables ]
+    uses: ./github/workflows/upload-dependencies-cn.yml
+    secrets: inherit
+    with:
+      region: cn-north-1
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+    
+
   StartLocalStackCN:
     name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables ]
+    needs: [ OutputEnvVariables, UploadDependenciesCN ]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
