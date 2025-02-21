@@ -3,6 +3,10 @@
 
 name: Upload Dependencies to S3 (CN)
 
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+
 on:
   workflow_call:
     inputs:
@@ -27,7 +31,7 @@ on:
         type: string
 
 jobs:
-  upload_dependencies:
+  UploadDependenciesS3:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -42,6 +46,11 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
+      - name: Verify AWS Credentials
+        run: |
+          aws sts get-caller-identity
+          aws s3 ls
+
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
@@ -55,8 +64,4 @@ jobs:
       - name: Upload vendor directory to S3
         run: |
           aws s3 sync ./vendor s3://${{ inputs.s3_integration_bucket }}/vendor/ --delete
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ inputs.region }}
 
