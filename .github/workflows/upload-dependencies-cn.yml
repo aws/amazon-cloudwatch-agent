@@ -33,6 +33,12 @@ jobs:
         with:
           repository: ${{ inputs.test_repo_name }}
           ref: ${{ inputs.test_repo_branch }}
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: ${{ inputs.region }}
 
       - name: Set up Go
         uses: actions/setup-go@v3
