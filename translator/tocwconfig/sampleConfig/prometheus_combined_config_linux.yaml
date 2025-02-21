@@ -190,10 +190,6 @@ receivers:
         start_time_metric_regex: ""
         trim_metric_suffixes: false
         use_start_time_metric: false
-    telegraf_prometheus:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -215,7 +211,7 @@ service:
             processors:
                 - batch/prometheus/cloudwatchlogs
             receivers:
-                - telegraf_prometheus
+                - prometheus
     telemetry:
         logs:
             development: false

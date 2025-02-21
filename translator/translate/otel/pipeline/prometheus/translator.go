@@ -5,12 +5,10 @@ package prometheus
 
 import (
 	"fmt"
-	"time"
 
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
@@ -19,7 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
 )
 
@@ -67,7 +64,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under logs section with destination (%s)", t.name, t.Destination())
 		}
 		return &common.ComponentTranslators{
-			Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, LogsKey, time.Minute)),
+			Receivers: common.NewTranslatorMap(otelprom.NewTranslator(otelprom.WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)))),
 			Processors: common.NewTranslatorMap(
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
