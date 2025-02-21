@@ -198,6 +198,9 @@ jobs:
     needs: [ OutputEnvVariables ]
     uses: ./.github/workflows/upload-dependencies-cn.yml
     secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
     with:
       region: cn-north-1
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
