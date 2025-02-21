@@ -196,7 +196,7 @@ jobs:
   UploadDependenciesCN:
     name: 'UploadDependenciesCN'
     needs: [ OutputEnvVariables ]
-    uses: ./github/workflows/upload-dependencies-cn.yml
+    uses: ./.github/workflows/upload-dependencies-cn.yml
     secrets: inherit
     with:
       region: cn-north-1
