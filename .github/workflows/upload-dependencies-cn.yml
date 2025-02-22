@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Upload Dependencies to S3 (CN)
+name: Upload Dependencies to S3 for China region tests
 
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
@@ -31,7 +31,7 @@ on:
         type: string
 
 jobs:
-  UploadDependenciesS3:
+  UploadDependenciesCN:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -46,22 +46,13 @@ jobs:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
-      - name: Verify AWS Credentials
-        run: |
-          aws sts get-caller-identity
-          aws s3 ls
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: ~1.22.2
 
-      - name: Run go mod vendor
+      - name: Upload Dependencies to S3
         run: |
           go mod tidy
           go mod vendor
-
-      - name: Upload vendor directory to S3
-        run: |
-          aws s3 sync ./vendor s3://${{ inputs.s3_integration_bucket }}/vendor/ --delete
-
+          aws s3 sync ./vendor s3://${{ inputs.s3_integration_bucket }}/integration-test/vendor/ --delete
