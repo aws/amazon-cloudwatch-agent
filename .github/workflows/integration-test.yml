@@ -213,7 +213,7 @@ jobs:
 
   StartLocalStackCN:
     name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables, UploadDependenciesCN ]
+    needs: [ OutputEnvVariables ]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
@@ -410,7 +410,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestCN:
-    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ UploadDependenciesCN, StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxCN'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
