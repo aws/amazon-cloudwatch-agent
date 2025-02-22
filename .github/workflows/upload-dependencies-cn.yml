@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Upload Dependencies to S3 for China region tests
+name: Upload Dependencies to S3
 
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
@@ -31,7 +31,7 @@ on:
         type: string
 
 jobs:
-  UploadDependenciesCN:
+  UploadDependencies:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
