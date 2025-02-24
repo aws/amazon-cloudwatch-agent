@@ -55,4 +55,4 @@ jobs:
         run: |
           go mod tidy
           go mod vendor
-          aws s3 sync ./vendor s3://${{ inputs.s3_integration_bucket }}/integration-test/vendor/ --delete --quiet
+          aws s3 sync ./vendor s3://${{ inputs.s3_integration_bucket }}/integration-test/vendor/${{ inputs.github_sha }} --delete --quiet
