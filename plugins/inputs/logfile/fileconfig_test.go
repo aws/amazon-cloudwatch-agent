@@ -130,15 +130,34 @@ func TestTimestampParser(t *testing.T) {
 	expectedTimestamp := time.Unix(1497882318, 0)
 	timestampString := "19 Jun 2017 14:25:18"
 	logEntry := fmt.Sprintf("%s [INFO] This is a test message.", timestampString)
-	timestamp := fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry := fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
 		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
 	// Test regex match for multiline, the first timestamp in multiline should be matched
 	logEntry = fmt.Sprintf("%s [INFO] This is the first line.\n19 Jun 2017 14:25:19 [INFO] This is the second line.\n", timestampString)
-	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
 		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, logEntry, modifiedLogEntry)
+
+	// Test TrimTimeStamp for single line
+	fileConfig.TrimTimestamp = true
+	logEntry = fmt.Sprintf("%s [INFO] This is a test message.", timestampString)
+	trimmedTimestampString := " [INFO] This is a test message."
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
+		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	// Test TrimTimeStamp for multiline, the first timestamp in multiline should be matched
+	logEntry = fmt.Sprintf("%s [INFO] This is the first line.\n19 Jun 2017 14:25:19 [INFO] This is the second line.\n", timestampString)
+	trimmedTimestampString = " [INFO] This is the first line.\n19 Jun 2017 14:25:19 [INFO] This is the second line.\n"
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
+		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
 }
 
 func TestTimestampParserWithPadding(t *testing.T) {
@@ -156,14 +175,32 @@ func TestTimestampParserWithPadding(t *testing.T) {
 		TimezoneLoc:     timezoneLoc}
 
 	logEntry := fmt.Sprintf(" 2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
-	timestamp := fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry := fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
 	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
 	logEntry = fmt.Sprintf("2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
-	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
 	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
+	assert.Equal(t, logEntry, modifiedLogEntry)
+
+	//Test when TrimTimeStamp is enabled
+	fileConfig.TrimTimestamp = true
+	logEntry = fmt.Sprintf(" 2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
+	trimmedTimestampString := "  instance-id: i-02fce21a425a2efb3"
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	logEntry = fmt.Sprintf("2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
+	trimmedTimestampString = " instance-id: i-02fce21a425a2efb3"
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
 }
 
 func TestTimestampParserDefault(t *testing.T) {
@@ -184,25 +221,55 @@ func TestTimestampParserDefault(t *testing.T) {
 
 	// make sure layout is compatible for "Sep 9", "Sep  9" , "Sep 09", "Sep  09" options
 	logEntry := fmt.Sprintf("Sep 9 02:00:43  ip-10-4-213-132 \n")
-	timestamp := fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry := fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 02, timestamp.Hour())
 	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
 	logEntry = fmt.Sprintf("Sep  9 02:00:43  ip-10-4-213-132 \n")
-	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 02, timestamp.Hour())
 	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
 	logEntry = fmt.Sprintf("Sep 09 02:00:43  ip-10-4-213-132 \n")
-	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 02, timestamp.Hour())
 	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
 	logEntry = fmt.Sprintf("Sep  09 02:00:43  ip-10-4-213-132 \n")
-	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 02, timestamp.Hour())
 	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
+	// When TrimTimestamp is enabled, make sure layout is compatible for "Sep 9", "Sep  9" , "Sep 09", "Sep  09" options and log value is trimmed correctly
+	fileConfig.TrimTimestamp = true
+	logEntry = fmt.Sprintf("Sep 9 02:00:43  ip-10-4-213-132 \n")
+	trimmedTimestampString := "  ip-10-4-213-132 \n"
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	logEntry = fmt.Sprintf("Sep  9 02:00:43  ip-10-4-213-132 \n")
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	logEntry = fmt.Sprintf("Sep 09 02:00:43  ip-10-4-213-132 \n")
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	logEntry = fmt.Sprintf("Sep  09 02:00:43  ip-10-4-213-132 \n")
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
 }
 
 func TestTimestampParserWithFracSeconds(t *testing.T) {
@@ -222,15 +289,34 @@ func TestTimestampParserWithFracSeconds(t *testing.T) {
 	expectedTimestamp := time.Unix(1497882318, 234000000)
 	timestampString := "19 Jun 2017 14:25:18,234088 UTC"
 	logEntry := fmt.Sprintf("%s [INFO] This is a test message.", timestampString)
-	timestamp := fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry := fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
 		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, logEntry, modifiedLogEntry)
 
 	// Test regex match for multiline, the first timestamp in multiline should be matched
 	logEntry = fmt.Sprintf("%s [INFO] This is the first line.\n19 Jun 2017 14:25:19,123456 UTC [INFO] This is the second line.\n", timestampString)
-	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
 		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, logEntry, modifiedLogEntry)
+
+	// Test TrimTimeStamp for single line
+	fileConfig.TrimTimestamp = true
+	logEntry = fmt.Sprintf("%s [INFO] This is a test message.", timestampString)
+	trimmedTimestampString := " [INFO] This is a test message."
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
+		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	// Test TrimTimeStamp for multiline, the first timestamp in multiline should be matched
+	logEntry = fmt.Sprintf("%s [INFO] This is the first line.\n19 Jun 2017 14:25:19,123456 UTC [INFO] This is the second line.\n", timestampString)
+	trimmedTimestampString = " [INFO] This is the first line.\n19 Jun 2017 14:25:19,123456 UTC [INFO] This is the second line.\n"
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
+		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
 }
 
 func TestNonAllowlistedTimezone(t *testing.T) {
