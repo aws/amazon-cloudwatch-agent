@@ -54,43 +54,7 @@ func main() {
 	deleteOldLogGroups(client, cutoffCreationTime, cutoffInactiveTime)
 }
 
-func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime, cutoffInactiveTime int64) {
-	var wg sync.WaitGroup
-	logGroupsToBeDeleted := processLogGroups(client, cutoffCreationTime, cutoffInactiveTime)
-
-	if dryRun {
-		fmt.Printf("🛑 Dry-Run: Would delete %d log groups\n", len(logGroupsToBeDeleted))
-		// Dry-run mode - only print
-		return
-	}
-	// Confirm deletion
-	fmt.Printf("⚠️  Confirm delete? (yes/no): ")
-	var response string
-	fmt.Scanln(&response)
-	if response != "yes" {
-		fmt.Println("❌ Skipping deletion")
-		return
-	}
-
-	for _, logGroupName := range logGroupsToBeDeleted {
-		// Delete log group
-		go func() {
-			wg.Add(1)
-			defer wg.Done()
-			_, err := client.DeleteLogGroup(context.TODO(), &cloudwatchlogs.DeleteLogGroupInput{
-				LogGroupName: &logGroupName,
-			})
-			if err != nil {
-				fmt.Printf("❌ Error deleting %s: %v\n", logGroupName, err)
-			} else {
-				fmt.Printf("✅ Deleted log group: %s\n", logGroupName)
-			}
-		}()
-	}
-	wg.Wait()
-
-}
-func processLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, cutoffInactiveTime int64) []string {
+func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, cutoffInactiveTime int64) []string {
 	var wg sync.WaitGroup
 	var mutex sync.Mutex
 	var logGroupsToBeDeleted []string
@@ -123,6 +87,19 @@ func processLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, c
 						mutex.Lock()
 						logGroupsToBeDeleted = append(logGroupsToBeDeleted, logGroupName)
 						mutex.Unlock()
+						if dryRun {
+							fmt.Printf("🛑 Dry-Run: Would delete %d log groups\n", len(logGroupsToBeDeleted))
+							// Dry-run mode - only print
+							return
+						}
+						_, err := client.DeleteLogGroup(context.TODO(), &cloudwatchlogs.DeleteLogGroupInput{
+							LogGroupName: logGroup.LogGroupName,
+						})
+						if err != nil {
+							fmt.Printf("❌ Error deleting %s: %v\n", logGroupName, err)
+						} else {
+							fmt.Printf("✅ Deleted log group: %s\n", logGroupName)
+						}
 					}
 				}
 				// fmt.Printf("👷 Worker: %d| No OLD log group found\n", workerId)
@@ -136,7 +113,7 @@ func processLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, c
 		output, err := client.DescribeLogGroups(context.TODO(), &cloudwatchlogs.DescribeLogGroupsInput{
 			NextToken: nextToken,
 		})
-		fmt.Printf("🔍 Found %d log groups now will process them\n", len(output.LogGroups))
+		// fmt.Printf("🔍 Found %d log groups now will process them\n", len(output.LogGroups))
 		if err != nil {
 			log.Fatalf("❌ Failed to retrieve log groups: %v", err)
 		}
@@ -145,7 +122,6 @@ func processLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, c
 		for _, logGroup := range output.LogGroups {
 			logGroupChan <- &logGroup
 		}
-		fmt.Printf("🔍 %d log groups are sent to channel\n", len(output.LogGroups))
 		// Handle pagination
 		if output.NextToken == nil {
 			break
@@ -157,7 +133,7 @@ func processLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, c
 			break
 		}
 		nextToken = output.NextToken
-		fmt.Printf("So far found %d\n", l)
+		fmt.Printf("🔍 So far deleted %d\n", l)
 	}
 
 	// Close the channel after all log groups have been sent
