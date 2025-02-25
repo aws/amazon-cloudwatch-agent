@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -56,29 +57,47 @@ func (m *targetManager) InitTarget(target Target) error {
 
 func (m *targetManager) createLogGroupAndStream(t Target) error {
 	err := m.createLogStream(t)
-	if err == nil {
+	if m.isLogStreamCreated(err, t.Stream) {
 		return nil
 	}
 
-	m.logger.Debugf("creating stream fail due to : %v", err)
+	m.logger.Debugf("creating stream %v fail due to: %v", t.Stream, err)
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
 		err = m.createLogGroup(t)
 
 		// attempt to create stream again if group created successfully.
-		if err == nil {
+		if m.isLogGroupCreated(err, t.Group) {
 			m.logger.Debugf("successfully created log group %v. Retrying log stream %v", t.Group, t.Stream)
 			err = m.createLogStream(t)
+			if m.isLogStreamCreated(err, t.Stream) {
+				return nil
+			}
 		} else {
-			m.logger.Debugf("creating group fail due to : %v", err)
+			m.logger.Debugf("creating group %v fail due to: %v", t.Group, err)
 		}
 	}
 
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
-		m.logger.Debugf("Resource was already created. %v\n", err)
-		return nil // if the log group or log stream already exist, this is not worth returning an error for
-	}
-
 	return err
+}
+
+func (m *targetManager) isLogGroupCreated(err error, group string) bool {
+	return m.isResourceCreated(err, fmt.Sprintf("log group %v", group))
+}
+
+func (m *targetManager) isLogStreamCreated(err error, stream string) bool {
+	return m.isResourceCreated(err, fmt.Sprintf("log stream %v", stream))
+}
+
+func (m *targetManager) isResourceCreated(err error, resourceName string) bool {
+	if err == nil {
+		return true
+	}
+	// if the resource already exist
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+		m.logger.Debugf("%s was already created. %v\n", resourceName, err)
+		return true
+	}
+	return false
 }
 
 func (m *targetManager) createLogGroup(t Target) error {

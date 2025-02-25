@@ -31,6 +31,7 @@ func TestTargetManager(t *testing.T) {
 
 		assert.NoError(t, err)
 		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("CreateLogGroupAndStream", func(t *testing.T) {
@@ -47,6 +48,58 @@ func TestTargetManager(t *testing.T) {
 
 		assert.NoError(t, err)
 		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
+	})
+
+	t.Run("CreateLogGroupAndStream/GroupAlreadyExists", func(t *testing.T) {
+		target := Target{Group: "G1", Stream: "S1"}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+
+		assert.NoError(t, err)
+		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
+	})
+
+	t.Run("CreateLogGroupAndStream/RetryStreamFail", func(t *testing.T) {
+		target := Target{Group: "G1", Stream: "S1"}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.AccessDeniedException{}).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+
+		assert.Error(t, err)
+		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 0)
+	})
+
+	t.Run("CreateLogGroupAndStream/RetryStreamAlreadyExists", func(t *testing.T) {
+		target := Target{Group: "G1", Stream: "S1"}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+
+		assert.NoError(t, err)
+		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("CreateLogGroup/Error", func(t *testing.T) {
@@ -63,6 +116,7 @@ func TestTargetManager(t *testing.T) {
 
 		assert.Error(t, err)
 		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 0)
 	})
 
 	t.Run("SetRetentionPolicy", func(t *testing.T) {
@@ -77,6 +131,7 @@ func TestTargetManager(t *testing.T) {
 
 		assert.NoError(t, err)
 		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("SetRetentionPolicy/LogGroupNotFound", func(t *testing.T) {
@@ -92,6 +147,7 @@ func TestTargetManager(t *testing.T) {
 
 		assert.NoError(t, err) // The overall operation should still succeed even if setting retention policy fails
 		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("SetRetentionPolicy/Error", func(t *testing.T) {
@@ -107,6 +163,7 @@ func TestTargetManager(t *testing.T) {
 
 		assert.NoError(t, err) // The overall operation should still succeed even if setting retention policy fails
 		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("SetRetentionPolicy/Negative", func(t *testing.T) {
@@ -118,6 +175,7 @@ func TestTargetManager(t *testing.T) {
 		manager.PutRetentionPolicy(target)
 
 		mockService.AssertNotCalled(t, "PutRetentionPolicy", mock.Anything)
+		assertCacheLen(t, manager, 0)
 	})
 
 	t.Run("ConcurrentInit", func(t *testing.T) {
@@ -147,5 +205,14 @@ func TestTargetManager(t *testing.T) {
 
 		wg.Wait()
 		assert.EqualValues(t, len(targets), count.Load())
+		assertCacheLen(t, manager, 2)
 	})
+}
+
+func assertCacheLen(t *testing.T, manager TargetManager, count int) {
+	t.Helper()
+	tm := manager.(*targetManager)
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	assert.Len(t, tm.cache, count)
 }
