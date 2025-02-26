@@ -961,7 +961,7 @@
                   },
                   "trim_timestamp" : {
                     "type": "boolean",
-                    "description": "Whether to trim the timestamp in the log messageuniso"
+                    "description": "Whether to trim the timestamp in the log message"
                   },
                   "encoding": {
                     "type": "string",
