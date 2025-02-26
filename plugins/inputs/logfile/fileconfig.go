@@ -48,6 +48,8 @@ type FileConfig struct {
 	TimestampLayout []string `toml:"timestamp_layout"`
 	//The time zone used to parse the timestampFromLogLine in the log entry.
 	Timezone string `toml:"timezone"`
+	//Trim timestamp from log line
+	TrimTimestamp bool `toml:"trim_timestamp"`
 
 	//Indicate whether it is a start of multiline.
 	//If this config is not present, it means the multiline mode is disabled.
@@ -171,9 +173,9 @@ func (config *FileConfig) init() error {
 // Try to parse the timestampFromLogLine value from the log entry line.
 // The parser logic will be based on the timestampFromLogLine regex, and time zone info.
 // If the parsing operation encounters any issue, int64(0) is returned.
-func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
+func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, string) {
 	if config.TimestampRegexP == nil {
-		return time.Time{}
+		return time.Time{}, logValue
 	}
 	index := config.TimestampRegexP.FindStringSubmatchIndex(logValue)
 	if len(index) > 3 {
@@ -196,7 +198,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 		}
 		if err != nil {
 			log.Printf("E! Error parsing timestampFromLogLine: %s", err)
-			return time.Time{}
+			return time.Time{}, logValue
 		}
 		if timestamp.Year() == 0 {
 			now := time.Now()
@@ -208,9 +210,13 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 				timestamp = timestamp.AddDate(-1, 0, 0)
 			}
 		}
-		return timestamp
+		if config.TrimTimestamp {
+			// Trim the entire timestamp portion (from start to end of the match)
+			return timestamp, logValue[:index[0]] + logValue[index[1]:]
+		}
+		return timestamp, logValue
 	}
-	return time.Time{}
+	return time.Time{}, logValue
 }
 
 // This method determine whether the line is a start line for multiline log entry.
