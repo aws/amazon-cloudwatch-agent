@@ -211,8 +211,8 @@ func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, stri
 			}
 		}
 		if config.TrimTimestamp {
-			// Trim the entire timestamp portion (from start to end of the match)
-			return timestamp, logValue[:index[0]] + logValue[index[1]:]
+			// Trim the entire timestamp portion and leading whitespaces
+			return timestamp, strings.TrimLeft(logValue[:index[0]]+logValue[index[1]:], " \t\n\r")
 		}
 		return timestamp, logValue
 	}
