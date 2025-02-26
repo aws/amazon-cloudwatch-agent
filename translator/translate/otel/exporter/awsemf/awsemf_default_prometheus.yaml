@@ -6,3 +6,4 @@ dimension_rollup_option: NoDimensionRollup
 use_all_labels_as_dimensions: true
 version: "0"
 retain_initial_value_of_delta_metric: false
+use_all_labels_as_dimensions: true
