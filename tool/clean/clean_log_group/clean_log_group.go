@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,16 +17,15 @@ import (
 
 // Configurable flags
 const (
-	MONTH            = 30
-	YEAR             = 12 * MONTH
-	thresholdDays    = 1 * YEAR
-	inactiveDays     = 7
+	thresholdDays    = 3
+	inactiveDays     = 1
 	numWorkers       = 15 // Adjust this number based on your needs
 	DELETE_BATCH_CAP = 10000
 )
 
 var (
-	dryRun bool
+	dryRun                       bool
+	EXCEPTION_LIST_DO_NOT_DELETE = []string{"lambda"}
 )
 
 func init() {
@@ -108,18 +108,23 @@ func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64,
 	}
 
 	var nextToken *string
+	decribeCount :=0
 	for {
 		// Fetch log groups in pages
 		output, err := client.DescribeLogGroups(context.TODO(), &cloudwatchlogs.DescribeLogGroupsInput{
 			NextToken: nextToken,
 		})
-		// fmt.Printf("🔍 Found %d log groups now will process them\n", len(output.LogGroups))
+		fmt.Printf("🔍 Described %d times | Found %d log groups now will process them\n", decribeCount,len(output.LogGroups))
 		if err != nil {
 			log.Fatalf("❌ Failed to retrieve log groups: %v", err)
 		}
 
 		// Send log groups to the channel
 		for _, logGroup := range output.LogGroups {
+			if isLogGroupAnException(*logGroup.LogGroupName) {
+				fmt.Printf("⏭️ Skipping Log Group: %s it is in exception list\n", *logGroup.LogGroupName)
+				continue
+			}
 			logGroupChan <- &logGroup
 		}
 		// Handle pagination
@@ -133,6 +138,7 @@ func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64,
 			break
 		}
 		nextToken = output.NextToken
+		decribeCount++
 		fmt.Printf("🔍 So far deleted %d\n", l)
 	}
 
@@ -180,4 +186,13 @@ func getLastLogEventTime(client *cloudwatchlogs.Client, logGroupName string) int
 	}
 
 	return latestTimestamp
+}
+
+func isLogGroupAnException(logGroupName string) bool {
+	for _, exception_string := range EXCEPTION_LIST_DO_NOT_DELETE {
+		if strings.Contains(logGroupName, exception_string) {
+			return true
+		}
+	}
+	return false
 }
