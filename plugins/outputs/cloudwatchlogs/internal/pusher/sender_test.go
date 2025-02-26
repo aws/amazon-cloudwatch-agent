@@ -35,6 +35,11 @@ func (m *mockLogsService) CreateLogGroup(input *cloudwatchlogs.CreateLogGroupInp
 	return args.Get(0).(*cloudwatchlogs.CreateLogGroupOutput), args.Error(1)
 }
 
+func (m *mockLogsService) AssociateKmsKey(input *cloudwatchlogs.AssociateKmsKeyInput) (*cloudwatchlogs.AssociateKmsKeyOutput, error) {
+	args := m.Called(input)
+	return args.Get(0).(*cloudwatchlogs.AssociateKmsKeyOutput), nil
+}
+
 func (m *mockLogsService) PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
 	args := m.Called(input)
 	return args.Get(0).(*cloudwatchlogs.PutRetentionPolicyOutput), args.Error(1)
@@ -60,6 +65,26 @@ func (m *mockTargetManager) PutRetentionPolicy(target Target) {
 
 func TestSender(t *testing.T) {
 	logger := testutil.NewNopLogger()
+
+	t.Run("Send/RejectedLogEvents", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+		rejectedInfo := &cloudwatchlogs.RejectedLogEventsInfo{
+			TooOldLogEventEndIndex:   aws.Int64(1),
+			TooNewLogEventStartIndex: aws.Int64(2),
+			ExpiredLogEventEndIndex:  aws.Int64(3),
+		}
+
+		mockService := new(mockLogsService)
+		mockManager := new(mockTargetManager)
+		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
+
+		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s.Send(batch)
+
+		mockService.AssertExpectations(t)
+	})
 
 	t.Run("Send/RejectedLogEvents", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)

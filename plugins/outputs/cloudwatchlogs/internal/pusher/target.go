@@ -25,8 +25,8 @@ const (
 )
 
 type Target struct {
-	Group, Stream, Class string
-	Retention            int
+	Group, Stream, KmsKeyID, Class string
+	Retention                      int
 }
 
 type TargetManager interface {
@@ -76,6 +76,12 @@ func (m *targetManager) InitTarget(target Target) error {
 				m.dlg <- target
 			}
 		}
+
+		//Associate Kms key with log group
+		if target.KmsKeyID != "" {
+			m.associateKmsKey(target)
+		}
+
 		m.cache[target] = struct{}{}
 	}
 	return nil
@@ -149,6 +155,27 @@ func (m *targetManager) createLogStream(t Target) error {
 		return nil
 	}
 	return err
+}
+func (m *targetManager) associateKmsKey(t Target) {
+	// Ensure KmsKeyID and Group are non-empty strings
+	if t.KmsKeyID == "" {
+		return
+	}
+	if t.Group == "" {
+		return
+	}
+
+	input := &cloudwatchlogs.AssociateKmsKeyInput{
+		KmsKeyId:     aws.String(t.KmsKeyID), // Ensure it's passed as a pointer to a string
+		LogGroupName: aws.String(t.Group),
+	}
+
+	_, err := m.service.AssociateKmsKey(input)
+	if err == nil {
+		m.logger.Debugf("Successfully associated KMS Key: %v", t.KmsKeyID)
+	} else {
+		m.logger.Debugf("Something went wrong with associating KMS Key: %v", err)
+	}
 }
 
 func (m *targetManager) processDescribeLogGroup() {

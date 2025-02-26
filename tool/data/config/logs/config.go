@@ -6,15 +6,16 @@ package logs
 import "github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 
 type Config struct {
-	FilePath              string `file_path`
-	LogGroup              string `log_group_name`
-	LogStream             string `log_stream_name`
-	LogGroupClass         string `log_group_class`
-	TimestampFormat       string `timestamp_format`
-	Timezone              string `timezone`
-	MultiLineStartPattern string `multi_line_start_pattern`
-	Encoding              string `encoding`
-	Retention             int    `retention_in_days`
+	FilePath              string `json:"file_path"`
+	LogGroup              string `json:"log_group_name"`
+	LogStream             string `json:"log_stream_name"`
+	KmsKeyID              string `json:"kms_key_id"`
+	LogGroupClass         string `json:"log_group_class"`
+	TimestampFormat       string `json:"timestamp_format"`
+	Timezone              string `json:"timezone"`
+	MultiLineStartPattern string `json:"multi_line_start_pattern"`
+	Encoding              string `json:"encoding"`
+	Retention             int    `json:"retention_in_days"`
 }
 
 func (config *Config) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -32,6 +33,9 @@ func (config *Config) ToMap(ctx *runtime.Context) (string, map[string]interface{
 	}
 	if config.LogStream != "" {
 		resultMap["log_stream_name"] = config.LogStream
+	}
+	if config.KmsKeyID != "" {
+		resultMap["kms_key_id"] = config.KmsKeyID
 	}
 	if config.Encoding != "" {
 		resultMap["encoding"] = config.Encoding

@@ -41,6 +41,8 @@ type FileConfig struct {
 	LogStreamName string `toml:"log_stream_name"`
 	//log group class
 	LogGroupClass string `toml:"log_group_class"`
+	//Kms Key ID
+	KmsKeyID string `toml:"kms_key_id"`
 
 	//The regex of the timestampFromLogLine presents in the log entry
 	TimestampRegex string `toml:"timestamp_regex"`

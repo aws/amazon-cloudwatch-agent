@@ -77,7 +77,7 @@ func TestCreateDestination(t *testing.T) {
 				pusherStopChan: make(chan struct{}),
 				cwDests:        make(map[pusher.Target]*cwDest),
 			}
-			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, testCase.cfgLogClass, testCase.cfgTailerSrc).(*cwDest)
+			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, "", testCase.cfgLogRetention, testCase.cfgLogClass, testCase.cfgTailerSrc).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
 			require.Equal(t, testCase.expectedLogStream, dest.pusher.Stream)
 			require.Equal(t, testCase.expectedLogGroupRetention, dest.pusher.Retention)
@@ -96,8 +96,8 @@ func TestDuplicateDestination(t *testing.T) {
 		pusherStopChan: make(chan struct{}),
 	}
 	// Given the same log group, log stream, same retention, and logClass
-	d1 := c.CreateDest("FILENAME", "", -1, util.InfrequentAccessLogGroupClass, nil)
-	d2 := c.CreateDest("FILENAME", "", -1, util.InfrequentAccessLogGroupClass, nil)
+	d1 := c.CreateDest("FILENAME", "", "", -1, util.InfrequentAccessLogGroupClass, nil)
+	d2 := c.CreateDest("FILENAME", "", "", -1, util.InfrequentAccessLogGroupClass, nil)
 
 	// Then the destination for cloudwatchlogs endpoint would be the same
 	require.Equal(t, d1, d2)

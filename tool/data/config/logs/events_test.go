@@ -23,8 +23,8 @@ func TestEvents_ToMap(t *testing.T) {
 	expectedKey := "windows_events"
 	expectedVal := map[string]interface{}{
 		"collect_list": []map[string]interface{}{
-			{"event_name": "EN1", "event_levels": []string{"ERROR", "SUCCESS"}, "log_group_name": "LG1", "log_stream_name": "LS1", "retention_in_days": 1, "log_group_class": util.InfrequentAccessLogGroupClass},
-			{"event_name": "EN2", "event_levels": []string{"ERROR"}, "log_group_name": "LG2", "log_stream_name": "LS2", "event_format": "xml", "retention_in_days": 1, "log_group_class": util.InfrequentAccessLogGroupClass},
+			{"event_name": "EN1", "kms_key_id": "", "event_levels": []string{"ERROR", "SUCCESS"}, "log_group_name": "LG1", "log_stream_name": "LS1", "retention_in_days": 1, "log_group_class": util.InfrequentAccessLogGroupClass},
+			{"event_name": "EN2", "kms_key_id": "", "event_levels": []string{"ERROR"}, "log_group_name": "LG2", "log_stream_name": "LS2", "event_format": "xml", "retention_in_days": 1, "log_group_class": util.InfrequentAccessLogGroupClass},
 		},
 	}
 	assert.Equal(t, expectedKey, actualkey)

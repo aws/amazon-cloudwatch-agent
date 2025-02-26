@@ -61,6 +61,7 @@ func (le LogEvent) Done() {
 type tailerSrc struct {
 	group           string
 	stream          string
+	kmsKeyID        string
 	class           string
 	fileGlobPath    string
 	destination     string
@@ -86,7 +87,7 @@ type tailerSrc struct {
 var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
-	group, stream, destination, stateFilePath, logClass, fileGlobPath string,
+	group, stream, kmsKeyID, destination, stateFilePath, logClass, fileGlobPath string,
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
@@ -100,6 +101,7 @@ func NewTailerSrc(
 	ts := &tailerSrc{
 		group:           group,
 		stream:          stream,
+		kmsKeyID:        kmsKeyID,
 		destination:     destination,
 		stateFilePath:   stateFilePath,
 		class:           logClass,
@@ -135,6 +137,10 @@ func (ts *tailerSrc) Group() string {
 
 func (ts *tailerSrc) Stream() string {
 	return ts.stream
+}
+
+func (ts *tailerSrc) KmsKeyID() string {
+	return ts.kmsKeyID
 }
 
 func (ts *tailerSrc) Description() string {

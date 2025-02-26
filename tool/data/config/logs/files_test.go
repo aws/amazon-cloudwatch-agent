@@ -15,8 +15,8 @@ import (
 func TestFiles_ToMap(t *testing.T) {
 	conf := new(Files)
 
-	conf.AddLogFile("/var/log", "lg1", "ls1", "timeStamp1", "utc", "p1", "utf-8", 1, util.InfrequentAccessLogGroupClass)
-	conf.AddLogFile("/var/message", "lg2", "ls2", "timeStamp2", "pst", "p2", "", 1, util.InfrequentAccessLogGroupClass)
+	conf.AddLogFile("/var/log", "lg1", "ls1", "", "timeStamp1", "utc", "p1", "utf-8", 1, util.InfrequentAccessLogGroupClass)
+	conf.AddLogFile("/var/message", "lg2", "ls2", "", "timeStamp2", "pst", "p2", "", 1, util.InfrequentAccessLogGroupClass)
 
 	expectedKey := "files"
 	expectedVal := map[string]interface{}{
