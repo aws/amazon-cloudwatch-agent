@@ -6,13 +6,14 @@ package logs
 import "github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 
 type EventConfig struct {
-	EventName     string   `event_name`
-	EventLevels   []string `event_levels`
-	EventFormat   string   `event_format`
-	LogGroup      string   `log_group_name`
-	LogStream     string   `log_stream_name`
-	LogGroupClass string   `log_group_class`
-	Retention     int      `retention_in_days`
+	EventName     string   `json:"event_name"`
+	EventLevels   []string `json:"event_levels"`
+	EventFormat   string   `json:"event_format"`
+	LogGroup      string   `json:"log_group_name"`
+	LogStream     string   `json:"log_stream_name"`
+	LogGroupClass string   `json:"log_group_class"`
+	KmsKeyID      string   `json:"kms_key_id"`
+	Retention     int      `json:"retention_in_days"`
 }
 
 func (config *EventConfig) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -26,6 +27,7 @@ func (config *EventConfig) ToMap(ctx *runtime.Context) (string, map[string]inter
 	}
 	resultMap["log_group_name"] = config.LogGroup
 	resultMap["log_stream_name"] = config.LogStream
+	resultMap["kms_key_id"] = config.KmsKeyID
 	if config.LogGroupClass != "" {
 		resultMap["log_group_class"] = config.LogGroupClass
 	}

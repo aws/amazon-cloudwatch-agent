@@ -59,7 +59,7 @@ func TestTailerSrc(t *testing.T) {
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
-		"groupName", "streamName",
+		"groupName", "streamName", "",
 		"destination", statefile.Name(),
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
@@ -170,7 +170,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 
 	ts := NewTailerSrc(
-		"groupName", "streamName",
+		"groupName", "streamName", "",
 		"destination",
 		statefile.Name(),
 		util.InfrequentAccessLogGroupClass,
@@ -390,7 +390,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	assert.NoError(t, err)
 	ts := NewTailerSrc(
 		t.Name(),
-		t.Name(),
+		t.Name(), "",
 		"destination",
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",

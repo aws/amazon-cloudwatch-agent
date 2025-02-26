@@ -43,8 +43,8 @@ func TestLogs_ToMap(t *testing.T) {
 		},
 	}
 	conf := new(Logs)
-	conf.AddLogFile("file1", "log_group_1", "{hostname}", "%H:%M:%S %y %b %d", "UTC", "{timestamp_format}", "", 1, util.StandardLogGroupClass)
-	conf.AddLogFile("file2", "log_group_2", "{hostname}", "%H:%M:%S %y %b %d", "UTC", "{timestamp_format}", "", 1, util.StandardLogGroupClass)
+	conf.AddLogFile("file1", "log_group_1", "{hostname}", "", "%H:%M:%S %y %b %d", "UTC", "{timestamp_format}", "", 1, util.StandardLogGroupClass)
+	conf.AddLogFile("file2", "log_group_2", "{hostname}", "", "%H:%M:%S %y %b %d", "UTC", "{timestamp_format}", "", 1, util.StandardLogGroupClass)
 	ctx := &runtime.Context{}
 	key, value := conf.ToMap(ctx)
 	assert.Equal(t, expectedKey, key)

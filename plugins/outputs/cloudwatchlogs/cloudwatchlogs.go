@@ -34,6 +34,7 @@ import (
 const (
 	LogGroupNameTag   = "log_group_name"
 	LogStreamNameTag  = "log_stream_name"
+	KmsKeyIDTag       = "kms_key_id"
 	LogGroupClassTag  = "log_group_class"
 	LogTimestampField = "log_timestamp"
 	LogEntryField     = "value"
@@ -65,6 +66,7 @@ type CloudWatchLogs struct {
 	//log group and stream names
 	LogStreamName string `toml:"log_stream_name"`
 	LogGroupName  string `toml:"log_group_name"`
+	KmsKeyID      string `toml:"kms_key_id"`
 
 	// Retention for log group
 	RetentionInDays int `toml:"retention_in_days"`
@@ -108,12 +110,15 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGroupClass string, logSrc logs.LogSrc) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream, kmsKeyID string, retention int, logGroupClass string, logSrc logs.LogSrc) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
 	if stream == "" {
 		stream = c.LogStreamName
+	}
+	if kmsKeyID == "" {
+		kmsKeyID = c.KmsKeyID
 	}
 	if retention <= 0 {
 		retention = -1
@@ -122,6 +127,7 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 	t := pusher.Target{
 		Group:     group,
 		Stream:    stream,
+		KmsKeyID:  kmsKeyID,
 		Retention: retention,
 		Class:     logGroupClass,
 	}
@@ -219,7 +225,14 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (pusher.Target, 
 		logStream = c.LogStreamName
 	}
 
-	return pusher.Target{Group: logGroup, Stream: logStream, Class: util.StandardLogGroupClass, Retention: -1}, nil
+	kmsKeyID, ok := tags[KmsKeyIDTag]
+	if ok {
+		m.RemoveTag(KmsKeyIDTag)
+	} else if kmsKeyID == "" {
+		kmsKeyID = c.KmsKeyID
+	}
+
+	return pusher.Target{Group: logGroup, Stream: logStream, KmsKeyID: kmsKeyID, Class: util.StandardLogGroupClass, Retention: -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {
