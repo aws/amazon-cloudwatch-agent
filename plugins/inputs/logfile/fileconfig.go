@@ -214,7 +214,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, stri
 			// Trim the entire timestamp portion (from start to end of the match)
 			return timestamp, logValue[:index[0]] + logValue[index[1]:]
 		}
-		return timestamp,  logValue
+		return timestamp, logValue
 	}
 	return time.Time{}, logValue
 }
