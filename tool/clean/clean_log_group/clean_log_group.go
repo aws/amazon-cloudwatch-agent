@@ -81,6 +81,9 @@ func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64,
 				if creationTime < cutoffCreationTime {
 					// Check last log event timestamp
 					lastLogTime := getLastLogEventTime(client, logGroupName)
+					if lastLogTime == 0 {
+						return
+					}
 					if lastLogTime < cutoffInactiveTime {
 						fmt.Printf("🚨 Worker: %d| Old & Inactive Log Group: %s (Created: %v, Last Event: %v)\n",
 							workerId, logGroupName, time.Unix(creationTime/1000, 0), time.Unix(lastLogTime/1000, 0))
@@ -108,13 +111,13 @@ func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64,
 	}
 
 	var nextToken *string
-	decribeCount :=0
+	decribeCount := 0
 	for {
 		// Fetch log groups in pages
 		output, err := client.DescribeLogGroups(context.TODO(), &cloudwatchlogs.DescribeLogGroupsInput{
 			NextToken: nextToken,
 		})
-		fmt.Printf("🔍 Described %d times | Found %d log groups now will process them\n", decribeCount,len(output.LogGroups))
+		fmt.Printf("🔍 Described %d times | Found %d log groups now will process them\n", decribeCount, len(output.LogGroups))
 		if err != nil {
 			log.Fatalf("❌ Failed to retrieve log groups: %v", err)
 		}
