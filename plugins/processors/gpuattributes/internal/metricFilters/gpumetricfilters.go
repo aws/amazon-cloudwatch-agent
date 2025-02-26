@@ -108,6 +108,7 @@ var PodNeuronLabelFilter = map[string]map[string]interface{}{
 	internal.SubnetId:                  nil,
 	internal.NeuronCore:                nil,
 	containerinsightscommon.MetricType: nil,
+	containerinsightscommon.UltraServerKey: nil,
 }
 
 var ContainerNeuronLabelFilter = map[string]map[string]interface{}{
@@ -134,6 +135,7 @@ var ContainerNeuronLabelFilter = map[string]map[string]interface{}{
 	internal.SubnetId:                  nil,
 	internal.NeuronCore:                nil,
 	containerinsightscommon.MetricType: nil,
+	containerinsightscommon.UltraServerKey: nil,
 }
 
 var NodeNeuronLabelFilter = map[string]map[string]interface{}{
@@ -153,4 +155,5 @@ var NodeNeuronLabelFilter = map[string]map[string]interface{}{
 	internal.SubnetId:                  nil,
 	internal.NeuronCore:                nil,
 	containerinsightscommon.MetricType: nil,
+	containerinsightscommon.UltraServerKey: nil,
 }
