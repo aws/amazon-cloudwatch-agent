@@ -13,16 +13,17 @@ type TrimTimestamp struct {
 }
 
 func (r *TrimTimestamp) ApplyRule(input interface{}) (string, interface{}) {
-	_, returnVal := translator.DefaultCase(TrimTimestampSectionKey, "", input)
-	if returnVal == "" {
+	_, val := translator.DefaultCase(TrimTimestampSectionKey, "", input)
+	if val == "" {
 		return "", ""
 	}
-	returnKey := TrimTimestampSectionKey
-	var ok bool
-	if returnVal, ok = returnVal.(bool); !ok {
-		returnVal = false
+
+	boolVal, ok := val.(bool)
+	if !ok {
+		return TrimTimestampSectionKey, false
 	}
-	return returnKey, returnVal
+
+	return TrimTimestampSectionKey, boolVal
 }
 
 func init() {
