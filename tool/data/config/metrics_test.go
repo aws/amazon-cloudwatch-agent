@@ -4,6 +4,7 @@
 package config
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,6 +31,7 @@ func TestMetrics_ToMap(t *testing.T) {
 		},
 	}
 	conf := new(Metrics)
+	extraDim := [][]string{{"cluster.id"}}
 	ctx := &runtime.Context{
 		OsParameter:             util.OsTypeLinux,
 		WantEC2TagDimensions:    true,
@@ -38,6 +40,9 @@ func TestMetrics_ToMap(t *testing.T) {
 		WantPerInstanceMetrics:  true,
 	}
 	conf.CollectAllMetrics(ctx)
+	conf.AggregationDimensions = new(metric.AggregationDimensions)
+	conf.AggregationDimensions.SetDefaultDimensions()
+	conf.AggregationDimensions.Dimensions = append(conf.AggregationDimensions.Dimensions, extraDim...)
 	key, value := conf.ToMap(ctx)
 	assert.Equal(t, expectedKey, key)
 	assert.Equal(t, expectedValue, value)

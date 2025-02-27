@@ -547,6 +547,7 @@ func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
 
 // ProcessRollup creates the dimension sets based on the dimensions available in the original metric.
 func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
+	c.logger.Debug("Processing rollup")
 	rawDimensionMap := map[string]string{}
 	for _, v := range rawDimensions {
 		rawDimensionMap[*v.Name] = *v.Value
@@ -576,6 +577,7 @@ func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*c
 			fullDimensionsList = append(fullDimensionsList, extraDimensions)
 		}
 	}
+	c.logger.Debug("Processing rollup:", zap.Int("full dimlist len", len(fullDimensionsList)))
 	return fullDimensionsList
 }
 
