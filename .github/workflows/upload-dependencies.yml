@@ -50,10 +50,12 @@ jobs:
 
       - name: Upload Test Repo
         run: |
-          aws s3 sync . s3://${{ inputs.s3_integration_bucket }}/integration-test/test-repo/${{ inputs.github_sha }} --delete --quiet
+          tar -czf amazon-cloudwatch-agent-test.tar.gz .
+          aws s3 cp amazon-cloudwatch-agent-test.tar.gz s3://${{ inputs.s3_integration_bucket }}/integration-test/test-repo/${{ inputs.github_sha }}.tar.gz --quiet
 
       - name: Upload Dependencies to S3
         run: |
           go mod tidy
           go mod vendor
-          aws s3 sync ./vendor s3://${{ inputs.s3_integration_bucket }}/integration-test/vendor/${{ inputs.github_sha }} --delete --quiet
+          tar -czf vendor.tar.gz ./vendor
+          aws s3 cp ./vendor.tar.gz s3://${{ inputs.s3_integration_bucket }}/integration-test/vendor/${{ inputs.github_sha }}.tar.gz --quiet
