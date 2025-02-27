@@ -434,6 +434,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 	}
 
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
+	c.logger.Debug("BuildMetricDatum", zap.String("metric", metric.String()), zap.Int("dimList", len(dimensionsList)))
 	for index, dimensions := range dimensionsList {
 		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 		//metric datum
@@ -577,7 +578,7 @@ func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*c
 			fullDimensionsList = append(fullDimensionsList, extraDimensions)
 		}
 	}
-	c.logger.Debug("Processing rollup:", zap.Int("full dimlist len", len(fullDimensionsList)))
+	c.logger.Debug("Processing rollup", zap.Int("full dimlist len", len(fullDimensionsList)))
 	return fullDimensionsList
 }
 
