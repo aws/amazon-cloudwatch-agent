@@ -91,31 +91,47 @@ func (m *targetManager) PutRetentionPolicy(target Target) {
 
 func (m *targetManager) createLogGroupAndStream(t Target) (bool, error) {
 	err := m.createLogStream(t)
-	if err == nil {
+	if m.isLogStreamCreated(err, t.Stream) {
 		return false, nil
 	}
 
-	m.logger.Debugf("creating stream fail due to : %v", err)
-	newGroup := false
+	m.logger.Debugf("creating stream %v fail due to: %v", t.Stream, err)
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
 		err = m.createLogGroup(t)
-		newGroup = true
 
 		// attempt to create stream again if group created successfully.
-		if err == nil {
+		if m.isLogGroupCreated(err, t.Group) {
 			m.logger.Debugf("retrying log stream %v", t.Stream)
 			err = m.createLogStream(t)
+			if m.isLogStreamCreated(err, t.Stream) {
+				return true, nil
+			}
 		} else {
-			m.logger.Debugf("creating group fail due to : %v", err)
+			m.logger.Debugf("creating group %v fail due to: %v", t.Group, err)
 		}
 	}
 
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
-		m.logger.Debugf("resource was already created. %v\n", err)
-		return false, nil
-	}
+	return false, err
+}
 
-	return newGroup, err
+func (m *targetManager) isLogGroupCreated(err error, group string) bool {
+	return m.isResourceCreated(err, fmt.Sprintf("log group %v", group))
+}
+
+func (m *targetManager) isLogStreamCreated(err error, stream string) bool {
+	return m.isResourceCreated(err, fmt.Sprintf("log stream %v", stream))
+}
+
+func (m *targetManager) isResourceCreated(err error, resourceName string) bool {
+	if err == nil {
+		return true
+	}
+	// if the resource already exist
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+		m.logger.Debugf("%s was already created. %v\n", resourceName, err)
+		return true
+	}
+	return false
 }
 
 func (m *targetManager) createLogGroup(t Target) error {
