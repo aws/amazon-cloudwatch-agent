@@ -82,6 +82,7 @@ func (agg *aggregator) AddMetric(m *aggregationDatum) {
 	if aggDurationMapKey < time.Minute {
 		m.SetStorageResolution(1)
 	}
+	fmt.Printf("Aggregator: %s\n", m.String())
 	durationAgg.addMetric(m)
 }
 
