@@ -1,201 +1,277 @@
 package main
 
 import (
-	"context"
-	"flag"
-	"fmt"
-	"log"
-	"strings"
-	"sync"
-	"time"
+    "context"
+    "flag"
+    "fmt"
+    "log"
+    "strings"
+    "sync"
+    "time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+    "github.com/aws/aws-sdk-go-v2/aws"
+    "github.com/aws/aws-sdk-go-v2/config"
+    "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+    "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 )
 
-// Configurable flags
-const (
-	thresholdDays    = 3
-	inactiveDays     = 1
-	numWorkers       = 15 // Adjust this number based on your needs
-	DELETE_BATCH_CAP = 10000
-)
+// Config holds the application configuration
+type Config struct {
+    thresholdDays    int
+    inactiveDays     int
+    numWorkers       int
+    deleteBatchCap   int
+    exceptionList    []string
+    dryRun          bool
+}
 
+// Logger wraps logging functionality
+type Logger struct {
+    *log.Logger
+}
+
+// NewLogger creates a new logger instance
+func NewLogger() *Logger {
+    return &Logger{
+        Logger: log.New(log.Writer(), "", log.LstdFlags),
+    }
+}
+
+// Global configuration
 var (
-	dryRun                       bool
-	EXCEPTION_LIST_DO_NOT_DELETE = []string{"lambda"}
+    cfg    Config
+    logger *Logger
 )
 
 func init() {
-	flag.BoolVar(&dryRun, "dry-run", false, "Enable dry-run mode (no actual deletion)")
-	flag.Parse()
+    // Initialize logger
+    logger = NewLogger()
+
+    // Set default configuration
+    cfg = Config{
+        thresholdDays:    3,
+        inactiveDays:     1,
+        numWorkers:       15,
+        deleteBatchCap:   10000,
+        exceptionList:    []string{"lambda"},
+    }
+
+    // Parse command line flags
+    flag.BoolVar(&cfg.dryRun, "dry-run", false, "Enable dry-run mode (no actual deletion)")
+    flag.Parse()
 }
 
 func main() {
-	// Load AWS configuration
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	cfg.RetryMode = aws.RetryModeAdaptive
-	if err != nil {
-		log.Fatalf("Error loading AWS config: %v", err)
-	}
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+    defer cancel()
 
-	// Create CloudWatch Logs client
-	client := cloudwatchlogs.NewFromConfig(cfg)
+    // Load AWS configuration
+    awsCfg, err := loadAWSConfig(ctx)
+    if err != nil {
+        logger.Fatalf("Error loading AWS config: %v", err)
+    }
 
-	// Compute the cutoff timestamps
-	cutoffCreationTime := time.Now().AddDate(0, 0, -thresholdDays).Unix() * 1000
-	cutoffInactiveTime := time.Now().AddDate(0, 0, -inactiveDays).Unix() * 1000
+    // Create CloudWatch Logs client
+    client := cloudwatchlogs.NewFromConfig(awsCfg)
 
-	fmt.Printf("🔍 Searching for CloudWatch Log Groups older than %d days AND inactive for %d days. in  %s region\n", thresholdDays, inactiveDays, cfg.Region)
+    // Compute cutoff times
+    cutoffTimes := calculateCutoffTimes()
 
-	// Fetch and delete log groups
-	deleteOldLogGroups(client, cutoffCreationTime, cutoffInactiveTime)
+    logger.Printf("🔍 Searching for CloudWatch Log Groups older than %d days AND inactive for %d days in %s region\n",
+        cfg.thresholdDays, cfg.inactiveDays, awsCfg.Region)
+
+    // Delete old log groups
+    deletedGroups := deleteOldLogGroups(ctx, client, cutoffTimes)
+    logger.Printf("Total log groups deleted: %d", len(deletedGroups))
 }
 
-func deleteOldLogGroups(client *cloudwatchlogs.Client, cutoffCreationTime int64, cutoffInactiveTime int64) []string {
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
-	var logGroupsToBeDeleted []string
-
-	// Create a channel to send log groups to workers
-	logGroupChan := make(chan *types.LogGroup, 500)
-	fmt.Printf("👷 Creating %d of workers\n", numWorkers)
-	// Start worker goroutines
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func(workerId int) {
-			defer wg.Done()
-			for logGroup := range logGroupChan {
-				// Skip if creationTime is nil (unlikely)
-				if logGroup.CreationTime == nil {
-					fmt.Printf("Found faulty log group \n %v", logGroup)
-					continue
-				}
-
-				logGroupName := *logGroup.LogGroupName
-				creationTime := *logGroup.CreationTime
-
-				// Check if log group is older than threshold
-				if creationTime < cutoffCreationTime {
-					// Check last log event timestamp
-					lastLogTime := getLastLogEventTime(client, logGroupName)
-					if lastLogTime == 0 {
-						return
-					}
-					if lastLogTime < cutoffInactiveTime {
-						fmt.Printf("🚨 Worker: %d| Old & Inactive Log Group: %s (Created: %v, Last Event: %v)\n",
-							workerId, logGroupName, time.Unix(creationTime/1000, 0), time.Unix(lastLogTime/1000, 0))
-						mutex.Lock()
-						logGroupsToBeDeleted = append(logGroupsToBeDeleted, logGroupName)
-						mutex.Unlock()
-						if dryRun {
-							fmt.Printf("🛑 Dry-Run: Would delete %d log groups\n", len(logGroupsToBeDeleted))
-							// Dry-run mode - only print
-							return
-						}
-						_, err := client.DeleteLogGroup(context.TODO(), &cloudwatchlogs.DeleteLogGroupInput{
-							LogGroupName: logGroup.LogGroupName,
-						})
-						if err != nil {
-							fmt.Printf("❌ Error deleting %s: %v\n", logGroupName, err)
-						} else {
-							fmt.Printf("✅ Deleted log group: %s\n", logGroupName)
-						}
-					}
-				}
-				// fmt.Printf("👷 Worker: %d| No OLD log group found\n", workerId)
-			}
-		}(i)
-	}
-
-	var nextToken *string
-	decribeCount := 0
-	for {
-		// Fetch log groups in pages
-		output, err := client.DescribeLogGroups(context.TODO(), &cloudwatchlogs.DescribeLogGroupsInput{
-			NextToken: nextToken,
-		})
-		fmt.Printf("🔍 Described %d times | Found %d log groups now will process them\n", decribeCount, len(output.LogGroups))
-		if err != nil {
-			log.Fatalf("❌ Failed to retrieve log groups: %v", err)
-		}
-
-		// Send log groups to the channel
-		for _, logGroup := range output.LogGroups {
-			if isLogGroupAnException(*logGroup.LogGroupName) {
-				fmt.Printf("⏭️ Skipping Log Group: %s it is in exception list\n", *logGroup.LogGroupName)
-				continue
-			}
-			logGroupChan <- &logGroup
-		}
-		// Handle pagination
-		if output.NextToken == nil {
-			break
-		}
-		mutex.Lock()
-		l := len(logGroupsToBeDeleted)
-		mutex.Unlock()
-		if l > DELETE_BATCH_CAP {
-			break
-		}
-		nextToken = output.NextToken
-		decribeCount++
-		fmt.Printf("🔍 So far deleted %d\n", l)
-	}
-
-	// Close the channel after all log groups have been sent
-	close(logGroupChan)
-
-	// Wait for all workers to finish
-	wg.Wait()
-
-	// Process the logGroupsToBeDeleted as needed
-	fmt.Printf("Log groups to be deleted: %d\n", len(logGroupsToBeDeleted))
-	return logGroupsToBeDeleted
+type cutoffTimes struct {
+    creation int64
+    inactive int64
 }
 
-// getLastLogEventTime fetches the latest log event timestamp for a log group
-func getLastLogEventTime(client *cloudwatchlogs.Client, logGroupName string) int64 {
-	var latestTimestamp int64
-	var nextToken *string
-
-	for {
-		// Fetch log streams for the log group
-		output, err := client.DescribeLogStreams(context.TODO(), &cloudwatchlogs.DescribeLogStreamsInput{
-			LogGroupName: aws.String(logGroupName),
-			OrderBy:      types.OrderByLastEventTime,
-			Descending:   aws.Bool(true),
-			NextToken:    nextToken,
-		})
-		if err != nil {
-			fmt.Printf("⚠️ Warning: Failed to retrieve log streams for %s: %v\n", logGroupName, err)
-			return 0 // Assume no activity if error occurs
-		}
-
-		// Find the latest log event timestamp
-		for _, stream := range output.LogStreams {
-			if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {
-				latestTimestamp = *stream.LastEventTimestamp
-			}
-		}
-
-		// Handle pagination
-		if output.NextToken == nil {
-			break
-		}
-		nextToken = output.NextToken
-	}
-
-	return latestTimestamp
+func calculateCutoffTimes() cutoffTimes {
+    return cutoffTimes{
+        creation: time.Now().AddDate(0, 0, -cfg.thresholdDays).Unix() * 1000,
+        inactive: time.Now().AddDate(0, 0, -cfg.inactiveDays).Unix() * 1000,
+    }
 }
 
-func isLogGroupAnException(logGroupName string) bool {
-	for _, exception_string := range EXCEPTION_LIST_DO_NOT_DELETE {
-		if strings.Contains(logGroupName, exception_string) {
-			return true
-		}
-	}
-	return false
+func loadAWSConfig(ctx context.Context) (aws.Config, error) {
+    cfg, err := config.LoadDefaultConfig(ctx)
+    if err != nil {
+        return aws.Config{}, fmt.Errorf("loading AWS config: %w", err)
+    }
+    cfg.RetryMode = aws.RetryModeAdaptive
+    return cfg, nil
+}
+
+func deleteOldLogGroups(ctx context.Context, client *cloudwatchlogs.Client, times cutoffTimes) []string {
+    var (
+        wg                  sync.WaitGroup
+        mutex              sync.Mutex
+        logGroupsToDelete []string
+        logGroupChan      = make(chan *types.LogGroup, 500)
+    )
+
+    // Start worker pool
+    logger.Printf("👷 Creating %d workers\n", cfg.numWorkers)
+    for i := 0; i < cfg.numWorkers; i++ {
+        wg.Add(1)
+        go processLogGroup(ctx, client, logGroupChan, &wg, &mutex, &logGroupsToDelete, times, i)
+    }
+
+    // Process log groups in batches
+    if err := fetchAndProcessLogGroups(ctx, client, logGroupChan, &logGroupsToDelete, &mutex); err != nil {
+        logger.Printf("Error processing log groups: %v", err)
+    }
+
+    close(logGroupChan)
+    wg.Wait()
+
+    return logGroupsToDelete
+}
+
+func processLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroupChan <-chan *types.LogGroup,
+    wg *sync.WaitGroup, mutex *sync.Mutex, logGroupsToDelete *[]string, times cutoffTimes, workerID int) {
+    defer wg.Done()
+
+    for logGroup := range logGroupChan {
+        if err := handleLogGroup(ctx, client, logGroup, mutex, logGroupsToDelete, times, workerID); err != nil {
+            logger.Printf("Worker %d: Error processing log group: %v", workerID, err)
+        }
+    }
+}
+
+func handleLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroup *types.LogGroup,
+    mutex *sync.Mutex, logGroupsToDelete *[]string, times cutoffTimes, workerID int) error {
+    
+    if logGroup.CreationTime == nil {
+        return fmt.Errorf("log group has no creation time: %v", logGroup)
+    }
+
+    logGroupName := *logGroup.LogGroupName
+    creationTime := *logGroup.CreationTime
+
+    if creationTime >= times.creation {
+        return nil
+    }
+
+    lastLogTime := getLastLogEventTime(ctx, client, logGroupName)
+    if lastLogTime == 0 {
+        return nil
+    }
+
+    if lastLogTime < times.inactive {
+        logger.Printf("🚨 Worker: %d| Old & Inactive Log Group: %s (Created: %v, Last Event: %v)\n",
+            workerID, logGroupName, time.Unix(creationTime/1000, 0), time.Unix(lastLogTime/1000, 0))
+
+        mutex.Lock()
+        *logGroupsToDelete = append(*logGroupsToDelete, logGroupName)
+        mutex.Unlock()
+
+        if cfg.dryRun {
+            logger.Printf("🛑 Dry-Run: Would delete log group: %s", logGroupName)
+            return nil
+        }
+
+        return deleteLogGroup(ctx, client, logGroupName)
+    }
+
+    return nil
+}
+
+func deleteLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroupName string) error {
+    _, err := client.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
+        LogGroupName: aws.String(logGroupName),
+    })
+    if err != nil {
+        return fmt.Errorf("deleting log group %s: %w", logGroupName, err)
+    }
+    logger.Printf("✅ Deleted log group: %s", logGroupName)
+    return nil
+}
+
+func fetchAndProcessLogGroups(ctx context.Context, client *cloudwatchlogs.Client,
+    logGroupChan chan<- *types.LogGroup, logGroupsToDelete *[]string, mutex *sync.Mutex) error {
+    
+    var nextToken *string
+    describeCount := 0
+
+    for {
+        output, err := client.DescribeLogGroups(ctx, &cloudwatchlogs.DescribeLogGroupsInput{
+            NextToken: nextToken,
+        })
+        if err != nil {
+            return fmt.Errorf("describing log groups: %w", err)
+        }
+
+        logger.Printf("🔍 Described %d times | Found %d log groups\n", describeCount, len(output.LogGroups))
+
+        for _, logGroup := range output.LogGroups {
+            if isLogGroupException(*logGroup.LogGroupName) {
+                logger.Printf("⏭️ Skipping Log Group: %s (in exception list)\n", *logGroup.LogGroupName)
+                continue
+            }
+            logGroupChan <- &logGroup
+        }
+
+        if output.NextToken == nil {
+            break
+        }
+
+        mutex.Lock()
+        count := len(*logGroupsToDelete)
+        mutex.Unlock()
+
+        if count > cfg.deleteBatchCap {
+            break
+        }
+
+        nextToken = output.NextToken
+        describeCount++
+        logger.Printf("🔍 Processed %d log groups so far\n", count)
+    }
+
+    return nil
+}
+
+func getLastLogEventTime(ctx context.Context, client *cloudwatchlogs.Client, logGroupName string) int64 {
+    var latestTimestamp int64
+    var nextToken *string
+
+    for {
+        output, err := client.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
+            LogGroupName: aws.String(logGroupName),
+            OrderBy:      types.OrderByLastEventTime,
+            Descending:   aws.Bool(true),
+            NextToken:    nextToken,
+        })
+        if err != nil {
+            logger.Printf("⚠️ Warning: Failed to retrieve log streams for %s: %v\n", logGroupName, err)
+            return 0
+        }
+
+        for _, stream := range output.LogStreams {
+            if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {
+                latestTimestamp = *stream.LastEventTimestamp
+            }
+        }
+
+        if output.NextToken == nil {
+            break
+        }
+        nextToken = output.NextToken
+    }
+
+    return latestTimestamp
+}
+
+func isLogGroupException(logGroupName string) bool {
+    for _, exception := range cfg.exceptionList {
+        if strings.Contains(logGroupName, exception) {
+            return true
+        }
+    }
+    return false
 }
