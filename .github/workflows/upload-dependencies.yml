@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Upload Dependencies to S3
+name: Upload Dependencies and Test Repo to S3
 
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
@@ -18,9 +18,6 @@ on:
       test_repo_branch:
         required: true
         type: string
-      test_repo_url:
-        required: true
-        type: string
       github_sha:
         required: true
         type: string
@@ -31,7 +28,7 @@ on:
         type: string
 
 jobs:
-  UploadDependencies:
+  UploadDependenciesAndTestRepo:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -50,6 +47,10 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ~1.22.2
+
+      - name: Upload Test Repo:
+        run: |
+          aws s3 sync . s3://${{ inputs.s3_integration_bucket }}/integration-test/test-repo/${{ inputs.github_sha }} --delete --quiet
 
       - name: Upload Dependencies to S3
         run: |
