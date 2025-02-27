@@ -382,7 +382,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		EntityMetricData:       createEntityMetricData(entityToMetricDatum),
 		StrictEntityValidation: aws.Bool(false),
 	}
-
+	log.Printf("D! cloudwatch: PutMetricData: %s \n", params.String())
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
 		_, err = c.svc.PutMetricData(params)
