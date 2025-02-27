@@ -6,6 +6,7 @@ package config
 import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"log"
 )
 
 type Metrics struct {
@@ -46,7 +47,7 @@ func (config *Metrics) ToMap(ctx *runtime.Context) (string, map[string]interface
 		mapKey, mapValue := config.MetricsCollect.ToMap(ctx)
 		resultMap[mapKey] = mapValue
 	}
-
+	log.Printf("D!Metrics.go ToMap:%v\n", resultMap)
 	return "metrics", resultMap
 }
 
