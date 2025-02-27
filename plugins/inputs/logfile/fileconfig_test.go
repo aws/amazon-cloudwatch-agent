@@ -200,6 +200,13 @@ func TestTimestampParserWithPadding(t *testing.T) {
 	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
 	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
 	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
+
+	logEntry = " instance-id: i-02fce21a425a2efb3 2 1 07:10:06"
+	trimmedTimestampString = "instance-id: i-02fce21a425a2efb3 "
+	timestamp, modifiedLogEntry = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
+	assert.Equal(t, trimmedTimestampString, modifiedLogEntry)
 }
 
 func TestTimestampParserDefault(t *testing.T) {
