@@ -48,7 +48,7 @@ jobs:
         with:
           go-version: ~1.22.2
 
-      - name: Upload Test Repo:
+      - name: Upload Test Repo
         run: |
           aws s3 sync . s3://${{ inputs.s3_integration_bucket }}/integration-test/test-repo/${{ inputs.github_sha }} --delete --quiet
 
