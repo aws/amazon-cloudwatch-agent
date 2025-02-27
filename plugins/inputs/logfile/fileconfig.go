@@ -212,6 +212,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, stri
 		}
 		if config.TrimTimestamp {
 			// Trim the entire timestamp portion and leading whitespaces
+			// The whitespace characters being removed are: space, tab, newline, and carriage return ( " \t\n\r")
 			return timestamp, strings.TrimLeft(logValue[:index[0]]+logValue[index[1]:], " \t\n\r")
 		}
 		return timestamp, logValue
