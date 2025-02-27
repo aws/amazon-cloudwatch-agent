@@ -156,7 +156,9 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 // The actual publishing will occur in a long running goroutine.
 // This method can block when publishing is backed up.
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
+	c.logger.Debug("ConsumeMetrics", zap.Any("metrics", metrics.ResourceMetrics().Len()))
 	datums := ConvertOtelMetrics(metrics)
+	c.logger.Debug("ConsumeMetrics", zap.Any("datums", datums))
 	for _, d := range datums {
 		c.aggregator.AddMetric(d)
 	}
@@ -421,6 +423,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
 	var datums []*cloudwatch.MetricDatum
 	var distList []distribution.Distribution
+	c.logger.Debug("BuildMetricDatum called", zap.String("metric", metric.String()))
 
 	if metric.distribution != nil {
 		if metric.distribution.Size() == 0 {
