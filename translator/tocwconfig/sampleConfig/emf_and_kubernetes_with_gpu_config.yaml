@@ -679,6 +679,20 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    filter/containerinsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
     gpuattributes/containerinsights: {}
     metricstransform/containerinsights:
         transforms:
@@ -1007,9 +1021,44 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
+              include: execution_errors_total
+              match_type: ""
+              new_name: neuron_execution_errors
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: execution_status_total
+              match_type: ""
+              new_name: neuron_execution_status
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
               include: neuroncore_memory_usage_constants
               match_type: ""
               new_name: neuroncore_memory_usage_constants
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_model_code
+              match_type: ""
+              new_name: neuroncore_memory_usage_model_code
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_runtime_memory
+              match_type: ""
+              new_name: neuroncore_memory_usage_runtime_memory
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: instance_info
+              match_type: ""
+              new_name: instance_info
               operations: []
               submatch_case: ""
             - action: update
@@ -1028,9 +1077,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_latency_seconds
+              include: neuron_runtime_memory_used_bytes
               match_type: ""
-              new_name: neuron_execution_latency
+              new_name: neurondevice_runtime_memory_used_bytes
               operations: []
               submatch_case: ""
             - action: update
@@ -1038,13 +1087,6 @@ processors:
               include: neuroncore_memory_usage_model_shared_scratchpad
               match_type: ""
               new_name: neuroncore_memory_usage_model_shared_scratchpad
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_runtime_memory
-              match_type: ""
-              new_name: neuroncore_memory_usage_runtime_memory
               operations: []
               submatch_case: ""
             - action: update
@@ -1070,37 +1112,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_errors_total
+              include: execution_latency_seconds
               match_type: ""
-              new_name: neuron_execution_errors
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: execution_status_total
-              match_type: ""
-              new_name: neuron_execution_status
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuron_runtime_memory_used_bytes
-              match_type: ""
-              new_name: neurondevice_runtime_memory_used_bytes
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_model_code
-              match_type: ""
-              new_name: neuroncore_memory_usage_model_code
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: instance_info
-              match_type: ""
-              new_name: instance_info
+              new_name: neuron_execution_latency
               operations: []
               submatch_case: ""
 receivers:
@@ -1180,6 +1194,7 @@ service:
                 - awsemf/containerinsights
             processors:
                 - batch/containerinsights
+                - filter/containerinsights
                 - metricstransform/containerinsights
                 - gpuattributes/containerinsights
             receivers:

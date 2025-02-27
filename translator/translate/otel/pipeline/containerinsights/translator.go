@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/kueue"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
@@ -22,8 +23,7 @@ import (
 )
 
 const (
-	ciPipelineName    = common.PipelineNameContainerInsights
-	kueuePipelineName = "kueueContainerInsights"
+	ciPipelineName = common.PipelineNameContainerInsights
 )
 
 var (
@@ -57,8 +57,13 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 
-	// create processor map with default batch processor based on pipeline name
-	processors := common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey))
+	// create processor map with
+	// - default batch processor
+	// - filter processor to drop prometheus metadata
+	processors := common.NewTranslatorMap(
+		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
+		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
+	)
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name
@@ -83,10 +88,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				processors.Set(gpu.NewTranslatorWithName(t.pipelineName))
 			}
 		}
-	case kueuePipelineName:
+	case common.PipelineNameKueue:
 		// add prometheus receiver for kueue
 		receivers = common.NewTranslatorMap((awscontainerinsightskueue.NewTranslator()))
 		processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
+
 	default:
 		return nil, fmt.Errorf("unknown container insights pipeline name: %s", t.pipelineName)
 	}
