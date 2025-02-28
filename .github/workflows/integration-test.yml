@@ -212,7 +212,7 @@ jobs:
 
   StartLocalStackCN:
     name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables ]
+    needs: [ OutputEnvVariables, UploadDependenciesCN ]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
