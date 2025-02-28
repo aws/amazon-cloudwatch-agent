@@ -55,7 +55,7 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
- 
+
   TestArtifacts:
     name: 'TestArtifacts'
     needs: [CheckBuildTestArtifacts]
