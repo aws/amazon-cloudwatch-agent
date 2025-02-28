@@ -18,6 +18,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 )
 
+type cloudwatchlogsClient interface {
+	DeleteLogGroup(ctx context.Context, params *cloudwatchlogs.DeleteLogGroupInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DeleteLogGroupOutput, error)
+	DescribeLogGroups(ctx context.Context, params *cloudwatchlogs.DescribeLogGroupsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
+	DescribeLogStreams(ctx context.Context, params *cloudwatchlogs.DescribeLogStreamsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
+}
+
 // Config holds the application configuration
 type Config struct {
 	thresholdDays  int
@@ -57,17 +63,17 @@ func init() {
 		numWorkers:     15,
 		deleteBatchCap: 10000,
 		exceptionList:  []string{"lambda"},
+		dryRun:         true,
 	}
 
-	// Parse command line flags
-	flag.BoolVar(&cfg.dryRun, "dry-run", false, "Enable dry-run mode (no actual deletion)")
-	flag.Parse()
 }
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-
+	// Parse command line flags
+	flag.BoolVar(&cfg.dryRun, "dry-run", false, "Enable dry-run mode (no actual deletion)")
+	flag.Parse()
 	// Load AWS configuration
 	awsCfg, err := loadAWSConfig(ctx)
 	if err != nil {
@@ -95,8 +101,8 @@ type cutoffTimes struct {
 
 func calculateCutoffTimes() cutoffTimes {
 	return cutoffTimes{
-		creation: time.Now().AddDate(0, 0, -cfg.thresholdDays).Unix() * 1000,
-		inactive: time.Now().AddDate(0, 0, -cfg.inactiveDays).Unix() * 1000,
+		creation: time.Now().AddDate(0, 0, -cfg.thresholdDays).UnixMilli(),
+		inactive: time.Now().AddDate(0, 0, -cfg.inactiveDays).UnixMilli(),
 	}
 }
 
@@ -109,7 +115,7 @@ func loadAWSConfig(ctx context.Context) (aws.Config, error) {
 	return cfg, nil
 }
 
-func deleteOldLogGroups(ctx context.Context, client *cloudwatchlogs.Client, times cutoffTimes) []string {
+func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times cutoffTimes) []string {
 	var (
 		wg                sync.WaitGroup
 		mutex             sync.Mutex
@@ -135,7 +141,7 @@ func deleteOldLogGroups(ctx context.Context, client *cloudwatchlogs.Client, time
 	return logGroupsToDelete
 }
 
-func processLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroupChan <-chan *types.LogGroup,
+func processLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroupChan <-chan *types.LogGroup,
 	wg *sync.WaitGroup, mutex *sync.Mutex, logGroupsToDelete *[]string, times cutoffTimes, workerID int) {
 	defer wg.Done()
 
@@ -146,7 +152,7 @@ func processLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGrou
 	}
 }
 
-func handleLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroup *types.LogGroup,
+func handleLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroup *types.LogGroup,
 	mutex *sync.Mutex, logGroupsToDelete *[]string, times cutoffTimes, workerID int) error {
 
 	if logGroup.CreationTime == nil {
@@ -167,7 +173,7 @@ func handleLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroup
 
 	if lastLogTime < times.inactive {
 		logger.Printf("🚨 Worker: %d| Old & Inactive Log Group: %s (Created: %v, Last Event: %v)\n",
-			workerID, logGroupName, time.Unix(creationTime/1000, 0), time.Unix(lastLogTime/1000, 0))
+			workerID, logGroupName, time.Unix(creationTime, 0), time.Unix(lastLogTime, 0))
 
 		mutex.Lock()
 		*logGroupsToDelete = append(*logGroupsToDelete, logGroupName)
@@ -184,7 +190,7 @@ func handleLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroup
 	return nil
 }
 
-func deleteLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroupName string) error {
+func deleteLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroupName string) error {
 	_, err := client.DeleteLogGroup(ctx, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
@@ -195,7 +201,7 @@ func deleteLogGroup(ctx context.Context, client *cloudwatchlogs.Client, logGroup
 	return nil
 }
 
-func fetchAndProcessLogGroups(ctx context.Context, client *cloudwatchlogs.Client,
+func fetchAndProcessLogGroups(ctx context.Context, client cloudwatchlogsClient,
 	logGroupChan chan<- *types.LogGroup, logGroupsToDelete *[]string, mutex *sync.Mutex) error {
 
 	var nextToken *string
@@ -239,7 +245,7 @@ func fetchAndProcessLogGroups(ctx context.Context, client *cloudwatchlogs.Client
 	return nil
 }
 
-func getLastLogEventTime(ctx context.Context, client *cloudwatchlogs.Client, logGroupName string) int64 {
+func getLastLogEventTime(ctx context.Context, client cloudwatchlogsClient, logGroupName string) int64 {
 	var latestTimestamp int64
 	var nextToken *string
 
