@@ -46,7 +46,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "metrics/containerinsights",
 				receivers:    []string{"awscontainerinsightreceiver"},
-				processors:   []string{"batch/containerinsights"},
+				processors:   []string{"batch/containerinsights", "filter/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -62,7 +62,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "metrics/containerinsights",
 				receivers:    []string{"awscontainerinsightreceiver"},
-				processors:   []string{"batch/containerinsights"},
+				processors:   []string{"batch/containerinsights", "filter/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -94,7 +94,7 @@ func TestKueueTranslator(t *testing.T) {
 		exporters    []string
 		extensions   []string
 	}
-	cit := NewTranslatorWithName(kueuePipelineName)
+	cit := NewTranslatorWithName(common.PipelineNameKueue)
 	require.EqualValues(t, "metrics/kueueContainerInsights", cit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
@@ -117,6 +117,7 @@ func TestKueueTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightskueuereceiver"},
 				processors: []string{
 					"batch/kueueContainerInsights",
+					"filter/kueueContainerInsights",
 					"kueueattributes/kueueContainerInsights",
 				},
 				exporters:  []string{"awsemf/kueueContainerInsights"},

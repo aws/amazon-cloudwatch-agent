@@ -118,7 +118,13 @@ func getWorkloadAndNamespace(pod *corev1.Pod) string {
 // 3) If no pattern matches, return the original podName.
 //
 // Caveat: You can't reliably distinguish DaemonSet vs. bare ReplicaSet by name alone.
-func inferWorkloadName(podName string) string {
+// In some edge cases when the deployment name is longer than 47 characters, The regex pattern is
+// not reliable. See reference:
+//   - https://pauldally.medium.com/why-you-try-to-keep-your-deployment-names-to-47-characters-or-less-1f93a848d34c
+//   - https://github.com/kubernetes/kubernetes/issues/116447#issuecomment-1530652258
+//
+// For that, we fall back to use service name as last defense.
+func inferWorkloadName(podName, fallbackServiceName string) string {
 	// 1) Check if it's a StatefulSet pod: <stsName>-<ordinal>
 	if matches := reStatefulSet.FindStringSubmatch(podName); matches != nil {
 		return matches[1] // e.g. "mysql-0" => "mysql"
@@ -138,7 +144,12 @@ func inferWorkloadName(podName string) string {
 		return parentName
 	}
 
-	// 3) If none of the patterns matched, return the entire podName.
+	// 3) If none of the patterns matched, return the service name as fallback
+	if fallbackServiceName != "" {
+		return fallbackServiceName
+	}
+
+	// 4) Finally return the full pod name (I don't think this will happen)
 	return podName
 }
 
