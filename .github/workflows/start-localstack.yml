@@ -83,5 +83,5 @@ jobs:
           -var="ssh_key_name=${{env.KEY_NAME}}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
-          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+          echo "local_stack_host_name=$LOCAL_STACK_HOST_NAME" >> "$GITHUB_OUTPUT" &&
           aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate
