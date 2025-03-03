@@ -50,7 +50,8 @@ processors:
             - InstanceId
             - InstanceType
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 5m0s
 receivers:
     telegraf_cpu:
         collection_interval: 1m0s

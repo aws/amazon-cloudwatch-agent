@@ -54,7 +54,8 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 5m0s
 receivers:
     otlp/metrics:
         protocols:

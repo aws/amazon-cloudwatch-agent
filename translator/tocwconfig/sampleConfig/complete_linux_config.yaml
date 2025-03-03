@@ -152,7 +152,8 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 5m0s
     filter/jmx/0:
         error_mode: propagate
         logs: {}
@@ -199,11 +200,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx/0:
         error_mode: propagate
@@ -212,9 +213,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -396,12 +397,12 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_processes
-                - telegraf_cpu
                 - telegraf_netstat
+                - telegraf_swap
                 - telegraf_disk
                 - telegraf_mem
-                - telegraf_swap
+                - telegraf_cpu
+                - telegraf_processes
                 - telegraf_procstat/1917393364
         metrics/hostCustomMetrics/cloudwatch:
             exporters:
@@ -411,8 +412,8 @@ service:
                 - transform
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
