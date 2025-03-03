@@ -254,30 +254,21 @@ func fetchAndProcessLogGroups(ctx context.Context, client cloudwatchlogsClient,
 
 func getLastLogEventTime(ctx context.Context, client cloudwatchlogsClient, logGroupName string) int64 {
 	var latestTimestamp int64
-	var nextToken *string
+	latestTimestamp = 0
+	output, err := client.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName: aws.String(logGroupName),
+		OrderBy:      types.OrderByLastEventTime,
+		Descending:   aws.Bool(true),
+	})
+	if err != nil {
+		log.Printf("⚠️ Warning: Failed to retrieve log streams for %s: %v\n", logGroupName, err)
+		return 0
+	}
 
-	for {
-		output, err := client.DescribeLogStreams(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
-			LogGroupName: aws.String(logGroupName),
-			OrderBy:      types.OrderByLastEventTime,
-			Descending:   aws.Bool(true),
-			NextToken:    nextToken,
-		})
-		if err != nil {
-			log.Printf("⚠️ Warning: Failed to retrieve log streams for %s: %v\n", logGroupName, err)
-			return 0
-		}
+	stream := output.LogStreams[0]
 
-		stream := output.LogStreams[0]
-
-		if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {
-			latestTimestamp = *stream.LastEventTimestamp
-		}
-
-		if output.NextToken == nil {
-			break
-		}
-		nextToken = output.NextToken
+	if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {
+		latestTimestamp = *stream.LastEventTimestamp
 	}
 
 	return latestTimestamp
