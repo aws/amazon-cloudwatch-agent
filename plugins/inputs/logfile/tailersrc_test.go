@@ -540,7 +540,7 @@ func TestTailerSrcFileDescriptorHandling(t *testing.T) {
 				tmpfile.Name(),
 				tailer,
 				tc.autoRemoval,
-				regexp.MustCompile("^[\\S]").MatchString,
+				regexp.MustCompile(`^[\S]`).MatchString,
 				nil,
 				parseRFC3339Timestamp,
 				nil,
