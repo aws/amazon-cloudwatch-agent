@@ -216,7 +216,7 @@ jobs:
 
   StartLocalStackCN:
     name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables ]
+    needs: [ OutputEnvVariables, UploadDependenciesCN ]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
@@ -231,7 +231,21 @@ jobs:
       github_sha: ${{ inputs.build_id }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
-
+  UploadDependenciesCN:
+    name: 'UploadDependenciesCN'
+    needs: [ OutputEnvVariables ]
+    uses: ./.github/workflows/upload-dependencies.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: cn-north-1
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
