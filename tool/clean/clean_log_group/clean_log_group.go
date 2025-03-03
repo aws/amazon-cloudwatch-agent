@@ -110,7 +110,6 @@ func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times 
 		deletedLogGroup         []string
 		foundLogGroupChan       = make(chan *types.LogGroup, LogGroupProcessChanSize)
 		deletedLogGroupNameChan = make(chan string, LogGroupProcessChanSize)
-		handlerWg               sync.WaitGroup
 	)
 
 	// Start worker pool
@@ -128,10 +127,10 @@ func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times 
 	}
 
 	// Start handler with its own WaitGroup
-	handlerWg.Add(1)
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		handleDeletedLogGroups(&deletedLogGroup, deletedLogGroupNameChan)
-		handlerWg.Done()
 	}()
 
 	// Process log groups in batches
@@ -140,9 +139,8 @@ func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times 
 	}
 
 	close(foundLogGroupChan)
-	wg.Wait()
 	close(deletedLogGroupNameChan)
-	handlerWg.Wait()
+	wg.Wait()
 
 	return deletedLogGroup
 }
