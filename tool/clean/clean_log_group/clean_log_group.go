@@ -46,7 +46,6 @@ func init() {
 		creationThreshold: 3 * clean.KeepDurationOneDay,
 		inactiveThreshold: 1 * clean.KeepDurationOneDay,
 		numWorkers:        15,
-		deleteBatchCap:    10000,
 		exceptionList:     []string{"lambda"},
 		dryRun:            true,
 	}
@@ -102,44 +101,64 @@ func loadAWSConfig(ctx context.Context) (aws.Config, error) {
 
 func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times cutoffTimes) []string {
 	var (
-		wg              sync.WaitGroup
-		mutex           sync.Mutex
-		deletedLogGroup []string
-		logGroupChan    = make(chan *types.LogGroup, 500)
+		wg                      sync.WaitGroup
+		deletedLogGroup         []string
+		foundLogGroupChan       = make(chan *types.LogGroup, 500)
+		deletedLogGroupNameChan = make(chan string, 500)
 	)
 
 	// Start worker pool
 	log.Printf("👷 Creating %d workers\n", cfg.numWorkers)
 	for i := 0; i < cfg.numWorkers; i++ {
 		wg.Add(1)
-		go processLogGroup(ctx, client, logGroupChan, &wg, &mutex, &deletedLogGroup, times, i)
+		w := worker{
+			id:                   i,
+			wg:                   &wg,
+			incomingLogGroupChan: foundLogGroupChan,
+			deletedLogGroupChan:  deletedLogGroupNameChan,
+			times:                times,
+		}
+		go w.processLogGroup(ctx, client)
 	}
-
+	go handleDeletedLogGroups(&deletedLogGroup, deletedLogGroupNameChan)
 	// Process log groups in batches
-	if err := fetchAndProcessLogGroups(ctx, client, logGroupChan, &deletedLogGroup, &mutex); err != nil {
+	if err := fetchAndProcessLogGroups(ctx, client, foundLogGroupChan); err != nil {
 		log.Printf("Error processing log groups: %v", err)
 	}
 
-	close(logGroupChan)
+	close(foundLogGroupChan)
 	wg.Wait()
+	close(deletedLogGroupNameChan)
 
 	return deletedLogGroup
 }
+func handleDeletedLogGroups(deletedLogGroups *[]string, deletedLogGroupNameChan chan string) {
+	select {
+	case logGroupName := <-deletedLogGroupNameChan:
+		*deletedLogGroups = append(*deletedLogGroups, logGroupName)
+		log.Printf("🔍 Processed %d log groups so far\n", len(*deletedLogGroups))
+	}
+}
 
-func processLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroupChan <-chan *types.LogGroup,
-	wg *sync.WaitGroup, mutex *sync.Mutex, deletedLogGroup *[]string, times cutoffTimes, workerID int) {
-	defer wg.Done()
+type worker struct {
+	id                   int
+	wg                   *sync.WaitGroup
+	incomingLogGroupChan <-chan *types.LogGroup
+	deletedLogGroupChan  chan<- string
+	times                cutoffTimes
+}
 
-	for logGroup := range logGroupChan {
-		if err := handleLogGroup(ctx, client, logGroup, mutex, deletedLogGroup, times, workerID); err != nil {
-			log.Printf("Worker %d: Error processing log group: %v", workerID, err)
+func (w *worker) processLogGroup(ctx context.Context, client cloudwatchlogsClient) {
+	defer w.wg.Done()
+
+	for logGroup := range w.incomingLogGroupChan {
+		if err := w.handleLogGroup(ctx, client, logGroup); err != nil {
+			log.Printf("Worker %d: Error processing log group: %v", w.id, err)
 		}
 	}
 }
 
-func handleLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroup *types.LogGroup,
-	mutex *sync.Mutex, deletedLogGroup *[]string, times cutoffTimes, workerID int) error {
-
+func (w *worker) handleLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroup *types.LogGroup) error {
 	if logGroup.CreationTime == nil {
 		return fmt.Errorf("log group has no creation time: %v", logGroup)
 	}
@@ -147,7 +166,7 @@ func handleLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroup *
 	logGroupName := *logGroup.LogGroupName
 	creationTime := *logGroup.CreationTime
 
-	if creationTime >= times.creation {
+	if creationTime >= w.times.creation {
 		return nil
 	}
 
@@ -156,13 +175,11 @@ func handleLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroup *
 		return nil
 	}
 
-	if lastLogTime < times.inactive {
+	if lastLogTime < w.times.inactive {
 		log.Printf("🚨 Worker: %d| Old & Inactive Log Group: %s (Created: %v, Last Event: %v)\n",
-			workerID, logGroupName, time.Unix(creationTime, 0), time.Unix(lastLogTime, 0))
+			w.id, logGroupName, time.Unix(creationTime, 0), time.Unix(lastLogTime, 0))
 
-		mutex.Lock()
-		*deletedLogGroup = append(*deletedLogGroup, logGroupName)
-		mutex.Unlock()
+		w.deletedLogGroupChan <- logGroupName
 
 		if cfg.dryRun {
 			log.Printf("🛑 Dry-Run: Would delete log group: %s", logGroupName)
@@ -187,7 +204,7 @@ func deleteLogGroup(ctx context.Context, client cloudwatchlogsClient, logGroupNa
 }
 
 func fetchAndProcessLogGroups(ctx context.Context, client cloudwatchlogsClient,
-	logGroupChan chan<- *types.LogGroup, deletedLogGroup *[]string, mutex *sync.Mutex) error {
+	logGroupChan chan<- *types.LogGroup) error {
 
 	var nextToken *string
 	describeCount := 0
@@ -214,17 +231,8 @@ func fetchAndProcessLogGroups(ctx context.Context, client cloudwatchlogsClient,
 			break
 		}
 
-		mutex.Lock()
-		count := len(*deletedLogGroup)
-		mutex.Unlock()
-
-		if count > cfg.deleteBatchCap {
-			break
-		}
-
 		nextToken = output.NextToken
 		describeCount++
-		log.Printf("🔍 Processed %d log groups so far\n", count)
 	}
 
 	return nil

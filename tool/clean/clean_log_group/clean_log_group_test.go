@@ -117,11 +117,24 @@ func testHandleLogGroup(cfg Config, logGroupName string, logCreationDate, logStr
 		NextToken: nil,
 	}, nil).Once()
 
-	var deletedLogGroup []string
-	var mutex sync.Mutex
+	var (
+		deletedLogGroup         []string
+		wg                      sync.WaitGroup
+		foundLogGroupChan       = make(chan *types.LogGroup, 500)
+		deletedLogGroupNameChan = make(chan string, 500)
+	)
 
+	w := worker{
+		id:                   1,
+		wg:                   &wg,
+		incomingLogGroupChan: foundLogGroupChan,
+		deletedLogGroupChan:  deletedLogGroupNameChan,
+		times:                times,
+	}
+	go handleDeletedLogGroups(&deletedLogGroup, deletedLogGroupNameChan)
 	// Call handleLogGroup in dry-run mode (so no deletion call is made).
-	err := handleLogGroup(context.Background(), mockClient, logGroup, &mutex, &deletedLogGroup, times, 1)
+	err := w.handleLogGroup(context.Background(), mockClient, logGroup)
+	time.Sleep(1 * time.Second) // give time for deleted group to be handled
 	return deletedLogGroup, err
 
 }
