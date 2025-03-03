@@ -65,12 +65,12 @@ func main() {
 		log.SetOutput(writer)
 	}
 
-	if err := translateConfig(); err != nil {
-		log.Fatalf("E! Cannot translate JSON, ERROR is %v \n", err)
-	}
-	log.Printf("I! Config has been translated into TOML %s \n", paths.TomlConfigPath)
-	printFileContents(paths.TomlConfigPath)
-	log.Printf("I! Config has been translated into YAML %s \n", paths.YamlConfigPath)
+	//if err := translateConfig(); err != nil {
+	//	log.Fatalf("E! Cannot translate JSON, ERROR is %v \n", err)
+	//}
+	//log.Printf("I! Config has been translated into TOML %s \n", paths.TomlConfigPath)
+	//printFileContents(paths.TomlConfigPath)
+	log.Printf("I! [DEBUG BUILD] USING YAML %s \n", paths.YamlConfigPath)
 	printFileContents(paths.YamlConfigPath)
 
 	if err := startAgent(writer); err != nil {
