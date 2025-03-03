@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
@@ -88,8 +89,8 @@ func testHandleLogGroup(cfg Config, logGroupName string, logCreationDate, logStr
 	// Calculate cutoffs relative to now.
 	now := time.Now()
 	times := cutoffTimes{
-		creation: now.AddDate(0, 0, -cfg.thresholdDays).UnixMilli(), // log group created 15 days ago.
-		inactive: now.AddDate(0, 0, -cfg.inactiveDays).UnixMilli(),  // inactive for 7 days.
+		creation: now.Add(cfg.creationThreshold).UnixMilli(),
+		inactive: now.Add(cfg.inactiveThreshold).UnixMilli(),
 	}
 	// Create a dummy log group.
 	creationTime := now.AddDate(0, 0, -logCreationDate).UnixMilli()
@@ -116,24 +117,24 @@ func testHandleLogGroup(cfg Config, logGroupName string, logCreationDate, logStr
 		NextToken: nil,
 	}, nil).Once()
 
-	var logGroupsToDelete []string
+	var deletedLogGroup []string
 	var mutex sync.Mutex
 
 	// Call handleLogGroup in dry-run mode (so no deletion call is made).
-	err := handleLogGroup(context.Background(), mockClient, logGroup, &mutex, &logGroupsToDelete, times, 1)
-	return logGroupsToDelete, err
+	err := handleLogGroup(context.Background(), mockClient, logGroup, &mutex, &deletedLogGroup, times, 1)
+	return deletedLogGroup, err
 
 }
 
 // Test handleLogGroup to simulate deletion when a log group is old and inactive.
 func TestHandleLogGroup(t *testing.T) {
 	cfg := Config{
-		thresholdDays:  3,
-		inactiveDays:   2,
-		numWorkers:     0,
-		deleteBatchCap: 0,
-		exceptionList:  []string{"EXCEPTION"},
-		dryRun:         true,
+		creationThreshold: 3 * clean.KeepDurationOneDay,
+		inactiveThreshold: 2 * clean.KeepDurationOneDay,
+		numWorkers:        0,
+		deleteBatchCap:    0,
+		exceptionList:     []string{"EXCEPTION"},
+		dryRun:            true,
 	}
 	testCases := []struct {
 		name                  string
@@ -166,10 +167,10 @@ func TestHandleLogGroup(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.logGroupName, func(t *testing.T) {
-			logGroupsToDelete, err := testHandleLogGroup(cfg, tc.logGroupName, tc.logCreationDate, tc.logStreamCreationDate)
+			deletedLogGroup, err := testHandleLogGroup(cfg, tc.logGroupName, tc.logCreationDate, tc.logStreamCreationDate)
 			assert.NoError(t, err)
-			assert.Len(t, logGroupsToDelete, len(tc.expected))
-			assert.ElementsMatch(t, logGroupsToDelete, tc.expected)
+			assert.Len(t, deletedLogGroup, len(tc.expected))
+			assert.ElementsMatch(t, deletedLogGroup, tc.expected)
 		})
 	}
 
@@ -214,12 +215,12 @@ func testDeleteLogGroup(cfg Config, logGroupName string, logCreationDate, logStr
 }
 func TestDeleteLogGroups(t *testing.T) {
 	cfg := Config{
-		thresholdDays:  3,
-		inactiveDays:   2,
-		numWorkers:     0,
-		deleteBatchCap: 0,
-		exceptionList:  []string{"except"},
-		dryRun:         true,
+		creationThreshold: 3,
+		inactiveThreshold: 2,
+		numWorkers:        0,
+		deleteBatchCap:    0,
+		exceptionList:     []string{"except"},
+		dryRun:            true,
 	}
 	testCases := []struct {
 		name                  string
@@ -259,9 +260,9 @@ func TestDeleteLogGroups(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.logGroupName, func(t *testing.T) {
-			logGroupsToDelete := testDeleteLogGroup(cfg, tc.logGroupName, tc.logCreationDate, tc.logStreamCreationDate)
-			assert.Len(t, logGroupsToDelete, len(tc.expected))
-			assert.ElementsMatch(t, logGroupsToDelete, tc.expected)
+			deletedLogGroup := testDeleteLogGroup(cfg, tc.logGroupName, tc.logCreationDate, tc.logStreamCreationDate)
+			assert.Len(t, deletedLogGroup, len(tc.expected))
+			assert.ElementsMatch(t, deletedLogGroup, tc.expected)
 		})
 	}
 
