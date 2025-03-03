@@ -1,10 +1,11 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 // main_test.go
 package main
 
 import (
 	"context"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 // MockCloudWatchLogsClient is a stub for cloudwatchlogs.Client

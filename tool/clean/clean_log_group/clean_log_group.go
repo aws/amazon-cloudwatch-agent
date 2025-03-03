@@ -7,7 +7,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 	"log"
 	"strings"
 	"sync"
@@ -17,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 type cloudwatchlogsClient interface {
