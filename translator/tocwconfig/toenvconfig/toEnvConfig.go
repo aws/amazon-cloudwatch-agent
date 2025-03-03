@@ -6,11 +6,14 @@ package toenvconfig
 import (
 	"encoding/json"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -19,6 +22,7 @@ const (
 	debugKey          = "debug"
 	awsSdkLogLevelKey = "aws_sdk_log_level"
 	usageDataKey      = "usage_data"
+	handleRotationKey = "handle_rotation"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -62,6 +66,19 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	if len(sslConfig) > 0 {
 		envVars[envconfig.AWS_CA_BUNDLE] = sslConfig[commonconfig.CABundlePath]
 	}
+
+	handleRotation := "false" // default value
+	//respect existing handle_rotation flag already set in env
+	if envValue := os.Getenv(envconfig.CWAgentHandleRotation); envValue != "" {
+		handleRotation = strings.ToLower(envValue)
+	}
+	//config value takes higher priority
+	if logsMap, ok := jsonConfigValue[logs.SectionKey].(map[string]interface{}); ok {
+		if handleRotationVal, ok := logsMap[handleRotationKey].(string); ok {
+			handleRotation = strings.ToLower(handleRotationVal)
+		}
+	}
+	envVars[envconfig.CWAgentHandleRotation] = handleRotation
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {
