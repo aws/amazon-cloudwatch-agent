@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -30,6 +31,8 @@ type tailerTestResources struct {
 	consumed  *int32
 	file      *os.File
 	statefile *os.File
+	tailer    *tail.Tail
+	ts        *tailerSrc
 }
 
 func TestTailerSrc(t *testing.T) {
@@ -72,6 +75,7 @@ func TestTailerSrc(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		false,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -184,6 +188,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		false,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -276,7 +281,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	resources := setupTailer(t, nil, defaultMaxEventSize)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, false)
 	defer teardown(resources)
 
 	n := 100
@@ -299,6 +304,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		t,
 		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
 		defaultMaxEventSize,
+		false, false,
 	)
 	defer teardown(resources)
 
@@ -354,7 +360,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, handleRotation bool) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -396,7 +402,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		"tailsrctest-*.log",
 		statefile.Name(),
 		tailer,
-		false, // AutoRemoval
+		autoRemoval,
 		multiLineFn,
 		config.Filters,
 		parseRFC3339Timestamp,
@@ -404,6 +410,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		maxEventSize,
 		defaultTruncateSuffix,
 		1,
+		handleRotation,
 	)
 
 	ts.SetOutput(func(evt logs.LogEvent) {
@@ -420,6 +427,8 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		consumed:  &consumed,
 		file:      file,
 		statefile: statefile,
+		tailer:    tailer,
+		ts:        ts,
 	}
 }
 
@@ -466,4 +475,155 @@ func resetState(originWaitDuration time.Duration) {
 func teardown(resources tailerTestResources) {
 	os.Remove(resources.file.Name())
 	os.Remove(resources.statefile.Name())
+}
+
+func TestTailerSrcFileDescriptorHandling(t *testing.T) {
+	// Reset at start of test
+	tail.OpenFileCount.Store(0)
+
+	testCases := []struct {
+		name           string
+		handleRotation bool
+		autoRemoval    bool
+		expectedLogs   []string
+	}{
+		{
+			name:           "handle_rotation=true",
+			handleRotation: true,
+			autoRemoval:    false,
+			expectedLogs:   []string{"old-log1", "old-log2", "new-log1", "new-log2"},
+		},
+		{
+			name:           "auto_removal=true",
+			handleRotation: false,
+			autoRemoval:    true,
+			expectedLogs:   []string{"old-log1", "old-log2"},
+		},
+		{
+			name:           "handle_rotation=true_and_auto_removal=true",
+			handleRotation: true,
+			autoRemoval:    true,
+			expectedLogs:   []string{"old-log1", "old-log2"}, // Same behavior as auto_removal=true
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			beforeCount := tail.OpenFileCount.Load()
+			t.Logf("Before tailer creation: OpenFileCount=%d", beforeCount)
+
+			tmpfile, err := createTempFile("", "tailsrctest-*.log")
+			require.NoError(t, err)
+			defer os.Remove(tmpfile.Name())
+
+			statefile, err := os.CreateTemp("", "tailsrctest-state-*.log")
+			require.NoError(t, err)
+			defer os.Remove(statefile.Name())
+
+			tailer, err := tail.TailFile(tmpfile.Name(),
+				tail.Config{
+					ReOpen:      tc.handleRotation,
+					Follow:      true,
+					Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+					MustExist:   true,
+					Poll:        true,
+					MaxLineSize: defaultMaxEventSize,
+				})
+			require.NoError(t, err)
+
+			ts := NewTailerSrc(
+				"test-group",
+				"test-stream",
+				"destination",
+				statefile.Name(),
+				util.InfrequentAccessLogGroupClass,
+				tmpfile.Name(),
+				tailer,
+				tc.autoRemoval,
+				regexp.MustCompile("^[\\S]").MatchString,
+				nil,
+				parseRFC3339Timestamp,
+				nil,
+				defaultMaxEventSize,
+				defaultTruncateSuffix,
+				1,
+				tc.handleRotation,
+			)
+
+			var processedLogs []string
+			var mu sync.Mutex
+			done := make(chan struct{})
+			logCount := int32(0)
+
+			ts.SetOutput(func(evt logs.LogEvent) {
+				if evt == nil {
+					close(done)
+					return
+				}
+				mu.Lock()
+				processedLogs = append(processedLogs, evt.Message())
+				mu.Unlock()
+				atomic.AddInt32(&logCount, 1)
+			})
+
+			fmt.Fprintln(tmpfile, "old-log1")
+			fmt.Fprintln(tmpfile, "old-log2")
+			tmpfile.Sync()
+
+			// wait for initial logs
+			for atomic.LoadInt32(&logCount) < 2 {
+				time.Sleep(100 * time.Millisecond)
+			}
+
+			if !tc.autoRemoval && tc.handleRotation {
+				oldName := tmpfile.Name() + ".1"
+				tmpfile.Close()
+				err = os.Rename(tmpfile.Name(), oldName)
+				require.NoError(t, err)
+				defer os.Remove(oldName)
+
+				newFile, err := os.Create(tmpfile.Name())
+				require.NoError(t, err)
+
+				fmt.Fprintln(newFile, "new-log1")
+				fmt.Fprintln(newFile, "new-log2")
+				newFile.Sync()
+				newFile.Close()
+
+				// wait for all logs
+				startTime := time.Now()
+				for atomic.LoadInt32(&logCount) < 4 && time.Since(startTime) < 5*time.Second {
+					time.Sleep(100 * time.Millisecond)
+				}
+
+				// check all logs were processed before stopping
+				require.Equal(t, int32(4), atomic.LoadInt32(&logCount), "Not all logs were processed")
+			}
+
+			ts.Stop()
+			tailer.Stop()
+			tailer.Cleanup()
+			<-done
+
+			mu.Lock()
+			t.Logf("Processed logs: %v", processedLogs)
+			assert.Equal(t, tc.expectedLogs, processedLogs, "Logs should be processed in order")
+			mu.Unlock()
+
+			// for auto_removal, verify file is removed
+			if tc.autoRemoval {
+				assert.Eventually(t, func() bool {
+					_, err := os.Stat(tmpfile.Name())
+					return os.IsNotExist(err)
+				}, 5*time.Second, 100*time.Millisecond, "File should be removed with auto_removal")
+			}
+
+			// verify file descriptors
+			assert.Eventually(t, func() bool {
+				count := tail.OpenFileCount.Load()
+				t.Logf("Current OpenFileCount: %d", count)
+				return count == beforeCount
+			}, 5*time.Second, 100*time.Millisecond, "File descriptors should be released")
+		})
+	}
 }
