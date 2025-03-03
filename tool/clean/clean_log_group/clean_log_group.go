@@ -268,10 +268,10 @@ func getLastLogEventTime(ctx context.Context, client cloudwatchlogsClient, logGr
 			return 0
 		}
 
-		for _, stream := range output.LogStreams {
-			if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {
-				latestTimestamp = *stream.LastEventTimestamp
-			}
+		stream := output.LogStreams[0]
+
+		if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {
+			latestTimestamp = *stream.LastEventTimestamp
 		}
 
 		if output.NextToken == nil {
