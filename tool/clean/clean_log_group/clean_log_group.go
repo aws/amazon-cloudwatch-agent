@@ -25,6 +25,10 @@ type cloudwatchlogsClient interface {
 	DescribeLogStreams(ctx context.Context, params *cloudwatchlogs.DescribeLogStreamsInput, optFns ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
 }
 
+const (
+	LogGroupProcessChanSize = 500
+)
+
 // Config holds the application configuration
 type Config struct {
 	creationThreshold time.Duration
@@ -103,8 +107,9 @@ func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times 
 	var (
 		wg                      sync.WaitGroup
 		deletedLogGroup         []string
-		foundLogGroupChan       = make(chan *types.LogGroup, 500)
-		deletedLogGroupNameChan = make(chan string, 500)
+		foundLogGroupChan       = make(chan *types.LogGroup, LogGroupProcessChanSize)
+		deletedLogGroupNameChan = make(chan string, LogGroupProcessChanSize)
+		handlerWg               sync.WaitGroup
 	)
 
 	// Start worker pool
@@ -120,7 +125,14 @@ func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times 
 		}
 		go w.processLogGroup(ctx, client)
 	}
-	go handleDeletedLogGroups(&deletedLogGroup, deletedLogGroupNameChan)
+
+	// Start handler with its own WaitGroup
+	handlerWg.Add(1)
+	go func() {
+		handleDeletedLogGroups(&deletedLogGroup, deletedLogGroupNameChan)
+		handlerWg.Done()
+	}()
+
 	// Process log groups in batches
 	if err := fetchAndProcessLogGroups(ctx, client, foundLogGroupChan); err != nil {
 		log.Printf("Error processing log groups: %v", err)
@@ -129,12 +141,13 @@ func deleteOldLogGroups(ctx context.Context, client cloudwatchlogsClient, times 
 	close(foundLogGroupChan)
 	wg.Wait()
 	close(deletedLogGroupNameChan)
+	handlerWg.Wait()
 
 	return deletedLogGroup
 }
+
 func handleDeletedLogGroups(deletedLogGroups *[]string, deletedLogGroupNameChan chan string) {
-	select {
-	case logGroupName := <-deletedLogGroupNameChan:
+	for logGroupName := range deletedLogGroupNameChan {
 		*deletedLogGroups = append(*deletedLogGroups, logGroupName)
 		log.Printf("🔍 Processed %d log groups so far\n", len(*deletedLogGroups))
 	}
