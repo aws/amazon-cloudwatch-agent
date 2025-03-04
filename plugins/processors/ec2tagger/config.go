@@ -22,7 +22,8 @@ const (
 )
 
 type Config struct {
-	RefreshIntervalSeconds time.Duration `mapstructure:"refresh_interval_seconds"`
+	RefreshTagsInterval    time.Duration `mapstructure:"refresh_tags_interval"`
+	RefreshVolumesInterval time.Duration `mapstructure:"refresh_volumes_interval"`
 	EC2MetadataTags        []string      `mapstructure:"ec2_metadata_tags"`
 	EC2InstanceTagKeys     []string      `mapstructure:"ec2_instance_tag_keys"`
 	EBSDeviceKeys          []string      `mapstructure:"ebs_device_keys,omitempty"`

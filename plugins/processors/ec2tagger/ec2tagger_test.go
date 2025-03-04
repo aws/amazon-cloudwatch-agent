@@ -282,7 +282,8 @@ func TestStartFailWithNoMetadata(t *testing.T) {
 // run Start() and check all tags/volumes are retrieved and saved
 func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.RefreshTagsInterval = 0 * time.Second
+	cfg.RefreshVolumesInterval = 0 * time.Second
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
@@ -326,7 +327,8 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	//use millisecond rather than second to speed up test execution
-	cfg.RefreshIntervalSeconds = 20 * time.Millisecond
+	cfg.RefreshTagsInterval = 20 * time.Millisecond
+	cfg.RefreshVolumesInterval = 20 * time.Millisecond
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
@@ -382,7 +384,8 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 // check there is no attempt to fetch all tags/volumes
 func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.RefreshTagsInterval = 0 * time.Second
+	cfg.RefreshVolumesInterval = 0 * time.Second
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
@@ -426,7 +429,8 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	//use millisecond rather than second to speed up test execution
-	cfg.RefreshIntervalSeconds = 20 * time.Millisecond
+	cfg.RefreshTagsInterval = 20 * time.Millisecond
+	cfg.RefreshVolumesInterval = 20 * time.Millisecond
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
@@ -520,7 +524,8 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 // Test metrics are dropped before the initial retrieval is done
 func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	cfg.RefreshIntervalSeconds = 0 * time.Millisecond
+	cfg.RefreshTagsInterval = 0 * time.Millisecond
+	cfg.RefreshVolumesInterval = 0 * time.Millisecond
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
@@ -585,7 +590,8 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 // Test ec2tagger Start does not block for a long time
 func TestTaggerStartDoesNotBlock(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.RefreshTagsInterval = 0 * time.Second
+	cfg.RefreshVolumesInterval = 0 * time.Second
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
@@ -628,7 +634,8 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 // Test ec2tagger Start does not block for a long time
 func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.RefreshTagsInterval = 0 * time.Second
+	cfg.RefreshVolumesInterval = 0 * time.Second
 	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
 	_, cancel := context.WithCancel(context.Background())
 
