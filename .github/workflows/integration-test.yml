@@ -18,6 +18,7 @@ env:
   S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
   S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  github_token: ${{ secrets.SELINUX_TESTING }}
 
 on:
   workflow_dispatch:
@@ -394,6 +395,7 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: true
+
     secrets: inherit
 
   EC2LinuxIntegrationTestITAR:
