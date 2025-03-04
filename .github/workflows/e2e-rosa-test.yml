@@ -136,7 +136,7 @@ jobs:
         working-directory: test/e2e/rosa
         env:
           CLUSTER_NAME: ${{env.CLUSTER_NAME}}
-        run: go test --cluster-name ${{env.CLUSTER_NAME}} -v
+        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
 
       - name: Run Security Test
         working-directory: test/e2e/security
