@@ -73,15 +73,15 @@ type tailerSrc struct {
 	truncateSuffix  string
 	retentionInDays int
 
-	outputFn        func(logs.LogEvent)
-	isMLStart       func(string) bool
-	filters         []*LogFilter
-	offsetCh        chan fileOffset
-	done            chan struct{}
-	startTailerOnce sync.Once
-	cleanUpFns      []func()
-	handleRotation  bool
-	buffer          chan *LogEvent
+	outputFn         func(logs.LogEvent)
+	isMLStart        func(string) bool
+	filters          []*LogFilter
+	offsetCh         chan fileOffset
+	done             chan struct{}
+	startTailerOnce  sync.Once
+	cleanUpFns       []func()
+	backpressureDrop bool
+	buffer           chan *LogEvent
 }
 
 // Verify tailerSrc implements LogSrc
@@ -98,26 +98,26 @@ func NewTailerSrc(
 	maxEventSize int,
 	truncateSuffix string,
 	retentionInDays int,
-	handleRotation bool,
+	backpressureDrop bool,
 ) *tailerSrc {
-	useBufferedSender := handleRotation && !autoRemoval
+	useBufferedSender := backpressureDrop && !autoRemoval
 	ts := &tailerSrc{
-		group:           group,
-		stream:          stream,
-		destination:     destination,
-		stateFilePath:   stateFilePath,
-		class:           logClass,
-		fileGlobPath:    fileGlobPath,
-		tailer:          tailer,
-		autoRemoval:     autoRemoval,
-		isMLStart:       isMultilineStartFn,
-		filters:         filters,
-		timestampFn:     timestampFn,
-		enc:             enc,
-		maxEventSize:    maxEventSize,
-		truncateSuffix:  truncateSuffix,
-		retentionInDays: retentionInDays,
-		handleRotation:  useBufferedSender,
+		group:            group,
+		stream:           stream,
+		destination:      destination,
+		stateFilePath:    stateFilePath,
+		class:            logClass,
+		fileGlobPath:     fileGlobPath,
+		tailer:           tailer,
+		autoRemoval:      autoRemoval,
+		isMLStart:        isMultilineStartFn,
+		filters:          filters,
+		timestampFn:      timestampFn,
+		enc:              enc,
+		maxEventSize:     maxEventSize,
+		truncateSuffix:   truncateSuffix,
+		retentionInDays:  retentionInDays,
+		backpressureDrop: useBufferedSender,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
@@ -137,7 +137,7 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 	ts.outputFn = fn
 	ts.startTailerOnce.Do(func() {
 		go ts.runTail()
-		if ts.handleRotation {
+		if ts.backpressureDrop {
 			go ts.runSender()
 		}
 	})
@@ -223,7 +223,7 @@ func (ts *tailerSrc) runTail() {
 			src:    ts,
 		}
 		if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
-			if ts.handleRotation {
+			if ts.backpressureDrop {
 				select {
 				case ts.buffer <- e:
 				case <-ts.done:
@@ -325,9 +325,33 @@ func (ts *tailerSrc) cleanUp() {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
 
-	if ts.handleRotation {
+	if ts.backpressureDrop {
 		close(ts.buffer)
 	}
+
+	//ts.cleanupOnce.Do(func() {
+	//	close(ts.done)
+	//
+	//	for _, clf := range ts.cleanUpFns {
+	//		clf()
+	//	}
+	//
+	//	if ts.backpressureDrop {
+	//		if ts.autoRemoval {
+	//			if err := os.Remove(ts.tailer.Filename); err != nil {
+	//				log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
+	//			} else {
+	//				log.Printf("I! [logfile] Successfully removed file %v with auto_removal feature", ts.tailer.Filename)
+	//			}
+	//		} else {
+	//			close(ts.buffer)
+	//		}
+	//	}
+	//
+	//	if ts.outputFn != nil {
+	//		ts.outputFn(nil)
+	//	}
+	//})
 }
 
 func (ts *tailerSrc) runSaveState() {
