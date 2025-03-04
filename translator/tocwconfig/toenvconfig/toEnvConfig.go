@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	userAgentKey      = "user_agent"
-	debugKey          = "debug"
-	awsSdkLogLevelKey = "aws_sdk_log_level"
-	usageDataKey      = "usage_data"
-	handleRotationKey = "handle_rotation"
+	userAgentKey        = "user_agent"
+	debugKey            = "debug"
+	awsSdkLogLevelKey   = "aws_sdk_log_level"
+	usageDataKey        = "usage_data"
+	backpressureDropKey = "backpressure_drop"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -66,16 +66,16 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.AWS_CA_BUNDLE] = sslConfig[commonconfig.CABundlePath]
 	}
 
-	handleRotation := false // default value
-	//respect existing handle_rotation flag already set in env
-	handleRotation = envconfig.IsHandleRotationEnabled()
+	backpressureDrop := false // default value
+	//respect existing flag already set in env
+	backpressureDrop = envconfig.IsBackpressureDropEnabled()
 	//config value takes higher priority
 	if logsMap, ok := jsonConfigValue[logs.SectionKey].(map[string]interface{}); ok {
-		if handleRotationVal, ok := logsMap[handleRotationKey].(string); ok {
-			handleRotation, _ = strconv.ParseBool(handleRotationVal)
+		if backpressureDropVal, ok := logsMap[backpressureDropKey].(string); ok {
+			backpressureDrop, _ = strconv.ParseBool(backpressureDropVal)
 		}
 	}
-	envVars[envconfig.CWAgentHandleRotation] = strconv.FormatBool(handleRotation)
+	envVars[envconfig.CWAgentBackpressureDrop] = strconv.FormatBool(backpressureDrop)
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {
