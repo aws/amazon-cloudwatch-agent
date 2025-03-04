@@ -29,7 +29,7 @@ func TestToEnvConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "false", // default value
+				envconfig.CWAgentBackpressureDrop: "false", // default value
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -48,11 +48,11 @@ func TestToEnvConfig(t *testing.T) {
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAGENT_USER_AGENT:    "custom-agent",
-				envconfig.CWAGENT_LOG_LEVEL:     "DEBUG",
-				envconfig.AWS_SDK_LOG_LEVEL:     "DEBUG",
-				envconfig.CWAGENT_USAGE_DATA:    "FALSE",
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.CWAGENT_USER_AGENT:      "custom-agent",
+				envconfig.CWAGENT_LOG_LEVEL:       "DEBUG",
+				envconfig.AWS_SDK_LOG_LEVEL:       "DEBUG",
+				envconfig.CWAGENT_USAGE_DATA:      "FALSE",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -64,10 +64,10 @@ func TestToEnvConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.HTTP_PROXY:            "http://proxy.example.com",
-				envconfig.HTTPS_PROXY:           "https://proxy.example.com",
-				envconfig.NO_PROXY:              "localhost,127.0.0.1",
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.HTTP_PROXY:              "http://proxy.example.com",
+				envconfig.HTTPS_PROXY:             "https://proxy.example.com",
+				envconfig.NO_PROXY:                "localhost,127.0.0.1",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{
@@ -83,8 +83,8 @@ func TestToEnvConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.AWS_CA_BUNDLE:         "/path/to/ca-bundle.pem",
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.AWS_CA_BUNDLE:           "/path/to/ca-bundle.pem",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -97,12 +97,12 @@ func TestToEnvConfig(t *testing.T) {
 			name: "logs section with handle rotation",
 			input: map[string]interface{}{
 				logs.SectionKey: map[string]interface{}{
-					handleRotationKey: "true",
+					backpressureDropKey: "true",
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -117,16 +117,16 @@ func TestToEnvConfig(t *testing.T) {
 					debugKey:     true,
 				},
 				logs.SectionKey: map[string]interface{}{
-					handleRotationKey: "true",
+					backpressureDropKey: "true",
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAGENT_USER_AGENT:    "custom-agent",
-				envconfig.CWAGENT_LOG_LEVEL:     "DEBUG",
-				envconfig.CWAgentHandleRotation: "true",
-				envconfig.HTTP_PROXY:            "http://proxy.test",
-				envconfig.AWS_CA_BUNDLE:         "/test/ca-bundle.pem",
+				envconfig.CWAGENT_USER_AGENT:      "custom-agent",
+				envconfig.CWAGENT_LOG_LEVEL:       "DEBUG",
+				envconfig.CWAgentBackpressureDrop: "true",
+				envconfig.HTTP_PROXY:              "http://proxy.test",
+				envconfig.AWS_CA_BUNDLE:           "/test/ca-bundle.pem",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{
@@ -141,10 +141,10 @@ func TestToEnvConfig(t *testing.T) {
 			name:  "existing env var without config",
 			input: map[string]interface{}{},
 			envVars: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -155,14 +155,14 @@ func TestToEnvConfig(t *testing.T) {
 			name: "config overrides env var",
 			input: map[string]interface{}{
 				logs.SectionKey: map[string]interface{}{
-					handleRotationKey: "false",
+					backpressureDropKey: "false",
 				},
 			},
 			envVars: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -173,12 +173,12 @@ func TestToEnvConfig(t *testing.T) {
 			name: "mixed case handling",
 			input: map[string]interface{}{
 				logs.SectionKey: map[string]interface{}{
-					handleRotationKey: "TRUE",
+					backpressureDropKey: "TRUE",
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -223,7 +223,7 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 		},
 		{
@@ -235,7 +235,7 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 		},
 		{
@@ -247,7 +247,7 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 		},
 		{
@@ -257,21 +257,21 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "false",
+				envconfig.CWAgentBackpressureDrop: "false",
 			},
 		},
 		{
-			name: "invalid handle_rotation type in config",
+			name: "invalid backpressure_drop type in config",
 			input: map[string]interface{}{
 				logs.SectionKey: map[string]interface{}{
-					handleRotationKey: 123,
+					backpressureDropKey: 123,
 				},
 			},
 			envVars: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			expectedEnv: map[string]string{
-				envconfig.CWAgentHandleRotation: "true",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 		},
 	}

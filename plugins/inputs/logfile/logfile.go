@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -38,17 +38,17 @@ type LogFile struct {
 	done              chan struct{}
 	removeTailerSrcCh chan *tailerSrc
 	started           bool
-	handleRotation    bool
+	backpressureDrop  bool
 }
 
 func NewLogFile() *LogFile {
-	handleRotation := envconfig.IsHandleRotationEnabled()
+	backpressureDrop := envconfig.IsBackpressureDropEnabled()
 
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
 		removeTailerSrcCh: make(chan *tailerSrc, 100),
-		handleRotation:    handleRotation,
+		backpressureDrop:  backpressureDrop,
 	}
 }
 
@@ -138,7 +138,6 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 	}
 
 	t.started = true
-	t.Log.Infof("turned on logs plugin (handle_rotation: %v)", t.handleRotation)
 	return nil
 }
 
@@ -264,7 +263,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
-				t.handleRotation,
+				t.backpressureDrop,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {
