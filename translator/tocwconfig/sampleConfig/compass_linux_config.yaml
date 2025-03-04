@@ -53,7 +53,7 @@ processors:
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
-        refresh_volumes_interval: 5m0s
+        refresh_volumes_interval: 0s
 receivers:
     telegraf_socket_listener:
         collection_interval: 10s
