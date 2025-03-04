@@ -68,13 +68,94 @@ on:
         type: string
 
 jobs:
+  CreateCluster:
+    name: "Create ROSA HCP Cluster"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+#    outputs:
+#      cluster_id: ${{}}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Terraform Apply
+        run: echo "Terraform run"
+  ValidateCluster:
+    needs: [CreateCluster]
+    name: "Validate Cluster"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Install ROSA CLI
+        shell: bash
+        run: |
+          curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz"
+          tar -xvf rosa-linux.tar.gz
+          sudo mv rosa /usr/local/bin/rosa
+          chmod +x /usr/local/bin/rosa
+          rm -f rosa-linux.tar.gz
+          rosa version
+
+      - name: Get Secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          parse-json-secrets: true
+          secret-ids: |
+            ,${{env.CLUSTER_NAME}}-htpasswd
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          # URL to your OpenShift cluster.
+          openshift_server_url: ${{ env.OPENSHIFT_SERVER }}
+          openshift_username: ${{ env.OPENSHIFT_USERNAME }}
+          openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
+
+      - name: Validate Cluster and Host ROSA Setup
+        working-directory: test/e2e/rosa
+        env:
+          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
+        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+
+
   RosaTest:
+    needs: [ValidateCluster]
     name: 'RosaTest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-#      matrix:
-#        arrays: ${{ fromJson(inputs.test_props) }}
+      matrix:
+        arrays: ${{ fromJson(inputs.test_props) }}
     permissions:
       id-token: write
       contents: read
@@ -132,21 +213,8 @@ jobs:
           openshift_username: ${{ env.OPENSHIFT_USERNAME }}
           openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
 
-      - name: Validate Cluster and Host ROSA Setup
-        working-directory: test/e2e/rosa
-        env:
-          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
-        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-
-      - name: Run Security Test
-        working-directory: test/e2e/security
-        env:
-          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
-        run: |
-          go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-          go test --destroy -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-      - name: Run Container Insights Test
-        working-directory: test/e2e/container_insights
+      - name: ${{matrix.arrays.testName}}
+        working-directory: ${{matrix.arrays.test_dir}}
         env:
           CLUSTER_NAME: ${{env.CLUSTER_NAME}}
         run: |
