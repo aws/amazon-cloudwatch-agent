@@ -84,7 +84,7 @@ func (h *HttpClient) request(endpoint string) ([]byte, error) {
 	}
 
 	if len(body) == maxHttpResponseLength {
-		return nil, fmt.Errorf("response from %s, execeeds the maximum length: %v", endpoint, maxHttpResponseLength)
+		return nil, fmt.Errorf("response from %s, exceeds the maximum length: %v", endpoint, maxHttpResponseLength)
 	}
 	return body, nil
 }

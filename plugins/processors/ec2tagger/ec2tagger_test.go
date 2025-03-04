@@ -205,7 +205,7 @@ func (m *mockVolumeCache) Devices() []string {
 //	pm.ResourceMetrics().At(0).ScopeMetrics().Len() == 1
 //	pm.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len() == len(metrics)
 //
-// and for each metric from metrics it create one single datapoint that appy all tags/attributes from metric
+// and for each metric from metrics it create one single datapoint that apply all tags/attributes from metric
 func createTestMetrics(metrics []map[string]string) pmetric.Metrics {
 	pm := pmetric.NewMetrics()
 	rm := pm.ResourceMetrics().AppendEmpty()
