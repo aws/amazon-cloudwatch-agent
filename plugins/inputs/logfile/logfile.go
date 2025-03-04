@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -41,7 +42,7 @@ type LogFile struct {
 }
 
 func NewLogFile() *LogFile {
-	handleRotation := strings.ToLower(os.Getenv("CWAGENT_LOGS_HANDLE_ROTATION")) == "true"
+	handleRotation := envconfig.IsHandleRotationEnabled()
 
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
