@@ -36,13 +36,13 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
-        refresh_volumes_interval: 5m0s
+        refresh_volumes_interval: 0s
 receivers:
     telegraf_win_perf_counters/1492679118:
         alias_name: Memory

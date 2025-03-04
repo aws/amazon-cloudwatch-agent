@@ -57,7 +57,7 @@ processors:
         middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
         refresh_tags_interval: 0s
-        refresh_volumes_interval: 5m0s
+        refresh_volumes_interval: 0s
         shared_credential_file: fake-path
 receivers:
     telegraf_cpu:
