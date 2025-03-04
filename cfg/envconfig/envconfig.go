@@ -32,7 +32,7 @@ const (
 	CWConfigContent           = "CW_CONFIG_CONTENT"
 	CWOtelConfigContent       = "CW_OTEL_CONFIG_CONTENT"
 	CWAgentMergedOtelConfig   = "CWAGENT_MERGED_OTEL_CONFIG"
-	CWAgentHandleRotation     = "CWAGENT_LOGS_HANDLE_ROTATION"
+	CWAgentBackpressureDrop   = "CWAGENT_LOGS_BACKPRESSURE_DROP"
 
 	// confused deputy prevention related headers
 	AmzSourceAccount = "AMZ_SOURCE_ACCOUNT" // populates the "x-amz-source-account" header
@@ -74,7 +74,7 @@ func IsWindowsHostProcessContainer() bool {
 	return false
 }
 
-func IsHandleRotationEnabled() bool {
-	handleRotation, _ := strconv.ParseBool(os.Getenv(CWAgentHandleRotation))
-	return handleRotation
+func IsBackpressureDropEnabled() bool {
+	backpressureDrop, _ := strconv.ParseBool(os.Getenv(CWAgentBackpressureDrop))
+	return backpressureDrop
 }

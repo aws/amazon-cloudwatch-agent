@@ -360,7 +360,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, handleRotation bool) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop bool) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -410,7 +410,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 		maxEventSize,
 		defaultTruncateSuffix,
 		1,
-		handleRotation,
+		backpressureDrop,
 	)
 
 	ts.SetOutput(func(evt logs.LogEvent) {
@@ -482,28 +482,28 @@ func TestTailerSrcFileDescriptorHandling(t *testing.T) {
 	tail.OpenFileCount.Store(0)
 
 	testCases := []struct {
-		name           string
-		handleRotation bool
-		autoRemoval    bool
-		expectedLogs   []string
+		name             string
+		backpressureDrop bool
+		autoRemoval      bool
+		expectedLogs     []string
 	}{
 		{
-			name:           "handle_rotation=true",
-			handleRotation: true,
-			autoRemoval:    false,
-			expectedLogs:   []string{"old-log1", "old-log2", "new-log1", "new-log2"},
+			name:             "backpressure_drop=true",
+			backpressureDrop: true,
+			autoRemoval:      false,
+			expectedLogs:     []string{"old-log1", "old-log2", "new-log1", "new-log2"},
 		},
 		{
-			name:           "auto_removal=true",
-			handleRotation: false,
-			autoRemoval:    true,
-			expectedLogs:   []string{"old-log1", "old-log2"},
+			name:             "auto_removal=true",
+			backpressureDrop: false,
+			autoRemoval:      true,
+			expectedLogs:     []string{"old-log1", "old-log2"},
 		},
 		{
-			name:           "handle_rotation=true_and_auto_removal=true",
-			handleRotation: true,
-			autoRemoval:    true,
-			expectedLogs:   []string{"old-log1", "old-log2"}, // Same behavior as auto_removal=true
+			name:             "backpressure_drop=true_and_auto_removal=true",
+			backpressureDrop: true,
+			autoRemoval:      true,
+			expectedLogs:     []string{"old-log1", "old-log2"}, // Same behavior as auto_removal=true
 		},
 	}
 
@@ -522,7 +522,7 @@ func TestTailerSrcFileDescriptorHandling(t *testing.T) {
 
 			tailer, err := tail.TailFile(tmpfile.Name(),
 				tail.Config{
-					ReOpen:      tc.handleRotation,
+					ReOpen:      tc.backpressureDrop,
 					Follow:      true,
 					Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
 					MustExist:   true,
@@ -547,7 +547,7 @@ func TestTailerSrcFileDescriptorHandling(t *testing.T) {
 				defaultMaxEventSize,
 				defaultTruncateSuffix,
 				1,
-				tc.handleRotation,
+				tc.backpressureDrop,
 			)
 
 			var processedLogs []string
@@ -575,7 +575,7 @@ func TestTailerSrcFileDescriptorHandling(t *testing.T) {
 				time.Sleep(100 * time.Millisecond)
 			}
 
-			if !tc.autoRemoval && tc.handleRotation {
+			if !tc.autoRemoval && tc.backpressureDrop {
 				oldName := tmpfile.Name() + ".1"
 				tmpfile.Close()
 				err = os.Rename(tmpfile.Name(), oldName)
