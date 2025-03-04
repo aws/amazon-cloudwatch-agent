@@ -214,7 +214,7 @@ func (t *Tagger) refreshLoopTags(refreshInterval time.Duration, stopAfterFirstSu
 				// need refresh tags when it is configured and not all ec2 tags are retrieved
 				refreshTags = refreshTags && !allTagsRetrieved
 				if !refreshTags {
-					t.logger.Info("ec2tagger: Refresh is no longer needed, stop refreshTicker.")
+					t.logger.Info("ec2tagger: Refresh for tags is no longer needed, stop refreshTicker.")
 					return
 				}
 			}
@@ -248,7 +248,7 @@ func (t *Tagger) refreshLoopVolumes(refreshInterval time.Duration, stopAfterFirs
 				// need refresh volumes when it is configured and not all volumes are retrieved
 				refreshVolumes = refreshVolumes && !allVolumesRetrieved
 				if !refreshVolumes {
-					t.logger.Info("ec2tagger: Refresh is no longer needed, stop refreshTicker.")
+					t.logger.Info("ec2tagger: Refresh for volumes is no longer needed, stop refreshTicker.")
 					return
 				}
 			}
@@ -409,7 +409,7 @@ func (t *Tagger) refreshLoopToUpdateVolumes() {
 		stopAfterFirstSuccess = true
 		refreshInterval = defaultRefreshInterval
 	} else if refreshInterval.Seconds() > 0 {
-		//customer wants to update the tags with the given refresh interval
+		//customer wants to update the volumes with the given refresh interval
 		needRefresh = true
 	}
 
