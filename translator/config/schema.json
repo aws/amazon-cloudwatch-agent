@@ -903,6 +903,10 @@
           "description": "The number of concurrent workers available for cloudwatch logs export",
           "type": "integer",
           "minimum": 1
+        },
+        "backpressure_drop": {
+          "description": "Close rotate file when there is backpressure",
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
