@@ -6,8 +6,7 @@ package toenvconfig
 import (
 	"encoding/json"
 	"log"
-	"os"
-	"strings"
+	"strconv"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -67,18 +66,16 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.AWS_CA_BUNDLE] = sslConfig[commonconfig.CABundlePath]
 	}
 
-	handleRotation := "false" // default value
+	handleRotation := false // default value
 	//respect existing handle_rotation flag already set in env
-	if envValue := os.Getenv(envconfig.CWAgentHandleRotation); envValue != "" {
-		handleRotation = strings.ToLower(envValue)
-	}
+	handleRotation = envconfig.IsHandleRotationEnabled()
 	//config value takes higher priority
 	if logsMap, ok := jsonConfigValue[logs.SectionKey].(map[string]interface{}); ok {
 		if handleRotationVal, ok := logsMap[handleRotationKey].(string); ok {
-			handleRotation = strings.ToLower(handleRotationVal)
+			handleRotation, _ = strconv.ParseBool(handleRotationVal)
 		}
 	}
-	envVars[envconfig.CWAgentHandleRotation] = handleRotation
+	envVars[envconfig.CWAgentHandleRotation] = strconv.FormatBool(handleRotation)
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {
