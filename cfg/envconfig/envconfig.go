@@ -34,6 +34,7 @@ const (
 	CWConfigContent           = "CW_CONFIG_CONTENT"
 	CWOtelConfigContent       = "CW_OTEL_CONFIG_CONTENT"
 	CWAgentMergedOtelConfig   = "CWAGENT_MERGED_OTEL_CONFIG"
+	CWAgentHandleRotation     = "CWAGENT_LOGS_HANDLE_ROTATION"
 
 	// confused deputy prevention related headers
 	AmzSourceAccount = "AMZ_SOURCE_ACCOUNT" // populates the "x-amz-source-account" header
@@ -81,4 +82,9 @@ func IsSelinuxEnabled() bool {
 
 func IsRunningInROSA() bool {
 	return os.Getenv(RunInROSA) == TrueValue
+}
+
+func IsHandleRotationEnabled() bool {
+	handleRotation, _ := strconv.ParseBool(os.Getenv(CWAgentHandleRotation))
+	return handleRotation
 }
