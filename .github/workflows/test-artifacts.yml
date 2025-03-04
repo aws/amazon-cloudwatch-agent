@@ -249,7 +249,7 @@ jobs:
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2NVIDIAGPUIntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -435,7 +435,7 @@ jobs:
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
-    name: 'EC2Win ' +  ${{matrix.arrays.testName}}
+    name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -513,7 +513,7 @@ jobs:
 
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
-    name: 'EC2Darwin ' + ${{matrix.arrays.testName}}
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -641,7 +641,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
-    name: 'ECSEC2 ' + ${{matrix.arrays.testName}}
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -717,7 +717,7 @@ jobs:
             terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
-    name: 'ECSFargate' + ${{matrix.arrays.testName}}
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [GenerateTestMatrix, OutputEnvVariables]
     strategy:
@@ -788,7 +788,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSIntegrationTest:
-    name: 'EKS ' + ${{matrix.arrays.testName}}
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -863,7 +863,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
-    name: 'EKSPrometheus ' + ${{matrix.arrays.testName}}
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -1189,7 +1189,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   GPUEndToEndTest:
-    name: "GPU E2E Test " + ${{matrix.arrays.testName}}
+    name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
