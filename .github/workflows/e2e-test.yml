@@ -16,16 +16,14 @@ env:
 on:
   schedule:
     - cron: '0 17 * * 1'
-  push:
-    branches:
-      - rosa
+
   workflow_dispatch:
     inputs:
       region:
         required: false
         type: string
         description: 'AWS Region to run tests in'
-        default: 'us-east-1'
+        default: 'us-west-2'
       operator-branch:
         required: false
         type: string
@@ -35,7 +33,7 @@ on:
         required: false
         type: string
         description: 'Branch of the helm charts to test'
-        default: 'main'
+        default: 'rosa'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-parent
