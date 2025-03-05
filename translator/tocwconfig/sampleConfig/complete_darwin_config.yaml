@@ -139,7 +139,8 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
     transform:
         error_mode: propagate
         flatten_data: false
@@ -289,13 +290,13 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_swap
                 - telegraf_netstat
-                - telegraf_disk
                 - telegraf_processes
+                - telegraf_disk
+                - telegraf_cpu
+                - telegraf_swap
                 - telegraf_mem
                 - telegraf_procstat/1917393364
-                - telegraf_cpu
         metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch

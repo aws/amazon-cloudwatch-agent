@@ -43,7 +43,7 @@ on:
 
 jobs:
   EC2IntegrationTest:
-    name: 'Test'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
