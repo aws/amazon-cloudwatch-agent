@@ -197,29 +197,24 @@ func (t *Tagger) Shutdown(context.Context) error {
 	return nil
 }
 
-// refreshLoop handles the refresh ticks and also responds to shutdown signal
-func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSuccess bool) {
+// refreshLoopTags handles the refresh ticks for describe tags and also responds to shutdown signal
+func (t *Tagger) refreshLoopTags(refreshInterval time.Duration, stopAfterFirstSuccess bool) {
 	refreshTicker := time.NewTicker(refreshInterval)
 	defer refreshTicker.Stop()
 	for {
 		select {
 		case <-refreshTicker.C:
-			t.logger.Debug("ec2tagger refreshing")
+			t.logger.Debug("ec2tagger refreshing tags")
 			allTagsRetrieved := t.ec2TagsRetrieved()
-			allVolumesRetrieved := t.ebsVolumesRetrieved()
 			t.logger.Debug("Retrieve status",
-				zap.Bool("Ec2AllTagsRetrieved", allTagsRetrieved),
-				zap.Bool("EbsAllVolumesRetrieved", allVolumesRetrieved))
+				zap.Bool("Ec2AllTagsRetrieved", allTagsRetrieved))
 			refreshTags := len(t.EC2InstanceTagKeys) > 0
-			refreshVolumes := len(t.EBSDeviceKeys) > 0
 
 			if stopAfterFirstSuccess {
 				// need refresh tags when it is configured and not all ec2 tags are retrieved
 				refreshTags = refreshTags && !allTagsRetrieved
-				// need refresh volumes when it is configured and not all volumes are retrieved
-				refreshVolumes = refreshVolumes && !allVolumesRetrieved
-				if !refreshTags && !refreshVolumes {
-					t.logger.Info("ec2tagger: Refresh is no longer needed, stop refreshTicker.")
+				if !refreshTags {
+					t.logger.Info("ec2tagger: Refresh for tags is no longer needed, stop refreshTicker.")
 					return
 				}
 			}
@@ -227,6 +222,34 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 			if refreshTags {
 				if err := t.updateTags(); err != nil {
 					t.logger.Warn("ec2tagger: Error refreshing EC2 tags, keeping old values", zap.Error(err))
+				}
+			}
+
+		case <-t.shutdownC:
+			return
+		}
+	}
+}
+
+// refreshLoopVolumes handles the refresh ticks for describe volumes and also responds to shutdown signal
+func (t *Tagger) refreshLoopVolumes(refreshInterval time.Duration, stopAfterFirstSuccess bool) {
+	refreshTicker := time.NewTicker(refreshInterval)
+	defer refreshTicker.Stop()
+	for {
+		select {
+		case <-refreshTicker.C:
+			t.logger.Debug("ec2tagger refreshing volumes")
+			allVolumesRetrieved := t.ebsVolumesRetrieved()
+			t.logger.Debug("Retrieve status",
+				zap.Bool("EbsAllVolumesRetrieved", allVolumesRetrieved))
+			refreshVolumes := len(t.EBSDeviceKeys) > 0
+
+			if stopAfterFirstSuccess {
+				// need refresh volumes when it is configured and not all volumes are retrieved
+				refreshVolumes = refreshVolumes && !allVolumesRetrieved
+				if !refreshVolumes {
+					t.logger.Info("ec2tagger: Refresh for volumes is no longer needed, stop refreshTicker.")
+					return
 				}
 			}
 
@@ -333,7 +356,8 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 
 		go func() { //Async start of initial retrieval to prevent block of agent start
 			t.initialRetrievalOfTagsAndVolumes()
-			t.refreshLoopToUpdateTagsAndVolumes()
+			t.refreshLoopToUpdateTags()
+			t.refreshLoopToUpdateVolumes()
 		}()
 		t.logger.Info("ec2tagger: EC2 tagger has started initialization.")
 
@@ -343,24 +367,24 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-func (t *Tagger) refreshLoopToUpdateTagsAndVolumes() {
+func (t *Tagger) refreshLoopToUpdateTags() {
 	needRefresh := false
 	stopAfterFirstSuccess := false
-	refreshInterval := t.RefreshIntervalSeconds
 
-	if t.RefreshIntervalSeconds.Seconds() == 0 {
+	refreshInterval := t.RefreshTagsInterval
+	if refreshInterval.Seconds() == 0 {
 		//when the refresh interval is 0, this means that customer don't want to
-		//update tags/volumes values once they are retrieved successfully. In this case,
+		//update tags values once they are retrieved successfully. In this case,
 		//we still want to do refresh to make sure all the specified keys for tags/volumes
 		//are fetched successfully because initial retrieval might not get all of them.
 		//When the specified key is "*", there is no way for us to check if all
-		//tags/volumes are fetched. So there is no need to do refresh in this case.
-		needRefresh = !(len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*") ||
-			!(len(t.EBSDeviceKeys) == 1 && t.EBSDeviceKeys[0] == "*")
+		//tags are fetched. So there is no need to do refresh in this case.
+		needRefresh = !(len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*")
+
 		stopAfterFirstSuccess = true
 		refreshInterval = defaultRefreshInterval
-	} else if t.RefreshIntervalSeconds.Seconds() > 0 {
-		//customer wants to update the tags/volumes with the given refresh interval
+	} else if refreshInterval.Seconds() > 0 {
+		//customer wants to update the tags with the given refresh interval
 		needRefresh = true
 	}
 
@@ -369,7 +393,32 @@ func (t *Tagger) refreshLoopToUpdateTagsAndVolumes() {
 			// randomly stagger the time of the first refresh to mitigate throttling if a whole fleet is
 			// restarted at the same time
 			sleepUntilHostJitter(refreshInterval)
-			t.refreshLoop(refreshInterval, stopAfterFirstSuccess)
+			t.refreshLoopTags(refreshInterval, stopAfterFirstSuccess)
+		}()
+	}
+}
+
+func (t *Tagger) refreshLoopToUpdateVolumes() {
+	needRefresh := false
+	stopAfterFirstSuccess := false
+
+	refreshInterval := t.RefreshVolumesInterval
+	if refreshInterval.Seconds() == 0 {
+		needRefresh = !(len(t.EBSDeviceKeys) == 1 && t.EBSDeviceKeys[0] == "*")
+
+		stopAfterFirstSuccess = true
+		refreshInterval = defaultRefreshInterval
+	} else if refreshInterval.Seconds() > 0 {
+		//customer wants to update the volumes with the given refresh interval
+		needRefresh = true
+	}
+
+	if needRefresh {
+		go func() {
+			// randomly stagger the time of the first refresh to mitigate throttling if a whole fleet is
+			// restarted at the same time
+			sleepUntilHostJitter(refreshInterval)
+			t.refreshLoopVolumes(refreshInterval, stopAfterFirstSuccess)
 		}()
 	}
 }
