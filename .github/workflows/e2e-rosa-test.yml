@@ -100,6 +100,7 @@ jobs:
       env:
         TF_VAR_rhcs_token: ${{secrets.RHCS_ACCOUNT_TOKEN}}
         TF_VAR_billing_account_id: ${{secrets.ROSA_BILLING_ACCOUNT}}
+        TF_VAR_aws_region: ${{inputs.region}}
       with:
         max_attempts: 1
         timeout_minutes: 60
