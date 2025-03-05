@@ -249,7 +249,7 @@ jobs:
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2NVIDIAGPUIntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -435,7 +435,7 @@ jobs:
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
-    name: 'EC2WinIntegrationTest'
+    name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -513,7 +513,7 @@ jobs:
 
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
-    name: 'EC2DarwinIntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -626,7 +626,7 @@ jobs:
   StopLocalStackCN:
     name: 'StopLocalStackCN'
     if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
-    needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN ]
+    needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN, OutputEnvVariables]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -641,7 +641,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
-    name: 'ECSEC2IntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -717,7 +717,7 @@ jobs:
             terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
-    name: 'ECSFargateIntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [GenerateTestMatrix, OutputEnvVariables]
     strategy:
@@ -788,7 +788,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSIntegrationTest:
-    name: 'EKSIntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -863,7 +863,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
-    name: 'EKSPrometheusIntegrationTest'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -936,7 +936,7 @@ jobs:
             terraform destroy --auto-approve
 
   PerformanceTrackingTest:
-    name: "PerformanceTrackingTest"
+    name: ${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     runs-on: ubuntu-latest
     strategy:
@@ -998,7 +998,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   EC2WinPerformanceTest:
-    name: "EC2WinPerformanceTest"
+    name: ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
@@ -1060,7 +1060,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   StressTrackingTest:
-    name: "StressTrackingTest"
+    name: ${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
@@ -1124,7 +1124,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   EC2WinStressTrackingTest:
-    name: "EC2WinStressTrackingTest"
+    name: ${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     runs-on: ubuntu-latest
     strategy:
@@ -1189,7 +1189,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   GPUEndToEndTest:
-    name: "GPU E2E Test"
+    name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
