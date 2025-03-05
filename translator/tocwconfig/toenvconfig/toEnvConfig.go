@@ -75,7 +75,10 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 			backpressureDrop, _ = strconv.ParseBool(backpressureDropVal)
 		}
 	}
-	envVars[envconfig.CWAgentBackpressureDrop] = strconv.FormatBool(backpressureDrop)
+	// skip adding if not enabled
+	if backpressureDrop {
+		envVars[envconfig.CWAgentBackpressureDrop] = strconv.FormatBool(backpressureDrop)
+	}
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {

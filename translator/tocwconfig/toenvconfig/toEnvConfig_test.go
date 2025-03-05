@@ -25,12 +25,10 @@ func TestToEnvConfig(t *testing.T) {
 		contextSetup func()
 	}{
 		{
-			name:    "empty config",
-			input:   map[string]interface{}{},
-			envVars: map[string]string{},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "false", // default value
-			},
+			name:        "empty config",
+			input:       map[string]interface{}{},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
@@ -48,11 +46,10 @@ func TestToEnvConfig(t *testing.T) {
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAGENT_USER_AGENT:      "custom-agent",
-				envconfig.CWAGENT_LOG_LEVEL:       "DEBUG",
-				envconfig.AWS_SDK_LOG_LEVEL:       "DEBUG",
-				envconfig.CWAGENT_USAGE_DATA:      "FALSE",
-				envconfig.CWAgentBackpressureDrop: "false",
+				envconfig.CWAGENT_USER_AGENT: "custom-agent",
+				envconfig.CWAGENT_LOG_LEVEL:  "DEBUG",
+				envconfig.AWS_SDK_LOG_LEVEL:  "DEBUG",
+				envconfig.CWAGENT_USAGE_DATA: "FALSE",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -64,10 +61,9 @@ func TestToEnvConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.HTTP_PROXY:              "http://proxy.example.com",
-				envconfig.HTTPS_PROXY:             "https://proxy.example.com",
-				envconfig.NO_PROXY:                "localhost,127.0.0.1",
-				envconfig.CWAgentBackpressureDrop: "false",
+				envconfig.HTTP_PROXY:  "http://proxy.example.com",
+				envconfig.HTTPS_PROXY: "https://proxy.example.com",
+				envconfig.NO_PROXY:    "localhost,127.0.0.1",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{
@@ -83,8 +79,7 @@ func TestToEnvConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.AWS_CA_BUNDLE:           "/path/to/ca-bundle.pem",
-				envconfig.CWAgentBackpressureDrop: "false",
+				envconfig.AWS_CA_BUNDLE: "/path/to/ca-bundle.pem",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -158,12 +153,8 @@ func TestToEnvConfig(t *testing.T) {
 					backpressureDropKey: "false",
 				},
 			},
-			envVars: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "true",
-			},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "false",
-			},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
@@ -221,10 +212,8 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			input: map[string]interface{}{
 				agent.SectionKey: "invalid",
 			},
-			envVars: map[string]string{},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "false",
-			},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 		},
 		{
 			name: "invalid user_agent type",
@@ -233,10 +222,8 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 					userAgentKey: 123,
 				},
 			},
-			envVars: map[string]string{},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "false",
-			},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 		},
 		{
 			name: "invalid debug type",
@@ -245,20 +232,16 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 					debugKey: "true",
 				},
 			},
-			envVars: map[string]string{},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "false",
-			},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 		},
 		{
 			name: "invalid logs section type",
 			input: map[string]interface{}{
 				logs.SectionKey: "invalid",
 			},
-			envVars: map[string]string{},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "false",
-			},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 		},
 		{
 			name: "invalid backpressure_drop type in config",
