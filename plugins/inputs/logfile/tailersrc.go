@@ -178,13 +178,6 @@ func (ts *tailerSrc) Done(offset fileOffset) {
 
 func (ts *tailerSrc) Stop() {
 	close(ts.done)
-	//select {
-	//case <-ts.done:
-	//	// already closed
-	//	return
-	//default:
-	//	ts.cleanUp()
-	//}
 }
 
 func (ts *tailerSrc) AddCleanUpFn(f func()) {
@@ -328,30 +321,6 @@ func (ts *tailerSrc) cleanUp() {
 	if ts.backpressureDrop {
 		close(ts.buffer)
 	}
-
-	//ts.cleanupOnce.Do(func() {
-	//	close(ts.done)
-	//
-	//	for _, clf := range ts.cleanUpFns {
-	//		clf()
-	//	}
-	//
-	//	if ts.backpressureDrop {
-	//		if ts.autoRemoval {
-	//			if err := os.Remove(ts.tailer.Filename); err != nil {
-	//				log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
-	//			} else {
-	//				log.Printf("I! [logfile] Successfully removed file %v with auto_removal feature", ts.tailer.Filename)
-	//			}
-	//		} else {
-	//			close(ts.buffer)
-	//		}
-	//	}
-	//
-	//	if ts.outputFn != nil {
-	//		ts.outputFn(nil)
-	//	}
-	//})
 }
 
 func (ts *tailerSrc) runSaveState() {
@@ -381,13 +350,6 @@ func (ts *tailerSrc) runSaveState() {
 			if err != nil {
 				log.Printf("W! [logfile] Error happened while deleting state file %s on cleanup: %v", ts.stateFilePath, err)
 			}
-			//if ts.autoRemoval {
-			//	if err := os.Remove(ts.tailer.Filename); err != nil && !os.IsNotExist(err) {
-			//		log.Printf("W! [logfile] Failed to auto remove completed file %v: %v", ts.tailer.Filename, err)
-			//	} else {
-			//		log.Printf("I! [logfile] Successfully removed completed file %v with auto_removal feature", ts.tailer.Filename)
-			//	}
-			//}
 			return
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
