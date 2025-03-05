@@ -30,7 +30,8 @@ The IAM User or Role making the calls must have permissions to call the EC2 Desc
 The following receiver configuration parameters are supported.
 | Name                     | Description                                                                                                    | Supported Value                          | Default | 
 |--------------------------| ---------------------------------------------------------------------------------------------------------------| -----------------------------------------| --------|
-|`refresh_interval_seconds`| is the frequency for the plugin to refresh the EC2 Instance Tags and ebs Volumes associated with this Instance.| "0s"                                     |   "0s"  |
+|`refresh_tags_interval`   | is the frequency for the plugin to refresh the EC2 Instance Tags associated with this Instance.                | "0s"                                     |   "0s"  |
+|`refresh_volumes_interval`| is the frequency for the plugin to refresh the EBS Volumes associated with this Instance.                      | "0s"                                     |   "0s"  |
 |`ec2_metadata_tags`       | is the option to specify which tags to be scraped from IMDS and add to datapoint attributes                    | ["InstanceId", "ImageId", "InstanceType"]|    []   |
 |`ec2_instance_tag_keys`   | is the option to specific which EC2 Instance tags to be scraped associated with this instance.                 | ["aws:autoscaling:groupName", "Name"]    |    []   |
 |`disk_device_tag_key`     | is the option to Specify which tags to use to get the specified disk device name from input metric             | []                                       |    []   |

@@ -29,7 +29,7 @@ func TestTranslator(t *testing.T) {
 				JsonKey: Ec2taggerKey,
 			},
 		},
-		"FullEc2TaggerProcessorConfig": {
+		"FullEc2TaggerProcessorNoVolumeConfig": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"append_dimensions": map[string]interface{}{
@@ -41,7 +41,8 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshIntervalSeconds: 0 * time.Second,
+				RefreshTagsInterval:    0 * time.Second,
+				RefreshVolumesInterval: 0 * time.Minute,
 				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
 				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
 			},
@@ -65,7 +66,8 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshIntervalSeconds: 0 * time.Second,
+				RefreshTagsInterval:    0 * time.Second,
+				RefreshVolumesInterval: 5 * time.Minute,
 				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
 				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
 				DiskDeviceTagKey:       "device",
@@ -82,7 +84,8 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*ec2tagger.Config)
 				require.True(t, ok)
-				require.Equal(t, tc.want.RefreshIntervalSeconds, gotCfg.RefreshIntervalSeconds)
+				require.Equal(t, tc.want.RefreshTagsInterval, gotCfg.RefreshTagsInterval)
+				require.Equal(t, tc.want.RefreshVolumesInterval, gotCfg.RefreshVolumesInterval)
 				sort.Strings(gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2MetadataTags, gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2InstanceTagKeys, gotCfg.EC2InstanceTagKeys)
