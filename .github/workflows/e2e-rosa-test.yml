@@ -104,7 +104,7 @@ jobs:
         TF_VAR_cluster_name: rosa-cluster-${{github.run_id}}
       with:
         max_attempts: 1
-        timeout_minutes: 60
+        timeout_minutes: 80
         retry_wait_seconds: 5
         command: |
           cd terraform/rosa/e2e
