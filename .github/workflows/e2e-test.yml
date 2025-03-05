@@ -143,7 +143,7 @@ jobs:
       cloudwatch_agent_tag: ${{ github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-east-1' }}
+      region: ${{ inputs.region}}
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
       terraform_assume_role: ${{vars.TERRAFORM_AWS_ASSUME_ROLE}}
       agent_config: resources/cwagent_configs/jvm_tomcat.json
