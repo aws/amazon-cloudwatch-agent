@@ -26,6 +26,7 @@ func TestEventConfig_ToMap(t *testing.T) {
 	assert.Equal(t, "", key)
 	assert.Equal(t, map[string]interface{}{
 		"event_name":        "System",
+		"kms_key_id":        "",
 		"event_levels":      []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
 		"log_group_name":    "SystemGroup",
 		"log_stream_name":   "SystemStream",

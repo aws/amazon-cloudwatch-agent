@@ -18,8 +18,6 @@ import (
 
 	// Enabled cloudwatch-agent output plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs"
-
 	// Enabled telegraf input plugins
 	// NOTE: any plugins that are dependencies of the plugins enabled will be enabled too
 	// e.g.: cpu plguin from telegraf would enable the system plugin as its dependency

@@ -64,7 +64,7 @@ func monitorLogs(ctx *runtime.Context, config *data.Config) {
 		if err == nil {
 			retention = i
 		}
-		logsConf.AddLogFile(logFilePath, logGroupName, logStreamName, "", "", "", "", retention, logGroupClass)
+		logsConf.AddLogFile(logFilePath, logGroupName, logStreamName, "", "", "", "", "", retention, logGroupClass)
 		yes = util.Yes("Do you want to specify any additional log files to monitor?")
 		if !yes {
 			return

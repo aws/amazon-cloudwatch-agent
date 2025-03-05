@@ -223,6 +223,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			groupName := fileconfig.LogGroupName
 			streamName := fileconfig.LogStreamName
+			kmsKeyID := fileconfig.KmsKeyID
 
 			// In case of multilog, the group and stream has to be generated here
 			// since it is based on the actual file name
@@ -240,7 +241,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			}
 
 			src := NewTailerSrc(
-				groupName, streamName,
+				groupName, streamName, kmsKeyID,
 				t.Destination,
 				t.getStateFilePath(filename),
 				fileconfig.LogGroupClass,

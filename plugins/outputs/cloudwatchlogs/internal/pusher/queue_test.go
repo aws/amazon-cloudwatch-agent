@@ -27,6 +27,7 @@ type stubLogsService struct {
 	ple func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
 	clg func(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
 	cls func(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
+	akk func(input *cloudwatchlogs.AssociateKmsKeyInput) (*cloudwatchlogs.AssociateKmsKeyOutput, error)
 	prp func(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
 	dlg func(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
 }
@@ -62,6 +63,13 @@ func (s *stubLogsService) PutRetentionPolicy(in *cloudwatchlogs.PutRetentionPoli
 func (s *stubLogsService) DescribeLogGroups(in *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 	if s.dlg != nil {
 		return s.dlg(in)
+	}
+	return nil, nil
+}
+
+func (s *stubLogsService) AssociateKmsKey(in *cloudwatchlogs.AssociateKmsKeyInput) (*cloudwatchlogs.AssociateKmsKeyOutput, error) {
+	if s.akk != nil {
+		return s.akk(in)
 	}
 	return nil, nil
 }
@@ -678,7 +686,7 @@ func testPreparationWithLogger(
 	s := newSender(logger, service, tm, retryDuration, stop)
 	q := newQueue(
 		logger,
-		Target{"G", "S", util.StandardLogGroupClass, retention},
+		Target{"G", "S", "A", util.StandardLogGroupClass, retention},
 		flushTimeout,
 		entityProvider,
 		s,
