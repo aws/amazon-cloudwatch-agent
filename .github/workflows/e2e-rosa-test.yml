@@ -5,7 +5,6 @@ name: Reusable ROSA E2E Test
 
 env:
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  CLUSTER_NAME: ${{vars.ROSA_CLUSTER_NAME}}
 
 on:
   workflow_call:
@@ -71,16 +70,51 @@ jobs:
   CreateCluster:
     name: "Create ROSA HCP Cluster"
     runs-on: ubuntu-latest
+    outputs:
+      cluster_id: ${{ steps.terraform.outputs.cluster_id }}
+      cluster_name: ${{ steps.terraform.outputs.cluster_name }}
     strategy:
       fail-fast: false
-#    outputs:
-#      cluster_id: ${{}}
     permissions:
       id-token: write
       contents: read
     steps:
-      - name: Terraform Apply
-        run: echo "Terraform run"
+    - uses: actions/checkout@v3
+      with:
+        repository: ${{inputs.test_repo_name}}
+        ref: ${{inputs.test_repo_branch}}
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ inputs.terraform_assume_role}}
+        aws-region: ${{ inputs.region }}
+        role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+    - name: Verify Terraform version
+      run: terraform --version
+
+    - name: Terraform apply
+      id: terraform
+      uses: nick-fields/retry@v2
+      env:
+        TF_VAR_rhcs_token: ${{secrets.RHCS_ACCOUNT_TOKEN}}
+        TF_VAR_billing_account_id: ${{secrets.ROSA_BILLING_ACCOUNT}}
+      with:
+        max_attempts: 1
+        timeout_minutes: 60
+        retry_wait_seconds: 5
+        command: |
+          cd terraform/rosa/e2e
+
+          terraform init
+          if terraform apply --auto-approve; then
+            echo "cluster_id=$(terraform output -raw cluster_id)" >> $GITHUB_OUTPUT
+            echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+          else
+            terraform destroy --auto-approve && exit 1
+          fi
+
   ValidateCluster:
     needs: [CreateCluster]
     name: "Validate Cluster"
@@ -106,12 +140,6 @@ jobs:
       - name: Login ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Verify Terraform version
-        run: terraform --version
 
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
@@ -144,15 +172,14 @@ jobs:
       - name: Validate Cluster and Host ROSA Setup
         working-directory: test/e2e/rosa
         env:
-          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
+          CLUSTER_NAME: ${{needs.CreateCluster.outputs.cluster_name}}
         run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-
-
   RosaTest:
-    needs: [ValidateCluster]
+    needs: [CreateCluster,ValidateCluster]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         arrays: ${{ fromJson(inputs.test_props) }}
@@ -216,12 +243,40 @@ jobs:
       - name: ${{matrix.arrays.testName}}
         working-directory: ${{matrix.arrays.test_dir}}
         env:
-          CLUSTER_NAME: ${{env.CLUSTER_NAME}}
+          CLUSTER_NAME: ${{needs.CreateCluster.outputs.cluster_name}}
         run: |
           go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
           go test --destroy -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
 
-#
+
+  DestroyCluster:
+    name: "Destroy ROSA HCP Cluster"
+    needs: [CreateCluster, ValidateCluster, RosaTest]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        id: terraform
+        uses: nick-fields/retry@v2
+        env:
+          TF_VAR_rhcs_token=${{secrets.RHCS_ACCOUNT_TOKEN}}
+          TF_VAR_billing_account_id=${{secrets.ROSA_BILLING_ACCOUNT}}
+        with:
+          max_attempts: 1
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/rosa/e2e
+            terraform destroy --auto-approve && exit 1
 #
 #      - name: Terraform apply
 #        uses: nick-fields/retry@v2
