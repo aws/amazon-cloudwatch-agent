@@ -303,6 +303,10 @@ func (ts *tailerSrc) runTail() {
 }
 
 func (ts *tailerSrc) cleanUp() {
+	if ts.backpressureDrop && ts.buffer != nil {
+		close(ts.buffer)
+	}
+
 	if ts.autoRemoval {
 		if err := os.Remove(ts.tailer.Filename); err != nil {
 			log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
@@ -316,10 +320,7 @@ func (ts *tailerSrc) cleanUp() {
 
 	if ts.outputFn != nil {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
-	}
-
-	if ts.backpressureDrop {
-		close(ts.buffer)
+		ts.outputFn = nil
 	}
 }
 
@@ -371,6 +372,12 @@ func (ts *tailerSrc) saveState(offset int64) error {
 }
 
 func (ts *tailerSrc) runSender() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("E! [logfile] Recovered panic in runSender: %v", r)
+		}
+	}()
+
 	log.Printf("D! [logfile] runSender starting for %s", ts.tailer.Filename)
 	defer log.Printf("D! [logfile] runSender exiting for %s", ts.tailer.Filename)
 
@@ -381,7 +388,7 @@ func (ts *tailerSrc) runSender() {
 				log.Printf("D! [logfile] runSender buffer was closed for %s", ts.tailer.Filename)
 				return
 			}
-			if e != nil {
+			if e != nil && ts.outputFn != nil {
 				ts.outputFn(e)
 			}
 		case <-ts.done:
