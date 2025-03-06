@@ -26,6 +26,7 @@ const (
 var (
 	multilineWaitPeriod = 1 * time.Second
 	defaultBufferSize   = 1
+	closeFileInterval   = 5 * time.Second
 )
 
 type fileOffset struct {
@@ -82,6 +83,7 @@ type tailerSrc struct {
 	cleanUpFns       []func()
 	backpressureDrop bool
 	buffer           chan *LogEvent
+	lastCloseTime    time.Time
 }
 
 // Verify tailerSrc implements LogSrc
@@ -222,10 +224,20 @@ func (ts *tailerSrc) runTail() {
 				case <-ts.done:
 					return
 				default:
-					// Buffer is full, close the file to force a reopen
-					ts.tailer.CloseFile()
+					now := time.Now()
+					if now.Sub(ts.lastCloseTime) > closeFileInterval {
+						log.Printf("D! [logfile] buffer is full, closing file %v after %v sec", ts.tailer.Filename, closeFileInterval)
+						ts.tailer.CloseFile()
+						ts.lastCloseTime = now
+					}
 					select {
 					case ts.buffer <- e:
+						// reopen the file only if the buffer successfully accepts the event
+						err := ts.tailer.Reopen(false)
+						if err != nil {
+							log.Printf("E! [logfile] Error reopening file %s: %v", ts.tailer.Filename, err)
+							return
+						}
 					case <-ts.done:
 						return
 					}
