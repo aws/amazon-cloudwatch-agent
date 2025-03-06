@@ -169,7 +169,9 @@ func TestTTLServicePodEnvironmentMapping(t *testing.T) {
 			ServiceName: "service",
 			Environment: "environment",
 		},
-	}, time.Microsecond)
+	}, 500*time.Millisecond)
+	// this assertion relies on the speed of your computer to get this done before
+	// the cache evicts the item based on the TTL
 	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
 
 	//starting the ttl cache like we do in code. This will automatically evict expired pods.

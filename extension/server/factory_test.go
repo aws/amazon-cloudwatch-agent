@@ -20,16 +20,16 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 func TestCreateExtension(t *testing.T) {
 	cfg := &Config{}
-	got, err := NewFactory().CreateExtension(context.Background(), extensiontest.NewNopCreateSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }
 
-func TestCreateExtensionWithConfig(t *testing.T) {
+func TestCreateWithConfig(t *testing.T) {
 	cfg := &Config{ListenAddress: ":8080", TLSCertPath: "./testdata/example-server-cert.pem",
 		TLSKeyPath: "./testdata/example-server-key.pem",
 		TLSCAPath:  "./testdata/example-CA-cert.pem"}
-	got, err := NewFactory().CreateExtension(context.Background(), extensiontest.NewNopCreateSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }

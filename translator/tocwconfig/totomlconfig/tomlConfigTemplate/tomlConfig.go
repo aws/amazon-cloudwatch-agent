@@ -126,6 +126,8 @@ type (
 		Pipe            bool
 		RetentionInDays int `toml:"retention_in_days"`
 		Timezone        string
+		//Customer specifies if the timestamp from the log message should be trimmed
+		TrimTimestamp bool `toml:"trim_timestamp"`
 		//Customer specified service.name
 		ServiceName string `toml:"service_name"`
 		//Customer specified deployment.environment

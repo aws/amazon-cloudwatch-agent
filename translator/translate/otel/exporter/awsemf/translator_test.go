@@ -929,7 +929,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -945,7 +945,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -961,7 +961,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -977,7 +977,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -993,7 +993,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -1009,7 +1009,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -1025,7 +1025,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -1041,7 +1041,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",

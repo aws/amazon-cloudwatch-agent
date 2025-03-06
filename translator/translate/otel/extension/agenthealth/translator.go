@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
@@ -25,10 +26,19 @@ const (
 )
 
 var (
-	MetricsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
-	LogsID       = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
-	TracesID     = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
+	MetricsID    = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalMetrics.String())
+	LogsID       = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalLogs.String())
+	TracesID     = component.NewIDWithName(agenthealth.TypeStr, pipeline.SignalTraces.String())
 	StatusCodeID = component.NewIDWithName(agenthealth.TypeStr, "statuscode")
+)
+
+type Name string
+
+var (
+	MetricsName    = Name(pipeline.SignalMetrics.String())
+	LogsName       = Name(pipeline.SignalLogs.String())
+	TracesName     = Name(pipeline.SignalTraces.String())
+	StatusCodeName = Name("statuscode")
 )
 
 type translator struct {
@@ -39,11 +49,11 @@ type translator struct {
 	isStatusCodeEnabled bool
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithStatusCode(name component.DataType, operations []string, isStatusCodeEnabled bool) common.Translator[component.Config] {
+func NewTranslatorWithStatusCode(name Name, operations []string, isStatusCodeEnabled bool) common.ComponentTranslator {
 	return &translator{
-		name:                name.String(),
+		name:                string(name),
 		operations:          operations,
 		factory:             agenthealth.NewFactory(),
 		isUsageDataEnabled:  envconfig.IsUsageDataEnabled(),
@@ -51,9 +61,9 @@ func NewTranslatorWithStatusCode(name component.DataType, operations []string, i
 	}
 }
 
-func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
+func NewTranslator(name Name, operations []string) common.ComponentTranslator {
 	return &translator{
-		name:               name.String(),
+		name:               string(name),
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),

@@ -20,9 +20,9 @@ type translator struct {
 	factory exporter.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: debugexporter.NewFactory()}
 	for _, opt := range opts {
 		opt(t)

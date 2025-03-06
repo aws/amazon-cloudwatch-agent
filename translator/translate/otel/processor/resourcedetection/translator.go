@@ -9,6 +9,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -25,9 +26,9 @@ var appSignalsDefaultResourceDetectionConfig string
 var appSignalsECSResourceDetectionConfig string
 
 type translator struct {
-	name     string
-	dataType component.DataType
-	factory  processor.Factory
+	name    string
+	signal  pipeline.Signal
+	factory processor.Factory
 }
 
 type Option interface {
@@ -40,17 +41,17 @@ func (o optionFunc) apply(t *translator) {
 	o(t)
 }
 
-// WithDataType determines where the translator should look to find
+// WithSignal determines where the translator should look to find
 // the configuration.
-func WithDataType(dataType component.DataType) Option {
+func WithSignal(signal pipeline.Signal) Option {
 	return optionFunc(func(t *translator) {
-		t.dataType = dataType
+		t.signal = signal
 	})
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
+func NewTranslator(opts ...Option) common.ComponentTranslator {
 	t := &translator{factory: resourcedetectionprocessor.NewFactory()}
 	for _, opt := range opts {
 		opt.apply(t)

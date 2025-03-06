@@ -56,10 +56,10 @@ type translator struct {
 	keys []string
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 var _ common.NameSetter = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: cumulativetodeltaprocessor.NewFactory()}
 	for _, opt := range opts {
 		opt(t)

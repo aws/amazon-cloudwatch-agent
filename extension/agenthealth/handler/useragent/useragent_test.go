@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/pipelines"
 
@@ -23,7 +24,6 @@ import (
 )
 
 func TestSetComponents(t *testing.T) {
-	metricsType, _ := component.NewType("metrics")
 	telegrafCPUType, _ := component.NewType(adapter.TelegrafPrefix + "cpu")
 	prometheusType, _ := component.NewType("prometheus")
 	batchType, _ := component.NewType("batch")
@@ -31,8 +31,8 @@ func TestSetComponents(t *testing.T) {
 	cloudwatchType, _ := component.NewType("cloudwatch")
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
-			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID(metricsType): {
+			Pipelines: map[pipeline.ID]*pipelines.PipelineConfig{
+				pipeline.NewID(pipeline.SignalMetrics): {
 					Receivers: []component.ID{
 						component.NewID(telegrafCPUType),
 						component.NewID(prometheusType),
@@ -108,13 +108,12 @@ func TestAlternateUserAgent(t *testing.T) {
 }
 
 func TestEmf(t *testing.T) {
-	metricsType, _ := component.NewType("metrics")
 	nopType, _ := component.NewType("nop")
 	awsEMFType, _ := component.NewType("awsemf")
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
-			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID(metricsType): {
+			Pipelines: map[pipeline.ID]*pipelines.PipelineConfig{
+				pipeline.NewID(pipeline.SignalMetrics): {
 					Receivers: []component.ID{
 						component.NewID(nopType),
 					},
@@ -142,8 +141,8 @@ func TestEmf(t *testing.T) {
 func TestMissingEmfExporterConfig(t *testing.T) {
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
-			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID(component.MustNewType("metrics")): {
+			Pipelines: map[pipeline.ID]*pipelines.PipelineConfig{
+				pipeline.NewID(pipeline.SignalMetrics): {
 					Receivers: []component.ID{
 						component.NewID(component.MustNewType("nop")),
 					},
@@ -170,10 +169,10 @@ func TestJmx(t *testing.T) {
 	jmxOther := "jmxOther"
 	nopType, _ := component.NewType("nop")
 	jmxType, _ := component.NewType(jmx)
-	pipelineType, _ := component.NewType("pipeline")
-	pipelineTypeOther, _ := component.NewType("pipelineOther")
+	pipelineID := pipeline.NewIDWithName(pipeline.SignalMetrics, "pipeline")
+	pipelineIDOther := pipeline.NewIDWithName(pipeline.SignalMetrics, "pipelineOther")
 	pls := make(pipelines.Config)
-	pls[component.NewID(pipelineType)] = &pipelines.PipelineConfig{
+	pls[pipelineID] = &pipelines.PipelineConfig{
 		Receivers: []component.ID{
 			component.NewIDWithName(jmxType, jmx),
 		},
@@ -181,7 +180,7 @@ func TestJmx(t *testing.T) {
 			component.NewID(nopType),
 		},
 	}
-	pls[component.NewID(pipelineTypeOther)] = &pipelines.PipelineConfig{
+	pls[pipelineIDOther] = &pipelines.PipelineConfig{
 		Receivers: []component.ID{
 			component.NewIDWithName(jmxType, jmxOther),
 		},

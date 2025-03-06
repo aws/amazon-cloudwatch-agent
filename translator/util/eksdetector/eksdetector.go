@@ -5,7 +5,10 @@ package eksdetector
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +18,7 @@ import (
 
 type Detector interface {
 	getConfigMap(namespace string, name string) (map[string]string, error)
+	getIssuer() (string, error)
 }
 
 type EksDetector struct {
@@ -55,7 +59,8 @@ var (
 	}
 
 	// IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
-	// configmap exists in the kube-system namespace
+	// configmap exists in the kube-system namespace or by extracting the "iss" field from the service account token and
+	// checking if it contains "eks" as a fall-back
 	IsEKS = func() IsEKSCache {
 		once.Do(func() {
 			var errors error
@@ -71,6 +76,11 @@ var (
 				awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 				if err == nil {
 					value = awsAuth != nil
+				} else {
+					issuer, err := eksDetector.getIssuer()
+					if err == nil {
+						value = strings.Contains(strings.ToLower(issuer), "eks")
+					}
 				}
 			}
 			isEKSCacheSingleton = IsEKSCache{Value: value, Err: errors}
@@ -88,6 +98,41 @@ func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]st
 	}
 
 	return configMap.Data, nil
+}
+
+// getIssuer retrieves the issuer ("iss") from the service account token
+func (d *EksDetector) getIssuer() (string, error) {
+	conf, err := getInClusterConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get in-cluster config: %w", err)
+	}
+
+	token := conf.BearerToken
+	if token == "" {
+		return "", fmt.Errorf("empty token in config")
+	}
+
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("missing payload")
+	}
+
+	decoded, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", fmt.Errorf("failed to decode token payload: %w", err)
+	}
+
+	var claims map[string]interface{}
+	if err = json.Unmarshal(decoded, &claims); err != nil {
+		return "", fmt.Errorf("failed to unmarshal token payload: %w", err)
+	}
+
+	iss, ok := claims["iss"].(string)
+	if !ok {
+		return "", fmt.Errorf("issuer field not found in token")
+	}
+
+	return iss, nil
 }
 
 func getClient() (kubernetes.Interface, error) {

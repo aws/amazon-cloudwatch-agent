@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator"
@@ -181,7 +182,7 @@ func TestTranslators(t *testing.T) {
 			} else {
 				require.NotNil(t, got)
 				assert.Equal(t, len(testCase.want), got.Len())
-				got.Range(func(tr common.Translator[*common.ComponentTranslators]) {
+				got.Range(func(tr common.Translator[*common.ComponentTranslators, pipeline.ID]) {
 					w, ok := testCase.want[tr.ID().String()]
 					require.True(t, ok)
 					g, err := tr.Translate(conf)

@@ -53,6 +53,9 @@ jobs:
       - name: Copy state
         run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Verify Terraform version
         run: terraform --version
 

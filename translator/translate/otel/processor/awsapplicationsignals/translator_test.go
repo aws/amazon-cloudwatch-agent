@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
@@ -45,7 +45,7 @@ func TestTranslate(t *testing.T) {
 	json.Unmarshal([]byte(validAppSignalsRulesConfig), &validJsonMap)
 	json.Unmarshal([]byte(invalidAppSignalsRulesConfig), &invalidJsonMap)
 
-	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
+	tt := NewTranslator(WithSignal(pipeline.SignalMetrics))
 	testCases := map[string]struct {
 		input          map[string]interface{}
 		want           string

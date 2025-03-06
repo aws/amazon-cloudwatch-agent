@@ -11,7 +11,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -20,7 +19,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
-		translator common.Translator[component.Config]
+		translator common.ComponentTranslator
 		input      map[string]interface{}
 		want       *confmap.Conf
 		wantErr    error

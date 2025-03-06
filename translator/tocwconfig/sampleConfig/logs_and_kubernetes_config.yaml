@@ -415,6 +415,20 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    filter/containerinsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
     metricstransform/containerinsights:
         transforms:
             - action: insert
@@ -500,6 +514,7 @@ service:
                 - awsemf/containerinsights
             processors:
                 - batch/containerinsights
+                - filter/containerinsights
                 - metricstransform/containerinsights
             receivers:
                 - awscontainerinsightreceiver
@@ -518,4 +533,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

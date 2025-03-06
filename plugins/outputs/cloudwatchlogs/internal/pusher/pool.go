@@ -19,6 +19,7 @@ type workerPool struct {
 	workerCount atomic.Int32
 	wg          sync.WaitGroup
 	stopCh      chan struct{}
+	stopLock    sync.RWMutex
 }
 
 // NewWorkerPool creates a pool of workers of the specified size.
@@ -53,6 +54,8 @@ func (p *workerPool) worker() {
 
 // Submit adds a task to the pool. Blocks until a worker is available to receive the task or the pool is stopped.
 func (p *workerPool) Submit(task func()) {
+	p.stopLock.RLock()
+	defer p.stopLock.RUnlock()
 	select {
 	case <-p.stopCh:
 		return
@@ -72,6 +75,8 @@ func (p *workerPool) WorkerCount() int32 {
 
 // Stop closes the channels and waits for the workers to stop.
 func (p *workerPool) Stop() {
+	p.stopLock.Lock()
+	defer p.stopLock.Unlock()
 	select {
 	case <-p.stopCh:
 		return

@@ -64,9 +64,9 @@ func WithIndex(index int) Option {
 	}
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.Translator[component.Config] {
+func NewTranslator(opts ...Option) common.ComponentTranslator {
 	t := &translator{index: -1, factory: jmxreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)

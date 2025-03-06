@@ -20,6 +20,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+const defaultEndpoint = "0.0.0.0:2000"
+
 var (
 	endpointOverrideKey = common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)
 	localModeKey        = common.ConfigKey(common.TracesKey, common.LocalModeKey)
@@ -30,13 +32,13 @@ type translator struct {
 	factory extension.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, awsproxy.NewFactory()}
 }
 
@@ -49,6 +51,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.TracesKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsproxy.Config)
+	cfg.ProxyConfig.Endpoint = defaultEndpoint
 	cfg.ProxyConfig.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if conf.IsSet(endpointOverrideKey) {
 		cfg.ProxyConfig.AWSEndpoint, _ = common.GetString(conf, endpointOverrideKey)

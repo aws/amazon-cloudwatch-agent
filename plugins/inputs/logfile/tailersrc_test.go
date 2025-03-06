@@ -324,7 +324,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
 
-func parseRFC3339Timestamp(line string) time.Time {
+func parseRFC3339Timestamp(line string) (time.Time, string) {
 	// Use RFC3339 for testing `2006-01-02T15:04:05Z07:00`
 	re := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`)
 	tstr := re.FindString(line)
@@ -332,7 +332,7 @@ func parseRFC3339Timestamp(line string) time.Time {
 	if tstr != "" {
 		t, _ = time.Parse(time.RFC3339, tstr)
 	}
-	return t
+	return t, line
 }
 
 func logLine(s string, l int, t time.Time) string {

@@ -270,3 +270,21 @@ jobs:
       - name: Clean old IAM roles
         working-directory: tool/clean
         run: go run ./clean_iam_roles/clean_iam_roles.go --tags=clean
+  clean-log-groups:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old Log Groups
+        working-directory: tool/clean
+        run: go run ./clean_log_group/clean_log_group.go 

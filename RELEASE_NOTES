@@ -1,4 +1,19 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300053.0 (2024-02-26)
+========================================================================
+Bug Fixes:
+* [Related Telemetry] Fix EKS cluster detection when aws-auth config map does not exist
+* [Logs] Reduce PutRetentionPolicy calls by checking existing policy
+* [Logs] Fix data races in cloudwatchlogs
+* [Logs] Only add to cache if log stream is created
+
+Enhancements:
+* [Application Signals] Use an endpoint slice watcher instead of a pod watcher
+* [Related Telemetry] Scrape auto scaling group attributes from resource metrics
+* [Security] Add Confused Deputy Prevention
+* [OpenTelemetry] Bump otel dependencies to v0.115.0/v1.21.0
+
+========================================================================
 Amazon CloudWatch Agent 1.300052.0 (2024-01-21)
 ========================================================================
 

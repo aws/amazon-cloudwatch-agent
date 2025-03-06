@@ -67,7 +67,7 @@ type tailerSrc struct {
 	stateFilePath   string
 	tailer          *tail.Tail
 	autoRemoval     bool
-	timestampFn     func(string) time.Time
+	timestampFn     func(string) (time.Time, string)
 	enc             encoding.Encoding
 	maxEventSize    int
 	truncateSuffix  string
@@ -91,7 +91,7 @@ func NewTailerSrc(
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
 	filters []*LogFilter,
-	timestampFn func(string) time.Time,
+	timestampFn func(string) (time.Time, string),
 	enc encoding.Encoding,
 	maxEventSize int,
 	truncateSuffix string,
@@ -195,9 +195,10 @@ func (ts *tailerSrc) runTail() {
 			if !ok {
 				if msgBuf.Len() > 0 {
 					msg := msgBuf.String()
+					timestamp, modifiedMsg := ts.timestampFn(msg)
 					e := &LogEvent{
-						msg:    msg,
-						t:      ts.timestampFn(msg),
+						msg:    modifiedMsg,
+						t:      timestamp,
 						offset: *fo,
 						src:    ts,
 					}
@@ -249,9 +250,10 @@ func (ts *tailerSrc) runTail() {
 
 			if msgBuf.Len() > 0 {
 				msg := msgBuf.String()
+				timestamp, modifiedMsg := ts.timestampFn(msg)
 				e := &LogEvent{
-					msg:    msg,
-					t:      ts.timestampFn(msg),
+					msg:    modifiedMsg,
+					t:      timestamp,
 					offset: *fo,
 					src:    ts,
 				}
@@ -276,9 +278,10 @@ func (ts *tailerSrc) runTail() {
 			}
 
 			msg := msgBuf.String()
+			timestamp, modifiedMsg := ts.timestampFn(msg)
 			e := &LogEvent{
-				msg:    msg,
-				t:      ts.timestampFn(msg),
+				msg:    modifiedMsg,
+				t:      timestamp,
 				offset: *fo,
 				src:    ts,
 			}

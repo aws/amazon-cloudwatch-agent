@@ -24,13 +24,13 @@ type translator struct {
 	factory processor.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, ec2tagger.NewFactory()}
 }
 
@@ -59,13 +59,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
+	cfg.RefreshTagsInterval = time.Duration(0)
+	cfg.RefreshVolumesInterval = time.Duration(0)
 	if value, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskKey, common.AppendDimensionsKey, ec2tagger.AttributeVolumeId)); ok && value == ec2tagger.ValueAppendDimensionVolumeId {
+		cfg.RefreshVolumesInterval = 5 * time.Minute
 		cfg.EBSDeviceKeys = []string{"*"}
 		cfg.DiskDeviceTagKey = "device"
 	}
 
 	cfg.MiddlewareID = &agenthealth.StatusCodeID
-	cfg.RefreshIntervalSeconds = time.Duration(0)
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil

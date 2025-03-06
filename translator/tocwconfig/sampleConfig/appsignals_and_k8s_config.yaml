@@ -333,6 +333,20 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    filter/containerinsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
     metricstransform/application_signals:
         transforms:
             - action: update
@@ -1386,7 +1400,9 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
+        max_conns_per_host: 0
         max_idle_conns: 100
+        max_idle_conns_per_host: 0
         middleware: agenthealth/statuscode
         openshift:
             address: ""
@@ -1499,11 +1515,15 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:4316
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -1528,6 +1548,7 @@ service:
                 - awsemf/containerinsights
             processors:
                 - batch/containerinsights
+                - filter/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         traces/application_signals:
@@ -1553,4 +1574,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
@@ -29,16 +30,16 @@ type translator struct {
 	common.NameProvider
 	common.IndexProvider
 	configKey string
-	dataType  component.DataType
+	signal    pipeline.Signal
 	factory   receiver.Factory
 }
 
-// WithDataType determines where the translator should look to find
+// WithSignal determines where the translator should look to find
 // the configuration.
-func WithDataType(dataType component.DataType) common.TranslatorOption {
+func WithSignal(signal pipeline.Signal) common.TranslatorOption {
 	return func(target any) {
 		if t, ok := target.(*translator); ok {
-			t.dataType = dataType
+			t.signal = signal
 		}
 	}
 }
@@ -51,16 +52,16 @@ func WithConfigKey(configKey string) common.TranslatorOption {
 	}
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: otlpreceiver.NewFactory()}
 	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.Name() == "" && t.dataType.String() != "" {
-		t.SetName(t.dataType.String())
+	if t.Name() == "" && t.signal.String() != "" {
+		t.SetName(t.signal.String())
 		if t.Index() != -1 {
 			t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
 		}
@@ -87,9 +88,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.HTTP.Endpoint = defaultHttpEndpoint
 
 	if t.Name() == common.AppSignals {
-		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.dataType]
+		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.signal]
 		if !ok {
-			return nil, fmt.Errorf("no application_signals config key defined for data type: %s", t.dataType)
+			return nil, fmt.Errorf("no application_signals config key defined for signal: %s", t.signal)
 		}
 		if conf.IsSet(appSignalsConfigKeys[0]) {
 			configKey = appSignalsConfigKeys[0]

@@ -4,6 +4,7 @@
 package eksdetector
 
 import (
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -54,7 +55,15 @@ func TestEKS(t *testing.T) {
 	}
 
 	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{conventions.AttributeK8SClusterName: "my-cluster"}, nil)
+
 	isEks := IsEKS()
+	assert.True(t, isEks.Value)
+	assert.NoError(t, isEks.Err)
+
+	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(nil, fmt.Errorf("configmap not found"))
+	testDetector.On("getIssuer").Return("https://oidc.eks.us-west-2.amazonaws.com/id/someid", nil)
+
+	isEks = IsEKS()
 	assert.True(t, isEks.Value)
 	assert.NoError(t, isEks.Err)
 }
@@ -80,6 +89,23 @@ func Test_getConfigMap(t *testing.T) {
 	res, err = testDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
+}
+
+func Test_getIssuer(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	testDetector := &EksDetector{Clientset: client}
+
+	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	issuer, err := testDetector.getIssuer()
+	assert.NoError(t, err)
+	assert.Equal(t, "https://oidc.eks.us-west-2.amazonaws.com/id/someid", issuer)
 }
 
 func Test_getClientError(t *testing.T) {

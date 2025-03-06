@@ -33,7 +33,7 @@ type queue struct {
 	flushCh      chan struct{}
 	resetTimerCh chan struct{}
 	flushTimer   *time.Timer
-	flushTimeout time.Duration
+	flushTimeout atomic.Value
 	stop         <-chan struct{}
 	lastSentTime atomic.Value
 
@@ -61,11 +61,11 @@ func newQueue(
 		flushCh:         make(chan struct{}),
 		resetTimerCh:    make(chan struct{}),
 		flushTimer:      time.NewTimer(flushTimeout),
-		flushTimeout:    flushTimeout,
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
 	}
+	q.flushTimeout.Store(flushTimeout)
 	q.wg.Add(1)
 	go q.start()
 	return q
@@ -112,13 +112,15 @@ func (q *queue) start() {
 
 	// Merge events from both blocking and non-blocking channel
 	go func() {
+		var nonBlockingEventsCh <-chan logs.LogEvent
 		for {
 			select {
 			case e := <-q.eventsCh:
 				mergeChan <- e
-			case e := <-q.nonBlockingEventsCh:
+			case e := <-nonBlockingEventsCh:
 				mergeChan <- e
 			case <-q.startNonBlockCh:
+				nonBlockingEventsCh = q.nonBlockingEventsCh
 			case <-q.stop:
 				return
 			}
@@ -141,7 +143,8 @@ func (q *queue) start() {
 			q.batch.append(event)
 		case <-q.flushCh:
 			lastSentTime, _ := q.lastSentTime.Load().(time.Time)
-			if time.Since(lastSentTime) >= q.flushTimeout && len(q.batch.events) > 0 {
+			flushTimeout, _ := q.flushTimeout.Load().(time.Duration)
+			if time.Since(lastSentTime) >= flushTimeout && len(q.batch.events) > 0 {
 				q.send()
 			} else {
 				q.resetFlushTimer()
@@ -188,7 +191,9 @@ func (q *queue) manageFlushTimer() {
 			q.flushCh <- struct{}{}
 		case <-q.resetTimerCh:
 			q.stopFlushTimer()
-			q.flushTimer.Reset(q.flushTimeout)
+			if flushTimeout, ok := q.flushTimeout.Load().(time.Duration); ok {
+				q.flushTimer.Reset(flushTimeout)
+			}
 		case <-q.stop:
 			q.stopFlushTimer()
 			return

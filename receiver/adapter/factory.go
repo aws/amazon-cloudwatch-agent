@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
+	otelscraper "go.opentelemetry.io/collector/scraper"
 )
 
 const (
@@ -52,7 +53,7 @@ func (a Adapter) NewReceiverFactory(telegrafInputName string) receiver.Factory {
 		receiver.WithMetrics(a.createMetricsReceiver, component.StabilityLevelStable))
 }
 
-func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.CreateSettings, config component.Config, consumer consumer.Metrics) (receiver.Metrics, error) {
+func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Settings, config component.Config, consumer consumer.Metrics) (receiver.Metrics, error) {
 	cfg := config.(*Config)
 	input, err := a.initializeInput(settings.ID.Type().String(), settings.ID.Name())
 
@@ -62,11 +63,10 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Cr
 
 	rcvr := newAdaptedReceiver(input, ctx, consumer, settings.Logger)
 
-	scraper, err := scraperhelper.NewScraper(
-		settings.ID.Type().String(),
+	scraper, err := otelscraper.NewMetrics(
 		rcvr.scrape,
-		scraperhelper.WithStart(rcvr.start),
-		scraperhelper.WithShutdown(rcvr.shutdown),
+		otelscraper.WithStart(rcvr.start),
+		otelscraper.WithShutdown(rcvr.shutdown),
 	)
 
 	if err != nil {
@@ -75,7 +75,7 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Cr
 
 	return scraperhelper.NewScraperControllerReceiver(
 		&cfg.ControllerConfig, settings, consumer,
-		scraperhelper.AddScraper(scraper),
+		scraperhelper.AddScraper(settings.ID.Type(), scraper),
 	)
 }
 

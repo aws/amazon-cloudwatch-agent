@@ -258,6 +258,7 @@
             "log_group_name": "amazon-cloudwatch-agent.log",
             "log_stream_name": "amazon-cloudwatch-agent.log",
             "timezone": "UTC",
+            "trim_timestamp": true,
             "retention_in_days": 5
           },
           {

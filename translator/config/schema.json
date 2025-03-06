@@ -959,6 +959,10 @@
                       "UTC"
                     ]
                   },
+                  "trim_timestamp" : {
+                    "type": "boolean",
+                    "description": "Whether to trim the timestamp in the log message"
+                  },
                   "encoding": {
                     "type": "string",
                     "minLength": 1,

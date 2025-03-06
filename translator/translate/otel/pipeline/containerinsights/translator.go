@@ -8,11 +8,13 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/kueue"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
@@ -21,8 +23,7 @@ import (
 )
 
 const (
-	ciPipelineName    = common.PipelineNameContainerInsights
-	kueuePipelineName = "kueueContainerInsights"
+	ciPipelineName = common.PipelineNameContainerInsights
 )
 
 var (
@@ -35,18 +36,18 @@ type translator struct {
 	pipelineName string
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[*common.ComponentTranslators] {
+func NewTranslator() common.PipelineTranslator {
 	return NewTranslatorWithName(ciPipelineName)
 }
 
-func NewTranslatorWithName(pipelineName string) common.Translator[*common.ComponentTranslators] {
+func NewTranslatorWithName(pipelineName string) common.PipelineTranslator {
 	return &translator{pipelineName: pipelineName}
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, t.pipelineName)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, t.pipelineName)
 }
 
 // Translate creates a pipeline for container insights if the logs.metrics_collected.ecs or logs.metrics_collected.kubernetes
@@ -56,17 +57,22 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 
-	// create processor map with default batch processor based on pipeline name
-	processors := common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey))
+	// create processor map with
+	// - default batch processor
+	// - filter processor to drop prometheus metadata
+	processors := common.NewTranslatorMap(
+		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
+		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
+	)
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name
-	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
-		agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true),
+	extensions := common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
+		agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
 	)
 
 	// create variable for receivers, use switch block below to assign
-	var receivers common.TranslatorMap[component.Config]
+	var receivers common.TranslatorMap[component.Config, component.ID]
 
 	switch t.pipelineName {
 	case ciPipelineName:
@@ -82,10 +88,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				processors.Set(gpu.NewTranslatorWithName(t.pipelineName))
 			}
 		}
-	case kueuePipelineName:
+	case common.PipelineNameKueue:
 		// add prometheus receiver for kueue
 		receivers = common.NewTranslatorMap((awscontainerinsightskueue.NewTranslator()))
 		processors.Set(kueue.NewTranslatorWithName(t.pipelineName))
+
 	default:
 		return nil, fmt.Errorf("unknown container insights pipeline name: %s", t.pipelineName)
 	}
