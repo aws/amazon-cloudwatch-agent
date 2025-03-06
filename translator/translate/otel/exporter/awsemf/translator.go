@@ -24,10 +24,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
-const (
-	kueuePipelineName = "kueueContainerInsights"
-)
-
 //go:embed awsemf_default_generic.yaml
 var defaultGenericConfig string
 
@@ -64,13 +60,13 @@ type translator struct {
 	factory exporter.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, awsemfexporter.NewFactory()}
 }
 
@@ -173,7 +169,7 @@ func isKubernetes(conf *confmap.Conf) bool {
 
 // `kueue_container_insights` is a child of `kubernetes` in config spec.
 func isKubernetesKueue(conf *confmap.Conf, pipelineName string) bool {
-	return isKubernetes(conf) && pipelineName == kueuePipelineName && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
+	return isKubernetes(conf) && pipelineName == common.PipelineNameKueue && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
 }
 
 func isPrometheus(conf *confmap.Conf) bool {

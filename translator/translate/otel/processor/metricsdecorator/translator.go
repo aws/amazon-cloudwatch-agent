@@ -29,7 +29,7 @@ type ContextStatement struct {
 }
 
 type Translator interface {
-	common.Translator[component.Config]
+	common.ComponentTranslator
 	// IsSet determines whether the config has the fields needed for the translator.
 	IsSet(conf *confmap.Conf) bool
 }
@@ -115,7 +115,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	c := confmap.NewFromStringMap(map[string]any{
-		"metric_statements": contextStatement,
+		"metric_statements": []ContextStatement{contextStatement},
 	})
 	if err := c.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal metric decoration processor: %w", err)
