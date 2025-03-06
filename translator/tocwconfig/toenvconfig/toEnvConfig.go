@@ -71,8 +71,8 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	backpressureDrop = envconfig.IsBackpressureDropEnabled()
 	//config value takes higher priority
 	if logsMap, ok := jsonConfigValue[logs.SectionKey].(map[string]interface{}); ok {
-		if backpressureDropVal, ok := logsMap[backpressureDropKey].(string); ok {
-			backpressureDrop, _ = strconv.ParseBool(backpressureDropVal)
+		if backpressureDropVal, ok := logsMap[backpressureDropKey].(bool); ok {
+			backpressureDrop = backpressureDropVal
 		}
 	}
 	// skip adding if not enabled
