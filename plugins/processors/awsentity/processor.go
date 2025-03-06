@@ -27,6 +27,7 @@ const (
 	attributeService                       = "Service"
 	attributeEC2TagAwsAutoscalingGroupName = "ec2.tag.aws:autoscaling:groupName"
 	EMPTY                                  = ""
+	unknownService                         = "unknown_service"
 )
 
 type scraper interface {
@@ -187,13 +188,18 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				}
 
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
-				// Perform fallback mechanism for service and environment name if they
-				// are empty
-				if entityServiceName == EMPTY && ok && podInfo != nil && podInfo.Workload != EMPTY {
+				// Perform fallback mechanism for service name if it is empty
+				// or has prefix unknown_service ( unknown_service will be set by OTEL SDK if the service name is empty on application pod)
+				// https://opentelemetry.io/docs/specs/semconv/attributes-registry/service/
+				if (entityServiceName == EMPTY || strings.HasPrefix(entityServiceName, unknownService)) && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}
-
+				// Set the service name source to Instrumentation if the operator doesn't set it
+				if entityServiceName != EMPTY && entityServiceNameSource == EMPTY && getTelemetrySDKEnabledAttribute(resourceAttrs) {
+					entityServiceNameSource = entitystore.ServiceNameSourceInstrumentation
+				}
+				// Perform fallback mechanism for environment if it is empty
 				if entityEnvironmentName == EMPTY && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
 					if p.config.KubernetesMode == config.ModeEKS {
 						entityEnvironmentName = "eks:" + p.config.ClusterName + "/" + podInfo.Namespace
@@ -489,6 +495,13 @@ func getServiceAttributes(p pcommon.Map) string {
 		return serviceName.Str()
 	}
 	return EMPTY
+}
+
+func getTelemetrySDKEnabledAttribute(p pcommon.Map) bool {
+	if _, ok := p.Get(semconv.AttributeTelemetrySDKName); ok {
+		return true
+	}
+	return false
 }
 
 // scrapeK8sPodName gets the k8s pod name which is full pod name from the resource attributes
