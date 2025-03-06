@@ -89,10 +89,10 @@ func TestToEnvConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "logs section with handle rotation",
+			name: "logs section with backpressure drop",
 			input: map[string]interface{}{
 				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: "true",
+					backpressureDropKey: true,
 				},
 			},
 			envVars: map[string]string{},
@@ -112,16 +112,16 @@ func TestToEnvConfig(t *testing.T) {
 					debugKey:     true,
 				},
 				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: "true",
+					backpressureDropKey: true,
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
 				envconfig.CWAGENT_USER_AGENT:      "custom-agent",
 				envconfig.CWAGENT_LOG_LEVEL:       "DEBUG",
-				envconfig.CWAgentBackpressureDrop: "true",
 				envconfig.HTTP_PROXY:              "http://proxy.test",
 				envconfig.AWS_CA_BUNDLE:           "/test/ca-bundle.pem",
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{
@@ -150,7 +150,7 @@ func TestToEnvConfig(t *testing.T) {
 			name: "config overrides env var",
 			input: map[string]interface{}{
 				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: "false",
+					backpressureDropKey: false,
 				},
 			},
 			envVars:     map[string]string{},
@@ -167,10 +167,8 @@ func TestToEnvConfig(t *testing.T) {
 					backpressureDropKey: "TRUE",
 				},
 			},
-			envVars: map[string]string{},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "true",
-			},
+			envVars:     map[string]string{},
+			expectedEnv: map[string]string{},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
