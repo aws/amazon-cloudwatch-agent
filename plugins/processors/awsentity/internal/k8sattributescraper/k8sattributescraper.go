@@ -6,6 +6,8 @@ package k8sattributescraper
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 )
 
 var (
@@ -44,14 +46,19 @@ func NewK8sAttributeScraper(clusterName string) *K8sAttributeScraper {
 	}
 }
 
-func (e *K8sAttributeScraper) Scrape(rm pcommon.Resource) {
+func (e *K8sAttributeScraper) Scrape(rm pcommon.Resource, podMeta k8sclient.PodMetadata) {
 	resourceAttrs := rm.Attributes()
-	e.scrapeNamespace(resourceAttrs)
-	e.scrapeWorkload(resourceAttrs)
-	e.scrapeNode(resourceAttrs)
+	e.scrapeNamespace(resourceAttrs, podMeta.Namespace)
+	e.scrapeWorkload(resourceAttrs, podMeta.Workload)
+	e.scrapeNode(resourceAttrs, podMeta.Node)
 }
 
-func (e *K8sAttributeScraper) scrapeNamespace(p pcommon.Map) {
+func (e *K8sAttributeScraper) scrapeNamespace(p pcommon.Map, ns string) {
+	if ns != "" {
+		e.Namespace = ns
+		return
+	}
+
 	for _, namespace := range namespaceAllowlist {
 		if namespaceAttr, ok := p.Get(namespace); ok {
 			e.Namespace = namespaceAttr.Str()
@@ -60,7 +67,12 @@ func (e *K8sAttributeScraper) scrapeNamespace(p pcommon.Map) {
 	}
 }
 
-func (e *K8sAttributeScraper) scrapeWorkload(p pcommon.Map) {
+func (e *K8sAttributeScraper) scrapeWorkload(p pcommon.Map, wl string) {
+	if wl != "" {
+		e.Workload = wl
+		return
+	}
+
 	for _, workload := range workloadAllowlist {
 		if workloadAttr, ok := p.Get(workload); ok {
 			e.Workload = workloadAttr.Str()
@@ -70,7 +82,12 @@ func (e *K8sAttributeScraper) scrapeWorkload(p pcommon.Map) {
 
 }
 
-func (e *K8sAttributeScraper) scrapeNode(p pcommon.Map) {
+func (e *K8sAttributeScraper) scrapeNode(p pcommon.Map, nd string) {
+	if nd != "" {
+		e.Node = nd
+		return
+	}
+
 	for _, node := range nodeAllowlist {
 		if nodeAttr, ok := p.Get(node); ok {
 			e.Node = nodeAttr.Str()

@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/processor/processortest"
 )
 
@@ -29,17 +29,17 @@ func TestCreateProcessor(t *testing.T) {
 	require.NotNil(t, factory)
 
 	cfg := factory.CreateDefaultConfig()
-	setting := processortest.NewNopCreateSettings()
+	setting := processortest.NewNopSettings()
 
-	tProcessor, err := factory.CreateTracesProcessor(context.Background(), setting, cfg, consumertest.NewNop())
-	assert.Equal(t, err, component.ErrDataTypeIsNotSupported)
+	tProcessor, err := factory.CreateTraces(context.Background(), setting, cfg, consumertest.NewNop())
+	assert.Equal(t, err, pipeline.ErrSignalNotSupported)
 	assert.Nil(t, tProcessor)
 
-	mProcessor, err := factory.CreateMetricsProcessor(context.Background(), setting, cfg, consumertest.NewNop())
+	mProcessor, err := factory.CreateMetrics(context.Background(), setting, cfg, consumertest.NewNop())
 	assert.NoError(t, err)
 	assert.NotNil(t, mProcessor)
 
-	lProcessor, err := factory.CreateLogsProcessor(context.Background(), setting, cfg, consumertest.NewNop())
-	assert.Equal(t, err, component.ErrDataTypeIsNotSupported)
+	lProcessor, err := factory.CreateLogs(context.Background(), setting, cfg, consumertest.NewNop())
+	assert.Equal(t, err, pipeline.ErrSignalNotSupported)
 	assert.Nil(t, lProcessor)
 }

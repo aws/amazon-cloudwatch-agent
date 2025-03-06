@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/telemetry"
 	"go.uber.org/multierr"
@@ -22,7 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
+	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsightsjmx"
@@ -35,9 +36,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
-var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
+var registry = common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 
-func RegisterPipeline(translators ...pipeline.Translator) {
+func RegisterPipeline(translators ...pipelinetranslator.Translator) {
 	for _, translator := range translators {
 		registry.Set(translator)
 	}
@@ -55,7 +56,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
+	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	metricsHostTranslators, err := host.NewTranslators(conf, host.MetricsKey, os)
 	if err != nil {
 		return nil, err
@@ -68,18 +69,18 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Merge(logsHostTranslators)
 	containerInsightsTranslators := containerinsights.NewTranslators(conf)
 	translators.Merge(containerInsightsTranslators)
-	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
-	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
+	translators.Set(applicationsignals.NewTranslator(pipeline.SignalTraces))
+	translators.Set(applicationsignals.NewTranslator(pipeline.SignalMetrics))
 	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Merge(registry)
-	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
-	if pipelines == nil {
+	pipelines, err := pipelinetranslator.NewTranslator(translators).Translate(conf)
+	if err != nil {
 		translators.Set(nop.NewTranslator())
-		pipelines, err = pipeline.NewTranslator(translators).Translate(conf)
+		pipelines, err = pipelinetranslator.NewTranslator(translators).Translate(conf)
 		if err != nil {
 			return nil, err
 		}
@@ -91,6 +92,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}
+
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
 		Exporters:  map[component.ID]component.Config{},
@@ -100,6 +102,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			Telemetry: telemetry.Config{
 				Logs:    getLoggingConfig(conf),
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
+				Traces:  telemetry.TracesConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines.Pipelines,
 			Extensions: pipelines.Translators.Extensions.Keys(),
@@ -165,17 +168,17 @@ func build(conf *confmap.Conf, cfg *otelcol.Config, translators common.Component
 }
 
 // buildComponents attempts to translate a component for each ID in the set.
-func buildComponents[C component.Config](
+func buildComponents[C component.Config, ID common.TranslatorID](
 	conf *confmap.Conf,
-	ids []component.ID,
-	components map[component.ID]C,
-	getTranslator func(component.ID) (common.Translator[C], bool),
+	ids []ID,
+	components map[ID]C,
+	getTranslator func(ID) (common.Translator[C, ID], bool),
 ) error {
 	var errs error
 	for _, id := range ids {
 		translator, ok := getTranslator(id)
 		if !ok {
-			errs = multierr.Append(errs, fmt.Errorf("missing translator for %v", id.Type()))
+			errs = multierr.Append(errs, fmt.Errorf("missing translator for %v", id.Name()))
 			continue
 		}
 		cfg, err := translator.Translate(conf)

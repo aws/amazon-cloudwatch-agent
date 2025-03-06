@@ -138,7 +138,7 @@ func TestTranslator(t *testing.T) {
 				"emf_only":                true,
 				"endpoint":                "https://cloudwatchlogs-endpoint",
 				"imds_retries":            1,
-				"local_mode":              "true",
+				"local_mode":              true,
 				"log_group_name":          "emf/logs/default",
 				"log_stream_name":         "some_hostname/some_private_ip",
 				"middleware":              "agenthealth/logs",

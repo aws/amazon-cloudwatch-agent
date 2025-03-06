@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 )
@@ -18,11 +18,11 @@ func TestTranslators(t *testing.T) {
 
 	testCases := map[string]struct {
 		input map[string]any
-		want  []component.ID
+		want  []pipeline.ID
 	}{
 		"WithEmpty": {
 			input: map[string]any{},
-			want:  []component.ID{},
+			want:  []pipeline.ID{},
 		},
 		"WithMetricsWithoutDestinations": {
 			input: map[string]any{
@@ -32,8 +32,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "prometheus/amp"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
 			},
 		},
 		"WithLogsWithoutDestinations": {
@@ -44,8 +44,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
 			},
 		},
 		"WithMetricsWithCloudWatchDestination": {
@@ -59,8 +59,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "prometheus/amp"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
 			},
 		},
 		"WithMetricsWithAMP": {
@@ -76,8 +76,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "prometheus/amp"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
 			},
 		},
 		"WithLogsWithCloudWatch": {
@@ -93,8 +93,8 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
 			},
 		},
 		"WithMultiple/Destinations": {
@@ -116,9 +116,9 @@ func TestTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: []component.ID{
-				component.MustNewIDWithName("metrics", "prometheus/amp"),
-				component.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+			want: []pipeline.ID{
+				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
+				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
 			},
 		},
 	}

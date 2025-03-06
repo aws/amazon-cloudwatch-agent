@@ -21,7 +21,7 @@ type translator struct {
 	factory receiver.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 var (
 	baseKey           = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.Emf)
@@ -34,12 +34,12 @@ const (
 )
 
 // NewTranslator creates a new tcp logs receiver translator.
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
 // NewTranslatorWithName creates a new tcp logs receiver translator.
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, tcplogreceiver.NewFactory()}
 }
 

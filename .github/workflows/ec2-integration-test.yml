@@ -11,7 +11,7 @@ env:
 on:
   workflow_call:
     inputs:
-      github_sha:
+      build_id:
         required: true
         type: string
       test_repo_name:
@@ -43,7 +43,7 @@ on:
 
 jobs:
   EC2IntegrationTest:
-    name: 'Test'
+    name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -92,24 +92,27 @@ jobs:
 
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${{env.PRIVATE_KEY}}" -var="github_test_repo=${{ inputs.test_repo_url }}" \
-              -var="test_name=${{ matrix.arrays.os }}" \
-              -var="cwa_github_sha=${{inputs.github_sha}}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-              -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
-              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="user=${{ matrix.arrays.username }}" \
+              -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
-              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="cwa_github_sha=${{inputs.build_id}}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
+              -var="github_test_repo=${{ inputs.test_repo_url }}" \
+              -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="local_stack_host_name=${{ inputs.localstack_host }}" \
+              -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
               -var="region=${{ inputs.region }}" \
               -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
-              -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
-              -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="user=${{ matrix.arrays.username }}"; then
+              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
             fi
@@ -121,4 +124,11 @@ jobs:
           max_attempts: 2
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd ${{inputs.test_dir}}
+            fi
+
+            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve

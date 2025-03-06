@@ -48,6 +48,7 @@ extensions:
         kubernetes_mode: K8sEC2
         mode: ec2
         region: us-west-2
+    k8smetadata: {}
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
@@ -95,10 +96,13 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:2345
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 tls:
                     ca_file: ""
                     cert_file: /path/to/cert.pem
@@ -110,8 +114,10 @@ receivers:
                     min_version: ""
                     reload_interval: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
+        - k8smetadata
         - agenthealth/logs
         - agenthealth/statuscode
         - entitystore
@@ -121,8 +127,8 @@ service:
             exporters:
                 - awsemf
             processors:
-                - awsentity/service/otlp
                 - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - awsentity/service/otlp
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
                 - otlp/metrics
@@ -141,4 +147,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

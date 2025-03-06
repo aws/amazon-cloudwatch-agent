@@ -43,7 +43,12 @@ func TestTranslate(t *testing.T) {
 					"debug": true,
 				},
 			},
-			want: &debugexporter.Config{Verbosity: configtelemetry.LevelDetailed, SamplingInitial: 2, SamplingThereafter: 500},
+			want: &debugexporter.Config{
+				Verbosity:          configtelemetry.LevelDetailed,
+				SamplingInitial:    2,
+				SamplingThereafter: 500,
+				UseInternalLogger:  true,
+			},
 		},
 	}
 	for name, testCase := range testCases {

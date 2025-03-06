@@ -74,8 +74,8 @@ var (
 // plugins require adapter translators. Logs is processed first, so any
 // colliding metrics translators will override them. This follows the rule
 // setup.
-func FindReceiversInConfig(conf *confmap.Conf, os string) (common.TranslatorMap[component.Config], error) {
-	translators := common.NewTranslatorMap[component.Config]()
+func FindReceiversInConfig(conf *confmap.Conf, os string) (common.TranslatorMap[component.Config, component.ID], error) {
+	translators := common.NewTranslatorMap[component.Config, component.ID]()
 	translators.Merge(fromLogs(conf))
 	metricTranslators, err := fromMetrics(conf, os)
 	translators.Merge(metricTranslators)
@@ -84,8 +84,8 @@ func FindReceiversInConfig(conf *confmap.Conf, os string) (common.TranslatorMap[
 
 // fromMetrics creates adapter receiver translators based on the os-specific
 // metrics section in the config.
-func fromMetrics(conf *confmap.Conf, os string) (common.TranslatorMap[component.Config], error) {
-	translators := common.NewTranslatorMap[component.Config]()
+func fromMetrics(conf *confmap.Conf, os string) (common.TranslatorMap[component.Config, component.ID], error) {
+	translators := common.NewTranslatorMap[component.Config, component.ID]()
 	switch os {
 	case translatorconfig.OS_TYPE_LINUX, translatorconfig.OS_TYPE_DARWIN:
 		translators.Merge(fromLinuxMetrics(conf))
@@ -99,7 +99,7 @@ func fromMetrics(conf *confmap.Conf, os string) (common.TranslatorMap[component.
 
 // fromLinuxMetrics creates a translator for each subsection within the
 // metrics::metrics_collected section of the config. Can be anything.
-func fromLinuxMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config] {
+func fromLinuxMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config, component.ID] {
 	var validInputs map[string]bool
 	if _, ok := conf.Get(common.ConfigKey(metricKey)).(map[string]interface{}); ok {
 		rule := &metrics_collect.CollectMetrics{}
@@ -113,8 +113,8 @@ func fromLinuxMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config]
 // within the metrics::metrics_collected section. See windowsInputSet for
 // allow list. If non-allow-listed subsections exist, they will be grouped
 // under a windows performance counter adapter translator.
-func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config] {
-	translators := common.NewTranslatorMap[component.Config]()
+func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config, component.ID] {
+	translators := common.NewTranslatorMap[component.Config, component.ID]()
 	if inputs, ok := conf.Get(metricKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
 			if otelReceivers.Contains(inputName) {
@@ -138,13 +138,13 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 // fromLogs creates a translator for each subsection within logs::logs_collected
 // along with a socket listener translator if "emf" or "structuredlog" are present
 // within the logs:metrics_collected section.
-func fromLogs(conf *confmap.Conf) common.TranslatorMap[component.Config] {
+func fromLogs(conf *confmap.Conf) common.TranslatorMap[component.Config, component.ID] {
 	return fromInputs(conf, nil, logKey)
 }
 
 // fromInputs converts all the keys in the section into adapter translators.
-func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string) common.TranslatorMap[component.Config] {
-	translators := common.NewTranslatorMap[component.Config]()
+func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string) common.TranslatorMap[component.Config, component.ID] {
+	translators := common.NewTranslatorMap[component.Config, component.ID]()
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
 			if skipInputSet.Contains(inputName) {
@@ -183,8 +183,8 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 // to provide a unique identifier for the receivers and easy in compare with the alias
 // https://github.com/influxdata/telegraf/blob/d8db3ca3a293bc24a9120b590984b09e2de1851a/models/running_input.go#L60
 // and generate the appropriate running input when starting adapter
-func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.TranslatorMap[component.Config] {
-	translators := common.NewTranslatorMap[component.Config]()
+func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.TranslatorMap[component.Config, component.ID] {
+	translators := common.NewTranslatorMap[component.Config, component.ID]()
 	cfgKey := common.ConfigKey(metricKey, inputName)
 
 	if inputName == procstat.SectionKey {
