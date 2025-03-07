@@ -26,7 +26,6 @@ const (
 var (
 	multilineWaitPeriod = 1 * time.Second
 	defaultBufferSize   = 1
-	closeFileInterval   = 5 * time.Second
 )
 
 type fileOffset struct {
@@ -83,7 +82,6 @@ type tailerSrc struct {
 	cleanUpFns       []func()
 	backpressureDrop bool
 	buffer           chan *LogEvent
-	lastCloseTime    time.Time
 }
 
 // Verify tailerSrc implements LogSrc
@@ -224,18 +222,14 @@ func (ts *tailerSrc) runTail() {
 				case <-ts.done:
 					return
 				default:
-					now := time.Now()
-					if now.Sub(ts.lastCloseTime) > closeFileInterval {
-						log.Printf("D! [logfile] buffer is full, closing file %v after %v sec", ts.tailer.Filename, closeFileInterval)
-						ts.tailer.CloseFile()
-						ts.lastCloseTime = now
-					}
+					log.Printf("D! [logfile] tailer sender buffer is full, closing file %v", ts.tailer.Filename)
+					ts.tailer.CloseFile()
 					select {
 					case ts.buffer <- e:
 						// reopen the file only if the buffer successfully accepts the event
 						err := ts.tailer.Reopen(false)
 						if err != nil {
-							log.Printf("E! [logfile] Error reopening file %s: %v", ts.tailer.Filename, err)
+							log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
 							return
 						}
 					case <-ts.done:
@@ -384,12 +378,6 @@ func (ts *tailerSrc) saveState(offset int64) error {
 }
 
 func (ts *tailerSrc) runSender() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("E! [logfile] Recovered panic in runSender: %v", r)
-		}
-	}()
-
 	log.Printf("D! [logfile] runSender starting for %s", ts.tailer.Filename)
 	defer log.Printf("D! [logfile] runSender exiting for %s", ts.tailer.Filename)
 
