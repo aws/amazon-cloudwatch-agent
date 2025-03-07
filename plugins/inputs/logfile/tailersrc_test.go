@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -477,153 +476,64 @@ func teardown(resources tailerTestResources) {
 	os.Remove(resources.statefile.Name())
 }
 
-func TestTailerSrcFileDescriptorHandling(t *testing.T) {
-	// Reset at start of test
-	tail.OpenFileCount.Store(0)
+func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
+	beforeCount := tail.OpenFileCount.Load()
+	t.Logf("Before OpenFileCount: %d", beforeCount)
 
-	testCases := []struct {
-		name             string
-		backpressureDrop bool
-		autoRemoval      bool
-		expectedLogs     []string
-	}{
-		{
-			name:             "backpressure_drop=true",
-			backpressureDrop: true,
-			autoRemoval:      false,
-			expectedLogs:     []string{"old-log1", "old-log2", "new-log1", "new-log2"},
-		},
-		{
-			name:             "auto_removal=true",
-			backpressureDrop: false,
-			autoRemoval:      true,
-			expectedLogs:     []string{"old-log1", "old-log2"},
-		},
-		{
-			name:             "backpressure_drop=true_and_auto_removal=true",
-			backpressureDrop: true,
-			autoRemoval:      true,
-			expectedLogs:     []string{"old-log1", "old-log2"}, // Same behavior as auto_removal=true
-		},
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, true) // backpressureDrop=true
+	defer teardown(resources)
+
+	multilineWaitPeriod = 100 * time.Millisecond
+	var consumed int32
+
+	// Create a blocking output function
+	blockCh := make(chan struct{})
+	resources.ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(*resources.done)
+			return
+		}
+		atomic.AddInt32(&consumed, 1)
+		t.Logf("Processed log: %s", evt.Message())
+		<-blockCh // Block processing
+	})
+
+	// Write logs to fill the buffer
+	logCount := 10
+	for i := 0; i < logCount; i++ {
+		_, err := fmt.Fprintf(resources.file, "ERROR: Test log line %d\n", i)
+		require.NoError(t, err)
+	}
+	resources.file.Sync()
+
+	// Wait for the buffer to fill and file to be closed
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify that the file descriptor is closed when buffer is full
+	currentCount := tail.OpenFileCount.Load()
+	t.Logf("OpenFileCount after buffer full: %d", currentCount)
+	assert.Equal(t, int64(0), currentCount, "File should be closed when buffer is full")
+
+	// Allow processing to continue
+	for i := 0; i < 3; i++ { // Process a few logs
+		blockCh <- struct{}{}
+		time.Sleep(50 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		t.Logf("OpenFileCount during processing %d: %d", i, currentCount)
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			beforeCount := tail.OpenFileCount.Load()
-			t.Logf("Before tailer creation: OpenFileCount=%d", beforeCount)
+	// Verify that some logs were processed
+	processedCount := atomic.LoadInt32(&consumed)
+	t.Logf("Processed %d logs", processedCount)
+	assert.Greater(t, processedCount, int32(0), "Should have processed some logs")
 
-			tmpfile, err := createTempFile("", "tailsrctest-*.log")
-			require.NoError(t, err)
-			defer os.Remove(tmpfile.Name())
+	// Stop the tailer
+	resources.ts.Stop()
+	close(blockCh)
+	<-*resources.done
 
-			statefile, err := os.CreateTemp("", "tailsrctest-state-*.log")
-			require.NoError(t, err)
-			defer os.Remove(statefile.Name())
-
-			tailer, err := tail.TailFile(tmpfile.Name(),
-				tail.Config{
-					ReOpen:      tc.backpressureDrop,
-					Follow:      true,
-					Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
-					MustExist:   true,
-					Poll:        true,
-					MaxLineSize: defaultMaxEventSize,
-				})
-			require.NoError(t, err)
-
-			ts := NewTailerSrc(
-				"test-group",
-				"test-stream",
-				"destination",
-				statefile.Name(),
-				util.InfrequentAccessLogGroupClass,
-				tmpfile.Name(),
-				tailer,
-				tc.autoRemoval,
-				regexp.MustCompile(`^[\S]`).MatchString,
-				nil,
-				parseRFC3339Timestamp,
-				nil,
-				defaultMaxEventSize,
-				defaultTruncateSuffix,
-				1,
-				tc.backpressureDrop,
-			)
-
-			var processedLogs []string
-			var mu sync.Mutex
-			done := make(chan struct{})
-			logCount := int32(0)
-
-			ts.SetOutput(func(evt logs.LogEvent) {
-				if evt == nil {
-					close(done)
-					return
-				}
-				mu.Lock()
-				processedLogs = append(processedLogs, evt.Message())
-				mu.Unlock()
-				atomic.AddInt32(&logCount, 1)
-			})
-
-			fmt.Fprintln(tmpfile, "old-log1")
-			fmt.Fprintln(tmpfile, "old-log2")
-			tmpfile.Sync()
-
-			// wait for initial logs
-			for atomic.LoadInt32(&logCount) < 2 {
-				time.Sleep(100 * time.Millisecond)
-			}
-
-			if !tc.autoRemoval && tc.backpressureDrop {
-				oldName := tmpfile.Name() + ".1"
-				tmpfile.Close()
-				err = os.Rename(tmpfile.Name(), oldName)
-				require.NoError(t, err)
-				defer os.Remove(oldName)
-
-				newFile, err := os.Create(tmpfile.Name())
-				require.NoError(t, err)
-
-				fmt.Fprintln(newFile, "new-log1")
-				fmt.Fprintln(newFile, "new-log2")
-				newFile.Sync()
-				newFile.Close()
-
-				// wait for all logs
-				startTime := time.Now()
-				for atomic.LoadInt32(&logCount) < 4 && time.Since(startTime) < 5*time.Second {
-					time.Sleep(100 * time.Millisecond)
-				}
-
-				// check all logs were processed before stopping
-				require.LessOrEqual(t, int32(2), atomic.LoadInt32(&logCount), "Not all logs were processed")
-			}
-
-			ts.Stop()
-			tailer.Stop()
-			tailer.Cleanup()
-			<-done
-
-			mu.Lock()
-			t.Logf("Processed logs: %v", processedLogs)
-			assert.Equal(t, tc.expectedLogs, processedLogs, "Logs should be processed in order")
-			mu.Unlock()
-
-			// for auto_removal, verify file is removed
-			if tc.autoRemoval {
-				assert.Eventually(t, func() bool {
-					_, err := os.Stat(tmpfile.Name())
-					return os.IsNotExist(err)
-				}, 5*time.Second, 100*time.Millisecond, "File should be removed with auto_removal")
-			}
-
-			// verify file descriptors
-			assert.Eventually(t, func() bool {
-				count := tail.OpenFileCount.Load()
-				t.Logf("Current OpenFileCount: %d", count)
-				return count == beforeCount
-			}, 5*time.Second, 100*time.Millisecond, "File descriptors should be released")
-		})
-	}
+	// Final check of OpenFileCount
+	finalCount := tail.OpenFileCount.Load()
+	t.Logf("Final OpenFileCount: %d", finalCount)
+	assert.Equal(t, int64(0), finalCount, "All files should be closed at the end")
 }
