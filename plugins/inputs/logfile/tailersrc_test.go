@@ -30,6 +30,8 @@ type tailerTestResources struct {
 	consumed  *int32
 	file      *os.File
 	statefile *os.File
+	tailer    *tail.Tail
+	ts        *tailerSrc
 }
 
 func TestTailerSrc(t *testing.T) {
@@ -72,6 +74,7 @@ func TestTailerSrc(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		false,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -184,6 +187,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		false,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -276,7 +280,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	resources := setupTailer(t, nil, defaultMaxEventSize)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, false)
 	defer teardown(resources)
 
 	n := 100
@@ -299,6 +303,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		t,
 		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
 		defaultMaxEventSize,
+		false, false,
 	)
 	defer teardown(resources)
 
@@ -354,7 +359,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop bool) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -396,7 +401,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		"tailsrctest-*.log",
 		statefile.Name(),
 		tailer,
-		false, // AutoRemoval
+		autoRemoval,
 		multiLineFn,
 		config.Filters,
 		parseRFC3339Timestamp,
@@ -404,6 +409,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		maxEventSize,
 		defaultTruncateSuffix,
 		1,
+		backpressureDrop,
 	)
 
 	ts.SetOutput(func(evt logs.LogEvent) {
@@ -420,6 +426,8 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		consumed:  &consumed,
 		file:      file,
 		statefile: statefile,
+		tailer:    tailer,
+		ts:        ts,
 	}
 }
 
@@ -466,4 +474,66 @@ func resetState(originWaitDuration time.Duration) {
 func teardown(resources tailerTestResources) {
 	os.Remove(resources.file.Name())
 	os.Remove(resources.statefile.Name())
+}
+
+func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
+	beforeCount := tail.OpenFileCount.Load()
+	t.Logf("Before OpenFileCount: %d", beforeCount)
+
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, true) // backpressureDrop=true
+	defer teardown(resources)
+
+	multilineWaitPeriod = 100 * time.Millisecond
+	var consumed int32
+
+	// Create a blocking output function
+	blockCh := make(chan struct{})
+	resources.ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(*resources.done)
+			return
+		}
+		atomic.AddInt32(&consumed, 1)
+		t.Logf("Processed log: %s", evt.Message())
+		<-blockCh // Block processing
+	})
+
+	// Write logs to fill the buffer
+	logCount := 10
+	for i := 0; i < logCount; i++ {
+		_, err := fmt.Fprintf(resources.file, "ERROR: Test log line %d\n", i)
+		require.NoError(t, err)
+	}
+	resources.file.Sync()
+
+	// Wait for the buffer to fill and file to be closed
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify that the file descriptor is closed when buffer is full
+	currentCount := tail.OpenFileCount.Load()
+	t.Logf("OpenFileCount after buffer full: %d", currentCount)
+	assert.Equal(t, int64(0), currentCount, "File should be closed when buffer is full")
+
+	// Allow processing to continue
+	for i := 0; i < 3; i++ { // Process a few logs
+		blockCh <- struct{}{}
+		time.Sleep(50 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		t.Logf("OpenFileCount during processing %d: %d", i, currentCount)
+	}
+
+	// Verify that some logs were processed
+	processedCount := atomic.LoadInt32(&consumed)
+	t.Logf("Processed %d logs", processedCount)
+	assert.Greater(t, processedCount, int32(0), "Should have processed some logs")
+
+	// Stop the tailer
+	resources.ts.Stop()
+	close(blockCh)
+	<-*resources.done
+
+	// Final check of OpenFileCount
+	finalCount := tail.OpenFileCount.Load()
+	t.Logf("Final OpenFileCount: %d", finalCount)
+	assert.Equal(t, int64(0), finalCount, "All files should be closed at the end")
 }
