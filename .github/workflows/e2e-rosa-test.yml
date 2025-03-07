@@ -175,7 +175,7 @@ jobs:
         working-directory: test/e2e/rosa
         env:
           CLUSTER_NAME: ${{needs.CreateCluster.outputs.cluster_name}}
-        run: go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+        run: go test -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
   RosaTest:
     needs: [CreateCluster,ValidateCluster]
     name: ${{matrix.arrays.testName}}
@@ -232,7 +232,7 @@ jobs:
         with:
           parse-json-secrets: true
           secret-ids: |
-            ,${{env.CLUSTER_NAME}}-htpasswd
+            ,${{needs.CreateCluster.outputs.cluster_name}}-htpasswd
 
       - name: Login to OpenShift
         uses: redhat-actions/oc-login@v1
@@ -244,15 +244,14 @@ jobs:
 
       - name: ${{matrix.arrays.testName}}
         working-directory: ${{matrix.arrays.test_dir}}
-        env:
-          CLUSTER_NAME: ${{needs.CreateCluster.outputs.cluster_name}}
         run: |
-          go test -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-          go test --destroy -computeType=ROSA -eksClusterName=${{env.CLUSTER_NAME}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+          go test -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+          go test --destroy -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
 
 
   DestroyCluster:
     name: "Destroy ROSA HCP Cluster"
+    if: ${{ always() && needs.CreateCluster.result== 'success' }}
     needs: [CreateCluster, ValidateCluster, RosaTest]
     runs-on: ubuntu-latest
     strategy:
