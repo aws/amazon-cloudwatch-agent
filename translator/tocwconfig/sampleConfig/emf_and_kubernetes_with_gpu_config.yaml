@@ -479,6 +479,8 @@ exporters:
             - dimensions:
                 - - ClusterName
                 - - ClusterName
+                  - UltraServer
+                - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
@@ -498,6 +500,8 @@ exporters:
             - dimensions:
                 - - ClusterName
                 - - ClusterName
+                  - UltraServer
+                - - ClusterName
                   - InstanceId
                   - NodeName
               metric_name_selectors:
@@ -506,6 +510,8 @@ exporters:
                 - node_neuron_execution_latency
             - dimensions:
                 - - ClusterName
+                - - ClusterName
+                  - UltraServer
                 - - ClusterName
                   - InstanceId
                   - NodeName
