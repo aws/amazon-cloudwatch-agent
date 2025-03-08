@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
 )
 
 func TestProcessor_Process(t *testing.T) {
@@ -84,8 +85,8 @@ func TestFilePathForTheExistingConfigFile(t *testing.T) {
 	inputChan := testutil.SetUpTestInputStream()
 
 	testutil.Type(inputChan, "", "/var/test.conf")
-	assert.Equal(t, "/var/awslogs/etc/awslogs.conf", util.AskWithDefault(filePathLinuxConfigQuestion, DefaultFilePathLinuxConfiguration))
-	assert.Equal(t, "/var/test.conf", util.AskWithDefault(filePathLinuxConfigQuestion, DefaultFilePathLinuxConfiguration))
+	assert.Equal(t, "/var/awslogs/etc/awslogs.conf", util.AskWithDefault(filePathLinuxConfigQuestion, flags.DefaultFilePathLinuxConfiguration))
+	assert.Equal(t, "/var/test.conf", util.AskWithDefault(filePathLinuxConfigQuestion, flags.DefaultFilePathLinuxConfiguration))
 }
 
 func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
