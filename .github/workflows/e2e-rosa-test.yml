@@ -245,7 +245,6 @@ jobs:
 
       - name: ${{matrix.arrays.testName}}
         working-directory: ${{matrix.arrays.test_dir}}
-        continue-on-error: true
         run: |
           go test -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
           
