@@ -138,7 +138,7 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 	}
 }
 
-func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
 
 	rm := md.ResourceMetrics()
