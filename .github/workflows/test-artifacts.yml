@@ -388,7 +388,7 @@ jobs:
     name: 'EC2SELinux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
-      github_sha: ${{github.sha}}
+      build_id: ${{ inputs.build_id }}
       test_dir: terraform/ec2/linux
       job_id: ec2-linux-integration-test
       test_props: ${{needs.GenerateTestMatrix.outputs.ec2_selinux_matrix}}
