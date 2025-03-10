@@ -177,8 +177,59 @@ jobs:
         env:
           CLUSTER_NAME: ${{needs.CreateCluster.outputs.cluster_name}}
         run: go test -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-  RosaTest:
+  PatchCluster:
     needs: [CreateCluster,ValidateCluster]
+    name: "Patch ROSA Cluster"
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Install ROSA CLI
+        shell: bash
+        run: |
+          curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz"
+          tar -xvf rosa-linux.tar.gz
+          sudo mv rosa /usr/local/bin/rosa
+          chmod +x /usr/local/bin/rosa
+          rm -f rosa-linux.tar.gz
+          rosa version
+
+      - name: Get Secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          parse-json-secrets: true
+          secret-ids: |
+            ,${{needs.CreateCluster.outputs.cluster_name}}-htpasswd
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          # URL to your OpenShift cluster.
+          openshift_server_url: ${{ env.OPENSHIFT_SERVER }}
+          openshift_username: ${{ env.OPENSHIFT_USERNAME }}
+          openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
+
+      - name: Install SSM Agent
+        working-directory: "terraform/rosa/patching"
+        run : |
+          oc apply -f ./patch.yaml
+      
+      
+
+  RosaTest:
+    needs: [CreateCluster,ValidateCluster,PatchCluster]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -246,16 +297,20 @@ jobs:
       - name: ${{matrix.arrays.testName}}
         working-directory: ${{matrix.arrays.test_dir}}
         run: |
-          go test -computeType=ROSA \ 
-          -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
-          -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} \
-          -sample_app=${{matrix.arrays.sample_app_path}} \
-          -v
+          go test --computeType=ROSA \ 
+          --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
+          --eksDeploymentStrategy="DAEMON" --region=${{env.AWS_REGION}} \
+          --sample_app=${{matrix.arrays.sample_app_path}} \
+          --v
           
       - name: Cleanup
         working-directory: ${{matrix.arrays.test_dir}}
         if: always()
-        run: go test --destroy -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+        run: go test --destroy \
+          --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
+          --eksDeploymentStrategy="DAEMON" --region=${{env.AWS_REGION}} \
+          --sample_app=${{matrix.arrays.sample_app_path}} \
+          -v
 
 
 
