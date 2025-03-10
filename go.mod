@@ -1,6 +1,7 @@
 module github.com/aws/amazon-cloudwatch-agent
 
 go 1.22.5
+toolchain go1.23.7
 
 replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d
 
@@ -212,7 +213,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
-	go.opentelemetry.io/collector/config/configtelemetry v0.115.0
+	go.opentelemetry.io/collector/config/configtelemetry v0.121.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.115.0
 	go.opentelemetry.io/collector/exporter/exportertest v0.115.0
