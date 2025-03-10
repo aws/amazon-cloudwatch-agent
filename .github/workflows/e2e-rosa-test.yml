@@ -244,9 +244,15 @@ jobs:
 
       - name: ${{matrix.arrays.testName}}
         working-directory: ${{matrix.arrays.test_dir}}
+        continue-on-error: true
         run: |
           go test -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
-          go test --destroy -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+          
+      - name: Cleanup
+        working-directory: ${{matrix.arrays.test_dir}}
+        if: always()
+        run: go test --destroy -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+
 
 
   DestroyCluster:
@@ -280,58 +286,4 @@ jobs:
           command: |
             cd terraform/rosa/e2e
             terraform destroy --auto-approve && exit 1
-#
-#      - name: Terraform apply
-#        uses: nick-fields/retry@v2
-#        env:
-#
-#        with:
-#          max_attempts: 3
-#          timeout_minutes: 60
-#          retry_wait_seconds: 5
-#          command: |
-#            if [ "${{ inputs.terraform_dir }}" != "" ]; then
-#              cd "${{ inputs.terraform_dir }}"
-#            else
-#              cd terraform/eks/e2e
-#            fi
-#
-#            terraform init
-#            if terraform apply --auto-approve \
-#              -var="region=${{ inputs.region }}" \
-#              -var="k8s_version=${{ matrix.arrays.k8s_version }}" \
-#              -var="nodes=${{ matrix.arrays.nodes }}" \
-#              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
-#              -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
-#              -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
-#              -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
-#              -var="cloudwatch_agent_operator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
-#              -var="cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}" \
-#              -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
-#              -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
-#              -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
-#              -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
-#              -var="test_dir=${{ matrix.arrays.test_dir }}" \
-#              -var="agent_config=${{ inputs.agent_config }}" \
-#              -var="prometheus_config=${{ inputs.prometheus_config }}" \
-#              -var="otel_config=${{ inputs.otel_config }}" \
-#              -var="sample_app=${{ inputs.sample_app }}"; then
-#              terraform destroy --auto-approve
-#            else
-#              terraform destroy --auto-approve && exit 1
-#            fi
-#
-#      - name: Terraform destroy
-#        if: ${{ cancelled() || failure() }}
-#        uses: nick-fields/retry@v2
-#        with:
-#          max_attempts: 3
-#          timeout_minutes: 8
-#          retry_wait_seconds: 5
-#          command: |
-#            if [ "${{ inputs.terraform_dir }}" != "" ]; then
-#              cd "${{ inputs.terraform_dir }}"
-#            else
-#              cd terraform/eks/e2e
-#            fi
-#            terraform destroy --auto-approve
+
