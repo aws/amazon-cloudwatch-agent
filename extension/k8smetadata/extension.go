@@ -31,14 +31,13 @@ type KubernetesMetadata struct {
 	ready                atomic.Bool
 	safeStopCh           *k8sclient.SafeChannel
 	mu                   sync.Mutex
-	clientset            kubernetes.Interface
 	endpointSliceWatcher *k8sclient.EndpointSliceWatcher
 }
 
 var _ extension.Extension = (*KubernetesMetadata)(nil)
 
 func jitterSleep(seconds int) {
-	jitter := time.Duration(rand.Intn(seconds)) * time.Second
+	jitter := time.Duration(rand.Intn(seconds)) * time.Second // nolint:gosec
 	time.Sleep(jitter)
 }
 

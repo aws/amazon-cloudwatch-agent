@@ -106,7 +106,7 @@ var getServiceNameSource = func() (string, string) {
 	return es.GetMetricServiceNameAndSource()
 }
 
-var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
+var getPodMeta = func() k8sclient.PodMetadata {
 	podMeta := k8sclient.PodMetadata{}
 	k8sMetadata := k8smetadata.GetKubernetesMetadata()
 
@@ -193,7 +193,7 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				}
 			}
 			if p.config.KubernetesMode != "" {
-				p.k8sscraper.Scrape(rm.At(i).Resource(), getPodMeta(ctx))
+				p.k8sscraper.Scrape(rm.At(i).Resource(), getPodMeta())
 				if p.config.Platform == config.ModeEC2 {
 					ec2Info = getEC2InfoFromEntityStore()
 				}
