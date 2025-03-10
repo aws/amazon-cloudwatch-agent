@@ -113,6 +113,7 @@ jobs:
           if terraform apply --auto-approve; then
             echo "cluster_id=$(terraform output -raw cluster_id)" >> $GITHUB_OUTPUT
             echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+            aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate
           else
             terraform destroy --auto-approve && exit 1
           fi
@@ -266,6 +267,14 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Copy state
+        run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
+
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Verify Terraform version
