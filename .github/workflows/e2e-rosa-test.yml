@@ -65,6 +65,9 @@ on:
       sample_app:
         required: true
         type: string
+      s3_integration_bucket:
+        default: ${{vars.S3_INTEGRATION_BUCKET}}
+        type: string
 
 jobs:
   CreateCluster:
@@ -189,9 +192,13 @@ jobs:
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
-      - name: Login ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Install OpenShift CLI
         uses: redhat-actions/oc-installer@v1
@@ -222,11 +229,9 @@ jobs:
           openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
 
       - name: Install SSM Agent
-        working-directory: "terraform/rosa/patching"
+        working-directory: terraform/rosa/patching
         run : |
           oc apply -f ./patch.yaml
-      
-      
 
   RosaTest:
     needs: [CreateCluster,ValidateCluster,PatchCluster]
@@ -245,20 +250,19 @@ jobs:
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
+
       - uses: actions/checkout@v3
         with:
           repository: "aws-observability/helm-charts"
           ref: ${{inputs.helm_charts_branch}}
           path: "terraform/eks/e2e/helm-charts"# have to fix this later
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ inputs.terraform_assume_role}}
           aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-      - name: Login ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
@@ -297,9 +301,10 @@ jobs:
       - name: ${{matrix.arrays.testName}}
         working-directory: ${{matrix.arrays.test_dir}}
         run: |
-          go test --computeType=ROSA \ 
+          go test --computeType=ROSA \
           --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
-          --eksDeploymentStrategy="DAEMON" --region=${{env.AWS_REGION}} \
+          --eksDeploymentStrategy="DAEMON" \
+          --region=${{env.AWS_REGION}} \
           --sample_app=${{matrix.arrays.sample_app_path}} \
           --v
           
@@ -311,9 +316,6 @@ jobs:
           --eksDeploymentStrategy="DAEMON" --region=${{env.AWS_REGION}} \
           --sample_app=${{matrix.arrays.sample_app_path}} \
           -v
-
-
-
   DestroyCluster:
     name: "Destroy ROSA HCP Cluster"
     if: ${{ always() && needs.CreateCluster.result== 'success' }}
@@ -330,7 +332,15 @@ jobs:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
       - name: Copy state
+        working-directory: terraform/rosa/e2e
         run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
 
       - name: Install Terraform
@@ -352,5 +362,6 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/rosa/e2e
+            terraform init
             terraform destroy --auto-approve && exit 1
 
