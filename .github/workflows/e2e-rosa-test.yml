@@ -311,11 +311,14 @@ jobs:
       - name: Cleanup
         working-directory: ${{matrix.arrays.test_dir}}
         if: always()
-        run: go test --destroy \
+        run: |
+          go test --computeType=ROSA \
+          --destroy \
           --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
-          --eksDeploymentStrategy="DAEMON" --region=${{env.AWS_REGION}} \
+          --eksDeploymentStrategy="DAEMON" \
+          --region=${{env.AWS_REGION}} \
           --sample_app=${{matrix.arrays.sample_app_path}} \
-          -v
+          --v
   DestroyCluster:
     name: "Destroy ROSA HCP Cluster"
     if: ${{ always() && needs.CreateCluster.result== 'success' }}
@@ -363,5 +366,5 @@ jobs:
           command: |
             cd terraform/rosa/e2e
             terraform init
-            terraform destroy --auto-approve && exit 1
+            terraform destroy --auto-approve || exit 0
 
