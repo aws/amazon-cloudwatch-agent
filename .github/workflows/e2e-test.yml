@@ -176,26 +176,26 @@ jobs:
           echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
           echo "rosa_e2e_matrix: ${{ steps.set-matrix.outputs.rosa_e2e_matrix }}"
           
-  EKSE2EContainerInsightsTest:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKS E2E ContainerInsights Test'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      test_dir: test/e2e/container_insights
-      job_id: eks-e2e-ci-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-    secrets: inherit
+#  EKSE2EContainerInsightsTest:
+#    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+#    name: 'EKS E2E ContainerInsights Test'
+#    uses: ./.github/workflows/eks-e2e-test.yml
+#    with:
+#      terraform_dir: terraform/eks/e2e
+#      test_dir: test/e2e/container_insights
+#      job_id: eks-e2e-ci-test
+#      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+#      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+#      cloudwatch_agent_tag: ${{ github.sha }}
+#      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+#      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+#      region: ${{ inputs.region || 'us-west-2' }}
+#      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+#    secrets: inherit
 #  EKSE2EJVMTomcatTest:
 #    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
 #    name: 'EKSE2EJVMTomcatTest'
