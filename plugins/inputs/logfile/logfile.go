@@ -76,6 +76,7 @@ const sampleConfig = `
       timestamp_regex = "^(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}).*$"
       timestamp_layout = ["_2 Jan 2006 15:04:05"]
       timezone = "UTC"
+      trim_timestamp = false
       multi_line_start_pattern = "{timestamp_regex}"
       ## Read file from beginning.
       from_beginning = false

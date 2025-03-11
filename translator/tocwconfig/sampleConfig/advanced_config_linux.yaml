@@ -51,7 +51,8 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
 receivers:
     telegraf_cpu:
         collection_interval: 1m0s
@@ -98,13 +99,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_disk
+                - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_ethtool
                 - telegraf_nvidia_smi
                 - telegraf_cpu
-                - telegraf_disk
-                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

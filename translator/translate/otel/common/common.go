@@ -116,6 +116,7 @@ const (
 	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
 	PipelineNameEmfLogs              = "emf_logs"
 	PipelineNamePrometheus           = "prometheus"
+	PipelineNameKueue                = "kueueContainerInsights"
 	AppSignals                       = "application_signals"
 	AppSignalsFallback               = "app_signals"
 	AppSignalsRules                  = "rules"
