@@ -383,6 +383,8 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		StrictEntityValidation: aws.Bool(false),
 	}
 
+	log.Printf("Sending PutMetricData request to CloudWatch", zap.Any("params", params))
+
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
 		_, err = c.svc.PutMetricData(params)
