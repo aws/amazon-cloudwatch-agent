@@ -332,6 +332,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
+            
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -384,23 +385,6 @@ jobs:
       is_selinux_test: false
     secrets: inherit
 
-  EC2SELinuxIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2SELinux'
-    uses:  ./.github/workflows/ec2-integration-test.yml
-    with:
-      build_id: ${{ inputs.build_id }}
-      test_dir: terraform/ec2/linux
-      job_id: ec2-linux-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_selinux_matrix}}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
-      region: us-west-2
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      is_selinux_test: true
 
   EC2LinuxIntegrationTestITAR:
     needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
@@ -419,6 +403,24 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
     secrets: inherit
+
+  EC2SELinuxIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2SELinux'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_selinux_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
@@ -466,6 +468,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
+            
             terraform init
             if terraform apply --auto-approve \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -542,6 +545,7 @@ jobs:
             else
               cd terraform/ec2/mac
             fi
+            
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -590,7 +594,6 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
-
 
   LinuxOnPremIntegrationTest:
     needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
@@ -660,7 +663,6 @@ jobs:
       github_sha: ${{inputs.build_id}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
-
   ECSEC2IntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -707,6 +709,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
+            
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -720,6 +723,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -734,6 +738,7 @@ jobs:
               cd terraform/ecs_ec2/daemon
             fi
             terraform destroy --auto-approve
+
   ECSFargateIntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -780,6 +785,7 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
+            
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -789,6 +795,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -803,6 +810,7 @@ jobs:
               cd terraform/ecs_fargate/linux
             fi
             terraform destroy --auto-approve
+
   EKSIntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -849,6 +857,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
+            
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -861,6 +870,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -875,6 +885,7 @@ jobs:
               cd terraform/eks/daemon
             fi
             terraform destroy --auto-approve
+
   EKSPrometheusIntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -921,6 +932,7 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
+            
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -945,6 +957,7 @@ jobs:
               cd terraform/eks/deployment
             fi
             terraform destroy --auto-approve
+
   PerformanceTrackingTest:
     name: ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -997,6 +1010,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
