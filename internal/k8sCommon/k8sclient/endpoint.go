@@ -9,12 +9,10 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -134,14 +132,47 @@ func (c *epClient) Init() {
 	c.store = NewObjStore(transformFuncEndpoint)
 
 	lw := createEndpointListWatch(Get().ClientSet, metav1.NamespaceAll)
-	reflector := cache.NewReflector(lw, &v1.Endpoints{}, c.store, 0)
-	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(3))
-	go reflector.Run(c.stopChan)
 
-	if err := wait.Poll(50*time.Millisecond, 2*time.Second, func() (done bool, err error) {
-		return reflector.LastSyncResourceVersion() != "", nil
-	}); err != nil {
-		log.Printf("W! Endpoint initial sync timeout: %v", err)
+	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(3))
+
+	informer := cache.NewSharedIndexInformer(
+		lw,
+		&v1.Endpoints{},
+		0,
+		cache.Indexers{},
+	)
+
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			newObj, err := transformFuncEndpoint(obj)
+			if err != nil {
+				klog.Errorf("Error transforming endpoint: %v", err)
+				return
+			}
+			c.store.Add(newObj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			transformed, err := transformFuncEndpoint(newObj)
+			if err != nil {
+				klog.Errorf("Error transforming endpoint: %v", err)
+				return
+			}
+			c.store.Update(transformed)
+		},
+		DeleteFunc: func(obj interface{}) {
+			newObj, err := transformFuncEndpoint(obj)
+			if err != nil {
+				klog.Errorf("Error transforming endpoint: %v", err)
+				return
+			}
+			c.store.Delete(newObj)
+		},
+	})
+
+	go informer.Run(c.stopChan)
+
+	if !cache.WaitForCacheSync(c.stopChan, informer.HasSynced) {
+		log.Printf("W! Endpoint initial sync timeout")
 	}
 
 	c.inited = true
