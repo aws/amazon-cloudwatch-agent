@@ -39,7 +39,7 @@ type kvPair struct {
 	value PodMetadata // value: {"workload", "namespace", "node"}
 }
 
-// NewEndpointSliceWatcher creates an EndpointSlice watcher for the new approach (when USE_LIST_POD=false).
+// NewEndpointSliceWatcher creates an EndpointSlice watcher
 func NewEndpointSliceWatcher(
 	logger *zap.Logger,
 	factory informers.SharedInformerFactory,
