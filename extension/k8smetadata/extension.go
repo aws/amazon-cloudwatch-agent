@@ -25,7 +25,7 @@ const (
 	jitterKubernetesAPISeconds = 10
 )
 
-type KubernetesMetadata struct {
+type kubernetesMetadata struct {
 	logger               *zap.Logger
 	config               *Config
 	ready                atomic.Bool
@@ -34,14 +34,14 @@ type KubernetesMetadata struct {
 	endpointSliceWatcher *k8sclient.EndpointSliceWatcher
 }
 
-var _ extension.Extension = (*KubernetesMetadata)(nil)
+var _ extension.Extension = (*kubernetesMetadata)(nil)
 
 func jitterSleep(seconds int) {
 	jitter := time.Duration(rand.Intn(seconds)) * time.Second // nolint:gosec
 	time.Sleep(jitter)
 }
 
-func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
+func (e *kubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -79,14 +79,14 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 	return nil
 }
 
-func (e *KubernetesMetadata) Shutdown(_ context.Context) error {
+func (e *kubernetesMetadata) Shutdown(_ context.Context) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.safeStopCh.Close()
 	return nil
 }
 
-func (e *KubernetesMetadata) GetPodMetadata(ip string) k8sclient.PodMetadata {
+func (e *kubernetesMetadata) GetPodMetadata(ip string) k8sclient.PodMetadata {
 	pm, ok := e.endpointSliceWatcher.IPToPodMetadata.Load(ip)
 	if !ok {
 		e.logger.Debug("GetPodMetadata: no mapping found for IP", zap.String("ip", ip))

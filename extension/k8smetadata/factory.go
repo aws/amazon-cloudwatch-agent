@@ -12,16 +12,16 @@ import (
 )
 
 var (
-	TypeStr, _         = component.NewType("k8smetadata")
-	kubernetesMetadata *KubernetesMetadata
-	mutex              sync.RWMutex
+	TypeStr, _            = component.NewType("k8smetadata")
+	kubernetesMetadataExt *kubernetesMetadata
+	mutex                 sync.RWMutex
 )
 
-func GetKubernetesMetadata() *KubernetesMetadata {
+func GetKubernetesMetadata() *kubernetesMetadata {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	if kubernetesMetadata != nil && kubernetesMetadata.ready.Load() {
-		return kubernetesMetadata
+	if kubernetesMetadataExt != nil && kubernetesMetadataExt.ready.Load() {
+		return kubernetesMetadataExt
 	}
 	return nil
 }
@@ -42,9 +42,9 @@ func createDefaultConfig() component.Config {
 func createExtension(_ context.Context, settings extension.Settings, cfg component.Config) (extension.Extension, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	kubernetesMetadata = &KubernetesMetadata{
+	kubernetesMetadataExt = &kubernetesMetadata{
 		logger: settings.Logger,
 		config: cfg.(*Config),
 	}
-	return kubernetesMetadata, nil
+	return kubernetesMetadataExt, nil
 }
