@@ -26,7 +26,7 @@ func TestKubernetesMetadata_GetPodMetadata(t *testing.T) {
 	}
 	esw.IPToPodMetadata.Store(testIP, expected)
 
-	kMeta := &kubernetesMetadata{
+	kMeta := &KubernetesMetadata{
 		logger:               zap.NewNop(),
 		endpointSliceWatcher: esw,
 	}
