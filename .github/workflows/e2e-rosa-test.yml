@@ -306,6 +306,7 @@ jobs:
           --eksDeploymentStrategy="DAEMON" \
           --region=${{env.AWS_REGION}} \
           --sample_app=${{matrix.arrays.sample_app_path}} \
+          --timeout 30m \
           --v
           
       - name: Cleanup
@@ -318,6 +319,7 @@ jobs:
           --eksDeploymentStrategy="DAEMON" \
           --region=${{env.AWS_REGION}} \
           --sample_app=${{matrix.arrays.sample_app_path}} \
+          --timeout 30m \
           --v
   DestroyCluster:
     name: "Destroy ROSA HCP Cluster"
