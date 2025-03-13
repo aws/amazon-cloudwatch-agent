@@ -85,7 +85,7 @@ type tailerSrc struct {
 	buffer           chan *LogEvent
 	stopOnce         sync.Once
 	bufferCloseOnce  sync.Once
-	outputFnMu       sync.RWMutex // Add mutex to protect outputFn access
+	outputFnMu       sync.RWMutex // mutex to protect outputFn access
 }
 
 // Verify tailerSrc implements LogSrc
@@ -302,22 +302,25 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 				log.Printf("D! [logfile] tailer sender buffer is full, closing file %v", ts.tailer.Filename)
 				ts.tailer.CloseFile()
 
-				// Simple sleep to prevent rapid close/reopen
-				select {
-				case <-time.After(closeReopenInterval):
-				case <-ts.done:
-					return
-				}
-
-				select {
-				case ts.buffer <- e:
-					// reopen the file only if the buffer accepts the event
-					if err := ts.tailer.Reopen(false); err != nil {
-						log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
+				for {
+					select {
+					case ts.buffer <- e:
+						// reopen the file after successful send
+						if err := ts.tailer.Reopen(false); err != nil {
+							log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
+							return
+						}
 						return
+					case <-ts.done:
+						return
+					default:
+						// buffer still full, sleep and try again
+						select {
+						case <-time.After(closeReopenInterval):
+						case <-ts.done:
+							return
+						}
 					}
-				case <-ts.done:
-					return
 				}
 			}
 		} else {

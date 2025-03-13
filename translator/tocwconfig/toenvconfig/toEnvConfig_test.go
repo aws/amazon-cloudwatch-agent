@@ -182,6 +182,11 @@ func TestToEnvConfig(t *testing.T) {
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
 			}
+			defer func() {
+				for k := range tt.envVars {
+					os.Unsetenv(k)
+				}
+			}()
 
 			tt.contextSetup()
 			result := ToEnvConfig(tt.input)
@@ -258,6 +263,11 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
 			}
+			defer func() {
+				for k := range tt.envVars {
+					os.Unsetenv(k)
+				}
+			}()
 
 			context.CurrentContext().SetProxy(map[string]string{})
 			context.CurrentContext().SetSSL(map[string]string{})
