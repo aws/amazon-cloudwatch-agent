@@ -5,6 +5,7 @@ package host
 
 import (
 	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
+	awsebsnvmereceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsebsnvme"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -43,6 +45,9 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 				hostReceivers.Set(translator)
 			}
 		})
+		if addEBSReceiver(conf, configSection) {
+			deltaReceivers.Set(awsebsnvmereceiver.NewTranslator())
+		}
 	}
 
 	// Gather OTLP receivers
@@ -120,4 +125,19 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	}
 
 	return translators, nil
+}
+
+func addEBSReceiver(conf *confmap.Conf, configSection string) bool {
+	diskioMap := conf.Get(common.ConfigKey(configSection, common.DiskIOKey))
+	if diskioMap == nil {
+		return false
+	}
+
+	measurements := common.GetMeasurements(diskioMap.(map[string]any))
+	for _, measurement := range measurements {
+		if strings.HasPrefix(measurement, "diskio_ebs") {
+			return true
+		}
+	}
+	return false
 }

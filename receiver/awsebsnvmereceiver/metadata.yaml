@@ -1,0 +1,26 @@
+type: awsebsnvmereceiver
+
+status:
+  class: receiver
+  stability:
+    beta: [metrics]
+  distributions: []
+  codeowners:
+    active: [duhminick]
+
+resource_attributes:
+  VolumeId:
+    enabled: true
+    description: Unique identifier to the EBS volume
+    type: string
+
+metrics:
+  total_read_ops:
+    description: The total number of completed read operations
+    enabled: true
+    sum:
+      monotonic: true
+      aggregation_temporality: cumulative
+      value_type: int
+    unit: "1"
+
