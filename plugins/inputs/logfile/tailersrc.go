@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	stateFileMode = 0644
+	stateFileMode       = 0644
+	closeReopenInterval = 100 * time.Millisecond
 )
 
 var (
@@ -82,6 +83,9 @@ type tailerSrc struct {
 	cleanUpFns       []func()
 	backpressureDrop bool
 	buffer           chan *LogEvent
+	stopOnce         sync.Once
+	bufferCloseOnce  sync.Once
+	outputFnMu       sync.RWMutex // Add mutex to protect outputFn access
 }
 
 // Verify tailerSrc implements LogSrc
@@ -119,8 +123,10 @@ func NewTailerSrc(
 		retentionInDays:  retentionInDays,
 		backpressureDrop: useBufferedSender,
 
-		offsetCh: make(chan fileOffset, 2000),
-		done:     make(chan struct{}),
+		offsetCh:        make(chan fileOffset, 2000),
+		done:            make(chan struct{}),
+		stopOnce:        sync.Once{},
+		bufferCloseOnce: sync.Once{},
 	}
 
 	if useBufferedSender {
@@ -177,7 +183,9 @@ func (ts *tailerSrc) Done(offset fileOffset) {
 }
 
 func (ts *tailerSrc) Stop() {
-	close(ts.done)
+	ts.stopOnce.Do(func() {
+		close(ts.done)
+	})
 }
 
 func (ts *tailerSrc) AddCleanUpFn(f func()) {
@@ -202,50 +210,11 @@ func (ts *tailerSrc) runTail() {
 	fo := &fileOffset{}
 	ignoreUntilNextEvent := false
 
-	// helper to handle event publishing
-	publishEvent := func() {
-		if msgBuf.Len() == 0 {
-			return
-		}
-		msg := msgBuf.String()
-		timestamp, modifiedMsg := ts.timestampFn(msg)
-		e := &LogEvent{
-			msg:    modifiedMsg,
-			t:      timestamp,
-			offset: *fo,
-			src:    ts,
-		}
-		if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
-			if ts.backpressureDrop {
-				select {
-				case ts.buffer <- e:
-				case <-ts.done:
-					return
-				default:
-					log.Printf("D! [logfile] tailer sender buffer is full, closing file %v", ts.tailer.Filename)
-					ts.tailer.CloseFile()
-					select {
-					case ts.buffer <- e:
-						// reopen the file only if the buffer successfully accepts the event
-						err := ts.tailer.Reopen(false)
-						if err != nil {
-							log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
-							return
-						}
-					case <-ts.done:
-						return
-					}
-				}
-			} else {
-				ts.outputFn(e)
-			}
-		}
-	}
 	for {
 		select {
 		case line, ok := <-ts.tailer.Lines:
 			if !ok {
-				publishEvent()
+				ts.publishEvent(msgBuf, fo)
 				return
 			}
 
@@ -287,7 +256,7 @@ func (ts *tailerSrc) runTail() {
 				continue
 			}
 
-			publishEvent()
+			ts.publishEvent(msgBuf, fo)
 			msgBuf.Reset()
 			msgBuf.WriteString(init)
 			fo.SetOffset(line.Offset)
@@ -298,7 +267,7 @@ func (ts *tailerSrc) runTail() {
 			}
 
 			if cnt >= 5 {
-				publishEvent()
+				ts.publishEvent(msgBuf, fo)
 				msgBuf.Reset()
 				cnt = 0
 			}
@@ -308,11 +277,94 @@ func (ts *tailerSrc) runTail() {
 	}
 }
 
-func (ts *tailerSrc) cleanUp() {
-	if ts.backpressureDrop && ts.buffer != nil {
-		close(ts.buffer)
+func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
+	// helper to handle event publishing
+	if msgBuf.Len() == 0 {
+		return
 	}
+	msg := msgBuf.String()
+	timestamp, modifiedMsg := ts.timestampFn(msg)
+	e := &LogEvent{
+		msg:    modifiedMsg,
+		t:      timestamp,
+		offset: *fo,
+		src:    ts,
+	}
+	if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
+		if ts.backpressureDrop {
+			select {
+			case ts.buffer <- e:
+				// successfully sent
+			case <-ts.done:
+				return
+			default:
+				// Buffer is full, close file and try again
+				log.Printf("D! [logfile] tailer sender buffer is full, closing file %v", ts.tailer.Filename)
+				ts.tailer.CloseFile()
 
+				// Simple sleep to prevent rapid close/reopen
+				select {
+				case <-time.After(closeReopenInterval):
+				case <-ts.done:
+					return
+				}
+
+				select {
+				case ts.buffer <- e:
+					// reopen the file only if the buffer accepts the event
+					if err := ts.tailer.Reopen(false); err != nil {
+						log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
+						return
+					}
+				case <-ts.done:
+					return
+				}
+			}
+		} else {
+			ts.outputFn(e)
+		}
+	}
+}
+
+func (ts *tailerSrc) runSender() {
+	log.Printf("D! [logfile] runSender starting for %s", ts.tailer.Filename)
+	defer func() {
+		ts.bufferCloseOnce.Do(func() {
+			if ts.buffer != nil {
+				close(ts.buffer)
+			}
+		})
+		log.Printf("D! [logfile] runSender exiting for %s", ts.tailer.Filename)
+	}()
+
+	for {
+		select {
+		case e, ok := <-ts.buffer:
+			if !ok { // buffer was closed
+				log.Printf("D! [logfile] runSender buffer was closed for %s", ts.tailer.Filename)
+				return
+			}
+			// Check done before sending
+			select {
+			case <-ts.done:
+				return
+			default:
+				if e != nil {
+					ts.outputFnMu.RLock()
+					if ts.outputFn != nil {
+						ts.outputFn(e)
+					}
+					ts.outputFnMu.RUnlock()
+				}
+			}
+		case <-ts.done:
+			log.Printf("D! [logfile] runSender received done signal for %s", ts.tailer.Filename)
+			return
+		}
+	}
+}
+
+func (ts *tailerSrc) cleanUp() {
 	if ts.autoRemoval {
 		if err := os.Remove(ts.tailer.Filename); err != nil {
 			log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
@@ -324,10 +376,12 @@ func (ts *tailerSrc) cleanUp() {
 		clf()
 	}
 
+	ts.outputFnMu.Lock()
 	if ts.outputFn != nil {
-		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
+		ts.outputFn(nil)
 		ts.outputFn = nil
 	}
+	ts.outputFnMu.Unlock()
 }
 
 func (ts *tailerSrc) runSaveState() {
@@ -375,25 +429,4 @@ func (ts *tailerSrc) saveState(offset int64) error {
 
 	content := []byte(strconv.FormatInt(offset, 10) + "\n" + ts.tailer.Filename)
 	return os.WriteFile(ts.stateFilePath, content, stateFileMode)
-}
-
-func (ts *tailerSrc) runSender() {
-	log.Printf("D! [logfile] runSender starting for %s", ts.tailer.Filename)
-	defer log.Printf("D! [logfile] runSender exiting for %s", ts.tailer.Filename)
-
-	for {
-		select {
-		case e, ok := <-ts.buffer:
-			if !ok { // buffer was closed
-				log.Printf("D! [logfile] runSender buffer was closed for %s", ts.tailer.Filename)
-				return
-			}
-			if e != nil && ts.outputFn != nil {
-				ts.outputFn(e)
-			}
-		case <-ts.done:
-			log.Printf("D! [logfile] runSender received done signal for %s", ts.tailer.Filename)
-			return
-		}
-	}
 }

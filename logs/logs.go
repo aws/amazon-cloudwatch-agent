@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -144,13 +145,17 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
 
+	var eventsChClosed atomic.Bool
 	src.SetOutput(func(e LogEvent) {
 		if e == nil {
 			close(eventsCh)
+			eventsChClosed.Store(true)
 			log.Printf("I! [logagent] Log src has stopped for %v/%v(%v)", src.Group(), src.Stream(), src.Description())
 			return
 		}
-		eventsCh <- e
+		if !eventsChClosed.Load() {
+			eventsCh <- e
+		}
 	})
 
 	for e := range eventsCh {

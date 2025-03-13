@@ -217,7 +217,7 @@ func (tail *Tail) Reopen(resetOffset bool) error {
 	if !resetOffset && tail.curOffset > 0 {
 		err := tail.seekTo(SeekInfo{Offset: tail.curOffset, Whence: io.SeekStart})
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to restore offset on reopen: %w", err)
 		}
 	}
 
