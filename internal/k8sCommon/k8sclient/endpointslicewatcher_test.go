@@ -22,9 +22,7 @@ import (
 type MockDeleter struct{}
 
 func (md *MockDeleter) DeleteWithDelay(m *sync.Map, key interface{}, expected interface{}) {
-	if current, ok := m.Load(key); ok && reflect.DeepEqual(current, expected) {
-		m.Delete(key)
-	}
+	m.Delete(key)
 }
 
 var mockDeleter = &MockDeleter{}

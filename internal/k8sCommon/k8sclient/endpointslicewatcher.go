@@ -226,9 +226,7 @@ func (w *EndpointSliceWatcher) handleSliceUpdate(oldObj, newObj interface{}) {
 	// 3) For each key in oldKeys that doesn't exist in newKeys, remove it
 	for k := range oldKeysSet {
 		if _, stillPresent := newKeysSet[k]; !stillPresent {
-			if oldVal, ok := w.IPToPodMetadata.Load(k); ok {
-				w.deleter.DeleteWithDelay(w.IPToPodMetadata, k, oldVal)
-			}
+			w.deleter.DeleteWithDelay(w.IPToPodMetadata, k)
 		}
 	}
 
@@ -269,9 +267,7 @@ func (w *EndpointSliceWatcher) removeSliceKeys(slice *discv1.EndpointSlice) {
 
 	keys := val.([]string)
 	for _, k := range keys {
-		if currentVal, ok := w.IPToPodMetadata.Load(k); ok {
-			w.deleter.DeleteWithDelay(w.IPToPodMetadata, k, currentVal)
-		}
+		w.deleter.DeleteWithDelay(w.IPToPodMetadata, k, currentVal)
 	}
 	w.sliceToKeysMap.Delete(sliceUID)
 }
