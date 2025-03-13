@@ -1,4 +1,13 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300053.1 (2025-03-14)
+========================================================================
+Enhancements:
+* [ContainerInsights] Add service account token refresh to AWS Container Insights Kueue Receiver
+
+Bug Fixes:
+* [ApplicationSignals] Fix endpointSliceUpdate handling in Application Signals
+
+========================================================================
 Amazon CloudWatch Agent 1.300053.0 (2024-02-17)
 ========================================================================
 Bug Fixes:
