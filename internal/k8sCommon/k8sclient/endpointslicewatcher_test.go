@@ -21,7 +21,7 @@ import (
 // MockDeleter deletes a key immediately, useful for testing.
 type MockDeleter struct{}
 
-func (md *MockDeleter) DeleteWithDelay(m *sync.Map, key interface{}, expected interface{}) {
+func (md *MockDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
 	m.Delete(key)
 }
 
