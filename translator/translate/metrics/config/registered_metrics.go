@@ -9,7 +9,7 @@ var Registered_Metrics_Linux = map[string][]string{
 	"cpu": {"time_active", "time_guest", "time_guest_nice", "time_idle", "time_iowait", "time_irq", "time_nice", "time_softirq", "time_steal", "time_system", "time_user",
 		"usage_active", "usage_guest", "usage_guest_nice", "usage_idle", "usage_iowait", "usage_irq", "usage_nice", "usage_softirq", "usage_steal", "usage_system", "usage_user"},
 	"disk":      {"free", "inodes_free", "inodes_total", "inodes_used", "total", "used", "used_percent"},
-	"diskio":    {"iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"},
+	"diskio":    {"iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time", "ebs_total_read_ops"},
 	"swap":      {"free", "used", "used_percent"},
 	"mem":       {"active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total", "used", "used_percent"},
 	"net":       {"bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"},
