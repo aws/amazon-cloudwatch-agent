@@ -5,11 +5,9 @@ package awsentity
 
 import (
 	"context"
-	"net"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"go.opentelemetry.io/collector/client"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
@@ -108,21 +106,14 @@ var getServiceNameSource = func() (string, string) {
 	return es.GetMetricServiceNameAndSource()
 }
 
-var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
+var getPodMeta = func() k8sclient.PodMetadata {
 	podMeta := k8sclient.PodMetadata{}
 	k8sMetadata := k8smetadata.GetKubernetesMetadata()
 
 	if k8sMetadata != nil {
 		podIP := ""
 
-		switch addr := client.FromContext(ctx).Addr.(type) {
-		case *net.UDPAddr:
-			podIP = addr.IP.String()
-		case *net.TCPAddr:
-			podIP = addr.IP.String()
-		case *net.IPAddr:
-			podIP = addr.IP.String()
-		}
+		// Get Pod IP from connection context.
 
 		podMeta = k8sMetadata.GetPodMetadata(podIP)
 	}
@@ -147,7 +138,7 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 	}
 }
 
-func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
 
 	rm := md.ResourceMetrics()
@@ -202,7 +193,7 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				}
 			}
 			if p.config.KubernetesMode != "" {
-				p.k8sscraper.Scrape(rm.At(i).Resource(), getPodMeta(ctx))
+				p.k8sscraper.Scrape(rm.At(i).Resource(), getPodMeta())
 				if p.config.Platform == config.ModeEC2 {
 					ec2Info = getEC2InfoFromEntityStore()
 				}
