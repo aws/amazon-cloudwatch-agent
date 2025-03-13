@@ -267,7 +267,7 @@ func (w *EndpointSliceWatcher) removeSliceKeys(slice *discv1.EndpointSlice) {
 
 	keys := val.([]string)
 	for _, k := range keys {
-		w.deleter.DeleteWithDelay(w.IPToPodMetadata, k, currentVal)
+		w.deleter.DeleteWithDelay(w.IPToPodMetadata, k)
 	}
 	w.sliceToKeysMap.Delete(sliceUID)
 }
