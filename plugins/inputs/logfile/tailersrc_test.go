@@ -487,9 +487,7 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	blockCh := make(chan struct{})
 
 	defer func() {
-		// Signal processing to continue before stopping
 		close(blockCh)
-		// Wait a bit for any pending processing
 		time.Sleep(100 * time.Millisecond)
 		resources.ts.Stop()
 		<-doneCh
@@ -505,31 +503,36 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 		t.Logf("Processed log: %s", evt.Message())
 		select {
 		case <-blockCh:
-			// Channel closed, don't block
 			return
-		case <-blockCh:
-			// Channel open, block
+		default:
+			<-blockCh // Block until channel receives or is closed
 		}
 	})
 
-	// Write logs to fill the buffer
-	logCount := 10
+	// Write enough logs to ensure buffer fills
+	logCount := defaultBufferSize + 5 // Write more than buffer size
 	for i := 0; i < logCount; i++ {
 		_, err := fmt.Fprintf(resources.file, "ERROR: Test log line %d\n", i)
 		require.NoError(t, err)
 	}
 	resources.file.Sync()
 
-	// Wait for the buffer to fill and file to be closed
-	time.Sleep(100 * time.Millisecond)
+	// Wait for buffer to fill and file to close with retry
+	maxRetries := 10
+	var currentCount int64
+	for i := 0; i < maxRetries; i++ {
+		time.Sleep(100 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		if currentCount == 0 {
+			break
+		}
+	}
 
-	// Verify that the file descriptor is closed when buffer is full
-	currentCount := tail.OpenFileCount.Load()
 	t.Logf("OpenFileCount after buffer full: %d", currentCount)
 	assert.Equal(t, int64(0), currentCount, "File should be closed when buffer is full")
 
 	// Allow processing to continue
-	for i := 0; i < 3; i++ { // Process a few logs
+	for i := 0; i < 3; i++ {
 		blockCh <- struct{}{}
 		time.Sleep(50 * time.Millisecond)
 		currentCount = tail.OpenFileCount.Load()
