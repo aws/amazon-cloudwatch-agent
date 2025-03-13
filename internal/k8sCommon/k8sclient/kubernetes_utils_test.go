@@ -68,6 +68,12 @@ func TestInferWorkloadName(t *testing.T) {
 			service:  "service",
 			expected: "service",
 		},
+		{
+			name:     "No match, empty fallback returns full pod name",
+			podName:  "custom-app-xyz123",
+			service:  "",
+			expected: "custom-app-xyz123",
+		},
 	}
 
 	for _, tc := range testCases {

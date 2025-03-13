@@ -5,6 +5,7 @@ package k8sclient
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"sync"
 	"time"
@@ -104,7 +105,7 @@ func (sc *SafeChannel) Close() {
 
 // Deleter represents a type that can delete a key from a map after a certain delay.
 type Deleter interface {
-	DeleteWithDelay(m *sync.Map, key interface{})
+	DeleteWithDelay(m *sync.Map, key interface{}, expected interface{})
 }
 
 // TimedDeleter deletes a key after a specified delay.
@@ -112,9 +113,11 @@ type TimedDeleter struct {
 	Delay time.Duration
 }
 
-func (td *TimedDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
+func (td *TimedDeleter) DeleteWithDelay(m *sync.Map, key interface{}, expected interface{}) {
 	go func() {
 		time.Sleep(td.Delay)
-		m.Delete(key)
+		if current, ok := m.Load(key); ok && reflect.DeepEqual(current, expected) {
+			m.Delete(key)
+		}
 	}()
 }
