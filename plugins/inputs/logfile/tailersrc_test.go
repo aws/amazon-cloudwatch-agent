@@ -480,22 +480,36 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	beforeCount := tail.OpenFileCount.Load()
 	t.Logf("Before OpenFileCount: %d", beforeCount)
 
-	resources := setupTailer(t, nil, defaultMaxEventSize, false, true) // backpressureDrop=true
-	defer teardown(resources)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, true)
 
-	multilineWaitPeriod = 100 * time.Millisecond
+	doneCh := make(chan struct{})
 	var consumed int32
-
-	// Create a blocking output function
 	blockCh := make(chan struct{})
+
+	defer func() {
+		// Signal processing to continue before stopping
+		close(blockCh)
+		// Wait a bit for any pending processing
+		time.Sleep(100 * time.Millisecond)
+		resources.ts.Stop()
+		<-doneCh
+		teardown(resources)
+	}()
+
 	resources.ts.SetOutput(func(evt logs.LogEvent) {
 		if evt == nil {
-			close(*resources.done)
+			close(doneCh)
 			return
 		}
 		atomic.AddInt32(&consumed, 1)
 		t.Logf("Processed log: %s", evt.Message())
-		<-blockCh // Block processing
+		select {
+		case <-blockCh:
+			// Channel closed, don't block
+			return
+		case <-blockCh:
+			// Channel open, block
+		}
 	})
 
 	// Write logs to fill the buffer
@@ -507,7 +521,7 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	resources.file.Sync()
 
 	// Wait for the buffer to fill and file to be closed
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Verify that the file descriptor is closed when buffer is full
 	currentCount := tail.OpenFileCount.Load()
@@ -526,11 +540,6 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	processedCount := atomic.LoadInt32(&consumed)
 	t.Logf("Processed %d logs", processedCount)
 	assert.Greater(t, processedCount, int32(0), "Should have processed some logs")
-
-	// Stop the tailer
-	resources.ts.Stop()
-	close(blockCh)
-	<-*resources.done
 
 	// Final check of OpenFileCount
 	finalCount := tail.OpenFileCount.Load()
