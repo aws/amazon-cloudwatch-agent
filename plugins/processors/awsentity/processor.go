@@ -5,9 +5,10 @@ package awsentity
 
 import (
 	"context"
-	"go.opentelemetry.io/collector/client"
 	"net"
 	"strings"
+
+	"go.opentelemetry.io/collector/client"
 
 	"github.com/go-playground/validator/v10"
 	"go.opentelemetry.io/collector/pdata/pcommon"
