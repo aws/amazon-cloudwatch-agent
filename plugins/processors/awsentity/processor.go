@@ -8,9 +8,8 @@ import (
 	"net"
 	"strings"
 
-	"go.opentelemetry.io/collector/client"
-
 	"github.com/go-playground/validator/v10"
+	"go.opentelemetry.io/collector/client"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
