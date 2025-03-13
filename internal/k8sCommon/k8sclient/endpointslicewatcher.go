@@ -108,15 +108,11 @@ func (w *EndpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 				nodeName = *endpoint.NodeName
 			}
 
-			w.logger.Debug("Processing endpoint",
-				zap.String("podName", podName),
-				zap.String("namespace", ns),
-				zap.String("nodeName", nodeName),
-			)
+			w.logger.Debug("Processing endpoint")
 
 			derivedWorkload := inferWorkloadName(podName, svcName)
 			if derivedWorkload == "" {
-				w.logger.Warn("failed to infer workload name from Pod name", zap.String("podName", podName))
+				w.logger.Warn("failed to infer workload name from Pod name")
 				continue
 			}
 			fullWl :=
@@ -158,9 +154,7 @@ func (w *EndpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 func (w *EndpointSliceWatcher) handleSliceAdd(obj interface{}) {
 	newSlice := obj.(*discv1.EndpointSlice)
 	w.logger.Debug("Received EndpointSlice Add",
-		zap.String("sliceName", newSlice.Name),
 		zap.String("uid", string(newSlice.UID)),
-		zap.String("namespace", newSlice.Namespace),
 	)
 	sliceUID := string(newSlice.UID)
 
@@ -193,8 +187,6 @@ func (w *EndpointSliceWatcher) handleSliceUpdate(oldObj, newObj interface{}) {
 	w.logger.Debug("Received EndpointSlice Update",
 		zap.String("oldSliceUID", string(oldSlice.UID)),
 		zap.String("newSliceUID", string(newSlice.UID)),
-		zap.String("name", newSlice.Name),
-		zap.String("namespace", newSlice.Namespace),
 	)
 
 	oldUID := string(oldSlice.UID)
@@ -252,8 +244,6 @@ func (w *EndpointSliceWatcher) handleSliceDelete(obj interface{}) {
 	slice := obj.(*discv1.EndpointSlice)
 	w.logger.Debug("Received EndpointSlice Delete",
 		zap.String("uid", string(slice.UID)),
-		zap.String("name", slice.Name),
-		zap.String("namespace", slice.Namespace),
 	)
 	w.removeSliceKeys(slice)
 }
