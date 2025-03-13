@@ -26,9 +26,7 @@ type translator struct {
 }
 
 var (
-	baseKey                            = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	k8sKey                             = common.ConfigKey(baseKey, common.KubernetesKey)
-	_       common.ComponentTranslator = (*translator)(nil)
+	_ common.ComponentTranslator = (*translator)(nil)
 )
 
 func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
