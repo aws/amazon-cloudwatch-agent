@@ -196,12 +196,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsprox
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:e/jLBoFSMhTOjmXiLvawbpjJwKG+UgWqS1tC02t/9pk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250211205059-8e29fa0c45ef h1:aHVZ+XiGYrjX8fSy6NPhEiRrnMhCNoKW6JTxkaEJ6QE=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:NwKx37vwAIGpgEqo5v1AdZS8UKV0e2lX/yUTDgQjrls=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250211205059-8e29fa0c45ef h1:zLNdCrMW4SFPsaSk6ojvQSqvU0x35J+Mwdm1n+EsTR0=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:4HebVM9TmMpsxZAXLX5om998dTm1JUndjcpmhrnGkx4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250211205059-8e29fa0c45ef h1:R/MtcGt87Qs/lgW0MZmFgXXBKxZnTsuAhwLCu1muapg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:sCx+2x6y1jjWGcXbgyP97Q+Himx84LlPZ9yWLgcV4vo=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250211205059-8e29fa0c45ef h1:BphlS2kiWU2y9Z01aSe5eKx4oiqloYEnNo00H0qsdII=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:kxuPS8JKnLVWie4PnL8iCoFx/mr89yR4VYFvJhlQfpY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250211205059-8e29fa0c45ef h1:R0y5npVY0nr/nosW6ayhFYf9ZSUq0G0t8aEHmNUjBw8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:jNjrbc2MpIBzlaEnOVdlxniDzIUgzD80fm6wkBs0flw=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20250211205059-8e29fa0c45ef h1:9OQPzBfebr8wERnJtUdFQ4uOfGKUpJQ21IumgRFySYA=
@@ -212,8 +208,6 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfi
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfig v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:Hp9uSq3qNJqdxu24u7RWyuPT9x1GgEUSx9US1LLeLi0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20250211205059-8e29fa0c45ef h1:zv7gIcAvK9ym4DMHvgMt0AcXHcsCq0ciUhmfXHRFqYo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:DeEH8iR0kq3UaS4NZowwJnOYWGF09qtQ6kipUSFGKjI=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20250211205059-8e29fa0c45ef h1:Qy0Y88wzM0MngORjrJVUPj9KzdEb3ZifaTEx5B1+We8=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:cKGsnFWzTlbvm1m7J6d4hchm18LM/h7BCdyWj+sO81M=
 github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20241216205413-8e059f1441db h1:Lqq98S/zDfQ+y0OJu9EIwdmgFf5gCJ1chDZJWqpydVs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20241216205413-8e059f1441db/go.mod h1:t/hYoRTnlPuRjh8y0BwVGgNvNIXpU2QJME5YVppUUHQ=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20250211205059-8e29fa0c45ef h1:YI0MlzOF7uUIZB7XctOBUa4+HxGbsJDMIl5LA87qYfs=
@@ -224,8 +218,6 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/pr
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:cW/BaYE6Uo7ZYHbmT0wVBktHP0SfeLqGHMf0qks7rOE=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250211205059-8e29fa0c45ef h1:VEYhybddpvPoX6YsMp5crwQXHDgI8c3cQRj13NMsZhM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:yyT23VxqHJZaOR1wSO4GqO4Nr8omwlNUL/ouxPmjlvM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250211205059-8e29fa0c45ef h1:vKXPssoYMXclfh33KOMxza/WHdbluHOOKG2EZgUaL9w=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:CevoQ0mSIcnS/eKfBqZnYEUeMEe/slvtpOhlWb6KnDM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250211205059-8e29fa0c45ef h1:DYcnWxbw6j5mKWLHQJgkH2hfXKcURNbLiTGX35X8cOc=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250211205059-8e29fa0c45ef/go.mod h1:48Qw63SpQsWKxh+cHz77YEtndVIAsHegsRpo/Mi4wp8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250211205059-8e29fa0c45ef h1:GLr284FKwSOb2kS+il4mBqcsIEgeRg7LDfnU5wUNo9s=
@@ -2159,7 +2151,7 @@ google.golang.org/genproto v0.0.0-20190425155659-357c62f0e4bb/go.mod h1:VzzqZJRn
 google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873/go.mod h1:VzzqZJRnGkLBvHegQrXjBqPurQTc5/KpmUdxsrq26oE=
 google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64/go.mod h1:DMBHOl98Agz4BDEuKkezgsaosCRResVns1a3J2ZsMNc=
 google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55/go.mod h1:DMBHOl98Agz4BDEuKkezgsaosCRResVns1a3J2ZsMNc=
-google.golang.org/genproto v0.0.0-20190911173649-1774047e7e5q1/go.mod h1:IbNlFCBrqXvoKpeg0TB2l7cyZUmoaFKYIwrEpbDKLA8=
+google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51/go.mod h1:IbNlFCBrqXvoKpeg0TB2l7cyZUmoaFKYIwrEpbDKLA8=
 google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a/go.mod h1:n3cpQtvxv34hfy77yVDNjmbRyujviMdxYliBSkLhpCc=
 google.golang.org/genproto v0.0.0-20191115194625-c23dd37a84c9/go.mod h1:n3cpQtvxv34hfy77yVDNjmbRyujviMdxYliBSkLhpCc=
 google.golang.org/genproto v0.0.0-20191216164720-4f79533eabd1/go.mod h1:n3cpQtvxv34hfy77yVDNjmbRyujviMdxYliBSkLhpCc=
