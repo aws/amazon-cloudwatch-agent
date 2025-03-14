@@ -528,9 +528,9 @@ exporters:
                   - PodName
                 - - ClusterName
                   - ContainerName
-                  - NetworkInterfaceId
                   - FullPodName
                   - Namespace
+                  - NetworkInterfaceId
                   - PodName
               metric_name_selectors:
                 - container_efa_rx_bytes
@@ -554,9 +554,9 @@ exporters:
                   - Namespace
                   - PodName
                 - - ClusterName
-                  - NetworkInterfaceId
                   - FullPodName
                   - Namespace
+                  - NetworkInterfaceId
                   - PodName
               metric_name_selectors:
                 - pod_efa_rx_bytes
@@ -571,9 +571,9 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-                  - NetworkInterfaceId
                   - InstanceId
                   - InstanceType
+                  - NetworkInterfaceId
                   - NodeName
               metric_name_selectors:
                 - node_efa_rx_bytes
