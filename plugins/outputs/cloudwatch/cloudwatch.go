@@ -157,7 +157,9 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 // This method can block when publishing is backed up.
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
 	datums := ConvertOtelMetrics(metrics)
+	log.Printf("I! Datums = %v.", datums)
 	for _, d := range datums {
+		log.Printf("I! CloudWatch ConsumeMetrics, metric = %v.", d)
 		c.aggregator.AddMetric(d)
 	}
 	return nil
@@ -172,6 +174,7 @@ func (c *CloudWatch) pushMetricDatum() {
 	for {
 		select {
 		case metric := <-c.metricChan:
+			log.Printf("I! pushMetricDatum, metric = %v.", metric)
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
 			/* We currently do not account for entity information as a part of the payload size.
@@ -441,6 +444,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 			continue
 		}
 		if len(distList) == 0 {
+			log.Printf("I! metric.Value is called on this = %v.", *metric)
 			if !distribution.IsSupportedValue(*metric.Value, distribution.MinValue, distribution.MaxValue) {
 				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
 				continue
