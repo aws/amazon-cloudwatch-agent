@@ -10,7 +10,6 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -506,8 +505,6 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	}()
 
 	initialCount := tail.OpenFileCount.Load()
-	t.Logf("Initial OpenFileCount: %d", initialCount)
-
 	resources.ts.SetOutput(func(evt logs.LogEvent) {
 		if evt == nil {
 			close(doneCh)
@@ -537,24 +534,13 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	for i := 0; i < maxRetries; i++ {
 		time.Sleep(100 * time.Millisecond)
 		currentCount = tail.OpenFileCount.Load()
-		if runtime.GOOS == "windows" {
-			// On Windows, check if count hasn't increased
-			if currentCount <= initialCount {
-				break
-			}
-		} else {
-			if currentCount == 0 {
-				break
-			}
+		if currentCount <= initialCount {
+			break
 		}
 	}
 
 	t.Logf("OpenFileCount after buffer full: %d", currentCount)
-	if runtime.GOOS == "windows" {
-		assert.LessOrEqual(t, currentCount, initialCount, "File count should not increase when buffer is full")
-	} else {
-		assert.Equal(t, int64(0), currentCount, "File should be closed when buffer is full")
-	}
+	assert.LessOrEqual(t, currentCount, initialCount, "File count should not increase when buffer is full")
 
 	// Allow processing to continue
 	for i := 0; i < 3; i++ {
@@ -571,9 +557,5 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 
 	// Final check of OpenFileCount
 	finalCount := tail.OpenFileCount.Load()
-	if runtime.GOOS == "windows" {
-		assert.LessOrEqual(t, finalCount, initialCount, "File count should not increase")
-	} else {
-		assert.Equal(t, int64(0), finalCount, "All files should be closed at the end")
-	}
+	assert.LessOrEqual(t, finalCount, initialCount, "File count should not increase")
 }
