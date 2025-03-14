@@ -990,7 +990,7 @@ jobs:
       - name: Set Commit Date to Terraform Variable
         id: set_commit_date
         run: |
-          echo "commit_date=$(git show -s --format=%ci e164ab40db3fff6b85af4a33eff3ba67eec84429)" >> $GITHUB_OUTPUT
+          echo "commit_date=$(git show -s --format=%ci e1927dad59f54bebd7d8079db2ccf248817d176f)" >> $GITHUB_OUTPUT
 
       - name: Terraform apply
         uses: nick-fields/retry@v2
