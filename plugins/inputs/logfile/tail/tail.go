@@ -177,10 +177,10 @@ func (tail *Tail) close() {
 		tail.Logger.Errorf("Dropped %v lines for stopped tail for file %v", tail.dropCnt, tail.Filename)
 	}
 	close(tail.Lines)
-	tail.closeFile()
+	tail.CloseFile()
 }
 
-func (tail *Tail) closeFile() {
+func (tail *Tail) CloseFile() {
 	if tail.file != nil {
 		tail.file.Close()
 		tail.file = nil
@@ -188,12 +188,14 @@ func (tail *Tail) closeFile() {
 	}
 }
 
-func (tail *Tail) reopen() error {
-	tail.closeFile()
+func (tail *Tail) Reopen(resetOffset bool) error {
+	tail.CloseFile()
 	for {
 		var err error
 		tail.file, err = OpenFile(tail.Filename)
-		tail.curOffset = 0
+		if resetOffset {
+			tail.curOffset = 0
+		}
 		if err != nil {
 			if os.IsNotExist(err) {
 				tail.Logger.Debugf("Waiting for %s to appear...", tail.Filename)
@@ -210,6 +212,15 @@ func (tail *Tail) reopen() error {
 		break
 	}
 	OpenFileCount.Add(1)
+
+	tail.openReader()
+	if !resetOffset && tail.curOffset > 0 {
+		err := tail.seekTo(SeekInfo{Offset: tail.curOffset, Whence: io.SeekStart})
+		if err != nil {
+			return fmt.Errorf("unable to restore offset on reopen: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -317,7 +328,7 @@ func (tail *Tail) tailFileSync() {
 
 	if !tail.MustExist {
 		// deferred first open.
-		err := tail.reopen()
+		err := tail.Reopen(true)
 		if err != nil {
 			if err != tomb.ErrDying {
 				tail.Kill(err)
@@ -453,7 +464,7 @@ func (tail *Tail) waitForChanges() error {
 		tail.changes = nil
 		if tail.ReOpen {
 			tail.Logger.Infof("Re-opening moved/deleted file %s ...", tail.Filename)
-			if err := tail.reopen(); err != nil {
+			if err := tail.Reopen(true); err != nil {
 				return err
 			}
 			tail.Logger.Debugf("Successfully reopened %s", tail.Filename)
@@ -466,7 +477,7 @@ func (tail *Tail) waitForChanges() error {
 	case <-tail.changes.Truncated:
 		// Always reopen truncated files (Follow is true)
 		tail.Logger.Infof("Re-opening truncated file %s ...", tail.Filename)
-		if err := tail.reopen(); err != nil {
+		if err := tail.Reopen(true); err != nil {
 			return err
 		}
 		tail.Logger.Debugf("Successfully reopened truncated %s", tail.Filename)

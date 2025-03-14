@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -37,13 +38,17 @@ type LogFile struct {
 	done              chan struct{}
 	removeTailerSrcCh chan *tailerSrc
 	started           bool
+	backpressureDrop  bool
 }
 
 func NewLogFile() *LogFile {
+	backpressureDrop := envconfig.IsBackpressureDropEnabled()
+
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
 		removeTailerSrcCh: make(chan *tailerSrc, 100),
+		backpressureDrop:  backpressureDrop,
 	}
 }
 
@@ -254,6 +259,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
+				t.backpressureDrop,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {
@@ -287,8 +293,8 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileName string
 	var targetModTime time.Time
 	for matchedFileName, matchedFileInfo := range g.Match() {
+		t.Log.Debugf("Processing matched file: %s, ModTime: %v", matchedFileName, matchedFileInfo.ModTime())
 
-		// we do not allow customer to monitor the file in t.FileStateFolder, it will monitor all of the state files
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
 			continue
 		}
@@ -304,18 +310,20 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 			continue
 		}
 
-		// Add another file blacklist here
 		fileBaseName := filepath.Base(matchedFileName)
 		if blacklistP != nil && blacklistP.MatchString(fileBaseName) {
 			continue
 		}
 		if !fileconfig.PublishMultiLogs {
+			t.Log.Debugf("Single file mode - current target: %s (ModTime: %v), candidate: %s (ModTime: %v)",
+				targetFileName, targetModTime, matchedFileName, matchedFileInfo.ModTime())
 			if targetFileName == "" || matchedFileInfo.ModTime().After(targetModTime) {
 				targetFileName = matchedFileName
 				targetModTime = matchedFileInfo.ModTime()
 			}
 		} else {
 			targetFileList = append(targetFileList, matchedFileName)
+			t.Log.Debugf("Multi-log mode - added file: %s", matchedFileName)
 		}
 	}
 	//If targetFileName != "", it means customer doesn't enable publish_multi_logs feature, targetFileList should be empty in this case.
