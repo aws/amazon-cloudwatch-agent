@@ -5,8 +5,8 @@ package main
 
 import (
 	"context"
-	"testing"
 	"sync"
+	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -16,15 +16,30 @@ import (
 
 // Mock EC2 client for testing
 type mockEC2Client struct {
-	describeSecurityGroupsOutput *ec2.DescribeSecurityGroupsOutput
+	describeSecurityGroupsOutput    *ec2.DescribeSecurityGroupsOutput
 	describeNetworkInterfacesOutput *ec2.DescribeNetworkInterfacesOutput
-	deleteSecurityGroupCalled bool
-	deleteSecurityGroupInput *ec2.DeleteSecurityGroupInput
-	revokeIngressCalled bool
-	revokeEgressCalled bool
+	deleteSecurityGroupCalled       bool
+	deleteSecurityGroupInput        *ec2.DeleteSecurityGroupInput
+	revokeIngressCalled             bool
+	revokeEgressCalled              bool
 }
 
 func (m *mockEC2Client) DescribeSecurityGroups(ctx context.Context, params *ec2.DescribeSecurityGroupsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSecurityGroupsOutput, error) {
+	if params != nil && len(params.GroupIds) > 0 {
+		// When called with specific GroupIds, return only those groups
+		matchingGroups := []types.SecurityGroup{}
+		for _, sg := range m.describeSecurityGroupsOutput.SecurityGroups {
+			for _, requestedID := range params.GroupIds {
+				if *sg.GroupId == requestedID {
+					matchingGroups = append(matchingGroups, sg)
+					break
+				}
+			}
+		}
+		return &ec2.DescribeSecurityGroupsOutput{
+			SecurityGroups: matchingGroups,
+		}, nil
+	}
 	return m.describeSecurityGroupsOutput, nil
 }
 
@@ -173,12 +188,12 @@ func TestHandleSecurityGroup(t *testing.T) {
 	defer func() { cfg.dryRun = originalDryRun }()
 
 	tests := []struct {
-		name                string
-		securityGroup       types.SecurityGroup
-		dryRun              bool
+		name                 string
+		securityGroup        types.SecurityGroup
+		dryRun               bool
 		hasNetworkInterfaces bool
-		expectDelete        bool
-		expectRevokeRules   bool
+		expectDelete         bool
+		expectRevokeRules    bool
 	}{
 		{
 			name: "Default security group - should not delete",
@@ -186,10 +201,10 @@ func TestHandleSecurityGroup(t *testing.T) {
 				GroupId:   aws.String("sg-12345"),
 				GroupName: aws.String("default"),
 			},
-			dryRun:              false,
+			dryRun:               false,
 			hasNetworkInterfaces: false,
-			expectDelete:        false,
-			expectRevokeRules:   false,
+			expectDelete:         false,
+			expectRevokeRules:    false,
 		},
 		{
 			name: "Security group with network interfaces - should not delete",
@@ -197,10 +212,10 @@ func TestHandleSecurityGroup(t *testing.T) {
 				GroupId:   aws.String("sg-67890"),
 				GroupName: aws.String("test-group"),
 			},
-			dryRun:              false,
+			dryRun:               false,
 			hasNetworkInterfaces: true,
-			expectDelete:        false,
-			expectRevokeRules:   false,
+			expectDelete:         false,
+			expectRevokeRules:    false,
 		},
 		{
 			name: "Unused security group with rules - should delete and revoke rules",
@@ -220,10 +235,10 @@ func TestHandleSecurityGroup(t *testing.T) {
 					},
 				},
 			},
-			dryRun:              false,
+			dryRun:               false,
 			hasNetworkInterfaces: false,
-			expectDelete:        true,
-			expectRevokeRules:   true,
+			expectDelete:         true,
+			expectRevokeRules:    true,
 		},
 		{
 			name: "Dry run - should not actually delete",
@@ -231,24 +246,27 @@ func TestHandleSecurityGroup(t *testing.T) {
 				GroupId:   aws.String("sg-abcde"),
 				GroupName: aws.String("test-group"),
 			},
-			dryRun:              true,
+			dryRun:               true,
 			hasNetworkInterfaces: false,
-			expectDelete:        false,
-			expectRevokeRules:   false,
+			expectDelete:         false,
+			expectRevokeRules:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg.dryRun = tt.dryRun
-			
+
 			// Create mock client
 			mockClient := &mockEC2Client{
 				describeNetworkInterfacesOutput: &ec2.DescribeNetworkInterfacesOutput{
 					NetworkInterfaces: make([]types.NetworkInterface, 0),
 				},
+				describeSecurityGroupsOutput: &ec2.DescribeSecurityGroupsOutput{
+					SecurityGroups: []types.SecurityGroup{tt.securityGroup},
+				},
 			}
-			
+
 			if tt.hasNetworkInterfaces {
 				mockClient.describeNetworkInterfacesOutput.NetworkInterfaces = append(
 					mockClient.describeNetworkInterfacesOutput.NetworkInterfaces,
@@ -257,22 +275,22 @@ func TestHandleSecurityGroup(t *testing.T) {
 					},
 				)
 			}
-			
+
 			// Create worker
 			w := worker{
-				id: 1,
-				wg: &sync.WaitGroup{},
+				id:                       1,
+				wg:                       &sync.WaitGroup{},
 				deletedSecurityGroupChan: make(chan string, 1),
 			}
-			
+
 			// Call the function
 			err := w.handleSecurityGroup(context.Background(), mockClient, tt.securityGroup)
-			
+
 			// Check results
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectDelete && !tt.dryRun, mockClient.deleteSecurityGroupCalled)
 			assert.Equal(t, tt.expectRevokeRules && !tt.dryRun, mockClient.revokeIngressCalled || mockClient.revokeEgressCalled)
-			
+
 			// Clean up channel
 			close(w.deletedSecurityGroupChan)
 		})

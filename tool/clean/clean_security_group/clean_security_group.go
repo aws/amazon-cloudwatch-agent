@@ -34,12 +34,12 @@ const (
 
 // Config holds the application configuration
 type Config struct {
-	ageThreshold    time.Duration
-	numWorkers      int
-	exceptionList   []string
-	dryRun          bool
-	skipVpcSGs      bool
-	skipWithRules   bool
+	ageThreshold  time.Duration
+	numWorkers    int
+	exceptionList []string
+	dryRun        bool
+	skipVpcSGs    bool
+	skipWithRules bool
 }
 
 // Global configuration
@@ -50,26 +50,26 @@ var (
 func init() {
 	// Set default configuration
 	cfg = Config{
-		ageThreshold:   3 * clean.KeepDurationOneDay,
-		numWorkers:     30,
-		exceptionList:  []string{"default"},
-		dryRun:         true,
-		skipVpcSGs:     false,
-		skipWithRules:  false,
+		ageThreshold:  3 * clean.KeepDurationOneDay,
+		numWorkers:    30,
+		exceptionList: []string{"default"},
+		dryRun:        true,
+		skipVpcSGs:    false,
+		skipWithRules: false,
 	}
 }
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
-	
+
 	// Parse command line flags
 	flag.BoolVar(&cfg.dryRun, "dry-run", true, "Enable dry-run mode (no actual deletion)")
 	flag.DurationVar(&cfg.ageThreshold, "age", 3*clean.KeepDurationOneDay, "Age threshold for security groups (e.g. 72h)")
 	flag.BoolVar(&cfg.skipVpcSGs, "skip-vpc", false, "Skip security groups associated with VPCs")
 	flag.BoolVar(&cfg.skipWithRules, "skip-with-rules", false, "Skip security groups that have ingress or egress rules")
 	flag.Parse()
-	
+
 	// Load AWS configuration
 	awsCfg, err := loadAWSConfig(ctx)
 	if err != nil {
@@ -98,11 +98,11 @@ func loadAWSConfig(ctx context.Context) (aws.Config, error) {
 
 func deleteUnusedSecurityGroups(ctx context.Context, client ec2Client) []string {
 	var (
-		wg                      sync.WaitGroup
-		deletedSecurityGroups   []string
-		foundSecurityGroupChan  = make(chan types.SecurityGroup, SecurityGroupProcessChanSize)
+		wg                       sync.WaitGroup
+		deletedSecurityGroups    []string
+		foundSecurityGroupChan   = make(chan types.SecurityGroup, SecurityGroupProcessChanSize)
 		deletedSecurityGroupChan = make(chan string, SecurityGroupProcessChanSize)
-		handlerWg               sync.WaitGroup
+		handlerWg                sync.WaitGroup
 	)
 
 	// Start worker pool
@@ -110,8 +110,8 @@ func deleteUnusedSecurityGroups(ctx context.Context, client ec2Client) []string 
 	for i := 0; i < cfg.numWorkers; i++ {
 		wg.Add(1)
 		w := worker{
-			id:                      i,
-			wg:                      &wg,
+			id:                        i,
+			wg:                        &wg,
 			incomingSecurityGroupChan: foundSecurityGroupChan,
 			deletedSecurityGroupChan:  deletedSecurityGroupChan,
 		}
@@ -174,52 +174,52 @@ func (w *worker) processSecurityGroup(ctx context.Context, client ec2Client) {
 func (w *worker) handleSecurityGroup(ctx context.Context, client ec2Client, securityGroup types.SecurityGroup) error {
 	sgID := *securityGroup.GroupId
 	sgName := *securityGroup.GroupName
-	
+
 	// Skip default security groups
 	if isDefaultSecurityGroup(securityGroup) {
 		log.Printf("⏭️ Worker %d: Skipping default security group: %s (%s)", w.id, sgID, sgName)
 		return nil
 	}
-	
+
 	// Skip security groups in exception list
 	if isSecurityGroupException(securityGroup) {
 		log.Printf("⏭️ Worker %d: Skipping security group in exception list: %s (%s)", w.id, sgID, sgName)
 		return nil
 	}
-	
+
 	// Check if security group is in use
 	isInUse, err := isSecurityGroupInUse(ctx, client, sgID)
 	if err != nil {
 		return fmt.Errorf("checking if security group is in use: %w", err)
 	}
-	
+
 	if isInUse {
 		log.Printf("⏭️ Worker %d: Security group is in use: %s (%s)", w.id, sgID, sgName)
 		return nil
 	}
-	
+
 	// Check if security group has rules and we're configured to skip those
 	if cfg.skipWithRules && hasRules(securityGroup) {
 		log.Printf("⏭️ Worker %d: Skipping security group with rules: %s (%s)", w.id, sgID, sgName)
 		return nil
 	}
-	
+
 	log.Printf("🚨 Worker %d: Found unused security group: %s (%s)", w.id, sgID, sgName)
-	
+
 	// Clean up any rules before deletion
 	if hasRules(securityGroup) {
 		if err := cleanSecurityGroupRules(ctx, client, securityGroup); err != nil {
 			return fmt.Errorf("cleaning security group rules: %w", err)
 		}
 	}
-	
+
 	w.deletedSecurityGroupChan <- sgID
-	
+
 	if cfg.dryRun {
 		log.Printf("🛑 Dry-Run: Would delete security group: %s (%s)", sgID, sgName)
 		return nil
 	}
-	
+
 	return deleteSecurityGroup(ctx, client, sgID)
 }
 
@@ -236,7 +236,7 @@ func deleteSecurityGroup(ctx context.Context, client ec2Client, securityGroupID 
 
 func cleanSecurityGroupRules(ctx context.Context, client ec2Client, securityGroup types.SecurityGroup) error {
 	sgID := *securityGroup.GroupId
-	
+
 	// Get fresh security group data in one call
 	describeOutput, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 		GroupIds: []string{sgID},
@@ -244,20 +244,20 @@ func cleanSecurityGroupRules(ctx context.Context, client ec2Client, securityGrou
 	if err != nil {
 		return fmt.Errorf("describing security group %s: %w", sgID, err)
 	}
-	
+
 	if len(describeOutput.SecurityGroups) == 0 {
 		return fmt.Errorf("security group %s not found", sgID)
 	}
-	
+
 	sg := describeOutput.SecurityGroups[0]
-	
+
 	// Handle both ingress and egress rules concurrently
 	var wg sync.WaitGroup
 	var ingressErr, egressErr error
-	
+
 	if len(sg.IpPermissions) > 0 {
 		if cfg.dryRun {
-			log.Printf("🛑 Dry-Run: Would revoke %d ingress rules from security group: %s", 
+			log.Printf("🛑 Dry-Run: Would revoke %d ingress rules from security group: %s",
 				len(sg.IpPermissions), sgID)
 		} else {
 			wg.Add(1)
@@ -275,10 +275,10 @@ func cleanSecurityGroupRules(ctx context.Context, client ec2Client, securityGrou
 			}()
 		}
 	}
-	
+
 	if len(sg.IpPermissionsEgress) > 0 {
 		if cfg.dryRun {
-			log.Printf("🛑 Dry-Run: Would revoke %d egress rules from security group: %s", 
+			log.Printf("🛑 Dry-Run: Would revoke %d egress rules from security group: %s",
 				len(sg.IpPermissionsEgress), sgID)
 		} else {
 			wg.Add(1)
@@ -296,16 +296,16 @@ func cleanSecurityGroupRules(ctx context.Context, client ec2Client, securityGrou
 			}()
 		}
 	}
-	
+
 	wg.Wait()
-	
+
 	if ingressErr != nil {
 		return ingressErr
 	}
 	if egressErr != nil {
 		return egressErr
 	}
-	
+
 	return nil
 }
 
@@ -323,7 +323,7 @@ func fetchAndProcessSecurityGroups(ctx context.Context, client ec2Client,
 		default:
 			output, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 				MaxResults: aws.Int32(maxResults),
-				NextToken: nextToken,
+				NextToken:  nextToken,
 			})
 			if err != nil {
 				return fmt.Errorf("describing security groups: %w", err)
@@ -356,7 +356,7 @@ func isSecurityGroupInUse(ctx context.Context, client ec2Client, securityGroupID
 	// Use a channel to handle concurrent checks
 	resultChan := make(chan bool, 2)
 	errChan := make(chan error, 2)
-	
+
 	// Check network interfaces concurrently
 	go func() {
 		output, err := client.DescribeNetworkInterfaces(ctx, &ec2.DescribeNetworkInterfacesInput{
@@ -366,7 +366,6 @@ func isSecurityGroupInUse(ctx context.Context, client ec2Client, securityGroupID
 					Values: []string{securityGroupID},
 				},
 			},
-			MaxResults: aws.Int32(1), // We only need to know if any exist
 		})
 		if err != nil {
 			errChan <- fmt.Errorf("describing network interfaces: %w", err)
@@ -374,7 +373,7 @@ func isSecurityGroupInUse(ctx context.Context, client ec2Client, securityGroupID
 		}
 		resultChan <- len(output.NetworkInterfaces) > 0
 	}()
-	
+
 	// Check security group references concurrently
 	go func() {
 		output, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{})
@@ -382,22 +381,22 @@ func isSecurityGroupInUse(ctx context.Context, client ec2Client, securityGroupID
 			errChan <- fmt.Errorf("describing security groups: %w", err)
 			return
 		}
-		
+
 		for _, sg := range output.SecurityGroups {
 			if *sg.GroupId == securityGroupID {
 				continue
 			}
-			
+
 			// Check both ingress and egress rules
 			if isReferencedInRules(sg.IpPermissions, securityGroupID) ||
-			   isReferencedInRules(sg.IpPermissionsEgress, securityGroupID) {
+				isReferencedInRules(sg.IpPermissionsEgress, securityGroupID) {
 				resultChan <- true
 				return
 			}
 		}
 		resultChan <- false
 	}()
-	
+
 	// Wait for both checks
 	for i := 0; i < 2; i++ {
 		select {
@@ -411,7 +410,7 @@ func isSecurityGroupInUse(ctx context.Context, client ec2Client, securityGroupID
 			return false, ctx.Err()
 		}
 	}
-	
+
 	return false, nil
 }
 
