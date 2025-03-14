@@ -85,6 +85,7 @@ jobs:
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
@@ -116,6 +117,7 @@ jobs:
           echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_performance_matrix=$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
@@ -134,6 +136,7 @@ jobs:
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
@@ -329,6 +332,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
+            
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -378,7 +382,9 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
     secrets: inherit
+
 
   EC2LinuxIntegrationTestITAR:
     needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
@@ -416,7 +422,6 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
 
-
   LinuxOnPremIntegrationTest:
     needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
     name: 'OnpremLinux'
@@ -432,6 +437,24 @@ jobs:
       localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
       region: us-west-2
     secrets: inherit
+
+  EC2SELinuxIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2SELinux'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_selinux_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
@@ -479,6 +502,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
+            
             terraform init
             if terraform apply --auto-approve \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -494,7 +518,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -510,7 +533,6 @@ jobs:
               cd terraform/ec2/win
             fi
             terraform destroy --auto-approve
-
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: ${{matrix.arrays.testName}}
@@ -557,6 +579,7 @@ jobs:
             else
               cd terraform/ec2/mac
             fi
+            
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -572,7 +595,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -686,7 +708,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-
+            
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -719,7 +741,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    needs: [GenerateTestMatrix, OutputEnvVariables]
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
       fail-fast: false
       matrix:
@@ -762,7 +784,7 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-
+            
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -772,6 +794,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -833,7 +856,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-
+            
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -908,7 +931,7 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
-
+            
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -919,7 +942,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -937,7 +959,7 @@ jobs:
 
   PerformanceTrackingTest:
     name: ${{matrix.arrays.testName}}
-    needs: [GenerateTestMatrix, OutputEnvVariables]
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
