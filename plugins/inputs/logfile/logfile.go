@@ -138,6 +138,7 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 	}
 
 	t.started = true
+	t.Log.Infof("turned on logs plugin")
 	return nil
 }
 
@@ -149,8 +150,6 @@ func (t *LogFile) Stop() {
 
 // Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
-	t.Log.Debugf("FindLogSrc called")
-
 	if !t.started {
 		t.Log.Warn("not started with file state folder %s", t.FileStateFolder)
 		return nil
@@ -165,8 +164,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-		t.Log.Debugf("Looking for files matching %s", fileconfig.FilePath)
-		t.Log.Infof("D! [logfile] Searching for files matching pattern: %s", fileconfig.FilePath)
+
 		//Add file -> {serviceName,  deploymentEnvironment} mapping to entity store
 		if es != nil {
 			es.AddServiceAttrEntryForLogFile(entitystore.LogFileGlob(fileconfig.FilePath), fileconfig.ServiceName, fileconfig.Environment)
@@ -174,10 +172,8 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 		targetFiles, err := t.getTargetFiles(fileconfig)
 		if err != nil {
-			t.Log.Errorf("Error getting target files: %v", err)
 			t.Log.Errorf("Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)
 		}
-		t.Log.Infof("D! [logfile] Found %d target files", len(targetFiles))
 		for _, filename := range targetFiles {
 			dests, ok := t.configs[fileconfig]
 			if !ok {
@@ -288,8 +284,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	filePath := fileconfig.FilePath
 	blacklistP := fileconfig.BlacklistRegexP
-	t.Log.Debugf("getTargetFiles starting for pattern: %s", filePath)
-
 	g, err := globpath.Compile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("file_path glob %s failed to compile, %s", filePath, err)
@@ -298,57 +292,45 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileList []string
 	var targetFileName string
 	var targetModTime time.Time
-
-	matches := g.Match()
-	t.Log.Debugf("Glob match found %d files", len(matches))
-
-	for matchedFileName, matchedFileInfo := range matches {
+	for matchedFileName, matchedFileInfo := range g.Match() {
 		t.Log.Debugf("Processing matched file: %s, ModTime: %v", matchedFileName, matchedFileInfo.ModTime())
 
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
-			t.Log.Debugf("Skipping state folder file: %s", matchedFileName)
 			continue
 		}
 
 		if isCompressedFile(matchedFileName) {
-			t.Log.Debugf("Skipping compressed file: %s", matchedFileName)
 			continue
 		}
 
+		// If it's a dir or a symbolic link pointing to a dir, ignore it
 		if isDir, err := isDirectory(matchedFileName); err != nil {
-			t.Log.Errorf("Error checking if directory: %s, error: %v", matchedFileName, err)
 			return nil, fmt.Errorf("error tailing file %v with error: %v", matchedFileName, err)
 		} else if isDir {
-			t.Log.Debugf("Skipping directory: %s", matchedFileName)
 			continue
 		}
 
 		fileBaseName := filepath.Base(matchedFileName)
 		if blacklistP != nil && blacklistP.MatchString(fileBaseName) {
-			t.Log.Debugf("File matched blacklist pattern: %s", matchedFileName)
 			continue
 		}
-
 		if !fileconfig.PublishMultiLogs {
 			t.Log.Debugf("Single file mode - current target: %s (ModTime: %v), candidate: %s (ModTime: %v)",
 				targetFileName, targetModTime, matchedFileName, matchedFileInfo.ModTime())
 			if targetFileName == "" || matchedFileInfo.ModTime().After(targetModTime) {
 				targetFileName = matchedFileName
 				targetModTime = matchedFileInfo.ModTime()
-				t.Log.Debugf("Updated target file to: %s", targetFileName)
 			}
 		} else {
 			targetFileList = append(targetFileList, matchedFileName)
 			t.Log.Debugf("Multi-log mode - added file: %s", matchedFileName)
 		}
 	}
-
+	//If targetFileName != "", it means customer doesn't enable publish_multi_logs feature, targetFileList should be empty in this case.
 	if targetFileName != "" {
 		targetFileList = append(targetFileList, targetFileName)
-		t.Log.Debugf("Single file mode - final target file: %s", targetFileName)
 	}
 
-	t.Log.Debugf("getTargetFiles returning %d files", len(targetFileList))
 	return targetFileList, nil
 }
 
