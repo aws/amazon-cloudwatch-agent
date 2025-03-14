@@ -990,7 +990,14 @@ jobs:
       - name: Set Commit Date to Terraform Variable
         id: set_commit_date
         run: |
-          echo "git status"
+          echo "Current directory: $(pwd)"
+          echo "Git status:"
+          git status || true
+          echo "Git branch:"
+          git branch || true
+          echo "Git remote:"
+          git remote -v || true
+          echo "Running git show command..."
           echo "commit_date=$(git show -s --format=%ci e1927dad59f54bebd7d8079db2ccf248817d176f)" >> $GITHUB_OUTPUT
 
       - name: Terraform apply
