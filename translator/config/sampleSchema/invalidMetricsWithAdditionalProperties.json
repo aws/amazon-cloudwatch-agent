@@ -23,7 +23,7 @@
           "metric2"
         ],
         "resources": [
-          "customizedInstaces"
+          "customizedInstances"
         ],
         "measurement": [
           "customizedCounter1"

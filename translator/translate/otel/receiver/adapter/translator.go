@@ -24,12 +24,12 @@ type translator struct {
 	// See otel.ConfigKey.
 	cfgKey string
 
-	// preferMetricCollectionInterval is an option to using the preferaable metric collection interval before
+	// preferMetricCollectionInterval is an option to using the preferable metric collection interval before
 	// using the interval key chain and defaultMetricCollectionInterval
 	preferMetricCollectionInterval time.Duration
 
 	// defaultMetricCollectionInterval is the fallback interval if it
-	// it is not present in the interval keychain.
+	// is not present in the interval keychain.
 	defaultMetricCollectionInterval time.Duration
 }
 
@@ -72,7 +72,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AliasName = t.name
-	// The fall back interval is 0 when there is no plugin's collection interval or the plugin's collection interval cannot  be scraped.
+	// The fallback interval is 0 when there is no plugin's collection interval or the plugin's collection interval cannot  be scraped.
 	// Therefore, using 0 as a gate for procstat plugin
 	if t.preferMetricCollectionInterval != time.Duration(0) {
 		cfg.CollectionInterval = t.preferMetricCollectionInterval

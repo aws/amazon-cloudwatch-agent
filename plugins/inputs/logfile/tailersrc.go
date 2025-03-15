@@ -29,7 +29,7 @@ var (
 )
 
 type fileOffset struct {
-	seq, offset int64 // Seq handles file trucation, when file is trucated, we increase the offset seq
+	seq, offset int64 // Seq handles file truncation, when file is truncated, we increase the offset seq
 }
 
 func (fo *fileOffset) SetOffset(o int64) {
