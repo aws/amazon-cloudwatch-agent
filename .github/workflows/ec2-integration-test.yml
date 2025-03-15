@@ -96,6 +96,8 @@ jobs:
             if terraform apply --auto-approve \
               -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
+              -var="is_selinux_test=${{ inputs.is_selinux_test }}" \
+              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
