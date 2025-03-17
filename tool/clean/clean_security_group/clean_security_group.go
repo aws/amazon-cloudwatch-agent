@@ -50,8 +50,8 @@ var (
 func init() {
 	// Set default configuration
 	cfg = Config{
-		ageThreshold:  3 * clean.KeepDurationOneDay,
-		numWorkers:    30,
+		ageThreshold:  1 * clean.KeepDurationOneDay,
+		numWorkers:    10,
 		exceptionList: []string{"default"},
 		dryRun:        true,
 		skipVpcSGs:    false,
@@ -60,7 +60,7 @@ func init() {
 }
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Minute)
 	defer cancel()
 
 	// Parse command line flags
