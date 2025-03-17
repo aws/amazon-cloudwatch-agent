@@ -59,6 +59,7 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 	}
 	e.logger.Debug("Kubernetes clientset created successfully")
 
+	// jitter calls to the kubernetes api (a precaution to prevent overloading api server)
 	jitterSleep(jitterKubernetesAPISeconds)
 
 	timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
