@@ -51,7 +51,7 @@ func init() {
 	// Set default configuration
 	cfg = Config{
 		ageThreshold:  1 * clean.KeepDurationOneDay,
-		numWorkers:    10,
+		numWorkers:    30,
 		exceptionList: []string{"default"},
 		dryRun:        true,
 		skipVpcSGs:    false,
@@ -65,7 +65,7 @@ func main() {
 
 	// Parse command line flags
 	flag.BoolVar(&cfg.dryRun, "dry-run", true, "Enable dry-run mode (no actual deletion)")
-	flag.DurationVar(&cfg.ageThreshold, "age", 3*clean.KeepDurationOneDay, "Age threshold for security groups (e.g. 72h)")
+	flag.DurationVar(&cfg.ageThreshold, "age", 1*clean.KeepDurationOneDay, "Age threshold for security groups (e.g. 24h)")
 	flag.BoolVar(&cfg.skipVpcSGs, "skip-vpc", false, "Skip security groups associated with VPCs")
 	flag.BoolVar(&cfg.skipWithRules, "skip-with-rules", false, "Skip security groups that have ingress or egress rules")
 	flag.Parse()
