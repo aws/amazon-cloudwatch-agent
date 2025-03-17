@@ -136,4 +136,4 @@ jobs:
               cd ${{inputs.test_dir}}
             fi
 
-            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+            terraform destroy -lock-timeout=5m -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
