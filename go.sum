@@ -1676,6 +1676,8 @@ go.opentelemetry.io/collector/extension/zpagesextension v0.115.0 h1:zYrZZocc7n0Z
 go.opentelemetry.io/collector/extension/zpagesextension v0.115.0/go.mod h1:OaXwNHF3MAcInBzCXrhXbTNHfIi9b7YGhXjtCFZqxNY=
 go.opentelemetry.io/collector/featuregate v1.22.0 h1:1TUcdqA5VpEsX1Lrr6GG15CptZxDXxiu5AXgwpeNSR4=
 go.opentelemetry.io/collector/featuregate v1.22.0/go.mod h1:3GaXqflNDVwWndNGBJ1+XJFy3Fv/XrFgjMN60N3z7yg=
+go.opentelemetry.io/collector/filter v0.115.0 h1:pYnHUFDSHSjEIFZit+CU09itVkDXgV+WcV2HOkjvQcE=
+go.opentelemetry.io/collector/filter v0.115.0/go.mod h1:aewQ+jmvpH88gPVWpNXiWSm+wwJVxTK4f23ex2NMd2c=
 go.opentelemetry.io/collector/internal/fanoutconsumer v0.115.0 h1:6DRiSECeApFq6Jj5ug77rG53R6FzJEZBfygkyMEXdpg=
 go.opentelemetry.io/collector/internal/fanoutconsumer v0.115.0/go.mod h1:vgQf5HQdmLQqpDHpDq2S3nTRoUuKtRcZpRTsy+UiwYw=
 go.opentelemetry.io/collector/internal/memorylimiter v0.115.0 h1:U07IJxyHZXM6eLn8cOq/Lycx6DhQZhpDOuYtIRw/d6I=
