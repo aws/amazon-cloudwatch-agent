@@ -38,6 +38,8 @@ on:
         type: string
       terraform_assume_role:
         type: string
+      is_selinux_test:
+        type: boolean
       s3_integration_bucket:
         type: string
 
@@ -103,10 +105,13 @@ jobs:
               -var="github_test_repo=${{ inputs.test_repo_url }}" \
               -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
               -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="is_selinux_test=${{ inputs.is_selinux_test }}" \
+              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
               -var="local_stack_host_name=${{ inputs.localstack_host }}" \
               -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
               -var="region=${{ inputs.region }}" \
               -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
+              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
@@ -131,4 +136,4 @@ jobs:
               cd ${{inputs.test_dir}}
             fi
 
-            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+            terraform destroy -lock-timeout=5m -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
