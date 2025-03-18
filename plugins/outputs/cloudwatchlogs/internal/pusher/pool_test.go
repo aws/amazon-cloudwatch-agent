@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 func TestWorkerPool(t *testing.T) {
@@ -104,7 +104,7 @@ func TestWorkerPool(t *testing.T) {
 }
 
 func TestSenderPool(t *testing.T) {
-	logger := testutil.Logger{Name: "test"}
+	logger := testutil.NewNopLogger()
 	stop := make(chan struct{})
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)

@@ -46,7 +46,8 @@ processors:
         imds_retries: 2
         middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
         shared_credential_file: fake-path
 receivers:
     telegraf_win_perf_counters/1492679118:

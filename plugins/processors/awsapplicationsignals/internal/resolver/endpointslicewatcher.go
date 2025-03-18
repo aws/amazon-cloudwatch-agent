@@ -64,7 +64,7 @@ func (w *endpointSliceWatcher) Run(stopCh chan struct{}) {
 			w.handleSliceAdd(obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			w.handleSliceUpdate(newObj, oldObj)
+			w.handleSliceUpdate(oldObj, newObj)
 		},
 		DeleteFunc: func(obj interface{}) {
 			w.handleSliceDelete(obj)
@@ -92,6 +92,8 @@ func (w *endpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 	var pairs []kvPair
 
 	isFirstPod := true
+	svcName := slice.Labels["kubernetes.io/service-name"]
+
 	for _, endpoint := range slice.Endpoints {
 		if endpoint.TargetRef != nil {
 			if endpoint.TargetRef.Kind != "Pod" {
@@ -101,7 +103,7 @@ func (w *endpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 			podName := endpoint.TargetRef.Name
 			ns := endpoint.TargetRef.Namespace
 
-			derivedWorkload := inferWorkloadName(podName)
+			derivedWorkload := inferWorkloadName(podName, svcName)
 			if derivedWorkload == "" {
 				w.logger.Warn("failed to infer workload name from Pod name", zap.String("podName", podName))
 				continue
@@ -133,7 +135,6 @@ func (w *endpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 			// Build service name -> "workload@namespace" pair from the first pod
 			if isFirstPod {
 				isFirstPod = false
-				svcName := slice.Labels["kubernetes.io/service-name"]
 				if svcName != "" {
 					pairs = append(pairs, kvPair{
 						key:       svcName + "@" + ns,
