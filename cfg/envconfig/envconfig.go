@@ -74,6 +74,6 @@ func IsWindowsHostProcessContainer() bool {
 	return false
 }
 
-func IsSelinuxEnabled() (status bool) {
+func IsSelinuxEnabled() bool {
 	return os.Getenv(RunWithSELinux) == TrueValue
 }
