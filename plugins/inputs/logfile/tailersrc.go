@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	stateFileMode       = 0644
-	closeReopenInterval = 100 * time.Millisecond
+	stateFileMode     = 0644
+	tailCloseInterval = 500 * time.Millisecond
 )
 
 var (
@@ -84,8 +84,6 @@ type tailerSrc struct {
 	backpressureDrop bool
 	buffer           chan *LogEvent
 	stopOnce         sync.Once
-	bufferCloseOnce  sync.Once
-	outputFnMu       sync.RWMutex // mutex to protect outputFn access
 }
 
 // Verify tailerSrc implements LogSrc
@@ -123,10 +121,8 @@ func NewTailerSrc(
 		retentionInDays:  retentionInDays,
 		backpressureDrop: useBufferedSender,
 
-		offsetCh:        make(chan fileOffset, 2000),
-		done:            make(chan struct{}),
-		stopOnce:        sync.Once{},
-		bufferCloseOnce: sync.Once{},
+		offsetCh: make(chan fileOffset, 2000),
+		done:     make(chan struct{}),
 	}
 
 	if useBufferedSender {
@@ -185,6 +181,9 @@ func (ts *tailerSrc) Done(offset fileOffset) {
 func (ts *tailerSrc) Stop() {
 	ts.stopOnce.Do(func() {
 		close(ts.done)
+		if ts.buffer != nil {
+			close(ts.buffer)
+		}
 	})
 }
 
@@ -298,28 +297,24 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 			case <-ts.done:
 				return
 			default:
-				// Buffer is full, close file and try again
-				log.Printf("D! [logfile] tailer sender buffer is full, closing file %v", ts.tailer.Filename)
-				ts.tailer.CloseFile()
+				// sender buffer is full. start timer to close file then retry
+				timer := time.NewTimer(tailCloseInterval)
+				defer timer.Stop()
 
 				for {
 					select {
 					case ts.buffer <- e:
-						// reopen the file after successful send
+						// sent event after buffer gets freed up
 						if err := ts.tailer.Reopen(false); err != nil {
 							log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
-							return
 						}
 						return
+					case <-timer.C:
+						// timer expired without successful send, close file
+						log.Printf("D! [logfile] tailer sender buffer blocked after retrying, closing file %v", ts.tailer.Filename)
+						ts.tailer.CloseFile()
 					case <-ts.done:
 						return
-					default:
-						// buffer still full, sleep and try again
-						select {
-						case <-time.After(closeReopenInterval):
-						case <-ts.done:
-							return
-						}
 					}
 				}
 			}
@@ -331,14 +326,6 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 
 func (ts *tailerSrc) runSender() {
 	log.Printf("D! [logfile] runSender starting for %s", ts.tailer.Filename)
-	defer func() {
-		ts.bufferCloseOnce.Do(func() {
-			if ts.buffer != nil {
-				close(ts.buffer)
-			}
-		})
-		log.Printf("D! [logfile] runSender exiting for %s", ts.tailer.Filename)
-	}()
 
 	for {
 		select {
@@ -353,11 +340,7 @@ func (ts *tailerSrc) runSender() {
 				return
 			default:
 				if e != nil {
-					ts.outputFnMu.RLock()
-					if ts.outputFn != nil {
-						ts.outputFn(e)
-					}
-					ts.outputFnMu.RUnlock()
+					ts.outputFn(e)
 				}
 			}
 		case <-ts.done:
@@ -379,12 +362,9 @@ func (ts *tailerSrc) cleanUp() {
 		clf()
 	}
 
-	ts.outputFnMu.Lock()
 	if ts.outputFn != nil {
-		ts.outputFn(nil)
-		ts.outputFn = nil
+		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
-	ts.outputFnMu.Unlock()
 }
 
 func (ts *tailerSrc) runSaveState() {
