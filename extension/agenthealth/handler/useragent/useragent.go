@@ -31,6 +31,7 @@ const (
 	flagContainerInsights         = "container_insights"
 	flagAppSignals                = "application_signals"
 	flagEnhancedContainerInsights = "enhanced_container_insights"
+	flagSELinux                   = "selinux"
 	flagROSA					  = "rosa"
 	separator = " "
 
@@ -76,6 +77,11 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	}
 	for _, output := range telegrafCfg.Outputs {
 		ua.outputs.Add(output.Config.Name)
+	}
+
+	// Adding SELinux status
+	if envconfig.IsSelinuxEnabled() {
+		ua.inputs.Add(flagSELinux)
 	}
 	//Adding ROSA status
 	if envconfig.IsRunningOnROSA(){

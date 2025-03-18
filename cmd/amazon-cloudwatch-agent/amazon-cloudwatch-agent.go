@@ -313,6 +313,10 @@ func runAgent(ctx context.Context,
 		log.Println("I! Running on ROSA")
 	}
 
+	if envconfig.IsSelinuxEnabled() {
+		log.Println("I! SELinux Status: Enabled")
+	}
+
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
