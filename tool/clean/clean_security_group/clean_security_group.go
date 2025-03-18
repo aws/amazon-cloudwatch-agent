@@ -83,7 +83,7 @@ func main() {
 		cfg.ageThreshold, awsCfg.Region)
 
 	// Delete old security groups
-	deletedGroups := deleteUnusedSecurityGroups(ctx, client)
+	deletedGroups, err := deleteUnusedSecurityGroups(ctx, client)
 	log.Printf("Total security groups deleted: %d", len(deletedGroups))
 }
 
@@ -96,7 +96,7 @@ func loadAWSConfig(ctx context.Context) (aws.Config, error) {
 	return cfg, nil
 }
 
-func deleteUnusedSecurityGroups(ctx context.Context, client ec2Client) []string {
+func deleteUnusedSecurityGroups(ctx context.Context, client ec2Client) ([]string,error) {
 	var (
 		wg                       sync.WaitGroup
 		deletedSecurityGroups    []string
@@ -128,6 +128,7 @@ func deleteUnusedSecurityGroups(ctx context.Context, client ec2Client) []string 
 	// Process security groups in batches
 	if err := fetchAndProcessSecurityGroups(ctx, client, foundSecurityGroupChan); err != nil {
 		log.Printf("Error processing security groups: %v", err)
+		return nil, err
 	}
 
 	close(foundSecurityGroupChan)
@@ -135,7 +136,7 @@ func deleteUnusedSecurityGroups(ctx context.Context, client ec2Client) []string 
 	close(deletedSecurityGroupChan)
 	handlerWg.Wait()
 
-	return deletedSecurityGroups
+	return deletedSecurityGroups,nil
 }
 
 func handleDeletedSecurityGroups(deletedSecurityGroups *[]string, deletedSecurityGroupChan chan string) {

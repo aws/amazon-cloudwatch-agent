@@ -305,4 +305,7 @@ jobs:
 
       - name: Clean Old Security Groups
         working-directory: tool/clean
-        run: go run ./clean_security_group/clean_security_group.go
+        run: |
+          set -e
+          go run ./clean_security_group/clean_security_group.go || { echo "Failed to clean security groups"; exit 1; }
+
