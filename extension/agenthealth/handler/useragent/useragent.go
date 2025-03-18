@@ -81,11 +81,11 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 
 	// Adding SELinux status
 	if envconfig.IsSelinuxEnabled() {
-		ua.inputs.Add(flagSELinux)
+		ua.outputs.Add(flagSELinux)
 	}
 	//Adding ROSA status
 	if envconfig.IsRunningOnROSA() {
-		ua.inputs.Add(flagROSA)
+		ua.outputs.Add(flagROSA)
 	}
 
 	for _, pipeline := range otelCfg.Service.Pipelines {
