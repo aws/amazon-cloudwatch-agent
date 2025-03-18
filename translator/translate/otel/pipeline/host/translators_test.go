@@ -122,6 +122,90 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithBothDiskIoAndAdapted": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"io_time", "diskio_ebs_total_read_bytes"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"telegraf_diskio", "awsebsnvmereceiver"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_diskio", "awsebsnvmereceiver"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithoutDiskIoMetrics": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"io_time"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"telegraf_diskio"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_diskio"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithDiskIoMetrics": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"diskio_ebs_total_read_bytes"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"awsebsnvmereceiver"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"awsebsnvmereceiver"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
 		"WithOtlpMetrics/CloudWatch": {
 			input: map[string]any{
 				"metrics": map[string]any{

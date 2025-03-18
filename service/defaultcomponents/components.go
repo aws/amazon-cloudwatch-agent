@@ -64,6 +64,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -73,6 +74,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Receivers, err = receiver.MakeFactoryMap(
 		awscontainerinsightreceiver.NewFactory(),
 		awscontainerinsightskueuereceiver.NewFactory(),
+		awsebsnvmereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
