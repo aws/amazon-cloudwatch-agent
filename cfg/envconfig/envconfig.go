@@ -25,7 +25,7 @@ const (
 	RunAsHostProcessContainer = "RUN_AS_HOST_PROCESS_CONTAINER"
 	RunInAWS                  = "RUN_IN_AWS"
 	RunWithIRSA               = "RUN_WITH_IRSA"
-	RunWithROSA               = "RUN_ON_ROSA"
+	RunOnROSA                 = "RUN_ON_ROSA"
 	UseDefaultConfig          = "USE_DEFAULT_CONFIG"
 	HostName                  = "HOST_NAME"
 	PodName                   = "POD_NAME"
@@ -75,5 +75,5 @@ func IsWindowsHostProcessContainer() bool {
 }
 
 func IsRunningOnROSA() bool {
-	return os.Getenv(RunWithROSA) == TrueValue
+	return os.Getenv(RunOnROSA) == TrueValue
 }
