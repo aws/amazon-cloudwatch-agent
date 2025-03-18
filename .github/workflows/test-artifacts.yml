@@ -166,6 +166,23 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       github_sha: ${{ inputs.build_id }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  
+   StartLocalStack:
+    name: 'StartLocalStack'
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{ inputs.build_id }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   UploadDependenciesCN:
     name: 'UploadDependenciesCN'
@@ -200,6 +217,42 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
+
+  EC2LinuxIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2Linux'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+    secrets: inherit
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      github_sha: ${{inputs.build_id}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   StopLocalStackCN:
     name: 'StopLocalStackCN'
