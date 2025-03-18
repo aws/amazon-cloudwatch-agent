@@ -310,6 +310,10 @@ func runAgent(ctx context.Context,
 		}
 	}
 
+	if envconfig.IsSelinuxEnabled() {
+		log.Println("I! SELinux Status: Enabled")
+	}
+
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
@@ -736,3 +740,4 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 
 	return "", nil
 }
+
