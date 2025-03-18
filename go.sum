@@ -200,8 +200,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cont
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250313160903-790751417220/go.mod h1:4HebVM9TmMpsxZAXLX5om998dTm1JUndjcpmhrnGkx4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250313160903-790751417220 h1:mxMnJHpqxpxRfZ/Ph/8RY9u7NhQftYWSkkSujLMRU3s=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250313160903-790751417220/go.mod h1:sCx+2x6y1jjWGcXbgyP97Q+Himx84LlPZ9yWLgcV4vo=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250313160903-790751417220 h1:InKUp04/CXtZ4QUeB1ec9fq0mYoqruncw669jnVtJDE=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250313160903-790751417220/go.mod h1:kxuPS8JKnLVWie4PnL8iCoFx/mr89yR4VYFvJhlQfpY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250318180415-0f3e7c4087af h1:w4PiBzq24qzG26jk5hvWvw78xAapfvNSkZSUml8sVk8=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250318180415-0f3e7c4087af/go.mod h1:kxuPS8JKnLVWie4PnL8iCoFx/mr89yR4VYFvJhlQfpY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250313160903-790751417220 h1:epYN+kmQQ5h7W+qc/iMUv4PT1swMgzrj9NUIUMifMIc=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250313160903-790751417220/go.mod h1:jNjrbc2MpIBzlaEnOVdlxniDzIUgzD80fm6wkBs0flw=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20250313160903-790751417220 h1:9qmR+GqEiKd9s4eqQLYE6f/4GszLx8LRb+qw+41gjNU=
