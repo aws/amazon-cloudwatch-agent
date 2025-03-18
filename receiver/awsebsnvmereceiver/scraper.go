@@ -24,6 +24,9 @@ type nvmeScraper struct {
 	logger *zap.Logger
 	mb     *metadata.MetricsBuilder
 	nvme   nvme.UtilInterface
+
+	// If collectAllDevices is true then allowedDevices will still be populated (likely with `*`) but unused
+	allowedDevices map[string]struct{}
 }
 
 type ebsDevice struct {
@@ -34,6 +37,7 @@ type ebsDevice struct {
 
 type recordDataMetricFunc func(pcommon.Timestamp, int64)
 
+// For unit testing
 var getMetrics = nvme.GetMetrics
 
 func (s *nvmeScraper) start(_ context.Context, _ component.Host) error {
@@ -47,65 +51,88 @@ func (s *nvmeScraper) shutdown(_ context.Context) error {
 }
 
 func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
-	ebsDevices, err := s.getEbsDevices()
+	s.logger.Debug("Began scraping for NVMe metrics")
+
+	ebsDevicesByController, err := s.getEbsDevicesByController()
 	if err != nil {
 		return pmetric.NewMetrics(), err
 	}
 
 	now := pcommon.NewTimestampFromTime(time.Now())
 
-	for _, device := range ebsDevices {
-		metrics, err := getMetrics(device.devicePath)
-		if err != nil {
-			s.logger.Info("unable to get metrics for device", zap.String("device", device.deviceName), zap.Error(err))
-			continue
+	for id, ebsDevices := range ebsDevicesByController {
+		// Some devices are owned by root:root, root:disk, etc, so the agent will attempt to
+		// retrieve the metric for a device (grouped by controller ID) until the first
+		// success
+		foundWorkingDevice := false
+
+		for _, device := range ebsDevices {
+			if foundWorkingDevice {
+				break
+			}
+
+			metrics, err := getMetrics(device.devicePath)
+			if err != nil {
+				s.logger.Debug("unable to get metrics for device", zap.String("device", device.deviceName), zap.Error(err))
+				continue
+			}
+
+			foundWorkingDevice = true
+
+			rb := s.mb.NewResourceBuilder()
+			rb.SetVolumeID(device.volumeID)
+
+			s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
+			s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
+			s.recordMetric(s.mb.RecordDiskioEbsTotalReadBytesDataPoint, now, metrics.ReadBytes)
+			s.recordMetric(s.mb.RecordDiskioEbsTotalWriteBytesDataPoint, now, metrics.WriteBytes)
+			s.recordMetric(s.mb.RecordDiskioEbsTotalReadTimeDataPoint, now, metrics.TotalReadTime)
+			s.recordMetric(s.mb.RecordDiskioEbsTotalWriteTimeDataPoint, now, metrics.TotalWriteTime)
+			s.recordMetric(s.mb.RecordDiskioEbsVolumePerformanceExceededIopsDataPoint, now, metrics.EBSIOPSExceeded)
+			s.recordMetric(s.mb.RecordDiskioEbsVolumePerformanceExceededTpDataPoint, now, metrics.EBSThroughputExceeded)
+			s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
+			s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
+			s.recordMetric(s.mb.RecordDiskioEbsVolumeQueueLengthDataPoint, now, metrics.QueueLength)
+
+			s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
 		}
 
-		rb := s.mb.NewResourceBuilder()
-		rb.SetVolumeID(device.volumeID)
-
-		s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
-		s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
-		s.recordMetric(s.mb.RecordDiskioEbsTotalReadBytesDataPoint, now, metrics.ReadBytes)
-		s.recordMetric(s.mb.RecordDiskioEbsTotalWriteBytesDataPoint, now, metrics.WriteBytes)
-		s.recordMetric(s.mb.RecordDiskioEbsTotalReadTimeDataPoint, now, metrics.TotalReadTime)
-		s.recordMetric(s.mb.RecordDiskioEbsTotalWriteTimeDataPoint, now, metrics.TotalWriteTime)
-		s.recordMetric(s.mb.RecordDiskioEbsVolumePerformanceExceededIopsDataPoint, now, metrics.EBSIOPSExceeded)
-		s.recordMetric(s.mb.RecordDiskioEbsVolumePerformanceExceededTpDataPoint, now, metrics.EBSThroughputExceeded)
-		s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
-		s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
-		s.recordMetric(s.mb.RecordDiskioEbsVolumeQueueLengthDataPoint, now, metrics.QueueLength)
-
-		s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
+		if foundWorkingDevice {
+			s.logger.Debug("emitted metrics for nvme device with controller id", zap.Int("controllerID", id))
+		} else {
+			s.logger.Info("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id))
+		}
 	}
 
 	return s.mb.Emit(), nil
 }
 
-func (s *nvmeScraper) getEbsDevices() (map[int]ebsDevice, error) {
+// nvme0, nvme1, ... nvme{n} can have multiple devices with the same controller ID.
+// For example nvme0n1, nvme0n1p1 are all under the controller ID 0. The metrics 
+// are the same based on the controller ID. We also do not want to duplicate metrics
+// so we group the devices by the controller ID.
+func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 	allNvmeDevices, err := s.nvme.GetAllDevices()
 	if err != nil {
 		return nil, err
 	}
 
-	devices := make(map[int]ebsDevice)
+	devices := make(map[int][]ebsDevice)
 
 	for _, device := range allNvmeDevices {
-		var deviceName string
-		if name, err := device.DeviceName(); err == nil {
-			deviceName = name
-		}
-
-		// nvme0, nvme1, ... nvme{n} are owned by root:root. Device files with
-		// namespace (e.g. nvme0n1, nvme0n2) are owned by root:disk. We skip attempting to open the former.
-		if device.Namespace() == -1 {
-			s.logger.Debug("skipping invalid device", zap.String("device", deviceName))
+		deviceName, err := device.DeviceName()
+		if err != nil {
+			s.logger.Debug("unable to get device name", zap.Int("controllerID", device.Controller()), zap.Error(err))
 			continue
 		}
 
-		// Skip if we already have a device file we can use
-		if _, ok := devices[device.Controller()]; ok {
-			continue
+		// Check if all devices should be collected. Otherwise check if defined by user
+		_, hasAsterisk := s.allowedDevices["*"]
+		if !hasAsterisk {
+			if _, isAllowed := s.allowedDevices[deviceName]; !isAllowed {
+				s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
+				continue
+			}
 		}
 
 		isEbs, err := s.nvme.IsEbsDevice(&device)
@@ -126,21 +153,26 @@ func (s *nvmeScraper) getEbsDevices() (map[int]ebsDevice, error) {
 			continue
 		}
 
-		devices[device.Controller()] = ebsDevice{
+		devices[device.Controller()] = append(devices[device.Controller()], ebsDevice{
 			deviceName: deviceName,
 			devicePath: fmt.Sprintf("%s/%s", nvme.DevDirectoryPath, deviceName),
 			volumeID:   fmt.Sprintf("vol-%s", serial[3:]),
-		}
+		})
 	}
 
 	return devices, nil
 }
 
-func newScraper(cfg *Config, settings receiver.Settings, nvme nvme.UtilInterface) *nvmeScraper {
+func newScraper(cfg *Config,
+	settings receiver.Settings,
+	nvme nvme.UtilInterface,
+	allowedDevices map[string]struct{},
+) *nvmeScraper {
 	return &nvmeScraper{
-		logger: settings.TelemetrySettings.Logger,
-		mb:     metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
-		nvme:   nvme,
+		logger:         settings.TelemetrySettings.Logger,
+		mb:             metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
+		nvme:           nvme,
+		allowedDevices: allowedDevices,
 	}
 }
 
