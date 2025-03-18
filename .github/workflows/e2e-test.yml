@@ -193,8 +193,10 @@ jobs:
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
+      agent_config: resources/cwagent_configs/jvm_tomcat.json
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      sample_app: resources/sample_apps/tomcat.yaml
     secrets: inherit
   EKSE2EJVMTomcatTest:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
