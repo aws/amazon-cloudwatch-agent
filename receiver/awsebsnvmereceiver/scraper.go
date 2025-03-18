@@ -107,7 +107,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 }
 
 // nvme0, nvme1, ... nvme{n} can have multiple devices with the same controller ID.
-// For example nvme0n1, nvme0n1p1 are all under the controller ID 0. The metrics 
+// For example nvme0n1, nvme0n1p1 are all under the controller ID 0. The metrics
 // are the same based on the controller ID. We also do not want to duplicate metrics
 // so we group the devices by the controller ID.
 func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
