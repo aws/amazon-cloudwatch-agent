@@ -25,7 +25,6 @@ type nvmeScraper struct {
 	mb     *metadata.MetricsBuilder
 	nvme   nvme.UtilInterface
 
-	// If collectAllDevices is true then allowedDevices will still be populated (likely with `*`) but unused
 	allowedDevices map[string]struct{}
 }
 
