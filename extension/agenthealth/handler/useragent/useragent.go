@@ -31,7 +31,7 @@ const (
 	flagContainerInsights         = "container_insights"
 	flagAppSignals                = "application_signals"
 	flagEnhancedContainerInsights = "enhanced_container_insights"
-
+	flagROSA					  = "rosa"
 	separator = " "
 
 	typeInputs     = "inputs"
@@ -77,7 +77,12 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	for _, output := range telegrafCfg.Outputs {
 		ua.outputs.Add(output.Config.Name)
 	}
-
+	//Adding ROSA status
+	if envconfig.IsRunningOnROSA(){
+		ua.inputs.Add(flagROSA)
+	
+	}
+	
 	for _, pipeline := range otelCfg.Service.Pipelines {
 		for _, receiver := range pipeline.Receivers {
 			// trim the adapter prefix from adapted Telegraf plugins
