@@ -167,7 +167,7 @@ jobs:
       github_sha: ${{ inputs.build_id }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
   
-  StartLocalStack:
+   StartLocalStack:
     name: 'StartLocalStack'
     needs: [OutputEnvVariables]
     uses: ./.github/workflows/start-localstack.yml
@@ -240,7 +240,7 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
