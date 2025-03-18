@@ -630,6 +630,139 @@ func TestAutoRemoval(t *testing.T) {
 	assert.Equal(t, expectVal, val)
 }
 
+func TestBackpressureDrop(t *testing.T) {
+	// Save original env var value and restore it after test
+	originalEnvVal := os.Getenv("CWAGENT_LOGS_BACKPRESSURE_DROP")
+	defer os.Setenv("CWAGENT_LOGS_BACKPRESSURE_DROP", originalEnvVal)
+
+	f := new(FileConfig)
+	var input interface{}
+
+	// Test case 1: backpressure_drop explicitly set to true
+	e := json.Unmarshal([]byte(`{
+        "collect_list":[
+            {
+                "file_path":"path1",
+                "backpressure_drop": true
+            }
+        ]
+    }`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":              "path1",
+		"from_beginning":         true,
+		"pipe":                   false,
+		"retention_in_days":      -1,
+		"log_group_class":        "",
+		"backpressure_drop":      true,
+		"service_name":           "",
+		"deployment_environment": "",
+	}}
+	assert.Equal(t, expectVal, val)
+
+	// Test case 2: backpressure_drop explicitly set to false
+	e = json.Unmarshal([]byte(`{
+        "collect_list":[
+            {
+                "file_path":"path1",
+                "backpressure_drop": false
+            }
+        ]
+    }`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val = f.ApplyRule(input)
+	expectVal = []interface{}{map[string]interface{}{
+		"file_path":              "path1",
+		"from_beginning":         true,
+		"pipe":                   false,
+		"retention_in_days":      -1,
+		"backpressure_drop":      false,
+		"log_group_class":        "",
+		"service_name":           "",
+		"deployment_environment": "",
+	}}
+	assert.Equal(t, expectVal, val)
+
+	// Test case 3: backpressure_drop not set, env var set to true
+	os.Setenv("CWAGENT_LOGS_BACKPRESSURE_DROP", "true")
+	e = json.Unmarshal([]byte(`{
+        "collect_list":[
+            {
+                "file_path":"path1"
+            }
+        ]
+    }`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val = f.ApplyRule(input)
+	expectVal = []interface{}{map[string]interface{}{
+		"file_path":              "path1",
+		"from_beginning":         true,
+		"pipe":                   false,
+		"retention_in_days":      -1,
+		"log_group_class":        "",
+		"backpressure_drop":      true,
+		"service_name":           "",
+		"deployment_environment": "",
+	}}
+	assert.Equal(t, expectVal, val)
+
+	// Test case 4: backpressure_drop not set, env var set to false
+	os.Setenv("CWAGENT_LOGS_BACKPRESSURE_DROP", "false")
+	e = json.Unmarshal([]byte(`{
+        "collect_list":[
+            {
+                "file_path":"path1"
+            }
+        ]
+    }`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val = f.ApplyRule(input)
+	expectVal = []interface{}{map[string]interface{}{
+		"file_path":              "path1",
+		"from_beginning":         true,
+		"pipe":                   false,
+		"retention_in_days":      -1,
+		"log_group_class":        "",
+		"service_name":           "",
+		"deployment_environment": "",
+	}}
+	assert.Equal(t, expectVal, val)
+
+	// Test case 5: invalid type (non-boolean)
+	e = json.Unmarshal([]byte(`{
+        "collect_list":[
+            {
+                "file_path":"path1",
+                "backpressure_drop": "invalid"
+            }
+        ]
+    }`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val = f.ApplyRule(input)
+	expectVal = []interface{}{map[string]interface{}{
+		"file_path":              "path1",
+		"from_beginning":         true,
+		"pipe":                   false,
+		"retention_in_days":      -1,
+		"backpressure_drop":      false,
+		"log_group_class":        "",
+		"service_name":           "",
+		"deployment_environment": "",
+	}}
+	assert.Equal(t, expectVal, val)
+}
+
 func TestFileConfigOutputFile(t *testing.T) {
 	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)

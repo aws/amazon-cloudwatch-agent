@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -66,15 +65,8 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.AWS_CA_BUNDLE] = sslConfig[commonconfig.CABundlePath]
 	}
 
-	backpressureDrop := false // default value
 	//respect existing flag already set in env
-	backpressureDrop = envconfig.IsBackpressureDropEnabled()
-	//config value takes higher priority
-	if logsMap, ok := jsonConfigValue[logs.SectionKey].(map[string]interface{}); ok {
-		if backpressureDropVal, ok := logsMap[backpressureDropKey].(bool); ok {
-			backpressureDrop = backpressureDropVal
-		}
-	}
+	backpressureDrop := envconfig.IsBackpressureDropEnabled()
 	// skip adding if not enabled
 	if backpressureDrop {
 		envVars[envconfig.CWAgentBackpressureDrop] = strconv.FormatBool(backpressureDrop)

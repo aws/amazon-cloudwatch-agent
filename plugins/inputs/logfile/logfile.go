@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -38,17 +37,14 @@ type LogFile struct {
 	done              chan struct{}
 	removeTailerSrcCh chan *tailerSrc
 	started           bool
-	backpressureDrop  bool
 }
 
 func NewLogFile() *LogFile {
-	backpressureDrop := envconfig.IsBackpressureDropEnabled()
 
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
 		removeTailerSrcCh: make(chan *tailerSrc, 100),
-		backpressureDrop:  backpressureDrop,
 	}
 }
 
@@ -259,7 +255,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
-				t.backpressureDrop,
+				fileconfig.BackpressureDrop,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {

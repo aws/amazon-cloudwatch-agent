@@ -102,7 +102,6 @@ func NewTailerSrc(
 	retentionInDays int,
 	backpressureDrop bool,
 ) *tailerSrc {
-	useBufferedSender := backpressureDrop && !autoRemoval
 	ts := &tailerSrc{
 		group:            group,
 		stream:           stream,
@@ -119,13 +118,13 @@ func NewTailerSrc(
 		maxEventSize:     maxEventSize,
 		truncateSuffix:   truncateSuffix,
 		retentionInDays:  retentionInDays,
-		backpressureDrop: useBufferedSender,
+		backpressureDrop: backpressureDrop && !autoRemoval,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
 	}
 
-	if useBufferedSender {
+	if ts.backpressureDrop {
 		ts.buffer = make(chan *LogEvent, defaultBufferSize)
 	}
 	go ts.runSaveState()

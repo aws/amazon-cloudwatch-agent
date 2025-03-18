@@ -89,13 +89,11 @@ func TestToEnvConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "logs section with backpressure drop",
-			input: map[string]interface{}{
-				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: true,
-				},
+			name:  "logs section with backpressure drop",
+			input: map[string]interface{}{},
+			envVars: map[string]string{
+				envconfig.CWAgentBackpressureDrop: "true",
 			},
-			envVars: map[string]string{},
 			expectedEnv: map[string]string{
 				envconfig.CWAgentBackpressureDrop: "true",
 			},
@@ -111,17 +109,13 @@ func TestToEnvConfig(t *testing.T) {
 					userAgentKey: "custom-agent",
 					debugKey:     true,
 				},
-				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: true,
-				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAGENT_USER_AGENT:      "custom-agent",
-				envconfig.CWAGENT_LOG_LEVEL:       "DEBUG",
-				envconfig.HTTP_PROXY:              "http://proxy.test",
-				envconfig.AWS_CA_BUNDLE:           "/test/ca-bundle.pem",
-				envconfig.CWAgentBackpressureDrop: "true",
+				envconfig.CWAGENT_USER_AGENT: "custom-agent",
+				envconfig.CWAGENT_LOG_LEVEL:  "DEBUG",
+				envconfig.HTTP_PROXY:         "http://proxy.test",
+				envconfig.AWS_CA_BUNDLE:      "/test/ca-bundle.pem",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{
@@ -130,48 +124,6 @@ func TestToEnvConfig(t *testing.T) {
 				context.CurrentContext().SetSSL(map[string]string{
 					"ca_bundle_path": "/test/ca-bundle.pem",
 				})
-			},
-		},
-		{
-			name:  "existing env var without config",
-			input: map[string]interface{}{},
-			envVars: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "true",
-			},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "true",
-			},
-			contextSetup: func() {
-				context.CurrentContext().SetProxy(map[string]string{})
-				context.CurrentContext().SetSSL(map[string]string{})
-			},
-		},
-		{
-			name: "config overrides env var",
-			input: map[string]interface{}{
-				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: false,
-				},
-			},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
-			contextSetup: func() {
-				context.CurrentContext().SetProxy(map[string]string{})
-				context.CurrentContext().SetSSL(map[string]string{})
-			},
-		},
-		{
-			name: "mixed case handling",
-			input: map[string]interface{}{
-				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: "TRUE",
-				},
-			},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
-			contextSetup: func() {
-				context.CurrentContext().SetProxy(map[string]string{})
-				context.CurrentContext().SetSSL(map[string]string{})
 			},
 		},
 	}
@@ -240,20 +192,6 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			},
 			envVars:     map[string]string{},
 			expectedEnv: map[string]string{},
-		},
-		{
-			name: "invalid backpressure_drop type in config",
-			input: map[string]interface{}{
-				logs.SectionKey: map[string]interface{}{
-					backpressureDropKey: 123,
-				},
-			},
-			envVars: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "true",
-			},
-			expectedEnv: map[string]string{
-				envconfig.CWAgentBackpressureDrop: "true",
-			},
 		},
 	}
 
