@@ -84,7 +84,7 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 		ua.outputs.Add(flagSELinux)
 	}
 	//Adding ROSA status
-	if envconfig.IsRunningOnROSA() {
+	if envconfig.IsRunningInROSA() {
 		ua.outputs.Add(flagROSA)
 	}
 
