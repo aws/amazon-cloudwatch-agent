@@ -6,29 +6,33 @@ package awsebsnvmereceiver
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/metadata"
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/metadata"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
 
 type nvmeScraper struct {
 	logger *zap.Logger
 	mb     *metadata.MetricsBuilder
-	nvme   nvme.NvmeUtilInterface
+	nvme   nvme.UtilInterface
 }
 
 type ebsDevice struct {
 	deviceName string
 	devicePath string
-	volumeId   string
+	volumeID   string
 }
+
+type recordDataMetricFunc func(pcommon.Timestamp, int64)
 
 var getMetrics = nvme.GetMetrics
 
@@ -42,7 +46,7 @@ func (s *nvmeScraper) shutdown(_ context.Context) error {
 	return nil
 }
 
-func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
+func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 	ebsDevices, err := s.getEbsDevices()
 	if err != nil {
 		return pmetric.NewMetrics(), err
@@ -58,19 +62,19 @@ func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		}
 
 		rb := s.mb.NewResourceBuilder()
-		rb.SetVolumeID(device.volumeId)
+		rb.SetVolumeID(device.volumeID)
 
-		s.mb.RecordDiskioEbsTotalReadOpsDataPoint(now, int64(metrics.ReadOps))
-		s.mb.RecordDiskioEbsTotalWriteOpsDataPoint(now, int64(metrics.WriteOps))
-		s.mb.RecordDiskioEbsTotalReadBytesDataPoint(now, int64(metrics.ReadBytes))
-		s.mb.RecordDiskioEbsTotalWriteBytesDataPoint(now, int64(metrics.WriteBytes))
-		s.mb.RecordDiskioEbsTotalReadTimeDataPoint(now, int64(metrics.TotalReadTime))
-		s.mb.RecordDiskioEbsTotalWriteTimeDataPoint(now, int64(metrics.TotalWriteTime))
-		s.mb.RecordDiskioEbsVolumePerformanceExceededIopsDataPoint(now, int64(metrics.EBSIOPSExceeded))
-		s.mb.RecordDiskioEbsVolumePerformanceExceededTpDataPoint(now, int64(metrics.EBSThroughputExceeded))
-		s.mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint(now, int64(metrics.EC2IOPSExceeded))
-		s.mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint(now, int64(metrics.EC2ThroughputExceeded))
-		s.mb.RecordDiskioEbsVolumeQueueLengthDataPoint(now, int64(metrics.QueueLength))
+		s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
+		s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
+		s.recordMetric(s.mb.RecordDiskioEbsTotalReadBytesDataPoint, now, metrics.ReadBytes)
+		s.recordMetric(s.mb.RecordDiskioEbsTotalWriteBytesDataPoint, now, metrics.WriteBytes)
+		s.recordMetric(s.mb.RecordDiskioEbsTotalReadTimeDataPoint, now, metrics.TotalReadTime)
+		s.recordMetric(s.mb.RecordDiskioEbsTotalWriteTimeDataPoint, now, metrics.TotalWriteTime)
+		s.recordMetric(s.mb.RecordDiskioEbsVolumePerformanceExceededIopsDataPoint, now, metrics.EBSIOPSExceeded)
+		s.recordMetric(s.mb.RecordDiskioEbsVolumePerformanceExceededTpDataPoint, now, metrics.EBSThroughputExceeded)
+		s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
+		s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
+		s.recordMetric(s.mb.RecordDiskioEbsVolumeQueueLengthDataPoint, now, metrics.QueueLength)
 
 		s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
 	}
@@ -125,17 +129,33 @@ func (s *nvmeScraper) getEbsDevices() (map[int]ebsDevice, error) {
 		devices[device.Controller()] = ebsDevice{
 			deviceName: deviceName,
 			devicePath: fmt.Sprintf("%s/%s", nvme.DevDirectoryPath, deviceName),
-			volumeId:   fmt.Sprintf("vol-%s", serial[3:]),
+			volumeID:   fmt.Sprintf("vol-%s", serial[3:]),
 		}
 	}
 
 	return devices, nil
 }
 
-func newScraper(cfg *Config, settings receiver.Settings, nvme nvme.NvmeUtilInterface) *nvmeScraper {
+func newScraper(cfg *Config, settings receiver.Settings, nvme nvme.UtilInterface) *nvmeScraper {
 	return &nvmeScraper{
 		logger: settings.TelemetrySettings.Logger,
 		mb:     metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
 		nvme:   nvme,
 	}
+}
+
+func (s *nvmeScraper) recordMetric(recordFn recordDataMetricFunc, ts pcommon.Timestamp, val uint64) {
+	converted, err := safeUint64ToInt64(val)
+	if err != nil {
+		s.logger.Debug("skipping metric due to potential integer overflow")
+		return
+	}
+	recordFn(ts, converted)
+}
+
+func safeUint64ToInt64(value uint64) (int64, error) {
+	if value > math.MaxInt64 {
+		return 0, fmt.Errorf("value %d is too large for int64", value)
+	}
+	return int64(value), nil
 }

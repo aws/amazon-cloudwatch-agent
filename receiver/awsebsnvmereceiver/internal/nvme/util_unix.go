@@ -15,13 +15,13 @@ import (
 var osReadFile = os.ReadFile
 var osReadDir = os.ReadDir
 
-func (u *NvmeUtil) GetAllDevices() ([]NvmeDeviceFileAttributes, error) {
+func (u *Util) GetAllDevices() ([]DeviceFileAttributes, error) {
 	entries, err := osReadDir(DevDirectoryPath)
 	if err != nil {
 		return nil, err
 	}
 
-	devices := []NvmeDeviceFileAttributes{}
+	devices := []DeviceFileAttributes{}
 	for _, entry := range entries {
 		if strings.HasPrefix(entry.Name(), NvmeDevicePrefix) {
 			device, err := ParseNvmeDeviceFileName(entry.Name())
@@ -34,7 +34,7 @@ func (u *NvmeUtil) GetAllDevices() ([]NvmeDeviceFileAttributes, error) {
 	return devices, nil
 }
 
-func (u *NvmeUtil) GetDeviceSerial(device *NvmeDeviceFileAttributes) (string, error) {
+func (u *Util) GetDeviceSerial(device *DeviceFileAttributes) (string, error) {
 	deviceName, err := device.BaseDeviceName()
 	if err != nil {
 		return "", err
@@ -46,7 +46,7 @@ func (u *NvmeUtil) GetDeviceSerial(device *NvmeDeviceFileAttributes) (string, er
 	return cleanupString(string(data)), nil
 }
 
-func (u *NvmeUtil) GetDeviceModel(device *NvmeDeviceFileAttributes) (string, error) {
+func (u *Util) GetDeviceModel(device *DeviceFileAttributes) (string, error) {
 	deviceName, err := device.BaseDeviceName()
 	if err != nil {
 		return "", err
@@ -58,7 +58,7 @@ func (u *NvmeUtil) GetDeviceModel(device *NvmeDeviceFileAttributes) (string, err
 	return cleanupString(string(data)), nil
 }
 
-func (u *NvmeUtil) IsEbsDevice(device *NvmeDeviceFileAttributes) (bool, error) {
+func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 	model, err := u.GetDeviceModel(device)
 	if err != nil {
 		return false, err

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -18,6 +17,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
 
 // mockNvmeUtil is a mock implementation of the NvmeUtilInterface
@@ -25,22 +26,22 @@ type mockNvmeUtil struct {
 	mock.Mock
 }
 
-func (m *mockNvmeUtil) GetAllDevices() ([]nvme.NvmeDeviceFileAttributes, error) {
+func (m *mockNvmeUtil) GetAllDevices() ([]nvme.DeviceFileAttributes, error) {
 	args := m.Called()
-	return args.Get(0).([]nvme.NvmeDeviceFileAttributes), args.Error(1)
+	return args.Get(0).([]nvme.DeviceFileAttributes), args.Error(1)
 }
 
-func (m *mockNvmeUtil) GetDeviceSerial(device *nvme.NvmeDeviceFileAttributes) (string, error) {
+func (m *mockNvmeUtil) GetDeviceSerial(device *nvme.DeviceFileAttributes) (string, error) {
 	args := m.Called(device)
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockNvmeUtil) GetDeviceModel(device *nvme.NvmeDeviceFileAttributes) (string, error) {
+func (m *mockNvmeUtil) GetDeviceModel(device *nvme.DeviceFileAttributes) (string, error) {
 	args := m.Called(device)
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockNvmeUtil) IsEbsDevice(device *nvme.NvmeDeviceFileAttributes) (bool, error) {
+func (m *mockNvmeUtil) IsEbsDevice(device *nvme.DeviceFileAttributes) (bool, error) {
 	args := m.Called(device)
 	return args.Bool(0), args.Error(1)
 }
@@ -89,7 +90,7 @@ func TestScraper_Shutdown(t *testing.T) {
 
 func TestScraper_Scrape_NoDevices(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, nil)
 
 	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil)
 
@@ -102,7 +103,7 @@ func TestScraper_Scrape_NoDevices(t *testing.T) {
 
 func TestScraper_Scrape_GetAllDevicesError(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{}, errors.New("failed to get devices"))
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, errors.New("failed to get devices"))
 
 	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil)
 
@@ -123,7 +124,7 @@ func TestScraper_Scrape_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 
@@ -163,7 +164,7 @@ func TestScraper_Scrape_NonEbsDevice(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, nil)
 
 	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil)
@@ -180,7 +181,7 @@ func TestScraper_Scrape_IsEbsDeviceError(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, errors.New("failed to check device"))
 
 	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil)
@@ -197,7 +198,7 @@ func TestScraper_Scrape_GetDeviceSerialError(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("", errors.New("failed to get serial"))
 
@@ -215,7 +216,7 @@ func TestScraper_Scrape_InvalidSerialPrefix(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("invalid-serial", nil)
 
@@ -237,7 +238,7 @@ func TestScraper_Scrape_GetMetricsError(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 
@@ -274,7 +275,7 @@ func TestScraper_Scrape_MultipleDevices(t *testing.T) {
 	require.NoError(t, err)
 
 	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.NvmeDeviceFileAttributes{device1, device2}, nil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1, device2}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 	mockUtil.On("IsEbsDevice", &device2).Return(true, nil)

@@ -18,7 +18,7 @@ func TestGetAllDevices(t *testing.T) {
 		name           string
 		mockDirEntries []os.DirEntry
 		mockError      error
-		expected       []NvmeDeviceFileAttributes
+		expected       []DeviceFileAttributes
 		expectedError  error
 	}{
 		{
@@ -28,7 +28,7 @@ func TestGetAllDevices(t *testing.T) {
 				mockDirEntry{name: "nvme1n1"},
 				mockDirEntry{name: "other-device"}, // Should be ignored
 			},
-			expected: []NvmeDeviceFileAttributes{
+			expected: []DeviceFileAttributes{
 				{controller: 0, namespace: 1, partition: -1},
 				{controller: 1, namespace: 1, partition: -1},
 			},
@@ -44,7 +44,7 @@ func TestGetAllDevices(t *testing.T) {
 				mockDirEntry{name: "nvmeinvalid"},
 				mockDirEntry{name: "nvme0n1"},
 			},
-			expected: []NvmeDeviceFileAttributes{
+			expected: []DeviceFileAttributes{
 				{controller: 0, namespace: 1, partition: -1},
 			},
 		},
@@ -56,14 +56,14 @@ func TestGetAllDevices(t *testing.T) {
 				osReadDir = os.ReadDir
 			})
 
-			osReadDir = func(path string) ([]os.DirEntry, error) {
+			osReadDir = func(_ string) ([]os.DirEntry, error) {
 				if tt.mockError != nil {
 					return nil, tt.mockError
 				}
 				return tt.mockDirEntries, nil
 			}
 
-			util := &NvmeUtil{}
+			util := &Util{}
 			devices, err := util.GetAllDevices()
 
 			if tt.expectedError != nil {
@@ -81,7 +81,7 @@ func TestGetAllDevices(t *testing.T) {
 func TestGetDeviceSerial(t *testing.T) {
 	tests := []struct {
 		name          string
-		device        NvmeDeviceFileAttributes
+		device        DeviceFileAttributes
 		mockData      string
 		mockError     error
 		expected      string
@@ -89,19 +89,19 @@ func TestGetDeviceSerial(t *testing.T) {
 	}{
 		{
 			name:     "successful read",
-			device:   NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockData: "vol0123456789\n",
 			expected: "vol0123456789",
 		},
 		{
 			name:          "read error",
-			device:        NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:        DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockError:     errors.New("read error"),
 			expectedError: errors.New("read error"),
 		},
 		{
 			name:     "padded serial number",
-			device:   NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockData: "  vol0123456789  \n",
 			expected: "vol0123456789",
 		},
@@ -113,14 +113,14 @@ func TestGetDeviceSerial(t *testing.T) {
 				osReadFile = os.ReadFile
 			})
 
-			osReadFile = func(path string) ([]byte, error) {
+			osReadFile = func(_ string) ([]byte, error) {
 				if tt.mockError != nil {
 					return nil, tt.mockError
 				}
 				return []byte(tt.mockData), nil
 			}
 
-			util := &NvmeUtil{}
+			util := &Util{}
 			serial, err := util.GetDeviceSerial(&tt.device)
 
 			if tt.expectedError != nil {
@@ -138,7 +138,7 @@ func TestGetDeviceSerial(t *testing.T) {
 func TestGetDeviceModel(t *testing.T) {
 	tests := []struct {
 		name          string
-		device        NvmeDeviceFileAttributes
+		device        DeviceFileAttributes
 		mockData      string
 		mockError     error
 		expected      string
@@ -146,19 +146,19 @@ func TestGetDeviceModel(t *testing.T) {
 	}{
 		{
 			name:     "successful read",
-			device:   NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockData: "Amazon Elastic Block Store\n",
 			expected: "Amazon Elastic Block Store",
 		},
 		{
 			name:          "read error",
-			device:        NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:        DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockError:     errors.New("read error"),
 			expectedError: errors.New("read error"),
 		},
 		{
 			name:     "padded model name",
-			device:   NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockData: "  Amazon Elastic Block Store  \n",
 			expected: "Amazon Elastic Block Store",
 		},
@@ -170,14 +170,14 @@ func TestGetDeviceModel(t *testing.T) {
 				osReadFile = os.ReadFile
 			})
 
-			osReadFile = func(path string) ([]byte, error) {
+			osReadFile = func(_ string) ([]byte, error) {
 				if tt.mockError != nil {
 					return nil, tt.mockError
 				}
 				return []byte(tt.mockData), nil
 			}
 
-			util := &NvmeUtil{}
+			util := &Util{}
 			model, err := util.GetDeviceModel(&tt.device)
 
 			if tt.expectedError != nil {
@@ -195,7 +195,7 @@ func TestGetDeviceModel(t *testing.T) {
 func TestIsEbsDevice(t *testing.T) {
 	tests := []struct {
 		name          string
-		device        NvmeDeviceFileAttributes
+		device        DeviceFileAttributes
 		mockData      string
 		mockError     error
 		expected      bool
@@ -203,19 +203,19 @@ func TestIsEbsDevice(t *testing.T) {
 	}{
 		{
 			name:     "is EBS device",
-			device:   NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockData: "Amazon Elastic Block Store\n",
 			expected: true,
 		},
 		{
 			name:     "not EBS device",
-			device:   NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockData: "Other Storage Device\n",
 			expected: false,
 		},
 		{
 			name:          "read error",
-			device:        NvmeDeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
+			device:        DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
 			mockError:     errors.New("read error"),
 			expectedError: errors.New("read error"),
 		},
@@ -227,14 +227,14 @@ func TestIsEbsDevice(t *testing.T) {
 				osReadFile = os.ReadFile
 			})
 
-			osReadFile = func(path string) ([]byte, error) {
+			osReadFile = func(_ string) ([]byte, error) {
 				if tt.mockError != nil {
 					return nil, tt.mockError
 				}
 				return []byte(tt.mockData), nil
 			}
 
-			util := &NvmeUtil{}
+			util := &Util{}
 			isEbs, err := util.IsEbsDevice(&tt.device)
 
 			if tt.expectedError != nil {

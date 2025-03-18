@@ -3,13 +3,12 @@
 
 package nvme
 
-type NvmeUtilInterface interface {
-	GetAllDevices() ([]NvmeDeviceFileAttributes, error)
-	GetDeviceSerial(device *NvmeDeviceFileAttributes) (string, error)
-	GetDeviceModel(device *NvmeDeviceFileAttributes) (string, error)
-	IsEbsDevice(device *NvmeDeviceFileAttributes) (bool, error)
+type UtilInterface interface {
+	GetAllDevices() ([]DeviceFileAttributes, error)
+	GetDeviceSerial(device *DeviceFileAttributes) (string, error)
+	GetDeviceModel(device *DeviceFileAttributes) (string, error)
+	IsEbsDevice(device *DeviceFileAttributes) (bool, error)
 }
 
-type NvmeUtil struct {
+type Util struct {
 }
-

@@ -10,25 +10,25 @@ import (
 	"strings"
 )
 
-type NvmeDeviceFileAttributes struct {
-	controller   int
-	namespace    int
-	partition    int
+type DeviceFileAttributes struct {
+	controller int
+	namespace  int
+	partition  int
 }
 
 type Attribute interface {
-	apply(*NvmeDeviceFileAttributes) error
+	apply(*DeviceFileAttributes) error
 }
 
-type nvmeDeviceAttributeFunc func(*NvmeDeviceFileAttributes) error
+type nvmeDeviceAttributeFunc func(*DeviceFileAttributes) error
 
-func (f nvmeDeviceAttributeFunc) apply(e *NvmeDeviceFileAttributes) error {
+func (f nvmeDeviceAttributeFunc) apply(e *DeviceFileAttributes) error {
 	return f(e)
 }
 
-func ParseNvmeDeviceFileName(device string) (NvmeDeviceFileAttributes, error) {
+func ParseNvmeDeviceFileName(device string) (DeviceFileAttributes, error) {
 	if !strings.HasPrefix(device, NvmeDevicePrefix) {
-		return NvmeDeviceFileAttributes{
+		return DeviceFileAttributes{
 			controller: -1,
 			namespace:  -1,
 			partition:  -1,
@@ -61,19 +61,19 @@ func ParseNvmeDeviceFileName(device string) (NvmeDeviceFileAttributes, error) {
 	)
 }
 
-func (n *NvmeDeviceFileAttributes) Controller() int {
+func (n *DeviceFileAttributes) Controller() int {
 	return n.controller
 }
 
-func (n *NvmeDeviceFileAttributes) Namespace() int {
+func (n *DeviceFileAttributes) Namespace() int {
 	return n.namespace
 }
 
-func (n *NvmeDeviceFileAttributes) Partition() int {
+func (n *DeviceFileAttributes) Partition() int {
 	return n.partition
 }
 
-func (n *NvmeDeviceFileAttributes) BaseDeviceName() (string, error) {
+func (n *DeviceFileAttributes) BaseDeviceName() (string, error) {
 	if n.Controller() == -1 {
 		return "", errors.New("unable to re-create device name due to missing controller id")
 	}
@@ -81,7 +81,7 @@ func (n *NvmeDeviceFileAttributes) BaseDeviceName() (string, error) {
 	return fmt.Sprintf("nvme%d", n.Controller()), nil
 }
 
-func (n *NvmeDeviceFileAttributes) DeviceName() (string, error) {
+func (n *DeviceFileAttributes) DeviceName() (string, error) {
 	hasNamespace := n.Namespace() != -1
 	hasPartition := n.Partition() != -1
 
@@ -89,14 +89,14 @@ func (n *NvmeDeviceFileAttributes) DeviceName() (string, error) {
 		return fmt.Sprintf("nvme%dn%dp%d", n.Controller(), n.Namespace(), n.Partition()), nil
 	} else if hasNamespace {
 		return fmt.Sprintf("nvme%dn%d", n.Controller(), n.Namespace()), nil
-	} 
+	}
 
 	// Fall back to BaseDeviceName if only the controller ID exists
 	return n.BaseDeviceName()
 }
 
-func newNvmeDeviceFileAttributes(attributes ...Attribute) (NvmeDeviceFileAttributes, error) {
-	n := &NvmeDeviceFileAttributes{
+func newNvmeDeviceFileAttributes(attributes ...Attribute) (DeviceFileAttributes, error) {
+	n := &DeviceFileAttributes{
 		controller: -1,
 		namespace:  -1,
 		partition:  -1,
@@ -116,24 +116,24 @@ func newNvmeDeviceFileAttributes(attributes ...Attribute) (NvmeDeviceFileAttribu
 }
 
 func withController(controller string) Attribute {
-	c, err := convertNvmeIdStringToNum(controller)
-	return nvmeDeviceAttributeFunc(func(attr *NvmeDeviceFileAttributes) error {
+	c, err := convertNvmeIDStringToNum(controller)
+	return nvmeDeviceAttributeFunc(func(attr *DeviceFileAttributes) error {
 		attr.controller = c
 		return err
 	})
 }
 
 func withNamespace(namespace string) Attribute {
-	n, err := convertNvmeIdStringToNum(namespace)
-	return nvmeDeviceAttributeFunc(func(attr *NvmeDeviceFileAttributes) error {
+	n, err := convertNvmeIDStringToNum(namespace)
+	return nvmeDeviceAttributeFunc(func(attr *DeviceFileAttributes) error {
 		attr.namespace = n
 		return err
 	})
 }
 
 func withPartition(partition string) Attribute {
-	p, err := convertNvmeIdStringToNum(partition)
-	return nvmeDeviceAttributeFunc(func(attr *NvmeDeviceFileAttributes) error {
+	p, err := convertNvmeIDStringToNum(partition)
+	return nvmeDeviceAttributeFunc(func(attr *DeviceFileAttributes) error {
 		attr.partition = p
 		return err
 	})
@@ -155,7 +155,7 @@ func substring(s string, l, r int) string {
 	return s[l:r]
 }
 
-func convertNvmeIdStringToNum(a string) (int, error) {
+func convertNvmeIDStringToNum(a string) (int, error) {
 	if a == "" {
 		return -1, errors.New("nvme device attribute is empty")
 	}

@@ -140,46 +140,46 @@ func TestParseNvmeDeviceFileName(t *testing.T) {
 
 func TestSubstring(t *testing.T) {
 	tests := []struct {
-		name      string
-		s         string
-		left      int
-		right     int
-		want      string
+		name  string
+		s     string
+		left  int
+		right int
+		want  string
 	}{
 		{
-			name: "Valid substring",
-			s:    "hello",
-			left: 1,
+			name:  "Valid substring",
+			s:     "hello",
+			left:  1,
 			right: 4,
-			want: "ell",
+			want:  "ell",
 		},
 		{
-			name: "Left boundary negative",
-			s:    "hello",
-			left: -1,
+			name:  "Left boundary negative",
+			s:     "hello",
+			left:  -1,
 			right: 4,
-			want: "",
+			want:  "",
 		},
 		{
-			name: "Right boundary exceeds length",
-			s:    "hello",
-			left: 1,
+			name:  "Right boundary exceeds length",
+			s:     "hello",
+			left:  1,
 			right: 10,
-			want: "",
+			want:  "",
 		},
 		{
-			name: "Left greater than right",
-			s:    "hello",
-			left: 4,
+			name:  "Left greater than right",
+			s:     "hello",
+			left:  4,
 			right: 2,
-			want: "",
+			want:  "",
 		},
 		{
-			name: "Empty string",
-			s:    "",
-			left: 0,
+			name:  "Empty string",
+			s:     "",
+			left:  0,
 			right: 1,
-			want: "",
+			want:  "",
 		},
 	}
 
@@ -233,7 +233,7 @@ func TestConvertNvmeIdStringToNum(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertNvmeIdStringToNum(tt.input)
+			got, err := convertNvmeIDStringToNum(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("convertNvmeIdStringToNum() error = %v, wantErr %v", err, tt.wantErr)
 				return
