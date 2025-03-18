@@ -58,6 +58,6 @@ jobs:
       
       - name: Upload LocalStack Docker Image
         run: |
-          docker pull localstack/localstack:0.13.0
+          docker pull --platform linux/arm64 localstack/localstack:0.13.0
           docker save localstack/localstack:0.13.0 > ${{ inputs.github_sha }}.tar
-          aws s3 cp ${{ inputs.github_sha }}.tar s3://${{ inputs.s3_integration_bucket }}/integration-test/docker-images/${{ inputs.github_sha }}.tar
+          aws s3 cp ${{ inputs.github_sha }}.tar s3://${{ inputs.s3_integration_bucket }}/integration-test/docker-images/${{ inputs.github_sha }}.tar --quiet
