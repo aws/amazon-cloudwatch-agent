@@ -442,7 +442,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 		}
 		if len(distList) == 0 {
 			if metric.Value == nil {
-				log.Printf("E! metric (%s) has nil value, dropping it", *metric.MetricName)
+				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
 				continue
 			}
 
