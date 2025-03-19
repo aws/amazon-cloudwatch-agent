@@ -847,7 +847,7 @@ jobs:
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 2
+          max_attempts: 4
           timeout_minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
           retry_wait_seconds: 5
           command: |
