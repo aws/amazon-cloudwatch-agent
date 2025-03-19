@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
@@ -632,18 +633,18 @@ func TestAutoRemoval(t *testing.T) {
 
 func TestBackpressureDrop(t *testing.T) {
 	// Save original env var value and restore it after test
-	originalEnvVal := os.Getenv("CWAGENT_LOGS_BACKPRESSURE_DROP")
-	defer os.Setenv("CWAGENT_LOGS_BACKPRESSURE_DROP", originalEnvVal)
+	originalEnvVal := os.Getenv(logscommon.LogBackpressureModeEnvKey)
+	defer os.Setenv(logscommon.LogBackpressureModeEnvKey, originalEnvVal)
 
 	f := new(FileConfig)
 	var input interface{}
 
-	// Test case 1: backpressure_drop explicitly set to true
+	// backpressure_mode explicitly set to true
 	e := json.Unmarshal([]byte(`{
         "collect_list":[
             {
                 "file_path":"path1",
-                "backpressure_drop": true
+                "backpressure_mode": "fd_drop"
             }
         ]
     }`), &input)
@@ -657,39 +658,14 @@ func TestBackpressureDrop(t *testing.T) {
 		"pipe":                   false,
 		"retention_in_days":      -1,
 		"log_group_class":        "",
-		"backpressure_drop":      true,
+		"backpressure_mode":      "fd_drop",
 		"service_name":           "",
 		"deployment_environment": "",
 	}}
 	assert.Equal(t, expectVal, val)
 
-	// Test case 2: backpressure_drop explicitly set to false
-	e = json.Unmarshal([]byte(`{
-        "collect_list":[
-            {
-                "file_path":"path1",
-                "backpressure_drop": false
-            }
-        ]
-    }`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
-	}
-	_, val = f.ApplyRule(input)
-	expectVal = []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"backpressure_drop":      false,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
-	}}
-	assert.Equal(t, expectVal, val)
-
-	// Test case 3: backpressure_drop not set, env var set to true
-	os.Setenv("CWAGENT_LOGS_BACKPRESSURE_DROP", "true")
+	// backpressure_mode not set, env var set to fd_drop
+	os.Setenv(logscommon.LogBackpressureModeEnvKey, "fd_drop")
 	e = json.Unmarshal([]byte(`{
         "collect_list":[
             {
@@ -707,14 +683,15 @@ func TestBackpressureDrop(t *testing.T) {
 		"pipe":                   false,
 		"retention_in_days":      -1,
 		"log_group_class":        "",
-		"backpressure_drop":      true,
+		"backpressure_mode":      "fd_drop",
 		"service_name":           "",
 		"deployment_environment": "",
 	}}
 	assert.Equal(t, expectVal, val)
+	os.Unsetenv(logscommon.LogBackpressureModeEnvKey)
 
-	// Test case 4: backpressure_drop not set, env var set to false
-	os.Setenv("CWAGENT_LOGS_BACKPRESSURE_DROP", "false")
+	// backpressure_mode not set, env var set to ""
+	os.Setenv("CWAGENT_LOGS_backpressure_mode", "")
 	e = json.Unmarshal([]byte(`{
         "collect_list":[
             {
@@ -737,12 +714,12 @@ func TestBackpressureDrop(t *testing.T) {
 	}}
 	assert.Equal(t, expectVal, val)
 
-	// Test case 5: invalid type (non-boolean)
+	// invalid type (non-boolean)
 	e = json.Unmarshal([]byte(`{
         "collect_list":[
             {
                 "file_path":"path1",
-                "backpressure_drop": "invalid"
+                "backpressure_mode": "invalid"
             }
         ]
     }`), &input)
@@ -755,7 +732,7 @@ func TestBackpressureDrop(t *testing.T) {
 		"from_beginning":         true,
 		"pipe":                   false,
 		"retention_in_days":      -1,
-		"backpressure_drop":      false,
+		"backpressure_mode":      "",
 		"log_group_class":        "",
 		"service_name":           "",
 		"deployment_environment": "",

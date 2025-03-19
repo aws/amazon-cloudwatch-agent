@@ -971,9 +971,12 @@
                   "auto_removal": {
                     "type": "boolean"
                   },
-                  "backpressure_drop": {
-                    "description": "Close file when there is backpressure until buffer frees up",
-                    "type": "boolean"
+                  "backpressure_mode": {
+                    "description": "Define the strategy during backpressure condition",
+                    "type": "string",
+                    "enum": [
+                      "fd_drop"
+                    ]
                   },
                   "blacklist": {
                     "type": "string",

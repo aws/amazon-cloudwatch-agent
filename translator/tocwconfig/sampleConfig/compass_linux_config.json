@@ -33,7 +33,7 @@
             "log_stream_name": "test.log",
             "timezone": "UTC",
             "auto_removal": true,
-            "backpressure_drop": true
+            "backpressure_mode": "fd_drop"
           }
         ]
       }

@@ -26,4 +26,8 @@ const (
 
 	WindowsEventLogPrefix = "Amazon_CloudWatch_WindowsEventLog_"
 	LogType               = "log_type"
+
+	LogBackpressureModeEnvKey = "CWAGENT_LOGS_BACKPRESSURE_MODE"
+	LogBackpressureModeKey    = "backpressure_mode"
+	LogBackpressureModeDrop   = "fd_drop"
 )

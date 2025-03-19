@@ -74,7 +74,7 @@ func TestTailerSrc(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
-		false,
+		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -187,7 +187,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
-		false,
+		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -280,7 +280,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	resources := setupTailer(t, nil, defaultMaxEventSize, false, false)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, "")
 	defer teardown(resources)
 
 	n := 100
@@ -303,7 +303,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		t,
 		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
 		defaultMaxEventSize,
-		false, false,
+		false, "",
 	)
 	defer teardown(resources)
 
@@ -359,7 +359,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop bool) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop string) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -490,7 +490,7 @@ func teardown(resources tailerTestResources) {
 }
 
 func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
-	resources := setupTailer(t, nil, defaultMaxEventSize, false, true)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, "fd_drop")
 
 	doneCh := make(chan struct{})
 	var consumed int32

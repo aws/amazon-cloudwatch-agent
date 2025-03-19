@@ -119,7 +119,7 @@ type (
 
 	fileConfig struct {
 		AutoRemoval      bool   `toml:"auto_removal"`
-		BackpressureDrop bool   `toml:"backpressure_drop"`
+		BackpressureMode string `toml:"backpressure_mode"`
 		FilePath         string `toml:"file_path"`
 		FromBeginning    bool   `toml:"from_beginning"`
 		LogGroupName     string `toml:"log_group_name"`

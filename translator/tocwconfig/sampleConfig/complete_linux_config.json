@@ -260,7 +260,7 @@
             "timezone": "UTC",
             "trim_timestamp": true,
             "retention_in_days": 5,
-            "backpressure_drop": true
+            "backpressure_mode": "fd_drop"
           },
           {
             "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",

@@ -255,7 +255,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
-				fileconfig.BackpressureDrop,
+				fileconfig.BackpressureMode,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {

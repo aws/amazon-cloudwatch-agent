@@ -6,21 +6,20 @@ package toenvconfig
 import (
 	"encoding/json"
 	"log"
-	"strconv"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (
-	userAgentKey        = "user_agent"
-	debugKey            = "debug"
-	awsSdkLogLevelKey   = "aws_sdk_log_level"
-	usageDataKey        = "usage_data"
-	backpressureDropKey = "backpressure_drop"
+	userAgentKey      = "user_agent"
+	debugKey          = "debug"
+	awsSdkLogLevelKey = "aws_sdk_log_level"
+	usageDataKey      = "usage_data"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -65,11 +64,9 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.AWS_CA_BUNDLE] = sslConfig[commonconfig.CABundlePath]
 	}
 
-	//respect existing flag already set in env
-	backpressureDrop := envconfig.IsBackpressureDropEnabled()
-	// skip adding if not enabled
-	if backpressureDrop {
-		envVars[envconfig.CWAgentBackpressureDrop] = strconv.FormatBool(backpressureDrop)
+	backpressureMode := envconfig.GetLogsBackpressureMode()
+	if len(backpressureMode) > 0 {
+		envVars[logscommon.LogBackpressureModeEnvKey] = backpressureMode
 	}
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")

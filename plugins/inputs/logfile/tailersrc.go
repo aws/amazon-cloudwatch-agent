@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"golang.org/x/text/encoding"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
@@ -21,7 +22,7 @@ import (
 
 const (
 	stateFileMode     = 0644
-	tailCloseInterval = 500 * time.Millisecond
+	tailCloseInterval = 3 * time.Second
 )
 
 var (
@@ -74,16 +75,16 @@ type tailerSrc struct {
 	truncateSuffix  string
 	retentionInDays int
 
-	outputFn         func(logs.LogEvent)
-	isMLStart        func(string) bool
-	filters          []*LogFilter
-	offsetCh         chan fileOffset
-	done             chan struct{}
-	startTailerOnce  sync.Once
-	cleanUpFns       []func()
-	backpressureDrop bool
-	buffer           chan *LogEvent
-	stopOnce         sync.Once
+	outputFn           func(logs.LogEvent)
+	isMLStart          func(string) bool
+	filters            []*LogFilter
+	offsetCh           chan fileOffset
+	done               chan struct{}
+	startTailerOnce    sync.Once
+	cleanUpFns         []func()
+	backpressureFdDrop bool
+	buffer             chan *LogEvent
+	stopOnce           sync.Once
 }
 
 // Verify tailerSrc implements LogSrc
@@ -100,31 +101,31 @@ func NewTailerSrc(
 	maxEventSize int,
 	truncateSuffix string,
 	retentionInDays int,
-	backpressureDrop bool,
+	backpressureMode string,
 ) *tailerSrc {
 	ts := &tailerSrc{
-		group:            group,
-		stream:           stream,
-		destination:      destination,
-		stateFilePath:    stateFilePath,
-		class:            logClass,
-		fileGlobPath:     fileGlobPath,
-		tailer:           tailer,
-		autoRemoval:      autoRemoval,
-		isMLStart:        isMultilineStartFn,
-		filters:          filters,
-		timestampFn:      timestampFn,
-		enc:              enc,
-		maxEventSize:     maxEventSize,
-		truncateSuffix:   truncateSuffix,
-		retentionInDays:  retentionInDays,
-		backpressureDrop: backpressureDrop && !autoRemoval,
+		group:              group,
+		stream:             stream,
+		destination:        destination,
+		stateFilePath:      stateFilePath,
+		class:              logClass,
+		fileGlobPath:       fileGlobPath,
+		tailer:             tailer,
+		autoRemoval:        autoRemoval,
+		isMLStart:          isMultilineStartFn,
+		filters:            filters,
+		timestampFn:        timestampFn,
+		enc:                enc,
+		maxEventSize:       maxEventSize,
+		truncateSuffix:     truncateSuffix,
+		retentionInDays:    retentionInDays,
+		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeDrop,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
 	}
 
-	if ts.backpressureDrop {
+	if ts.backpressureFdDrop {
 		ts.buffer = make(chan *LogEvent, defaultBufferSize)
 	}
 	go ts.runSaveState()
@@ -138,7 +139,7 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 	ts.outputFn = fn
 	ts.startTailerOnce.Do(func() {
 		go ts.runTail()
-		if ts.backpressureDrop {
+		if ts.backpressureFdDrop {
 			go ts.runSender()
 		}
 	})
@@ -289,7 +290,7 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 		src:    ts,
 	}
 	if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
-		if ts.backpressureDrop {
+		if ts.backpressureFdDrop {
 			select {
 			case ts.buffer <- e:
 				// successfully sent

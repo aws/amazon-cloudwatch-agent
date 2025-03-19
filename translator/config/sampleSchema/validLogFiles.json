@@ -26,7 +26,7 @@
           {
             "file_path": "/var/test/logs/*",
             "blacklist": "agent.log*|env.log|profiler.log|\\.\\d$",
-            "backpressure_drop": true,
+            "backpressure_mode": "fd_drop",
             "timezone": "UTC"
           }
         ]

@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 )
 
 const (
@@ -34,7 +36,6 @@ const (
 	CWConfigContent           = "CW_CONFIG_CONTENT"
 	CWOtelConfigContent       = "CW_OTEL_CONFIG_CONTENT"
 	CWAgentMergedOtelConfig   = "CWAGENT_MERGED_OTEL_CONFIG"
-	CWAgentBackpressureDrop   = "CWAGENT_LOGS_BACKPRESSURE_DROP"
 
 	// confused deputy prevention related headers
 	AmzSourceAccount = "AMZ_SOURCE_ACCOUNT" // populates the "x-amz-source-account" header
@@ -84,7 +85,6 @@ func IsRunningInROSA() bool {
 	return os.Getenv(RunInROSA) == TrueValue
 }
 
-func IsBackpressureDropEnabled() bool {
-	backpressureDrop, _ := strconv.ParseBool(os.Getenv(CWAgentBackpressureDrop))
-	return backpressureDrop
+func GetLogsBackpressureMode() string {
+	return os.Getenv(logscommon.LogBackpressureModeEnvKey)
 }

@@ -62,7 +62,7 @@ type FileConfig struct {
 	AutoRemoval bool `toml:"auto_removal"`
 	// close current file if processing buffer is full/blocked then reopen when the buffer frees up
 	// AutoRemoval take higher priority than BackpressureDrop
-	BackpressureDrop bool `toml:"backpressure_drop"`
+	BackpressureMode string `toml:"backpressure_mode"`
 
 	//Indicate whether to tail the log file from the beginning or not.
 	//The default value for this field should be set as true in configuration.
