@@ -445,6 +445,11 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 		}
 		if len(distList) == 0 {
 			log.Printf("I! metric.Value is called on this = %v.", *metric)
+			if metric.Value == nil {
+				log.Printf("E! metric (%s) has nil value, dropping it", *metric.MetricName)
+				continue
+			}
+
 			if !distribution.IsSupportedValue(*metric.Value, distribution.MinValue, distribution.MaxValue) {
 				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
 				continue
