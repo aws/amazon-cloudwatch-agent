@@ -26,6 +26,7 @@ const (
 	RunInAWS                  = "RUN_IN_AWS"
 	RunWithIRSA               = "RUN_WITH_IRSA"
 	RunWithSELinux            = "RUN_WITH_SELINUX"
+	RunInROSA                 = "RUN_IN_ROSA"
 	UseDefaultConfig          = "USE_DEFAULT_CONFIG"
 	HostName                  = "HOST_NAME"
 	PodName                   = "POD_NAME"
@@ -76,4 +77,8 @@ func IsWindowsHostProcessContainer() bool {
 
 func IsSelinuxEnabled() bool {
 	return os.Getenv(RunWithSELinux) == TrueValue
+}
+
+func IsRunningInROSA() bool {
+	return os.Getenv(RunInROSA) == TrueValue
 }
