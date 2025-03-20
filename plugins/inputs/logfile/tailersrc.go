@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	stateFileMode     = 0644
-	tailCloseInterval = 3 * time.Second
+	stateFileMode      = 0644
+	tailCloseThreshold = 3 * time.Second
 )
 
 var (
@@ -101,7 +101,7 @@ func NewTailerSrc(
 	maxEventSize int,
 	truncateSuffix string,
 	retentionInDays int,
-	backpressureMode string,
+	backpressureMode logscommon.BackpressureMode,
 ) *tailerSrc {
 	ts := &tailerSrc{
 		group:              group,
@@ -119,7 +119,7 @@ func NewTailerSrc(
 		maxEventSize:       maxEventSize,
 		truncateSuffix:     truncateSuffix,
 		retentionInDays:    retentionInDays,
-		backpressureFdDrop: !autoRemoval && backpressureMode == string(logscommon.LogBackpressureModeFDDrop),
+		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeFDRelease,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
@@ -298,7 +298,7 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 				return
 			default:
 				// sender buffer is full. start timer to close file then retry
-				timer := time.NewTimer(tailCloseInterval)
+				timer := time.NewTimer(tailCloseThreshold)
 				defer timer.Stop()
 
 				for {

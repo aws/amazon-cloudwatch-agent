@@ -6,7 +6,7 @@ package logscommon
 type BackpressureMode string
 
 const (
-	LogBackpressureModeFDDrop BackpressureMode = "fd_release"
+	LogBackpressureModeFDRelease BackpressureMode = "fd_release"
 )
 
 const (

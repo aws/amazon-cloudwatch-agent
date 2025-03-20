@@ -64,7 +64,7 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	}
 
 	backpressureMode := envconfig.GetLogsBackpressureMode()
-	if len(backpressureMode) > 0 {
+	if backpressureMode != "" {
 		envVars[envconfig.CWAgentLogsBackpressureMode] = backpressureMode
 	}
 

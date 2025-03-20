@@ -37,7 +37,7 @@ func init() {
 
 func isValidMode(s string) bool {
 	switch logscommon.BackpressureMode(s) {
-	case logscommon.LogBackpressureModeFDDrop:
+	case logscommon.LogBackpressureModeFDRelease:
 		return true
 	default:
 		return false

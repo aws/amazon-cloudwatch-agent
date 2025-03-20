@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -359,7 +360,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop string) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop logscommon.BackpressureMode) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -486,7 +487,7 @@ func teardown(resources tailerTestResources) {
 }
 
 func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
-	resources := setupTailer(t, nil, defaultMaxEventSize, false, "fd_release")
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, logscommon.LogBackpressureModeFDRelease)
 
 	doneCh := make(chan struct{})
 	var consumed int32

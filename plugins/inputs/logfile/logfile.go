@@ -289,8 +289,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileName string
 	var targetModTime time.Time
 	for matchedFileName, matchedFileInfo := range g.Match() {
-		t.Log.Debugf("Processing matched file: %s, ModTime: %v", matchedFileName, matchedFileInfo.ModTime())
-
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
 			continue
 		}
