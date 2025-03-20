@@ -36,6 +36,9 @@ func TestKubernetesMetadata_GetPodMetadata(t *testing.T) {
 
 	unknown := kMeta.GetPodMetadata("9.9.9.9")
 	assert.Equal(t, k8sclient.PodMetadata{}, unknown, "GetPodMetadata should return empty if the IP is not present")
+
+	unknown = kMeta.GetPodMetadata("")
+	assert.Equal(t, k8sclient.PodMetadata{}, unknown, "GetPodMetadata should return empty if the IP is empty")
 }
 
 func TestKubernetesMetadata_GetPodMetadata_Incomplete(t *testing.T) {
