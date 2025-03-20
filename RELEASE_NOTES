@@ -1,5 +1,5 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300054.0 (2023-06-15)
+Amazon CloudWatch Agent 1.300054.0 (2025-03-20)
 ========================================================================
 Features:
 * [EFA] Added Elastic Network Interface (ENI) ID as a dimension to EFA (Elastic Fabric Adapter) metrics
