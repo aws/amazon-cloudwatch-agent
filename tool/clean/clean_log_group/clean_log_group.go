@@ -264,7 +264,9 @@ func getLastLogEventTime(ctx context.Context, client cloudwatchlogsClient, logGr
 		log.Printf("⚠️ Warning: Failed to retrieve log streams for %s: %v\n", logGroupName, err)
 		return 0
 	}
-
+	if len(output.LogStreams) == 0 {
+		return 0
+	}
 	stream := output.LogStreams[0]
 
 	if stream.LastEventTimestamp != nil && *stream.LastEventTimestamp > latestTimestamp {

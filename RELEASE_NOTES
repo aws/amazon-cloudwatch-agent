@@ -1,5 +1,5 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300053.0 (2024-02-26)
+Amazon CloudWatch Agent 1.300053.0 (2025-02-26)
 ========================================================================
 Bug Fixes:
 * [Related Telemetry] Fix EKS cluster detection when aws-auth config map does not exist
@@ -14,7 +14,7 @@ Enhancements:
 * [OpenTelemetry] Bump otel dependencies to v0.115.0/v1.21.0
 
 ========================================================================
-Amazon CloudWatch Agent 1.300052.0 (2024-01-21)
+Amazon CloudWatch Agent 1.300052.0 (2025-01-21)
 ========================================================================
 
 Bug Fixes:
