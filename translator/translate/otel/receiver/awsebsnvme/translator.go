@@ -85,8 +85,11 @@ func getEnabledMeasurements(conf *confmap.Conf) map[string]any {
 		if !strings.HasPrefix(m, "diskio_") {
 			metricName = "diskio_" + m
 		}
-		metrics[metricName] = map[string]any{
-			"enabled": true,
+		// Skip any metrics collected by Telegraf
+		if strings.HasPrefix(metricName, "diskio_ebs_") {
+			metrics[metricName] = map[string]any{
+				"enabled": true,
+			}
 		}
 	}
 
