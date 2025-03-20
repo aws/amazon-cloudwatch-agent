@@ -19,6 +19,7 @@ func TestComponents(t *testing.T) {
 	wantReceivers := []string{
 		"awscontainerinsightreceiver",
 		"awscontainerinsightskueuereceiver",
+		"awsebsnvmereceiver",
 		"awsecscontainermetrics",
 		"awsxray",
 		"filelog",

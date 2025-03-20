@@ -18,7 +18,8 @@ import (
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
-const DiskIOEbsPrefix = "diskio_ebs_"
+const DiskIOPrefix = "diskio_"
+const DiskIOEbsPrefix = "ebs_"
 
 var (
 	MetricsKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
@@ -49,6 +50,10 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 		})
 	}
 
+	if shouldAddEbsReceiver(conf, configSection) {
+		deltaReceivers.Set(awsebsnvme.NewTranslator())
+	}
+
 	// Gather OTLP receivers
 	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
 	case []any:
@@ -64,10 +69,6 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 			otlpreceiver.WithSignal(pipeline.SignalMetrics),
 			otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 		))
-	}
-
-	if shouldAddEbsReceiver(conf, configSection) {
-		deltaReceivers.Set(awsebsnvme.NewTranslator())
 	}
 
 	hasHostPipeline := hostReceivers.Len() != 0
@@ -138,6 +139,7 @@ func shouldAddEbsReceiver(conf *confmap.Conf, configSection string) bool {
 
 	measurements := common.GetMeasurements(diskioMap.(map[string]any))
 	for _, measurement := range measurements {
+		measurement = strings.TrimPrefix(measurement, DiskIOPrefix)
 		if strings.HasPrefix(measurement, DiskIOEbsPrefix) {
 			return true
 		}

@@ -122,7 +122,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
-		"WithBothDiskIoAndAdapted": {
+		"WithBothEbsAndAdaptedDiskio": {
 			input: map[string]any{
 				"metrics": map[string]any{
 					"metrics_destinations": map[string]any{
@@ -133,7 +133,7 @@ func TestTranslators(t *testing.T) {
 					},
 					"metrics_collected": map[string]any{
 						"diskio": map[string]any{
-							"measurement": []interface{}{"io_time", "diskio_ebs_total_read_bytes"},
+							"measurement": []interface{}{"io_time", "ebs_total_read_bytes"},
 						},
 					},
 				},
@@ -150,7 +150,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
-		"WithoutDiskIoMetrics": {
+		"WithoutEbsoMetrics": {
 			input: map[string]any{
 				"metrics": map[string]any{
 					"metrics_destinations": map[string]any{
@@ -178,7 +178,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
-		"WithDiskIoMetrics": {
+		"WithEbsMetrics": {
 			input: map[string]any{
 				"metrics": map[string]any{
 					"metrics_destinations": map[string]any{
@@ -189,7 +189,7 @@ func TestTranslators(t *testing.T) {
 					},
 					"metrics_collected": map[string]any{
 						"diskio": map[string]any{
-							"measurement": []interface{}{"diskio_ebs_total_read_bytes"},
+							"measurement": []interface{}{"ebs_total_read_bytes"},
 						},
 					},
 				},
