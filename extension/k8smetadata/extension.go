@@ -88,6 +88,10 @@ func (e *KubernetesMetadata) Shutdown(_ context.Context) error {
 }
 
 func (e *KubernetesMetadata) GetPodMetadata(ip string) k8sclient.PodMetadata {
+	if ip == "" {
+		e.logger.Debug("GetPodMetadata: no IP provided")
+		return k8sclient.PodMetadata{}
+	}
 	pm, ok := e.endpointSliceWatcher.IPToPodMetadata.Load(ip)
 	if !ok {
 		e.logger.Debug("GetPodMetadata: no mapping found for IP")
