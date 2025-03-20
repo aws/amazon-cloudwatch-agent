@@ -309,8 +309,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 			continue
 		}
 		if !fileconfig.PublishMultiLogs {
-			t.Log.Debugf("Single file mode - current target: %s (ModTime: %v), candidate: %s (ModTime: %v)",
-				targetFileName, targetModTime, matchedFileName, matchedFileInfo.ModTime())
 			if targetFileName == "" || matchedFileInfo.ModTime().After(targetModTime) {
 				targetFileName = matchedFileName
 				targetModTime = matchedFileInfo.ModTime()
