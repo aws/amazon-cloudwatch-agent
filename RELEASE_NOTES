@@ -3,7 +3,6 @@ Amazon CloudWatch Agent 1.300054.0 (2025-03-20)
 ========================================================================
 Features:
 * [EFA] Added Elastic Network Interface (ENI) ID as a dimension to EFA (Elastic Fabric Adapter) metrics
-* [Kubernetes] Added support for using Kubernetes secret file for bearer token when accessing apiserver Prometheus endpoint
 
 Enhancements:
 * [ContainerInsights] Switched to using EndpointSlices instead of Endpoints for improved performance in large EKS clusters
@@ -15,6 +14,7 @@ Bug Fixes:
 * [Logs] Implemented fixed-size buffer to handle file descriptors in log tailer, controlled by a feature flag
 * [Logs] Added 'backpressure_drop' feature flag for granular control of log handling during file rotation
 * [Kubernetes] Implemented dynamic CA certificate handling for kubelet connections
+* [Kubernetes] Use Kubernetes Secret File for Bearer Token in Prometheus API Access
 
 ========================================================================
 Amazon CloudWatch Agent 1.300053.0 (2025-02-26)
