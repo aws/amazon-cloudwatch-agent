@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -93,10 +92,10 @@ func TestToEnvConfig(t *testing.T) {
 			name:  "logs section with backpressure drop",
 			input: map[string]interface{}{},
 			envVars: map[string]string{
-				logscommon.LogBackpressureModeEnvKey: "fd_mode",
+				envconfig.CWAgentLogsBackpressureMode: "fd_release",
 			},
 			expectedEnv: map[string]string{
-				logscommon.LogBackpressureModeEnvKey: "fd_mode",
+				envconfig.CWAgentLogsBackpressureMode: "fd_release",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})

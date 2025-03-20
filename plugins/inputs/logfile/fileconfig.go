@@ -60,8 +60,8 @@ type FileConfig struct {
 	// automatically remove the file / symlink after uploading.
 	// This auto removal does not support the case where other log rotation mechanism is already in place.
 	AutoRemoval bool `toml:"auto_removal"`
-	// close current file if processing buffer is full/blocked then reopen when the buffer frees up
-	// AutoRemoval take higher priority than BackpressureDrop
+	// strategy during backpressure in log processing where AutoRemoval take higher priority. supported values
+	// fd_release: release file descriptor when there is backpressure then reopen the file once backpressure condition is cleared
 	BackpressureMode string `toml:"backpressure_mode"`
 
 	//Indicate whether to tail the log file from the beginning or not.

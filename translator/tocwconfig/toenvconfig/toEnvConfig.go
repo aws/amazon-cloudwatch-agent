@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -66,7 +65,7 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 
 	backpressureMode := envconfig.GetLogsBackpressureMode()
 	if len(backpressureMode) > 0 {
-		envVars[logscommon.LogBackpressureModeEnvKey] = backpressureMode
+		envVars[envconfig.CWAgentLogsBackpressureMode] = backpressureMode
 	}
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")

@@ -3,6 +3,12 @@
 
 package logscommon
 
+type BackpressureMode string
+
+const (
+	LogBackpressureModeFDDrop BackpressureMode = "fd_release"
+)
+
 const (
 	LogGroupNameTag  = "log_group_name"
 	LogStreamNameTag = "log_stream_name"
@@ -27,7 +33,5 @@ const (
 	WindowsEventLogPrefix = "Amazon_CloudWatch_WindowsEventLog_"
 	LogType               = "log_type"
 
-	LogBackpressureModeEnvKey = "CWAGENT_LOGS_BACKPRESSURE_MODE"
-	LogBackpressureModeKey    = "backpressure_mode"
-	LogBackpressureModeDrop   = "fd_drop"
+	LogBackpressureModeKey = "backpressure_mode"
 )

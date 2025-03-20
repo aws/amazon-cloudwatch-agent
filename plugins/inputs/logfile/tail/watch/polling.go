@@ -4,6 +4,7 @@
 package watch
 
 import (
+	"errors"
 	"log"
 	"os"
 	"runtime"
@@ -24,17 +25,27 @@ func NewPollingFileWatcher(filename string) *PollingFileWatcher {
 }
 
 var POLL_DURATION time.Duration
+var POLL_WAIT_MAX time.Duration
 
 func (fw *PollingFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
+	timer := time.NewTimer(POLL_DURATION)
+	deadline := time.NewTimer(POLL_WAIT_MAX)
+	defer timer.Stop()
+	defer deadline.Stop()
+
 	for {
 		if _, err := os.Stat(fw.Filename); err == nil {
 			return nil
 		} else if !os.IsNotExist(err) {
 			return err
 		}
+
+		timer.Reset(POLL_DURATION)
 		select {
-		case <-time.After(POLL_DURATION):
+		case <-timer.C:
 			continue
+		case <-deadline.C:
+			return errors.New("file does not exist and reached the polling limit")
 		case <-t.Dying():
 			return tomb.ErrDying
 		}
@@ -113,4 +124,5 @@ func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 
 func init() {
 	POLL_DURATION = 250 * time.Millisecond
+	POLL_WAIT_MAX = 5 * time.Minute
 }

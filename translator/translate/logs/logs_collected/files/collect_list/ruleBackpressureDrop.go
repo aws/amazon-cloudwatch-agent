@@ -10,10 +10,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
-var acceptedModes = map[string]interface{}{
-	logscommon.LogBackpressureModeDrop: nil,
-}
-
 type BackpressureMode struct {
 }
 
@@ -27,7 +23,7 @@ func (hr *BackpressureMode) ApplyRule(input any) (string, interface{}) {
 		}
 	}
 	returnKey := logscommon.LogBackpressureModeKey
-	if _, ok := acceptedModes[returnVal.(string)]; !ok {
+	if !isValidMode(returnVal.(string)) {
 		returnVal = ""
 	}
 	return returnKey, returnVal
@@ -37,4 +33,13 @@ func init() {
 	l := new(BackpressureMode)
 	r := []Rule{l}
 	RegisterRule(logscommon.LogBackpressureModeKey, r)
+}
+
+func isValidMode(s string) bool {
+	switch logscommon.BackpressureMode(s) {
+	case logscommon.LogBackpressureModeFDDrop:
+		return true
+	default:
+		return false
+	}
 }

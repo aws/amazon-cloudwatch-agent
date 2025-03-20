@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
@@ -633,8 +633,8 @@ func TestAutoRemoval(t *testing.T) {
 
 func TestBackpressureDrop(t *testing.T) {
 	// Save original env var value and restore it after test
-	originalEnvVal := os.Getenv(logscommon.LogBackpressureModeEnvKey)
-	defer os.Setenv(logscommon.LogBackpressureModeEnvKey, originalEnvVal)
+	originalEnvVal := os.Getenv(envconfig.CWAgentLogsBackpressureMode)
+	defer os.Setenv(envconfig.CWAgentLogsBackpressureMode, originalEnvVal)
 
 	f := new(FileConfig)
 	var input interface{}
@@ -644,7 +644,7 @@ func TestBackpressureDrop(t *testing.T) {
         "collect_list":[
             {
                 "file_path":"path1",
-                "backpressure_mode": "fd_drop"
+                "backpressure_mode": "fd_release"
             }
         ]
     }`), &input)
@@ -658,14 +658,14 @@ func TestBackpressureDrop(t *testing.T) {
 		"pipe":                   false,
 		"retention_in_days":      -1,
 		"log_group_class":        "",
-		"backpressure_mode":      "fd_drop",
+		"backpressure_mode":      "fd_release",
 		"service_name":           "",
 		"deployment_environment": "",
 	}}
 	assert.Equal(t, expectVal, val)
 
-	// backpressure_mode not set, env var set to fd_drop
-	os.Setenv(logscommon.LogBackpressureModeEnvKey, "fd_drop")
+	// backpressure_mode not set, env var set to fd_release
+	os.Setenv(envconfig.CWAgentLogsBackpressureMode, "fd_release")
 	e = json.Unmarshal([]byte(`{
         "collect_list":[
             {
@@ -683,12 +683,12 @@ func TestBackpressureDrop(t *testing.T) {
 		"pipe":                   false,
 		"retention_in_days":      -1,
 		"log_group_class":        "",
-		"backpressure_mode":      "fd_drop",
+		"backpressure_mode":      "fd_release",
 		"service_name":           "",
 		"deployment_environment": "",
 	}}
 	assert.Equal(t, expectVal, val)
-	os.Unsetenv(logscommon.LogBackpressureModeEnvKey)
+	os.Unsetenv(envconfig.CWAgentLogsBackpressureMode)
 
 	// backpressure_mode not set, env var set to ""
 	os.Setenv("CWAGENT_LOGS_backpressure_mode", "")

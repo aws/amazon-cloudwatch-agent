@@ -180,6 +180,10 @@ func (tail *Tail) close() {
 	tail.CloseFile()
 }
 
+func (tail *Tail) IsFileClosed() bool {
+	return tail.file == nil
+}
+
 func (tail *Tail) CloseFile() {
 	if tail.file != nil {
 		tail.file.Close()

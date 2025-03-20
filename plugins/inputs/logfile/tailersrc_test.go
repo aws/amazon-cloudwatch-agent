@@ -472,9 +472,6 @@ func resetState(originWaitDuration time.Duration) {
 }
 
 func teardown(resources tailerTestResources) {
-	beforeCount := tail.OpenFileCount.Load()
-	log.Printf("teardown start - OpenFileCount: %d", beforeCount)
-
 	if resources.file != nil {
 		resources.file.Close()
 	}
@@ -486,11 +483,10 @@ func teardown(resources tailerTestResources) {
 
 	// Wait for file operations to complete
 	time.Sleep(100 * time.Millisecond)
-	log.Printf("teardown end - OpenFileCount: %d", tail.OpenFileCount.Load())
 }
 
 func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
-	resources := setupTailer(t, nil, defaultMaxEventSize, false, "fd_drop")
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, "fd_release")
 
 	doneCh := make(chan struct{})
 	var consumed int32

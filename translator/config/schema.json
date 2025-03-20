@@ -975,7 +975,7 @@
                     "description": "Define the strategy during backpressure condition",
                     "type": "string",
                     "enum": [
-                      "fd_drop"
+                      "fd_release"
                     ]
                   },
                   "blacklist": {

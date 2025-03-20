@@ -119,7 +119,7 @@ func NewTailerSrc(
 		maxEventSize:       maxEventSize,
 		truncateSuffix:     truncateSuffix,
 		retentionInDays:    retentionInDays,
-		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeDrop,
+		backpressureFdDrop: !autoRemoval && backpressureMode == string(logscommon.LogBackpressureModeFDDrop),
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
@@ -305,8 +305,10 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 					select {
 					case ts.buffer <- e:
 						// sent event after buffer gets freed up
-						if err := ts.tailer.Reopen(false); err != nil {
-							log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
+						if ts.tailer.IsFileClosed() { // skip file closing if not already closed
+							if err := ts.tailer.Reopen(false); err != nil {
+								log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
+							}
 						}
 						return
 					case <-timer.C:

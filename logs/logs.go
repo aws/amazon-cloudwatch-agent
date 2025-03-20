@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -145,11 +144,8 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
 
-	var mu sync.Mutex
 	closed := false
 	src.SetOutput(func(e LogEvent) {
-		mu.Lock()
-		defer mu.Unlock()
 		if closed {
 			return
 		}
