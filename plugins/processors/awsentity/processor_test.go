@@ -83,8 +83,8 @@ func newMockSetAutoScalingGroup(es *mockEntityStore) func(string) {
 	}
 }
 
-func newMockPodMeta(workload, namespace, node string) func() k8sclient.PodMetadata {
-	return func() k8sclient.PodMetadata {
+func newMockPodMeta(workload, namespace, node string) func(_ context.Context) k8sclient.PodMetadata {
+	return func(_ context.Context) k8sclient.PodMetadata {
 		return k8sclient.PodMetadata{
 			Workload:  workload,
 			Namespace: namespace,
@@ -936,7 +936,7 @@ func TestAwsEntityProcessor_AddsEntityFieldsFromPodMeta_WithMock(t *testing.T) {
 	tests := []struct {
 		name           string
 		metrics        pmetric.Metrics
-		mockGetPodMeta func() k8sclient.PodMetadata
+		mockGetPodMeta func(_ context.Context) k8sclient.PodMetadata
 		want           map[string]any
 	}{
 		{
