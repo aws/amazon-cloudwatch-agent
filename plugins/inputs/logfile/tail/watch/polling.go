@@ -13,6 +13,11 @@ import (
 	"gopkg.in/tomb.v1"
 )
 
+var (
+	PollDuration time.Duration
+	PollMaxWait  time.Duration
+)
+
 // PollingFileWatcher polls the file for changes.
 type PollingFileWatcher struct {
 	Filename string
@@ -24,12 +29,9 @@ func NewPollingFileWatcher(filename string) *PollingFileWatcher {
 	return fw
 }
 
-var POLL_DURATION time.Duration
-var POLL_WAIT_MAX time.Duration
-
 func (fw *PollingFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
-	timer := time.NewTimer(POLL_DURATION)
-	deadline := time.NewTimer(POLL_WAIT_MAX)
+	timer := time.NewTimer(PollDuration)
+	deadline := time.NewTimer(PollMaxWait)
 	defer timer.Stop()
 	defer deadline.Stop()
 
@@ -40,7 +42,7 @@ func (fw *PollingFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 			return err
 		}
 
-		timer.Reset(POLL_DURATION)
+		timer.Reset(PollDuration)
 		select {
 		case <-timer.C:
 			continue
@@ -75,7 +77,7 @@ func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 			default:
 			}
 
-			time.Sleep(POLL_DURATION)
+			time.Sleep(PollDuration)
 			fi, err := os.Stat(fw.Filename)
 			if err != nil {
 				// Windows cannot delete a file if a handle is still open (tail keeps one open)
@@ -123,6 +125,6 @@ func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChange
 }
 
 func init() {
-	POLL_DURATION = 250 * time.Millisecond
-	POLL_WAIT_MAX = 5 * time.Minute
+	PollDuration = 250 * time.Millisecond
+	PollMaxWait = 5 * time.Minute
 }
