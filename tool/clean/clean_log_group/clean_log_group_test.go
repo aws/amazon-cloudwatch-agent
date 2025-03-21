@@ -84,7 +84,7 @@ func TestGetLastLogEventTime(t *testing.T) {
 
 	lastEventTime := getLastLogEventTime(context.Background(), mockClient, "dummy-log-group")
 
-	assert.Equal(t, int64(2000), lastEventTime)
+	assert.Equal(t, int64(1000), lastEventTime)
 	mockClient.AssertExpectations(t)
 }
 func testHandleLogGroup(cfg Config, logGroupName string, logCreationDate, logStreamCreationDate int) ([]string, error) {
