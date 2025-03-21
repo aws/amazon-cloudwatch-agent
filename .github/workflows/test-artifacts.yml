@@ -44,6 +44,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  id:
+    name: Workflow ID Provider
+    runs-on: ubuntu-latest
+    steps:
+      - name: ${{ github.event.inputs.build_id }}
+        run: echo run identifier ${{ inputs.build_id }}
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
@@ -332,7 +338,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -502,7 +508,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -579,7 +585,7 @@ jobs:
             else
               cd terraform/ec2/mac
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -708,7 +714,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-            
+
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -784,7 +790,7 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-            
+
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -856,7 +862,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -931,7 +937,7 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
