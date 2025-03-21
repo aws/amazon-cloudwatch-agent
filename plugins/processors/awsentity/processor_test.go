@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -79,6 +80,16 @@ func newMockGetAutoScalingGroupFromEntityStore(asg string) func() string {
 func newMockSetAutoScalingGroup(es *mockEntityStore) func(string) {
 	return func(asg string) {
 		es.autoScalingGroup = asg
+	}
+}
+
+func newMockPodMeta(workload, namespace, node string) func(_ context.Context) k8sclient.PodMetadata {
+	return func(_ context.Context) k8sclient.PodMetadata {
+		return k8sclient.PodMetadata{
+			Workload:  workload,
+			Namespace: namespace,
+			Node:      node,
+		}
 	}
 }
 
@@ -196,6 +207,12 @@ func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 			name:    "WithPodNameAndServiceNameNoSource",
 			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
 			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceUnknown}},
+			k8sMode: config.ModeEKS,
+		},
+		{
+			name:    "WithPodNameAndServiceNameNoSourceWithTelemetryEnabled",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
 			k8sMode: config.ModeEKS,
 		},
 		{
@@ -373,6 +390,104 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				semconv.AttributeK8SNamespaceName:                     "test-namespace",
 				semconv.AttributeK8SDeploymentName:                    "test-workload",
 				semconv.AttributeK8SNodeName:                          "test-node",
+			},
+		},
+		{
+			name:           "ResourceAttributeWorkloadFallbackForUnknownService",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeServiceName, "unknown_service"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-workload",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				entityattributes.AttributeEntityCluster:               "test-cluster",
+				entityattributes.AttributeEntityNamespace:             "test-namespace",
+				entityattributes.AttributeEntityNode:                  "test-node",
+				entityattributes.AttributeEntityWorkload:              "test-workload",
+				entityattributes.AttributeEntityServiceNameSource:     "K8sWorkload",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SDeploymentName:                    "test-workload",
+				semconv.AttributeK8SNodeName:                          "test-node",
+				attributeServiceName:                                  "unknown_service",
+			},
+		},
+		{
+			name:           "ResourceAttributeWorkloadFallbackForUnknownServiceJava",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeServiceName, "unknown_service:java"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-workload",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				entityattributes.AttributeEntityCluster:               "test-cluster",
+				entityattributes.AttributeEntityNamespace:             "test-namespace",
+				entityattributes.AttributeEntityNode:                  "test-node",
+				entityattributes.AttributeEntityWorkload:              "test-workload",
+				entityattributes.AttributeEntityServiceNameSource:     "K8sWorkload",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SDeploymentName:                    "test-workload",
+				semconv.AttributeK8SNodeName:                          "test-node",
+				attributeServiceName:                                  "unknown_service:java",
+			},
+		},
+		{
+			name:           "ResourceAttributeWithUnknownServiceNegativeCase",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeServiceName, "unknown_servic"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "unknown_servic",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				entityattributes.AttributeEntityCluster:               "test-cluster",
+				entityattributes.AttributeEntityNamespace:             "test-namespace",
+				entityattributes.AttributeEntityNode:                  "test-node",
+				entityattributes.AttributeEntityWorkload:              "test-workload",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SDeploymentName:                    "test-workload",
+				semconv.AttributeK8SNodeName:                          "test-node",
+				attributeServiceName:                                  "unknown_servic",
+			},
+		},
+		{
+			name:           "ResourceAttributeWorkloadFallbackForUnknownServiceJava",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeServiceName, "unknown_service:java"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "unknown_service:java",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SNodeName:                          "test-node",
+				attributeServiceName:                                  "unknown_service:java",
+			},
+		},
+		{
+			name:           "ResourceAttributeTelemetrySDKEnabled",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node", attributeServiceName, "test-service", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				entityattributes.AttributeEntityCluster:               "test-cluster",
+				entityattributes.AttributeEntityNamespace:             "test-namespace",
+				entityattributes.AttributeEntityNode:                  "test-node",
+				entityattributes.AttributeEntityWorkload:              "test-workload",
+				entityattributes.AttributeEntityServiceNameSource:     "Instrumentation",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SDeploymentName:                    "test-workload",
+				semconv.AttributeK8SNodeName:                          "test-node",
+				attributeServiceName:                                  "test-service",
+				semconv.AttributeTelemetrySDKName:                     "opentelemetry",
 			},
 		},
 		{
@@ -811,6 +926,60 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 				assert.Equal(t, tt.wantDatapointAttributes, rm.At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes().AsRaw())
 			}
 			getServiceNameSource = resetServiceNameSource
+		})
+	}
+}
+
+func TestAwsEntityProcessor_AddsEntityFieldsFromPodMeta_WithMock(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+
+	tests := []struct {
+		name           string
+		metrics        pmetric.Metrics
+		mockGetPodMeta func(_ context.Context) k8sclient.PodMetadata
+		want           map[string]any
+	}{
+		{
+			name:    "PodMetaFromMockFunction",
+			metrics: generateMetrics(),
+			mockGetPodMeta: newMockPodMeta(
+				"test-workload",
+				"test-namespace",
+				"test-node",
+			),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":  "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name": "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":      "test-node",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			origGetPodMeta := getPodMeta
+			getPodMeta = tt.mockGetPodMeta
+			defer func() { getPodMeta = origGetPodMeta }()
+
+			metrics := tt.metrics
+			rm := metrics.ResourceMetrics().At(0)
+			rm.Resource().Attributes().Clear()
+
+			processor := newAwsEntityProcessor(&Config{
+				EntityType:  attributeService,
+				ClusterName: "test-cluster",
+			}, logger)
+			processor.config.KubernetesMode = config.ModeEKS
+
+			_, err := processor.processMetrics(context.Background(), metrics)
+			assert.NoError(t, err)
+
+			attrs := rm.Resource().Attributes().AsRaw()
+			for key, expectedVal := range tt.want {
+				actualVal, exists := attrs[key]
+				assert.True(t, exists, "expected attribute %s to be set", key)
+				assert.Equal(t, expectedVal, actualVal, "mismatch for attribute %s", key)
+			}
 		})
 	}
 }

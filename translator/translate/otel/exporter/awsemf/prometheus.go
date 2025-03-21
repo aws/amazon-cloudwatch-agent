@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
@@ -40,7 +39,7 @@ func setPrometheusLogGroup(conf *confmap.Conf, cfg *awsemfexporter.Config) error
 			}
 		} else {
 
-			if clusterName := util.GetClusterNameFromEc2Tagger(); clusterName != "" {
+			if clusterName := common.GetClusterName(conf); clusterName != "" {
 				cfg.LogGroupName = fmt.Sprintf(eksDefaultLogGroupFormat, clusterName)
 			}
 		}

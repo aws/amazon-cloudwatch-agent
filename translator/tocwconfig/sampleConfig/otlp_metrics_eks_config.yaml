@@ -28,6 +28,7 @@ extensions:
         kubernetes_mode: K8sEC2
         mode: ec2
         region: us-west-2
+    k8smetadata: {}
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
@@ -102,6 +103,7 @@ receivers:
                 write_timeout: 0s
 service:
     extensions:
+        - k8smetadata
         - agenthealth/metrics
         - agenthealth/statuscode
         - entitystore

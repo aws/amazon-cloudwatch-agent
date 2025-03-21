@@ -18,7 +18,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
@@ -65,15 +64,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	configKey := common.AppSignalsConfigKeys[t.signal]
 	cfg := t.factory.CreateDefaultConfig().(*appsignalsconfig.Config)
 
-	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
-	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
-	if !hostedInConfigured {
-		hostedInConfigKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in")
-		hostedIn, hostedInConfigured = common.GetString(conf, hostedInConfigKey)
-	}
+	hostedIn, hostedInConfigured := common.GetHostedIn(conf)
 	if common.IsAppSignalsKubernetes() {
 		if !hostedInConfigured {
-			hostedIn = util.GetClusterNameFromEc2Tagger()
+			hostedIn = common.GetClusterName(conf)
 		}
 	}
 
