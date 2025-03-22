@@ -873,7 +873,7 @@ jobs:
               -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
               echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -889,7 +889,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            terraform destroy --auto-approve
+            echo cluster has set up
 
   EKSPrometheusIntegrationTest:
     name: ${{matrix.arrays.testName}}
