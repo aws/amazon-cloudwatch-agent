@@ -13,7 +13,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "windows-deadline"
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
@@ -44,6 +44,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  id:
+    name: Workflow ID Provider
+    runs-on: ubuntu-latest
+    steps:
+      - name: ${{ github.event.inputs.build_id }}
+        run: echo run identifier ${{ inputs.build_id }}
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
@@ -315,9 +321,9 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'window' }}
@@ -332,7 +338,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -344,9 +350,9 @@ jobs:
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
@@ -502,7 +508,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -514,9 +520,9 @@ jobs:
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="use_ssm=${{ matrix.arrays.useSSM }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
-              terraform destroy -auto-approve
+              echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
@@ -579,7 +585,7 @@ jobs:
             else
               cd terraform/ec2/mac
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -591,9 +597,9 @@ jobs:
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="license_manager_arn=${{ env.LICENSE_MANAGER_ARN }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}"; then
-              terraform destroy -auto-approve
+              echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
@@ -708,7 +714,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-            
+
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -718,9 +724,9 @@ jobs:
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
               -var="ami=${{ matrix.arrays.ami }}" ; then
-              terraform destroy -auto-approve
+              echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -784,15 +790,15 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-            
+
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
               -var="cwagent_image_tag=${{ inputs.build_id }}"; then
-              terraform destroy -auto-approve
+              echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -856,7 +862,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -865,9 +871,9 @@ jobs:
               -var="ami_type=${{ matrix.arrays.ami }}" \
               -var="instance_type=${{ matrix.arrays.instanceType }}" \
               -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
-              terraform destroy -auto-approve
+              echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -883,7 +889,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            terraform destroy --auto-approve
+            echo cluster has set up
 
   EKSPrometheusIntegrationTest:
     name: ${{matrix.arrays.testName}}
@@ -931,16 +937,16 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ inputs.build_id }}" \
               -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
-              terraform destroy -auto-approve
+              echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -1005,9 +1011,9 @@ jobs:
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
               -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -1067,9 +1073,9 @@ jobs:
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
               -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -1131,9 +1137,9 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -1196,9 +1202,9 @@ jobs:
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
               -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then echo cluster has set up
             else
-              terraform destroy -auto-approve && exit 1
+              echo cluster has set up && exit 1
             fi
 
       - name: Terraform destroy
@@ -1266,7 +1272,7 @@ jobs:
             sleep 10
             kubectl apply -f ./gpuBurner.yaml
           else
-            terraform destroy -auto-approve && exit 1
+            echo cluster has set up && exit 1
           fi
 
       - name: Run Go tests with retry
@@ -1305,4 +1311,4 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            terraform destroy -auto-approve
+            echo cluster has set up
