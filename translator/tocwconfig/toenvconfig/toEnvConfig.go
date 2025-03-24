@@ -63,6 +63,11 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.AWS_CA_BUNDLE] = sslConfig[commonconfig.CABundlePath]
 	}
 
+	backpressureMode := envconfig.GetLogsBackpressureMode()
+	if backpressureMode != "" {
+		envVars[envconfig.CWAgentLogsBackpressureMode] = backpressureMode
+	}
+
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {
 		log.Panicf("Failed to create json map for environment variables. Reason: %s", err.Error())

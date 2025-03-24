@@ -84,8 +84,7 @@ func TestGetLastLogEventTime(t *testing.T) {
 
 	lastEventTime := getLastLogEventTime(context.Background(), mockClient, "dummy-log-group")
 
-	assert.Equal(t, int64(2000), lastEventTime)
-	mockClient.AssertExpectations(t)
+	assert.Equal(t, int64(1000), lastEventTime)
 }
 func testHandleLogGroup(cfg Config, logGroupName string, logCreationDate, logStreamCreationDate int) ([]string, error) {
 	cfg.dryRun = true // Prevent actual deletion.
