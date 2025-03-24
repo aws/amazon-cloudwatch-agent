@@ -38,38 +38,52 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
-                - ebs_volume_queue_length
                 - diskio_ebs_volume_queue_length
+                - ebs_volume_queue_length
         include:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
     ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
-    transform:
-        error_mode: propagate
-        flatten_data: false
-        log_statements: []
-        metric_statements:
-            - context: metric
-              statements:
-                - set(unit, "Count") where name == "diskio_iops_in_progress"
-                - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
-                - set(unit, "Milliseconds") where name == "diskio_read_time"
-                - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
-                - set(unit, "Milliseconds") where name == "diskio_write_time"
-                - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
-        trace_statements: []
 receivers:
+    awsebsnvmereceiver:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        metrics:
+            diskio_ebs_ec2_instance_performance_exceeded_iops:
+                enabled: false
+            diskio_ebs_ec2_instance_performance_exceeded_tp:
+                enabled: false
+            diskio_ebs_total_read_bytes:
+                enabled: true
+            diskio_ebs_total_read_ops:
+                enabled: false
+            diskio_ebs_total_read_time:
+                enabled: false
+            diskio_ebs_total_write_bytes:
+                enabled: true
+            diskio_ebs_total_write_ops:
+                enabled: false
+            diskio_ebs_total_write_time:
+                enabled: false
+            diskio_ebs_volume_performance_exceeded_iops:
+                enabled: false
+            diskio_ebs_volume_performance_exceeded_tp:
+                enabled: false
+            diskio_ebs_volume_queue_length:
+                enabled: false
+        resource_attributes:
+            VolumeId:
+                enabled: true
+        resources:
+            - nvme0n1
+        timeout: 0s
     telegraf_diskio:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -86,10 +100,10 @@ service:
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
-                - transform
                 - awsentity/resource
             receivers:
                 - telegraf_diskio
+                - awsebsnvmereceiver
     telemetry:
         logs:
             development: false

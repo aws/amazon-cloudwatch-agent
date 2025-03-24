@@ -5,7 +5,7 @@ exporters:
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
-        region: us-east-1
+        region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
 extensions:
@@ -26,7 +26,7 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
-        region: us-east-1
+        region: us-west-2
 processors:
     awsentity/resource:
         entity_type: Resource
@@ -51,26 +51,27 @@ processors:
             - ImageId
             - InstanceId
             - InstanceType
-        imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
-    transform:
-        error_mode: propagate
-        flatten_data: false
-        log_statements: []
-        metric_statements:
-            - context: metric
-              statements:
-                - set(unit, "Count") where name == "diskio_iops_in_progress"
-                - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
-                - set(unit, "Milliseconds") where name == "diskio_read_time"
-                - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
-                - set(unit, "Milliseconds") where name == "diskio_write_time"
-                - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
-        trace_statements: []
 receivers:
+    telegraf_cpu:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_disk:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
     telegraf_diskio:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_mem:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_swap:
         collection_interval: 1m0s
         initial_delay: 1s
         timeout: 0s
@@ -80,13 +81,23 @@ service:
         - agenthealth/statuscode
         - entitystore
     pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+                - awsentity/resource
+            receivers:
+                - telegraf_swap
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
-                - transform
                 - awsentity/resource
             receivers:
                 - telegraf_diskio

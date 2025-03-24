@@ -38,37 +38,19 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
-                - ebs_volume_queue_length
                 - diskio_ebs_volume_queue_length
+                - ebs_volume_queue_length
         include:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
     ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
-    transform:
-        error_mode: propagate
-        flatten_data: false
-        log_statements: []
-        metric_statements:
-            - context: metric
-              statements:
-                - set(unit, "Count") where name == "diskio_iops_in_progress"
-                - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
-                - set(unit, "Milliseconds") where name == "diskio_read_time"
-                - set(name, "DRIVER_DISKIO_READ_TIME") where name == "diskio_read_time"
-                - set(unit, "Milliseconds") where name == "diskio_write_time"
-                - set(name, "DRIVER_DISKIO_WRITE_TIME") where name == "diskio_write_time"
-        trace_statements: []
 receivers:
     telegraf_diskio:
         collection_interval: 1m0s
@@ -86,7 +68,6 @@ service:
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
-                - transform
                 - awsentity/resource
             receivers:
                 - telegraf_diskio
@@ -109,3 +90,4 @@ service:
             level: None
         traces:
             level: None
+
