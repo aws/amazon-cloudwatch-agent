@@ -8,16 +8,12 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"go.opentelemetry.io/collector/client"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
-	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
-	"github.com/aws/amazon-cloudwatch-agent/internal/clientutil"
-	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/k8sattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
@@ -107,19 +103,6 @@ var getServiceNameSource = func() (string, string) {
 	return es.GetMetricServiceNameAndSource()
 }
 
-var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
-	podMeta := k8sclient.PodMetadata{}
-	k8sMetadata := k8smetadata.GetKubernetesMetadata()
-
-	if k8sMetadata != nil {
-		// Get the pod IP from the context
-		podIP := clientutil.Address(client.FromContext(ctx))
-		podMeta = k8sMetadata.GetPodMetadata(podIP)
-	}
-
-	return podMeta
-}
-
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
@@ -137,7 +120,7 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 	}
 }
 
-func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
 
 	rm := md.ResourceMetrics()
@@ -192,7 +175,7 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				}
 			}
 			if p.config.KubernetesMode != "" {
-				p.k8sscraper.Scrape(rm.At(i).Resource(), getPodMeta(ctx))
+				p.k8sscraper.Scrape(rm.At(i).Resource())
 				if p.config.Platform == config.ModeEC2 {
 					ec2Info = getEC2InfoFromEntityStore()
 				}
