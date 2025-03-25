@@ -2,7 +2,6 @@ package awsebsnvme
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -63,9 +62,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.Resources = resources
 	}
 
-	// The default config enables all of the metrics. Reset the flags to false,
-	// then use the user configuration to individually enable each metric.
-	resetEnabledMetrics(cfg)
+	// Total Read Ops is the only metric enabled by default. Disable it so that
+	// the measurements from the agent config are used instead.
+	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled = false
 	c := confmap.NewFromStringMap(map[string]any{
 		"metrics": getEnabledMeasurements(conf),
 	})
@@ -96,19 +95,4 @@ func getEnabledMeasurements(conf *confmap.Conf) map[string]any {
 	}
 
 	return metrics
-}
-
-func resetEnabledMetrics(cfg *awsebsnvmereceiver.Config) {
-	v := reflect.ValueOf(&cfg.MetricsBuilderConfig.Metrics).Elem()
-
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-
-		if field.Kind() == reflect.Struct {
-			enabledField := field.FieldByName("Enabled")
-			if enabledField.IsValid() && enabledField.CanSet() {
-				enabledField.SetBool(false)
-			}
-		}
-	}
 }
