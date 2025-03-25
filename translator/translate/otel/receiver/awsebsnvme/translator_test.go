@@ -112,7 +112,7 @@ func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsebsnvmer
 	assert.Equal(t, want.CollectionInterval, got.CollectionInterval)
 
 	// Compare resources
-	assert.ElementsMatch(t, want.Resources, got.Resources)
+	assert.ElementsMatch(t, want.Devices, got.Devices)
 
 	// Compare metrics enabled state
 	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled,

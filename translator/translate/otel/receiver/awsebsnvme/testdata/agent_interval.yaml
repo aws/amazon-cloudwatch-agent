@@ -1,5 +1,5 @@
 collection_interval: 45s
-resources:
+devices:
   - "*"
 metrics:
   diskio_ebs_total_read_ops:

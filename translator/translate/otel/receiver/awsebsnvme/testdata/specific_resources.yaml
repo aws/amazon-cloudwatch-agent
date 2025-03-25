@@ -1,5 +1,5 @@
 collection_interval: 60s
-resources:
+devices:
   - nvme0n1
   - nvme1n1
 metrics:

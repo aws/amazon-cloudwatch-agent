@@ -81,7 +81,7 @@ receivers:
         resource_attributes:
             VolumeId:
                 enabled: true
-        resources:
+        devices:
             - nvme0n1
         timeout: 0s
     telegraf_diskio:

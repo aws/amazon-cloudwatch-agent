@@ -61,9 +61,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	resources := common.GetArray[string](conf, common.ConfigKey(baseKey, common.ResourcesKey))
 	if resources == nil {
 		// Was not set by the user, so collect all devices by default
-		cfg.Resources = []string{"*"}
+		cfg.Devices = []string{"*"}
 	} else {
-		cfg.Resources = resources
+		cfg.Devices = resources
 	}
 
 	// Total Read Ops is the only metric enabled by default. Disable it so that

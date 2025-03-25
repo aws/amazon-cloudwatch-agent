@@ -345,7 +345,7 @@ receivers:
         resource_attributes:
             VolumeId:
                 enabled: true
-        resources:
+        devices:
             - '*'
         timeout: 0s
     telegraf_cpu:
