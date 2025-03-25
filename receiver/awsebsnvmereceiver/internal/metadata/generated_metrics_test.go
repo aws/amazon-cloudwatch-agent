@@ -68,15 +68,12 @@ func TestMetricsBuilder(t *testing.T) {
 			defaultMetricsCount := 0
 			allMetricsCount := 0
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsTotalReadBytesDataPoint(ts, 1)
 
@@ -84,31 +81,24 @@ func TestMetricsBuilder(t *testing.T) {
 			allMetricsCount++
 			mb.RecordDiskioEbsTotalReadOpsDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsTotalReadTimeDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsTotalWriteBytesDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsTotalWriteOpsDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsTotalWriteTimeDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsVolumePerformanceExceededIopsDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsVolumePerformanceExceededTpDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioEbsVolumeQueueLengthDataPoint(ts, 1)
 

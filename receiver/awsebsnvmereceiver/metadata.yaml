@@ -25,7 +25,7 @@ metrics:
     unit: "1"
   diskio_ebs_total_write_ops:
     description: The total number of completed write operations
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -33,7 +33,7 @@ metrics:
     unit: "1"
   diskio_ebs_total_read_bytes:
     description: The total number of read bytes transferred
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -41,7 +41,7 @@ metrics:
     unit: "By"
   diskio_ebs_total_write_bytes:
     description: The total number of write bytes transferred
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -49,7 +49,7 @@ metrics:
     unit: "By"
   diskio_ebs_total_read_time:
     description: The total time spent, in microseconds, by all completed read operations
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -57,7 +57,7 @@ metrics:
     unit: "us"
   diskio_ebs_total_write_time:
     description: The total time spent, in microseconds, by all completed write operations
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -65,7 +65,7 @@ metrics:
     unit: "us"
   diskio_ebs_volume_performance_exceeded_iops:
     description: The total time, in microseconds, that IOPS demand exceeded the volume's provisioned IOPS performance
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -73,7 +73,7 @@ metrics:
     unit: "us"
   diskio_ebs_volume_performance_exceeded_tp:
     description: The total time, in microseconds, that throughput demand exceeded the volume's provisioned throughput performance
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -81,7 +81,7 @@ metrics:
     unit: "us"
   diskio_ebs_ec2_instance_performance_exceeded_iops:
     description: The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -89,7 +89,7 @@ metrics:
     unit: "us"
   diskio_ebs_ec2_instance_performance_exceeded_tp:
     description: The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum throughput performance
-    enabled: true
+    enabled: false
     sum:
       monotonic: true
       aggregation_temporality: cumulative
@@ -97,7 +97,7 @@ metrics:
     unit: "us"
   diskio_ebs_volume_queue_length:
     description: The number of read and write operations waiting to be completed
-    enabled: true
+    enabled: false
     gauge:
       value_type: int
     unit: "1"
