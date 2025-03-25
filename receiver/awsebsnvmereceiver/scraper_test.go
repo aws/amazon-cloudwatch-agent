@@ -6,6 +6,7 @@ package awsebsnvmereceiver
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,7 +72,7 @@ func mockGetMetricsError(_ string) (nvme.EBSMetrics, error) {
 
 func TestScraper_Start(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
 
 	err := scraper.start(context.Background(), componenttest.NewNopHost())
 	assert.NoError(t, err)
@@ -79,7 +80,7 @@ func TestScraper_Start(t *testing.T) {
 
 func TestScraper_Shutdown(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
 
 	err := scraper.shutdown(context.Background())
 	assert.NoError(t, err)
@@ -89,7 +90,7 @@ func TestScraper_Scrape_NoDevices(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, nil)
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -102,7 +103,7 @@ func TestScraper_Scrape_GetAllDevicesError(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, errors.New("failed to get devices"))
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
 
 	_, err := scraper.scrape(context.Background())
 	assert.Error(t, err)
@@ -126,7 +127,7 @@ func TestScraper_Scrape_Success(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 
 	// Allow all devices with empty map
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -165,7 +166,7 @@ func TestScraper_Scrape_NonEbsDevice(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, nil)
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -182,7 +183,7 @@ func TestScraper_Scrape_IsEbsDeviceError(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, errors.New("failed to check device"))
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -200,7 +201,7 @@ func TestScraper_Scrape_GetDeviceSerialError(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("", errors.New("failed to get serial"))
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -218,7 +219,7 @@ func TestScraper_Scrape_InvalidSerialPrefix(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("invalid-serial", nil)
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -248,7 +249,7 @@ func TestScraper_Scrape_GetMetricsError(t *testing.T) {
 	settings := receivertest.NewNopSettings()
 	settings.TelemetrySettings.Logger = logger
 
-	scraper := newScraper(createDefaultConfig().(*Config), settings, mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -281,7 +282,7 @@ func TestScraper_Scrape_MultipleDevices(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device2).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device2).Return("vol0987654321fedcba", nil)
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -317,7 +318,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	settings.TelemetrySettings.Logger = logger
 
 	// Only allow nvme1n1
-	scraper := newScraper(createDefaultConfig().(*Config), settings, mockUtil, map[string]struct{}{"nvme0n1": {}})
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, map[string]struct{}{"nvme0n1": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -358,7 +359,7 @@ func TestScraper_Scrape_MultipleDevicesSameController(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device2).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device2).Return("vol1234567890abcdef", nil)
 
-	scraper := newScraper(createDefaultConfig().(*Config), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -389,4 +390,24 @@ func verifyGaugeMetric(t *testing.T, metrics pmetric.MetricSlice, name string, e
 		}
 	}
 	t.Errorf("Metric %s not found", name)
+}
+
+func createTestReceiverConfig() *Config {
+	cfg := createDefaultConfig().(*Config)
+
+	// Use reflection to enable all metrics
+	v := reflect.ValueOf(&cfg.MetricsBuilderConfig.Metrics).Elem()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+
+		if field.Kind() == reflect.Struct {
+			enabledField := field.FieldByName("Enabled")
+			if enabledField.IsValid() && enabledField.CanSet() {
+				enabledField.SetBool(true)
+			}
+		}
+	}
+
+	return cfg
 }

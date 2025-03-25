@@ -12,6 +12,24 @@ metrics:
     enabled: false
 ```
 
+### diskio_ebs_total_read_ops
+
+The total number of completed read operations
+
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| 1 | Sum | Int | Cumulative | true |
+
+## Optional Metrics
+
+The following metrics are not emitted by default. Each of them can be enabled by applying the following configuration:
+
+```yaml
+metrics:
+  <metric_name>:
+    enabled: true
+```
+
 ### diskio_ebs_ec2_instance_performance_exceeded_iops
 
 The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance
@@ -35,14 +53,6 @@ The total number of read bytes transferred
 | Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
 | ---- | ----------- | ---------- | ----------------------- | --------- |
 | By | Sum | Int | Cumulative | true |
-
-### diskio_ebs_total_read_ops
-
-The total number of completed read operations
-
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
-| ---- | ----------- | ---------- | ----------------------- | --------- |
-| 1 | Sum | Int | Cumulative | true |
 
 ### diskio_ebs_total_read_time
 

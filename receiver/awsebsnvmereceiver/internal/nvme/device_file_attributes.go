@@ -6,8 +6,6 @@ package nvme
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 )
 
 type DeviceFileAttributes struct {
@@ -16,49 +14,22 @@ type DeviceFileAttributes struct {
 	partition  int
 }
 
-type Attribute interface {
-	apply(*DeviceFileAttributes) error
-}
-
-type nvmeDeviceAttributeFunc func(*DeviceFileAttributes) error
-
-func (f nvmeDeviceAttributeFunc) apply(e *DeviceFileAttributes) error {
-	return f(e)
-}
-
 func ParseNvmeDeviceFileName(device string) (DeviceFileAttributes, error) {
-	if !strings.HasPrefix(device, NvmeDevicePrefix) {
-		return DeviceFileAttributes{
-			controller: -1,
-			namespace:  -1,
-			partition:  -1,
-		}, errors.New("device is not prefixed with nvme")
+	controller := -1
+	namespace := -1
+	partition := -1
+
+	fmt.Sscanf(device, "nvme%dn%dp%d", &controller, &namespace, &partition)
+
+	if controller == -1 {
+		return DeviceFileAttributes{}, errors.New("unable to parse device name")
 	}
 
-	trimmed := strings.TrimPrefix(device, NvmeDevicePrefix)
-
-	controllerEndIdx := strings.Index(trimmed, "n")
-	if controllerEndIdx == -1 {
-		controllerEndIdx = len(trimmed)
-		return newNvmeDeviceFileAttributes(
-			withController(substring(trimmed, 0, controllerEndIdx)),
-		)
-	}
-
-	namespaceEndIdx := strings.Index(trimmed, "p")
-	if namespaceEndIdx == -1 {
-		namespaceEndIdx = len(trimmed)
-		return newNvmeDeviceFileAttributes(
-			withController(substring(trimmed, 0, controllerEndIdx)),
-			withNamespace(substring(trimmed, controllerEndIdx+1, namespaceEndIdx)),
-		)
-	}
-
-	return newNvmeDeviceFileAttributes(
-		withController(substring(trimmed, 0, controllerEndIdx)),
-		withNamespace(substring(trimmed, controllerEndIdx+1, namespaceEndIdx)),
-		withPartition(substring(trimmed, namespaceEndIdx+1, len(trimmed))),
-	)
+	return DeviceFileAttributes{
+		controller: controller,
+		namespace:  namespace,
+		partition:  partition,
+	}, nil
 }
 
 func (n *DeviceFileAttributes) Controller() int {
@@ -93,75 +64,4 @@ func (n *DeviceFileAttributes) DeviceName() (string, error) {
 
 	// Fall back to BaseDeviceName if only the controller ID exists
 	return n.BaseDeviceName()
-}
-
-func newNvmeDeviceFileAttributes(attributes ...Attribute) (DeviceFileAttributes, error) {
-	n := &DeviceFileAttributes{
-		controller: -1,
-		namespace:  -1,
-		partition:  -1,
-	}
-	var anyErr error
-	for _, attribute := range attributes {
-		err := attribute.apply(n)
-		if err != nil {
-			anyErr = err
-		}
-	}
-	// Controller should always exist and should be a non-negative number
-	if n.Controller() == -1 {
-		return *n, errors.New("unable to parse controller id of nvme device")
-	}
-	return *n, anyErr
-}
-
-func withController(controller string) Attribute {
-	c, err := convertNvmeIDStringToNum(controller)
-	return nvmeDeviceAttributeFunc(func(attr *DeviceFileAttributes) error {
-		attr.controller = c
-		return err
-	})
-}
-
-func withNamespace(namespace string) Attribute {
-	n, err := convertNvmeIDStringToNum(namespace)
-	return nvmeDeviceAttributeFunc(func(attr *DeviceFileAttributes) error {
-		attr.namespace = n
-		return err
-	})
-}
-
-func withPartition(partition string) Attribute {
-	p, err := convertNvmeIDStringToNum(partition)
-	return nvmeDeviceAttributeFunc(func(attr *DeviceFileAttributes) error {
-		attr.partition = p
-		return err
-	})
-}
-
-// substring returns the slice of a string, or an empty string if the bounds
-// are invaild
-func substring(s string, l, r int) string {
-	if l < 0 {
-		return ""
-	}
-	if r > len(s) {
-		return ""
-	}
-	if l >= r {
-		return ""
-	}
-
-	return s[l:r]
-}
-
-func convertNvmeIDStringToNum(a string) (int, error) {
-	if a == "" {
-		return -1, errors.New("nvme device attribute is empty")
-	}
-	i, err := strconv.Atoi(a)
-	if err != nil {
-		return -1, err
-	}
-	return i, nil
 }

@@ -16,36 +16,36 @@ func TestConfigValidate(t *testing.T) {
 	require.NotNil(t, err)
 }
 
-func TestConfigWithResources(t *testing.T) {
+func TestConfigWithDevices(t *testing.T) {
 	testCases := []struct {
-		name      string
-		resources []string
+		name    string
+		devices []string
 	}{
 		{
-			name:      "empty resources",
-			resources: []string{},
+			name:    "empty devices",
+			devices: []string{},
 		},
 		{
-			name:      "single resource",
-			resources: []string{"nvme0n1"},
+			name:    "single device",
+			devices: []string{"nvme0n1"},
 		},
 		{
-			name:      "multiple resources",
-			resources: []string{"nvme0n1", "nvme1n1"},
+			name:    "multiple devices",
+			devices: []string{"nvme0n1", "nvme1n1"},
 		},
 		{
-			name:      "wildcard",
-			resources: []string{"*"},
+			name:    "wildcard",
+			devices: []string{"*"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := createDefaultConfig().(*Config)
-			cfg.Resources = tc.resources
+			cfg.Devices = tc.devices
 
-			// Just verify we can set the resources field
-			assert.Equal(t, tc.resources, cfg.Resources)
+			// Just verify we can set the devices field
+			assert.Equal(t, tc.devices, cfg.Devices)
 		})
 	}
 }

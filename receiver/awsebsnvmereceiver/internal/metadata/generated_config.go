@@ -44,37 +44,37 @@ type MetricsConfig struct {
 func DefaultMetricsConfig() MetricsConfig {
 	return MetricsConfig{
 		DiskioEbsEc2InstancePerformanceExceededIops: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsEc2InstancePerformanceExceededTp: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsTotalReadBytes: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsTotalReadOps: MetricConfig{
 			Enabled: true,
 		},
 		DiskioEbsTotalReadTime: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsTotalWriteBytes: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsTotalWriteOps: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsTotalWriteTime: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsVolumePerformanceExceededIops: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsVolumePerformanceExceededTp: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioEbsVolumeQueueLength: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 	}
 }
