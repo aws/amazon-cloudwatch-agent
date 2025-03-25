@@ -61,32 +61,32 @@ func TestArrayToSet(t *testing.T) {
 func TestCreateDefaultConfig(t *testing.T) {
 	config := createDefaultConfig().(*Config)
 	assert.NotNil(t, config)
-	assert.Empty(t, config.Resources)
+	assert.Empty(t, config.Devices)
 }
 
 func TestCreateMetricsReceiver(t *testing.T) {
 	testCases := []struct {
-		name      string
-		resources []string
+		name    string
+		devices []string
 	}{
 		{
-			name:      "no resources",
-			resources: []string{},
+			name:    "no devices",
+			devices: []string{},
 		},
 		{
-			name:      "with resources",
-			resources: []string{"nvme0n1", "nvme1n1"},
+			name:    "with devices",
+			devices: []string{"nvme0n1", "nvme1n1"},
 		},
 		{
-			name:      "with wildcard",
-			resources: []string{"*"},
+			name:    "with wildcard",
+			devices: []string{"*"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := createDefaultConfig().(*Config)
-			cfg.Resources = tc.resources
+			cfg.Devices = tc.devices
 
 			receiver, err := createMetricsReceiver(
 				context.Background(),

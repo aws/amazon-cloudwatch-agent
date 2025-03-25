@@ -13,7 +13,7 @@ import (
 type Config struct {
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
 	metadata.MetricsBuilderConfig  `mapstructure:",squash"`
-	Resources                      []string `mapstructure:"resources,omitempty"`
+	Devices                        []string `mapstructure:"devices,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)
