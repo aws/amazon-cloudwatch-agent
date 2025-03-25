@@ -6,7 +6,6 @@ package k8smetadata
 import (
 	"context"
 	"math/rand"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -30,7 +29,6 @@ type KubernetesMetadata struct {
 	config               *Config
 	ready                atomic.Bool
 	safeStopCh           *k8sclient.SafeChannel
-	mu                   sync.Mutex
 	endpointSliceWatcher *k8sclient.EndpointSliceWatcher
 }
 
@@ -42,9 +40,6 @@ func jitterSleep(seconds int) {
 }
 
 func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	e.logger.Debug("Starting k8smetadata extension...")
 
 	config, err := clientcmd.BuildConfigFromFlags("", "")
@@ -77,9 +72,9 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 }
 
 func (e *KubernetesMetadata) Shutdown(_ context.Context) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.safeStopCh.Close()
+	if e.safeStopCh != nil {
+		e.safeStopCh.Close()
+	}
 	return nil
 }
 
