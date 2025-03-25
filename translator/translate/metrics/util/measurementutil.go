@@ -31,7 +31,7 @@ const (
 	Default_Windows_Smi_Path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
 
 	diskio_plugin_name = "diskio"
-	diskio_ebs_prefix = "ebs_"
+	diskio_ebs_prefix  = "ebs_"
 )
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {

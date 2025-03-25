@@ -7,10 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -96,7 +97,7 @@ func TestTranslator(t *testing.T) {
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig().(*awsebsnvmereceiver.Config)
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
-				
+
 				// Some fields are unexported (e.g. enabledSetByUser), so a direct
 				// equality check will not work.
 				compareConfigsIgnoringEnabledSetByUser(t, wantCfg, gotCfg)
@@ -109,36 +110,36 @@ func TestTranslator(t *testing.T) {
 func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsebsnvmereceiver.Config) {
 	// Compare collection interval
 	assert.Equal(t, want.CollectionInterval, got.CollectionInterval)
-	
+
 	// Compare resources
 	assert.ElementsMatch(t, want.Resources, got.Resources)
-	
+
 	// Compare metrics enabled state
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadBytes.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadBytes.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadBytes.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadTime.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadTime.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadTime.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteBytes.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteBytes.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteBytes.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteOps.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteOps.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteOps.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteTime.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteTime.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteTime.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled)
-	
+
 	// Compare resource attributes
-	assert.Equal(t, want.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled, 
+	assert.Equal(t, want.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled,
 		got.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled)
 }
 
@@ -146,7 +147,7 @@ func TestNewTranslator(t *testing.T) {
 	// Test with default options
 	translator := NewTranslator()
 	assert.Equal(t, "awsebsnvmereceiver", translator.ID().String())
-	
+
 	// Test with custom name
 	customName := "custom_name"
 	translator = NewTranslator(common.WithName(customName))

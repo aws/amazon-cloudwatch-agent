@@ -167,7 +167,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"diskio":     map[string]interface{}{
+						"diskio": map[string]interface{}{
 							"measurement": []interface{}{
 								"io_time",
 							},
@@ -175,16 +175,16 @@ func TestFindReceiversInConfig(t *testing.T) {
 					},
 				},
 			},
-			os:   translatorconfig.OS_TYPE_LINUX,
+			os: translatorconfig.OS_TYPE_LINUX,
 			want: map[component.ID]wantResult{
-				component.NewID(telegrafDiskIOType):                         {"metrics::metrics_collected::diskio", time.Minute},
+				component.NewID(telegrafDiskIOType): {"metrics::metrics_collected::diskio", time.Minute},
 			},
 		},
 		"WithOnlyNonAdaptedMetrics": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"diskio":     map[string]interface{}{
+						"diskio": map[string]interface{}{
 							"measurement": []interface{}{
 								"diskio_ebs_total_read_bytes",
 							},
@@ -199,7 +199,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"diskio":     map[string]interface{}{
+						"diskio": map[string]interface{}{
 							"measurement": []interface{}{
 								"diskio_ebs_total_read_bytes",
 								"io_time",
@@ -208,9 +208,9 @@ func TestFindReceiversInConfig(t *testing.T) {
 					},
 				},
 			},
-			os:   translatorconfig.OS_TYPE_LINUX,
+			os: translatorconfig.OS_TYPE_LINUX,
 			want: map[component.ID]wantResult{
-				component.NewID(telegrafDiskIOType):                         {"metrics::metrics_collected::diskio", time.Minute},
+				component.NewID(telegrafDiskIOType): {"metrics::metrics_collected::diskio", time.Minute},
 			},
 		},
 	}

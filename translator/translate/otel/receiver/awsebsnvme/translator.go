@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package awsebsnvme
 
 import (
@@ -5,11 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
+
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 var (
@@ -18,8 +22,8 @@ var (
 
 const (
 	defaultCollectionInterval = time.Minute
-	diskIOPrefix = "diskio_"
-	ebsPrefix = diskIOPrefix + "ebs_"
+	diskIOPrefix              = "diskio_"
+	ebsPrefix                 = diskIOPrefix + "ebs_"
 )
 
 type translator struct {
