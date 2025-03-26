@@ -105,6 +105,12 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
+    deltatocumulative/host/amp:
+        max_stale: 5m0s
+        max_streams: 9223372036854775807
+    deltatocumulative/jmx/amp:
+        max_stale: 5m0s
+        max_streams: 9223372036854775807
     filter/jmx:
         error_mode: propagate
         logs: {}
@@ -187,6 +193,7 @@ service:
             processors:
                 - transform
                 - batch/host/amp
+                - deltatocumulative/host/amp
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
@@ -207,6 +214,7 @@ service:
                 - resource/jmx
                 - transform/jmx
                 - batch/jmx/amp
+                - deltatocumulative/jmx/amp
             receivers:
                 - jmx
         metrics/jmx/cloudwatch:

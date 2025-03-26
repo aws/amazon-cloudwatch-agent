@@ -121,6 +121,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
 			translators.Processors.Set(rollupprocessor.NewTranslator())
 		}
+		// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics
 		translators.Processors.Set(deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())

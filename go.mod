@@ -211,6 +211,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.115.0
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.115.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
@@ -442,7 +443,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.115.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.115.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.14 // indirect
