@@ -6,6 +6,7 @@ package awsentity
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -83,7 +84,12 @@ func newMockSetAutoScalingGroup(es *mockEntityStore) func(string) {
 	}
 }
 
-func newMockPodMeta(workload, namespace, node string) func(_ context.Context) k8sclient.PodMetadata {
+func newMockPodMeta(emptyData bool, workload, namespace, node string) func(_ context.Context) k8sclient.PodMetadata {
+	if emptyData {
+		return func(_ context.Context) k8sclient.PodMetadata {
+			return k8sclient.PodMetadata{}
+		}
+	}
 	return func(_ context.Context) k8sclient.PodMetadata {
 		return k8sclient.PodMetadata{
 			Workload:  workload,
@@ -725,6 +731,230 @@ func TestAWSEntityProcessorSetAutoScalingGroup(t *testing.T) {
 	}
 }
 
+func TestAWSEntityProcessorSetInstanceId(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	p := newAwsEntityProcessor(&Config{ClusterName: "test-cluster", EntityType: attributeService}, logger)
+	ctx := context.Background()
+	tests := []struct {
+		name                      string
+		metrics                   pmetric.Metrics
+		k8sMode                   string
+		want                      map[string]any
+		mockGetPodMeta            func(_ context.Context) k8sclient.PodMetadata
+		k8sNodeNameEnv            string
+		setK8sNodeNameEnvVariable bool
+	}{
+		{
+			name:    "WithSameK8sNodeNameEnvVariable",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id":         "123456789012",
+				"com.amazonaws.cloudwatch.entity.internal.deployment.environment": "eks:test-cluster/test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.instance.id":            "i-1234567890abcdef0",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.cluster.name":       "test-cluster",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name":     "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":          "test-node",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":      "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.platform.type":          "AWS::EKS",
+				"com.amazonaws.cloudwatch.entity.internal.service.name":           "test-service",
+				"com.amazonaws.cloudwatch.entity.internal.service.name.source":    "Instrumentation",
+				"com.amazonaws.cloudwatch.entity.internal.type":                   "Service",
+				"service.name":       "test-service",
+				"telemetry.sdk.name": "opentelemetry",
+			},
+			k8sMode: config.ModeEKS,
+			mockGetPodMeta: newMockPodMeta(
+				false,
+				"test-workload",
+				"test-namespace",
+				"test-node",
+			),
+			k8sNodeNameEnv:            "test-node",
+			setK8sNodeNameEnvVariable: true,
+		},
+		{
+			name:    "WithDifferentK8sNodeNameEnvVariable",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id":         "123456789012",
+				"com.amazonaws.cloudwatch.entity.internal.deployment.environment": "eks:test-cluster/test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.cluster.name":       "test-cluster",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name":     "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":          "test-node",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":      "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.platform.type":          "AWS::EKS",
+				"com.amazonaws.cloudwatch.entity.internal.service.name":           "test-service",
+				"com.amazonaws.cloudwatch.entity.internal.service.name.source":    "Instrumentation",
+				"com.amazonaws.cloudwatch.entity.internal.type":                   "Service",
+				"service.name":       "test-service",
+				"telemetry.sdk.name": "opentelemetry",
+			},
+			k8sMode: config.ModeEKS,
+			mockGetPodMeta: newMockPodMeta(
+				false,
+				"test-workload",
+				"test-namespace",
+				"test-node",
+			),
+			k8sNodeNameEnv:            "test-agent-node",
+			setK8sNodeNameEnvVariable: true,
+		},
+		{
+			name:    "WithEmptyK8sNodeNameEnvVariable",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id":         "123456789012",
+				"com.amazonaws.cloudwatch.entity.internal.deployment.environment": "eks:test-cluster/test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.cluster.name":       "test-cluster",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name":     "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":          "test-node",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":      "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.platform.type":          "AWS::EKS",
+				"com.amazonaws.cloudwatch.entity.internal.service.name":           "test-service",
+				"com.amazonaws.cloudwatch.entity.internal.service.name.source":    "Instrumentation",
+				"com.amazonaws.cloudwatch.entity.internal.type":                   "Service",
+				"service.name":       "test-service",
+				"telemetry.sdk.name": "opentelemetry",
+			},
+			k8sMode: config.ModeEKS,
+			mockGetPodMeta: newMockPodMeta(
+				false,
+				"test-workload",
+				"test-namespace",
+				"test-node",
+			),
+			setK8sNodeNameEnvVariable: true,
+		},
+		{
+			name:    "WithNoK8sNodeNameEnvVariable",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeTelemetrySDKName, "opentelemetry"),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id":         "123456789012",
+				"com.amazonaws.cloudwatch.entity.internal.deployment.environment": "eks:test-cluster/test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.cluster.name":       "test-cluster",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name":     "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":          "test-node",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":      "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.platform.type":          "AWS::EKS",
+				"com.amazonaws.cloudwatch.entity.internal.service.name":           "test-service",
+				"com.amazonaws.cloudwatch.entity.internal.service.name.source":    "Instrumentation",
+				"com.amazonaws.cloudwatch.entity.internal.type":                   "Service",
+				"service.name":       "test-service",
+				"telemetry.sdk.name": "opentelemetry",
+			},
+			k8sMode: config.ModeEKS,
+			mockGetPodMeta: newMockPodMeta(
+				false,
+				"test-workload",
+				"test-namespace",
+				"test-node",
+			),
+		},
+		{
+			name: "WithSameK8sNodeNameEnvVariableForAppsignalsMetrics",
+			metrics: generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-env", entityattributes.AttributeEntityServiceNameSource, entitystore.ServiceNameSourceInstrumentation,
+				semconv.AttributeK8SPodName, "test-pod", semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeK8SContainerName, "test-container",
+				semconv.AttributeK8SDaemonSetName, "test-workload"),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id":         "123456789012",
+				"com.amazonaws.cloudwatch.entity.internal.deployment.environment": "test-env",
+				"com.amazonaws.cloudwatch.entity.internal.instance.id":            "i-1234567890abcdef0",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.cluster.name":       "test-cluster",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name":     "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":          "test-node",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":      "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.platform.type":          "AWS::EKS",
+				"com.amazonaws.cloudwatch.entity.internal.service.name":           "test-service",
+				"com.amazonaws.cloudwatch.entity.internal.service.name.source":    "Instrumentation",
+				"com.amazonaws.cloudwatch.entity.internal.type":                   "Service",
+				"service.name":           "test-service",
+				"deployment.environment": "test-env",
+				"k8s.container.name":     "test-container",
+				"k8s.daemonset.name":     "test-workload",
+				"k8s.namespace.name":     "test-namespace",
+				"k8s.node.name":          "test-node",
+				"k8s.pod.name":           "test-pod",
+			},
+			k8sMode: config.ModeEKS,
+			mockGetPodMeta: newMockPodMeta(
+				true,
+				"",
+				"",
+				"",
+			),
+			k8sNodeNameEnv:            "test-node",
+			setK8sNodeNameEnvVariable: true,
+		},
+		{
+			name: "WithDifferentK8sNodeNameEnvVariableForAppsignalsMetrics",
+			metrics: generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-env", entityattributes.AttributeEntityServiceNameSource, entitystore.ServiceNameSourceInstrumentation,
+				semconv.AttributeK8SPodName, "test-pod", semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SNodeName, "test-node", semconv.AttributeK8SContainerName, "test-container",
+				semconv.AttributeK8SDaemonSetName, "test-workload"),
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id":         "123456789012",
+				"com.amazonaws.cloudwatch.entity.internal.deployment.environment": "test-env",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.cluster.name":       "test-cluster",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.namespace.name":     "test-namespace",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.node.name":          "test-node",
+				"com.amazonaws.cloudwatch.entity.internal.k8s.workload.name":      "test-workload",
+				"com.amazonaws.cloudwatch.entity.internal.platform.type":          "AWS::EKS",
+				"com.amazonaws.cloudwatch.entity.internal.service.name":           "test-service",
+				"com.amazonaws.cloudwatch.entity.internal.service.name.source":    "Instrumentation",
+				"com.amazonaws.cloudwatch.entity.internal.type":                   "Service",
+				"service.name":           "test-service",
+				"deployment.environment": "test-env",
+				"k8s.container.name":     "test-container",
+				"k8s.daemonset.name":     "test-workload",
+				"k8s.namespace.name":     "test-namespace",
+				"k8s.node.name":          "test-node",
+				"k8s.pod.name":           "test-pod",
+			},
+			k8sMode: config.ModeEKS,
+			mockGetPodMeta: newMockPodMeta(
+				true,
+				"",
+				"",
+				"",
+			),
+			k8sNodeNameEnv:            "test-agent-node",
+			setK8sNodeNameEnvVariable: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// Clear environment variable before each test
+			assert.NoError(t, os.Unsetenv("K8S_NODE_NAME"))
+			// Set environment variable
+			if tt.setK8sNodeNameEnvVariable {
+				assert.NoError(t, os.Setenv("K8S_NODE_NAME", tt.k8sNodeNameEnv))
+				defer func() {
+					_ = os.Unsetenv("K8S_NODE_NAME")
+				}()
+			}
+
+			rm := tt.metrics.ResourceMetrics().At(0)
+
+			origGetPodMeta := getPodMeta
+			getPodMeta = tt.mockGetPodMeta
+			defer func() { getPodMeta = origGetPodMeta }()
+
+			resetGetEC2InfoFromEntityStore := getEC2InfoFromEntityStore
+			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore("i-1234567890abcdef0", "123456789012")
+			defer func() { getEC2InfoFromEntityStore = resetGetEC2InfoFromEntityStore }()
+
+			p.config.KubernetesMode = tt.k8sMode
+			p.config.Platform = config.ModeEC2
+			_, err := p.processMetrics(ctx, tt.metrics)
+
+			attrs := rm.Resource().Attributes().AsRaw()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, attrs)
+		})
+	}
+}
+
 func generateTestMetrics() pmetric.Metrics {
 	md := pmetric.NewMetrics()
 	rm := md.ResourceMetrics().AppendEmpty()
@@ -943,6 +1173,7 @@ func TestAwsEntityProcessor_AddsEntityFieldsFromPodMeta_WithMock(t *testing.T) {
 			name:    "PodMetaFromMockFunction",
 			metrics: generateMetrics(),
 			mockGetPodMeta: newMockPodMeta(
+				false,
 				"test-workload",
 				"test-namespace",
 				"test-node",

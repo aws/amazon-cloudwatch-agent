@@ -5,6 +5,7 @@ package awsentity
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -251,7 +252,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNode, eksAttributes.Node)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.GetInstanceID())
+					//Add Instance id attribute only if the application node is same as agent node
+					if eksAttributes.Node == os.Getenv("K8S_NODE_NAME") {
+						AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, eksAttributes.InstanceId)
+					}
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
 				}
