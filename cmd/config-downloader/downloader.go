@@ -134,11 +134,11 @@ func main() {
 	if downloadLocation == "" || outputDir == "" {
 		executable, err := os.Executable()
 		if err == nil {
-			errorMessage = fmt.Sprintf("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = fmt.Sprint("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		} else {
-			errorMessage = fmt.Sprintf("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = fmt.Sprint("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		}
-		log.Panicf(errorMessage)
+		log.Panic(errorMessage)
 	}
 
 	mode = sdkutil.DetectAgentMode(mode)
@@ -153,7 +153,7 @@ func main() {
 			errorMessage = "E! Please make sure the credentials and region set correctly on your hosts.\n" +
 				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html"
 		}
-		log.Panicf(errorMessage)
+		log.Panic(errorMessage)
 	}
 
 	// clean up output dir for tmp files before writing out new tmp file.
