@@ -305,6 +305,16 @@ jobs:
           --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
           --eksDeploymentStrategy="DAEMON" \
           --region=${{env.AWS_REGION}} \
+          --helm_charts_branch=${{inputs.helm_charts_branch}} \
+          --cloudwatch_agent_repository=${{inputs.cloudwatch_agent_repository}} \
+          --cloudwatch_agent_tag=${{inputs.cloudwatch_agent_tag}} \
+          --cloudwatch_agent_repository_url=${{inputs.cloudwatch_agent_repository_url}} \
+          --cloudwatch_agent_operator_repository=${{inputs.cloudwatch_agent_operator_repository}} \
+          --cloudwatch_agent_operator_tag=${{inputs.cloudwatch_agent_operator_tag}} \
+          --cloudwatch_agent_operator_repository_url=${{inputs.cloudwatch_agent_operator_repository_url}} \
+          --cloudwatch_agent_target_allocator_repository=${{inputs.cloudwatch_agent_target_allocator_repository}} \
+          --cloudwatch_agent_target_allocator_tag=${{inputs.cloudwatch_agent_target_allocator_tag}} \
+          --cloudwatch_agent_target_allocator_repository_url=${{inputs.cloudwatch_agent_target_allocator_repository_url}} \
           --sample_app=${{matrix.arrays.sample_app_path}} \
           --timeout 30m \
           --v

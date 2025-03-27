@@ -86,7 +86,7 @@ jobs:
       test-image-before-upload: false
 
   OutputEnvVariables:
-#    needs: [ BuildAgent, BuildOperator ]
+    needs: [ BuildAgent, BuildOperator ]
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
