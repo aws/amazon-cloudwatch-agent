@@ -1,4 +1,22 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300054.0 (2025-03-20)
+========================================================================
+Features:
+* [EFA] Added Elastic Network Interface (ENI) ID as a dimension to EFA (Elastic Fabric Adapter) metrics
+
+Enhancements:
+* [ContainerInsights] Switched to using EndpointSlices instead of Endpoints for improved performance in large EKS clusters
+* [Logs] Added option to trim timestamp from log messages if enabled by customer
+* [EC2Tagger] Set separate refresh intervals for tags (default 0) and volumes (default 5 minutes if VolumeId configured)
+
+Bug Fixes:
+* [CloudWatch Exporter] Fixed issue with nil metric values by dropping metrics with nil values
+* [Logs] Implemented fixed-size buffer to handle file descriptors in log tailer, controlled by a feature flag
+* [Logs] Added 'backpressure_drop' feature flag for granular control of log handling during file rotation
+* [Kubernetes] Implemented dynamic CA certificate handling for kubelet connections
+* [Kubernetes] Use Kubernetes Secret File for Bearer Token in Prometheus API Access
+
+========================================================================
 Amazon CloudWatch Agent 1.300053.0 (2025-02-26)
 ========================================================================
 Bug Fixes:

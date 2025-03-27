@@ -144,9 +144,14 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
 
+	closed := false
 	src.SetOutput(func(e LogEvent) {
+		if closed {
+			return
+		}
 		if e == nil {
 			close(eventsCh)
+			closed = true
 			log.Printf("I! [logagent] Log src has stopped for %v/%v(%v)", src.Group(), src.Stream(), src.Description())
 			return
 		}
