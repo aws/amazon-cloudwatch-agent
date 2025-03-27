@@ -309,8 +309,8 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
-	if envconfig.IsRunningOnROSA() {
-		log.Println("I! Running on ROSA")
+	if envconfig.IsRunningInROSA() {
+		log.Println("I! Running in ROSA")
 	}
 
 	if envconfig.IsSelinuxEnabled() {
