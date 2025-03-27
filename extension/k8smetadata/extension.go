@@ -6,7 +6,6 @@ package k8smetadata
 import (
 	"context"
 	"math/rand"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -30,7 +29,6 @@ type KubernetesMetadata struct {
 	config               *Config
 	ready                atomic.Bool
 	safeStopCh           *k8sclient.SafeChannel
-	mu                   sync.Mutex
 	endpointSliceWatcher *k8sclient.EndpointSliceWatcher
 }
 
@@ -42,22 +40,17 @@ func jitterSleep(seconds int) {
 }
 
 func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	e.logger.Debug("Starting k8smetadata extension...")
 
 	config, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
 		e.logger.Error("Failed to create config", zap.Error(err))
 	}
-	e.logger.Debug("Kubernetes config built successfully")
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		e.logger.Error("Failed to create kubernetes client", zap.Error(err))
 	}
-	e.logger.Debug("Kubernetes clientset created successfully")
 
 	// jitter calls to the kubernetes api (a precaution to prevent overloading api server)
 	jitterSleep(jitterKubernetesAPISeconds)
@@ -68,10 +61,8 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 	e.endpointSliceWatcher = k8sclient.NewEndpointSliceWatcher(e.logger, sharedInformerFactory, timedDeleter)
 	e.safeStopCh = &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false}
 
-	e.logger.Debug("Starting EndpointSliceWatcher Run()")
 	e.endpointSliceWatcher.Run(e.safeStopCh.Ch)
 
-	e.logger.Debug("Waiting for EndpointSlice cache to sync...")
 	e.endpointSliceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
 
 	e.logger.Debug("EndpointSlice cache synced, extension fully started")
@@ -81,9 +72,9 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 }
 
 func (e *KubernetesMetadata) Shutdown(_ context.Context) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.safeStopCh.Close()
+	if e.safeStopCh != nil {
+		e.safeStopCh.Close()
+	}
 	return nil
 }
 
@@ -94,10 +85,15 @@ func (e *KubernetesMetadata) GetPodMetadata(ip string) k8sclient.PodMetadata {
 	}
 	pm, ok := e.endpointSliceWatcher.IPToPodMetadata.Load(ip)
 	if !ok {
-		e.logger.Debug("GetPodMetadata: no mapping found for IP")
+		e.logger.Debug("GetPodMetadata: no mapping found for IP", zap.String("ip", ip))
 		return k8sclient.PodMetadata{}
 	}
 	metadata := pm.(k8sclient.PodMetadata)
-	e.logger.Debug("GetPodMetadata: found metadata")
+	e.logger.Debug("GetPodMetadata: found metadata",
+		zap.String("ip", ip),
+		zap.String("workload", metadata.Workload),
+		zap.String("namespace", metadata.Namespace),
+		zap.String("node", metadata.Node),
+	)
 	return metadata
 }
