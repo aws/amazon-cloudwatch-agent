@@ -19,7 +19,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
@@ -89,7 +88,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		}
 
 		// TODO do we need cumulativetodeltaprocessor?
-		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
+		//translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 
 		// TODO do we need entityprocessor?
 		// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
