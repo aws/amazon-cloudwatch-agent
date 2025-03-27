@@ -16,7 +16,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -27,9 +26,7 @@ type translator struct {
 }
 
 var (
-	baseKey                            = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	k8sKey                             = common.ConfigKey(baseKey, common.KubernetesKey)
-	_       common.ComponentTranslator = (*translator)(nil)
+	_ common.ComponentTranslator = (*translator)(nil)
 )
 
 func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
@@ -113,11 +110,7 @@ func (t *translator) getJMXAttributes(conf *confmap.Conf) []any {
 }
 
 func (t *translator) getContainerInsightsJMXAttributes(conf *confmap.Conf) []any {
-	clusterName, ok := common.GetString(conf, common.ConfigKey(k8sKey, "cluster_name"))
-
-	if !ok {
-		clusterName = util.GetClusterNameFromEc2Tagger()
-	}
+	clusterName := common.GetClusterName(conf)
 	nodeName := os.Getenv(config.HOST_NAME)
 	return []any{
 		map[string]any{
