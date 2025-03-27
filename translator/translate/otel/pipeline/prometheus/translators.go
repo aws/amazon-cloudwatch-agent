@@ -21,7 +21,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	if conf.IsSet(prometheusremotewrite.AMPSectionKey) {
 		destinations = append(destinations, common.AMPKey)
 	}
-	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey, common.CloudWatchKey)) {
+	if !conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey)) || conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey, common.CloudWatchKey)) {
 		destinations = append(destinations, common.CloudWatchKey)
 	}
 
