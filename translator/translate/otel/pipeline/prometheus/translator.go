@@ -5,6 +5,7 @@ package prometheus
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"go.opentelemetry.io/collector/confmap"
@@ -12,11 +13,14 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
@@ -57,10 +61,44 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	// return pipeline based on destination to keep source/destination combinations clearly separated
-	// telegraf_prometheus - cloudwatch
+	// otel_prometheus - cloudwatch
+	// telegraf_prometheus - cloudwatch logs
 	// otel_prometheus - AMP
-	// this could change in future releases to support different source/destination combinations
 	switch t.Destination() {
+	case common.CloudWatchKey:
+		if !conf.IsSet(MetricsKey) {
+			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
+		}
+		translators := &common.ComponentTranslators{
+			Receivers:  common.NewTranslatorMap(otelprom.NewTranslator()),
+			Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey)),
+			Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
+			Extensions: common.NewTranslatorMap(
+				agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}),
+				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
+			),
+		}
+
+		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
+			translators.Processors.Set(rollupprocessor.NewTranslator())
+		}
+
+		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
+			log.Printf("D! ec2tagger processor required because append_dimensions is set")
+			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+		}
+
+		// TODO do we need cumulativetodeltaprocessor?
+		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
+
+		// TODO do we need entityprocessor?
+		// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+		//isECS := ecsutil.GetECSUtilSingleton().IsECS()
+		//if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !isECS && validDestination {
+		//	translators.Processors.Set(entityProcessor)
+		//}
+
+		return translators, nil
 	case common.CloudWatchLogsKey:
 		if !conf.IsSet(LogsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under logs section with destination (%s)", t.name, t.Destination())
@@ -71,7 +109,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
-			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
+			Extensions: common.NewTranslatorMap(
+				agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 		}, nil
 	case common.AMPKey:
