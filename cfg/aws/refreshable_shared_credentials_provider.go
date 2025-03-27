@@ -13,7 +13,7 @@ type Refreshable_shared_credentials_provider struct {
 	credentials.Expiry
 	sharedCredentialsProvider *credentials.SharedCredentialsProvider
 
-	// Retrival frequency, if the value is 15 minutes, the credentials will be retrieved every 15 minutes.
+	// Retrieval frequency, if the value is 15 minutes, the credentials will be retrieved every 15 minutes.
 	ExpiryWindow time.Duration
 }
 
