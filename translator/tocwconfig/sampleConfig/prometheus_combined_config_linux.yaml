@@ -152,7 +152,7 @@ processors:
         send_batch_size: 8192
         timeout: 30s
     deltatocumulative/prometheus/amp:
-        max_stale: 5m0s
+        max_stale: 336h0m0s
         max_streams: 9223372036854775807
 receivers:
     prometheus:

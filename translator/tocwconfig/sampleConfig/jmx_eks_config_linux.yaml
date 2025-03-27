@@ -93,10 +93,10 @@ processors:
         initial_value: 2
         max_staleness: 0s
     deltatocumulative/jmx/amp/0:
-        max_stale: 5m0s
+        max_stale: 336h0m0s
         max_streams: 9223372036854775807
     deltatocumulative/jmx/amp/1:
-        max_stale: 5m0s
+        max_stale: 336h0m0s
         max_streams: 9223372036854775807
     filter/jmx/0:
         error_mode: propagate
