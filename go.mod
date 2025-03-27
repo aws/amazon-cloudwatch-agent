@@ -211,6 +211,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.115.0
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.115.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
@@ -425,6 +426,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.115.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/exp/metrics v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka v0.115.0 // indirect
