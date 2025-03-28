@@ -13,7 +13,7 @@ RUN apt-get update &&  \
     rm -rf /var/lib/apt/lists/*
 COPY build/bin/linux_${TARGETARCH}/ /opt/aws/amazon-cloudwatch-agent/bin
 
-FROM scratch
+FROM alpine:latest
 
 COPY --from=cert /tmp /tmp
 COPY --from=cert /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
