@@ -3,68 +3,49 @@
 
 package deltatocumulativeprocessor
 
-// func TestTranslator(t *testing.T) {
-// 	cdpTranslator := NewTranslator(common.WithName("test"), WithDefaultKeys())
-// 	require.EqualValues(t, "cumulativetodelta/test", cdpTranslator.ID().String())
-// 	testCases := map[string]struct {
-// 		input   map[string]any
-// 		want    map[string]any
-// 		wantErr error
-// 	}{
-// 		"GenerateDeltaProcessorConfigWithCPU": {
-// 			input: map[string]any{
-// 				"metrics": map[string]any{
-// 					"metrics_collected": map[string]any{
-// 						"cpu": map[string]any{},
-// 					},
-// 				},
-// 			},
-// 			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey, " or ", otlpKey, " or ", otlpEmfKey)},
-// 		},
-// 		"GenerateDeltaProcessorConfigWithNet": {
-// 			input: map[string]any{
-// 				"metrics": map[string]any{
-// 					"metrics_collected": map[string]any{
-// 						"net": map[string]any{},
-// 					},
-// 				},
-// 			},
-// 			want: map[string]any{
-// 				"initial_value": "drop",
-// 			},
-// 		},
-// 		"GenerateDeltaProcessorConfigWithDiskIO": {
-// 			input: map[string]any{
-// 				"metrics": map[string]any{
-// 					"metrics_collected": map[string]any{
-// 						"diskio": map[string]any{},
-// 					},
-// 				},
-// 			},
-// 			want: map[string]any{
-// 				"exclude": map[string]any{
-// 					"match_type": "strict",
-// 					"metrics":    []string{"iops_in_progress", "diskio_iops_in_progress"},
-// 				},
-// 				"initial_value": "drop",
-// 			},
-// 		},
-// 	}
-// 	factory := cumulativetodeltaprocessor.NewFactory()
-// 	for name, testCase := range testCases {
-// 		t.Run(name, func(t *testing.T) {
-// 			conf := confmap.NewFromStringMap(testCase.input)
-// 			got, err := cdpTranslator.Translate(conf)
-// 			require.Equal(t, testCase.wantErr, err)
-// 			if err == nil {
-// 				require.NotNil(t, got)
-// 				gotCfg, ok := got.(*cumulativetodeltaprocessor.Config)
-// 				require.True(t, ok)
-// 				wantCfg := factory.CreateDefaultConfig()
-// 				wantConf := confmap.NewFromStringMap(testCase.want)
-// 				require.NoError(t, wantConf.Unmarshal(&wantCfg))
-// 				assert.Equal(t, wantCfg, gotCfg)
-// 			}
-// 		})
-// 	}
-// }
+import (
+	"math"
+	"testing"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+)
+
+func TestTranslator(t *testing.T) {
+	dcpTranslator := NewTranslator(common.WithName("test"))
+	require.EqualValues(t, "deltatocumulative/test", dcpTranslator.ID().String())
+	testCases := map[string]struct {
+		input   map[string]any
+		want    map[string]any
+		wantErr error
+	}{
+		"EmptyConfig": {
+			input: map[string]any{},
+			want: map[string]any{
+				"max_stale":   1209600000000000, // 2 weeks, in minutes
+				"max_streams": math.MaxInt64,
+			},
+		},
+	}
+	factory := deltatocumulativeprocessor.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := dcpTranslator.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*deltatocumulativeprocessor.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				wantConf := confmap.NewFromStringMap(testCase.want)
+				require.NoError(t, wantConf.Unmarshal(&wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}

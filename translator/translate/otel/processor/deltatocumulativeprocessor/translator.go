@@ -34,8 +34,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
-// Translate creates a processor config based on the fields in the
-// Metrics section of the JSON config.
+// Translate creates a processor config
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*deltatocumulativeprocessor.Config)
 	cfg.MaxStale = 14 * 24 * time.Hour // two weeks
