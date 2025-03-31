@@ -5,10 +5,10 @@ name: PR Build
 on:
   workflow_dispatch:
   pull_request:
-    branches: 
+    branches:
       - main*
       - feature*
-    types: 
+    types:
       - opened
       - synchronize
       - reopened
@@ -61,7 +61,7 @@ jobs:
         if: needs.changes.outputs.lint == 'true'
         run: |
           make fmt fmt-sh
-          if [ ! -z "`git status --porcelain`" ]; then
+          if [ ! -z "git status --porcelain" ]; then
             echo "make fmt changed files"
             git status
             exit 1
@@ -158,3 +158,35 @@ jobs:
       - name: Test data race
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
+
+  ec2-integration-test:
+    needs: [build]
+    name: EC2 Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger EC2 Integration Test
+        run: |
+          gh workflow run .github/workflows/test-artifacts.yml -f build_id=${{ github.sha }} -f test_repo_branch=main
+
+      - name: Check EC2 Integration Test Status
+        id: check_status
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const workflowRuns = await github.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'test-artifacts.yml'
+            });
+            const latestRun = workflowRuns.data.workflow_runs.find(run => run.event == 'workflow_dispatch' && run.head_sha == context.sha);
+            if (!latestRun) {
+              throw new Error('No matching workflow run found');
+            }
+            return latestRun.conclusion;
+
+      - name: Fail if EC2 Integration Test Failed
+        if: steps.check_status.outputs.result != 'success'
+        run: |
+          echo "EC2 Integration Test Failed"
+          exit 1
