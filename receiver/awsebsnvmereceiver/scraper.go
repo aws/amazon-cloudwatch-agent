@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/metadata"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
@@ -25,7 +26,7 @@ type nvmeScraper struct {
 	mb     *metadata.MetricsBuilder
 	nvme   nvme.UtilInterface
 
-	allowedDevices map[string]struct{}
+	allowedDevices collections.Set[string]
 }
 
 type ebsDevice struct {
@@ -126,9 +127,9 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 		}
 
 		// Check if all devices should be collected. Otherwise check if defined by user
-		_, hasAsterisk := s.allowedDevices["*"]
+		hasAsterisk := s.allowedDevices.Contains("*")
 		if !hasAsterisk {
-			if _, isAllowed := s.allowedDevices[deviceName]; !isAllowed {
+			if isAllowed := s.allowedDevices.Contains(deviceName); !isAllowed {
 				s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
 				continue
 			}
