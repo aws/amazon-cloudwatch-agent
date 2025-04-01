@@ -163,28 +163,26 @@ jobs:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Integration Tests
+      - name: Trigger build-test-artifacts Workflow
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -X POST \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/Run%20Integration%20Tests.yml/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-test-artifacts.yml/dispatches \
             -d '{
               "ref": "${{ github.ref }}",
               "inputs": {
-                "build_run_id": "${{ github.run_id }}",
-                "build_sha": "${{ github.sha }}",
-                "test_repo_branch": "main"
+                "test-image-before-upload": true
               }
             }'
 
-      - name: Wait for Integration Tests to Complete
+      - name: Wait for build-test-artifacts to Complete
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Waiting for Integration Tests to complete..."
+          echo "Waiting for build-test-artifacts to complete..."
           while true; do
             sleep 60
             status=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -192,12 +190,12 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/actions/runs?event=workflow_dispatch&status=completed&head_sha=${{ github.sha }}" \
               | jq -r '.workflow_runs[0].conclusion')
             if [ "$status" != "null" ]; then
-              echo "Integration Tests completed with status: $status"
+              echo "build-test-artifacts completed with status: $status"
               if [ "$status" != "success" ]; then
-                echo "Integration Tests failed"
+                echo "build-test-artifacts failed"
                 exit 1
               fi
               break
             fi
-            echo "Integration Tests still running..."
+            echo "build-test-artifacts still running..."
           done
