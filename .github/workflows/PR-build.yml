@@ -160,42 +160,12 @@ jobs:
         run: make test-data-race
 
   run-integration-tests:
+    needs: [build]
     name: Run Integration Tests
     runs-on: ubuntu-latest
     steps:
       - name: Trigger build-test-artifacts Workflow
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          curl -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-test-artifacts.yml/dispatches \
-            -d '{
-              "ref": "${{ github.ref }}",
-              "inputs": {
-                "test-image-before-upload": true
-              }
-            }'
-
-      - name: Wait for build-test-artifacts to Complete
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Waiting for build-test-artifacts to complete..."
-          while true; do
-            sleep 60
-            status=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/runs?event=workflow_dispatch&status=completed&head_sha=${{ github.sha }}" \
-              | jq -r '.workflow_runs[0].conclusion')
-            if [ "$status" != "null" ]; then
-              echo "build-test-artifacts completed with status: $status"
-              if [ "$status" != "success" ]; then
-                echo "build-test-artifacts failed"
-                exit 1
-              fi
-              break
-            fi
-            echo "build-test-artifacts still running..."
-          done
+        uses: ./.github/workflows/build-test-artifacts.yml
+        with:
+          test-image-before-upload: true
+        secrets: inherit
