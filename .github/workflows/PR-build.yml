@@ -163,7 +163,6 @@ jobs:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     uses: ./.github/workflows/build-test-artifacts.yml
-    secrets: inherit
     permissions:
       id-token: write
       contents: read
