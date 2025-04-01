@@ -163,6 +163,8 @@ jobs:
     needs: [build]
     name: EC2 Integration Test
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Trigger EC2 Integration Test
         run: |
