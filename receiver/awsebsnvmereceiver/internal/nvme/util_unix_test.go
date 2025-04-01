@@ -250,42 +250,6 @@ func TestIsEbsDevice(t *testing.T) {
 	}
 }
 
-func TestCleanupString(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "string with newline",
-			input:    "test string\n",
-			expected: "test string",
-		},
-		{
-			name:     "string with spaces",
-			input:    "  test string  ",
-			expected: "test string",
-		},
-		{
-			name:     "string with spaces and newline",
-			input:    "  test string  \n",
-			expected: "test string",
-		},
-		{
-			name:     "clean string",
-			input:    "test string",
-			expected: "test string",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := cleanupString(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 // Mock DirEntry implementation
 type mockDirEntry struct {
 	name  string

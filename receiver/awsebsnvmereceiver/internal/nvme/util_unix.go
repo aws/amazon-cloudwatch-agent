@@ -44,7 +44,7 @@ func (u *Util) GetDeviceSerial(device *DeviceFileAttributes) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return cleanupString(string(data)), nil
+	return strings.TrimSpace(string(data)), nil
 }
 
 func (u *Util) GetDeviceModel(device *DeviceFileAttributes) (string, error) {
@@ -56,7 +56,7 @@ func (u *Util) GetDeviceModel(device *DeviceFileAttributes) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return cleanupString(string(data)), nil
+	return strings.TrimSpace(string(data)), nil
 }
 
 func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
@@ -69,9 +69,4 @@ func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 
 func DevicePath(device string) (string, error) {
   return filepath.Join(devDirectoryPath, device), nil
-}
-
-func cleanupString(input string) string {
-	// Some device info strings use fixed-width padding and/or end with a new line
-	return strings.TrimSpace(strings.TrimSuffix(input, "\n"))
 }
