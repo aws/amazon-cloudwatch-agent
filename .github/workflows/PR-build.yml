@@ -159,22 +159,23 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
 
-  ec2-integration-test:
+  run-integration-tests:
     needs: [build]
-    name: EC2 Integration Test
+    name: Run Integration Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger EC2 Integration Test
+      - name: Trigger Integration Tests
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const workflow_id = 'test-artifacts.yml';
+            const workflow_id = 'Run Integration Tests.yml';
             const ref = context.sha;
             const inputs = {
-              build_id: ref,
+              build_run_id: context.runId,
+              build_sha: ref,
               test_repo_branch: 'main'
             };
 
@@ -186,7 +187,7 @@ jobs:
               inputs: inputs
             });
 
-      - name: Check EC2 Integration Test Status
+      - name: Check Integration Test Status
         id: check_status
         uses: actions/github-script@v6
         with:
@@ -195,7 +196,7 @@ jobs:
             const workflowRuns = await github.actions.listWorkflowRunsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'test-artifacts.yml'
+              workflow_id: 'Run Integration Tests.yml'
             });
             const latestRun = workflowRuns.data.workflow_runs.find(run => run.event == 'workflow_dispatch' && run.head_sha == context.sha);
             if (!latestRun) {
@@ -203,8 +204,8 @@ jobs:
             }
             return latestRun.conclusion;
 
-      - name: Fail if EC2 Integration Test Failed
+      - name: Fail if Integration Tests Failed
         if: steps.check_status.outputs.result != 'success'
         run: |
-          echo "EC2 Integration Test Failed"
+          echo "Integration Tests Failed"
           exit 1
