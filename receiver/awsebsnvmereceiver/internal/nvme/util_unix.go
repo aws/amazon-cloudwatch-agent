@@ -24,7 +24,7 @@ func (u *Util) GetAllDevices() ([]DeviceFileAttributes, error) {
 
 	devices := []DeviceFileAttributes{}
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), nvmeDevicePrefix) {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), nvmeDevicePrefix) {
 			device, err := ParseNvmeDeviceFileName(entry.Name())
 			if err == nil {
 				devices = append(devices, device)
