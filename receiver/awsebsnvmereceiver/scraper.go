@@ -30,7 +30,7 @@ type nvmeScraper struct {
 }
 
 type ebsDevices struct {
-	volumeID string
+	volumeID    string
 	deviceNames []string
 }
 
@@ -163,7 +163,7 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int]*ebsDevices, error) {
 
 		devices[device.Controller()] = &ebsDevices{
 			deviceNames: []string{deviceName},
-			volumeID:   fmt.Sprintf("vol-%s", serial[3:]),
+			volumeID:    fmt.Sprintf("vol-%s", serial[3:]),
 		}
 	}
 

@@ -68,5 +68,5 @@ func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 }
 
 func (u *Util) DevicePath(device string) (string, error) {
-  return filepath.Join(devDirectoryPath, device), nil
+	return filepath.Join(devDirectoryPath, device), nil
 }

@@ -24,5 +24,5 @@ func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 }
 
 func (u *Util) DevicePath(device string) (string, error) {
-  return "", errors.New("nvme not supported")
+	return "", errors.New("nvme not supported")
 }

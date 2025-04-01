@@ -27,7 +27,7 @@ func TestGetAllDevices(t *testing.T) {
 				mockDirEntry{name: "nvme0n1", isDir: false},
 				mockDirEntry{name: "nvme1n1", isDir: false},
 				mockDirEntry{name: "other-device", isDir: false}, // Should be ignored
-				mockDirEntry{name: "nvme2", isDir: true}, // Should be ignored because it's a directory
+				mockDirEntry{name: "nvme2", isDir: true},         // Should be ignored because it's a directory
 			},
 			expected: []DeviceFileAttributes{
 				{controller: 0, namespace: 1, partition: -1, deviceName: "nvme0n1"},
@@ -291,7 +291,8 @@ func TestDevicePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, err := DevicePath(tt.device)
+			util := &Util{}
+			path, err := util.DevicePath(tt.device)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, path)
 		})
