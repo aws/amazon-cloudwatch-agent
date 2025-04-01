@@ -2,6 +2,7 @@ log_group_name: "/aws/application-signals/data"
 namespace: "ApplicationSignals"
 middleware: agenthealth/logs
 dimension_rollup_option: "NoDimensionRollup"
+use_all_labels_as_dimensions: false
 metric_declarations:
   - dimensions:
       - [Environment, Service, Operation]

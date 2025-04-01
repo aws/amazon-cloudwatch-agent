@@ -3,6 +3,7 @@ log_group_name: '/aws/containerinsights/{ClusterName}/jmx'
 log_stream_name: '{NodeName}'
 detailed_metrics: false
 dimension_rollup_option: NoDimensionRollup
+use_all_labels_as_dimensions: false
 version: "0"
 retain_initial_value_of_delta_metric: false
 resource_to_telemetry_conversion:
