@@ -162,8 +162,11 @@ jobs:
   run-integration-tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
-    steps:
-      - name: Trigger build-test-artifacts Workflow
-        uses: ./.github/workflows/build-test-artifacts.yml
-        with:
-          test-image-before-upload: true
+    uses: ./.github/workflows/build-test-artifacts.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      build_id: ${{ inputs.build_sha }}
+      test_repo_branch: ${{ inputs.test_repo_branch }}
