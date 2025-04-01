@@ -160,51 +160,45 @@ jobs:
         run: make test-data-race
 
   run-integration-tests:
+    needs: [build]
     name: Run Integration Tests
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Integration Tests
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const workflow_id = 'Run Integration Tests.yml';
-            const ref = context.sha;
-            const inputs = {
-              build_run_id: context.runId,
-              build_sha: ref,
-              test_repo_branch: 'main'
-            };
-
-            await github.actions.createWorkflowDispatch({
-              owner: owner,
-              repo: repo,
-              workflow_id: workflow_id,
-              ref: ref,
-              inputs: inputs
-            });
-
-      - name: Check Integration Test Status
-        id: check_status
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const workflowRuns = await github.actions.listWorkflowRunsForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'Run Integration Tests.yml'
-            });
-            const latestRun = workflowRuns.data.workflow_runs.find(run => run.event == 'workflow_dispatch' && run.head_sha == context.sha);
-            if (!latestRun) {
-              throw new Error('No matching workflow run found');
-            }
-            return latestRun.conclusion;
-
-      - name: Fail if Integration Tests Failed
-        if: steps.check_status.outputs.result != 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Integration Tests Failed"
-          exit 1
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/Run%20Integration%20Tests.yml/dispatches \
+            -d '{
+              "ref": "${{ github.ref }}",
+              "inputs": {
+                "build_run_id": "${{ github.run_id }}",
+                "build_sha": "${{ github.sha }}",
+                "test_repo_branch": "main"
+              }
+            }'
+
+      - name: Wait for Integration Tests to Complete
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Waiting for Integration Tests to complete..."
+          while true; do
+            sleep 60
+            status=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?event=workflow_dispatch&status=completed&head_sha=${{ github.sha }}" \
+              | jq -r '.workflow_runs[0].conclusion')
+            if [ "$status" != "null" ]; then
+              echo "Integration Tests completed with status: $status"
+              if [ "$status" != "success" ]; then
+                echo "Integration Tests failed"
+                exit 1
+              fi
+              break
+            fi
+            echo "Integration Tests still running..."
+          done
