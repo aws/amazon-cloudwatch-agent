@@ -160,7 +160,6 @@ jobs:
         run: make test-data-race
 
   run-integration-tests:
-    needs: [build]
     name: Run Integration Tests
     runs-on: ubuntu-latest
     steps:
