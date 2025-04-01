@@ -24,7 +24,7 @@ import (
 type nvmeScraper struct {
 	logger *zap.Logger
 	mb     *metadata.MetricsBuilder
-	nvme   nvme.UtilInterface
+	nvme   nvme.DeviceInfoProvider
 
 	allowedDevices collections.Set[string]
 }
@@ -171,7 +171,7 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 
 func newScraper(cfg *Config,
 	settings receiver.Settings,
-	nvme nvme.UtilInterface,
+	nvme nvme.DeviceInfoProvider,
 	allowedDevices map[string]struct{},
 ) *nvmeScraper {
 	return &nvmeScraper{

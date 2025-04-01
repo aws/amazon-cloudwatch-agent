@@ -3,7 +3,7 @@
 
 package nvme
 
-type UtilInterface interface {
+type DeviceInfoProvider interface {
 	GetAllDevices() ([]DeviceFileAttributes, error)
 	GetDeviceSerial(device *DeviceFileAttributes) (string, error)
 	GetDeviceModel(device *DeviceFileAttributes) (string, error)

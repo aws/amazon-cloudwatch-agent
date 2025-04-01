@@ -22,7 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
 
-// mockNvmeUtil is a mock implementation of the NvmeUtilInterface
+// mockNvmeUtil is a mock implementation of the DeviceInfoProvider
 type mockNvmeUtil struct {
 	mock.Mock
 }

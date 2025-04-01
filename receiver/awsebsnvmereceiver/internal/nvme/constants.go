@@ -4,7 +4,7 @@
 package nvme
 
 const (
-	devDirectoryPath     = "/dev"
+	devDirectoryPath = "/dev"
 
 	nvmeDevicePrefix     = "nvme"
 	nvmeSysDirectoryPath = "/sys/class/nvme"
