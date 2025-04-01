@@ -99,6 +99,9 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
+    deltatocumulative/host/amp:
+        max_stale: 336h0m0s
+        max_streams: 9223372036854775807
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -152,6 +155,7 @@ service:
                 - transform
                 - rollup
                 - batch/host/amp
+                - deltatocumulative/host/amp
             receivers:
                 - telegraf_cpu
         metrics/host/cloudwatch:
