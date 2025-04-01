@@ -440,27 +440,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
 			continue
 		}
-		if len(distList) == 0 {
-			if metric.Value == nil {
-				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
-				continue
-			}
-
-			if !distribution.IsSupportedValue(*metric.Value, distribution.MinValue, distribution.MaxValue) {
-				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
-				continue
-			}
-			// Not a distribution.
-			datum := &cloudwatch.MetricDatum{
-				MetricName:        metric.MetricName,
-				Dimensions:        dimensions,
-				Timestamp:         metric.Timestamp,
-				Unit:              metric.Unit,
-				StorageResolution: metric.StorageResolution,
-				Value:             metric.Value,
-			}
-			datums = append(datums, datum)
-		} else {
+		if len(distList) > 0 {
 			for _, dist := range distList {
 				values, counts := dist.ValuesAndCounts()
 				s := cloudwatch.StatisticSet{}
@@ -483,6 +463,45 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 				}
 				datums = append(datums, datum)
 			}
+		} else if len(metric.Values) > 0 {
+
+			// If metric.Values is not empty, we're processing an exponential histogram. The PMD API is limited by how many
+			// metrics can be pushed at once, so the metrics/values arrays need to be split into separate MetricDatum's.
+
+			// Beware there may be many datums sharing pointers to the same
+			// strings for metric names, dimensions, etc.
+			// It is fine since at this point the values will not change.
+			datum := &cloudwatch.MetricDatum{
+				MetricName:        metric.MetricName,
+				Dimensions:        dimensions,
+				Timestamp:         metric.Timestamp,
+				Unit:              metric.Unit,
+				StorageResolution: metric.StorageResolution,
+				StatisticValues:   metric.StatisticValues,
+				Values:            metric.Values,
+				Counts:            metric.Counts,
+			}
+			datums = append(datums, datum)
+		} else {
+			if metric.Value == nil {
+				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
+				continue
+			}
+
+			if !distribution.IsSupportedValue(*metric.Value, distribution.MinValue, distribution.MaxValue) {
+				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
+				continue
+			}
+			// Not a distribution.
+			datum := &cloudwatch.MetricDatum{
+				MetricName:        metric.MetricName,
+				Dimensions:        dimensions,
+				Timestamp:         metric.Timestamp,
+				Unit:              metric.Unit,
+				StorageResolution: metric.StorageResolution,
+				Value:             metric.Value,
+			}
+			datums = append(datums, datum)
 		}
 	}
 	return metric.entity, datums
