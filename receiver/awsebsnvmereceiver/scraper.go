@@ -138,7 +138,7 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int]*ebsDevices, error) {
 		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
 		// retrieving the volume ID and validating if it's an EBS device
 		if entry, seenController := devices[device.Controller()]; seenController {
-			entry.deviceNames = append(devices[device.Controller()].deviceNames, deviceName)
+			entry.deviceNames = append(entry.deviceNames, deviceName)
 			s.logger.Debug("skipping unnecessary device validation steps", zap.String("device", deviceName))
 			continue
 		}
