@@ -8,5 +8,5 @@ package nvme
 import "errors"
 
 func GetMetrics(devicePath string) (EBSMetrics, error) {
-	return EBSMetrics{}, errors.New("ebs metrics stub: ebs metrics not supported")
+	return EBSMetrics{}, errors.New("ebs metrics not supported")
 }

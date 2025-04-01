@@ -8,17 +8,17 @@ package nvme
 import "errors"
 
 func (u *Util) GetAllDevices() ([]DeviceFileAttributes, error) {
-	return nil, errors.New("nvme stub: nvme not supported")
+	return nil, errors.New("nvme not supported")
 }
 
 func (u *Util) GetDeviceSerial(device *DeviceFileAttributes) (string, error) {
-	return "", errors.New("nvme stub: nvme not supported")
+	return "", errors.New("nvme not supported")
 }
 
 func (u *Util) GetDeviceModel(device *DeviceFileAttributes) (string, error) {
-	return "", errors.New("nvme stub: nvme not supported")
+	return "", errors.New("nvme not supported")
 }
 
 func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
-	return false, errors.New("nvme stub: nvme not supported")
+	return false, errors.New("nvme not supported")
 }
