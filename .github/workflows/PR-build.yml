@@ -14,7 +14,9 @@ on:
       - reopened
       - ready_for_review
 
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   changes:
@@ -130,7 +132,7 @@ jobs:
         run: choco install make
 
       - name: Unit Test
-        if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
 
       - name: Build
