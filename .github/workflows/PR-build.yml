@@ -166,6 +166,3 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    with:
-      build_id: ${{ inputs.build_sha }}
-      test_repo_branch: ${{ inputs.test_repo_branch }}
