@@ -120,11 +120,7 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 	devices := make(map[int][]ebsDevice)
 
 	for _, device := range allNvmeDevices {
-		deviceName, err := device.DeviceName()
-		if err != nil {
-			s.logger.Debug("unable to get device name", zap.Int("controllerID", device.Controller()), zap.Error(err))
-			continue
-		}
+		deviceName := device.DeviceName()
 
 		// Check if all devices should be collected. Otherwise check if defined by user
 		hasAsterisk := s.allowedDevices.Contains("*")

@@ -4,6 +4,7 @@
 package nvme
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -108,6 +109,14 @@ func TestParseNvmeDeviceFileName(t *testing.T) {
 				}
 				if got.Partition() != tt.wantPartition {
 					t.Errorf("Partition() = %v, want %v", got.Partition(), tt.wantPartition)
+				}
+				if got.DeviceName() != tt.device {
+					t.Errorf("DeviceName() = %v, want %v", got.DeviceName(), tt.device)
+				}
+				baseName, err := got.BaseDeviceName()
+				expectedBaseName := fmt.Sprintf("nvme%d", got.Controller())
+				if err != nil || baseName != expectedBaseName {
+					t.Errorf("BaseDeviceName() = %v, want %v", baseName, expectedBaseName)
 				}
 			}
 		})

@@ -30,8 +30,8 @@ func TestGetAllDevices(t *testing.T) {
 				mockDirEntry{name: "nvme2", isDir: true}, // Should be ignored because it's a directory
 			},
 			expected: []DeviceFileAttributes{
-				{controller: 0, namespace: 1, partition: -1},
-				{controller: 1, namespace: 1, partition: -1},
+				{controller: 0, namespace: 1, partition: -1, deviceName: "nvme0n1"},
+				{controller: 1, namespace: 1, partition: -1, deviceName: "nvme1n1"},
 			},
 		},
 		{
@@ -46,7 +46,7 @@ func TestGetAllDevices(t *testing.T) {
 				mockDirEntry{name: "nvme0n1", isDir: false},
 			},
 			expected: []DeviceFileAttributes{
-				{controller: 0, namespace: 1, partition: -1},
+				{controller: 0, namespace: 1, partition: -1, deviceName: "nvme0n1"},
 			},
 		},
 	}
