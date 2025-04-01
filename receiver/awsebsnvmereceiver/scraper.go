@@ -100,7 +100,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 		if foundWorkingDevice {
 			s.logger.Debug("emitted metrics for nvme device with controller id", zap.Int("controllerID", id))
 		} else {
-			s.logger.Info("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id))
+			s.logger.Debug("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id))
 		}
 	}
 
