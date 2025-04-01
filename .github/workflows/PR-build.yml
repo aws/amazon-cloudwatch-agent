@@ -162,9 +162,9 @@ jobs:
   run-integration-tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
+    secrets: inherit  # Move secrets here
     steps:
       - name: Trigger build-test-artifacts Workflow
         uses: ./.github/workflows/build-test-artifacts.yml
         with:
           test-image-before-upload: true
-        secrets: inherit
