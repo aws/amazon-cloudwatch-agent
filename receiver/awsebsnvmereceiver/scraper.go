@@ -172,7 +172,7 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 func newScraper(cfg *Config,
 	settings receiver.Settings,
 	nvme nvme.DeviceInfoProvider,
-	allowedDevices map[string]struct{},
+	allowedDevices collections.Set[string],
 ) *nvmeScraper {
 	return &nvmeScraper{
 		logger:         settings.TelemetrySettings.Logger,

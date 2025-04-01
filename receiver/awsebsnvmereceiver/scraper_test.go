@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
 
@@ -72,7 +73,7 @@ func mockGetMetricsError(_ string) (nvme.EBSMetrics, error) {
 
 func TestScraper_Start(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	err := scraper.start(context.Background(), componenttest.NewNopHost())
 	assert.NoError(t, err)
@@ -80,7 +81,7 @@ func TestScraper_Start(t *testing.T) {
 
 func TestScraper_Shutdown(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	err := scraper.shutdown(context.Background())
 	assert.NoError(t, err)
@@ -90,7 +91,7 @@ func TestScraper_Scrape_NoDevices(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -103,7 +104,7 @@ func TestScraper_Scrape_GetAllDevicesError(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, errors.New("failed to get devices"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	_, err := scraper.scrape(context.Background())
 	assert.Error(t, err)
@@ -127,7 +128,7 @@ func TestScraper_Scrape_Success(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 
 	// Allow all devices with empty map
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -243,21 +244,27 @@ func TestScraper_Scrape_GetMetricsError(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 
 	// Create a test logger to capture log messages
-	core, observedLogs := observer.New(zapcore.InfoLevel)
+	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
 	settings := receivertest.NewNopSettings()
 	settings.TelemetrySettings.Logger = logger
 
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
 
-	// Verify log message
-	assert.Equal(t, 1, observedLogs.Len())
-	assert.Contains(t, observedLogs.All()[0].Message, "unable to get metrics for nvme device with controller id")
+	// Verify log message about metrics failure
+	foundLogMessage := false
+	for _, log := range observedLogs.All() {
+		if log.Message == "unable to get metrics for nvme device with controller id" {
+			foundLogMessage = true
+			break
+		}
+	}
+	assert.True(t, foundLogMessage, "Expected to find log about unable to get metrics")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -318,7 +325,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	settings.TelemetrySettings.Logger = logger
 
 	// Only allow nvme1n1
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, map[string]struct{}{"nvme0n1": {}})
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("nvme0n1"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
