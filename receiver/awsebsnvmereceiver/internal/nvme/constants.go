@@ -4,9 +4,10 @@
 package nvme
 
 const (
-	NvmeDevicePrefix     = "nvme"
-	DevDirectoryPath     = "/dev"
-	NvmeSysDirectoryPath = "/sys/class/nvme"
+	devDirectoryPath     = "/dev"
 
-	EbsNvmeModelName = "Amazon Elastic Block Store"
+	nvmeDevicePrefix     = "nvme"
+	nvmeSysDirectoryPath = "/sys/class/nvme"
+
+	ebsNvmeModelName = "Amazon Elastic Block Store"
 )

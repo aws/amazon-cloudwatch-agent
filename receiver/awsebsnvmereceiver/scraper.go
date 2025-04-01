@@ -153,9 +153,15 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 			continue
 		}
 
+		devPath, err := nvme.DevicePath(deviceName)
+		if err != nil {
+			s.logger.Debug("unable to create dev path", zap.String("device", deviceName), zap.String("serial", serial))
+			continue
+		}
+
 		devices[device.Controller()] = append(devices[device.Controller()], ebsDevice{
 			deviceName: deviceName,
-			devicePath: fmt.Sprintf("%s/%s", nvme.DevDirectoryPath, deviceName),
+			devicePath: devPath,
 			volumeID:   fmt.Sprintf("vol-%s", serial[3:]),
 		})
 	}
