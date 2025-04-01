@@ -14,9 +14,7 @@ on:
       - reopened
       - ready_for_review
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
+
 
 jobs:
   changes:
