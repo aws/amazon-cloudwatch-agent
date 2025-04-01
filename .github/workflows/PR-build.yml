@@ -159,27 +159,14 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
 
-  run-integration-tests:
-    name: Run Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger build-test-artifacts Workflow
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const workflow_id = 'build-test-artifacts.yml';
-            const ref = context.sha;
-            const inputs = {
-              'test-image-before-upload': true
-            };
-
-            await github.actions.createWorkflowDispatch({
-              owner: owner,
-              repo: repo,
-              workflow_id: workflow_id,
-              ref: ref,
-              inputs: inputs
-            });
+  BuildAgent:
+    uses: ./.github/workflows/build-test-artifacts.yml
+    concurrency:
+      group: "Build-Test-Artifacts-${{github.ref_name}}"
+      cancel-in-progress: true
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      test-image-before-upload: false
