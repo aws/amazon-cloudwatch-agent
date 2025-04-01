@@ -162,7 +162,7 @@ jobs:
   BuildAgent:
     uses: ./.github/workflows/build-test-artifacts.yml
     concurrency:
-      group: "Build-Test-Artifacts-${{github.ref_name}}"
+      group: ${{ github.workflow }}-${{ github.ref_name }}
       cancel-in-progress: true
     secrets: inherit
     permissions:
