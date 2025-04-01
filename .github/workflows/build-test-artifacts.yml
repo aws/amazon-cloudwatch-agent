@@ -97,16 +97,13 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   StartIntegrationTests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
-    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
     steps:
-      - run: gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
+      - run: Run gh workflow run integration-test.yml --ref amp-log-selinux --repo $GITHUB_REPOSITORY -f build_run_id=14073823511 -f build_sha=b9300141190cc2bdd26176d2f60cbc773abc8059
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartApplicationSignalsE2ETests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
     # Workflow only runs against main
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
