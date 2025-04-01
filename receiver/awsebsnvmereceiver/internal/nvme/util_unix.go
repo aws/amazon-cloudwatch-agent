@@ -67,6 +67,6 @@ func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 	return model == ebsNvmeModelName, nil
 }
 
-func DevicePath(device string) (string, error) {
+func (u *Util) DevicePath(device string) (string, error) {
   return filepath.Join(devDirectoryPath, device), nil
 }

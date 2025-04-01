@@ -29,10 +29,9 @@ type nvmeScraper struct {
 	allowedDevices collections.Set[string]
 }
 
-type ebsDevice struct {
-	deviceName string
-	devicePath string
-	volumeID   string
+type ebsDevices struct {
+	volumeID string
+	deviceNames []string
 }
 
 type recordDataMetricFunc func(pcommon.Timestamp, int64)
@@ -66,21 +65,26 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 		// success
 		foundWorkingDevice := false
 
-		for _, device := range ebsDevices {
+		for _, device := range ebsDevices.deviceNames {
 			if foundWorkingDevice {
 				break
 			}
 
-			metrics, err := getMetrics(device.devicePath)
+			devicePath, err := s.nvme.DevicePath(device)
 			if err != nil {
-				s.logger.Debug("unable to get metrics for device", zap.String("device", device.deviceName), zap.Error(err))
+				s.logger.Debug("unable to get device path", zap.String("device", device), zap.Error(err))
+				continue
+			}
+			metrics, err := getMetrics(devicePath)
+			if err != nil {
+				s.logger.Debug("unable to get metrics for device", zap.String("device", device), zap.Error(err))
 				continue
 			}
 
 			foundWorkingDevice = true
 
 			rb := s.mb.NewResourceBuilder()
-			rb.SetVolumeID(device.volumeID)
+			rb.SetVolumeID(ebsDevices.volumeID)
 
 			s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
 			s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
@@ -98,9 +102,9 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 		}
 
 		if foundWorkingDevice {
-			s.logger.Debug("emitted metrics for nvme device with controller id", zap.Int("controllerID", id))
+			s.logger.Debug("emitted metrics for nvme device with controller id", zap.Int("controllerID", id), zap.String("volumeID", ebsDevices.volumeID))
 		} else {
-			s.logger.Debug("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id))
+			s.logger.Debug("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id), zap.String("volumeID", ebsDevices.volumeID))
 		}
 	}
 
@@ -111,13 +115,13 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 // For example nvme0n1, nvme0n1p1 are all under the controller ID 0. The metrics
 // are the same based on the controller ID. We also do not want to duplicate metrics
 // so we group the devices by the controller ID.
-func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
+func (s *nvmeScraper) getEbsDevicesByController() (map[int]*ebsDevices, error) {
 	allNvmeDevices, err := s.nvme.GetAllDevices()
 	if err != nil {
 		return nil, err
 	}
 
-	devices := make(map[int][]ebsDevice)
+	devices := make(map[int]*ebsDevices)
 
 	for _, device := range allNvmeDevices {
 		deviceName := device.DeviceName()
@@ -129,6 +133,14 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 				s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
 				continue
 			}
+		}
+
+		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
+		// retrieving the volume ID and validating if it's an EBS device
+		if entry, seenController := devices[device.Controller()]; seenController {
+			entry.deviceNames = append(devices[device.Controller()].deviceNames, deviceName)
+			s.logger.Debug("skipping unnecessary device validation steps", zap.String("device", deviceName))
+			continue
 		}
 
 		isEbs, err := s.nvme.IsEbsDevice(&device)
@@ -149,17 +161,10 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 			continue
 		}
 
-		devPath, err := nvme.DevicePath(deviceName)
-		if err != nil {
-			s.logger.Debug("unable to create dev path", zap.String("device", deviceName), zap.String("serial", serial))
-			continue
-		}
-
-		devices[device.Controller()] = append(devices[device.Controller()], ebsDevice{
-			deviceName: deviceName,
-			devicePath: devPath,
+		devices[device.Controller()] = &ebsDevices{
+			deviceNames: []string{deviceName},
 			volumeID:   fmt.Sprintf("vol-%s", serial[3:]),
-		})
+		}
 	}
 
 	return devices, nil

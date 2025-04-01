@@ -5,9 +5,10 @@ package nvme
 
 type DeviceInfoProvider interface {
 	GetAllDevices() ([]DeviceFileAttributes, error)
-	GetDeviceSerial(device *DeviceFileAttributes) (string, error)
-	GetDeviceModel(device *DeviceFileAttributes) (string, error)
-	IsEbsDevice(device *DeviceFileAttributes) (bool, error)
+	GetDeviceSerial(*DeviceFileAttributes) (string, error)
+	GetDeviceModel(*DeviceFileAttributes) (string, error)
+	IsEbsDevice(*DeviceFileAttributes) (bool, error)
+	DevicePath(string) (string, error)
 }
 
 type Util struct {
