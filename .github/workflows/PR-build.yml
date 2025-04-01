@@ -163,12 +163,28 @@ jobs:
     needs: [build]
     name: EC2 Integration Test
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Trigger EC2 Integration Test
-        run: |
-          gh workflow run .github/workflows/test-artifacts.yml -f build_id=${{ github.sha }} -f test_repo_branch=main
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const workflow_id = 'test-artifacts.yml';
+            const ref = context.sha;
+            const inputs = {
+              build_id: ref,
+              test_repo_branch: 'main'
+            };
+
+            await github.actions.createWorkflowDispatch({
+              owner: owner,
+              repo: repo,
+              workflow_id: workflow_id,
+              ref: ref,
+              inputs: inputs
+            });
 
       - name: Check EC2 Integration Test Status
         id: check_status
