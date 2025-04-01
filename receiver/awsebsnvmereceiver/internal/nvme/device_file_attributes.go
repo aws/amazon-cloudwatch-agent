@@ -19,7 +19,7 @@ func ParseNvmeDeviceFileName(device string) (DeviceFileAttributes, error) {
 	namespace := -1
 	partition := -1
 
-	fmt.Sscanf(device, "nvme%dn%dp%d", &controller, &namespace, &partition)
+	_, _ := fmt.Sscanf(device, "nvme%dn%dp%d", &controller, &namespace, &partition)
 
 	if controller == -1 {
 		return DeviceFileAttributes{}, errors.New("unable to parse device name")
