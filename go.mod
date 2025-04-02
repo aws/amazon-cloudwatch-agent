@@ -181,6 +181,7 @@ require (
 	go.opentelemetry.io/collector/exporter/nopexporter v0.115.0
 	go.opentelemetry.io/collector/extension v0.115.0
 	go.opentelemetry.io/collector/extension/zpagesextension v0.115.0
+	go.opentelemetry.io/collector/filter v0.115.0
 	go.opentelemetry.io/collector/otelcol v0.115.0
 	go.opentelemetry.io/collector/processor v0.115.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.115.0
@@ -224,6 +225,7 @@ require (
 	go.opentelemetry.io/collector/processor/processortest v0.115.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.115.0
 	go.opentelemetry.io/collector/scraper v0.115.0
+	go.uber.org/goleak v1.3.0
 )
 
 require (
