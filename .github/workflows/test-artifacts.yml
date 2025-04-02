@@ -50,6 +50,8 @@ jobs:
     steps:
       - name: ${{ github.event.inputs.build_id }}
         run: echo run identifier ${{ inputs.build_id }}
+
+
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
