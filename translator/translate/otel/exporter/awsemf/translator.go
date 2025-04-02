@@ -194,6 +194,7 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 
 	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
 		cfg.EnhancedContainerInsights = true
+		cfg.AddEntity = true
 	}
 
 	return nil
