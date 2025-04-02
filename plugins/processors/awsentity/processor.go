@@ -146,6 +146,14 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				}
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 			}
+			if p.config.KubernetesMode != "" {
+				switch p.config.KubernetesMode {
+				case config.ModeEKS:
+					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityEKSPlatform)
+				default:
+					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityK8sPlatform)
+				}
+			}
 		case entityattributes.Service:
 			if logGroupNamesAttr, ok := resourceAttrs.Get(attributeAwsLogGroupNames); ok {
 				logGroupNames = logGroupNamesAttr.Str()
