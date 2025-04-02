@@ -116,7 +116,7 @@ var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
 	if k8sMetadata != nil {
 		// Get the pod IP from the context
 		podIP := clientutil.Address(client.FromContext(ctx))
-		podMeta = k8sMetadata.GetPodMetadata(podIP)
+		podMeta = k8sMetadata.GetPodMetadataFromPodIP(podIP)
 	}
 
 	return podMeta

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resolver
+package k8sclient
 
 import (
 	"sync"
@@ -19,7 +19,7 @@ type serviceToWorkloadMapper struct {
 	deleter                        Deleter
 }
 
-func newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload *sync.Map, logger *zap.Logger, deleter Deleter) *serviceToWorkloadMapper {
+func NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload *sync.Map, logger *zap.Logger, deleter Deleter) *serviceToWorkloadMapper {
 	return &serviceToWorkloadMapper{
 		serviceAndNamespaceToSelectors: serviceAndNamespaceToSelectors,
 		workloadAndNamespaceToLabels:   workloadAndNamespaceToLabels,
@@ -35,13 +35,13 @@ func (m *serviceToWorkloadMapper) mapServiceToWorkload() {
 	m.serviceAndNamespaceToSelectors.Range(func(key, value interface{}) bool {
 		var workloads []string
 		serviceAndNamespace := key.(string)
-		_, serviceNamespace := extractResourceAndNamespace(serviceAndNamespace)
+		_, serviceNamespace := ExtractResourceAndNamespace(serviceAndNamespace)
 		serviceLabels := value.(mapset.Set[string])
 
 		m.workloadAndNamespaceToLabels.Range(func(workloadKey, labelsValue interface{}) bool {
 			labels := labelsValue.(mapset.Set[string])
 			workloadAndNamespace := workloadKey.(string)
-			_, workloadNamespace := extractResourceAndNamespace(workloadAndNamespace)
+			_, workloadNamespace := ExtractResourceAndNamespace(workloadAndNamespace)
 			if workloadNamespace == serviceNamespace && workloadNamespace != "" && serviceLabels.IsSubset(labels) {
 				m.logger.Debug("Found workload for service", zap.String("service", serviceAndNamespace), zap.String("workload", workloadAndNamespace))
 				workloads = append(workloads, workloadAndNamespace)
