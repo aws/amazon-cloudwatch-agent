@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	diskIOPrefix = "diskio_"
+	diskIOPrefix    = "diskio_"
 	diskIOEbsPrefix = "ebs_"
 )
 

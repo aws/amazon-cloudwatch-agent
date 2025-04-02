@@ -11,9 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
-
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 

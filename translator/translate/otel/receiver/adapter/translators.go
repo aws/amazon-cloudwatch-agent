@@ -170,7 +170,7 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				inputConf := conf.Get(cfgKey).(map[string]any)
 				measurement := common.GetMeasurements(inputConf)
 
-				hasMeasurements = measurement != nil && len(measurement) != 0
+				hasMeasurements = len(measurement) != 0
 				hasOnlyNonAdaptedMetrics = containsOnlyNonAdaptedMetrics(inputName, measurement)
 			}
 
