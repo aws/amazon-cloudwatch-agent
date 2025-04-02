@@ -29,6 +29,9 @@ const (
 	nvidia_smi_plugin_name   = "nvidia_smi"
 	Default_Unix_Smi_Path    = "/usr/bin/nvidia-smi"
 	Default_Windows_Smi_Path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
+
+	diskio_plugin_name = "diskio"
+	diskio_ebs_prefix  = "ebs_"
 )
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
@@ -58,7 +61,9 @@ func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string
 		}
 
 		if formatted_metricName := GetValidMetric(targetOs, pluginName, inputMetricName.(string)); formatted_metricName != "" {
-			returnVal = append(returnVal, formatted_metricName)
+			if !shouldFilterPluginSpecificMetrics(pluginName, formatted_metricName) {
+				returnVal = append(returnVal, formatted_metricName)
+			}
 		} else {
 			translator.AddErrorMessages(path, "measurement name "+inputMetricName.(string)+" is invalid")
 		}
@@ -196,6 +201,15 @@ func ApplyPluginSpecificRules(pluginName string) (map[string]interface{}, bool) 
 		return result, true
 	default:
 		return nil, false
+	}
+}
+
+func shouldFilterPluginSpecificMetrics(pluginName string, metricName string) bool {
+	switch pluginName {
+	case diskio_plugin_name:
+		return strings.HasPrefix(metricName, diskio_ebs_prefix)
+	default:
+		return false
 	}
 }
 
