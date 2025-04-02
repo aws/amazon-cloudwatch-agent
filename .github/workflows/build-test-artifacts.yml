@@ -59,7 +59,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   BuildDocker:
-    needs: [BuildAndUploadPackages]
+    needs: [BuildAndUpload]
     uses: ./.github/workflows/test-build-docker.yml
     secrets: inherit
     permissions:
@@ -106,12 +106,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartApplicationSignalsE2ETests:
-    needs: [BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker]
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    # Workflow only runs against main
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Application Signals E2E Tests
-        run: |
-          gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
+      - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

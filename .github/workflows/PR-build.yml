@@ -167,8 +167,20 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
 
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
   OutputEnvVariables:
-    needs: [ BuildAgent ]
+    needs: [ BuildAndUpload ]
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
@@ -243,17 +255,8 @@ jobs:
         run: |
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
 
-  BuildAgent:
-    uses: ./.github/workflows/build-test-artifacts.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      test-image-before-upload: false
-
   EC2LinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
     name: 'EC2LinuxTests'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
