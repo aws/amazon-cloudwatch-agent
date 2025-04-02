@@ -204,7 +204,6 @@ jobs:
 
 
   OutputEnvVariables:
-      needs: [ BuildAgent ]
       name: 'OutputEnvVariables'
       runs-on: ubuntu-latest
       outputs:
