@@ -24,13 +24,14 @@ func TestGetAllDevices(t *testing.T) {
 		{
 			name: "successful read with multiple devices",
 			mockDirEntries: []os.DirEntry{
-				mockDirEntry{name: "nvme0n1"},
-				mockDirEntry{name: "nvme1n1"},
-				mockDirEntry{name: "other-device"}, // Should be ignored
+				mockDirEntry{name: "nvme0n1", isDir: false},
+				mockDirEntry{name: "nvme1n1", isDir: false},
+				mockDirEntry{name: "other-device", isDir: false}, // Should be ignored
+				mockDirEntry{name: "nvme2", isDir: true},         // Should be ignored because it's a directory
 			},
 			expected: []DeviceFileAttributes{
-				{controller: 0, namespace: 1, partition: -1},
-				{controller: 1, namespace: 1, partition: -1},
+				{controller: 0, namespace: 1, partition: -1, deviceName: "nvme0n1"},
+				{controller: 1, namespace: 1, partition: -1, deviceName: "nvme1n1"},
 			},
 		},
 		{
@@ -41,11 +42,11 @@ func TestGetAllDevices(t *testing.T) {
 		{
 			name: "invalid device name format",
 			mockDirEntries: []os.DirEntry{
-				mockDirEntry{name: "nvmeinvalid"},
-				mockDirEntry{name: "nvme0n1"},
+				mockDirEntry{name: "nvmeinvalid", isDir: false},
+				mockDirEntry{name: "nvme0n1", isDir: false},
 			},
 			expected: []DeviceFileAttributes{
-				{controller: 0, namespace: 1, partition: -1},
+				{controller: 0, namespace: 1, partition: -1, deviceName: "nvme0n1"},
 			},
 		},
 	}
@@ -249,45 +250,10 @@ func TestIsEbsDevice(t *testing.T) {
 	}
 }
 
-func TestCleanupString(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "string with newline",
-			input:    "test string\n",
-			expected: "test string",
-		},
-		{
-			name:     "string with spaces",
-			input:    "  test string  ",
-			expected: "test string",
-		},
-		{
-			name:     "string with spaces and newline",
-			input:    "  test string  \n",
-			expected: "test string",
-		},
-		{
-			name:     "clean string",
-			input:    "test string",
-			expected: "test string",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := cleanupString(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 // Mock DirEntry implementation
 type mockDirEntry struct {
-	name string
+	name  string
+	isDir bool
 }
 
 func (m mockDirEntry) Name() string {
@@ -295,7 +261,7 @@ func (m mockDirEntry) Name() string {
 }
 
 func (m mockDirEntry) IsDir() bool {
-	return false
+	return m.isDir
 }
 
 func (m mockDirEntry) Type() os.FileMode {
@@ -304,4 +270,31 @@ func (m mockDirEntry) Type() os.FileMode {
 
 func (m mockDirEntry) Info() (os.FileInfo, error) {
 	return nil, nil
+}
+func TestDevicePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		device   string
+		expected string
+	}{
+		{
+			name:     "valid device",
+			device:   "nvme0n1",
+			expected: "/dev/nvme0n1",
+		},
+		{
+			name:     "empty device",
+			device:   "",
+			expected: "/dev",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			util := &Util{}
+			path, err := util.DevicePath(tt.device)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, path)
+		})
+	}
 }

@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/metadata"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
@@ -23,15 +24,14 @@ import (
 type nvmeScraper struct {
 	logger *zap.Logger
 	mb     *metadata.MetricsBuilder
-	nvme   nvme.UtilInterface
+	nvme   nvme.DeviceInfoProvider
 
-	allowedDevices map[string]struct{}
+	allowedDevices collections.Set[string]
 }
 
-type ebsDevice struct {
-	deviceName string
-	devicePath string
-	volumeID   string
+type ebsDevices struct {
+	volumeID    string
+	deviceNames []string
 }
 
 type recordDataMetricFunc func(pcommon.Timestamp, int64)
@@ -65,21 +65,26 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 		// success
 		foundWorkingDevice := false
 
-		for _, device := range ebsDevices {
+		for _, device := range ebsDevices.deviceNames {
 			if foundWorkingDevice {
 				break
 			}
 
-			metrics, err := getMetrics(device.devicePath)
+			devicePath, err := s.nvme.DevicePath(device)
 			if err != nil {
-				s.logger.Debug("unable to get metrics for device", zap.String("device", device.deviceName), zap.Error(err))
+				s.logger.Debug("unable to get device path", zap.String("device", device), zap.Error(err))
+				continue
+			}
+			metrics, err := getMetrics(devicePath)
+			if err != nil {
+				s.logger.Debug("unable to get metrics for device", zap.String("device", device), zap.Error(err))
 				continue
 			}
 
 			foundWorkingDevice = true
 
 			rb := s.mb.NewResourceBuilder()
-			rb.SetVolumeID(device.volumeID)
+			rb.SetVolumeID(ebsDevices.volumeID)
 
 			s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
 			s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
@@ -97,9 +102,9 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 		}
 
 		if foundWorkingDevice {
-			s.logger.Debug("emitted metrics for nvme device with controller id", zap.Int("controllerID", id))
+			s.logger.Debug("emitted metrics for nvme device with controller id", zap.Int("controllerID", id), zap.String("volumeID", ebsDevices.volumeID))
 		} else {
-			s.logger.Info("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id))
+			s.logger.Debug("unable to get metrics for nvme device with controller id", zap.Int("controllerID", id), zap.String("volumeID", ebsDevices.volumeID))
 		}
 	}
 
@@ -110,28 +115,32 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 // For example nvme0n1, nvme0n1p1 are all under the controller ID 0. The metrics
 // are the same based on the controller ID. We also do not want to duplicate metrics
 // so we group the devices by the controller ID.
-func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
+func (s *nvmeScraper) getEbsDevicesByController() (map[int]*ebsDevices, error) {
 	allNvmeDevices, err := s.nvme.GetAllDevices()
 	if err != nil {
 		return nil, err
 	}
 
-	devices := make(map[int][]ebsDevice)
+	devices := make(map[int]*ebsDevices)
 
 	for _, device := range allNvmeDevices {
-		deviceName, err := device.DeviceName()
-		if err != nil {
-			s.logger.Debug("unable to get device name", zap.Int("controllerID", device.Controller()), zap.Error(err))
-			continue
-		}
+		deviceName := device.DeviceName()
 
 		// Check if all devices should be collected. Otherwise check if defined by user
-		_, hasAsterisk := s.allowedDevices["*"]
+		hasAsterisk := s.allowedDevices.Contains("*")
 		if !hasAsterisk {
-			if _, isAllowed := s.allowedDevices[deviceName]; !isAllowed {
+			if isAllowed := s.allowedDevices.Contains(deviceName); !isAllowed {
 				s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
 				continue
 			}
+		}
+
+		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
+		// retrieving the volume ID and validating if it's an EBS device
+		if entry, seenController := devices[device.Controller()]; seenController {
+			entry.deviceNames = append(entry.deviceNames, deviceName)
+			s.logger.Debug("skipping unnecessary device validation steps", zap.String("device", deviceName))
+			continue
 		}
 
 		isEbs, err := s.nvme.IsEbsDevice(&device)
@@ -152,11 +161,10 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 			continue
 		}
 
-		devices[device.Controller()] = append(devices[device.Controller()], ebsDevice{
-			deviceName: deviceName,
-			devicePath: fmt.Sprintf("%s/%s", nvme.DevDirectoryPath, deviceName),
-			volumeID:   fmt.Sprintf("vol-%s", serial[3:]),
-		})
+		devices[device.Controller()] = &ebsDevices{
+			deviceNames: []string{deviceName},
+			volumeID:    fmt.Sprintf("vol-%s", serial[3:]),
+		}
 	}
 
 	return devices, nil
@@ -164,8 +172,8 @@ func (s *nvmeScraper) getEbsDevicesByController() (map[int][]ebsDevice, error) {
 
 func newScraper(cfg *Config,
 	settings receiver.Settings,
-	nvme nvme.UtilInterface,
-	allowedDevices map[string]struct{},
+	nvme nvme.DeviceInfoProvider,
+	allowedDevices collections.Set[string],
 ) *nvmeScraper {
 	return &nvmeScraper{
 		logger:         settings.TelemetrySettings.Logger,

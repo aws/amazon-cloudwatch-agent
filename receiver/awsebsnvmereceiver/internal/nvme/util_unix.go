@@ -8,6 +8,7 @@ package nvme
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,14 +17,14 @@ var osReadFile = os.ReadFile
 var osReadDir = os.ReadDir
 
 func (u *Util) GetAllDevices() ([]DeviceFileAttributes, error) {
-	entries, err := osReadDir(DevDirectoryPath)
+	entries, err := osReadDir(devDirectoryPath)
 	if err != nil {
 		return nil, err
 	}
 
 	devices := []DeviceFileAttributes{}
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), NvmeDevicePrefix) {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), nvmeDevicePrefix) {
 			device, err := ParseNvmeDeviceFileName(entry.Name())
 			if err == nil {
 				devices = append(devices, device)
@@ -39,11 +40,11 @@ func (u *Util) GetDeviceSerial(device *DeviceFileAttributes) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := osReadFile(fmt.Sprintf("%s/%s/serial", NvmeSysDirectoryPath, deviceName))
+	data, err := osReadFile(fmt.Sprintf("%s/%s/serial", nvmeSysDirectoryPath, deviceName))
 	if err != nil {
 		return "", err
 	}
-	return cleanupString(string(data)), nil
+	return strings.TrimSpace(string(data)), nil
 }
 
 func (u *Util) GetDeviceModel(device *DeviceFileAttributes) (string, error) {
@@ -51,11 +52,11 @@ func (u *Util) GetDeviceModel(device *DeviceFileAttributes) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := osReadFile(fmt.Sprintf("%s/%s/model", NvmeSysDirectoryPath, deviceName))
+	data, err := osReadFile(fmt.Sprintf("%s/%s/model", nvmeSysDirectoryPath, deviceName))
 	if err != nil {
 		return "", err
 	}
-	return cleanupString(string(data)), nil
+	return strings.TrimSpace(string(data)), nil
 }
 
 func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
@@ -63,10 +64,9 @@ func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return model == EbsNvmeModelName, nil
+	return model == ebsNvmeModelName, nil
 }
 
-func cleanupString(input string) string {
-	// Some device info strings use fixed-width padding and/or end with a new line
-	return strings.TrimSpace(strings.TrimSuffix(input, "\n"))
+func (u *Util) DevicePath(device string) (string, error) {
+	return filepath.Join(devDirectoryPath, device), nil
 }

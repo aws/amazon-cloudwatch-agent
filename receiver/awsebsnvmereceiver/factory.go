@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
 	otelscraper "go.opentelemetry.io/collector/scraper"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/metadata"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
@@ -37,7 +38,7 @@ func createMetricsReceiver(
 	consumer consumer.Metrics,
 ) (receiver.Metrics, error) {
 	cfg := baseCfg.(*Config)
-	nvmeScraper := newScraper(cfg, settings, &nvme.Util{}, arrayToSet(cfg.Devices))
+	nvmeScraper := newScraper(cfg, settings, &nvme.Util{}, collections.NewSet[string](cfg.Devices...))
 	scraper, err := otelscraper.NewMetrics(nvmeScraper.scrape, otelscraper.WithStart(nvmeScraper.start), otelscraper.WithShutdown(nvmeScraper.shutdown))
 	if err != nil {
 		return nil, err
@@ -47,12 +48,4 @@ func createMetricsReceiver(
 		&cfg.ControllerConfig, settings, consumer,
 		scraperhelper.AddScraper(metadata.Type, scraper),
 	)
-}
-
-func arrayToSet(arr []string) map[string]struct{} {
-	set := make(map[string]struct{})
-	for _, item := range arr {
-		set[item] = struct{}{}
-	}
-	return set
 }

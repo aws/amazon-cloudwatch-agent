@@ -13,51 +13,6 @@ import (
 	"go.opentelemetry.io/collector/receiver/receivertest"
 )
 
-func TestArrayToSet(t *testing.T) {
-	testCases := []struct {
-		name     string
-		input    []string
-		expected map[string]struct{}
-	}{
-		{
-			name:     "empty array",
-			input:    []string{},
-			expected: map[string]struct{}{},
-		},
-		{
-			name:  "single item",
-			input: []string{"nvme0n1"},
-			expected: map[string]struct{}{
-				"nvme0n1": {},
-			},
-		},
-		{
-			name:  "multiple items",
-			input: []string{"nvme0n1", "nvme1n1", "nvme2n1"},
-			expected: map[string]struct{}{
-				"nvme0n1": {},
-				"nvme1n1": {},
-				"nvme2n1": {},
-			},
-		},
-		{
-			name:  "duplicate items",
-			input: []string{"nvme0n1", "nvme0n1", "nvme1n1"},
-			expected: map[string]struct{}{
-				"nvme0n1": {},
-				"nvme1n1": {},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := arrayToSet(tc.input)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
 func TestCreateDefaultConfig(t *testing.T) {
 	config := createDefaultConfig().(*Config)
 	assert.NotNil(t, config)

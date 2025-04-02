@@ -307,7 +307,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"rollup", "batch/host/amp"},
+				processors: []string{"rollup", "batch/host/amp", "deltatocumulative/host/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -322,7 +322,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"batch/host/amp"},
+				processors: []string{"batch/host/amp", "deltatocumulative/host/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},

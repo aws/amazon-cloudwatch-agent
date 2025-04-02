@@ -19,10 +19,11 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver/internal/nvme"
 )
 
-// mockNvmeUtil is a mock implementation of the NvmeUtilInterface
+// mockNvmeUtil is a mock implementation of the DeviceInfoProvider
 type mockNvmeUtil struct {
 	mock.Mock
 }
@@ -45,6 +46,11 @@ func (m *mockNvmeUtil) GetDeviceModel(device *nvme.DeviceFileAttributes) (string
 func (m *mockNvmeUtil) IsEbsDevice(device *nvme.DeviceFileAttributes) (bool, error) {
 	args := m.Called(device)
 	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockNvmeUtil) DevicePath(device string) (string, error) {
+	args := m.Called(device)
+	return args.String(0), args.Error(1)
 }
 
 // mockGetMetrics is a mock function for nvme.GetMetrics
@@ -72,7 +78,7 @@ func mockGetMetricsError(_ string) (nvme.EBSMetrics, error) {
 
 func TestScraper_Start(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	err := scraper.start(context.Background(), componenttest.NewNopHost())
 	assert.NoError(t, err)
@@ -80,7 +86,7 @@ func TestScraper_Start(t *testing.T) {
 
 func TestScraper_Shutdown(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	err := scraper.shutdown(context.Background())
 	assert.NoError(t, err)
@@ -90,7 +96,7 @@ func TestScraper_Scrape_NoDevices(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -103,7 +109,7 @@ func TestScraper_Scrape_GetAllDevicesError(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, errors.New("failed to get devices"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
 
 	_, err := scraper.scrape(context.Background())
 	assert.Error(t, err)
@@ -125,9 +131,10 @@ func TestScraper_Scrape_Success(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
+	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
 	// Allow all devices with empty map
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -166,7 +173,7 @@ func TestScraper_Scrape_NonEbsDevice(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -183,7 +190,7 @@ func TestScraper_Scrape_IsEbsDeviceError(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, errors.New("failed to check device"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -201,7 +208,7 @@ func TestScraper_Scrape_GetDeviceSerialError(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("", errors.New("failed to get serial"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -219,7 +226,7 @@ func TestScraper_Scrape_InvalidSerialPrefix(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("invalid-serial", nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -241,23 +248,29 @@ func TestScraper_Scrape_GetMetricsError(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
+	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
 	// Create a test logger to capture log messages
-	core, observedLogs := observer.New(zapcore.InfoLevel)
+	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
 	settings := receivertest.NewNopSettings()
 	settings.TelemetrySettings.Logger = logger
 
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
 
-	// Verify log message
-	assert.Equal(t, 1, observedLogs.Len())
-	assert.Contains(t, observedLogs.All()[0].Message, "unable to get metrics for nvme device with controller id")
+	foundLogMessage := false
+	for _, log := range observedLogs.All() {
+		if log.Message == "unable to get metrics for device" {
+			foundLogMessage = true
+			break
+		}
+	}
+	assert.True(t, foundLogMessage, "Expected to find log about unable to get metrics")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -268,7 +281,6 @@ func TestScraper_Scrape_MultipleDevices(t *testing.T) {
 	})
 	getMetrics = mockGetMetrics
 
-	// Create device attributes
 	device1, err := nvme.ParseNvmeDeviceFileName("nvme0n1")
 	require.NoError(t, err)
 
@@ -279,10 +291,12 @@ func TestScraper_Scrape_MultipleDevices(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1, device2}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
+	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 	mockUtil.On("IsEbsDevice", &device2).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device2).Return("vol0987654321fedcba", nil)
+	mockUtil.On("DevicePath", "nvme1n1").Return("/dev/nvme1n1", nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -298,7 +312,6 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	})
 	getMetrics = mockGetMetrics
 
-	// Create device attributes with specific device names
 	device1, err := nvme.ParseNvmeDeviceFileName("nvme0n1")
 	require.NoError(t, err)
 
@@ -310,6 +323,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol0987654321fedcba", nil)
+	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
@@ -317,8 +331,8 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	settings := receivertest.NewNopSettings()
 	settings.TelemetrySettings.Logger = logger
 
-	// Only allow nvme1n1
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, map[string]struct{}{"nvme0n1": {}})
+	// Only allow nvme0n1
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("nvme0n1"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -326,7 +340,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	// We should get one set of metrics because of nvme0n1
 	assert.Equal(t, 1, metrics.ResourceMetrics().Len())
 
-	// Verify that we logged about skipping nvme0n1
+	// Verify that we logged about skipping nvme1n1
 	foundSkipLog := false
 	for _, log := range observedLogs.All() {
 		if log.Message == "skipping un-allowed device" && log.ContextMap()["device"] == "nvme1n1" {
@@ -345,7 +359,6 @@ func TestScraper_Scrape_MultipleDevicesSameController(t *testing.T) {
 	})
 	getMetrics = mockGetMetrics
 
-	// Create device attributes for same controller (nvme0)
 	device1, err := nvme.ParseNvmeDeviceFileName("nvme0n1")
 	require.NoError(t, err)
 
@@ -356,16 +369,31 @@ func TestScraper_Scrape_MultipleDevicesSameController(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1, device2}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
-	mockUtil.On("IsEbsDevice", &device2).Return(true, nil)
-	mockUtil.On("GetDeviceSerial", &device2).Return("vol1234567890abcdef", nil)
+	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, map[string]struct{}{"*": {}})
+	core, observedLogs := observer.New(zapcore.DebugLevel)
+	logger := zap.New(core)
+
+	settings := receivertest.NewNopSettings()
+	settings.TelemetrySettings.Logger = logger
+
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 
 	// Should only get one set of metrics for the controller
 	assert.Equal(t, 1, metrics.ResourceMetrics().Len())
+
+	// Verify that we logged about skipping unnecessary validation for the second device
+	foundSkipLog := false
+	for _, log := range observedLogs.All() {
+		if log.Message == "skipping unnecessary device validation steps" && log.ContextMap()["device"] == "nvme0n1p1" {
+			foundSkipLog = true
+			break
+		}
+	}
+	assert.True(t, foundSkipLog, "Expected to find log about skipping unnecessary device validation steps")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -390,6 +418,42 @@ func verifyGaugeMetric(t *testing.T, metrics pmetric.MetricSlice, name string, e
 		}
 	}
 	t.Errorf("Metric %s not found", name)
+}
+
+// Test for the device path error case
+func TestScraper_Scrape_DevicePathError(t *testing.T) {
+	device1, err := nvme.ParseNvmeDeviceFileName("nvme0n1")
+	require.NoError(t, err)
+
+	mockUtil := new(mockNvmeUtil)
+	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
+	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
+	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
+	mockUtil.On("DevicePath", "nvme0n1").Return("", errors.New("device path error"))
+
+	core, observedLogs := observer.New(zapcore.DebugLevel)
+	logger := zap.New(core)
+
+	settings := receivertest.NewNopSettings()
+	settings.TelemetrySettings.Logger = logger
+
+	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+
+	metrics, err := scraper.scrape(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
+
+	// Verify log message about device path error
+	foundLogMessage := false
+	for _, log := range observedLogs.All() {
+		if log.Message == "unable to get device path" {
+			foundLogMessage = true
+			break
+		}
+	}
+	assert.True(t, foundLogMessage, "Expected to find log about unable to get device path")
+
+	mockUtil.AssertExpectations(t)
 }
 
 func createTestReceiverConfig() *Config {

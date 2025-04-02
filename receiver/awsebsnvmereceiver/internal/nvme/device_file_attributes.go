@@ -12,6 +12,7 @@ type DeviceFileAttributes struct {
 	controller int
 	namespace  int
 	partition  int
+	deviceName string
 }
 
 func ParseNvmeDeviceFileName(device string) (DeviceFileAttributes, error) {
@@ -19,16 +20,17 @@ func ParseNvmeDeviceFileName(device string) (DeviceFileAttributes, error) {
 	namespace := -1
 	partition := -1
 
-	fmt.Sscanf(device, "nvme%dn%dp%d", &controller, &namespace, &partition)
+	_, _ = fmt.Sscanf(device, "nvme%dn%dp%d", &controller, &namespace, &partition)
 
 	if controller == -1 {
-		return DeviceFileAttributes{}, errors.New("unable to parse device name")
+		return DeviceFileAttributes{deviceName: device}, errors.New("unable to parse device name")
 	}
 
 	return DeviceFileAttributes{
 		controller: controller,
 		namespace:  namespace,
 		partition:  partition,
+		deviceName: device,
 	}, nil
 }
 
@@ -52,16 +54,6 @@ func (n *DeviceFileAttributes) BaseDeviceName() (string, error) {
 	return fmt.Sprintf("nvme%d", n.Controller()), nil
 }
 
-func (n *DeviceFileAttributes) DeviceName() (string, error) {
-	hasNamespace := n.Namespace() != -1
-	hasPartition := n.Partition() != -1
-
-	if hasNamespace && hasPartition {
-		return fmt.Sprintf("nvme%dn%dp%d", n.Controller(), n.Namespace(), n.Partition()), nil
-	} else if hasNamespace {
-		return fmt.Sprintf("nvme%dn%d", n.Controller(), n.Namespace()), nil
-	}
-
-	// Fall back to BaseDeviceName if only the controller ID exists
-	return n.BaseDeviceName()
+func (n *DeviceFileAttributes) DeviceName() string {
+	return n.deviceName
 }
