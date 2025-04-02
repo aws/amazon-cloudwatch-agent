@@ -241,7 +241,7 @@ jobs:
       - name: Generate matrix
         id: set-matrix
         run: |
-          go run generator/test_case_generator.go -e2e
+          go run --tags=generator generator/test_case_generator.go
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 
       - name: Echo test plan matrix
@@ -259,7 +259,7 @@ jobs:
 
 
   EC2LinuxIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2Linux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
