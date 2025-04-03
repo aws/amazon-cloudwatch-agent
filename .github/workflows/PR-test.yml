@@ -116,7 +116,7 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          # Convert the output to valid JSON and filter out metric_value_benchmark tests
+          # Convert the output to valid JSON and filter out metric_value_benchmark tests - below 2 lines will be removed once MVB test is fixed.
           jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_linux_complete_test_matrix.json > filtered_matrix.json
           # Escape the JSON for GitHub Actions
           MATRIX=$(jq -c -r '@json' filtered_matrix.json)
