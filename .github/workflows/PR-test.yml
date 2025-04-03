@@ -12,8 +12,6 @@ env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-
-
 on:
   workflow_dispatch:
   pull_request:
