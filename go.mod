@@ -181,6 +181,7 @@ require (
 	go.opentelemetry.io/collector/exporter/nopexporter v0.115.0
 	go.opentelemetry.io/collector/extension v0.115.0
 	go.opentelemetry.io/collector/extension/zpagesextension v0.115.0
+	go.opentelemetry.io/collector/filter v0.115.0
 	go.opentelemetry.io/collector/otelcol v0.115.0
 	go.opentelemetry.io/collector/processor v0.115.0
 	go.opentelemetry.io/collector/processor/batchprocessor v0.115.0
@@ -211,6 +212,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.115.0
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.115.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
@@ -223,6 +225,7 @@ require (
 	go.opentelemetry.io/collector/processor/processortest v0.115.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.115.0
 	go.opentelemetry.io/collector/scraper v0.115.0
+	go.uber.org/goleak v1.3.0
 )
 
 require (
@@ -425,6 +428,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.115.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/exp/metrics v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig v0.115.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kafka v0.115.0 // indirect
