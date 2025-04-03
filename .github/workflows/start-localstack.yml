@@ -89,20 +89,3 @@ jobs:
       - name: Verify LocalStack
         run: |
           curl -v http://${{ steps.localstack.outputs.local_stack_host_name }}:4566
-          
-
-      - name: Debug LocalStack connection
-        run: |
-          echo "LocalStack host: ${{ inputs.localstack_host }}"
-          curl -v http://${{ inputs.localstack_host }}:4566
-          nc -zv ${{ inputs.localstack_host }} 4566
-          
-
-      - name: Get LocalStack logs
-        run: |
-          aws ec2 get-console-output --instance-id $(terraform output -raw instance_id) --region ${{ inputs.region }}
-          
-
-      - name: Check EC2 networking
-        run: |
-          ssh -i ${{ env.PRIVATE_KEY }} ec2-user@$(terraform output -raw public_ip) "ifconfig; route -n; cat /etc/resolv.conf"
