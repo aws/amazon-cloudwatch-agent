@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
@@ -94,7 +95,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultPrometheusConfig
 	}
 
-	if isOTLP(c) {
+	if strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		cfg.AddEntity = true
 	}
 
