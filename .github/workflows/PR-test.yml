@@ -116,8 +116,11 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          jq '[.[] | select(.testDir != "./test/metric_value_benchmark")]' generator/resources/ec2_linux_complete_test_matrix.json > filtered_matrix.json
-          echo "ec2_linux_matrix=$(cat filtered_matrix.json)" >> "$GITHUB_OUTPUT"
+          # Convert the output to valid JSON and filter out metric_value_benchmark tests
+          jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_linux_complete_test_matrix.json > filtered_matrix.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix.json)
+          echo "ec2_linux_matrix=$MATRIX" >> $GITHUB_OUTPUT
 
       - name: Echo test plan matrix
         run: |
