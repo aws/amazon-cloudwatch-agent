@@ -186,6 +186,8 @@ func setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 }
 
 func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	cfg.AddEntity = true
+
 	setDisableMetricExtraction(kubernetesBasePathKey, conf, cfg)
 
 	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {
@@ -194,7 +196,6 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 
 	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
 		cfg.EnhancedContainerInsights = true
-		cfg.AddEntity = true
 	}
 
 	return nil
