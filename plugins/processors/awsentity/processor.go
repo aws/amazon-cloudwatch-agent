@@ -131,7 +131,14 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 		resourceAttrs := rm.At(i).Resource().Attributes()
 		switch p.config.EntityType {
 		case entityattributes.Resource:
-			if p.config.Platform == config.ModeEC2 {
+			if p.config.KubernetesMode != "" {
+				switch p.config.KubernetesMode {
+				case config.ModeEKS:
+					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityEKSPlatform)
+				default:
+					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityK8sPlatform)
+				}
+			} else if p.config.Platform == config.ModeEC2 {
 				// ec2tagger processor may have picked up the ASG name from an ec2:DescribeTags call
 				if getAutoScalingGroupFromEntityStore() == EMPTY && p.config.ScrapeDatapointAttribute {
 					if autoScalingGroup := p.scrapeResourceEntityAttribute(rm.At(i).ScopeMetrics()); autoScalingGroup != EMPTY {
@@ -145,14 +152,6 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.GetInstanceID())
 				}
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
-			}
-			if p.config.KubernetesMode != "" {
-				switch p.config.KubernetesMode {
-				case config.ModeEKS:
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityEKSPlatform)
-				default:
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityK8sPlatform)
-				}
 			}
 		case entityattributes.Service:
 			if logGroupNamesAttr, ok := resourceAttrs.Get(attributeAwsLogGroupNames); ok {

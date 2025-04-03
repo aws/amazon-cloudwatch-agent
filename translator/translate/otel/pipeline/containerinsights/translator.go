@@ -64,7 +64,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	processors := common.NewTranslatorMap(
 		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
 		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
-		awsentity.NewTranslatorWithEntityType(awsentity.Resource, common.PipelineNameContainerInsights, false),
 	)
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
@@ -78,6 +77,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	switch t.pipelineName {
 	case ciPipelineName:
+		if conf.IsSet(eksKey) {
+			processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Resource, common.PipelineNameContainerInsights, false))
+		}
 		// add aws container insights receiver
 		receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator())
 		// Append the metricstransformprocessor only if enhanced container insights is enabled
