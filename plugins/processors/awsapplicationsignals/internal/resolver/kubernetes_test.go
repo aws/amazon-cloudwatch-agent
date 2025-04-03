@@ -6,10 +6,11 @@ package resolver
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
