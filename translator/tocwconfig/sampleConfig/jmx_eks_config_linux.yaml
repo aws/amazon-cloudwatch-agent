@@ -92,6 +92,12 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
+    deltatocumulative/jmx/amp/0:
+        max_stale: 336h0m0s
+        max_streams: 9223372036854775807
+    deltatocumulative/jmx/amp/1:
+        max_stale: 336h0m0s
+        max_streams: 9223372036854775807
     filter/jmx/0:
         error_mode: propagate
         logs: {}
@@ -240,6 +246,7 @@ service:
                 - transform/jmx/drop
                 - transform/jmx/0
                 - batch/jmx/amp/0
+                - deltatocumulative/jmx/amp/0
             receivers:
                 - otlp/jmx
         metrics/jmx/amp/1:
@@ -252,6 +259,7 @@ service:
                 - transform/jmx/drop
                 - transform/jmx/1
                 - batch/jmx/amp/1
+                - deltatocumulative/jmx/amp/1
             receivers:
                 - otlp/jmx
         metrics/jmx/cloudwatch/0:
