@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type serviceToWorkloadMapper struct {
+type ServiceToWorkloadMapper struct {
 	serviceAndNamespaceToSelectors *sync.Map
 	workloadAndNamespaceToLabels   *sync.Map
 	serviceToWorkload              *sync.Map
@@ -19,8 +19,8 @@ type serviceToWorkloadMapper struct {
 	deleter                        Deleter
 }
 
-func NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload *sync.Map, logger *zap.Logger, deleter Deleter) *serviceToWorkloadMapper {
-	return &serviceToWorkloadMapper{
+func NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload *sync.Map, logger *zap.Logger, deleter Deleter) *ServiceToWorkloadMapper {
+	return &ServiceToWorkloadMapper{
 		serviceAndNamespaceToSelectors: serviceAndNamespaceToSelectors,
 		workloadAndNamespaceToLabels:   workloadAndNamespaceToLabels,
 		serviceToWorkload:              serviceToWorkload,
@@ -29,7 +29,7 @@ func NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNames
 	}
 }
 
-func (m *serviceToWorkloadMapper) mapServiceToWorkload() {
+func (m *ServiceToWorkloadMapper) mapServiceToWorkload() {
 	m.logger.Debug("Map service to workload at:", zap.Time("time", time.Now()))
 
 	m.serviceAndNamespaceToSelectors.Range(func(key, value interface{}) bool {
@@ -62,7 +62,7 @@ func (m *serviceToWorkloadMapper) mapServiceToWorkload() {
 	})
 }
 
-func (m *serviceToWorkloadMapper) Start(stopCh chan struct{}) {
+func (m *ServiceToWorkloadMapper) Start(stopCh chan struct{}) {
 	// do the first mapping immediately
 	m.mapServiceToWorkload()
 	m.logger.Debug("First-time map service to workload at:", zap.Time("time", time.Now()))
