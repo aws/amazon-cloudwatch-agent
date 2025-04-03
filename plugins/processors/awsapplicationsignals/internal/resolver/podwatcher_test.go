@@ -12,6 +12,8 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 )
 
 func newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels *sync.Map, workloadPodCount map[string]int) *podWatcher {
@@ -466,7 +468,7 @@ func TestFilterPodIPFields(t *testing.T) {
 	}
 	newPod, err := minimizePod(pod)
 	assert.Nil(t, err)
-	assert.Empty(t, getHostNetworkPorts(newPod.(*corev1.Pod)))
+	assert.Empty(t, k8sclient.GetHostNetworkPorts(newPod.(*corev1.Pod)))
 
 	podStatus := corev1.PodStatus{
 		PodIP: "192.168.0.12",
@@ -493,7 +495,7 @@ func TestFilterPodIPFields(t *testing.T) {
 	newPod, err = minimizePod(pod)
 	assert.Nil(t, err)
 	assert.Equal(t, "app", newPod.(*corev1.Pod).Labels["name"])
-	assert.Equal(t, []string{"8080"}, getHostNetworkPorts(newPod.(*corev1.Pod)))
+	assert.Equal(t, []string{"8080"}, k8sclient.GetHostNetworkPorts(newPod.(*corev1.Pod)))
 	assert.Equal(t, podStatus, newPod.(*corev1.Pod).Status)
 
 	pod = &corev1.Pod{
@@ -512,6 +514,6 @@ func TestFilterPodIPFields(t *testing.T) {
 	}
 	newPod, err = minimizePod(pod)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"8080", "8081"}, getHostNetworkPorts(newPod.(*corev1.Pod)))
+	assert.Equal(t, []string{"8080", "8081"}, k8sclient.GetHostNetworkPorts(newPod.(*corev1.Pod)))
 	assert.Equal(t, podStatus, newPod.(*corev1.Pod).Status)
 }

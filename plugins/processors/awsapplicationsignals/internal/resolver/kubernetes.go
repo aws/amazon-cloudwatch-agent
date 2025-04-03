@@ -19,6 +19,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
@@ -49,6 +51,10 @@ type kubernetesResolver struct {
 	clientset    kubernetes.Interface
 	clusterName  string
 	platformCode string
+
+	// If using the extension, no mappings wil be needed
+	useExtension bool
+
 	// if ListPod api is used, the following maps are needed
 	ipToPod                      *sync.Map
 	podToWorkloadAndNamespace    *sync.Map
@@ -67,7 +73,7 @@ type kubernetesResolver struct {
 	// if ListEndpointSlice is used, we can get serviceToWorkload directly from endpointSlice watcher
 	serviceToWorkload *sync.Map //
 
-	safeStopCh *safeChannel // trace and metric processors share the same kubernetesResolver and might close the same channel separately
+	safeStopCh *k8sclient.SafeChannel // trace and metric processors share the same kubernetesResolver and might close the same channel separately
 	useListPod bool
 }
 
@@ -83,47 +89,50 @@ func jitterSleep(seconds int) {
 
 func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger) subResolver {
 	once.Do(func() {
-		config, err := clientcmd.BuildConfigFromFlags("", "")
-		if err != nil {
-			logger.Fatal("Failed to create config", zap.Error(err))
-		}
-
-		clientset, err := kubernetes.NewForConfig(config)
-		if err != nil {
-			logger.Fatal("Failed to create kubernetes client", zap.Error(err))
-		}
-
-		// jitter calls to the kubernetes api
-		jitterSleep(jitterKubernetesAPISeconds)
-
+		// Check environment for "list pods" approach
 		useListPod := (os.Getenv(appSignalsUseListPod) == "true")
 
 		if useListPod {
+			logger.Info("APP_SIGNALS_USE_LIST_POD=true; setting up Pod & Service watchers, ignoring extension")
+
+			cfg, err := clientcmd.BuildConfigFromFlags("", "")
+			if err != nil {
+				logger.Fatal("Failed to create config", zap.Error(err))
+			}
+
+			clientset, err := kubernetes.NewForConfig(cfg)
+			if err != nil {
+				logger.Fatal("Failed to create kubernetes client", zap.Error(err))
+			}
+
+			jitterSleep(jitterKubernetesAPISeconds)
+
 			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-			timedDeleter := &TimedDeleter{Delay: deletionDelay}
+			timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
 
 			poWatcher := newPodWatcher(logger, sharedInformerFactory, timedDeleter)
-			svcWatcher := newServiceWatcher(logger, sharedInformerFactory, timedDeleter)
+			svcWatcher := k8sclient.NewServiceWatcher(logger, sharedInformerFactory, timedDeleter)
 
-			safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
+			safeStopCh := &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false}
 			// initialize the pod and service watchers for the cluster
-			poWatcher.run(safeStopCh.ch)
-			svcWatcher.Run(safeStopCh.ch)
+			poWatcher.run(safeStopCh.Ch)
+			svcWatcher.Run(safeStopCh.Ch)
 			// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
-			poWatcher.waitForCacheSync(safeStopCh.ch)
-			svcWatcher.waitForCacheSync(safeStopCh.ch)
+			poWatcher.waitForCacheSync(safeStopCh.Ch)
+			svcWatcher.WaitForCacheSync(safeStopCh.Ch)
 
 			serviceToWorkload := &sync.Map{}
-			svcToWorkloadMapper := newServiceToWorkloadMapper(svcWatcher.serviceAndNamespaceToSelectors, poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
-			svcToWorkloadMapper.Start(safeStopCh.ch)
+			svcToWorkloadMapper := k8sclient.NewServiceToWorkloadMapper(svcWatcher.ServiceAndNamespaceToSelectors, poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
+			svcToWorkloadMapper.Start(safeStopCh.Ch)
 
 			instance = &kubernetesResolver{
 				logger:                         logger,
 				clientset:                      clientset,
 				clusterName:                    clusterName,
 				platformCode:                   platformCode,
-				ipToServiceAndNamespace:        svcWatcher.ipToServiceAndNamespace,
-				serviceAndNamespaceToSelectors: svcWatcher.serviceAndNamespaceToSelectors,
+				useExtension:                   false,
+				ipToServiceAndNamespace:        svcWatcher.IPToServiceAndNamespace,
+				serviceAndNamespaceToSelectors: svcWatcher.ServiceAndNamespaceToSelectors,
 				ipToPod:                        poWatcher.ipToPod,
 				podToWorkloadAndNamespace:      poWatcher.podToWorkloadAndNamespace,
 				workloadAndNamespaceToLabels:   poWatcher.workloadAndNamespaceToLabels,
@@ -131,39 +140,69 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 				workloadPodCount:               poWatcher.workloadPodCount,
 				ipToWorkloadAndNamespace:       nil,
 				safeStopCh:                     safeStopCh,
-				useListPod:                     useListPod,
+				useListPod:                     true,
 			}
-		} else {
-			sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-			timedDeleter := &TimedDeleter{Delay: deletionDelay}
+			return
+		}
 
-			svcWatcher := newServiceWatcher(logger, sharedInformerFactory, timedDeleter)
-			endptSliceWatcher := newEndpointSliceWatcher(logger, sharedInformerFactory, timedDeleter)
-
-			safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
-			// initialize the pod and service watchers for the cluster
-			svcWatcher.Run(safeStopCh.ch)
-			endptSliceWatcher.Run(safeStopCh.ch)
-			// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
-			svcWatcher.waitForCacheSync(safeStopCh.ch)
-			endptSliceWatcher.waitForCacheSync(safeStopCh.ch)
+		// 2) If not using listPod, check if extension is present
+		ext := k8smetadata.GetKubernetesMetadata()
+		if ext != nil {
+			// We skip all watchers (the extension has them).
+			logger.Info("k8smetadata extension is present")
 
 			instance = &kubernetesResolver{
-				logger:                       logger,
-				clientset:                    clientset,
-				clusterName:                  clusterName,
-				platformCode:                 platformCode,
-				ipToWorkloadAndNamespace:     endptSliceWatcher.ipToWorkload, // endpointSlice provides pod IP → workload mapping
-				ipToPod:                      nil,
-				podToWorkloadAndNamespace:    nil,
-				workloadAndNamespaceToLabels: nil,
-				workloadPodCount:             nil,
-				ipToServiceAndNamespace:      svcWatcher.ipToServiceAndNamespace,
-				serviceToWorkload:            endptSliceWatcher.serviceToWorkload, // endpointSlice also provides service → workload mapping
-				safeStopCh:                   safeStopCh,
-				useListPod:                   useListPod,
+				logger:       logger,
+				clusterName:  clusterName,
+				platformCode: platformCode,
+				useExtension: true,
 			}
+			return
+		}
 
+		// 3) Extension is not present, and useListPod is false -> EndpointSlice approach
+		logger.Info("k8smetadata extension not found; setting up EndpointSlice watchers")
+
+		cfg, err := clientcmd.BuildConfigFromFlags("", "")
+		if err != nil {
+			logger.Fatal("Failed to create config", zap.Error(err))
+		}
+
+		clientset, err := kubernetes.NewForConfig(cfg)
+		if err != nil {
+			logger.Fatal("Failed to create kubernetes client", zap.Error(err))
+		}
+
+		jitterSleep(jitterKubernetesAPISeconds)
+
+		sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
+		timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
+
+		svcWatcher := k8sclient.NewServiceWatcher(logger, sharedInformerFactory, timedDeleter)
+		endptSliceWatcher := k8sclient.NewEndpointSliceWatcher(logger, sharedInformerFactory, timedDeleter)
+
+		safeStopCh := &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false}
+		// initialize the pod and service watchers for the cluster
+		svcWatcher.Run(safeStopCh.Ch)
+		endptSliceWatcher.Run(safeStopCh.Ch)
+		// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
+		svcWatcher.WaitForCacheSync(safeStopCh.Ch)
+		endptSliceWatcher.WaitForCacheSync(safeStopCh.Ch)
+
+		instance = &kubernetesResolver{
+			logger:                       logger,
+			clientset:                    clientset,
+			clusterName:                  clusterName,
+			platformCode:                 platformCode,
+			ipToWorkloadAndNamespace:     endptSliceWatcher.IPToPodMetadata, // endpointSlice provides pod IP → PodMetadata mapping
+			ipToPod:                      nil,
+			podToWorkloadAndNamespace:    nil,
+			workloadAndNamespaceToLabels: nil,
+			workloadPodCount:             nil,
+			ipToServiceAndNamespace:      svcWatcher.IPToServiceAndNamespace,
+			serviceToWorkload:            endptSliceWatcher.ServiceToPodMetadata, // endpointSlice also provides service → PodMetadata mapping
+			safeStopCh:                   safeStopCh,
+			useListPod:                   useListPod,
 		}
 	})
 
@@ -177,30 +216,61 @@ func (e *kubernetesResolver) Stop(_ context.Context) error {
 
 // add a method to kubernetesResolver
 func (e *kubernetesResolver) getWorkloadAndNamespaceByIP(ip string) (string, string, error) {
-	var workload, namespace string
+	// If extension is available, rely on that
+	if e.useExtension {
+		ext := k8smetadata.GetKubernetesMetadata()
+		if ext == nil {
+			return "", "", errors.New("extension not found (unexpected)")
+		}
+		pm := ext.GetPodMetadataFromPodIP(ip)
+		if pm.Workload != "" {
+			return pm.Workload, pm.Namespace, nil
+		}
 
+		if svcKeyVal := ext.GetServiceAndNamespaceFromClusterIP(ip); svcKeyVal != "" {
+			sm := ext.GetPodMetadataFromServiceAndNamespace(svcKeyVal)
+			if sm.Workload != "" {
+				return sm.Workload, sm.Namespace, nil
+			}
+		}
+		return "", "", fmt.Errorf("extension could not resolve IP: %s", ip)
+	}
+
+	// Otherwise watchers
 	if e.useListPod {
 		// use results from pod watcher
 		if podKey, ok := e.ipToPod.Load(ip); ok {
 			pod := podKey.(string)
 			if workloadKey, ok := e.podToWorkloadAndNamespace.Load(pod); ok {
-				workload, namespace = extractResourceAndNamespace(workloadKey.(string))
+				workload, namespace := k8sclient.ExtractResourceAndNamespace(workloadKey.(string))
 				return workload, namespace, nil
 			}
 		}
 	} else {
 		// use results from endpoint slice watcher
-		if workloadKey, ok := e.ipToWorkloadAndNamespace.Load(ip); ok {
-			workload, namespace = extractResourceAndNamespace(workloadKey.(string))
-			return workload, namespace, nil
+		if pmVal, ok := e.ipToWorkloadAndNamespace.Load(ip); ok {
+			pm := pmVal.(k8sclient.PodMetadata)
+			return pm.Workload, pm.Namespace, nil
 		}
 	}
 
-	if serviceKey, ok := e.ipToServiceAndNamespace.Load(ip); ok {
-		serviceAndNamespace := serviceKey.(string)
-		if workloadKey, ok := e.serviceToWorkload.Load(serviceAndNamespace); ok {
-			workload, namespace = extractResourceAndNamespace(workloadKey.(string))
-			return workload, namespace, nil
+	// Not found in IP->workload, so check IP->service, then service->workload
+	if svcKeyVal, ok := e.ipToServiceAndNamespace.Load(ip); ok {
+		svcAndNS := svcKeyVal.(string)
+		if e.serviceToWorkload != nil {
+			if pmVal, ok := e.serviceToWorkload.Load(svcAndNS); ok {
+				// For EndpointSlice watchers, the value is k8sclient.PodMetadata
+				// For listPod approach, the value might be "workload@namespace"
+				switch val := pmVal.(type) {
+				case k8sclient.PodMetadata:
+					return val.Workload, val.Namespace, nil
+				case string:
+					workload, namespace := k8sclient.ExtractResourceAndNamespace(val)
+					return workload, namespace, nil
+				default:
+					e.logger.Debug("Unknown type in serviceToWorkload map")
+				}
+			}
 		}
 	}
 	return "", "", errors.New("no kubernetes workload found for ip: " + ip)
@@ -211,14 +281,14 @@ func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map)
 	if value, ok := attributes.Get(attr.AWSRemoteService); ok {
 		valueStr := value.AsString()
 		ipStr := ""
-		if ip, _, ok := extractIPPort(valueStr); ok {
+		if ip, _, ok := k8sclient.ExtractIPPort(valueStr); ok {
 			if workload, ns, err := e.getWorkloadAndNamespaceByIP(valueStr); err == nil {
 				attributes.PutStr(attr.AWSRemoteService, workload)
 				namespace = ns
 			} else {
 				ipStr = ip
 			}
-		} else if isIP(valueStr) {
+		} else if k8sclient.IsIP(valueStr) {
 			ipStr = valueStr
 		}
 

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resolver
+package k8sclient
 
 import (
 	"sync"
@@ -13,31 +13,31 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-type serviceWatcher struct {
-	ipToServiceAndNamespace        *sync.Map
-	serviceAndNamespaceToSelectors *sync.Map
+type ServiceWatcher struct {
+	IPToServiceAndNamespace        *sync.Map
+	ServiceAndNamespaceToSelectors *sync.Map
 	logger                         *zap.Logger
 	informer                       cache.SharedIndexInformer
 	deleter                        Deleter
 }
 
-func newServiceWatcher(logger *zap.Logger, sharedInformerFactory informers.SharedInformerFactory, deleter Deleter) *serviceWatcher {
+func NewServiceWatcher(logger *zap.Logger, sharedInformerFactory informers.SharedInformerFactory, deleter Deleter) *ServiceWatcher {
 	serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
 	err := serviceInformer.SetTransform(minimizeService)
 	if err != nil {
 		logger.Error("failed to minimize Service objects", zap.Error(err))
 	}
 
-	return &serviceWatcher{
-		ipToServiceAndNamespace:        &sync.Map{},
-		serviceAndNamespaceToSelectors: &sync.Map{},
+	return &ServiceWatcher{
+		IPToServiceAndNamespace:        &sync.Map{},
+		ServiceAndNamespaceToSelectors: &sync.Map{},
 		logger:                         logger,
 		informer:                       serviceInformer,
 		deleter:                        deleter,
 	}
 }
 
-func (s *serviceWatcher) Run(stopCh chan struct{}) {
+func (s *ServiceWatcher) Run(stopCh chan struct{}) {
 	s.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			service := obj.(*corev1.Service)
@@ -58,15 +58,15 @@ func (s *serviceWatcher) Run(stopCh chan struct{}) {
 	go s.informer.Run(stopCh)
 }
 
-func (s *serviceWatcher) waitForCacheSync(stopCh chan struct{}) {
+func (s *ServiceWatcher) WaitForCacheSync(stopCh chan struct{}) {
 	if !cache.WaitForNamedCacheSync("serviceWatcher", stopCh, s.informer.HasSynced) {
-		s.logger.Fatal("timed out waiting for kubernetes service watcher caches to sync")
+		s.logger.Error("timed out waiting for kubernetes service watcher caches to sync")
 	}
 
 	s.logger.Info("serviceWatcher: Cache synced")
 }
 
-func (s *serviceWatcher) onAddOrUpdateService(service *corev1.Service) {
+func (s *ServiceWatcher) onAddOrUpdateService(service *corev1.Service) {
 	// service can also have an external IP (or ingress IP) that could be accessed
 	// this field can be either an IP address (in some edge case) or a hostname (see "EXTERNAL-IP" column in "k get svc" output)
 	// [ec2-user@ip-172-31-11-104 one-step]$ k get svc -A
@@ -80,22 +80,22 @@ func (s *serviceWatcher) onAddOrUpdateService(service *corev1.Service) {
 	//
 	// we ignore such case for now and may need to consider it in the future
 	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
-		s.ipToServiceAndNamespace.Store(service.Spec.ClusterIP, getServiceAndNamespace(service))
+		s.IPToServiceAndNamespace.Store(service.Spec.ClusterIP, getServiceAndNamespace(service))
 	}
 	labelSet := mapset.NewSet[string]()
 	for key, value := range service.Spec.Selector {
 		labelSet.Add(key + "=" + value)
 	}
 	if labelSet.Cardinality() > 0 {
-		s.serviceAndNamespaceToSelectors.Store(getServiceAndNamespace(service), labelSet)
+		s.ServiceAndNamespaceToSelectors.Store(getServiceAndNamespace(service), labelSet)
 	}
 }
 
-func (s *serviceWatcher) onDeleteService(service *corev1.Service, deleter Deleter) {
+func (s *ServiceWatcher) onDeleteService(service *corev1.Service, deleter Deleter) {
 	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
-		deleter.DeleteWithDelay(s.ipToServiceAndNamespace, service.Spec.ClusterIP)
+		deleter.DeleteWithDelay(s.IPToServiceAndNamespace, service.Spec.ClusterIP)
 	}
-	deleter.DeleteWithDelay(s.serviceAndNamespaceToSelectors, getServiceAndNamespace(service))
+	deleter.DeleteWithDelay(s.ServiceAndNamespaceToSelectors, getServiceAndNamespace(service))
 }
 
 // minimizeService removes fields that could contain large objects, and retain essential

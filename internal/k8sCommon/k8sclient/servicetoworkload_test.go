@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resolver
+package k8sclient
 
 import (
 	"sync"
@@ -22,7 +22,7 @@ func TestMapServiceToWorkload(t *testing.T) {
 	serviceAndNamespaceToSelectors.Store("service1@namespace1", mapset.NewSet("label1=value1", "label2=value2"))
 	workloadAndNamespaceToLabels.Store("deployment1@namespace1", mapset.NewSet("label1=value1", "label2=value2", "label3=value3"))
 
-	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
 	mapper.mapServiceToWorkload()
 
 	if _, ok := serviceToWorkload.Load("service1@namespace1"); !ok {
@@ -42,7 +42,7 @@ func TestMapServiceToWorkload_NoWorkload(t *testing.T) {
 	serviceAndNamespaceToSelectors.Store(serviceAndNamespace, mapset.NewSet("label1=value1"))
 	serviceToWorkload.Store(serviceAndNamespace, "workload@namespace")
 
-	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
 	mapper.mapServiceToWorkload()
 
 	// Check that the service was deleted from serviceToWorkload
@@ -65,7 +65,7 @@ func TestMapServiceToWorkload_MultipleWorkloads(t *testing.T) {
 	workloadAndNamespaceToLabels.Store("workload1@namespace", mapset.NewSet("label1=value1", "label2=value2", "label3=value3"))
 	workloadAndNamespaceToLabels.Store("workload2@namespace", mapset.NewSet("label1=value1", "label2=value2", "label4=value4"))
 
-	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
 	mapper.mapServiceToWorkload()
 
 	// Check that the service does not map to any workload
@@ -88,7 +88,7 @@ func TestStopsWhenSignaled(t *testing.T) {
 		close(stopchan)
 	})
 
-	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
 
 	start := time.Now()
 	mapper.Start(stopchan)

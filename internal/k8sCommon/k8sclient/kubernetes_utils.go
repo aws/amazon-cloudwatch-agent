@@ -4,10 +4,16 @@
 package k8sclient
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -39,6 +45,69 @@ var (
 	reStatefulSet = regexp.MustCompile(`^(.+)-(\d+)$`)
 )
 
+func attachNamespace(resourceName, namespace string) string {
+	// character "@" is not allowed in kubernetes resource names: https://unofficial-kubernetes.readthedocs.io/en/latest/concepts/overview/working-with-objects/names/
+	return resourceName + "@" + namespace
+}
+
+func getServiceAndNamespace(service *corev1.Service) string {
+	return attachNamespace(service.Name, service.Namespace)
+}
+
+func ExtractResourceAndNamespace(serviceOrWorkloadAndNamespace string) (string, string) {
+	// extract service name and namespace from serviceAndNamespace
+	parts := strings.Split(serviceOrWorkloadAndNamespace, "@")
+	if len(parts) != 2 {
+		return "", ""
+	}
+	return parts[0], parts[1]
+}
+
+func extractWorkloadNameFromRS(replicaSetName string) (string, error) {
+	match := deploymentFromReplicaSetPattern.FindStringSubmatch(replicaSetName)
+	if match != nil {
+		return match[1], nil
+	}
+
+	return "", errors.New("failed to extract workload name from replicatSet name: " + replicaSetName)
+}
+
+func extractWorkloadNameFromPodName(podName string) (string, error) {
+	match := replicaSetOrDaemonSetFromPodPattern.FindStringSubmatch(podName)
+	if match != nil {
+		return match[1], nil
+	}
+
+	return "", errors.New("failed to extract workload name from pod name: " + podName)
+}
+
+func GetWorkloadAndNamespace(pod *corev1.Pod) string {
+	var workloadAndNamespace string
+	if pod.ObjectMeta.OwnerReferences != nil {
+		for _, ownerRef := range pod.ObjectMeta.OwnerReferences {
+			if workloadAndNamespace != "" {
+				break
+			}
+
+			if ownerRef.Kind == "ReplicaSet" {
+				if workloadName, err := extractWorkloadNameFromRS(ownerRef.Name); err == nil {
+					// when the replicaSet is created by a deployment, use deployment name
+					workloadAndNamespace = attachNamespace(workloadName, pod.Namespace)
+				} else if workloadName, err := extractWorkloadNameFromPodName(pod.Name); err == nil {
+					// when the replicaSet is not created by a deployment, use replicaSet name directly
+					workloadAndNamespace = attachNamespace(workloadName, pod.Namespace)
+				}
+			} else if ownerRef.Kind == "StatefulSet" {
+				workloadAndNamespace = attachNamespace(ownerRef.Name, pod.Namespace)
+			} else if ownerRef.Kind == "DaemonSet" {
+				workloadAndNamespace = attachNamespace(ownerRef.Name, pod.Namespace)
+			}
+		}
+	}
+
+	return workloadAndNamespace
+}
+
 // InferWorkloadName tries to parse the given podName to find the top-level workload name.
 //
 // 1) If it matches <statefulset>-<ordinal>, return <statefulset>.
@@ -55,7 +124,7 @@ var (
 //   - https://github.com/kubernetes/kubernetes/issues/116447#issuecomment-1530652258
 //
 // For that, we fall back to use service name as last defense.
-func inferWorkloadName(podName, fallbackServiceName string) string {
+func InferWorkloadName(podName, fallbackServiceName string) string {
 	// 1) Check if it's a StatefulSet pod: <stsName>-<ordinal>
 	if matches := reStatefulSet.FindStringSubmatch(podName); matches != nil {
 		return matches[1] // e.g. "mysql-0" => "mysql"
@@ -82,6 +151,48 @@ func inferWorkloadName(podName, fallbackServiceName string) string {
 
 	// 4) Finally return the full pod name (I don't think this will happen)
 	return podName
+}
+
+const IP_PORT_PATTERN = `^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$`
+
+var ipPortRegex = regexp.MustCompile(IP_PORT_PATTERN)
+
+func ExtractIPPort(ipPort string) (string, string, bool) {
+	match := ipPortRegex.MatchString(ipPort)
+
+	if !match {
+		return "", "", false
+	}
+
+	result := ipPortRegex.FindStringSubmatch(ipPort)
+	if len(result) != 3 {
+		return "", "", false
+	}
+
+	ip := result[1]
+	port := result[2]
+
+	return ip, port, true
+}
+
+func GetHostNetworkPorts(pod *corev1.Pod) []string {
+	var ports []string
+	if !pod.Spec.HostNetwork {
+		return ports
+	}
+	for _, container := range pod.Spec.Containers {
+		for _, port := range container.Ports {
+			if port.HostPort != 0 {
+				ports = append(ports, strconv.Itoa(int(port.HostPort)))
+			}
+		}
+	}
+	return ports
+}
+
+func IsIP(ipString string) bool {
+	ip := net.ParseIP(ipString)
+	return ip != nil
 }
 
 // a safe channel which can be closed multiple times

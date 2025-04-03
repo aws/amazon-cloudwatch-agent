@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resolver
+package k8sclient
 
 import (
 	"sync"
@@ -14,9 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func newServiceWatcherForTesting(ipToServiceAndNamespace, serviceAndNamespaceToSelectors *sync.Map) *serviceWatcher {
+func newServiceWatcherForTesting(ipToServiceAndNamespace, serviceAndNamespaceToSelectors *sync.Map) *ServiceWatcher {
 	logger, _ := zap.NewDevelopment()
-	return &serviceWatcher{ipToServiceAndNamespace, serviceAndNamespaceToSelectors, logger, nil, nil}
+	return &ServiceWatcher{ipToServiceAndNamespace, serviceAndNamespaceToSelectors, logger, nil, nil}
 }
 
 func TestOnAddOrUpdateService(t *testing.T) {

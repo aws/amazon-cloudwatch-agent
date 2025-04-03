@@ -11,17 +11,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 )
 
 func (p *podWatcher) removeHostNetworkRecords(pod *corev1.Pod) {
-	for _, port := range getHostNetworkPorts(pod) {
+	for _, port := range k8sclient.GetHostNetworkPorts(pod) {
 		p.deleter.DeleteWithDelay(p.ipToPod, pod.Status.HostIP+":"+port)
 	}
 }
 
 func (p *podWatcher) handlePodAdd(pod *corev1.Pod) {
 	if pod.Spec.HostNetwork && pod.Status.HostIP != "" {
-		for _, port := range getHostNetworkPorts(pod) {
+		for _, port := range k8sclient.GetHostNetworkPorts(pod) {
 			p.ipToPod.Store(pod.Status.HostIP+":"+port, pod.Name)
 		}
 	}
@@ -38,7 +40,7 @@ func (p *podWatcher) handlePodUpdate(newPod *corev1.Pod, oldPod *corev1.Pod) {
 			p.removeHostNetworkRecords(oldPod)
 		}
 		if newPod.Status.HostIP != "" {
-			for _, port := range getHostNetworkPorts(newPod) {
+			for _, port := range k8sclient.GetHostNetworkPorts(newPod) {
 				p.ipToPod.Store(newPod.Status.HostIP+":"+port, newPod.Name)
 			}
 		}
@@ -61,7 +63,7 @@ func (p *podWatcher) onAddOrUpdatePod(pod, oldPod *corev1.Pod) {
 		p.handlePodUpdate(pod, oldPod)
 	}
 
-	workloadAndNamespace := getWorkloadAndNamespace(pod)
+	workloadAndNamespace := k8sclient.GetWorkloadAndNamespace(pod)
 
 	if workloadAndNamespace != "" {
 		p.podToWorkloadAndNamespace.Store(pod.Name, workloadAndNamespace)
@@ -110,10 +112,10 @@ type podWatcher struct {
 	workloadPodCount             map[string]int
 	logger                       *zap.Logger
 	informer                     cache.SharedIndexInformer
-	deleter                      Deleter
+	deleter                      k8sclient.Deleter
 }
 
-func newPodWatcher(logger *zap.Logger, sharedInformerFactory informers.SharedInformerFactory, deleter Deleter) *podWatcher {
+func newPodWatcher(logger *zap.Logger, sharedInformerFactory informers.SharedInformerFactory, deleter k8sclient.Deleter) *podWatcher {
 	podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
 	err := podInformer.SetTransform(minimizePod)
 	if err != nil {

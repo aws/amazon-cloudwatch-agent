@@ -10,12 +10,14 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awsproxy"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
@@ -67,6 +69,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	isECS := ecsutil.GetECSUtilSingleton().IsECS()
 	if t.signal == pipeline.SignalMetrics && !isECS {
 		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
+		if context.CurrentContext().KubernetesMode() != "" {
+			translators.Extensions.Set(k8smetadata.NewTranslator())
+		}
 	}
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
