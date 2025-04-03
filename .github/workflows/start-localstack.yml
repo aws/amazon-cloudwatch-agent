@@ -85,7 +85,3 @@ jobs:
           echo $LOCAL_STACK_HOST_NAME &&
           echo "local_stack_host_name=$LOCAL_STACK_HOST_NAME" >> "$GITHUB_OUTPUT" &&
           aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate
-
-      - name: Verify LocalStack
-        run: |
-          curl -v http://${{ steps.localstack.outputs.local_stack_host_name }}:4566

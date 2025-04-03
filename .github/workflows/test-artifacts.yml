@@ -50,8 +50,6 @@ jobs:
     steps:
       - name: ${{ github.event.inputs.build_id }}
         run: echo run identifier ${{ inputs.build_id }}
-
-
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
@@ -502,7 +500,7 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 60
+          timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
             if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
