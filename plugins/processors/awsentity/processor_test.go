@@ -447,7 +447,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 		metrics        pmetric.Metrics
 		want           map[string]any
 		instance       string
-		accountId      string
+		accountID      string
 		asg            string
 		platform       string
 		kubernetesMode string
@@ -461,7 +461,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 			name:      "ResourceEntityEC2",
 			metrics:   generateMetrics(),
 			instance:  "i-123456789",
-			accountId: "0123456789012",
+			accountID: "0123456789012",
 			platform:  config.ModeEC2,
 			want: map[string]any{
 				"com.amazonaws.cloudwatch.entity.internal.type":           "AWS::Resource",
@@ -474,7 +474,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 			name:      "ResourceEntityEC2NoInstance",
 			metrics:   generateMetrics(),
 			instance:  "",
-			accountId: "",
+			accountID: "",
 			platform:  config.ModeEC2,
 			want:      map[string]any{},
 		},
@@ -482,6 +482,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 			name:           "ResourceEntityEKS",
 			metrics:        generateMetrics(),
 			kubernetesMode: config.ModeEKS,
+			platform:       config.ModeEKS,
 			want: map[string]any{
 				entityattributes.AttributeEntityPlatformType: entityattributes.AttributeEntityEKSPlatform,
 			},
@@ -498,7 +499,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance, tt.accountId)
+			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance, tt.accountID)
 			p := newAwsEntityProcessor(&Config{EntityType: entityattributes.Resource, Platform: tt.platform, KubernetesMode: tt.kubernetesMode}, logger)
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
