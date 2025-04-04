@@ -186,8 +186,8 @@ github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrc
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250319220231-62fc4da9c51e h1:hjIuSq+rmBWSqGQ7D5kPjJhTtmofknkHq7h0QkdX0ls=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250319220231-62fc4da9c51e/go.mod h1:xdbVYSrv7X2GXPKfEeWYhCPkC5ch4h4JKn6uzn5ytqg=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250331143509-1b920e1fb1ea h1:Dd6p3SL2Avquq/dAXOIqXixgtH7hiyh0HAyrOKDgvac=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250331143509-1b920e1fb1ea/go.mod h1:4vjaqZfmvaZ0rj37LrPAwQpo/sgNLA+H65eUN0U+3fk=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250404180347-aeb630430889 h1:zs9h3uHazvyHPXydkjFHdOXiLgKKzqu8ut1HRCBID88=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250404180347-aeb630430889/go.mod h1:4vjaqZfmvaZ0rj37LrPAwQpo/sgNLA+H65eUN0U+3fk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250319220231-62fc4da9c51e h1:LeDehe1BnhEBB8yIOA8gHhtPe0NgUoQ4SXLJyZUkQBM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250319220231-62fc4da9c51e/go.mod h1:MeHyDYE/w6i9P0HNCql6L+/CJyCgitCnyk0MLfSc+9g=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250319220231-62fc4da9c51e h1:X6i3Aq5QNuVvKxaJ1iek5ljWnA1YSktysi2E/48Ce78=
