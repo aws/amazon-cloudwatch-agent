@@ -27,7 +27,7 @@ on:
         required: false
         type: string
         description: 'Branch of the operator to test'
-        default: 'main'
+        default: 'tjstark/e2e-test-build'
       helm-charts-branch:
         required: false
         type: string
