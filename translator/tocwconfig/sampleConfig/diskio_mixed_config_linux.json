@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "diskio": {
+        "measurement": [
+          "io_time",
+          "ebs_total_read_bytes",
+          "ebs_total_write_bytes"
+        ],
+        "resources": [
+          "nvme0n1"
+        ]
+      }
+    }
+  }
+}

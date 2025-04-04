@@ -154,7 +154,8 @@
           "writes",
           "read_time",
           "write_time",
-          "io_time"
+          "io_time",
+          "ebs_total_read_bytes"
         ],
         "metrics_collection_interval": 60
       },

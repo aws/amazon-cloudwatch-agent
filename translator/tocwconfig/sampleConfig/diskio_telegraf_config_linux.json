@@ -1,0 +1,20 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "diskio": {
+        "measurement": [
+          "io_time"
+        ],
+        "resources": [
+          "nvme0n1"
+        ]
+      }
+    }
+  }
+}

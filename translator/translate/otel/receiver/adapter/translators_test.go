@@ -21,6 +21,7 @@ import (
 func TestFindReceiversInConfig(t *testing.T) {
 	telegrafSocketListenerType, _ := component.NewType("telegraf_socket_listener")
 	telegrafCPUType, _ := component.NewType("telegraf_cpu")
+	telegrafDiskIOType, _ := component.NewType("telegraf_diskio")
 	telegrafEthtoolType, _ := component.NewType("telegraf_ethtool")
 	telegrafNvidiaSmiType, _ := component.NewType("telegraf_nvidia_smi")
 	telegrafStatsdType, _ := component.NewType("telegraf_statsd")
@@ -46,6 +47,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"collectd":   map[string]interface{}{},
 						"cpu":        map[string]interface{}{},
+						"diskio":     map[string]interface{}{},
 						"ethtool":    map[string]interface{}{},
 						"nvidia_gpu": map[string]interface{}{},
 						"statsd":     map[string]interface{}{},
@@ -65,6 +67,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			want: map[component.ID]wantResult{
 				component.NewID(telegrafSocketListenerType):                 {"metrics::metrics_collected::collectd", time.Minute},
 				component.NewID(telegrafCPUType):                            {"metrics::metrics_collected::cpu", time.Minute},
+				component.NewID(telegrafDiskIOType):                         {"metrics::metrics_collected::diskio", time.Minute},
 				component.NewID(telegrafEthtoolType):                        {"metrics::metrics_collected::ethtool", time.Minute},
 				component.NewID(telegrafNvidiaSmiType):                      {"metrics::metrics_collected::nvidia_gpu", time.Minute},
 				component.NewID(telegrafStatsdType):                         {"metrics::metrics_collected::statsd", 10 * time.Second},
@@ -159,6 +162,56 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			os:      "invalid",
 			wantErr: errors.New("unsupported OS: invalid"),
+		},
+		"WithAdaptedDiskioMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{
+							"measurement": []interface{}{
+								"io_time",
+							},
+						},
+					},
+				},
+			},
+			os: translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{
+				component.NewID(telegrafDiskIOType): {"metrics::metrics_collected::diskio", time.Minute},
+			},
+		},
+		"WithOnlyNonAdaptedMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{
+							"measurement": []interface{}{
+								"diskio_ebs_total_read_bytes",
+							},
+						},
+					},
+				},
+			},
+			os:   translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{},
+		},
+		"WithAdaptedAndNonAdaptedDiskioMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{
+							"measurement": []interface{}{
+								"diskio_ebs_total_read_bytes",
+								"io_time",
+							},
+						},
+					},
+				},
+			},
+			os: translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{
+				component.NewID(telegrafDiskIOType): {"metrics::metrics_collected::diskio", time.Minute},
+			},
 		},
 	}
 	for name, testCase := range testCases {

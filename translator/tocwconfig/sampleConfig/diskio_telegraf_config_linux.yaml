@@ -5,7 +5,7 @@ exporters:
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
-        region: us-west-2
+        region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
 extensions:
@@ -26,7 +26,7 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
-        region: us-west-2
+        region: us-east-1
 processors:
     awsentity/resource:
         entity_type: Resource
@@ -45,33 +45,14 @@ processors:
         initial_value: 2
         max_staleness: 0s
     ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
-            - InstanceType
+        imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
-    telegraf_cpu:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_disk:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
     telegraf_diskio:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_mem:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_swap:
         collection_interval: 1m0s
         initial_delay: 1s
         timeout: 0s
@@ -81,17 +62,6 @@ service:
         - agenthealth/statuscode
         - entitystore
     pipelines:
-        metrics/host:
-            exporters:
-                - awscloudwatch
-            processors:
-                - ec2tagger
-                - awsentity/resource
-            receivers:
-                - telegraf_swap
-                - telegraf_cpu
-                - telegraf_disk
-                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -120,3 +90,4 @@ service:
             level: None
         traces:
             level: None
+

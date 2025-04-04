@@ -56,7 +56,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]any{
 				"exclude": map[string]any{
 					"match_type": "strict",
-					"metrics":    []string{"iops_in_progress", "diskio_iops_in_progress"},
+					"metrics":    []string{"iops_in_progress", "diskio_iops_in_progress", "diskio_ebs_volume_queue_length", "ebs_volume_queue_length"},
 				},
 				"initial_value": "drop",
 			},
