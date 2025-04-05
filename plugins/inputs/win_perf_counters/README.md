@@ -13,7 +13,7 @@ when it is querying for all (*) as this is redundant.
 
 The examples contained in this file have been found on the internet
 as counters used when performance monitoring
- Active Directory and IIS in perticular.
+ Active Directory and IIS in particular.
  There are a lot other good objects to monitor, if you know what to look for.
  This file is likely to be updated in the future with more examples for
  useful configurations for separate scenarios.
@@ -38,7 +38,7 @@ Example:
 
 #### PreVistaSupport
 
-Bool, if set to `true` will use the localized PerfCounter interface that is present before Vista for backwards compatability.
+Bool, if set to `true` will use the localized PerfCounter interface that is present before Vista for backwards compatibility.
 
 It is recommended NOT to use this on OSes starting with Vista and newer because it requires more configuration to use this than the newer interface present since Vista.
 
@@ -107,7 +107,7 @@ Example: `Measurement = "win_disk"
 This key is optional, it is a simple bool.
 If it is not set to true or included it is treated as false.
 This key only has an effect if Instances is set to "*"
-and you would also like all instances containg _Total returned,
+and you would also like all instances containing _Total returned,
 like "_Total", "0,_Total" and so on where applicable
 (Processor Information is one example).
 
@@ -291,7 +291,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 
-### .NET Montioring
+### .NET Monitoring
 ```
   [[inputs.win_perf_counters.object]]
     # .NET CLR Exceptions, in this case for IIS only

@@ -57,7 +57,7 @@ func getAggregationKey(m *aggregationDatum, unixTime int64) string {
 	tmp := make([]string, len(m.Dimensions))
 	for i, d := range m.Dimensions {
 		if d.Name == nil || d.Value == nil {
-			log.Printf("E! dimentions key and/or val is nil")
+			log.Printf("E! dimensions key and/or val is nil")
 			continue
 		}
 		tmp[i] = fmt.Sprintf("%s=%s", *d.Name, *d.Value)
