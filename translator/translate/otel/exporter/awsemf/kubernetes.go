@@ -54,6 +54,8 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEFAMetricDeclarations(conf)...)
 
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEBSMetricDeclarations(conf)...)
+
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
@@ -641,6 +643,35 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_efa_rdma_read_bytes",
 					"node_efa_rdma_write_bytes",
 					"node_efa_rdma_write_recv_bytes",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getEBSMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "NodeName", "InstanceId"},
+					{"ClusterName", "NodeName", "InstanceId", "VolumeId"},
+				},
+				MetricNameSelectors: []string{
+					"node_diskio_ebs_total_read_ops",
+					"node_diskio_ebs_total_write_ops",
+					"node_diskio_ebs_total_read_bytes",
+					"node_diskio_ebs_total_write_bytes",
+					"node_diskio_ebs_total_read_time",
+					"node_diskio_ebs_total_write_time",
+					"node_diskio_ebs_volume_performance_exceeded_iops",
+					"node_diskio_ebs_volume_performance_exceeded_tp",
+					"node_diskio_ebs_ec2_instance_performance_exceeded_iops",
+					"node_diskio_ebs_ec2_instance_performance_exceeded_tp",
+					"node_diskio_ebs_volume_queue_length",
 				},
 			},
 		}
