@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
@@ -109,6 +110,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		// TODO: For OTLP, the entity processor is only on K8S for now. Eventually this should be added to EC2
 		if currentContext.KubernetesMode() != "" {
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
+			translators.Extensions.Set(k8smetadata.NewTranslator())
 		}
 	case common.PipelineNameHostCustomMetrics:
 		if !currentContext.RunInContainer() {
