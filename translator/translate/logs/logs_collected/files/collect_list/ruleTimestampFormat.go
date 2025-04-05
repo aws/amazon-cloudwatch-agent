@@ -76,7 +76,7 @@ var TimeFormatMap = map[string]string{
 	"%p":  "PM",
 	"%Z":  "MST",
 	"%z":  "-0700",
-	"%f":  ".000",
+	"%f":  "000",
 }
 
 var TimeFormatRexMap = map[string]string{
@@ -100,7 +100,7 @@ var TimeFormatRexMap = map[string]string{
 	"%p":  "\\w{2}",
 	"%Z":  "\\w{3}",
 	"%z":  "[\\+-]\\d{4}",
-	"%f":  "(\\d{1,9})",
+	"%f":  "\\d{1,9}",
 }
 
 // The characters required to be escaped are these characters special in regex, but normal in json.
