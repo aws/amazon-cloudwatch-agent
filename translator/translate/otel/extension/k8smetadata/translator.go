@@ -30,7 +30,21 @@ func (t *translator) ID() component.ID {
 }
 
 // Translate creates an extension configuration.
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*k8smetadata.Config)
+	if t.isOTLP(conf) {
+		cfg.Objects = []string{"endpointslices"}
+	}
+	if t.isAppSignals(conf) {
+		cfg.Objects = []string{"endpointslices", "services"}
+	}
 	return cfg, nil
+}
+
+func (t *translator) isAppSignals(conf *confmap.Conf) bool {
+	return conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsMetricsFallback) || conf.IsSet(common.AppSignalsTracesFallback)
+}
+
+func (t *translator) isOTLP(conf *confmap.Conf) bool {
+	return conf.IsSet(common.OTLPLogsKey) || conf.IsSet(common.OTLPMetricsKey)
 }

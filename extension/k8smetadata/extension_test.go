@@ -29,6 +29,9 @@ func TestKubernetesMetadata_GetPodMetadata(t *testing.T) {
 	kMeta := &KubernetesMetadata{
 		logger:               zap.NewNop(),
 		endpointSliceWatcher: esw,
+		config: &Config{
+			Objects: []string{"endpointslices"},
+		},
 	}
 
 	got := kMeta.GetPodMetadataFromPodIP(testIP)
@@ -39,6 +42,15 @@ func TestKubernetesMetadata_GetPodMetadata(t *testing.T) {
 
 	unknown = kMeta.GetPodMetadataFromPodIP("")
 	assert.Equal(t, k8sclient.PodMetadata{}, unknown, "GetPodMetadata should return empty if the IP is empty")
+
+	kMetaDisabled := &KubernetesMetadata{
+		logger: zap.NewNop(),
+		config: &Config{
+			Objects: []string{"services"},
+		},
+	}
+	disabled := kMetaDisabled.GetPodMetadataFromPodIP(testIP)
+	assert.Equal(t, k8sclient.PodMetadata{}, disabled, "GetPodMetadata should return empty when endpointslices are disabled")
 }
 
 func TestKubernetesMetadata_GetPodMetadata_Incomplete(t *testing.T) {
@@ -57,13 +69,16 @@ func TestKubernetesMetadata_GetPodMetadata_Incomplete(t *testing.T) {
 	kMeta := &KubernetesMetadata{
 		logger:               zap.NewNop(),
 		endpointSliceWatcher: esw,
+		config: &Config{
+			Objects: []string{"endpointslices"},
+		},
 	}
 
 	got := kMeta.GetPodMetadataFromPodIP(testIP)
 	assert.Equal(t, expected, got, "GetPodMetadata should return the stored incomplete PodMetadata for IP %s", testIP)
 }
 
-func TestKubernetesMetadata_GetPodMetadataFromService(t *testing.T) {
+func TestKubernetesMetadata_GetPodMetadataFromServiceAndNamespace(t *testing.T) {
 	esw := &k8sclient.EndpointSliceWatcher{
 		ServiceToPodMetadata: &sync.Map{},
 	}
@@ -79,6 +94,9 @@ func TestKubernetesMetadata_GetPodMetadataFromService(t *testing.T) {
 	kMeta := &KubernetesMetadata{
 		logger:               zap.NewNop(),
 		endpointSliceWatcher: esw,
+		config: &Config{
+			Objects: []string{"endpointslices"},
+		},
 	}
 
 	got := kMeta.GetPodMetadataFromServiceAndNamespace(svcKey)
@@ -89,6 +107,15 @@ func TestKubernetesMetadata_GetPodMetadataFromService(t *testing.T) {
 
 	emptyVal := kMeta.GetPodMetadataFromServiceAndNamespace("")
 	assert.Equal(t, k8sclient.PodMetadata{}, emptyVal, "Expected empty result for empty service key")
+
+	kMetaDisabled := &KubernetesMetadata{
+		logger: zap.NewNop(),
+		config: &Config{
+			Objects: []string{"services"},
+		},
+	}
+	disabled := kMetaDisabled.GetPodMetadataFromServiceAndNamespace(svcKey)
+	assert.Equal(t, k8sclient.PodMetadata{}, disabled, "GetPodMetadataFromService should return empty when endpointslices are disabled")
 }
 
 func TestKubernetesMetadata_GetServiceAndNamespaceFromClusterIP(t *testing.T) {
@@ -109,6 +136,9 @@ func TestKubernetesMetadata_GetServiceAndNamespaceFromClusterIP(t *testing.T) {
 		logger:               zap.NewNop(),
 		endpointSliceWatcher: mockESWatcher,
 		serviceWatcher:       mockSvcWatcher,
+		config: &Config{
+			Objects: []string{"services", "endpointslices"},
+		},
 	}
 
 	got := kMeta.GetServiceAndNamespaceFromClusterIP(knownIP)
@@ -119,4 +149,13 @@ func TestKubernetesMetadata_GetServiceAndNamespaceFromClusterIP(t *testing.T) {
 
 	gotEmpty := kMeta.GetServiceAndNamespaceFromClusterIP("")
 	assert.Equal(t, "", gotEmpty, "Expected empty string when IP is empty")
+
+	kMetaDisabled := &KubernetesMetadata{
+		logger: zap.NewNop(),
+		config: &Config{
+			Objects: []string{"endpointslices"},
+		},
+	}
+	disabled := kMetaDisabled.GetServiceAndNamespaceFromClusterIP(knownIP)
+	assert.Equal(t, "", disabled, "GetServiceAndNamespaceFromClusterIP should return empty when services are disabled")
 }

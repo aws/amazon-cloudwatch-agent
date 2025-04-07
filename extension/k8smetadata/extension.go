@@ -58,18 +58,24 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 
 	timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
 	sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-
-	e.endpointSliceWatcher = k8sclient.NewEndpointSliceWatcher(e.logger, sharedInformerFactory, timedDeleter)
-	e.serviceWatcher = k8sclient.NewServiceWatcher(e.logger, sharedInformerFactory, timedDeleter)
 	e.safeStopCh = &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false}
 
-	e.endpointSliceWatcher.Run(e.safeStopCh.Ch)
-	e.serviceWatcher.Run(e.safeStopCh.Ch)
+	for _, obj := range e.config.Objects {
+		switch obj {
+		case "endpointslices":
+			e.endpointSliceWatcher = k8sclient.NewEndpointSliceWatcher(e.logger, sharedInformerFactory, timedDeleter)
+			e.endpointSliceWatcher.Run(e.safeStopCh.Ch)
+			e.endpointSliceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
+			e.logger.Debug("EndpointSlice cache synced")
+		case "services":
+			e.serviceWatcher = k8sclient.NewServiceWatcher(e.logger, sharedInformerFactory, timedDeleter)
+			e.serviceWatcher.Run(e.safeStopCh.Ch)
+			e.serviceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
+			e.logger.Debug("Service cache synced")
+		}
+	}
 
-	e.endpointSliceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
-	e.serviceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
-
-	e.logger.Debug("EndpointSlice and Service cache synced, extension fully started")
+	e.logger.Debug("Cache synced, extension fully started")
 	e.ready.Store(true)
 
 	return nil
@@ -83,6 +89,10 @@ func (e *KubernetesMetadata) Shutdown(_ context.Context) error {
 }
 
 func (e *KubernetesMetadata) GetPodMetadataFromPodIP(ip string) k8sclient.PodMetadata {
+	if e.endpointSliceWatcher == nil {
+		e.logger.Debug("GetPodMetadataFromPodIP: endpointslices not enabled in config")
+		return k8sclient.PodMetadata{}
+	}
 	if ip == "" {
 		e.logger.Debug("GetPodMetadataFromPodIP: no IP provided")
 		return k8sclient.PodMetadata{}
@@ -103,17 +113,21 @@ func (e *KubernetesMetadata) GetPodMetadataFromPodIP(ip string) k8sclient.PodMet
 }
 
 func (e *KubernetesMetadata) GetPodMetadataFromServiceAndNamespace(svcAndNS string) k8sclient.PodMetadata {
+	if e.endpointSliceWatcher == nil {
+		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: endpointslices not enabled in config")
+		return k8sclient.PodMetadata{}
+	}
 	if svcAndNS == "" {
-		e.logger.Debug("GetPodMetadataFromService: no service@namespace provided")
+		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: no service@namespace provided")
 		return k8sclient.PodMetadata{}
 	}
 	pm, ok := e.endpointSliceWatcher.ServiceToPodMetadata.Load(svcAndNS)
 	if !ok {
-		e.logger.Debug("GetPodMetadataFromService: no mapping found", zap.String("svcAndNS", svcAndNS))
+		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: no mapping found", zap.String("svcAndNS", svcAndNS))
 		return k8sclient.PodMetadata{}
 	}
 	metadata := pm.(k8sclient.PodMetadata)
-	e.logger.Debug("GetPodMetadataFromService: found metadata",
+	e.logger.Debug("GetPodMetadataFromServiceAndNamespace: found metadata",
 		zap.String("serviceNameAndNamespace", svcAndNS),
 		zap.String("workload", metadata.Workload),
 		zap.String("node", metadata.Node),
@@ -122,6 +136,10 @@ func (e *KubernetesMetadata) GetPodMetadataFromServiceAndNamespace(svcAndNS stri
 }
 
 func (e *KubernetesMetadata) GetServiceAndNamespaceFromClusterIP(ip string) string {
+	if e.serviceWatcher == nil {
+		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: services not enabled in config")
+		return ""
+	}
 	if ip == "" {
 		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: no IP provided")
 		return ""

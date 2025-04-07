@@ -12,3 +12,16 @@ Pod IP → {Workload, Namespace, Node} mappings are stored.
 - Node: This is the Kubernetes node the application is in.
 
 Alternatively, if Pod IP isn't provided, a Cluster IP → Service → {Workload, Namespace, Node} mapping is used instead.
+
+## Configuration
+
+```yaml
+extensions:
+  k8smetadata:
+    objects:
+      - endpointslices
+      - services
+
+service:
+  extensions: [k8smetadata]
+```
