@@ -132,11 +132,11 @@ func main() {
 	util.SetSSLEnv(cc.SSLMap())
 	var errorMessage string
 	if downloadLocation == "" || outputDir == "" {
-		executable, err := os.Executable()
-		if err == nil {
-			errorMessage = fmt.Sprint("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
+		var errorMessage string
+		if executable, err := os.Executable(); err == nil {
+			errorMessage = "E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name>"
 		} else {
-			errorMessage = fmt.Sprint("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = "E! usage: --output-dir <path> --download-source ssm:<parameter-store-name>"
 		}
 		log.Panic(errorMessage)
 	}
