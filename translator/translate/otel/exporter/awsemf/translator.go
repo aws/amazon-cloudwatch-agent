@@ -186,6 +186,8 @@ func setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 }
 
 func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	cfg.AddEntity = true
+
 	setDisableMetricExtraction(kubernetesBasePathKey, conf, cfg)
 
 	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {

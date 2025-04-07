@@ -1,5 +1,6 @@
 exporters:
     awsemf/application_signals:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -129,6 +130,7 @@ exporters:
         role_arn: ""
         version: "1"
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -329,6 +331,11 @@ processors:
     awsentity/service/application_signals:
         cluster_name: TestCluster
         entity_type: Service
+        kubernetes_mode: EKS
+        platform: ec2
+    awsentity/resource/containerinsights:
+        cluster_name: TestCluster
+        entity_type: Resource
         kubernetes_mode: EKS
         platform: ec2
     batch/containerinsights:
@@ -1573,6 +1580,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         traces/application_signals:
