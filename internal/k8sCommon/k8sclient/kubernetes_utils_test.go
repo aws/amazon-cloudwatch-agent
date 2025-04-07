@@ -251,7 +251,7 @@ func TestInferWorkloadName(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := InferWorkloadName(tc.input, tc.service)
 			if got != tc.expected {
-				t.Errorf("inferWorkloadName(%q) = %q; expected %q", tc.input, got, tc.expected)
+				t.Errorf("InferWorkloadName(%q) = %q; expected %q", tc.input, got, tc.expected)
 			}
 		})
 	}

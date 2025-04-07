@@ -122,7 +122,7 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 			svcWatcher.WaitForCacheSync(safeStopCh.Ch)
 
 			serviceToWorkload := &sync.Map{}
-			svcToWorkloadMapper := k8sclient.NewServiceToWorkloadMapper(svcWatcher.ServiceAndNamespaceToSelectors, poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
+			svcToWorkloadMapper := k8sclient.NewServiceToWorkloadMapper(svcWatcher.GetServiceAndNamespaceToSelectors(), poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
 			svcToWorkloadMapper.Start(safeStopCh.Ch)
 
 			instance = &kubernetesResolver{
@@ -131,8 +131,8 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 				clusterName:                    clusterName,
 				platformCode:                   platformCode,
 				useExtension:                   false,
-				ipToServiceAndNamespace:        svcWatcher.IPToServiceAndNamespace,
-				serviceAndNamespaceToSelectors: svcWatcher.ServiceAndNamespaceToSelectors,
+				ipToServiceAndNamespace:        svcWatcher.GetIPToServiceAndNamespace(),
+				serviceAndNamespaceToSelectors: svcWatcher.GetServiceAndNamespaceToSelectors(),
 				ipToPod:                        poWatcher.ipToPod,
 				podToWorkloadAndNamespace:      poWatcher.podToWorkloadAndNamespace,
 				workloadAndNamespaceToLabels:   poWatcher.workloadAndNamespaceToLabels,
@@ -194,13 +194,13 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 			clientset:                    clientset,
 			clusterName:                  clusterName,
 			platformCode:                 platformCode,
-			ipToWorkloadAndNamespace:     endptSliceWatcher.IPToPodMetadata, // endpointSlice provides pod IP → PodMetadata mapping
+			ipToWorkloadAndNamespace:     endptSliceWatcher.GetIPToPodMetadata(), // endpointSlice provides pod IP → PodMetadata mapping
 			ipToPod:                      nil,
 			podToWorkloadAndNamespace:    nil,
 			workloadAndNamespaceToLabels: nil,
 			workloadPodCount:             nil,
-			ipToServiceAndNamespace:      svcWatcher.IPToServiceAndNamespace,
-			serviceToWorkload:            endptSliceWatcher.ServiceToPodMetadata, // endpointSlice also provides service → PodMetadata mapping
+			ipToServiceAndNamespace:      svcWatcher.GetIPToServiceAndNamespace(),
+			serviceToWorkload:            endptSliceWatcher.GetServiceNamespaceToPodMetadata(), // endpointSlice also provides service → PodMetadata mapping
 			safeStopCh:                   safeStopCh,
 			useListPod:                   useListPod,
 		}

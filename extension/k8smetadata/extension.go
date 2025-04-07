@@ -97,7 +97,7 @@ func (e *KubernetesMetadata) GetPodMetadataFromPodIP(ip string) k8sclient.PodMet
 		e.logger.Debug("GetPodMetadataFromPodIP: no IP provided")
 		return k8sclient.PodMetadata{}
 	}
-	pm, ok := e.endpointSliceWatcher.IPToPodMetadata.Load(ip)
+	pm, ok := e.endpointSliceWatcher.GetIPToPodMetadata().Load(ip)
 	if !ok {
 		e.logger.Debug("GetPodMetadataFromPodIP: no mapping found for IP", zap.String("ip", ip))
 		return k8sclient.PodMetadata{}
@@ -121,7 +121,7 @@ func (e *KubernetesMetadata) GetPodMetadataFromServiceAndNamespace(svcAndNS stri
 		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: no service@namespace provided")
 		return k8sclient.PodMetadata{}
 	}
-	pm, ok := e.endpointSliceWatcher.ServiceToPodMetadata.Load(svcAndNS)
+	pm, ok := e.endpointSliceWatcher.GetServiceNamespaceToPodMetadata().Load(svcAndNS)
 	if !ok {
 		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: no mapping found", zap.String("svcAndNS", svcAndNS))
 		return k8sclient.PodMetadata{}
@@ -144,7 +144,7 @@ func (e *KubernetesMetadata) GetServiceAndNamespaceFromClusterIP(ip string) stri
 		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: no IP provided")
 		return ""
 	}
-	svcAndNS, ok := e.serviceWatcher.IPToServiceAndNamespace.Load(ip)
+	svcAndNS, ok := e.serviceWatcher.GetIPToServiceAndNamespace().Load(ip)
 	if !ok {
 		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: no mapping found", zap.String("ip", ip))
 		return ""

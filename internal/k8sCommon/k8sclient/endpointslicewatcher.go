@@ -17,10 +17,10 @@ import (
 //  1. ip/ip:port -> {"workload", "namespace", "node"}
 //  2. service@namespace -> {"workload", "namespace", "node"}
 type EndpointSliceWatcher struct {
-	logger               *zap.Logger
-	informer             cache.SharedIndexInformer
-	IPToPodMetadata      *sync.Map // key: "ip" or "ip:port", val: PodMetadata
-	ServiceToPodMetadata *sync.Map // key: "serviceName@namespace", val: PodMetadata
+	logger                        *zap.Logger
+	informer                      cache.SharedIndexInformer
+	ipToPodMetadata               *sync.Map // key: "ip" or "ip:port", val: PodMetadata
+	serviceNamespaceToPodMetadata *sync.Map // key: "serviceName@namespace", val: PodMetadata
 
 	// For bookkeeping, so we can remove old mappings upon EndpointSlice deletion
 	sliceToKeysMap sync.Map // map[sliceUID string] -> []string of keys we inserted, which are "ip", "ip:port", or "service@namespace"
@@ -56,11 +56,11 @@ func NewEndpointSliceWatcher(
 	}
 
 	return &EndpointSliceWatcher{
-		logger:               logger,
-		informer:             esInformer,
-		IPToPodMetadata:      &sync.Map{},
-		ServiceToPodMetadata: &sync.Map{},
-		deleter:              deleter,
+		logger:                        logger,
+		informer:                      esInformer,
+		ipToPodMetadata:               &sync.Map{},
+		serviceNamespaceToPodMetadata: &sync.Map{},
+		deleter:                       deleter,
 	}
 }
 
@@ -94,7 +94,7 @@ func (w *EndpointSliceWatcher) WaitForCacheSync(stopCh chan struct{}) {
 //   - All IP and IP:port keys (isService=false) -> {"workload", "namespace", "node"}
 //   - The Service name key (isService=true) -> first {"workload", "namespace", "node"} found
 //
-// This function does NOT modify IPToPodMetadata or ServiceToPodMetadata. It's purely for computing
+// This function does NOT modify ipToPodMetadata or serviceNamespaceToPodMetadata. It's purely for computing
 // the pairs, so it can be reused by both add and update methods.
 func (w *EndpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.EndpointSlice) []kvPair {
 	var pairs []kvPair
@@ -158,7 +158,7 @@ func (w *EndpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 			// Build service name -> PodMetadata pair from the first pod
 			if isFirstPod {
 				isFirstPod = false
-				if svcName != "" {
+				if svcName != "" && ns != "" {
 					pairs = append(pairs, kvPair{
 						key:       svcName + "@" + ns,
 						value:     fullWl,
@@ -195,9 +195,9 @@ func (w *EndpointSliceWatcher) handleSliceAdd(obj interface{}) {
 	keys := make([]string, 0, len(pairs))
 	for _, kv := range pairs {
 		if kv.isService {
-			w.ServiceToPodMetadata.Store(kv.key, kv.value)
+			w.serviceNamespaceToPodMetadata.Store(kv.key, kv.value)
 		} else {
-			w.IPToPodMetadata.Store(kv.key, kv.value)
+			w.ipToPodMetadata.Store(kv.key, kv.value)
 		}
 		keys = append(keys, kv.key)
 	}
@@ -251,8 +251,8 @@ func (w *EndpointSliceWatcher) handleSliceUpdate(oldObj, newObj interface{}) {
 	// 3) For each key in oldKeys that doesn't exist in newKeys, remove it
 	for k := range oldKeysSet {
 		if _, stillPresent := newKeysSet[k]; !stillPresent {
-			w.deleter.DeleteWithDelay(w.IPToPodMetadata, k)
-			w.deleter.DeleteWithDelay(w.ServiceToPodMetadata, k)
+			w.deleter.DeleteWithDelay(w.ipToPodMetadata, k)
+			w.deleter.DeleteWithDelay(w.serviceNamespaceToPodMetadata, k)
 		}
 	}
 
@@ -261,9 +261,9 @@ func (w *EndpointSliceWatcher) handleSliceUpdate(oldObj, newObj interface{}) {
 	for _, kv := range newPairs {
 		if _, alreadyHad := oldKeysSet[kv.key]; !alreadyHad {
 			if kv.isService {
-				w.ServiceToPodMetadata.Store(kv.key, kv.value)
+				w.serviceNamespaceToPodMetadata.Store(kv.key, kv.value)
 			} else {
-				w.IPToPodMetadata.Store(kv.key, kv.value)
+				w.ipToPodMetadata.Store(kv.key, kv.value)
 			}
 		}
 	}
@@ -297,10 +297,30 @@ func (w *EndpointSliceWatcher) removeSliceKeys(slice *discv1.EndpointSlice) {
 
 	keys := val.([]string)
 	for _, k := range keys {
-		w.deleter.DeleteWithDelay(w.IPToPodMetadata, k)
-		w.deleter.DeleteWithDelay(w.ServiceToPodMetadata, k)
+		w.deleter.DeleteWithDelay(w.ipToPodMetadata, k)
+		w.deleter.DeleteWithDelay(w.serviceNamespaceToPodMetadata, k)
 	}
 	w.sliceToKeysMap.Delete(sliceUID)
+}
+
+// GetIPToPodMetadata returns the ipToPodMetadata
+func (w *EndpointSliceWatcher) GetIPToPodMetadata() *sync.Map {
+	return w.ipToPodMetadata
+}
+
+// InitializeIPToPodMetadata initializes the ipToPodMetadata
+func (w *EndpointSliceWatcher) InitializeIPToPodMetadata() {
+	w.ipToPodMetadata = &sync.Map{}
+}
+
+// GetServiceNamespaceToPodMetadata returns the serviceNamespaceToPodMetadata
+func (w *EndpointSliceWatcher) GetServiceNamespaceToPodMetadata() *sync.Map {
+	return w.serviceNamespaceToPodMetadata
+}
+
+// InitializeServiceNamespaceToPodMetadata initializes the serviceNamespaceToPodMetadata
+func (w *EndpointSliceWatcher) InitializeServiceNamespaceToPodMetadata() {
+	w.serviceNamespaceToPodMetadata = &sync.Map{}
 }
 
 // minimizeEndpointSlice removes fields that are not required by our mapping logic,

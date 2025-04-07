@@ -14,8 +14,8 @@ import (
 )
 
 type ServiceWatcher struct {
-	IPToServiceAndNamespace        *sync.Map
-	ServiceAndNamespaceToSelectors *sync.Map
+	ipToServiceAndNamespace        *sync.Map
+	serviceAndNamespaceToSelectors *sync.Map
 	logger                         *zap.Logger
 	informer                       cache.SharedIndexInformer
 	deleter                        Deleter
@@ -29,8 +29,8 @@ func NewServiceWatcher(logger *zap.Logger, sharedInformerFactory informers.Share
 	}
 
 	return &ServiceWatcher{
-		IPToServiceAndNamespace:        &sync.Map{},
-		ServiceAndNamespaceToSelectors: &sync.Map{},
+		ipToServiceAndNamespace:        &sync.Map{},
+		serviceAndNamespaceToSelectors: &sync.Map{},
 		logger:                         logger,
 		informer:                       serviceInformer,
 		deleter:                        deleter,
@@ -80,22 +80,22 @@ func (s *ServiceWatcher) onAddOrUpdateService(service *corev1.Service) {
 	//
 	// we ignore such case for now and may need to consider it in the future
 	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
-		s.IPToServiceAndNamespace.Store(service.Spec.ClusterIP, getServiceAndNamespace(service))
+		s.ipToServiceAndNamespace.Store(service.Spec.ClusterIP, getServiceAndNamespace(service))
 	}
 	labelSet := mapset.NewSet[string]()
 	for key, value := range service.Spec.Selector {
 		labelSet.Add(key + "=" + value)
 	}
 	if labelSet.Cardinality() > 0 {
-		s.ServiceAndNamespaceToSelectors.Store(getServiceAndNamespace(service), labelSet)
+		s.serviceAndNamespaceToSelectors.Store(getServiceAndNamespace(service), labelSet)
 	}
 }
 
 func (s *ServiceWatcher) onDeleteService(service *corev1.Service, deleter Deleter) {
 	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
-		deleter.DeleteWithDelay(s.IPToServiceAndNamespace, service.Spec.ClusterIP)
+		deleter.DeleteWithDelay(s.ipToServiceAndNamespace, service.Spec.ClusterIP)
 	}
-	deleter.DeleteWithDelay(s.ServiceAndNamespaceToSelectors, getServiceAndNamespace(service))
+	deleter.DeleteWithDelay(s.serviceAndNamespaceToSelectors, getServiceAndNamespace(service))
 }
 
 // minimizeService removes fields that could contain large objects, and retain essential
@@ -118,4 +118,19 @@ func minimizeService(obj interface{}) (interface{}, error) {
 		svc.Status.Conditions = nil
 	}
 	return obj, nil
+}
+
+// GetIPToServiceAndNamespace returns the ipToServiceAndNamespace
+func (s *ServiceWatcher) GetIPToServiceAndNamespace() *sync.Map {
+	return s.ipToServiceAndNamespace
+}
+
+// InitializeIPToServiceAndNamespace initializes the ipToServiceAndNamespace
+func (s *ServiceWatcher) InitializeIPToServiceAndNamespace() {
+	s.ipToServiceAndNamespace = &sync.Map{}
+}
+
+// GetServiceAndNamespaceToSelectors returns the serviceAndNamespaceToSelectors
+func (s *ServiceWatcher) GetServiceAndNamespaceToSelectors() *sync.Map {
+	return s.serviceAndNamespaceToSelectors
 }
