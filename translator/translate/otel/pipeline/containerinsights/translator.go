@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
@@ -76,6 +77,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	switch t.pipelineName {
 	case ciPipelineName:
+		if conf.IsSet(eksKey) {
+			processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Resource, common.PipelineNameContainerInsights, false))
+		}
 		// add aws container insights receiver
 		receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator())
 		// Append the metricstransformprocessor only if enhanced container insights is enabled
