@@ -31,6 +31,7 @@ exporters:
             num_consumers: 1
             queue_size: 1000
     awsemf/containerinsights:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
