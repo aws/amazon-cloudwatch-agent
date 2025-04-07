@@ -1,0 +1,396 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package exphbuckets
+
+import (
+	"fmt"
+	"log"
+	"math"
+	"slices"
+
+	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+)
+
+type ExpHistogramDistribution struct {
+	max             float64
+	min             float64
+	sampleCount     float64
+	sum             float64
+	scale           int32
+	positiveBuckets map[int]uint64 // map of bucket index to count
+	negativeBuckets map[int]uint64 // map of bucket index to count
+	zeroThreshold   float64
+	zeroCount       uint64
+	unit            string
+}
+
+func NewExpHistogramDistribution() *ExpHistogramDistribution {
+	return &ExpHistogramDistribution{
+		max:             -math.MaxFloat64,
+		min:             math.MaxFloat64,
+		sampleCount:     0,
+		sum:             0,
+		scale:           0,
+		unit:            "",
+		positiveBuckets: map[int]uint64{},
+		negativeBuckets: map[int]uint64{},
+		zeroThreshold:   0,
+		zeroCount:       0,
+	}
+}
+
+func (d *ExpHistogramDistribution) Maximum() float64 {
+	return d.max
+}
+
+func (d *ExpHistogramDistribution) Minimum() float64 {
+	return d.min
+}
+
+func (d *ExpHistogramDistribution) SampleCount() float64 {
+	return d.sampleCount
+}
+
+func (d *ExpHistogramDistribution) Sum() float64 {
+	return d.sum
+}
+
+func (d *ExpHistogramDistribution) Unit() string {
+	return d.unit
+}
+
+func (d *ExpHistogramDistribution) Size() int {
+	size := len(d.negativeBuckets) + len(d.positiveBuckets)
+	if d.zeroCount > 0 {
+		size++
+	}
+	return size
+}
+
+// ValuesAndCounts outputs two sparse arrays representing the midpoints of each exponential histogram bucket and the
+// counter of datapoints within the corresponding exponential histogram buckets
+func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
+	values := []float64{}
+	counts := []float64{}
+
+	// iterate through positive buckets in descending order
+	posOffsetIndicies := make([]int, 0, len(d.positiveBuckets))
+	for offsetIndex := range d.positiveBuckets {
+		posOffsetIndicies = append(posOffsetIndicies, offsetIndex)
+	}
+	slices.Sort(posOffsetIndicies)
+	slices.Reverse(posOffsetIndicies)
+	for _, offsetIndex := range posOffsetIndicies {
+		counter := d.positiveBuckets[offsetIndex]
+		bucketBegin := LowerBoundary(offsetIndex, int(d.scale))
+		bucketEnd := LowerBoundary(offsetIndex+1, int(d.scale))
+		value := (bucketBegin + bucketEnd) / 2.0
+		values = append(values, value)
+		counts = append(counts, float64(counter))
+	}
+
+	if d.zeroCount > 0 {
+		values = append(values, 0)
+		counts = append(counts, float64(d.zeroCount))
+	}
+
+	// iterate through negative buckets in ascending order
+	negOffsetIndicies := make([]int, 0, len(d.negativeBuckets))
+	for offsetIndex := range d.negativeBuckets {
+		negOffsetIndicies = append(negOffsetIndicies, offsetIndex)
+	}
+	slices.Sort(negOffsetIndicies)
+	for _, offsetIndex := range negOffsetIndicies {
+		counter := d.negativeBuckets[offsetIndex]
+		bucketBegin := LowerBoundary(offsetIndex, int(d.scale))
+		bucketEnd := LowerBoundary(offsetIndex+1, int(d.scale))
+		value := -(bucketBegin + bucketEnd) / 2.0
+		values = append(values, value)
+		counts = append(counts, float64(counter))
+	}
+
+	return values, counts
+}
+
+// weight is 1/samplingRate
+func (d *ExpHistogramDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+	if weight <= 0 {
+		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
+	}
+	if !distribution.IsSupportedValue(value, 0, distribution.MaxValue) {
+		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
+	}
+
+	d.sampleCount += weight
+	d.sum += value * weight
+	d.min = min(d.min, value)
+	d.max = max(d.max, value)
+
+	if math.Abs(value) > d.zeroThreshold {
+		d.zeroCount += uint64(weight)
+	} else if value > d.zeroThreshold {
+		bucketIndex := MapToIndex(value, int(d.scale))
+		d.positiveBuckets[bucketIndex] += uint64(weight)
+	} else {
+		bucketNumber := MapToIndex(value, int(d.scale))
+		d.negativeBuckets[bucketNumber] += uint64(weight)
+	}
+
+	if d.unit == "" {
+		d.unit = unit
+	} else if d.unit != unit && unit != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", d.unit, unit)
+	}
+	return nil
+}
+
+// weight is 1/samplingRate
+func (d *ExpHistogramDistribution) AddEntry(value float64, weight float64) error {
+	return d.AddEntryWithUnit(value, weight, "")
+}
+
+func (d *ExpHistogramDistribution) AddDistribution(other *ExpHistogramDistribution) {
+	d.AddDistributionWithWeight(other, 1)
+}
+
+func (to *ExpHistogramDistribution) AddDistributionWithWeight(from *ExpHistogramDistribution, weight float64) {
+	if from.SampleCount()*weight <= 0 {
+		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", from.SampleCount(), weight)
+		return
+	}
+
+	// some scales are compatible due to perfect subsetting (buckets of an exponential histogram map exactly into
+	// buckets with a lesser scale). for simplicity, deny adding distributions if the scales dont match
+	if from.scale != to.scale {
+		log.Printf("E! The from distribution scale is not compatible with the to distribution scale: from distribution scale %v, to distribution scale %v", from.scale, to.scale)
+		return
+	}
+
+	if from.zeroThreshold != to.zeroThreshold {
+		log.Printf("E! The from distribution zeroThreshold is not compatible with the to distribution zeroThreshold: from distribution zeroThreshold %v, to distribution zeroThreshold %v", from.zeroThreshold, to.zeroThreshold)
+		return
+	}
+
+	to.max = max(to.max, from.Maximum())
+	to.min = min(to.min, from.Minimum())
+	to.sampleCount += from.SampleCount() * weight
+	to.sum += from.Sum() * weight
+
+	for i := range from.positiveBuckets {
+		to.positiveBuckets[i] += from.positiveBuckets[i]
+	}
+
+	to.zeroCount += from.zeroCount
+
+	for i := range from.negativeBuckets {
+		to.negativeBuckets[i] += from.negativeBuckets[i]
+	}
+
+	if to.unit == "" {
+		to.unit = from.Unit()
+	} else if to.unit != from.Unit() && from.Unit() != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", to.unit, from.Unit())
+	}
+
+}
+
+func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogramDataPoint, unit string) {
+	positiveBuckets := dp.Positive()
+	negativeBuckets := dp.Negative()
+
+	d.scale = dp.Scale()
+	d.unit = unit
+
+	d.max = dp.Max()
+	d.min = dp.Min()
+	d.sampleCount = float64(dp.Count())
+	d.sum = dp.Sum()
+
+	positiveOffset := positiveBuckets.Offset()
+	posBucketCounts := positiveBuckets.BucketCounts().AsRaw()
+	for posBucketIndex := range posBucketCounts {
+		offsetIndex := posBucketIndex + int(positiveOffset)
+		d.positiveBuckets[offsetIndex] = posBucketCounts[posBucketIndex]
+	}
+
+	d.zeroThreshold = dp.ZeroThreshold()
+	d.zeroCount = dp.ZeroCount()
+
+	negativeOffset := negativeBuckets.Offset()
+	negBucketCounts := negativeBuckets.BucketCounts().AsRaw()
+	for negBucketIndex := range negBucketCounts {
+		offsetIndex := negBucketIndex + int(negativeOffset)
+		d.positiveBuckets[offsetIndex] = posBucketCounts[negBucketIndex]
+	}
+
+	return
+}
+
+func (d *ExpHistogramDistribution) Resize(listMaxSize int) []*ExpHistogramDistribution {
+	if listMaxSize <= 0 {
+		return []*ExpHistogramDistribution{d}
+	}
+
+	distList := []*ExpHistogramDistribution{}
+
+	newDist := NewExpHistogramDistribution()
+	newDist.max = math.MinInt
+	newDist.min = math.MaxInt
+	newDist.sampleCount = 0 // to be calculated
+	newDist.sum = d.sum
+	newDist.scale = d.scale
+	newDist.unit = d.unit
+	// iterate through positive buckets in descending order
+	posOffsetIndicies := make([]int, 0, len(d.positiveBuckets))
+	for offsetIndex := range d.positiveBuckets {
+		posOffsetIndicies = append(posOffsetIndicies, offsetIndex)
+	}
+	slices.Sort(posOffsetIndicies)
+	slices.Reverse(posOffsetIndicies)
+	for _, posOffsetIndex := range posOffsetIndicies {
+		count := d.positiveBuckets[posOffsetIndex]
+		if newDist.Size() >= listMaxSize {
+			distList = append(distList, newDist)
+
+			newDist = NewExpHistogramDistribution()
+			newDist.max = math.MinInt
+			newDist.min = math.MaxInt
+			newDist.sampleCount = 0 // to be calculated
+			newDist.sum = 0         // set sum
+			newDist.scale = d.scale
+			newDist.unit = d.unit
+		}
+
+		newDist.positiveBuckets[posOffsetIndex] = count
+		newDist.sampleCount += float64(count)
+		newDist.min = min(newDist.min, LowerBoundary(posOffsetIndex, int(d.scale)))
+		newDist.max = max(newDist.max, LowerBoundary(posOffsetIndex+1, int(d.scale)))
+	}
+
+	if d.zeroCount > 0 {
+		if newDist.Size() >= listMaxSize {
+			distList = append(distList, newDist)
+
+			newDist = NewExpHistogramDistribution()
+			newDist.max = 0
+			newDist.min = 0
+			newDist.sampleCount = 0 // to be calculated
+			newDist.sum = 0
+			newDist.scale = d.scale
+			newDist.unit = d.unit
+		}
+
+		newDist.zeroCount = d.zeroCount
+		newDist.sampleCount += float64(d.zeroCount)
+	}
+
+	// iterate through negative buckets in ascending order
+	negOffsetIndicies := make([]int, 0, len(d.negativeBuckets))
+	for offsetIndex := range d.negativeBuckets {
+		negOffsetIndicies = append(negOffsetIndicies, offsetIndex)
+	}
+	slices.Sort(negOffsetIndicies)
+	for _, negOffsetIndex := range negOffsetIndicies {
+		count := d.negativeBuckets[negOffsetIndex]
+		if newDist.Size() >= listMaxSize {
+			distList = append(distList, newDist)
+
+			newDist = NewExpHistogramDistribution()
+			newDist.max = math.MinInt
+			newDist.min = math.MaxInt
+			newDist.sampleCount = 0 // to be calculated
+			newDist.sum = 0
+			newDist.scale = d.scale
+			newDist.unit = d.unit
+		}
+
+		newDist.negativeBuckets[negOffsetIndex] = count
+		newDist.sampleCount += float64(count)
+		newDist.max = max(newDist.max, -LowerBoundary(negOffsetIndex, int(d.scale)))
+		newDist.min = min(newDist.min, -LowerBoundary(negOffsetIndex+1, int(d.scale)))
+	}
+
+	if newDist.Size() >= 0 {
+		distList = append(distList, newDist)
+	}
+
+	if len(distList) == 0 {
+		// this shouldn't happen as it means the distribution has no datapoints.
+		// but just in case, return the one and only exp histogram
+		return []*ExpHistogramDistribution{d}
+	}
+
+	// Override the min and max values of the first and last splits with the raw data of the metric.
+	distList[0].max = d.max
+	distList[len(distList)-1].min = d.min
+
+	return distList
+}
+
+// MapToIndexScale0 computes a bucket index at scale 0.
+func MapToIndexScale0(value float64) int {
+	// Note: Frexp() rounds submnormal values to the smallest normal
+	// value and returns an exponent corresponding to fractions in the
+	// range [0.5, 1), whereas an exponent for the range [1, 2), so
+	// subtract 1 from the exponent immediately.
+	frac, exp := math.Frexp(value)
+	exp--
+
+	if frac == 0.5 && value > 0 {
+		// Special case for positive powers of two: they fall into the bucket
+		// numbered one less.
+		exp--
+	}
+	return exp
+}
+
+// MapToIndexNegativeScale computes a bucket index for scales <= 0.
+func MapToIndexNegativeScale(value float64, scale int) int {
+	return MapToIndexScale0(value) >> -scale
+}
+
+// MapToIndex for any scale
+//
+// Values near a boundary could be mapped into the incorrect bucket due to float point calculation inaccuracy.
+func MapToIndex(value float64, scale int) int {
+	// Special case for power-of-two values.
+	if frac, exp := math.Frexp(value); frac == 0.5 {
+		return ((exp - 1) << scale) - 1
+	}
+	scaleFactor := math.Ldexp(math.Log2E, scale)
+	// The use of math.Log() to calculate the bucket index is not guaranteed to be exactly correct near powers of two.
+	return int(math.Floor(math.Log(math.Abs(value)) * scaleFactor))
+}
+
+// LowerBoundaryNegativeScale computes the lower boundary for index
+// with scales <= 0.
+func LowerBoundaryNegativeScale(index int, scale int) float64 {
+	return math.Ldexp(1, index<<-scale)
+}
+
+func LowerBoundary(index, scale int) float64 {
+	//return LowerBoundarySlow(index, scale)
+	if scale <= 0 {
+		return LowerBoundaryNegativeScale(index, scale)
+	}
+	return LowerBoundaryPositiveScale(index, scale)
+}
+
+// LowerBoundary computes the bucket boundary for positive scales.
+//
+// The returned value may be inaccurate due to accumulated floating point calculation errors
+func LowerBoundaryPositiveScale(index, scale int) float64 {
+	inverseFactor := math.Ldexp(math.Ln2, -scale)
+	return math.Exp(float64(index) * inverseFactor)
+}
+
+// LowerBoundarySlow is a naive implementation for calculating bucket boundaries
+//
+// This matches the implementation in the awsemfexporter
+func LowerBoundarySlow(index, scale int) float64 {
+	base := (2 << (2 << -scale)) //math.Pow(2, math.Pow(2, float64(-scale)))
+	return math.Pow(float64(base), float64(index))
+}

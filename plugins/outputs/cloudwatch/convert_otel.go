@@ -15,6 +15,7 @@ import (
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
@@ -154,10 +155,29 @@ func ConvertOtelExponentialHistogramDataPoints(
 	scale float64,
 	entity cloudwatch.Entity,
 ) []*aggregationDatum {
+
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
-		datums = append(datums, ConvertOtelExponentialHistogramDataPoint(dp, name, unit, scale, entity)...)
+		attrs := dp.Attributes()
+		storageResolution := checkHighResolution(&attrs)
+		aggregationInterval := getAggregationInterval(&attrs)
+		dimensions := ConvertOtelDimensions(attrs)
+		ad := aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				Dimensions:        dimensions,
+				MetricName:        aws.String(name),
+				Unit:              aws.String(unit),
+				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
+				StorageResolution: aws.Int64(storageResolution),
+			},
+			aggregationInterval: aggregationInterval,
+			entity:              entity,
+		}
+		// Assume function pointer is valid.
+		ad.expHistDistribution = exph.NewExpHistogramDistribution()
+		ad.expHistDistribution.ConvertFromOtel(dp, unit)
+		datums = append(datums, &ad)
 	}
 	return datums
 }
@@ -169,13 +189,31 @@ func ConvertOtelExponentialHistogramDataPoint(
 	scale float64,
 	entity cloudwatch.Entity,
 ) []*aggregationDatum {
-
 	attrs := metric.Attributes()
 	storageResolution := checkHighResolution(&attrs)
 	aggregationInterval := getAggregationInterval(&attrs)
 	dimensions := ConvertOtelDimensions(attrs)
 
-	const splitThreshold = defaultMaxValuesPerDatum // TODO: source from export config c.config.MaxValuesPerDatum
+	return []*aggregationDatum{{
+		MetricDatum: cloudwatch.MetricDatum{
+			Dimensions:        dimensions,
+			MetricName:        aws.String(name),
+			Unit:              aws.String(unit),
+			Timestamp:         aws.Time(metric.Timestamp().AsTime()),
+			StorageResolution: aws.Int64(storageResolution),
+			StatisticValues: &cloudwatch.StatisticSet{
+				SampleCount: aws.Float64(float64(metric.Count())),
+				Sum:         aws.Float64(metric.Sum()),
+				Maximum:     aws.Float64(metric.Max()),
+				Minimum:     aws.Float64(metric.Min()),
+			},
+		},
+		aggregationInterval: aggregationInterval,
+		entity:              entity,
+	}}
+
+	const splitThreshold = defaultMaxValuesPerDatum
+
 	currentBucketIndex := 0
 	currentPositiveIndex := metric.Positive().BucketCounts().Len() - 1
 	currentZeroIndex := 0
