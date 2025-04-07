@@ -186,6 +186,11 @@ func (sd *SEH1Distribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit 
 	}
 }
 
+func (sd *SEH1Distribution) Resize(listMaxSize int) []distribution.Distribution {
+	// it has already considered the list max size.
+	return []distribution.Distribution{sd}
+}
+
 func (seh1Distribution *SEH1Distribution) CanAdd(value float64, sizeLimit int) bool {
 	if seh1Distribution.Size() < sizeLimit {
 		return true
