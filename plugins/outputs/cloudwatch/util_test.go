@@ -49,7 +49,7 @@ func TestResize(t *testing.T) {
 
 	dist.AddEntry(1, 1)
 
-	distList := resize(dist, maxListSize)
+	distList := dist.Resize(maxListSize)
 	assert.Equal(t, 1, len(distList))
 
 	actualDist := distList[0]
@@ -69,7 +69,7 @@ func TestResize(t *testing.T) {
 	assert.NoError(t, dist.AddEntry(3, 1))
 	assert.NoError(t, dist.AddEntry(4, 1))
 
-	distList = resize(dist, maxListSize)
+	distList = dist.Resize(maxListSize)
 	assert.Equal(t, 2, len(distList))
 
 	actualDist = distList[0]

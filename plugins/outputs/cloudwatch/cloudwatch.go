@@ -30,6 +30,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
 )
@@ -420,8 +421,8 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
 	var datums []*cloudwatch.MetricDatum
-	var distList []distribution.Distribution
 
+	var distList []distribution.Distribution
 	if metric.distribution != nil {
 		if metric.distribution.Size() == 0 {
 			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
@@ -430,7 +431,19 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 		if metric.distribution.Unit() != "" {
 			metric.SetUnit(metric.distribution.Unit())
 		}
-		distList = resize(metric.distribution, c.config.MaxValuesPerDatum)
+		distList = metric.distribution.Resize(c.config.MaxValuesPerDatum)
+	}
+
+	var exphDistList []*exph.ExpHistogramDistribution
+	if metric.expHistDistribution != nil {
+		if metric.distribution.Size() == 0 {
+			log.Printf("E! metric has a exp histogram distribution with no entries, %s", *metric.MetricName)
+			return metric.entity, datums
+		}
+		if metric.expHistDistribution.Unit() != "" {
+			metric.SetUnit(metric.expHistDistribution.Unit())
+		}
+		exphDistList = metric.expHistDistribution.Resize(c.config.MaxValuesPerDatum)
 	}
 
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
@@ -463,25 +476,29 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 				}
 				datums = append(datums, datum)
 			}
-		} else if len(metric.Values) > 0 {
-
-			// If metric.Values is not empty, we're processing an exponential histogram. The PMD API is limited by how many
-			// metrics can be pushed at once, so the metrics/values arrays need to be split into separate MetricDatum's.
-
-			// Beware there may be many datums sharing pointers to the same
-			// strings for metric names, dimensions, etc.
-			// It is fine since at this point the values will not change.
-			datum := &cloudwatch.MetricDatum{
-				MetricName:        metric.MetricName,
-				Dimensions:        dimensions,
-				Timestamp:         metric.Timestamp,
-				Unit:              metric.Unit,
-				StorageResolution: metric.StorageResolution,
-				StatisticValues:   metric.StatisticValues,
-				Values:            metric.Values,
-				Counts:            metric.Counts,
+		} else if len(exphDistList) > 0 {
+			for _, dist := range exphDistList {
+				values, counts := dist.ValuesAndCounts()
+				s := cloudwatch.StatisticSet{}
+				s.SetMaximum(dist.Maximum())
+				s.SetMinimum(dist.Minimum())
+				s.SetSampleCount(dist.SampleCount())
+				s.SetSum(dist.Sum())
+				// Beware there may be many datums sharing pointers to the same
+				// strings for metric names, dimensions, etc.
+				// It is fine since at this point the values will not change.
+				datum := &cloudwatch.MetricDatum{
+					MetricName:        metric.MetricName,
+					Dimensions:        dimensions,
+					Timestamp:         metric.Timestamp,
+					Unit:              metric.Unit,
+					StorageResolution: metric.StorageResolution,
+					Values:            aws.Float64Slice(values),
+					Counts:            aws.Float64Slice(counts),
+					StatisticValues:   &s,
+				}
+				datums = append(datums, datum)
 			}
-			datums = append(datums, datum)
 		} else {
 			if metric.Value == nil {
 				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
