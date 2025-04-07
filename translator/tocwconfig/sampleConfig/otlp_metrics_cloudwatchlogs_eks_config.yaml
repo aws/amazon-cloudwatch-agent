@@ -1,6 +1,6 @@
 exporters:
     awsemf:
-        add_entity: false
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
