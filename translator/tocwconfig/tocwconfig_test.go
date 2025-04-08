@@ -378,6 +378,30 @@ func TestCollectDConfig(t *testing.T) {
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
 }
 
+// diskio
+func TestDiskIOTelegrafConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "diskio_telegraf_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "diskio_telegraf_config_linux", "darwin", nil, "")
+}
+
+func TestDiskIOEBSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "diskio_ebs_config_linux", "linux", expectedEnvVars, "")
+}
+
+// Both Telegraf & EBS
+func TestDiskIOMixedConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "diskio_mixed_config_linux", "linux", expectedEnvVars, "")
+}
+
 // prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext(t)
