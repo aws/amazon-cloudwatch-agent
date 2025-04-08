@@ -51,7 +51,7 @@ func main() {
 	}
 	client := iam.NewFromConfig(cfg)
 	if err = deleteRoles(ctx, client, getExpirationDate()); err != nil {
-		log.Fatalf("errors cleaning: %v", err)
+		log.Printf("errors cleaning: %v\n", err)
 	}
 }
 

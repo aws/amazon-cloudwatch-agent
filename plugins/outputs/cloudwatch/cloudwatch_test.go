@@ -195,6 +195,15 @@ func TestProcessRollup(t *testing.T) {
 func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
+
+	_, datums := cw.BuildMetricDatum(&aggregationDatum{
+		MetricDatum: cloudwatch.MetricDatum{
+			MetricName: aws.String("test_nil_value"),
+			Value:      nil,
+		},
+	})
+	assert.Empty(t, datums)
+
 	testCases := []float64{
 		math.NaN(),
 		math.Inf(1),

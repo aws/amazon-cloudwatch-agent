@@ -22,6 +22,12 @@
             "blacklist": "agent.log*|env.log|profiler.log|\\.\\d$",
             "publish_multi_logs": true,
             "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/test/logs/*",
+            "blacklist": "agent.log*|env.log|profiler.log|\\.\\d$",
+            "backpressure_mode": "fd_release",
+            "timezone": "UTC"
           }
         ]
       }

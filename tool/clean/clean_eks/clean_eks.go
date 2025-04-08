@@ -26,6 +26,7 @@ var (
 		"cwagent-helm-chart-integ-",
 		"cwagent-operator-eks-integ-",
 		"cwagent-monitoring-config-e2e-eks-",
+		"cwagent-addon-eks-integ-",
 	}
 )
 
@@ -80,7 +81,7 @@ func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []str
 
 func terminateClusters(ctx context.Context, client *eks.Client) {
 	listClusterInput := eks.ListClustersInput{}
-	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationFourDays)
+	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationOneDay)
 
 	clusters, err := client.ListClusters(ctx, &listClusterInput)
 	if err != nil {
@@ -93,7 +94,7 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 			return
 		}
 		if !expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) {
-			log.Printf("Ignoring cluster %s with a launch-date %s since it was created in the last %s", cluster, *describeClusterOutput.Cluster.CreatedAt, clean.KeepDurationFourDays)
+			log.Printf("Ignoring cluster %s with a launch-date %s since it was created in the last %s", cluster, *describeClusterOutput.Cluster.CreatedAt, clean.KeepDurationOneDay)
 			continue
 		}
 		if !clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, ClustersToClean) {

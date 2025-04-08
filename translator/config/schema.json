@@ -971,6 +971,13 @@
                   "auto_removal": {
                     "type": "boolean"
                   },
+                  "backpressure_mode": {
+                    "description": "Define the strategy during backpressure condition",
+                    "type": "string",
+                    "enum": [
+                      "fd_release"
+                    ]
+                  },
                   "blacklist": {
                     "type": "string",
                     "minLength": 1,

@@ -45,6 +45,7 @@ func TestComponents(t *testing.T) {
 		"attributes",
 		"batch",
 		"cumulativetodelta",
+		"deltatocumulative",
 		"deltatorate",
 		"ec2tagger",
 		"metricsgeneration",

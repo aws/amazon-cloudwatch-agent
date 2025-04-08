@@ -118,14 +118,15 @@ type (
 	}
 
 	fileConfig struct {
-		AutoRemoval     bool   `toml:"auto_removal"`
-		FilePath        string `toml:"file_path"`
-		FromBeginning   bool   `toml:"from_beginning"`
-		LogGroupName    string `toml:"log_group_name"`
-		LogStreamName   string `toml:"log_stream_name"`
-		Pipe            bool
-		RetentionInDays int `toml:"retention_in_days"`
-		Timezone        string
+		AutoRemoval      bool   `toml:"auto_removal"`
+		BackpressureMode string `toml:"backpressure_mode"`
+		FilePath         string `toml:"file_path"`
+		FromBeginning    bool   `toml:"from_beginning"`
+		LogGroupName     string `toml:"log_group_name"`
+		LogStreamName    string `toml:"log_stream_name"`
+		Pipe             bool
+		RetentionInDays  int `toml:"retention_in_days"`
+		Timezone         string
 		//Customer specifies if the timestamp from the log message should be trimmed
 		TrimTimestamp bool `toml:"trim_timestamp"`
 		//Customer specified service.name

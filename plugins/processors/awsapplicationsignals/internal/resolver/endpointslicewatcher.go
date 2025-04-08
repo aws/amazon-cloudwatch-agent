@@ -64,7 +64,7 @@ func (w *endpointSliceWatcher) Run(stopCh chan struct{}) {
 			w.handleSliceAdd(obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			w.handleSliceUpdate(newObj, oldObj)
+			w.handleSliceUpdate(oldObj, newObj)
 		},
 		DeleteFunc: func(obj interface{}) {
 			w.handleSliceDelete(obj)
