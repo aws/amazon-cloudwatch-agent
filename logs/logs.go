@@ -110,7 +110,7 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 			select {
 			case <-monitorTicker.C:
 				currentCount := tail.OpenFileCount.Load()
-				log.Printf("D! [logagent] New222---open file count, %v", currentCount)
+				log.Printf("D! [logagent] New333---open file count, %v", currentCount)
 
 				// If count drops to 0, track how long it's been 0
 				if currentCount == 0 {
@@ -194,21 +194,6 @@ func (l *LogAgent) startCollections() {
 			l.collections = append(l.collections, collection)
 		}
 	}
-}
-
-func (l *LogAgent) restartCollections() {
-	// Stop existing collections
-	for _, collection := range l.collections {
-		if stopper, ok := collection.(interface{ Stop() }); ok {
-			stopper.Stop()
-		}
-	}
-
-	// Clear existing collections
-	l.collections = nil
-
-	// Start new collections
-	l.startCollections()
 }
 
 func (l *LogAgent) processCollections() {
