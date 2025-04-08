@@ -81,7 +81,7 @@ func NewLogAgent(c *config.Config) *LogAgent {
 // Run LogAgent will scan all input and output plugins for LogCollection and LogBackend.
 // And connect all the LogSrc from the LogCollection found to the respective LogDest
 // based on the configured "destination", and "name"
-func (l *LogAgent) Run(ctx context.Context) {
+func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 	log.Printf("I! [logagent] starting")
 	for _, output := range l.Config.Outputs {
 		backend, ok := output.Output.(LogBackend)
@@ -107,12 +107,29 @@ func (l *LogAgent) Run(ctx context.Context) {
 		}
 	}
 
-	t := time.NewTicker(time.Second)
-	defer t.Stop()
+	// Start file monitoring in a separate goroutine with monitoring context
+	go func() {
+		monitorTicker := time.NewTicker(time.Second)
+		defer monitorTicker.Stop()
+
+		for {
+			select {
+			case <-monitorTicker.C:
+				log.Printf("D! [logagent] New!!!-----open file count, %v", tail.OpenFileCount.Load())
+			case <-monitoringCtx.Done():
+				log.Printf("I! [logagent] Stopping file monitoring")
+				return
+			}
+		}
+	}()
+
+	// Main processing loop with regular context
+	processTicker := time.NewTicker(time.Second)
+	defer processTicker.Stop()
+
 	for {
 		select {
-		case <-t.C:
-			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Load())
+		case <-processTicker.C:
 			for _, c := range l.collections {
 				srcs := c.FindLogSrc()
 				for _, src := range srcs {
@@ -135,6 +152,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 				}
 			}
 		case <-ctx.Done():
+			log.Printf("I! [logagent] Shutting down log processing")
 			return
 		}
 	}
