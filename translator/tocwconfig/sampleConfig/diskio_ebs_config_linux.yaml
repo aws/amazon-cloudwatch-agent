@@ -5,7 +5,7 @@ exporters:
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
-        region: us-west-2
+        region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
 extensions:
@@ -26,7 +26,7 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
-        region: us-west-2
+        region: us-east-1
 processors:
     awsentity/resource:
         entity_type: Resource
@@ -44,35 +44,44 @@ processors:
         initial_value: 2
         max_staleness: 0s
     ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
-            - InstanceType
+        imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
-    telegraf_cpu:
+    awsebsnvmereceiver:
         collection_interval: 1m0s
         initial_delay: 1s
-        timeout: 0s
-    telegraf_disk:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_diskio:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_mem:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_swap:
-        collection_interval: 1m0s
-        initial_delay: 1s
+        metrics:
+            diskio_ebs_ec2_instance_performance_exceeded_iops:
+                enabled: false
+            diskio_ebs_ec2_instance_performance_exceeded_tp:
+                enabled: false
+            diskio_ebs_total_read_bytes:
+                enabled: true
+            diskio_ebs_total_read_ops:
+                enabled: false
+            diskio_ebs_total_read_time:
+                enabled: false
+            diskio_ebs_total_write_bytes:
+                enabled: true
+            diskio_ebs_total_write_ops:
+                enabled: false
+            diskio_ebs_total_write_time:
+                enabled: false
+            diskio_ebs_volume_performance_exceeded_iops:
+                enabled: false
+            diskio_ebs_volume_performance_exceeded_tp:
+                enabled: false
+            diskio_ebs_volume_queue_length:
+                enabled: false
+        resource_attributes:
+            VolumeId:
+                enabled: true
+        devices:
+            - nvme0n1
         timeout: 0s
 service:
     extensions:
@@ -80,17 +89,6 @@ service:
         - agenthealth/statuscode
         - entitystore
     pipelines:
-        metrics/host:
-            exporters:
-                - awscloudwatch
-            processors:
-                - ec2tagger
-                - awsentity/resource
-            receivers:
-                - telegraf_swap
-                - telegraf_cpu
-                - telegraf_disk
-                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -99,7 +97,7 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_diskio
+                - awsebsnvmereceiver
     telemetry:
         logs:
             development: false
