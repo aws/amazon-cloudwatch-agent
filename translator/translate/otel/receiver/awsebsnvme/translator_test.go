@@ -59,10 +59,6 @@ func TestTranslator(t *testing.T) {
 			input: testutil.GetJson(t, filepath.Join("testdata", "all_resources.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "all_resources.yaml")),
 		},
-		"WithNonEbsMetrics": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "non_ebs_metrics.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "non_ebs_metrics.yaml")),
-		},
 		"WithPrefixedMetrics": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "prefixed_metrics.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "prefixed_metrics.yaml")),

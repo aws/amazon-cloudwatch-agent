@@ -165,19 +165,21 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 			cfgKey := common.ConfigKey(baseKey, inputName)
 
 			hasMeasurements := true
-			hasOnlyNonAdaptedMetrics := false
+			noTelegrafReceivers := false
 			if conf.IsSet(common.ConfigKey(cfgKey, common.MeasurementKey)) {
-				inputConf := conf.Get(cfgKey).(map[string]any)
-				measurement := common.GetMeasurements(inputConf)
+				inputConf := conf.Get(cfgKey)
+				if inputConf != nil {
+					measurement := common.GetMeasurements(inputConf.(map[string]any))
 
-				hasMeasurements = len(measurement) != 0
-				hasOnlyNonAdaptedMetrics = containsOnlyNonAdaptedMetrics(inputName, measurement)
+					hasMeasurements = len(measurement) != 0
+					noTelegrafReceivers = containsOnlyNonAdaptedMetrics(inputName, measurement)
+				}
 			}
 
 			if !hasMeasurements {
 				log.Printf("W! Agent will not emit any metrics for %s due to empty measurement field ", inputName)
 				continue
-			} else if hasOnlyNonAdaptedMetrics {
+			} else if noTelegrafReceivers {
 				// Skip adding the adapted translator because the metric is not being collected through the adapted receiver
 				// Example is EBS NVMe metrics which has its own receiver, whereas the other diskio metrics are collected
 				// using Telegraf (adapted receiver).

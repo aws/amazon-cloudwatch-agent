@@ -42,7 +42,6 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
-                - ebs_volume_queue_length
                 - diskio_ebs_volume_queue_length
         include:
             match_type: ""
