@@ -98,7 +98,6 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 		l.backends[name] = backend
 	}
 
-	// Initialize collections
 	for _, input := range l.Config.Inputs {
 		if collection, ok := input.Input.(LogCollection); ok {
 			log.Printf("I! [logagent] found plugin %v is a log collection", input.Config.Name)
