@@ -98,11 +98,8 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 		l.backends[name] = backend
 	}
 
-	// Channel to coordinate collection management
-	collectionCh := make(chan struct{}, 1)
-
-	// Start collections initially
-	l.startCollections()
+	var lastFileCount int64 = -1
+	zeroCountDuration := time.Duration(0)
 
 	// Start file monitoring in a separate goroutine with monitoring context
 	go func() {
@@ -112,21 +109,36 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 		for {
 			select {
 			case <-monitorTicker.C:
-				count := tail.OpenFileCount.Load()
-				log.Printf("D! [logagent] New222---open file count, %v", count)
-				// If count is 0, trigger collection restart
-				if count == 0 {
-					select {
-					case collectionCh <- struct{}{}:
-					default:
+				currentCount := tail.OpenFileCount.Load()
+				log.Printf("D! [logagent] New222---open file count, %v", currentCount)
+
+				// If count drops to 0, track how long it's been 0
+				if currentCount == 0 {
+					if lastFileCount > 0 {
+						// File count just dropped to 0
+						log.Printf("I! [logagent] File count dropped to 0, initiating recovery")
+						l.restartCollections()
 					}
+					zeroCountDuration += time.Second
+					// If count has been 0 for more than 5 seconds, try to recover
+					if zeroCountDuration >= 5*time.Second {
+						log.Printf("I! [logagent] Attempting to recover file monitoring")
+						l.restartCollections()
+						zeroCountDuration = 0
+					}
+				} else {
+					zeroCountDuration = 0
 				}
+				lastFileCount = currentCount
 			case <-monitoringCtx.Done():
 				log.Printf("I! [logagent] Stopping file monitoring")
 				return
 			}
 		}
 	}()
+
+	// Start initial collections
+	l.startCollections()
 
 	// Main processing loop
 	processTicker := time.NewTicker(time.Second)
@@ -136,12 +148,35 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 		select {
 		case <-processTicker.C:
 			l.processCollections()
-		case <-collectionCh:
-			log.Printf("I! [logagent] Restarting collections due to closed files")
-			l.restartCollections()
 		case <-ctx.Done():
 			log.Printf("I! [logagent] Shutting down log processing")
 			return
+		}
+	}
+}
+
+func (l *LogAgent) restartCollections() {
+	log.Printf("I! [logagent] Restarting collections")
+	// Stop existing collections
+	for _, collection := range l.collections {
+		if stopper, ok := collection.(interface{ Stop() }); ok {
+			stopper.Stop()
+		}
+	}
+
+	// Clear existing collections
+	l.collections = nil
+
+	// Start new collections
+	for _, input := range l.Config.Inputs {
+		if collection, ok := input.Input.(LogCollection); ok {
+			log.Printf("I! [logagent] Restarting collection for plugin %v", input.Config.Name)
+			err := collection.Start(nil)
+			if err != nil {
+				log.Printf("E! could not restart log collection %v err %v", input.Config.Name, err)
+				continue
+			}
+			l.collections = append(l.collections, collection)
 		}
 	}
 }
