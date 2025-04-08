@@ -98,8 +98,20 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 		l.backends[name] = backend
 	}
 
+	// Initialize collections
+	for _, input := range l.Config.Inputs {
+		if collection, ok := input.Input.(LogCollection); ok {
+			log.Printf("I! [logagent] found plugin %v is a log collection", input.Config.Name)
+			err := collection.Start(nil)
+			if err != nil {
+				log.Printf("E! could not start log collection %v err %v", input.Config.Name, err)
+			}
+			l.collections = append(l.collections, collection)
+		}
+	}
+
 	var lastFileCount int64 = -1
-	zeroCountDuration := time.Duration(0)
+	var consecutiveZeroCount int = 0
 
 	// Start file monitoring in a separate goroutine with monitoring context
 	go func() {
@@ -110,24 +122,35 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 			select {
 			case <-monitorTicker.C:
 				currentCount := tail.OpenFileCount.Load()
-				log.Printf("D! [logagent] New333---open file count, %v", currentCount)
+				log.Printf("D! [logagent] open file count, %v", currentCount)
 
-				// If count drops to 0, track how long it's been 0
 				if currentCount == 0 {
-					if lastFileCount > 0 {
-						// File count just dropped to 0
-						log.Printf("I! [logagent] File count dropped to 0, initiating recovery")
-						l.restartCollections()
-					}
-					zeroCountDuration += time.Second
-					// If count has been 0 for more than 5 seconds, try to recover
-					if zeroCountDuration >= 5*time.Second {
-						log.Printf("I! [logagent] Attempting to recover file monitoring")
-						l.restartCollections()
-						zeroCountDuration = 0
+					consecutiveZeroCount++
+					if lastFileCount > 0 || consecutiveZeroCount >= 5 {
+						log.Printf("I! [logagent] Attempting to recover file monitoring (zero count for %d seconds)", consecutiveZeroCount)
+						// Try to restart collections
+						for _, input := range l.Config.Inputs {
+							if collection, ok := input.Input.(LogCollection); ok {
+								// Try to stop first
+								if stopper, ok := collection.(interface{ Stop() }); ok {
+									stopper.Stop()
+								}
+								// Restart the collection
+								err := collection.Start(nil)
+								if err != nil {
+									log.Printf("E! could not restart log collection %v err %v", input.Config.Name, err)
+								} else {
+									log.Printf("I! [logagent] Successfully restarted collection for %v", input.Config.Name)
+								}
+							}
+						}
+						// Reset counter after attempt
+						if consecutiveZeroCount >= 5 {
+							consecutiveZeroCount = 0
+						}
 					}
 				} else {
-					zeroCountDuration = 0
+					consecutiveZeroCount = 0
 				}
 				lastFileCount = currentCount
 			case <-monitoringCtx.Done():
@@ -137,9 +160,6 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 		}
 	}()
 
-	// Start initial collections
-	l.startCollections()
-
 	// Main processing loop
 	processTicker := time.NewTicker(time.Second)
 	defer processTicker.Stop()
@@ -147,7 +167,27 @@ func (l *LogAgent) Run(ctx, monitoringCtx context.Context) {
 	for {
 		select {
 		case <-processTicker.C:
-			l.processCollections()
+			for _, c := range l.collections {
+				srcs := c.FindLogSrc()
+				for _, src := range srcs {
+					dname := src.Destination()
+					logGroup := src.Group()
+					logStream := src.Stream()
+					description := src.Description()
+					retention := src.Retention()
+					logGroupClass := src.Class()
+					backend, ok := l.backends[dname]
+					if !ok {
+						log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
+						continue
+					}
+					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
+					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
+					l.destNames[dest] = dname
+					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
+					go l.runSrcToDest(src, dest)
+				}
+			}
 		case <-ctx.Done():
 			log.Printf("I! [logagent] Shutting down log processing")
 			return
