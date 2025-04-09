@@ -19,7 +19,7 @@ import (
 var ErrOutputStopped = errors.New("Output plugin stopped")
 
 // A LogCollection is a collection of LogSrc, a plugin which can provide many LogSrc
-type LogCollection interface {
+type /**/LogCollection interface {
 	FindLogSrc() []LogSrc
 	Start(acc telegraf.Accumulator) error
 }

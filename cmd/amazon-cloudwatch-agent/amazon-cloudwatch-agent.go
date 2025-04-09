@@ -128,6 +128,39 @@ func reloadLoop(
 				cancel()
 			}
 		}()
+		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
+			// Reloads environment variables when file is changed
+			go func(ctx context.Context, envConfigPath string) {
+				var previousModTime time.Time
+				ticker := time.NewTicker(30 * time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ticker.C:
+						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
+							if err := loadEnvironmentVariables(envConfigPath); err != nil {
+								log.Printf("E! Unable to load env variables: %v\n", err)
+							}
+							// Sets the log level based on environment variable
+							logLevel := os.Getenv(envconfig.CWAGENT_LOG_LEVEL)
+							if logLevel == "" {
+								logLevel = "INFO"
+							}
+							if err := wlog.SetLevelFromName(logLevel); err != nil {
+								log.Printf("E! Unable to set log level: %v\n", err)
+							}
+							cwaLogger.SetLevel(cwaLogger.ConvertToAtomicLevel(wlog.LogLevel()))
+							// Set AWS SDK logging
+							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
+							configaws.SetSDKLogLevel(sdkLogLevel)
+							previousModTime = info.ModTime()
+						}
+					case <-ctx.Done():
+						return
+					}
+				}
+			}(ctx, envConfigPath)
+		}
 
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
