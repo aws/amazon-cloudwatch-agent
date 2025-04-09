@@ -142,7 +142,7 @@ func reloadLoop(
 					profiler.Profiler.ReportAndClear()
 				case <-ctx.Done():
 					profiler.Profiler.ReportAndClear()
-					log.Printf("I! Profiler is stopped during shutdown\n")
+					log.Printf("I! Newewewe Profiler is stopped during shutdown\n")
 					return
 				}
 			}
