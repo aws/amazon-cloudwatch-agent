@@ -60,6 +60,7 @@ const (
 	ForceFlushIntervalKey              = "force_flush_interval"
 	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
 	EnhancedContainerInsights          = "enhanced_container_insights"
+	ResourcesKey                       = "resources"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
 	EnableKueueContainerInsights       = "kueue_container_insights"
