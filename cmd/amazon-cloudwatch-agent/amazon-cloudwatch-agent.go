@@ -106,6 +106,10 @@ func reloadLoop(
 ) {
 	reload := make(chan bool, 1)
 	reload <- true
+
+	monitoringCtx, monitoringCancel := context.WithCancel(context.Background())
+	defer monitoringCancel() // Will be cancelled only when reloadLoop exits
+
 	for <-reload {
 		reload <- false
 
@@ -125,6 +129,7 @@ func reloadLoop(
 				cancel()
 			case <-stop:
 				cancel()
+				monitoringCancel()
 			}
 		}()
 
@@ -177,7 +182,7 @@ func reloadLoop(
 			}(ctx, envConfigPath)
 		}
 
-		err := runAgent(ctx, inputFilters, outputFilters)
+		err := runAgent(ctx, monitoringCtx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			if *fStartUpErrorFile != "" {
 				f, err := os.OpenFile(*fStartUpErrorFile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -229,6 +234,7 @@ func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
 }
 
 func runAgent(ctx context.Context,
+	monitoringCtx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
@@ -321,7 +327,7 @@ func runAgent(ctx context.Context,
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
 		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
-		go logAgent.Run(ctx)
+		go logAgent.Run(monitoringCtx)
 
 		// If only a single YAML is provided and does not exist, then ASSUME the agent is
 		// just monitoring logs since this is the default when no OTEL config flag is provided.
