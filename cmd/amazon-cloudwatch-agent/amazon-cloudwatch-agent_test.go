@@ -65,6 +65,11 @@ func Test_getCollectorParams(t *testing.T) {
 		})
 	}
 }
+func TestReload(t *testing.T) {
+	t.Run("ReloadTest", func(t *testing.T) {
+
+	})
+}
 
 func TestMergeConfigs(t *testing.T) {
 	testEnvValue := `receivers:

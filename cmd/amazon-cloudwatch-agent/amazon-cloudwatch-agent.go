@@ -104,7 +104,7 @@ func reloadLoop(
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
-	log.Printf("I! yoooooooo")
+	log.Println("I! yoooooooo")
 	log.Printf("I! inputFilters: %v\n", inputFilters)
 	log.Printf("outputFilters: %v\n", outputFilters)
 	log.Printf("aggregatorFilters: %v\n", aggregatorFilters)
