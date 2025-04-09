@@ -42,7 +42,6 @@ import (
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
@@ -106,32 +105,10 @@ func reloadLoop(
 ) {
 	reload := make(chan bool, 1)
 	reload <- true
-
-	// Create a persistent context for monitoring that survives reloads
-	monitoringCtx, monitoringCancel := context.WithCancel(context.Background())
-	defer monitoringCancel()
-
-	// Start the profiler with the persistent context
-	go func(ctx context.Context) {
-		profilerTicker := time.NewTicker(60 * time.Second)
-		defer profilerTicker.Stop()
-		for {
-			select {
-			case <-profilerTicker.C:
-				profiler.Profiler.ReportAndClear()
-			case <-ctx.Done():
-				profiler.Profiler.ReportAndClear()
-				log.Printf("I! Profiler is stopped during shutdown\n")
-				return
-			}
-		}
-	}(monitoringCtx)
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // This ensures the context is cancelled when reloadLoop exits
 	for <-reload {
 		reload <- false
-
-		// Create context for components that should restart on SIGHUP
-		ctx, cancel := context.WithCancel(context.Background())
 
 		signals := make(chan os.Signal)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
@@ -140,27 +117,19 @@ func reloadLoop(
 			select {
 			case sig := <-signals:
 				if sig == syscall.SIGHUP {
-					log.Println("I! Reloading Telegraf config- This is new")
+					log.Println("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
-				}
-				cancel() // Cancel only the main context
-
-				// For complete shutdown signals, also cancel the monitoring context
-				if sig != syscall.SIGHUP {
-					monitoringCancel()
+				} else {
+					// Cancel the context on other signals
+					cancel()
 				}
 			case <-stop:
 				cancel()
-				monitoringCancel()
 			}
 		}()
 
-		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
-			go watchEnvConfig(ctx, envConfigPath)
-		}
-
-		err := runAgent(ctx, monitoringCtx, inputFilters, outputFilters)
+		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			if *fStartUpErrorFile != "" {
 				f, err := os.OpenFile(*fStartUpErrorFile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -244,7 +213,6 @@ func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
 }
 
 func runAgent(ctx context.Context,
-	monitoringCtx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
@@ -337,7 +305,7 @@ func runAgent(ctx context.Context,
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
 		// Pass both contexts in a single call to Run
-		go logAgent.Run(ctx, monitoringCtx)
+		go logAgent.Run(ctx)
 
 		// If only a single YAML is provided and does not exist, then ASSUME the agent is
 		// just monitoring logs since this is the default when no OTEL config flag is provided.
