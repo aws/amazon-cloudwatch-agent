@@ -4,8 +4,11 @@
 package k8sclient
 
 import (
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -254,5 +257,89 @@ func TestInferWorkloadName(t *testing.T) {
 				t.Errorf("InferWorkloadName(%q) = %q; expected %q", tc.input, got, tc.expected)
 			}
 		})
+	}
+}
+
+// UUIDString wraps a string with a unique identifier.
+type UUIDString struct {
+	value string
+	uuid  string
+}
+
+// NewUUIDString returns a new UUIDString instance with a generated UUID.
+func NewUUIDString(s string) UUIDString {
+	return UUIDString{
+		value: s,
+		uuid:  uuid.NewString(),
+	}
+}
+
+// String returns the string value and implements the fmt.Stringer interface.
+func (u UUIDString) String() string {
+	return u.value
+}
+
+func (u UUIDString) UUID() string {
+	return u.uuid
+}
+
+// TestDeleteWithDelay_NoUpdate verifies that if the value is not updated,
+// the key is deleted after the delay.
+func TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate(t *testing.T) {
+	m := &sync.Map{}
+	key := "testKey"
+	initialVal := NewUUIDString("value")
+	m.Store(key, initialVal)
+
+	// Use a short delay to make the test run quickly.
+	td := TimedDeleterWithIDCheck{Delay: 10 * time.Millisecond}
+	td.DeleteWithDelay(m, key)
+
+	// Wait for longer than the deletion delay.
+	time.Sleep(20 * time.Millisecond)
+
+	if _, ok := m.Load(key); ok {
+		t.Errorf("Expected key %q to be deleted, but it still exists", key)
+	}
+}
+
+// TestDeleteWithDelay_WithUpdate verifies that if the value is updated before the deletion delay expires,
+// the key is not deleted.
+func TestTimedDeleterWithIDCheck_DeleteWithDelay_WithUpdate(t *testing.T) {
+	m := &sync.Map{}
+	key := "testKey"
+	initialVal := NewUUIDString("value")
+	m.Store(key, initialVal)
+
+	td := TimedDeleterWithIDCheck{Delay: 20 * time.Millisecond}
+	td.DeleteWithDelay(m, key)
+
+	// Wait a bit before updating (less than td.Delay).
+	time.Sleep(10 * time.Millisecond)
+	updatedVal := NewUUIDString("value") // same content, but a new instance (different UUID)
+	m.Store(key, updatedVal)
+
+	// Wait long enough for the deletion delay to expire.
+	time.Sleep(20 * time.Millisecond)
+
+	if _, ok := m.Load(key); !ok {
+		t.Errorf("Expected key %q to remain after update, but it was deleted", key)
+	}
+}
+
+// TestDeleteWithDelay_InvalidType verifies that if the value stored is not a UUIDString,
+// no deletion occurs.
+func TestTimedDeleterWithIDCheck_DeleteWithDelay_InvalidType(t *testing.T) {
+	m := &sync.Map{}
+	key := "invalidKey"
+	// Store a plain string instead of UUIDString.
+	m.Store(key, "a simple string")
+
+	td := TimedDeleterWithIDCheck{Delay: 10 * time.Millisecond}
+	td.DeleteWithDelay(m, key)
+
+	time.Sleep(20 * time.Millisecond)
+	if _, ok := m.Load(key); !ok {
+		t.Errorf("Expected key %q to remain since value is not a UUIDString, but it was deleted", key)
 	}
 }

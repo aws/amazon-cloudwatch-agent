@@ -229,3 +229,48 @@ func (td *TimedDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
 		m.Delete(key)
 	}()
 }
+
+type UUIDValue interface {
+	UUID() string
+}
+
+// TimedDeleterWithIDCheck deletes a key from a sync.Map after a specified delay,
+// but only if the value associated with the key has not been updated (i.e. its UUID is unchanged).
+// Please note TimedDeleterWithIDCheck only work with UUIDValue as value type
+type TimedDeleterWithIDCheck struct {
+	Delay time.Duration
+}
+
+// DeleteWithDelay schedules the deletion of key from map m after the delay.
+// It only deletes the key if the value's UUID remains the same.
+func (td *TimedDeleterWithIDCheck) DeleteWithDelay(m *sync.Map, key interface{}) {
+	// Attempt to load the value for the key.
+	deleteVal, ok := m.Load(key)
+	if !ok {
+		return
+	}
+
+	// The stored value must be of type UUIDValue.
+	initialVal, ok := deleteVal.(UUIDValue)
+	if !ok {
+		return
+	}
+
+	go func() {
+		time.Sleep(td.Delay)
+		// Check if the key still exists.
+		currentValRaw, ok := m.Load(key)
+		if !ok {
+			return
+		}
+		currentVal, ok := currentValRaw.(UUIDValue)
+		if !ok {
+			return
+		}
+
+		// Compare the UUIDs of the initial value and the current value.
+		if currentVal.UUID() == initialVal.UUID() {
+			m.Delete(key)
+		}
+	}()
+}
