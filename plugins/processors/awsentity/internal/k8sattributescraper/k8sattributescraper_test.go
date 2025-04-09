@@ -92,12 +92,12 @@ func Test_k8sattributescraper_Scrape(t *testing.T) {
 			want: &K8sAttributeScraper{
 				Cluster:   "test-cluster",
 				Namespace: "resource-namespace",
-				Workload:  "podmeta-workload",
+				Workload:  "resource-workload",
 				Node:      "resource-node",
 			},
 		},
 		{
-			name:        "PodMetaOverridesAllResourceAttrs",
+			name:        "ResourceAttrsOverridePodMeta",
 			clusterName: "test-cluster",
 			args: generateResourceMetrics(
 				semconv.AttributeK8SNamespaceName, "resource-namespace",
@@ -111,9 +111,9 @@ func Test_k8sattributescraper_Scrape(t *testing.T) {
 			},
 			want: &K8sAttributeScraper{
 				Cluster:   "test-cluster",
-				Namespace: "override-namespace",
-				Workload:  "override-workload",
-				Node:      "override-node",
+				Namespace: "resource-namespace",
+				Workload:  "resource-workload",
+				Node:      "resource-node",
 			},
 		},
 	}
@@ -196,7 +196,7 @@ func Test_k8sattributescraper_scrapeNamespace(t *testing.T) {
 			name:  "DirectOverride",
 			nsArg: "direct-namespace",
 			args:  getAttributeMap(map[string]any{semconv.AttributeK8SNamespaceName: "namespace-name"}),
-			want:  "direct-namespace",
+			want:  "namespace-name",
 		},
 		{
 			name: "AppSignalNodeExists",
@@ -234,7 +234,7 @@ func Test_k8sattributescraper_scrapeNode(t *testing.T) {
 			name:  "DirectOverride",
 			ndArg: "direct-node",
 			args:  getAttributeMap(map[string]any{semconv.AttributeK8SNodeName: "resource-node"}),
-			want:  "direct-node",
+			want:  "resource-node",
 		},
 		{
 			name: "AppsignalNodeExists",
@@ -297,7 +297,7 @@ func Test_k8sattributescraper_scrapeWorkload(t *testing.T) {
 			name:  "DirectOverride",
 			wlArg: "direct-workload",
 			args:  getAttributeMap(map[string]any{semconv.AttributeK8SDeploymentName: "resource-workload"}),
-			want:  "direct-workload",
+			want:  "resource-workload",
 		},
 		{
 			name: "MultipleWorkloads",
