@@ -4,9 +4,12 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/influxdata/wlog"
@@ -65,10 +68,110 @@ func Test_getCollectorParams(t *testing.T) {
 		})
 	}
 }
-func TestReload(t *testing.T) {
-	t.Run("ReloadTest", func(t *testing.T) {
 
-	})
+func TestReloadForDebugging(t *testing.T) {
+	// Set environment variables
+	os.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+	os.Setenv("AWS_ACCESS_KEY_ID", "your_access_key")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "your_secret_key")
+	os.Setenv("AWS_REGION", "us-west-2") // or your preferred region
+
+	// Create a temporary directory
+	tmpDir, err := os.MkdirTemp("", "cwagent-test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a temporary config file
+	configPath := filepath.Join(tmpDir, "test-config.toml")
+	err = os.WriteFile(configPath, []byte(`
+[agent]
+  interval = "10s"
+  flush_interval = "10s"
+
+[[inputs.cpu]]
+  percpu = true
+  totalcpu = true
+
+[[outputs.cloudwatchlogs]]
+  force_flush_interval = "60s"
+  log_stream_name = "test-stream"
+  log_group_name = "test-group"
+`), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Create a temporary env config file
+	envConfigPath := filepath.Join(tmpDir, "env-config.json")
+	envConfig := map[string]string{
+		"CWAGENT_LOG_LEVEL":         "DEBUG",
+		"AWS_EC2_METADATA_DISABLED": "true",
+	}
+	envConfigBytes, err := json.Marshal(envConfig)
+	if err != nil {
+		t.Fatalf("Failed to marshal env config: %v", err)
+	}
+	err = os.WriteFile(envConfigPath, envConfigBytes, 0644)
+	if err != nil {
+		t.Fatalf("Failed to write env config file: %v", err)
+	}
+
+	// Create a minimal OTel config
+	otelConfigPath := filepath.Join(tmpDir, "otel-config.yaml")
+	err = os.WriteFile(otelConfigPath, []byte(`
+receivers:
+  nop:
+
+processors:
+  nop:
+
+exporters:
+  nop:
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      processors: [nop]
+      exporters: [nop]
+`), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write OTel config file: %v", err)
+	}
+
+	// Set the config file flags
+	*fTomlConfig = configPath
+	*fEnvConfig = envConfigPath
+	fOtelConfigs = configprovider.OtelConfigFlags{otelConfigPath}
+
+	// Set the YAML config path
+	os.Setenv(envconfig.CWConfigContent, otelConfigPath)
+
+	// Create a stop channel
+	stop := make(chan struct{})
+
+	// Start reloadLoop in a goroutine
+	go reloadLoop(
+		stop,
+		[]string{"cpu"},
+		[]string{"cloudwatchlogs"},
+		[]string{},
+		[]string{},
+	)
+
+	// Let it run for a short while
+	time.Sleep(5 * time.Second)
+
+	// Stop the reloadLoop
+	close(stop)
+
+	// Wait a bit to ensure reloadLoop has stopped
+	time.Sleep(1 * time.Second)
+
+	// The test will always pass; it's just for running the function
+	t.Log("ReloadLoop test completed")
 }
 
 func TestMergeConfigs(t *testing.T) {

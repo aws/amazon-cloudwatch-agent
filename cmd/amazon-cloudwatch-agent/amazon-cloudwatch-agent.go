@@ -42,7 +42,6 @@ import (
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
@@ -133,20 +132,20 @@ func reloadLoop(
 			}
 		}()
 
-		go func(ctx context.Context) {
-			profilerTicker := time.NewTicker(60 * time.Second)
-			defer profilerTicker.Stop()
-			for {
-				select {
-				case <-profilerTicker.C:
-					profiler.Profiler.ReportAndClear()
-				case <-ctx.Done():
-					profiler.Profiler.ReportAndClear()
-					log.Printf("I! Newewewe Profiler is stopped during shutdown\n")
-					return
-				}
-			}
-		}(ctx)
+		//go func(ctx context.Context) {
+		//	profilerTicker := time.NewTicker(60 * time.Second)
+		//	defer profilerTicker.Stop()
+		//	for {
+		//		select {
+		//		case <-profilerTicker.C:
+		//			profiler.Profiler.ReportAndClear()
+		//		case <-ctx.Done():
+		//			profiler.Profiler.ReportAndClear()
+		//			log.Printf("I! Newewewe Profiler is stopped during shutdown\n")
+		//			return
+		//		}
+		//	}
+		//}(ctx)
 
 		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
 			// Reloads environment variables when file is changed
