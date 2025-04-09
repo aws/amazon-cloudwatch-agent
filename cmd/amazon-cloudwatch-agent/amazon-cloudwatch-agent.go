@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -103,11 +104,7 @@ func reloadLoop(
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
-	log.Println("I! yoooooooo")
-	log.Printf("I! inputFilters: %v\n", inputFilters)
-	log.Printf("outputFilters: %v\n", outputFilters)
-	log.Printf("aggregatorFilters: %v\n", aggregatorFilters)
-	log.Printf("processorFilters: %v\n", processorFilters)
+
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
@@ -126,26 +123,26 @@ func reloadLoop(
 					<-reload
 					reload <- true
 				}
-				defer cancel()
+				cancel()
 			case <-stop:
 				cancel()
 			}
 		}()
 
-		//go func(ctx context.Context) {
-		//	profilerTicker := time.NewTicker(60 * time.Second)
-		//	defer profilerTicker.Stop()
-		//	for {
-		//		select {
-		//		case <-profilerTicker.C:
-		//			profiler.Profiler.ReportAndClear()
-		//		case <-ctx.Done():
-		//			profiler.Profiler.ReportAndClear()
-		//			log.Printf("I! Newewewe Profiler is stopped during shutdown\n")
-		//			return
-		//		}
-		//	}
-		//}(ctx)
+		go func(ctx context.Context) {
+			profilerTicker := time.NewTicker(60 * time.Second)
+			defer profilerTicker.Stop()
+			for {
+				select {
+				case <-profilerTicker.C:
+					profiler.Profiler.ReportAndClear()
+				case <-ctx.Done():
+					profiler.Profiler.ReportAndClear()
+					log.Printf("I! Newewewe Profiler is stopped during shutdown\n")
+					return
+				}
+			}
+		}(ctx)
 
 		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
 			// Reloads environment variables when file is changed
