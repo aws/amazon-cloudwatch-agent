@@ -42,6 +42,7 @@ import (
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
@@ -103,12 +104,17 @@ func reloadLoop(
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
+	log.Printf("I! yoooooooo")
+	log.Printf("I! inputFilters: %v\n", inputFilters)
+	log.Printf("outputFilters: %v\n", outputFilters)
+	log.Printf("aggregatorFilters: %v\n", aggregatorFilters)
+	log.Printf("processorFilters: %v\n", processorFilters)
 	reload := make(chan bool, 1)
 	reload <- true
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel() // This ensures the context is cancelled when reloadLoop exits
 	for <-reload {
 		reload <- false
+
+		ctx, cancel := context.WithCancel(context.Background())
 
 		signals := make(chan os.Signal)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
@@ -120,14 +126,28 @@ func reloadLoop(
 					log.Println("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
-				} else {
-					// Cancel the context on other signals
-					cancel()
 				}
+				defer cancel()
 			case <-stop:
 				cancel()
 			}
 		}()
+
+		go func(ctx context.Context) {
+			profilerTicker := time.NewTicker(60 * time.Second)
+			defer profilerTicker.Stop()
+			for {
+				select {
+				case <-profilerTicker.C:
+					profiler.Profiler.ReportAndClear()
+				case <-ctx.Done():
+					profiler.Profiler.ReportAndClear()
+					log.Printf("I! Profiler is stopped during shutdown\n")
+					return
+				}
+			}
+		}(ctx)
+
 		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
 			// Reloads environment variables when file is changed
 			go func(ctx context.Context, envConfigPath string) {
@@ -173,38 +193,6 @@ func reloadLoop(
 				}
 			}
 			log.Fatalf("E! Error running agent: %v", err)
-		}
-	}
-}
-
-func watchEnvConfig(ctx context.Context, envConfigPath string) {
-	var previousModTime time.Time
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
-				if err := loadEnvironmentVariables(envConfigPath); err != nil {
-					log.Printf("E! Unable to load env variables: %v\n", err)
-				}
-				// Sets the log level based on environment variable
-				logLevel := os.Getenv(envconfig.CWAGENT_LOG_LEVEL)
-				if logLevel == "" {
-					logLevel = "INFO"
-				}
-				if err := wlog.SetLevelFromName(logLevel); err != nil {
-					log.Printf("E! Unable to set log level: %v\n", err)
-				}
-				cwaLogger.SetLevel(cwaLogger.ConvertToAtomicLevel(wlog.LogLevel()))
-				// Set AWS SDK logging
-				sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
-				configaws.SetSDKLogLevel(sdkLogLevel)
-				previousModTime = info.ModTime()
-			}
-		case <-ctx.Done():
-			return
 		}
 	}
 }
@@ -337,7 +325,7 @@ func runAgent(ctx context.Context,
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
-		// Pass both contexts in a single call to Run
+		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
 		go logAgent.Run(ctx)
 
 		// If only a single YAML is provided and does not exist, then ASSUME the agent is
