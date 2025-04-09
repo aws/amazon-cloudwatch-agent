@@ -123,7 +123,7 @@ func reloadLoop(
 			select {
 			case sig := <-signals:
 				if sig == syscall.SIGHUP {
-					log.Println("I! Reloading Telegraf config")
+					log.Println("I! newweweewe Reloading Telegraf config")
 					<-reload
 					reload <- true
 				}

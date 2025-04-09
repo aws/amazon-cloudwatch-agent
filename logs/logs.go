@@ -19,7 +19,7 @@ import (
 var ErrOutputStopped = errors.New("Output plugin stopped")
 
 // A LogCollection is a collection of LogSrc, a plugin which can provide many LogSrc
-type /**/LogCollection interface {
+type LogCollection interface {
 	FindLogSrc() []LogSrc
 	Start(acc telegraf.Accumulator) error
 }
@@ -83,7 +83,6 @@ func NewLogAgent(c *config.Config) *LogAgent {
 // based on the configured "destination", and "name"
 func (l *LogAgent) Run(ctx context.Context) {
 	log.Printf("I! [logagent] starting")
-
 	for _, output := range l.Config.Outputs {
 		backend, ok := output.Output.(LogBackend)
 		if !ok {
@@ -108,77 +107,35 @@ func (l *LogAgent) Run(ctx context.Context) {
 		}
 	}
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
 	for {
 		select {
-		case <-ticker.C:
-			currentCount := tail.OpenFileCount.Load()
-			log.Printf("D! [logagent] new4-open file count, %v", currentCount)
-			if currentCount == 0 {
-				log.Printf("I! [logagent] Attempting to recover file monitoring")
-				l.restartCollections()
+		case <-t.C:
+			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Load())
+			for _, c := range l.collections {
+				srcs := c.FindLogSrc()
+				for _, src := range srcs {
+					dname := src.Destination()
+					logGroup := src.Group()
+					logStream := src.Stream()
+					description := src.Description()
+					retention := src.Retention()
+					logGroupClass := src.Class()
+					backend, ok := l.backends[dname]
+					if !ok {
+						log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
+						continue
+					}
+					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
+					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
+					l.destNames[dest] = dname
+					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
+					go l.runSrcToDest(src, dest)
+				}
 			}
-			l.processCollections()
 		case <-ctx.Done():
-			log.Printf("I! [logagent] Shutting down log processing")
 			return
-		}
-	}
-}
-
-func (l *LogAgent) restartCollections() {
-	for _, input := range l.Config.Inputs {
-		if collection, ok := input.Input.(LogCollection); ok {
-			if stopper, ok := collection.(interface{ Stop() }); ok {
-				stopper.Stop()
-			}
-			err := collection.Start(nil)
-			if err != nil {
-				log.Printf("E! could not restart log collection %v err %v", input.Config.Name, err)
-			} else {
-				log.Printf("I! [logagent] Successfully restarted collection for %v", input.Config.Name)
-			}
-		}
-	}
-}
-
-// Add these helper methods to LogAgent
-func (l *LogAgent) startCollections() {
-	for _, input := range l.Config.Inputs {
-		if collection, ok := input.Input.(LogCollection); ok {
-			log.Printf("I! [logagent] Starting collection for plugin %v", input.Config.Name)
-			err := collection.Start(nil)
-			if err != nil {
-				log.Printf("E! could not start log collection %v err %v", input.Config.Name, err)
-				continue
-			}
-			l.collections = append(l.collections, collection)
-		}
-	}
-}
-
-func (l *LogAgent) processCollections() {
-	for _, c := range l.collections {
-		srcs := c.FindLogSrc()
-		for _, src := range srcs {
-			dname := src.Destination()
-			logGroup := src.Group()
-			logStream := src.Stream()
-			description := src.Description()
-			retention := src.Retention()
-			logGroupClass := src.Class()
-			backend, ok := l.backends[dname]
-			if !ok {
-				log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
-				continue
-			}
-			retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
-			dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
-			l.destNames[dest] = dname
-			log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
-			go l.runSrcToDest(src, dest)
 		}
 	}
 }
