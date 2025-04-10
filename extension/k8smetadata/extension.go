@@ -30,6 +30,7 @@ type KubernetesMetadata struct {
 	ready                atomic.Bool
 	safeStopCh           *k8sclient.SafeChannel
 	endpointSliceWatcher *k8sclient.EndpointSliceWatcher
+	serviceWatcher       *k8sclient.ServiceWatcher
 }
 
 var _ extension.Extension = (*KubernetesMetadata)(nil)
@@ -57,15 +58,24 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 
 	timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
 	sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
-
-	e.endpointSliceWatcher = k8sclient.NewEndpointSliceWatcher(e.logger, sharedInformerFactory, timedDeleter)
 	e.safeStopCh = &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false}
 
-	e.endpointSliceWatcher.Run(e.safeStopCh.Ch)
+	for _, obj := range e.config.Objects {
+		switch obj {
+		case "endpointslices":
+			e.endpointSliceWatcher = k8sclient.NewEndpointSliceWatcher(e.logger, sharedInformerFactory, timedDeleter)
+			e.endpointSliceWatcher.Run(e.safeStopCh.Ch)
+			e.endpointSliceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
+			e.logger.Debug("EndpointSlice cache synced")
+		case "services":
+			e.serviceWatcher = k8sclient.NewServiceWatcher(e.logger, sharedInformerFactory, timedDeleter)
+			e.serviceWatcher.Run(e.safeStopCh.Ch)
+			e.serviceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
+			e.logger.Debug("Service cache synced")
+		}
+	}
 
-	e.endpointSliceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
-
-	e.logger.Debug("EndpointSlice cache synced, extension fully started")
+	e.logger.Debug("Cache synced, extension fully started")
 	e.ready.Store(true)
 
 	return nil
@@ -78,22 +88,71 @@ func (e *KubernetesMetadata) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (e *KubernetesMetadata) GetPodMetadata(ip string) k8sclient.PodMetadata {
-	if ip == "" {
-		e.logger.Debug("GetPodMetadata: no IP provided")
+func (e *KubernetesMetadata) GetPodMetadataFromPodIP(ip string) k8sclient.PodMetadata {
+	if e.endpointSliceWatcher == nil {
+		e.logger.Debug("GetPodMetadataFromPodIP: endpointslices not enabled in config")
 		return k8sclient.PodMetadata{}
 	}
-	pm, ok := e.endpointSliceWatcher.IPToPodMetadata.Load(ip)
+	if ip == "" {
+		e.logger.Debug("GetPodMetadataFromPodIP: no IP provided")
+		return k8sclient.PodMetadata{}
+	}
+	pm, ok := e.endpointSliceWatcher.GetIPToPodMetadata().Load(ip)
 	if !ok {
-		e.logger.Debug("GetPodMetadata: no mapping found for IP", zap.String("ip", ip))
+		e.logger.Debug("GetPodMetadataFromPodIP: no mapping found for IP", zap.String("ip", ip))
 		return k8sclient.PodMetadata{}
 	}
 	metadata := pm.(k8sclient.PodMetadata)
-	e.logger.Debug("GetPodMetadata: found metadata",
+	e.logger.Debug("GetPodMetadataFromPodIP: found metadata",
 		zap.String("ip", ip),
 		zap.String("workload", metadata.Workload),
 		zap.String("namespace", metadata.Namespace),
 		zap.String("node", metadata.Node),
 	)
 	return metadata
+}
+
+func (e *KubernetesMetadata) GetPodMetadataFromServiceAndNamespace(svcAndNS string) k8sclient.PodMetadata {
+	if e.endpointSliceWatcher == nil {
+		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: endpointslices not enabled in config")
+		return k8sclient.PodMetadata{}
+	}
+	if svcAndNS == "" {
+		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: no service@namespace provided")
+		return k8sclient.PodMetadata{}
+	}
+	pm, ok := e.endpointSliceWatcher.GetServiceNamespaceToPodMetadata().Load(svcAndNS)
+	if !ok {
+		e.logger.Debug("GetPodMetadataFromServiceAndNamespace: no mapping found", zap.String("svcAndNS", svcAndNS))
+		return k8sclient.PodMetadata{}
+	}
+	metadata := pm.(k8sclient.PodMetadata)
+	e.logger.Debug("GetPodMetadataFromServiceAndNamespace: found metadata",
+		zap.String("serviceNameAndNamespace", svcAndNS),
+		zap.String("workload", metadata.Workload),
+		zap.String("node", metadata.Node),
+	)
+	return metadata
+}
+
+func (e *KubernetesMetadata) GetServiceAndNamespaceFromClusterIP(ip string) string {
+	if e.serviceWatcher == nil {
+		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: services not enabled in config")
+		return ""
+	}
+	if ip == "" {
+		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: no IP provided")
+		return ""
+	}
+	svcAndNS, ok := e.serviceWatcher.GetIPToServiceAndNamespace().Load(ip)
+	if !ok {
+		e.logger.Debug("GetServiceAndNamespaceFromClusterIP: no mapping found", zap.String("ip", ip))
+		return ""
+	}
+	svcAndNSString := svcAndNS.(string)
+	e.logger.Debug("GetServiceAndNamespaceFromClusterIP: found metadata",
+		zap.String("ip", ip),
+		zap.String("svcAndNS", svcAndNSString),
+	)
+	return svcAndNSString
 }
