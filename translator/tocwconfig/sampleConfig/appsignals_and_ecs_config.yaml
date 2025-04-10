@@ -1,5 +1,6 @@
 exporters:
     awsemf/application_signals:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup

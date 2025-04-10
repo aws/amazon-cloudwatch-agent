@@ -1,0 +1,10 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "diskio": {
+        "resources": ["nvme0n1"],
+        "measurement": []
+      }
+    }
+  }
+}
