@@ -21,7 +21,7 @@ type ConfigPath struct {
 func (obj *ConfigPath) ApplyRule(input interface{}) (string, interface{}) {
 	configPath, err := util.GetConfigPath(prometheusConfigName, common.PrometheusConfigPathKey, defaultLinuxPath+prometheusConfigName, input)
 	if err != nil {
-		log.Panicf(err.Error())
+		log.Panic(err.Error())
 	}
 	return common.PrometheusConfigPathKey, configPath
 }
