@@ -153,9 +153,9 @@ func InferWorkloadName(podName, fallbackServiceName string) string {
 	return podName
 }
 
-const IP_PORT_PATTERN = `^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$`
+const IPPortPattern = `^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$`
 
-var ipPortRegex = regexp.MustCompile(IP_PORT_PATTERN)
+var ipPortRegex = regexp.MustCompile(IPPortPattern)
 
 func ExtractIPPort(ipPort string) (string, string, bool) {
 	match := ipPortRegex.MatchString(ipPort)

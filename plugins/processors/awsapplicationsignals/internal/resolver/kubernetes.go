@@ -178,14 +178,14 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 		sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
 
 		// For the endpoint slice watcher, we maintain two mappings:
-		//   1. ip -> workflow
-		//   2. service -> workflow
+		//   1. ip -> workload
+		//   2. service -> workload
 		//
 		// Scenario:
 		//   When a deployment associated with service X has only one pod, the following events occur:
-		//     a. A pod terminates (one endpoint terminating). For this event, we add the service -> workflow mapping immediately
-		//     b. The endpoints become empty (null endpoints). For this event, we remove the service -> workflow mapping in a delay way
-		//     c. A new pod starts (one endpoint starting). For this event, we add the same service -> workflow mapping immediately
+		//     a. A pod terminates (one endpoint terminating). For this event, we add the service -> workload mapping immediately
+		//     b. The endpoints become empty (null endpoints). For this event, we remove the service -> workload mapping in a delay way
+		//     c. A new pod starts (one endpoint starting). For this event, we add the same service -> workload mapping immediately
 		//
 		// Problem:
 		//   In step (b), a deletion delay (e.g., 2 minutes) is initiated for the mapping with service key X.
@@ -201,7 +201,7 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 		endptSliceWatcher := k8sclient.NewEndpointSliceWatcher(logger, sharedInformerFactory, TimedDeleterWithIDCheck)
 
 		// for service watcher, we are doing the mapping from IP to service name, it's very rare for an ip to be reused
-		// by two services. So we don't face the issue of service -> workflow mapping in endpointSliceWatcher.
+		// by two services. So we don't face the issue of service -> workload mapping in endpointSliceWatcher.
 		// Technically, we can use TimedDeleterWithIDCheck as well but it will involve changing podwatcher with a log of code changes.
 		// I don't think it's worthwhile to do it now. We might conside to do it when podwatcher is no longer in use.
 		timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
