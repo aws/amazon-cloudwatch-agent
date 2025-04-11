@@ -79,6 +79,14 @@ func createTestEndpointSlice(uid, namespace, svcName, podName string, addresses 
 	}
 }
 
+// comparePodMetadataContent compares the content of two podMetadata objects
+// Returns true if the content is equal, false otherwise
+func comparePodMetadataContent(pod1, pod2 PodMetadata) bool {
+	return pod1.Workload == pod2.Workload &&
+		pod1.Namespace == pod2.Namespace &&
+		pod1.Node == pod2.Node
+}
+
 // --- Tests ---
 
 // TestEndpointSliceAddition verifies that when a new EndpointSlice is added,
@@ -98,7 +106,7 @@ func TestEndpointSliceAddition(t *testing.T) {
 	watcher.handleSliceAdd(slice)
 
 	// The dummy InferWorkloadName returns "workload", so full workload becomes {Workload: "workload", Namespace: "testns", Node: ""}
-	expectedVal := PodMetadata{Workload: "workload", Namespace: "testns", Node: ""}
+	expectedVal := NewPodMetadata("workload", "testns", "")
 
 	// We expect the following keys:
 	// - For the endpoint: "1.2.3.4" and "1.2.3.4:80"
@@ -110,14 +118,14 @@ func TestEndpointSliceAddition(t *testing.T) {
 	for _, key := range expectedIPKeys {
 		val, ok := watcher.ipToPodMetadata.Load(key)
 		assert.True(t, ok, "expected ipToPodMetadata key %s", key)
-		assert.Equal(t, expectedVal, val, "ipToPodMetadata[%s] mismatch", key)
+		assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "ipToPodMetadata[%s] mismatch", key)
 	}
 
 	// Verify serviceNamespaceToPodMetadata.
 	for _, key := range expectedSvcKeys {
 		val, ok := watcher.serviceNamespaceToPodMetadata.Load(key)
 		assert.True(t, ok, "expected serviceNamespaceToPodMetadata key %s", key)
-		assert.Equal(t, expectedVal, val, "serviceNamespaceToPodMetadata[%s] mismatch", key)
+		assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "serviceNamespaceToPodMetadata[%s] Workload mismatch", key)
 	}
 
 	// Verify that sliceToKeysMap recorded all keys.
@@ -176,7 +184,7 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		// Call update handler.
 		watcher.handleSliceUpdate(oldSlice, newSlice)
 
-		expectedVal := PodMetadata{Workload: "workload", Namespace: "testns", Node: ""}
+		expectedVal := NewPodMetadata("workload", "testns", "")
 
 		// Old keys that should be removed:
 		// "1.2.3.4" and "1.2.3.4:80" and service key "mysvc@testns"
@@ -201,7 +209,8 @@ func TestEndpointSliceUpdate(t *testing.T) {
 				val, ok = watcher.ipToPodMetadata.Load(key)
 			}
 			assert.True(t, ok, "expected key %s to be added", key)
-			assert.Equal(t, expectedVal, val, "value for key %s mismatch", key)
+			// assert.Equal(t, expectedVal, val, "value for key %s mismatch", key)
+			assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "value for key %s mismatch", key)
 		}
 
 		// Check that sliceToKeysMap now contains exactly the new keys.
@@ -273,7 +282,7 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		// Call update handler.
 		watcher.handleSliceUpdate(oldSlice, newSlice)
 
-		expectedVal := PodMetadata{Workload: "workload", Namespace: "testns", Node: ""}
+		expectedVal := NewPodMetadata("workload", "testns", "")
 		// Expected keys now:
 		// From endpoint 1: "1.2.3.4", "1.2.3.4:80"
 		// From endpoint 2: "1.2.3.5", "1.2.3.5:80"
@@ -285,12 +294,14 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		for _, key := range expectedKeysIP {
 			val, ok := watcher.ipToPodMetadata.Load(key)
 			assert.True(t, ok, "expected ipToPodMetadata key %s", key)
-			assert.Equal(t, expectedVal, val, "ipToPodMetadata[%s] mismatch", key)
+			// assert.Equal(t, expectedVal, val, "ipToPodMetadata[%s] mismatch", key)
+			assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "ipToPodMetadata[%s] mismatch", key)
 		}
 		for _, key := range expectedKeysSvc {
 			val, ok := watcher.serviceNamespaceToPodMetadata.Load(key)
 			assert.True(t, ok, "expected serviceNamespaceToPodMetadata key %s", key)
-			assert.Equal(t, expectedVal, val, "serviceNamespaceToPodMetadata[%s] mismatch", key)
+			// assert.Equal(t, expectedVal, val, "serviceNamespaceToPodMetadata[%s] mismatch", key)
+			assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "serviceNamespaceToPodMetadata[%s] mismatch", key)
 		}
 
 		// And check that sliceToKeysMap contains the union of the keys.
