@@ -1298,7 +1298,7 @@ jobs:
               exit 1
             fi
 
-      - name: Terraform destroy
+      - name: Terraform destroy2
         if: always()
         uses: nick-fields/retry@v2
         with:
