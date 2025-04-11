@@ -500,6 +500,14 @@ func TestTranslator(t *testing.T) {
 							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
 						},
 					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "VolumeId"}},
+						MetricNameSelectors: []string{
+							"node_diskio_ebs_total_read_ops", "node_diskio_ebs_total_write_ops", "node_diskio_ebs_total_read_bytes", "node_diskio_ebs_total_write_bytes",
+							"node_diskio_ebs_total_read_time", "node_diskio_ebs_total_write_time", "node_diskio_ebs_volume_performance_exceeded_iops", "node_diskio_ebs_volume_performance_exceeded_tp",
+							"node_diskio_ebs_ec2_instance_performance_exceeded_iops", "node_diskio_ebs_ec2_instance_performance_exceeded_tp", "node_diskio_ebs_volume_queue_length",
+						},
+					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
 					{
