@@ -68,7 +68,7 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 			//
 			// Scenario:
 			//   When a deployment associated with service X has only one pod, the following events occur:
-			//     a. A pod terminates (one endpoint terminating). For this event, we add the service -> workload mapping immediately
+			//     a. A pod terminates (one endpoint terminating). For this event, we keep the service -> workload mapping (which is added before)
 			//     b. The endpoints become empty (null endpoints). For this event, we remove the service -> workload mapping in a delay way
 			//     c. A new pod starts (one endpoint starting). For this event, we add the same service -> workload mapping immediately
 			//
