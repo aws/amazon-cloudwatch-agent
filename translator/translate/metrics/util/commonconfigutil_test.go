@@ -61,3 +61,30 @@ func TestProcessLinuxCommonConfigHappy(t *testing.T) {
 		panic(err)
 	}
 }
+
+func TestProcessLinuxCommonConfigEbs(t *testing.T) {
+	var input interface{}
+	actualResult := map[string]interface{}{}
+	err := json.Unmarshal([]byte(`{
+					"measurement": [
+						"ebs_total_read_ops",
+						"iops_in_progress",
+						"ebs_total_write_ops",
+						"ebs_dummy",
+						"dummy_ebs"
+					],
+					"metrics_collection_interval": 1
+				}`), &input)
+	if err == nil {
+		hasValidMetrics := ProcessLinuxCommonConfig(input, "diskio", "", actualResult)
+		expectedResult := map[string]interface{}{
+			"fieldpass": []string{"iops_in_progress"},
+			"interval":  "1s",
+			"tags":      map[string]interface{}{"aws:StorageResolution": "true"},
+		}
+		assert.True(t, hasValidMetrics, "Should return valid metrics")
+		assert.Equal(t, expectedResult, actualResult, "should be equal")
+	} else {
+		panic(err)
+	}
+}

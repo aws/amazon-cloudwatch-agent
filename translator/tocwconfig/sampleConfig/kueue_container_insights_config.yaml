@@ -31,7 +31,7 @@ exporters:
             num_consumers: 1
             queue_size: 1000
     awsemf/containerinsights:
-        add_entity: false
+        add_entity: true
         certificate_file_path: /etc/test/ca_bundle.pem
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -239,6 +239,9 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -362,6 +365,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         metrics/kueueContainerInsights:

@@ -1,6 +1,6 @@
 exporters:
     awsemf/containerinsights:
-        add_entity: false
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -195,6 +195,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -554,6 +557,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         metrics/containerinsightsjmx:
