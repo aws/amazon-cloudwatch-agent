@@ -1,5 +1,6 @@
 exporters:
     awsemf/application_signals:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -129,6 +130,7 @@ exporters:
         role_arn: ""
         version: "1"
     awsemf/containerinsights:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup

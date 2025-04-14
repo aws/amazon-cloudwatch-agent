@@ -33,6 +33,7 @@ exporters:
         shared_credentials_file:
             - /root/.aws/credentials
     awsemf/containerinsights:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
