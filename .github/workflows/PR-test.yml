@@ -123,6 +123,9 @@ jobs:
           # Escape the JSON for GitHub Actions
           MATRIX=$(jq -c -r '@json' filtered_matrix.json)
           echo "ec2_linux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+           jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_selinux_complete_test_matrix.json > filtered_matrix_selinux.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix_selinux.json)
           echo "ec2_selinux_matrix=$MATRIX" >> $GITHUB_OUTPUT
 
 
