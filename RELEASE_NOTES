@@ -5,7 +5,7 @@ Features:
 * [Logs] Add service entity support
 * [Metrics] Support entity for custom metrics
 * [Related Telemetry] Implement Kubernetes Metadata Extension
-* [Related Telemetry] Support delta counter and histogram prometheus metrics
+* [Related Telemetry] Support delta counter and histogram prometheus metrics for AMP destination
 * [Related Telemetry] Implement AWS EBS NVME Receiver
 * [Container Insights] Add platform type in EKS
 
