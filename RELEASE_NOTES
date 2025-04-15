@@ -1,4 +1,21 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300055.0 (2025-04-15)
+========================================================================
+Features:
+* [Logs] Add service entity support
+* [Metrics] Support entity for custom metrics
+* [Related Telemetry] Implement Kubernetes Metadata Extension
+* [Related Telemetry] Support delta counter and histogram prometheus metrics
+* [Related Telemetry] Implement AWS EBS NVME Receiver
+* [Container Insights] Add platform type in EKS
+
+Enhancements:
+* [Related Telemetry & Container Insights] Reduce noisy warning logs
+
+Bug Fixes:
+* [Application Signals] Fix service ip to workload mapping in pods
+
+========================================================================
 Amazon CloudWatch Agent 1.300054.0 (2025-03-20)
 ========================================================================
 Features:
@@ -41,7 +58,7 @@ Bug Fixes:
 * Fix service startup failures on Windows by updating network depenencies
 
 Enhancements:
-* [Logs] Improve performance with multi-threaded log pusher implementation 
+* [Logs] Improve performance with multi-threaded log pusher implementation
 * [Related Telemetry] Add case insensitive  metadata support for EC2 tags
 * [Related Telemetry] Reduce number of entities in explore experience by retrieving instance tags simultaneously
 * [Related Telemetry] Add fallback to use application signals for entity population when IMDS tags are not enabled
@@ -72,7 +89,7 @@ Features:
 Amazon CloudWatch Agent 1.300049.1 (2024-11-06)
 ========================================================================
 Enhancements:
-* [Logs] Attach Account ID to entity for cross-account checks 
+* [Logs] Attach Account ID to entity for cross-account checks
 
 Bug Fixes:
 * [Logs] Fix log stream name placeholder resolution for EMF logs
@@ -151,7 +168,7 @@ Enhancements:
 Amazon CloudWatch Agent 1.300044.0 (2024-08-14)
 ========================================================================
 Bug Fixes:
-* [ContainerInsights] Update GPU usage metrics emitted 
+* [ContainerInsights] Update GPU usage metrics emitted
 * [ContainerInsights] Deprecate runtime tag from neuron metrics to fix false average calculation
 
 Enhancements:
