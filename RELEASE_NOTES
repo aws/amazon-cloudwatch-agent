@@ -3,10 +3,10 @@ Amazon CloudWatch Agent 1.300055.0 (2025-04-15)
 ========================================================================
 Features:
 * [Logs] Add service entity support
-* [Metrics] Support entity for custom metrics
+* [Metrics/OTLP] Support entity for custom metrics
 * [Related Telemetry] Implement Kubernetes Metadata Extension
-* [Related Telemetry] Support delta counter and histogram prometheus metrics for AMP destination
-* [Related Telemetry] Implement AWS EBS NVME Receiver
+* [Metrics] Support delta counter and histogram prometheus metrics for AMP destination
+* [Metrics] Implement AWS EBS NVME Receiver
 * [Container Insights] Add platform type in EKS
 
 Enhancements:
