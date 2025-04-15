@@ -215,7 +215,7 @@ func TestEksResolver(t *testing.T) {
 		attributes.PutStr(attr.AWSRemoteService, "192.168.1.2")
 		resourceAttributes = pcommon.NewMap()
 		resolver.ipToServiceAndNamespace.Store("192.168.1.2", "service1@test-namespace-3")
-		resolver.serviceToWorkload.Store("service1@test-namespace-3", "service1-deployment@test-namespace-3")
+		resolver.serviceToWorkload.Store("service1@test-namespace-3", k8sclient.NewPodMetadata("service1-deployment", "test-namespace-3", ""))
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
 		assert.Equal(t, "service1-deployment", getStrAttr(attributes, attr.AWSRemoteService, t))
