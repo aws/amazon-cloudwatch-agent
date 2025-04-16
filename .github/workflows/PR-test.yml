@@ -136,7 +136,7 @@ jobs:
 
 
   EC2LinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
+    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     name: 'EC2LinuxTests'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
