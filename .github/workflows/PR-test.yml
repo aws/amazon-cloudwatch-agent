@@ -123,6 +123,9 @@ jobs:
           # Escape the JSON for GitHub Actions
           MATRIX=$(jq -c -r '@json' filtered_matrix.json)
           echo "ec2_linux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+           jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_selinux_complete_test_matrix.json > filtered_matrix_selinux.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix_selinux.json)
           echo "ec2_selinux_matrix=$MATRIX" >> $GITHUB_OUTPUT
 
 
@@ -159,7 +162,7 @@ jobs:
       build_id: ${{ github.sha }}
       test_dir: terraform/ec2/linux
       job_id: ec2-linux-integration-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix }}
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_selinux_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
