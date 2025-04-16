@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: AWS Daily Resources Cleaner
-
+env:
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 on:
   schedule:
     - cron: "0 0 * * *" # Run Every Day At Midnight
@@ -16,7 +18,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -25,7 +32,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old ami
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_ami/clean_ami.go --tags=clean
 
   clean-old-file-systems:
@@ -35,7 +42,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -44,7 +56,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old file system
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_file_system/clean_file_system.go --tags=clean
 
   clean-opensource-dedicated-hosts:
@@ -54,7 +66,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -63,7 +80,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old dedicated host
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_dedicated_host/clean_dedicated_host.go --tags=clean
 
   clean-internal-dedicated-hosts:
@@ -88,7 +105,12 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -97,7 +119,7 @@ jobs:
           aws-region: ${{ matrix.region }}
 
       - name: Clean old dedicated host
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_dedicated_host/clean_dedicated_host.go --tags=clean
 
   clean-hosts:
@@ -128,7 +150,12 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -137,7 +164,7 @@ jobs:
           aws-region: ${{ matrix.region }}
 
       - name: Clean old host
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_host/clean_host.go ${{ matrix.region }}
 
   clean-hosts-china:
@@ -147,7 +174,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -156,7 +188,7 @@ jobs:
           aws-region: "cn-north-1"
 
       - name: Clean old hosts
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_host/clean_host.go cn-north-1
 
   clean-ecs-clusters:
@@ -166,7 +198,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -175,7 +212,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old ecs cluster
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_ecs/clean_ecs.go --tags=clean
 
   clean-eks-clusters:
@@ -185,7 +222,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -194,7 +236,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old eks cluster
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_eks/clean_eks.go --tags=clean
   clean-ebs-volumes:
     runs-on: ubuntu-latest
@@ -203,7 +245,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -212,7 +259,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old unused ebs volumes
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_ebs/clean_ebs.go --tags=clean
 
   clean-asg:
@@ -222,7 +269,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -231,7 +283,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old asg
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go --tags=clean
 
   clean-launch-configs:
@@ -241,7 +293,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -250,7 +307,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old launch configuration
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_launch_configuration/clean_launch_configuration.go --tags=clean
   clean-iam-roles:
     runs-on: ubuntu-latest
@@ -259,7 +316,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -268,7 +330,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old IAM roles
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_iam_roles/clean_iam_roles.go --tags=clean
   clean-log-groups:
     runs-on: ubuntu-latest
@@ -277,7 +339,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -286,7 +353,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old Log Groups
-        working-directory: tool/clean
+        working-directory: clean
         run: go run ./clean_log_group/clean_log_group.go 
   clean-security-groups:
     runs-on: ubuntu-latest
@@ -295,7 +362,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
       - uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -304,7 +376,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean Old Security Groups
-        working-directory: tool/clean
+        working-directory: clean
         run: |
           set -e
           go run ./clean_security_group/clean_security_group.go || { echo "Failed to clean security groups"; exit 1; }
