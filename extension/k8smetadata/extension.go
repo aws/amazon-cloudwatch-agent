@@ -56,18 +56,43 @@ func (e *KubernetesMetadata) Start(_ context.Context, _ component.Host) error {
 	// jitter calls to the kubernetes api (a precaution to prevent overloading api server)
 	jitterSleep(jitterKubernetesAPISeconds)
 
-	timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
 	sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
 	e.safeStopCh = &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false}
 
 	for _, obj := range e.config.Objects {
 		switch obj {
 		case "endpointslices":
+			// For the endpoint slice watcher, we maintain two mappings:
+			//   1. ip -> workload
+			//   2. service -> workload
+			//
+			// Scenario:
+			//   When a deployment associated with service X has only one pod, the following events occur:
+			//     a. A pod terminates (one endpoint terminating). For this event, we keep the service -> workload mapping (which is added before)
+			//     b. The endpoints become empty (null endpoints). For this event, we remove the service -> workload mapping in a delay way
+			//     c. A new pod starts (one endpoint starting). For this event, we add the same service -> workload mapping immediately
+			//
+			// Problem:
+			//   In step (b), a deletion delay (e.g., 2 minutes) is initiated for the mapping with service key X.
+			//   Then, in step (c), the mapping for service key X is re-added. Since the new mapping is inserted
+			//   before the delay expires, the scheduled deletion from step (b) may erroneously remove the mapping
+			//   added in step (c).
+			//
+			// Root Cause and Resolution:
+			//   The issue is caused by deleting the mapping using only the key, without verifying the value.
+			//   To fix this, we need to compare both the key and the value before deletion.
+			//   That is exactly the purpose of TimedDeleterWithIDCheck.
+			timedDeleter := &k8sclient.TimedDeleterWithIDCheck{Delay: deletionDelay}
 			e.endpointSliceWatcher = k8sclient.NewEndpointSliceWatcher(e.logger, sharedInformerFactory, timedDeleter)
 			e.endpointSliceWatcher.Run(e.safeStopCh.Ch)
 			e.endpointSliceWatcher.WaitForCacheSync(e.safeStopCh.Ch)
 			e.logger.Debug("EndpointSlice cache synced")
 		case "services":
+			// for service watcher, we are doing the mapping from IP to service name, it's very rare for an ip to be reused
+			// by two services. So we don't face the issue of service -> workload mapping in endpointSliceWatcher.
+			// Technically, we can use TimedDeleterWithIDCheck as well but it will involve changing podwatcher with a lot of code changes.
+			// I don't think it's worthwhile to do it now. We might conside to do it when podwatcher is no longer in use.
+			timedDeleter := &k8sclient.TimedDeleter{Delay: deletionDelay}
 			e.serviceWatcher = k8sclient.NewServiceWatcher(e.logger, sharedInformerFactory, timedDeleter)
 			e.serviceWatcher.Run(e.safeStopCh.Ch)
 			e.serviceWatcher.WaitForCacheSync(e.safeStopCh.Ch)

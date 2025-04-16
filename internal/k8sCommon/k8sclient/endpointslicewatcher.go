@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	discv1 "k8s.io/api/discovery/v1"
 	"k8s.io/client-go/informers"
@@ -32,6 +33,22 @@ type PodMetadata struct {
 	Workload  string
 	Namespace string
 	Node      string
+	uuid      string // unexported field to store the unique identifier
+}
+
+// NewPodMetadata constructs a new PodMetadata instance with a unique uuid.
+func NewPodMetadata(workload, namespace, node string) PodMetadata {
+	return PodMetadata{
+		Workload:  workload,
+		Namespace: namespace,
+		Node:      node,
+		uuid:      uuid.NewString(),
+	}
+}
+
+// UUID returns the unique identifier (uuid) for the PodMetadata.
+func (pm PodMetadata) UUID() string {
+	return pm.uuid
 }
 
 // kvPair holds one mapping from key -> value. The isService flag
@@ -127,11 +144,7 @@ func (w *EndpointSliceWatcher) extractEndpointSliceKeyValuePairs(slice *discv1.E
 				continue
 			}
 
-			fullWl := PodMetadata{
-				Workload:  derivedWorkload,
-				Namespace: ns,
-				Node:      nodeName,
-			}
+			fullWl := NewPodMetadata(derivedWorkload, ns, nodeName)
 
 			// Build IP and IP:port pairs
 			for _, addr := range endpoint.Addresses {

@@ -84,7 +84,7 @@ jobs:
           ref: ${{inputs.test_repo_branch}}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
