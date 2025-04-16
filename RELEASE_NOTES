@@ -34,6 +34,17 @@ Bug Fixes:
 * [Kubernetes] Use Kubernetes Secret File for Bearer Token in Prometheus API Access
 
 ========================================================================
+Amazon CloudWatch Agent 1.300053.1 (2025-03-14)
+========================================================================
+Enhancements:
+* [ContainerInsights] Add service account token refresh to AWS Container Insights Kueue Receiver
+
+Bug Fixes:
+* [ApplicationSignals] Fix endpointSliceUpdate handling in Application Signals
+
+========================================================================
+
+========================================================================
 Amazon CloudWatch Agent 1.300053.0 (2025-02-26)
 ========================================================================
 Bug Fixes:
