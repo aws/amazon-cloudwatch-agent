@@ -139,6 +139,7 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
+        use_all_labels_as_dimensions: false
         version: "0"
 extensions:
     agenthealth/logs:

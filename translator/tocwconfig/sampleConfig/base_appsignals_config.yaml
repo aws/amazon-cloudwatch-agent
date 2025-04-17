@@ -130,6 +130,7 @@ exporters:
         role_arn: ""
         shared_credentials_file:
             - fake-path
+        use_all_labels_as_dimensions: false
         version: "1"
     awsxray/application_signals:
         certificate_file_path: ""

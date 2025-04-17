@@ -389,6 +389,7 @@ exporters:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        use_all_labels_as_dimensions: false
         version: "0"
     awsemf/kueueContainerInsights:
         add_entity: false
@@ -470,6 +471,7 @@ exporters:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        use_all_labels_as_dimensions: false
         version: "0"
 extensions:
     agenthealth/logs:

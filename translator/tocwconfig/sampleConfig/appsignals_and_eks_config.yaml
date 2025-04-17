@@ -128,6 +128,7 @@ exporters:
             enabled: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
+        use_all_labels_as_dimensions: false
         version: "1"
     awsemf/containerinsights:
         add_entity: true
@@ -238,6 +239,7 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
+        use_all_labels_as_dimensions: false
         version: "0"
     awsxray/application_signals:
         certificate_file_path: ""
