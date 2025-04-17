@@ -171,7 +171,7 @@ func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlog
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
+	//client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	if c.middleware != nil {
 		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
 			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
