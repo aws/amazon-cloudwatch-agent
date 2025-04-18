@@ -172,8 +172,8 @@ require (
 	go.opentelemetry.io/collector/config/confighttp v0.115.0
 	go.opentelemetry.io/collector/config/configopaque v1.21.0
 	go.opentelemetry.io/collector/config/configtls v1.21.0
-	go.opentelemetry.io/collector/confmap v1.21.0
-	go.opentelemetry.io/collector/confmap/provider/envprovider v1.21.0
+	go.opentelemetry.io/collector/confmap v1.30.0
+	go.opentelemetry.io/collector/confmap/provider/envprovider v1.30.0
 	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.21.0
 	go.opentelemetry.io/collector/consumer v1.22.0
 	go.opentelemetry.io/collector/exporter v0.115.0
@@ -213,6 +213,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.115.0
+	go.opentelemetry.io/collector/client v1.21.0
 	go.opentelemetry.io/collector/component/componenttest v0.115.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.115.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
@@ -505,7 +506,6 @@ require (
 	go.etcd.io/bbolt v1.3.11 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/collector v0.115.0 // indirect
-	go.opentelemetry.io/collector/client v1.21.0 // indirect
 	go.opentelemetry.io/collector/component/componentstatus v0.115.0 // indirect
 	go.opentelemetry.io/collector/config/configcompression v1.21.0 // indirect
 	go.opentelemetry.io/collector/config/configgrpc v0.115.0 // indirect
@@ -525,7 +525,7 @@ require (
 	go.opentelemetry.io/collector/extension/auth v0.115.0 // indirect
 	go.opentelemetry.io/collector/extension/experimental/storage v0.115.0 // indirect
 	go.opentelemetry.io/collector/extension/extensioncapabilities v0.115.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.22.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.30.0 // indirect
 	go.opentelemetry.io/collector/internal/fanoutconsumer v0.115.0 // indirect
 	go.opentelemetry.io/collector/internal/memorylimiter v0.115.0 // indirect
 	go.opentelemetry.io/collector/internal/sharedcomponent v0.115.0 // indirect
