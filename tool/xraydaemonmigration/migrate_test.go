@@ -135,7 +135,7 @@ func TestCovertYamlToJson(t *testing.T) {
 	jsonStruct, err := ConvertYamlToJson(yamlFile, duplicateDaemonProcess)
 	assert.NotNil(t, err)
 
-	exptectedFilePath := filepath.Join("testdata", "actualConfig.json")
+	expectedFilePath := filepath.Join("testdata", "actualConfig.json")
 	yamlFile, err = os.ReadFile(configFilePath)
 	assert.NoError(t, err)
 	var correctDaemonProcess = &proc{
@@ -147,10 +147,10 @@ func TestCovertYamlToJson(t *testing.T) {
 	jsonStruct, err = ConvertYamlToJson(yamlFile, correctDaemonProcess)
 	assert.NoError(t, err)
 
-	exptectedFile, err := os.ReadFile(exptectedFilePath)
+	expectedFile, err := os.ReadFile(expectedFilePath)
 	assert.NoError(t, err)
 
 	jsonFile, err := json.MarshalIndent(jsonStruct, "", "\t")
 	assert.NoError(t, err)
-	assert.JSONEq(t, string(exptectedFile), string(jsonFile))
+	assert.JSONEq(t, string(expectedFile), string(jsonFile))
 }

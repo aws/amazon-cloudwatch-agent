@@ -42,7 +42,7 @@ func deleteUnusedVolumes(ctx context.Context, client *ec2.Client) error {
 	input := &ec2.DescribeVolumesInput{
 		Filters: []types.Filter{
 			{
-				//if the status is availble, then EBS volume is not currently attached to any ec2 instance (so not being used)
+				//if the status is available, then EBS volume is not currently attached to any ec2 instance (so not being used)
 				Name:   aws.String("status"),
 				Values: []string{"available"},
 			},

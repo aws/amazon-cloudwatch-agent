@@ -22,7 +22,7 @@ import (
 
 	// Enabled telegraf input plugins
 	// NOTE: any plugins that are dependencies of the plugins enabled will be enabled too
-	// e.g.: cpu plguin from telegraf would enable the system plugin as its dependency
+	// e.g.: cpu plugin from telegraf would enable the system plugin as its dependency
 	_ "github.com/influxdata/telegraf/plugins/inputs/cpu"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
