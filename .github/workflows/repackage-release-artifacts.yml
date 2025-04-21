@@ -78,7 +78,7 @@ jobs:
 
           pushd darwin/amd64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/amd64/amazon-cloudwatch-agent.pkg
           popd
 
           pushd darwin/arm64
