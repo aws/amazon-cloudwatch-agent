@@ -112,6 +112,7 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
           platforms: linux/amd64
+          provenance: false
 
       - name: Build Cloudwatch Agent Image arm64
         uses: docker/build-push-action@v6
@@ -123,6 +124,7 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
           platforms: linux/arm64
+          provenance: false
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -386,8 +388,8 @@ jobs:
           docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
           docker manifest push $REGISTRY/$REPOSITORYWindows
 
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd | jq '.manifests[0]' > linux-amd.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm | jq '.manifests[0]' > linux-arm.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd > linux-amd.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm > linux-arm.json
           docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[0]' > 2019.json
           docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[1]' > 2022.json
 
