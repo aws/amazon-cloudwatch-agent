@@ -388,12 +388,8 @@ jobs:
           docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
           docker manifest push $REGISTRY/$REPOSITORYWindows
 
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd > linux-amd.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm > linux-arm.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[0]' > 2019.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[1]' > 2022.json
-
-          docker buildx imagetools create -f linux-amd.json -f linux-arm.json -f 2019.json -f 2022.json --tag $REGISTRY/$OrigREPOSITORY
+          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019 --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
+          docker manifest push $REGISTRY/$OrigREPOSITORY
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignWindowsPackage:
