@@ -103,6 +103,7 @@ jobs:
           echo "::set-output name=ContainerRepositoryName::$RepoName"
 
       - name: Build Cloudwatch Agent Image amd64
+        id: build_amd64
         uses: docker/build-push-action@v6
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
         with:
@@ -114,6 +115,7 @@ jobs:
           platforms: linux/amd64
 
       - name: Build Cloudwatch Agent Image arm64
+        id: build_arm64
         uses: docker/build-push-action@v6
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
         with:

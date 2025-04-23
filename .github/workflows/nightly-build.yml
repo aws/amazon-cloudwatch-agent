@@ -42,3 +42,85 @@ jobs:
       ContainerRepositoryNameAndTag: "nightly-build:latest"
       BucketKey: "nightly-build/latest"
       PackageBucketKey: "nightly-build/latest"
+
+  TagLinuxImages:
+    name: 'Tag Linux Images'
+    needs: [ BuildDocker ]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Tag AMD64 Image
+        env:
+          NIGHTLY_BUILD_REPO_NAME: "nightly-build"
+        run: |
+          # Tags
+          AMD64_IMAGE_INDEX_TAG='linux-amd64'
+          AMD64_IMAGE_TAG='latest-amd64'
+
+          # Get AMD64 Image Index manifest
+          AMD64_IMAGE_INDEX_MANIFEST=$(aws ecr batch-get-image \
+            --repository-name $NIGHTLY_BUILD_REPO_NAME \
+            --image-ids imageTag=$AMD64_IMAGE_INDEX_TAG \
+            --output text \
+            --query 'images[].imageManifest')
+
+          # Get AMD64 Image Digest
+          AMD64_IMAGE_DIGEST=$(echo "$AMD64_IMAGE_INDEX_MANIFEST" | jq -r '.manifests[] | select(.platform.architecture == "amd64") | .digest')
+          echo "AMD64 Image Digest: $AMD64_IMAGE_DIGEST"
+
+          # Get AMD64 Image manifest
+          AMD64_IMAGE_MANIFEST=$(aws ecr batch-get-image \
+            --repository-name $NIGHTLY_BUILD_REPO_NAME \
+            --image-ids imageDigest=$AMD64_IMAGE_DIGEST \
+            --output text \
+            --query 'images[].imageManifest')
+
+          # Tag AMD64 Image
+          aws ecr put-image \
+            --repository-name $NIGHTLY_BUILD_REPO_NAME \
+            --image-tag $AMD64_IMAGE_TAG \
+            --image-manifest "$AMD64_IMAGE_MANIFEST"
+
+          echo "AMD64 Image Tagged as: $AMD64_IMAGE_TAG"
+
+      - name: Tag ARM64 Image
+        env:
+          NIGHTLY_BUILD_REPO_NAME: "nightly-build"
+        run: |
+          # Tags
+          ARM64_IMAGE_INDEX_TAG='linux-arm64'
+          ARM64_IMAGE_TAG='latest-arm64'
+
+          # Get ARM64 Image Index manifest
+          ARM64_IMAGE_INDEX_MANIFEST=$(aws ecr batch-get-image \
+            --repository-name $NIGHTLY_BUILD_REPO_NAME \
+            --image-ids imageTag=$ARM64_IMAGE_INDEX_TAG \
+            --output text \
+            --query 'images[].imageManifest')
+
+          # Get ARM64 Image Digest
+          ARM64_IMAGE_DIGEST=$(echo "$ARM64_IMAGE_INDEX_MANIFEST" | jq -r '.manifests[] | select(.platform.architecture == "arm64") | .digest')
+          echo "ARM64 Image Digest: $ARM64_IMAGE_DIGEST"
+
+          # Get ARM64 Image manifest
+          ARM64_IMAGE_MANIFEST=$(aws ecr batch-get-image \
+            --repository-name $NIGHTLY_BUILD_REPO_NAME \
+            --image-ids imageDigest=$ARM64_IMAGE_DIGEST \
+            --output text \
+            --query 'images[].imageManifest')
+
+          # Tag ARM64 Image
+          aws ecr put-image \
+            --repository-name $NIGHTLY_BUILD_REPO_NAME \
+            --image-tag $ARM64_IMAGE_TAG \
+            --image-manifest "$ARM64_IMAGE_MANIFEST"
+
+          echo "ARM64 Image Tagged as: $ARM64_IMAGE_TAG"
