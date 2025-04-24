@@ -96,6 +96,9 @@ func TestTranslate(t *testing.T) {
 						"kubernetes": map[string]interface{}{
 							"cluster_name": "ci-logs",
 						},
+						"prometheus": map[string]interface{}{
+							"cluster_name": "ci-prometheus",
+						},
 					},
 				},
 			},
@@ -104,6 +107,43 @@ func TestTranslate(t *testing.T) {
 			envClusterName: "env-cluster",
 			want: &awsentity.Config{
 				ClusterName:    "ci-logs",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"PrometheusUnderLogs": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"cluster_name": "ci-prometheus",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			want: &awsentity.Config{
+				ClusterName:    "ci-prometheus",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+			},
+		},
+		"PrometheusPrecedence": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"cluster_name": "ci-prometheus",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			envClusterName: "env-cluster",
+			want: &awsentity.Config{
+				ClusterName:    "ci-prometheus",
 				KubernetesMode: config.ModeEKS,
 				Platform:       config.ModeEC2,
 			},
