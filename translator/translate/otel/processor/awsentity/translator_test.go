@@ -79,6 +79,9 @@ func TestTranslate(t *testing.T) {
 						"kubernetes": map[string]interface{}{
 							"cluster_name": "ci-logs",
 						},
+						"prometheus": map[string]interface{}{
+							"cluster_name": "ci-prometheus",
+						},
 					},
 				}},
 			mode:           config.ModeEC2,
