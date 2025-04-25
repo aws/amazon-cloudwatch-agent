@@ -91,6 +91,7 @@ func TestComponents(t *testing.T) {
 		"awsproxy",
 		"ecs_observer",
 		"entitystore",
+		"k8smetadata",
 		"file_storage",
 		"health_check",
 		"pprof",
