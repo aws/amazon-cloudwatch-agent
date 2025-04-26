@@ -17,8 +17,8 @@ The reference time used in the layouts in Golang is the specific time.
 For example : "Mon Jan 2 15:04:05 MST 2006"
 
 So the TimeFormatMap records time_format code and its corresponding Golang specific reference time.
-And the TimeFormatRexMap records time_format code and its corresponding regax expression.
-When process the user's input, the translator will translate the timestamp_format into the Golang reference time layout and the regax expression based on those two maps.
+And the TimeFormatRexMap records time_format code and its corresponding regex expression.
+When process the user's input, the translator will translate the timestamp_format into the Golang reference time layout and the regex expression based on those two maps.
 
 Based on https://golang.org/src/time/format.go and http://strftime.org/, here is the mapping below:
 stdLongMonth                                   // "January"                                                         //%B

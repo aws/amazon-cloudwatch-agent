@@ -109,7 +109,7 @@ func TestGenerateTracesConfiguration(t *testing.T) {
 	assert.JSONEq(t, string(cmdlineConfigFile), string(jsonFile))
 	ctx = &runtime.Context{TracesOnly: true}
 
-	//Xray run as a servie
+	//Xray run as a service
 	xraydaemonmigration.GetProcesses = mockProcessesXrayService
 	inputChan = testutil.SetUpTestInputStream()
 	testutil.Type(inputChan, "2", "2000", "2000", "", "", "")
@@ -137,7 +137,7 @@ func TestGenerateTracesConfiguration(t *testing.T) {
 	jsonFile, err = json.Marshal(*jsonStruct)
 	assert.JSONEq(t, string(expectedDefaultConfigFile), string(jsonFile))
 
-	//multiple proccess chose cmdline with no args
+	//multiple process chose cmdline with no args
 	xraydaemonmigration.GetProcesses = mockProcesses
 	testutil.Type(inputChan, "3")
 	jsonStruct, err = generateTracesConfiguration(ctx)

@@ -554,7 +554,7 @@ append line`
 }
 
 func TestLogsMultilineTimeout(t *testing.T) {
-	// multline line starter as [^/s]
+	// multiline line starter as [^/s]
 	logEntryString1 := `multiline begin
  append line
  append line`

@@ -366,7 +366,7 @@ func (w *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 	return records
 }
 
-// getRecord attemps to render and format the message for the given EvtHandle.
+// getRecord attempts to render and format the message for the given EvtHandle.
 func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord, error) {
 	// Notes on the process:
 	// - We first call RenderEventXML to get the publisher details. This piece of information is then used

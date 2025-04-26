@@ -177,7 +177,7 @@
         ],
         "metrics_collection_interval": 60,
         "resources": [
-          "customizedInstaces"
+          "customizedInstances"
         ]
       },
       "statsd": {

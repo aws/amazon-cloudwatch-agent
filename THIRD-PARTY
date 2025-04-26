@@ -1705,7 +1705,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 -------
-internal/common/binary.go in the gopsutil is copied and modifid from
+internal/common/binary.go in the gopsutil is copied and modified from
 golang/encoding/binary.go.
 
 

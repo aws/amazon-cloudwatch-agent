@@ -174,7 +174,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 	}
 }
 
-func Test_ConvertTelegrafToOtelMetrics_WithUnsupportTyped(t *testing.T) {
+func Test_ConvertTelegrafToOtelMetrics_WithUnsupportedTyped(t *testing.T) {
 	t.Helper()
 
 	as := assert.New(t)
