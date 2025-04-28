@@ -5,6 +5,7 @@ package util
 
 import (
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -33,6 +34,12 @@ func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 	if val, ok := input[sectionKey]; ok {
 		//The key is in current input instance, use the value in JSON.
 		clusterName = val.(string)
+	}
+	if clusterName == "" {
+		envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
+		if envVarClusterName != "" {
+			clusterName = envVarClusterName
+		}
 	}
 	if clusterName == "" {
 		clusterName = GetClusterNameFromEc2Tagger()
