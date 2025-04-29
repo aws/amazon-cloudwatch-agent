@@ -6,6 +6,7 @@ package adapter
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -26,6 +27,7 @@ import (
 
 const (
 	defaultMetricsCollectionInterval = time.Minute
+	ebsPrefix                        = "ebs_"
 )
 
 var (
@@ -159,9 +161,28 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 					continue
 				}
 			}
+
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			if measurement := common.GetArray[any](conf, common.ConfigKey(cfgKey, common.MeasurementKey)); measurement != nil && len(measurement) == 0 {
+
+			hasMeasurements := true
+			noTelegrafReceivers := false
+			if conf.IsSet(common.ConfigKey(cfgKey, common.MeasurementKey)) {
+				inputConf := conf.Get(cfgKey)
+				if inputConf != nil {
+					measurement := common.GetMeasurements(inputConf.(map[string]any))
+
+					hasMeasurements = len(measurement) != 0
+					noTelegrafReceivers = containsOnlyNonAdaptedMetrics(inputName, measurement)
+				}
+			}
+
+			if !hasMeasurements {
 				log.Printf("W! Agent will not emit any metrics for %s due to empty measurement field ", inputName)
+				continue
+			} else if noTelegrafReceivers {
+				// Skip adding the adapted translator because the metric is not being collected through the adapted receiver
+				// Example is EBS NVMe metrics which has its own receiver, whereas the other diskio metrics are collected
+				// using Telegraf (adapted receiver).
 				continue
 			} else if multipleInputSet.Contains(inputName) {
 				translators.Merge(fromMultipleInput(conf, inputName, ""))
@@ -248,4 +269,22 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 // toAlias gets the alias for the input name if it has one.
 func toAlias(inputName string) string {
 	return collections.GetOrDefault(aliasMap, inputName, inputName)
+}
+
+// containsOnlyNonAdaptedMetrics is used for when a section may contain metrics that are not
+// emitted through the adapted receiver. This function is used to check if only non-adaptable
+// metrics are configured for.
+func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool {
+	for _, m := range measurements {
+		switch inputName {
+		case common.DiskIOKey:
+			trimmed := strings.TrimPrefix(m, common.DiskIOKey+"_")
+			if !strings.HasPrefix(trimmed, ebsPrefix) {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }

@@ -33,6 +33,7 @@ exporters:
         shared_credentials_file:
             - /root/.aws/credentials
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -706,6 +707,9 @@ extensions:
         region: us-east-1
         shared_credential_file: /root/.aws/credentials
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: onPremise
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -1298,6 +1302,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
                 - metricstransform/containerinsights
                 - gpuattributes/containerinsights
             receivers:

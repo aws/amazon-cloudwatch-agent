@@ -1,0 +1,191 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: PR Test
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main*
+      - feature*
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  OutputEnvVariables:
+    name: 'OutputEnvVariables'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+    steps:
+      - name: SetOutputs
+        id: set-outputs
+        run: |
+          CWA_GITHUB_TEST_REPO_BRANCH=${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
+
+      - name: Echo test variables
+        run: |
+          echo "build_id: ${{ github.sha }}"
+          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+  StartLocalStack:
+    name: 'StartLocalStack'
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{ github.sha }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  GenerateTestMatrix:
+    needs: [OutputEnvVariables]
+    name: 'GenerateTestMatrix'
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          go run --tags=generator generator/test_case_generator.go
+          # Convert the output to valid JSON and filter out metric_value_benchmark tests
+          jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_linux_complete_test_matrix.json > filtered_matrix.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix.json)
+          echo "ec2_linux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+           jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_selinux_complete_test_matrix.json > filtered_matrix_selinux.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix_selinux.json)
+          echo "ec2_selinux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+
+      - name: Echo test plan matrix
+        run: |
+          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
+
+
+  EC2LinuxIntegrationTest:
+    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    name: 'EC2LinuxTests'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ github.sha }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+    secrets: inherit
+
+  EC2SELinuxIntegrationTest:
+    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
+    name: 'EC2SELinuxTests'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ github.sha }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_selinux_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
+    secrets: inherit
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      github_sha: ${{ github.sha }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}

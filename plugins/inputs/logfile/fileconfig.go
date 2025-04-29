@@ -114,7 +114,7 @@ func (config *FileConfig) init() error {
 		if config.Enc, _ = charset.Lookup(config.Encoding); config.Enc == nil {
 			if config.Enc, _ = ianaindex.IANA.Encoding(config.Encoding); config.Enc == nil {
 				msg := fmt.Sprintf("E! the encoding %s is not supported.", config.Encoding)
-				log.Printf(msg)
+				log.Print(msg)
 				return errors.New(msg)
 			}
 		}

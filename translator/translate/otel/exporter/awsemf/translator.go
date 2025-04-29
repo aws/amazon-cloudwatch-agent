@@ -94,6 +94,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultPrometheusConfig
 	}
 
+	if isOTLP(c) {
+		cfg.AddEntity = true
+	}
+
 	if defaultConfig != "" {
 		var rawConf map[string]interface{}
 		if err := yaml.Unmarshal([]byte(defaultConfig), &rawConf); err != nil {
@@ -176,6 +180,10 @@ func isPrometheus(conf *confmap.Conf) bool {
 	return conf.IsSet(prometheusBasePathKey)
 }
 
+func isOTLP(conf *confmap.Conf) bool {
+	return conf.IsSet(common.OTLPLogsKey)
+}
+
 func setAppSignalsFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
 	return nil
 }
@@ -186,6 +194,8 @@ func setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 }
 
 func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	cfg.AddEntity = true
+
 	setDisableMetricExtraction(kubernetesBasePathKey, conf, cfg)
 
 	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {

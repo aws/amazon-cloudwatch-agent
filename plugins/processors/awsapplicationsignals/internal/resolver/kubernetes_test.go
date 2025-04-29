@@ -15,6 +15,7 @@ import (
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
@@ -79,7 +80,7 @@ func TestEksResolver(t *testing.T) {
 	t.Run("Test Stop", func(t *testing.T) {
 		resolver := &kubernetesResolver{
 			logger:     logger,
-			safeStopCh: &safeChannel{ch: make(chan struct{}), closed: false},
+			safeStopCh: &k8sclient.SafeChannel{Ch: make(chan struct{}), Closed: false},
 		}
 
 		err := resolver.Stop(ctx)
@@ -87,7 +88,7 @@ func TestEksResolver(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		if !resolver.safeStopCh.closed {
+		if !resolver.safeStopCh.Closed {
 			t.Errorf("Expected channel to be closed")
 		}
 
@@ -185,7 +186,7 @@ func TestEksResolver(t *testing.T) {
 		attributes := pcommon.NewMap()
 		attributes.PutStr(attr.AWSRemoteService, "192.0.2.1:8080")
 		resourceAttributes := pcommon.NewMap()
-		resolver.ipToWorkloadAndNamespace.Store("192.0.2.1:8080", "test-deployment@test-namespace")
+		resolver.ipToWorkloadAndNamespace.Store("192.0.2.1:8080", k8sclient.PodMetadata{Workload: "test-deployment", Namespace: "test-namespace", Node: ""})
 		err := resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
 		assert.Equal(t, "test-deployment", getStrAttr(attributes, attr.AWSRemoteService, t))
@@ -195,7 +196,7 @@ func TestEksResolver(t *testing.T) {
 		attributes = pcommon.NewMap()
 		attributes.PutStr(attr.AWSRemoteService, "192.0.2.2")
 		resourceAttributes = pcommon.NewMap()
-		resolver.ipToWorkloadAndNamespace.Store("192.0.2.2", "test-deployment-2@test-namespace-2")
+		resolver.ipToWorkloadAndNamespace.Store("192.0.2.2", k8sclient.PodMetadata{Workload: "test-deployment-2", Namespace: "test-namespace-2", Node: ""})
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
 		assert.Equal(t, "test-deployment-2", getStrAttr(attributes, attr.AWSRemoteService, t))
@@ -214,11 +215,35 @@ func TestEksResolver(t *testing.T) {
 		attributes.PutStr(attr.AWSRemoteService, "192.168.1.2")
 		resourceAttributes = pcommon.NewMap()
 		resolver.ipToServiceAndNamespace.Store("192.168.1.2", "service1@test-namespace-3")
-		resolver.serviceToWorkload.Store("service1@test-namespace-3", "service1-deployment@test-namespace-3")
+		resolver.serviceToWorkload.Store("service1@test-namespace-3", k8sclient.NewPodMetadata("service1-deployment", "test-namespace-3", ""))
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
 		assert.Equal(t, "service1-deployment", getStrAttr(attributes, attr.AWSRemoteService, t))
 		assert.Equal(t, "eks:test/test-namespace-3", getStrAttr(attributes, attr.AWSRemoteEnvironment, t))
+	})
+
+	t.Run("Test extension flag", func(t *testing.T) {
+		logger, _ := zap.NewProduction()
+		resolver := &kubernetesResolver{
+			logger:       logger,
+			clusterName:  "test",
+			platformCode: config.PlatformEKS,
+			useExtension: true,
+		}
+
+		attributes := pcommon.NewMap()
+		attributes.PutStr(attr.AWSRemoteService, "1.2.3.4")
+
+		resourceAttributes := pcommon.NewMap()
+
+		err := resolver.Process(attributes, resourceAttributes)
+		assert.NoError(t, err)
+
+		gotVal, _ := attributes.Get(attr.AWSRemoteService)
+		assert.Equal(t, "1.2.3.4", gotVal.Str(), "Should remain unchanged if extension not started")
+
+		_, envExists := attributes.Get(attr.AWSRemoteEnvironment)
+		assert.False(t, envExists, "No environment if extension not started or watchers disabled")
 	})
 }
 
