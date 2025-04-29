@@ -146,6 +146,7 @@ const (
 	TypeGpuPod         = "PodGPU"
 	TypeGpuNode        = "NodeGPU"
 	TypeGpuCluster     = "ClusterGPU"
+	TypeNodeEBS        = "NodeEBS"
 
 	TypePod             = "Pod"
 	TypePodNet          = "PodNet"

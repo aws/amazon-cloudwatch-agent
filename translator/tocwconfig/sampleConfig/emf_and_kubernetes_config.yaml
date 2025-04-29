@@ -483,7 +483,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_write_ops_total
@@ -496,7 +496,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -511,7 +511,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_write_bytes_total
@@ -525,7 +525,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_read_seconds_total
@@ -539,7 +539,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_write_seconds_total
@@ -553,7 +553,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_exceeded_iops_seconds_total
@@ -567,7 +567,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_exceeded_tp_seconds_total
@@ -581,7 +581,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
@@ -595,7 +595,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
@@ -609,7 +609,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
             - action: update
               aggregation_type: ""
               include: aws_ebs_csi_volume_queue_length
@@ -623,7 +623,7 @@ processors:
                   label: ""
                   label_value: ""
                   new_label: Type
-                  new_value: Node
+                  new_value: NodeEBS
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false

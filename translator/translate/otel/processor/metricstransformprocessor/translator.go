@@ -112,7 +112,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					"operations": []map[string]interface{}{{
 						"action":    "add_label",
 						"new_label": containerinsightscommon.MetricType,
-						"new_value": containerinsightscommon.TypeNode,
+						"new_value": containerinsightscommon.TypeNodeEBS,
 					}},
 				})
 			}
