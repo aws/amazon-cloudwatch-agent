@@ -108,7 +108,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				transformRules = append(transformRules, map[string]interface{}{
 					"include":  oldNvmeMetric,
 					"action":   "update",
-					"new_name": newNvmeMetric,
+					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeNode, newNvmeMetric),
+					"operations": []map[string]interface{}{{
+						"action":    "add_label",
+						"new_label": containerinsightscommon.MetricType,
+						"new_value": containerinsightscommon.TypeNode,
+					}},
 				})
 			}
 
