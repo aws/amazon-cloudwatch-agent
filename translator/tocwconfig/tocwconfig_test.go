@@ -441,6 +441,8 @@ func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
 	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	fmt.Printf("Test Prometheus Config:\n%s\n", testPrometheusConfig)
+
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -926,7 +928,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
-		// assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
+		//assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
 
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}
