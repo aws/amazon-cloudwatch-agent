@@ -95,7 +95,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -151,7 +151,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
