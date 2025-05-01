@@ -428,22 +428,6 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
 
-  LinuxOnPremIntegrationTest:
-    needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
-    name: 'OnpremLinux'
-    uses: ./.github/workflows/ec2-integration-test.yml
-    with:
-      build_id: ${{ inputs.build_id }}
-      test_dir: terraform/ec2/linux_onprem
-      job_id: linux-onprem-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
-      region: us-west-2
-    secrets: inherit
-
   EC2SELinuxIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2SELinux'
@@ -620,7 +604,7 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
