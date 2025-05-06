@@ -98,6 +98,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -121,13 +123,20 @@ jobs:
           # Escape the JSON for GitHub Actions
           MATRIX=$(jq -c -r '@json' filtered_matrix.json)
           echo "ec2_linux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+           jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_selinux_complete_test_matrix.json > filtered_matrix_selinux.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix_selinux.json)
+          echo "ec2_selinux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+
 
       - name: Echo test plan matrix
         run: |
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
+
 
   EC2LinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
+    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     name: 'EC2LinuxTests'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -143,6 +152,25 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
+    secrets: inherit
+
+  EC2SELinuxIntegrationTest:
+    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
+    name: 'EC2SELinuxTests'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ github.sha }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_selinux_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
     secrets: inherit
 
   StopLocalStack:

@@ -5,15 +5,20 @@ package awsentity
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"go.opentelemetry.io/collector/client"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/clientutil"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/k8sattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
@@ -27,10 +32,11 @@ const (
 	attributeService                       = "Service"
 	attributeEC2TagAwsAutoscalingGroupName = "ec2.tag.aws:autoscaling:groupName"
 	EMPTY                                  = ""
+	unknownService                         = "unknown_service"
 )
 
 type scraper interface {
-	Scrape(rm pcommon.Resource)
+	Scrape(rm pcommon.Resource, podMeta k8sclient.PodMetadata)
 	Reset()
 }
 
@@ -103,6 +109,19 @@ var getServiceNameSource = func() (string, string) {
 	return es.GetMetricServiceNameAndSource()
 }
 
+var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
+	podMeta := k8sclient.PodMetadata{}
+	k8sMetadata := k8smetadata.GetKubernetesMetadata()
+
+	if k8sMetadata != nil {
+		// Get the pod IP from the context
+		podIP := clientutil.Address(client.FromContext(ctx))
+		podMeta = k8sMetadata.GetPodMetadataFromPodIP(podIP)
+	}
+
+	return podMeta
+}
+
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
@@ -120,7 +139,7 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 	}
 }
 
-func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
 
 	rm := md.ResourceMetrics()
@@ -182,7 +201,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				}
 			}
 			if p.config.KubernetesMode != "" {
-				p.k8sscraper.Scrape(rm.At(i).Resource())
+				p.k8sscraper.Scrape(rm.At(i).Resource(), getPodMeta(ctx))
 				if p.config.Platform == config.ModeEC2 {
 					ec2Info = getEC2InfoFromEntityStore()
 				}
@@ -194,13 +213,18 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				}
 
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
-				// Perform fallback mechanism for service and environment name if they
-				// are empty
-				if entityServiceName == EMPTY && ok && podInfo != nil && podInfo.Workload != EMPTY {
+				// Perform fallback mechanism for service name if it is empty
+				// or has prefix unknown_service ( unknown_service will be set by OTEL SDK if the service name is empty on application pod)
+				// https://opentelemetry.io/docs/specs/semconv/attributes-registry/service/
+				if shouldUseFallbackServiceName(entityServiceName) && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}
-
+				// Set the service name source to Instrumentation if the operator doesn't set it
+				if entityServiceName != EMPTY && entityServiceNameSource == EMPTY && getTelemetrySDKEnabledAttribute(resourceAttrs) {
+					entityServiceNameSource = entitystore.ServiceNameSourceInstrumentation
+				}
+				// Perform fallback mechanism for environment if it is empty
 				if entityEnvironmentName == EMPTY && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
 					if p.config.KubernetesMode == config.ModeEKS {
 						entityEnvironmentName = "eks:" + p.config.ClusterName + "/" + podInfo.Namespace
@@ -235,7 +259,10 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNode, eksAttributes.Node)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.GetInstanceID())
+					//Add Instance id attribute only if the application node is same as agent node
+					if eksAttributes.Node == os.Getenv("K8S_NODE_NAME") {
+						AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, eksAttributes.InstanceId)
+					}
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
 				}
@@ -246,10 +273,10 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				//  2. CWA config
 				//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
 				//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-				if entityServiceName == EMPTY && entityServiceNameSource == EMPTY {
+				if shouldUseFallbackServiceName(entityServiceName) {
 					entityServiceName, entityServiceNameSource = getServiceNameSource()
 				} else if entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
-					entityServiceNameSource = entitystore.ServiceNameSourceUnknown
+					entityServiceNameSource = entitystore.ServiceNameSourceInstrumentation
 				}
 
 				entityPlatformType = entityattributes.AttributeEntityEC2Platform
@@ -498,6 +525,13 @@ func getServiceAttributes(p pcommon.Map) string {
 	return EMPTY
 }
 
+func getTelemetrySDKEnabledAttribute(p pcommon.Map) bool {
+	if _, ok := p.Get(semconv.AttributeTelemetrySDKName); ok {
+		return true
+	}
+	return false
+}
+
 // scrapeK8sPodName gets the k8s pod name which is full pod name from the resource attributes
 // This is needed to map the pod to the service/environment
 func scrapeK8sPodName(p pcommon.Map) string {
@@ -505,4 +539,8 @@ func scrapeK8sPodName(p pcommon.Map) string {
 		return podAttr.Str()
 	}
 	return EMPTY
+}
+
+func shouldUseFallbackServiceName(serviceName string) bool {
+	return serviceName == EMPTY || strings.HasPrefix(serviceName, unknownService)
 }
