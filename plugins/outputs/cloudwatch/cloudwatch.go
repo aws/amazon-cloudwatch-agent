@@ -5,6 +5,7 @@ package cloudwatch
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"reflect"
 	"sort"
@@ -436,7 +437,8 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 
 	var exphDistList []*exph.ExpHistogramDistribution
 	if metric.expHistDistribution != nil {
-		if metric.distribution.Size() == 0 {
+		fmt.Println("I! BuildMetricDatum found expHistDistribution")
+		if metric.expHistDistribution.Size() == 0 {
 			log.Printf("E! metric has a exp histogram distribution with no entries, %s", *metric.MetricName)
 			return metric.entity, datums
 		}
@@ -448,35 +450,15 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
 	for index, dimensions := range dimensionsList {
+		fmt.Printf("I! BuildMetricDatum dimension loop index: %d\n", index)
 		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 		//metric datum
 		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
 			continue
 		}
-		if len(distList) > 0 {
-			for _, dist := range distList {
-				values, counts := dist.ValuesAndCounts()
-				s := cloudwatch.StatisticSet{}
-				s.SetMaximum(dist.Maximum())
-				s.SetMinimum(dist.Minimum())
-				s.SetSampleCount(dist.SampleCount())
-				s.SetSum(dist.Sum())
-				// Beware there may be many datums sharing pointers to the same
-				// strings for metric names, dimensions, etc.
-				// It is fine since at this point the values will not change.
-				datum := &cloudwatch.MetricDatum{
-					MetricName:        metric.MetricName,
-					Dimensions:        dimensions,
-					Timestamp:         metric.Timestamp,
-					Unit:              metric.Unit,
-					StorageResolution: metric.StorageResolution,
-					Values:            aws.Float64Slice(values),
-					Counts:            aws.Float64Slice(counts),
-					StatisticValues:   &s,
-				}
-				datums = append(datums, datum)
-			}
-		} else if len(exphDistList) > 0 {
+
+		if len(exphDistList) > 0 {
+			fmt.Printf("I! BuildMetricDatum found expHistDistribution dimension loop index: %d\n", index)
 			for _, dist := range exphDistList {
 				values, counts := dist.ValuesAndCounts()
 				s := cloudwatch.StatisticSet{}
@@ -499,7 +481,32 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 				}
 				datums = append(datums, datum)
 			}
+		} else if len(distList) > 0 {
+			fmt.Printf("I! BuildMetricDatum found distList dimension loop index: %d\n", index)
+			for _, dist := range distList {
+				values, counts := dist.ValuesAndCounts()
+				s := cloudwatch.StatisticSet{}
+				s.SetMaximum(dist.Maximum())
+				s.SetMinimum(dist.Minimum())
+				s.SetSampleCount(dist.SampleCount())
+				s.SetSum(dist.Sum())
+				// Beware there may be many datums sharing pointers to the same
+				// strings for metric names, dimensions, etc.
+				// It is fine since at this point the values will not change.
+				datum := &cloudwatch.MetricDatum{
+					MetricName:        metric.MetricName,
+					Dimensions:        dimensions,
+					Timestamp:         metric.Timestamp,
+					Unit:              metric.Unit,
+					StorageResolution: metric.StorageResolution,
+					Values:            aws.Float64Slice(values),
+					Counts:            aws.Float64Slice(counts),
+					StatisticValues:   &s,
+				}
+				datums = append(datums, datum)
+			}
 		} else {
+			fmt.Printf("I! BuildMetricDatum found non dist loop index: %d\n", index)
 			if metric.Value == nil {
 				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
 				continue
