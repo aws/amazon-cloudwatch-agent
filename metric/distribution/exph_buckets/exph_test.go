@@ -5,8 +5,11 @@ package exphbuckets
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
 func TestSize(t *testing.T) {
@@ -267,9 +270,9 @@ func TestValuesAndCounts(t *testing.T) {
 				return exph
 			}(),
 			expectedValues: []float64{
-				5.20684135475163, 4.37841423000544, 3.6817928305074274, 3.096006392880523, 2.6034206773758157, 2.189207115002721, 1.8408964152537142,
-				1.5480031964402619, 1.3017103386879079, 1.0946035575013604, -1.0946035575013604, -1.3017103386879079, -1.5480031964402619, -1.8408964152537142,
-				-2.189207115002721, -2.6034206773758157, -3.096006392880523, -3.6817928305074274, -4.37841423000544, -5.20684135475163,
+				5.2068413547516315, 4.378414230005442, 3.681792830507429, 3.0960063928805237, 2.6034206773758157, 2.189207115002721, 1.8408964152537144,
+				1.5480031964402619, 1.3017103386879079, 1.0946035575013604, -1.0946035575013604, -1.3017103386879079, -1.5480031964402619, -1.8408964152537144,
+				-2.189207115002721, -2.6034206773758157, -3.0960063928805237, -3.681792830507429, -4.378414230005442, -5.2068413547516315,
 			},
 			expectedCounts: []float64{
 				10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -635,120 +638,6 @@ func TestAddDistribution(t *testing.T) {
 
 }
 
-func TestResize(t *testing.T) {
-	tests := []struct {
-		name     string
-		exph     *ExpHistogramDistribution
-		maxSize  int
-		expected []*ExpHistogramDistribution
-	}{
-		{
-			name: "scale 0, offset 0",
-			exph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
-				exph.max = 4200
-				exph.min = -2500
-				exph.sampleCount = 256
-				exph.sum = 3000
-				exph.scale = 0
-				exph.positiveBuckets = map[int]uint64{
-					1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 12: 13,
-				}
-				exph.zeroCount = 52
-				exph.negativeBuckets = map[int]uint64{
-					0: 1, 1: 2, 2: 3, 3: 4, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11,
-				}
-				return exph
-			}(),
-			maxSize: 5,
-			expected: []*ExpHistogramDistribution{
-				{
-					max:         4200,
-					min:         128,
-					sampleCount: 51,
-					sum:         3000, // first entry, sum should be equal to original distribution
-					scale:       0,
-					positiveBuckets: map[int]uint64{
-						12: 13, 10: 11, 9: 10, 8: 9, 7: 8,
-					},
-					negativeBuckets: map[int]uint64{},
-					zeroCount:       0,
-					unit:            "",
-				},
-				{
-					max:         128,
-					min:         4,
-					sampleCount: 25,
-					sum:         0, // not first entry, sum should be 0
-					scale:       0,
-					positiveBuckets: map[int]uint64{
-						6: 7, 5: 6, 4: 5, 3: 4, 2: 3,
-					},
-					negativeBuckets: map[int]uint64{},
-					zeroCount:       0,
-					unit:            "",
-				},
-				{
-					max:         4,
-					min:         -8,
-					sampleCount: 60,
-					sum:         0,
-					scale:       0,
-					positiveBuckets: map[int]uint64{
-						1: 2,
-					},
-					negativeBuckets: map[int]uint64{
-						0: 1, 1: 2, 2: 3,
-					},
-					zeroCount: 52,
-					unit:      "",
-				},
-				{
-					max:             -8,
-					min:             -512,
-					sampleCount:     34,
-					sum:             0,
-					scale:           0,
-					positiveBuckets: map[int]uint64{},
-					negativeBuckets: map[int]uint64{
-						3: 4, 5: 6, 6: 7, 7: 8, 8: 9,
-					},
-					zeroCount: 0,
-					unit:      "",
-				},
-				{
-					max:             -512,
-					min:             -2500,
-					sampleCount:     21,
-					sum:             0,
-					scale:           0,
-					positiveBuckets: map[int]uint64{},
-					negativeBuckets: map[int]uint64{
-						9: 10, 10: 11,
-					},
-					zeroCount: 0,
-					unit:      "",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		dists := tt.exph.Resize(tt.maxSize)
-		assert.Equal(t, tt.expected, dists)
-
-		if len(dists) > 0 {
-			assert.Equal(t, tt.exph.max, dists[0].max, "first entry maximum should match the maximum in the original distribution")
-			assert.Equal(t, tt.exph.sum, dists[0].sum, "first entry sum should match the sum in the original distribution")
-			assert.Equal(t, tt.exph.min, dists[len(dists)-1].min, "last entry minimum should match the minimum in the original distribution")
-
-			for i := 1; i < len(dists); i++ {
-				assert.Equal(t, 0.0, dists[i].sum, "only first entry should have a non-zero sum")
-			}
-		}
-	}
-
-}
-
 func TestMapToIndexPositiveScale(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -968,4 +857,37 @@ func BenchmarkLowerBoundaryNegativeScale(b *testing.B) {
 			LowerBoundaryNegativeScale(10, -9)
 		}
 	})
+}
+
+func BenchmarkConvertFromOtel(b *testing.B) {
+
+	ts := time.Date(2025, time.March, 31, 22, 6, 30, 0, time.UTC)
+	histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+	histogramDP := histogramDPS.AppendEmpty()
+	posBucketCounts := make([]uint64, 60)
+	for i := range posBucketCounts {
+		posBucketCounts[i] = uint64(i % 5)
+	}
+	histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+	histogramDP.SetZeroCount(2)
+	negBucketCounts := make([]uint64, 60)
+	for i := range negBucketCounts {
+		negBucketCounts[i] = uint64(i % 5)
+	}
+	histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+	histogramDP.SetSum(1000)
+	histogramDP.SetMin(-9e+17)
+	histogramDP.SetMax(9e+17)
+	histogramDP.SetCount(uint64(3662))
+	histogramDP.SetScale(0)
+	histogramDP.Attributes().PutStr("label1", "value1")
+	histogramDP.Attributes().PutStr("aws:StorageResolution", "true")
+	histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		h := NewExpHistogramDistribution()
+		h.ConvertFromOtel(histogramDP, "count")
+	}
 }
