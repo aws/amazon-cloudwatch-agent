@@ -79,6 +79,42 @@ var resourceToMetricAttributes = map[string]string{
 	semconv.AttributeAWSECSTaskFamily:   common.MetricAttributeECSTaskDefinitionFamily,
 }
 
+// Below resource attributes are already effectively copied as metric attributes and should not be copied twice.
+var normalizedResourceAttributeKeys = map[string]struct{}{
+	// From attributesRenamingForMetric
+	attr.AWSLocalService:                       {},
+	attr.AWSLocalOperation:                     {},
+	attr.AWSLocalEnvironment:                   {},
+	attr.AWSRemoteService:                      {},
+	attr.AWSRemoteOperation:                    {},
+	attr.AWSRemoteEnvironment:                  {},
+	attr.AWSRemoteTarget:                       {},
+	attr.AWSRemoteResourceIdentifier:           {},
+	attr.AWSRemoteResourceType:                 {},
+	attr.AWSRemoteDbUser:                       {},
+	attr.AWSRemoteResourceCfnPrimaryIdentifier: {},
+	attr.AWSECSClusterName:                     {},
+	attr.AWSECSTaskID:                          {},
+	// From resourceToMetricAttributes
+	semconv.AttributeK8SDeploymentName:  {},
+	semconv.AttributeK8SStatefulSetName: {},
+	semconv.AttributeK8SDaemonSetName:   {},
+	semconv.AttributeK8SJobName:         {},
+	semconv.AttributeK8SCronJobName:     {},
+	semconv.AttributeK8SPodName:         {},
+	semconv.AttributeAWSLogGroupNames:   {},
+	semconv.AttributeAWSECSTaskRevision: {},
+	semconv.AttributeAWSECSTaskFamily:   {},
+	// From normalizeTelemetryAttributes
+	attr.ResourceDetectionHostId:                    {},
+	deprecatedsemconv.AttributeTelemetryAutoVersion: {},
+	semconv.AttributeTelemetryDistroName:            {},
+	semconv.AttributeTelemetryDistroVersion:         {},
+	semconv.AttributeTelemetrySDKLanguage:           {},
+	semconv.AttributeTelemetrySDKName:               {},
+	semconv.AttributeTelemetrySDKVersion:            {},
+}
+
 const (
 	instrumentationModeAuto   = "Auto"
 	instrumentationModeManual = "Manual"
@@ -120,9 +156,26 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			attributes.PutStr(v, resourceAttrValue.AsString())
 			if k == semconv.AttributeK8SPodName {
 				// only copy "host.id" from resource attributes to "K8s.Node" in attributesif the pod name is set
-				if host, ok := resourceAttributes.Get("host.id"); ok {
+				if host, ok := resourceAttributes.Get(attr.ResourceDetectionHostId); ok {
 					attributes.PutStr("K8s.Node", host.AsString())
 				}
+			}
+		}
+	}
+	// Copy resource attributes to metric attributes if specified or all resource attributes if not.
+	metricResourceKeysString, ok := resourceAttributes.Get(attr.AwsApplicationSignalsMetricResourceKeys)
+	if ok && metricResourceKeysString.AsString() == "all_attributes" {
+		n.logger.Debug("all metric resource keys specified for copying")
+		resourceAttributes.Range(func(key string, value pcommon.Value) bool {
+			copyNonDuplicateResourceAttributeToMetricAttributes(key, value, attributes)
+			return true
+		})
+	} else if ok {
+		n.logger.Debug("metric resource keys specified for copying", zap.String("keys", metricResourceKeysString.AsString()))
+		metricResourceKeys := strings.Split(metricResourceKeysString.AsString(), "&")
+		for _, key := range metricResourceKeys {
+			if value, ok := resourceAttributes.Get(key); ok {
+				copyNonDuplicateResourceAttributeToMetricAttributes(key, value, attributes)
 			}
 		}
 	}
@@ -197,6 +250,13 @@ func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resource
 	}
 }
 
+// Copy resource attribute to metric attributes with prefix (to avoid collisions) only if we did not already copy it over in other normalization logic.
+func copyNonDuplicateResourceAttributeToMetricAttributes(key string, value pcommon.Value, attributes pcommon.Map) {
+	if _, ok := normalizedResourceAttributeKeys[key]; !ok {
+		attributes.PutStr("otel.resource."+key, value.AsString())
+	}
+}
+
 func rename(attrs pcommon.Map, renameMap map[string]string) {
 	for original, replacement := range renameMap {
 		if value, ok := attrs.Get(original); ok {
@@ -204,7 +264,7 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 			attrs.Remove(original)
 			if original == semconv.AttributeK8SPodName {
 				// only rename host.id if the pod name is set
-				if host, ok := attrs.Get("host.id"); ok {
+				if host, ok := attrs.Get(attr.ResourceDetectionHostId); ok {
 					attrs.PutStr("K8s.Node", host.AsString())
 				}
 			}
