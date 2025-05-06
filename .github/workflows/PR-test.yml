@@ -71,9 +71,9 @@ jobs:
           ref: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: ~1.22.2
+          go-version: ~1.24.2
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -107,9 +107,9 @@ jobs:
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: ~1.22.2
+          go-version: ~1.24.2
 
       - name: Install jq
         run: sudo apt-get install -y jq
