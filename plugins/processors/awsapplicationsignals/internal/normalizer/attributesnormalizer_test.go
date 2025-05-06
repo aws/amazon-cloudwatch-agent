@@ -78,15 +78,17 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 }
 
 func TestNormalizedResourceAttributeKeys(t *testing.T) {
-	assert.Equal(t, 29, len(normalizedResourceAttributeKeys))
+	assert.Equal(t, 31, len(normalizedResourceAttributeKeys))
 	for key := range attributesRenamingForMetric {
 		assert.Contains(t, normalizedResourceAttributeKeys, key)
 	}
 	for key := range resourceToMetricAttributes {
 		assert.Contains(t, normalizedResourceAttributeKeys, key)
 	}
+	assert.Contains(t, normalizedResourceAttributeKeys, attr.AWSHostedInEnvironment)
 	assert.Contains(t, normalizedResourceAttributeKeys, attr.ResourceDetectionHostId)
 	assert.Contains(t, normalizedResourceAttributeKeys, deprecatedsemconv.AttributeTelemetryAutoVersion)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeServiceName)
 	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetryDistroName)
 	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetryDistroVersion)
 	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetrySDKLanguage)

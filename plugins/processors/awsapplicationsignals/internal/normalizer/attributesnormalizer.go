@@ -95,9 +95,11 @@ func constructNormalizedResourceAttributeKeys() map[string]struct{} {
 		keys[key] = struct{}{}
 	}
 
-	// Add keys from normalization logic.
+	// Add keys from resolver & normalization logic.
+	keys[attr.AWSHostedInEnvironment] = struct{}{}
 	keys[attr.ResourceDetectionHostId] = struct{}{}
 	keys[deprecatedsemconv.AttributeTelemetryAutoVersion] = struct{}{}
+	keys[semconv.AttributeServiceName] = struct{}{}
 	keys[semconv.AttributeTelemetryDistroName] = struct{}{}
 	keys[semconv.AttributeTelemetryDistroVersion] = struct{}{}
 	keys[semconv.AttributeTelemetrySDKLanguage] = struct{}{}
