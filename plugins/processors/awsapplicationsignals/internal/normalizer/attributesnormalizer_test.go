@@ -79,10 +79,10 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 
 func TestNormalizedResourceAttributeKeys(t *testing.T) {
 	assert.Equal(t, 29, len(normalizedResourceAttributeKeys))
-	for key, _ := range attributesRenamingForMetric {
+	for key := range attributesRenamingForMetric {
 		assert.Contains(t, normalizedResourceAttributeKeys, key)
 	}
-	for key, _ := range resourceToMetricAttributes {
+	for key := range resourceToMetricAttributes {
 		assert.Contains(t, normalizedResourceAttributeKeys, key)
 	}
 	assert.Contains(t, normalizedResourceAttributeKeys, attr.ResourceDetectionHostId)
@@ -115,13 +115,13 @@ func TestCopyResourceAttributesToAttributes_ResourceToMetricAttributesAndLocalSe
 
 func TestCopyResourceAttributesToAttributes_NoCopyDuplicateResourceAttributes(t *testing.T) {
 	resourceAttributes := pcommon.NewMap()
-	for resourceAttrKey, _ := range normalizedResourceAttributeKeys {
+	for resourceAttrKey := range normalizedResourceAttributeKeys {
 		resourceAttributes.PutStr(resourceAttrKey, resourceAttrKey+"-value")
 	}
 	resourceAttributes.PutStr(attr.AwsApplicationSignalsMetricResourceKeys, "all_attributes")
 	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
 
-	for resourceAttrKey, _ := range normalizedResourceAttributeKeys {
+	for resourceAttrKey := range normalizedResourceAttributeKeys {
 		_, exists := attributes.Get("otel.resource." + resourceAttrKey)
 		assert.False(t, exists, "%v unexpectedly found in attributes", "otel.resource."+resourceAttrKey)
 	}
