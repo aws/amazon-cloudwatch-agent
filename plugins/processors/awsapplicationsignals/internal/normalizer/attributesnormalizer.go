@@ -80,39 +80,31 @@ var resourceToMetricAttributes = map[string]string{
 }
 
 // Below resource attributes are already effectively copied as metric attributes and should not be copied twice.
-var normalizedResourceAttributeKeys = map[string]struct{}{
-	// From attributesRenamingForMetric
-	attr.AWSLocalService:                       {},
-	attr.AWSLocalOperation:                     {},
-	attr.AWSLocalEnvironment:                   {},
-	attr.AWSRemoteService:                      {},
-	attr.AWSRemoteOperation:                    {},
-	attr.AWSRemoteEnvironment:                  {},
-	attr.AWSRemoteTarget:                       {},
-	attr.AWSRemoteResourceIdentifier:           {},
-	attr.AWSRemoteResourceType:                 {},
-	attr.AWSRemoteDbUser:                       {},
-	attr.AWSRemoteResourceCfnPrimaryIdentifier: {},
-	attr.AWSECSClusterName:                     {},
-	attr.AWSECSTaskID:                          {},
-	// From resourceToMetricAttributes
-	semconv.AttributeK8SDeploymentName:  {},
-	semconv.AttributeK8SStatefulSetName: {},
-	semconv.AttributeK8SDaemonSetName:   {},
-	semconv.AttributeK8SJobName:         {},
-	semconv.AttributeK8SCronJobName:     {},
-	semconv.AttributeK8SPodName:         {},
-	semconv.AttributeAWSLogGroupNames:   {},
-	semconv.AttributeAWSECSTaskRevision: {},
-	semconv.AttributeAWSECSTaskFamily:   {},
-	// From normalizeTelemetryAttributes
-	attr.ResourceDetectionHostId:                    {},
-	deprecatedsemconv.AttributeTelemetryAutoVersion: {},
-	semconv.AttributeTelemetryDistroName:            {},
-	semconv.AttributeTelemetryDistroVersion:         {},
-	semconv.AttributeTelemetrySDKLanguage:           {},
-	semconv.AttributeTelemetrySDKName:               {},
-	semconv.AttributeTelemetrySDKVersion:            {},
+var normalizedResourceAttributeKeys = constructNormalizedResourceAttributeKeys()
+
+func constructNormalizedResourceAttributeKeys() map[string]struct{} {
+	keys := make(map[string]struct{})
+
+	// Add keys from attributesRenamingForMetric
+	for key := range attributesRenamingForMetric {
+		keys[key] = struct{}{}
+	}
+
+	// Add keys from resourceToMetricAttributes
+	for key := range resourceToMetricAttributes {
+		keys[key] = struct{}{}
+	}
+
+	// Add keys from normalization logic.
+	keys[attr.ResourceDetectionHostId] = struct{}{}
+	keys[deprecatedsemconv.AttributeTelemetryAutoVersion] = struct{}{}
+	keys[semconv.AttributeTelemetryDistroName] = struct{}{}
+	keys[semconv.AttributeTelemetryDistroVersion] = struct{}{}
+	keys[semconv.AttributeTelemetrySDKLanguage] = struct{}{}
+	keys[semconv.AttributeTelemetrySDKName] = struct{}{}
+	keys[semconv.AttributeTelemetrySDKVersion] = struct{}{}
+
+	return keys
 }
 
 const (
