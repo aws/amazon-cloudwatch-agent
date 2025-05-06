@@ -216,7 +216,7 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				// Perform fallback mechanism for service name if it is empty
 				// or has prefix unknown_service ( unknown_service will be set by OTEL SDK if the service name is empty on application pod)
 				// https://opentelemetry.io/docs/specs/semconv/attributes-registry/service/
-				if (entityServiceName == EMPTY || strings.HasPrefix(entityServiceName, unknownService)) && ok && podInfo != nil && podInfo.Workload != EMPTY {
+				if shouldUseFallbackServiceName(entityServiceName) && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}
@@ -273,10 +273,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				//  2. CWA config
 				//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
 				//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-				if entityServiceName == EMPTY && entityServiceNameSource == EMPTY {
+				if shouldUseFallbackServiceName(entityServiceName) {
 					entityServiceName, entityServiceNameSource = getServiceNameSource()
 				} else if entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
-					entityServiceNameSource = entitystore.ServiceNameSourceUnknown
+					entityServiceNameSource = entitystore.ServiceNameSourceInstrumentation
 				}
 
 				entityPlatformType = entityattributes.AttributeEntityEC2Platform
@@ -539,4 +539,8 @@ func scrapeK8sPodName(p pcommon.Map) string {
 		return podAttr.Str()
 	}
 	return EMPTY
+}
+
+func shouldUseFallbackServiceName(serviceName string) bool {
+	return serviceName == EMPTY || strings.HasPrefix(serviceName, unknownService)
 }
