@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"golang.org/x/text/transform"
 
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/cardinalitycontrol"
@@ -141,9 +142,15 @@ func (ap *awsapplicationsignalsprocessor) processMetrics(ctx context.Context, md
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
+				name := m.Name()
 				// Check if the first letter of the metric name is not capitalized
-				if len(m.Name()) > 0 && !unicode.IsUpper(rune(m.Name()[0])) {
-					m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
+				if len(name) > 0 && !unicode.IsUpper(rune(name[0])) {
+					result, _, err := transform.String(metricCaser, name) // Ensure metric name is in sentence case
+					if err != nil {
+						ap.logger.Error("Failed to capitalize name. Skipping metric.", zap.String("name", name), zap.Error(err))
+						continue
+					}
+					m.SetName(result)
 				}
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 				ap.aggregationMutator.ProcessMetrics(ctx, m, resourceAttributes)
