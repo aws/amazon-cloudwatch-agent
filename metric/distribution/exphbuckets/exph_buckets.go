@@ -70,7 +70,7 @@ func (d *ExpHistogramDistribution) Size() int {
 	return size
 }
 
-// ValuesAndCounts outputs two sparse arrays representing the midpoints of each exponential histogram bucket and the
+// ValuesAndCounts outputs two arrays representing the midpoints of each exponential histogram bucket and the
 // counter of datapoints within the corresponding exponential histogram buckets
 func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	values := []float64{}
@@ -223,7 +223,7 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 	negBucketCounts := negativeBuckets.BucketCounts().AsRaw()
 	for negBucketIndex := range negBucketCounts {
 		offsetIndex := negBucketIndex + int(negativeOffset)
-		d.positiveBuckets[offsetIndex] = posBucketCounts[negBucketIndex]
+		d.negativeBuckets[offsetIndex] = negBucketCounts[negBucketIndex]
 	}
 
 	return

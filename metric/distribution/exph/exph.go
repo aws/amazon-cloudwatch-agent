@@ -237,42 +237,6 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 	return
 }
 
-// The SampleCount of CloudWatch metrics will be calculated by the sum of the 'Counts' array.
-// The 'Count' field should be same as the sum of the 'Counts' array and will be ignored in CloudWatch.
-type cWMetricHistogram struct {
-	Values []float64
-	Counts []float64
-	Max    float64
-	Min    float64
-	Count  uint64
-	Sum    float64
-}
-
-type dataPointSplit struct {
-	cWMetricHistogram *cWMetricHistogram
-	length            int
-	capacity          int
-}
-
-func (split *dataPointSplit) isNotFull() bool {
-	return split.length < split.capacity
-}
-
-func (split *dataPointSplit) setMax(maxVal float64) {
-	split.cWMetricHistogram.Max = maxVal
-}
-
-func (split *dataPointSplit) setMin(minVal float64) {
-	split.cWMetricHistogram.Min = minVal
-}
-
-func (split *dataPointSplit) appendMetricData(metricVal float64, count uint64) {
-	split.cWMetricHistogram.Values = append(split.cWMetricHistogram.Values, metricVal)
-	split.cWMetricHistogram.Counts = append(split.cWMetricHistogram.Counts, float64(count))
-	split.length++
-	split.cWMetricHistogram.Count += count
-}
-
 func (d *ExpHistogramDistribution) Resize(listMaxSize int) []*ExpHistogramDistribution {
 	// for now, do not split data points into separate PMD requests
 	return []*ExpHistogramDistribution{d}
