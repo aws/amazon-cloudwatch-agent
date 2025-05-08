@@ -223,7 +223,7 @@ func TestTargetManager(t *testing.T) {
 		assertCacheLen(t, manager, 0)
 	})
 
-	t.Run("ConcurrentInit", func(t *testing.T) {
+	t.Run("CreateLogGroup/Concurrent", func(t *testing.T) {
 		targets := []Target{
 			{Group: "G1", Stream: "S1"},
 			{Group: "G2", Stream: "S2"},
@@ -251,6 +251,35 @@ func TestTargetManager(t *testing.T) {
 		wg.Wait()
 		assert.EqualValues(t, len(targets), count.Load())
 		assertCacheLen(t, manager, 2)
+	})
+
+	t.Run("CreateLogGroup/TTL", func(t *testing.T) {
+		target := Target{Group: "G", Stream: "S"}
+
+		var count atomic.Int32
+		service := new(stubLogsService)
+		service.cls = func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+			count.Add(1)
+			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
+		}
+
+		manager := NewTargetManager(logger, service)
+		manager.(*targetManager).cacheTTL = 50 * time.Millisecond
+		for i := 0; i < 10; i++ {
+			err := manager.InitTarget(target)
+			assert.NoError(t, err)
+		}
+		assert.EqualValues(t, 1, count.Load())
+		assertCacheLen(t, manager, 1)
+
+		time.Sleep(50 * time.Millisecond)
+		assertCacheLen(t, manager, 1)
+		for i := 0; i < 10; i++ {
+			err := manager.InitTarget(target)
+			assert.NoError(t, err)
+		}
+		assert.EqualValues(t, 2, count.Load())
+		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("InitTarget/ZeroRetention", func(t *testing.T) {
