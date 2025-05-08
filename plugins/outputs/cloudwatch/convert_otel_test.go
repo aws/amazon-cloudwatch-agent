@@ -302,7 +302,7 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i)
+					posBucketCounts[i] = uint64(i) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetSum(1000)
@@ -353,7 +353,7 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i)
+					negBucketCounts[i] = uint64(i) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(-1000)
@@ -451,7 +451,7 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetZeroCount(2)
@@ -503,7 +503,7 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetZeroCount(2)
@@ -555,12 +555,12 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(0)
@@ -611,13 +611,13 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetZeroCount(2)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(0)
@@ -706,13 +706,13 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetZeroCount(2)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(0)
@@ -764,13 +764,13 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetZeroCount(2)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(0)
@@ -822,13 +822,13 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetZeroCount(2)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(0)
@@ -882,13 +882,13 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.SetZeroCount(2)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.SetSum(0)
@@ -939,14 +939,14 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 				histogramDP := histogramDPS.AppendEmpty()
 				posBucketCounts := make([]uint64, 10)
 				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1)
+					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 				histogramDP.Positive().SetOffset(1)
 				histogramDP.SetZeroCount(2)
 				negBucketCounts := make([]uint64, 10)
 				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1)
+					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
 				}
 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 				histogramDP.Negative().SetOffset(2)
