@@ -50,6 +50,7 @@ type UserAgent interface {
 	SetContainerInsightsFlag()
 	Header(isUsageDataEnabled bool) string
 	Listen(listener func())
+	AddInput(string)
 }
 
 type userAgent struct {
@@ -182,6 +183,15 @@ func (ua *userAgent) Header(isUsageDataEnabled bool) string {
 	}
 
 	return strings.TrimSpace(fmt.Sprintf("%s ID/%s %s", version.Full(), ua.id, strings.Join(components, separator)))
+}
+
+func (ua *userAgent) AddInput(input string) {
+	ua.dataLock.Lock()
+	defer ua.dataLock.Unlock()
+
+	ua.inputs.Add(input)
+	ua.inputsStr.Store(componentsStr(typeInputs, ua.inputs))
+	ua.notify()
 }
 
 func componentsStr(componentType string, componentSet collections.Set[string]) string {
