@@ -17,7 +17,7 @@ func TestSize(t *testing.T) {
 		name           string
 		posBucketCount int
 		negBucketCount int
-		zeroCount      int
+		zeroCount      uint64
 		expectedSize   int
 	}{
 		{
@@ -64,16 +64,16 @@ func TestSize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exph := NewExpHistogramDistribution()
-			exph.positiveBuckets = make([]uint64, tt.posBucketCount)
-			exph.negativeBuckets = make([]uint64, tt.negBucketCount)
-			exph.zeroCount = uint64(tt.zeroCount)
+			exph.positiveBuckets = map[int]uint64{}
+			exph.negativeBuckets = map[int]uint64{}
+			exph.zeroCount = tt.zeroCount
 
-			for i := range exph.positiveBuckets {
-				exph.positiveBuckets[i] = uint64(i + 1)
+			for i := 0; i < len(exph.positiveBuckets); i++ {
+				exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
 			}
 
-			for i := range exph.negativeBuckets {
-				exph.negativeBuckets[i] = uint64(i + 1)
+			for i := range tt.negBucketCount {
+				exph.negativeBuckets[i] = uint64(i + 1) //nolint:gosec
 			}
 
 			assert.Equal(t, tt.expectedSize, exph.Size())
@@ -94,9 +94,9 @@ func TestValuesAndCounts(t *testing.T) {
 			histogram: func() *ExpHistogramDistribution {
 				exph := NewExpHistogramDistribution()
 				exph.scale = 0
-				exph.positiveBuckets = make([]uint64, 10)
-				for i := range exph.positiveBuckets {
-					exph.positiveBuckets[i] = uint64(i + 1)
+				exph.positiveBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
+					exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
 				}
 				return exph
 			}(),
@@ -112,10 +112,10 @@ func TestValuesAndCounts(t *testing.T) {
 			histogram: func() *ExpHistogramDistribution {
 				exph := NewExpHistogramDistribution()
 				exph.scale = 0
-				exph.positiveBuckets = make([]uint64, 10)
-				for i := range exph.positiveBuckets {
+				exph.positiveBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
 					if i%2 == 0 {
-						exph.positiveBuckets[i] = uint64(i + 1)
+						exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
 					}
 				}
 				return exph
@@ -132,9 +132,9 @@ func TestValuesAndCounts(t *testing.T) {
 			histogram: func() *ExpHistogramDistribution {
 				exph := NewExpHistogramDistribution()
 				exph.scale = 0
-				exph.negativeBuckets = make([]uint64, 10)
-				for i := range exph.negativeBuckets {
-					exph.negativeBuckets[i] = uint64(i + 1)
+				exph.negativeBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
+					exph.negativeBuckets[i] = uint64(i + 1) //nolint:gosec
 				}
 				return exph
 			}(),
@@ -150,10 +150,10 @@ func TestValuesAndCounts(t *testing.T) {
 			histogram: func() *ExpHistogramDistribution {
 				exph := NewExpHistogramDistribution()
 				exph.scale = 0
-				exph.negativeBuckets = make([]uint64, 10)
-				for i := range exph.negativeBuckets {
+				exph.negativeBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
 					if i%2 == 1 {
-						exph.negativeBuckets[i] = uint64(i + 1)
+						exph.negativeBuckets[i] = uint64(i + 1) //nolint:gosec
 					}
 				}
 				return exph
@@ -185,14 +185,14 @@ func TestValuesAndCounts(t *testing.T) {
 			histogram: func() *ExpHistogramDistribution {
 				exph := NewExpHistogramDistribution()
 				exph.scale = 0
-				exph.positiveBuckets = make([]uint64, 120)
-				exph.negativeBuckets = make([]uint64, 120)
-				for i := range exph.positiveBuckets {
-					exph.positiveBuckets[i] = uint64(i + 1)
+				exph.positiveBuckets = make(map[int]uint64, 120)
+				exph.negativeBuckets = make(map[int]uint64, 120)
+				for i := range 120 {
+					exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
 				}
 				exph.zeroCount = 10
-				for i := range exph.negativeBuckets {
-					exph.negativeBuckets[i] = uint64(i + 1)
+				for i := range 120 {
+					exph.negativeBuckets[i] = uint64(i + 1) //nolint:gosec
 				}
 				return exph
 			}(),
@@ -206,43 +206,40 @@ func TestValuesAndCounts(t *testing.T) {
 				// Start: -2.67e8 (2^28)
 				// Mid:   -4.03e8 (start+end)/2
 				// End:   -5.37e8 (2^29)
-				9.969209968386869e+35, 4.9846049841934345e+35, 2.4923024920967173e+35, 1.2461512460483586e+35, 6.230756230241793e+34,
-				3.1153781151208966e+34, 1.5576890575604483e+34, 7.788445287802241e+33, 3.894222643901121e+33, 1.9471113219505604e+33,
-				9.735556609752802e+32, 4.867778304876401e+32, 2.4338891524382005e+32, 1.2169445762191002e+32, 6.084722881095501e+31,
-				3.0423614405477506e+31, 1.5211807202738753e+31, 7.605903601369376e+30, 3.802951800684688e+30, 1.901475900342344e+30,
-				9.50737950171172e+29, 4.75368975085586e+29, 2.37684487542793e+29, 1.188422437713965e+29, 5.942112188569825e+28, 2.9710560942849127e+28,
-				1.4855280471424563e+28, 7.427640235712282e+27, 3.713820117856141e+27, 1.8569100589280704e+27, 9.284550294640352e+26,
-				4.642275147320176e+26, 2.321137573660088e+26, 1.160568786830044e+26, 5.80284393415022e+25, 2.90142196707511e+25, 1.450710983537555e+25,
-				7.253554917687775e+24, 3.6267774588438875e+24, 1.8133887294219438e+24, 9.066943647109719e+23, 4.5334718235548594e+23,
-				2.2667359117774297e+23, 1.1333679558887149e+23, 5.666839779443574e+22, 2.833419889721787e+22, 1.4167099448608936e+22,
-				7.083549724304468e+21, 3.541774862152234e+21, 1.770887431076117e+21, 8.854437155380585e+20, 4.4272185776902924e+20,
-				2.2136092888451462e+20, 1.1068046444225731e+20, 5.5340232221128655e+19, 2.7670116110564327e+19, 1.3835058055282164e+19,
-				6.917529027641082e+18, 3.458764513820541e+18, 1.7293822569102705e+18, 8.646911284551352e+17, 4.323455642275676e+17,
-				2.161727821137838e+17, 1.080863910568919e+17, 5.404319552844595e+16, 2.7021597764222976e+16, 1.3510798882111488e+16,
-				6.755399441055744e+15, 3.377699720527872e+15, 1.688849860263936e+15, 8.44424930131968e+14, 4.22212465065984e+14, 2.11106232532992e+14,
-				1.05553116266496e+14, 5.2776558133248e+13, 2.6388279066624e+13, 1.3194139533312e+13, 6.597069766656e+12, 3.298534883328e+12,
-				1.649267441664e+12, 8.24633720832e+11, 4.12316860416e+11, 2.06158430208e+11, 1.03079215104e+11, 5.1539607552e+10, 2.5769803776e+10,
-				1.2884901888e+10, 6.442450944e+09, 3.221225472e+09, 1.610612736e+09, 8.05306368e+08, 4.02653184e+08, 2.01326592e+08, 1.00663296e+08,
-				5.0331648e+07, 2.5165824e+07, 1.2582912e+07, 6.291456e+06, 3.145728e+06, 1.572864e+06, 786432, 393216, 196608, 98304, 49152, 24576,
-				12288, 6144, 3072, 1536, 768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768, -1536,
-				-3072, -6144, -12288, -24576, -49152, -98304, -196608, -393216, -786432, -1.572864e+06, -3.145728e+06, -6.291456e+06, -1.2582912e+07,
+
+				9.969209968386869e+35, 4.9846049841934345e+35, 2.4923024920967173e+35, 1.2461512460483586e+35, 6.230756230241793e+34, 3.1153781151208966e+34,
+				1.5576890575604483e+34, 7.788445287802241e+33, 3.894222643901121e+33, 1.9471113219505604e+33, 9.735556609752802e+32, 4.867778304876401e+32,
+				2.4338891524382005e+32, 1.2169445762191002e+32, 6.084722881095501e+31, 3.0423614405477506e+31, 1.5211807202738753e+31, 7.605903601369376e+30,
+				3.802951800684688e+30, 1.901475900342344e+30, 9.50737950171172e+29, 4.75368975085586e+29, 2.37684487542793e+29, 1.188422437713965e+29,
+				5.942112188569825e+28, 2.9710560942849127e+28, 1.4855280471424563e+28, 7.427640235712282e+27, 3.713820117856141e+27, 1.8569100589280704e+27,
+				9.284550294640352e+26, 4.642275147320176e+26, 2.321137573660088e+26, 1.160568786830044e+26, 5.80284393415022e+25, 2.90142196707511e+25,
+				1.450710983537555e+25, 7.253554917687775e+24, 3.6267774588438875e+24, 1.8133887294219438e+24, 9.066943647109719e+23, 4.5334718235548594e+23,
+				2.2667359117774297e+23, 1.1333679558887149e+23, 5.666839779443574e+22, 2.833419889721787e+22, 1.4167099448608936e+22, 7.083549724304468e+21,
+				3.541774862152234e+21, 1.770887431076117e+21, 8.854437155380585e+20, 4.4272185776902924e+20, 2.2136092888451462e+20, 1.1068046444225731e+20,
+				5.5340232221128655e+19, 2.7670116110564327e+19, 1.3835058055282164e+19, 6.917529027641082e+18, 3.458764513820541e+18, 1.7293822569102705e+18,
+				8.646911284551352e+17, 4.323455642275676e+17, 2.161727821137838e+17, 1.080863910568919e+17, 5.404319552844595e+16, 2.7021597764222976e+16,
+				1.3510798882111488e+16, 6.755399441055744e+15, 3.377699720527872e+15, 1.688849860263936e+15, 8.44424930131968e+14, 4.22212465065984e+14,
+				2.11106232532992e+14, 1.05553116266496e+14, 5.2776558133248e+13, 2.6388279066624e+13, 1.3194139533312e+13, 6.597069766656e+12,
+				3.298534883328e+12, 1.649267441664e+12, 8.24633720832e+11, 4.12316860416e+11, 2.06158430208e+11, 1.03079215104e+11, 5.1539607552e+10,
+				2.5769803776e+10, 1.2884901888e+10, 6.442450944e+09, 3.221225472e+09, 1.610612736e+09, 8.05306368e+08, 4.02653184e+08, 2.01326592e+08,
+				1.00663296e+08, 5.0331648e+07, 2.5165824e+07, 1.2582912e+07, 6.291456e+06, 3.145728e+06, 1.572864e+06, 786432, 393216, 196608, 98304,
+				49152, 24576, 12288, 6144, 3072, 1536, 768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+				-1536, -3072, -6144, -12288, -24576, -49152, -98304, -196608, -393216, -786432, -1.572864e+06, -3.145728e+06, -6.291456e+06, -1.2582912e+07,
 				-2.5165824e+07, -5.0331648e+07, -1.00663296e+08, -2.01326592e+08, -4.02653184e+08, -8.05306368e+08, -1.610612736e+09, -3.221225472e+09,
-				-6.442450944e+09, -1.2884901888e+10, -2.5769803776e+10, -5.1539607552e+10,
-				-1.03079215104e+11, -2.06158430208e+11, -4.12316860416e+11, -8.24633720832e+11, -1.649267441664e+12, -3.298534883328e+12,
-				-6.597069766656e+12, -1.3194139533312e+13, -2.6388279066624e+13, -5.2776558133248e+13, -1.05553116266496e+14, -2.11106232532992e+14,
-				-4.22212465065984e+14, -8.44424930131968e+14, -1.688849860263936e+15, -3.377699720527872e+15, -6.755399441055744e+15,
-				-1.3510798882111488e+16, -2.7021597764222976e+16, -5.404319552844595e+16, -1.080863910568919e+17, -2.161727821137838e+17,
-				-4.323455642275676e+17, -8.646911284551352e+17, -1.7293822569102705e+18, -3.458764513820541e+18, -6.917529027641082e+18,
-				-1.3835058055282164e+19, -2.7670116110564327e+19, -5.5340232221128655e+19, -1.1068046444225731e+20, -2.2136092888451462e+20,
-				-4.4272185776902924e+20, -8.854437155380585e+20, -1.770887431076117e+21, -3.541774862152234e+21, -7.083549724304468e+21,
+				-6.442450944e+09, -1.2884901888e+10, -2.5769803776e+10, -5.1539607552e+10, -1.03079215104e+11, -2.06158430208e+11, -4.12316860416e+11,
+				-8.24633720832e+11, -1.649267441664e+12, -3.298534883328e+12, -6.597069766656e+12, -1.3194139533312e+13, -2.6388279066624e+13,
+				-5.2776558133248e+13, -1.05553116266496e+14, -2.11106232532992e+14, -4.22212465065984e+14, -8.44424930131968e+14, -1.688849860263936e+15,
+				-3.377699720527872e+15, -6.755399441055744e+15, -1.3510798882111488e+16, -2.7021597764222976e+16, -5.404319552844595e+16,
+				-1.080863910568919e+17, -2.161727821137838e+17, -4.323455642275676e+17, -8.646911284551352e+17, -1.7293822569102705e+18, -3.458764513820541e+18,
+				-6.917529027641082e+18, -1.3835058055282164e+19, -2.7670116110564327e+19, -5.5340232221128655e+19, -1.1068046444225731e+20,
+				-2.2136092888451462e+20, -4.4272185776902924e+20, -8.854437155380585e+20, -1.770887431076117e+21, -3.541774862152234e+21, -7.083549724304468e+21,
 				-1.4167099448608936e+22, -2.833419889721787e+22, -5.666839779443574e+22, -1.1333679558887149e+23, -2.2667359117774297e+23,
-				-4.5334718235548594e+23, -9.066943647109719e+23, -1.8133887294219438e+24, -3.6267774588438875e+24, -7.253554917687775e+24,
-				-1.450710983537555e+25, -2.90142196707511e+25, -5.80284393415022e+25, -1.160568786830044e+26, -2.321137573660088e+26,
-				-4.642275147320176e+26, -9.284550294640352e+26, -1.8569100589280704e+27, -3.713820117856141e+27, -7.427640235712282e+27,
-				-1.4855280471424563e+28, -2.9710560942849127e+28, -5.942112188569825e+28, -1.188422437713965e+29, -2.37684487542793e+29,
-				-4.75368975085586e+29, -9.50737950171172e+29, -1.901475900342344e+30, -3.802951800684688e+30, -7.605903601369376e+30,
-				-1.5211807202738753e+31, -3.0423614405477506e+31, -6.084722881095501e+31, -1.2169445762191002e+32, -2.4338891524382005e+32,
-				-4.867778304876401e+32, -9.735556609752802e+32, -1.9471113219505604e+33, -3.894222643901121e+33, -7.788445287802241e+33,
+				-4.5334718235548594e+23, -9.066943647109719e+23, -1.8133887294219438e+24, -3.6267774588438875e+24, -7.253554917687775e+24, -1.450710983537555e+25,
+				-2.90142196707511e+25, -5.80284393415022e+25, -1.160568786830044e+26, -2.321137573660088e+26, -4.642275147320176e+26, -9.284550294640352e+26,
+				-1.8569100589280704e+27, -3.713820117856141e+27, -7.427640235712282e+27, -1.4855280471424563e+28, -2.9710560942849127e+28, -5.942112188569825e+28,
+				-1.188422437713965e+29, -2.37684487542793e+29, -4.75368975085586e+29, -9.50737950171172e+29, -1.901475900342344e+30, -3.802951800684688e+30,
+				-7.605903601369376e+30, -1.5211807202738753e+31, -3.0423614405477506e+31, -6.084722881095501e+31, -1.2169445762191002e+32,
+				-2.4338891524382005e+32, -4.867778304876401e+32, -9.735556609752802e+32, -1.9471113219505604e+33, -3.894222643901121e+33, -7.788445287802241e+33,
 				-1.5576890575604483e+34, -3.1153781151208966e+34, -6.230756230241793e+34, -1.2461512460483586e+35, -2.4923024920967173e+35,
 				-4.9846049841934345e+35, -9.969209968386869e+35,
 			},
@@ -257,6 +254,54 @@ func TestValuesAndCounts(t *testing.T) {
 				114, 115, 116, 117, 118, 119, 120,
 			},
 		},
+		{
+			name: "positive scale",
+			histogram: func() *ExpHistogramDistribution {
+				exph := NewExpHistogramDistribution()
+				exph.scale = 2
+				exph.positiveBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
+					exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
+				}
+				exph.negativeBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
+					exph.negativeBuckets[i] = uint64(i + 1) //nolint:gosec
+				}
+				return exph
+			}(),
+			expectedValues: []float64{
+				5.2068413547516315, 4.378414230005442, 3.681792830507429, 3.0960063928805237, 2.6034206773758157, 2.189207115002721, 1.8408964152537144,
+				1.5480031964402619, 1.3017103386879079, 1.0946035575013604, -1.0946035575013604, -1.3017103386879079, -1.5480031964402619, -1.8408964152537144,
+				-2.189207115002721, -2.6034206773758157, -3.0960063928805237, -3.681792830507429, -4.378414230005442, -5.2068413547516315,
+			},
+			expectedCounts: []float64{
+				10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+			},
+		},
+		{
+			name: "negative scale",
+			histogram: func() *ExpHistogramDistribution {
+				exph := NewExpHistogramDistribution()
+				exph.scale = -3
+				exph.positiveBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
+					exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
+				}
+				exph.negativeBuckets = make(map[int]uint64, 10)
+				for i := range 10 {
+					exph.negativeBuckets[i] = uint64(i + 1) //nolint:gosec
+				}
+				return exph
+			}(),
+			expectedValues: []float64{
+				6.068240930487494e+23, 2.3704066134716774e+21, 9.25940083387374e+18, 3.61695345073193e+16, 1.41287244169216e+14, 5.51903297536e+11,
+				2.155872256e+09, 8.421376e+06, 32896, 128.5, -128.5, -32896, -8.421376e+06, -2.155872256e+09, -5.51903297536e+11, -1.41287244169216e+14,
+				-3.61695345073193e+16, -9.25940083387374e+18, -2.3704066134716774e+21, -6.068240930487494e+23,
+			},
+			expectedCounts: []float64{
+				10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -267,6 +312,7 @@ func TestValuesAndCounts(t *testing.T) {
 			assert.Equal(t, tt.expectedCounts, counts)
 		})
 	}
+
 }
 
 func TestAddDistribution(t *testing.T) {
@@ -315,8 +361,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 21
 				exph.sum = 90
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					1, 2, 3, 4, 5, 6,
+				exph.positiveBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 				}
 				return exph
 			}(),
@@ -327,8 +373,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 10
 				exph.sum = 812
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					0, 0, 0, 0, 0, 0, 1, 2, 3, 4,
+				exph.positiveBuckets = map[int]uint64{
+					6: 1, 7: 2, 8: 3, 9: 4,
 				}
 				return exph
 			}(),
@@ -339,8 +385,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 31
 				exph.sum = 902
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 1, 2, 3, 4,
+				exph.positiveBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 1, 7: 2, 8: 3, 9: 4,
 				}
 				return exph
 			}(),
@@ -354,8 +400,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 55
 				exph.sum = 1300
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+				exph.positiveBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
 				}
 				return exph
 			}(),
@@ -366,8 +412,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 21
 				exph.sum = 70
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					1, 2, 3, 4, 5, 6,
+				exph.positiveBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 				}
 				return exph
 			}(),
@@ -378,8 +424,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 76
 				exph.scale = 0
 				exph.sum = 1370
-				exph.positiveBuckets = []uint64{
-					2, 4, 6, 8, 10, 12, 7, 8, 9, 10,
+				exph.positiveBuckets = map[int]uint64{
+					0: 2, 1: 4, 2: 6, 3: 8, 4: 10, 5: 12, 6: 7, 7: 8, 8: 9, 9: 10,
 				}
 				return exph
 			}(),
@@ -393,8 +439,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 21
 				exph.sum = -70
 				exph.scale = 0
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 4, 5, 6,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 				}
 				return exph
 			}(),
@@ -405,8 +451,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 10
 				exph.sum = -900
 				exph.scale = 0
-				exph.negativeBuckets = []uint64{
-					0, 0, 0, 0, 0, 0, 1, 2, 3, 4,
+				exph.negativeBuckets = map[int]uint64{
+					6: 1, 7: 2, 8: 3, 9: 4,
 				}
 				return exph
 			}(),
@@ -417,8 +463,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 31
 				exph.scale = 0
 				exph.sum = -970
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 1, 2, 3, 4,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 1, 7: 2, 8: 3, 9: 4,
 				}
 				return exph
 			}(),
@@ -432,8 +478,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 55
 				exph.sum = -1300
 				exph.scale = 0
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
 				}
 				return exph
 			}(),
@@ -444,8 +490,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 21
 				exph.sum = -70
 				exph.scale = 0
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 4, 5, 6,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 				}
 				return exph
 			}(),
@@ -456,8 +502,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 76
 				exph.sum = -1370
 				exph.scale = 0
-				exph.negativeBuckets = []uint64{
-					2, 4, 6, 8, 10, 12, 7, 8, 9, 10,
+				exph.negativeBuckets = map[int]uint64{
+					0: 2, 1: 4, 2: 6, 3: 8, 4: 10, 5: 12, 6: 7, 7: 8, 8: 9, 9: 10,
 				}
 				return exph
 			}(),
@@ -471,8 +517,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 55
 				exph.sum = 5000
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+				exph.positiveBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
 				}
 				return exph
 			}(),
@@ -483,8 +529,8 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 66
 				exph.sum = -7000
 				exph.scale = 0
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11,
 				}
 				return exph
 			}(),
@@ -495,11 +541,11 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 121
 				exph.sum = -2000
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+				exph.positiveBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
 				}
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11,
 				}
 				return exph
 			}(),
@@ -513,12 +559,12 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 138
 				exph.sum = -2000
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					0, 2, 3, 4, 5, 6, 7, 0, 9, 10,
+				exph.positiveBuckets = map[int]uint64{
+					0: 0, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 0, 8: 9, 9: 10,
 				}
 				exph.zeroCount = 42
-				exph.negativeBuckets = []uint64{
-					1, 2, 3, 0, 0, 6, 0, 8, 9, 10, 11,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 2, 2: 3, 3: 0, 4: 0, 5: 6, 6: 0, 7: 8, 8: 9, 9: 10, 10: 11,
 				}
 				return exph
 			}(),
@@ -529,12 +575,12 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 118
 				exph.sum = 5000
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					0, 2, 3, 0, 5, 6, 0, 8, 9, 10, 11, 0, 13,
+				exph.positiveBuckets = map[int]uint64{
+					0: 0, 1: 2, 2: 3, 3: 0, 4: 5, 5: 6, 6: 0, 7: 8, 8: 9, 9: 10, 10: 11, 11: 0, 12: 13,
 				}
 				exph.zeroCount = 10
-				exph.negativeBuckets = []uint64{
-					1, 0, 0, 4, 5, 6, 7, 8, 0, 10,
+				exph.negativeBuckets = map[int]uint64{
+					0: 1, 1: 0, 2: 0, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 0, 9: 10,
 				}
 				return exph
 			}(),
@@ -545,12 +591,12 @@ func TestAddDistribution(t *testing.T) {
 				exph.sampleCount = 256
 				exph.sum = 3000
 				exph.scale = 0
-				exph.positiveBuckets = []uint64{
-					0, 4, 6, 4, 10, 12, 7, 8, 18, 20, 11, 0, 13,
+				exph.positiveBuckets = map[int]uint64{
+					0: 0, 1: 4, 2: 6, 3: 4, 4: 10, 5: 12, 6: 7, 7: 8, 8: 18, 9: 20, 10: 11, 11: 0, 12: 13,
 				}
 				exph.zeroCount = 52
-				exph.negativeBuckets = []uint64{
-					2, 2, 3, 4, 5, 12, 7, 16, 9, 20, 11,
+				exph.negativeBuckets = map[int]uint64{
+					0: 2, 1: 2, 2: 3, 3: 4, 4: 5, 5: 12, 6: 7, 7: 16, 8: 9, 9: 20, 10: 11,
 				}
 				return exph
 			}(),
@@ -572,8 +618,8 @@ func TestAddDistribution(t *testing.T) {
 		exph1.min = 2
 		exph1.sampleCount = 21
 		exph1.sum = 90
-		exph1.positiveBuckets = []uint64{
-			1, 2, 3, 4, 5, 6,
+		exph1.positiveBuckets = map[int]uint64{
+			0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 		}
 
 		exph2 := NewExpHistogramDistribution()
@@ -582,67 +628,14 @@ func TestAddDistribution(t *testing.T) {
 		exph2.min = 2
 		exph2.sampleCount = 21
 		exph2.sum = 90
-		exph2.positiveBuckets = []uint64{
-			1, 2, 3, 4, 5, 6,
+		exph2.positiveBuckets = map[int]uint64{
+			0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 		}
 
 		exph1.AddDistribution(exph2)
 		assert.Equal(t, exph1, exph1, "expected exph1 to be unchanged when adding exph2 with different scale")
 	})
 
-	t.Run("different different positive offsets", func(t *testing.T) {
-		exph1 := NewExpHistogramDistribution()
-		exph1.scale = 1
-		exph1.max = 48
-		exph1.min = 2
-		exph1.sampleCount = 21
-		exph1.sum = 90
-		exph1.positiveBuckets = []uint64{
-			1, 2, 3, 4, 5, 6,
-		}
-		exph1.positiveOffset = 1
-
-		exph2 := NewExpHistogramDistribution()
-		exph2.scale = 0
-		exph2.max = 48
-		exph2.min = 2
-		exph2.sampleCount = 21
-		exph2.sum = 90
-		exph2.positiveBuckets = []uint64{
-			1, 2, 3, 4, 5, 6,
-		}
-		exph1.positiveOffset = 0
-
-		exph1.AddDistribution(exph2)
-		assert.Equal(t, exph1, exph1, "expected exph1 to be unchanged when adding exph2 with different scale")
-	})
-
-	t.Run("different different negative offsets", func(t *testing.T) {
-		exph1 := NewExpHistogramDistribution()
-		exph1.scale = 1
-		exph1.max = 48
-		exph1.min = 2
-		exph1.sampleCount = 21
-		exph1.sum = 90
-		exph1.negativeBuckets = []uint64{
-			1, 2, 3, 4, 5, 6,
-		}
-		exph1.negativeOffset = 1
-
-		exph2 := NewExpHistogramDistribution()
-		exph2.scale = 0
-		exph2.max = 48
-		exph2.min = 2
-		exph2.sampleCount = 21
-		exph2.sum = 90
-		exph2.negativeBuckets = []uint64{
-			1, 2, 3, 4, 5, 6,
-		}
-		exph1.negativeOffset = 10
-
-		exph1.AddDistribution(exph2)
-		assert.Equal(t, exph1, exph1, "expected exph1 to be unchanged when adding exph2 with different scale")
-	})
 }
 
 func TestMapToIndexPositiveScale(t *testing.T) {
@@ -772,28 +765,78 @@ func TestMapToIndexNegativeScale(t *testing.T) {
 	}
 }
 
-func TestLowerBoundaryPositiveScale(t *testing.T) {
-	// LowerBoundaryPositiveScale may produce inaccurate results due to floating point calculations
-	assert.InDelta(t, 2.0, LowerBoundaryPositiveScale(2, 1), 0.01)
-	assert.InDelta(t, 4.0, LowerBoundaryPositiveScale(4, 1), 0.01)
-	assert.InDelta(t, 8.0, LowerBoundaryPositiveScale(6, 1), 0.01)
-	assert.InDelta(t, 16.0, LowerBoundaryPositiveScale(8, 1), 0.01)
+func TestLowerBoundary(t *testing.T) {
+	// scale = 1, base = 2^(1/2) or sqrt(2) = 1.41421
+	assert.InDelta(t, 1.41421, LowerBoundary(1, 1), 0.01) // 2^(1/2)
+	assert.InDelta(t, 2.0, LowerBoundary(2, 1), 0.01)     // 2^(2/2)
+	assert.InDelta(t, 2.82842, LowerBoundary(3, 1), 0.01) // 2^(3/2)
+	assert.InDelta(t, 4.0, LowerBoundary(4, 1), 0.01)     // 2^(4/2)
+	assert.InDelta(t, 8.0, LowerBoundary(6, 1), 0.01)     // 2^(6/2)
+	assert.InDelta(t, 16.0, LowerBoundary(8, 1), 0.01)    // 2^(8/2)
+
+	// scale = 2, base = 2^(1/4) = 1.18921
+	assert.InDelta(t, 1.18921, LowerBoundary(1, 2), 0.01) // 2^(1/4)
+	assert.InDelta(t, 1.41421, LowerBoundary(2, 2), 0.01) // 2^(2/4)
+	assert.InDelta(t, 1.68180, LowerBoundary(3, 2), 0.01) // 2^(3/4)
+	assert.InDelta(t, 2.0, LowerBoundary(4, 2), 0.01)     // 2^(4/4)
+	assert.InDelta(t, 2.82842, LowerBoundary(6, 2), 0.01) // 2^(6/8)
+	assert.InDelta(t, 4.0, LowerBoundary(8, 2), 0.01)     // 2^(8/8)
+
+	// scale = 0, base = 2
+	assert.Equal(t, 1.0, LowerBoundary(0, 0)) // 2^0
+	assert.Equal(t, 2.0, LowerBoundary(1, 0)) // 2^1
+	assert.Equal(t, 4.0, LowerBoundary(2, 0)) // 2^2
+	assert.Equal(t, 8.0, LowerBoundary(3, 0)) // 2^3
+
+	assert.Equal(t, 1.0, LowerBoundary(0, -1))  // 4^0
+	assert.Equal(t, 4.0, LowerBoundary(1, -1))  // 4^1
+	assert.Equal(t, 16.0, LowerBoundary(2, -1)) // 4^2
+	assert.Equal(t, 64.0, LowerBoundary(3, -1)) // 4^3
+
+	// scale = -2, base = 2^(2^2) = 2^4 = 16
+	assert.Equal(t, 1.0, LowerBoundary(0, -2))    // 16^0
+	assert.Equal(t, 16.0, LowerBoundary(1, -2))   // 16^1
+	assert.Equal(t, 256.0, LowerBoundary(2, -2))  // 16^2
+	assert.Equal(t, 4096.0, LowerBoundary(3, -2)) // 16^3
+
+	assert.Equal(t, 1.0, LowerBoundary(0, -1))  // 4^0
+	assert.Equal(t, 4.0, LowerBoundary(1, -1))  // 2^(2^1)^1 = 4^1 = 2^2 = 4^1
+	assert.Equal(t, 16.0, LowerBoundary(2, -1)) // (2^2^1)^2 = 4^2 = 2^4 = 4^2
+	assert.Equal(t, 64.0, LowerBoundary(3, -1)) // (2^2^1)^3 = 4^3 = 2^6 = 4^3
+
+	// scale = -2, base = 2^(2^2) = 2^4 = 16
+	assert.Equal(t, 1.0, LowerBoundary(0, -2))    // (2^(2^2))^0 = 16^0 = 1
+	assert.Equal(t, 16.0, LowerBoundary(1, -2))   // (2^(2^2))^1 = 2^4 = 16^1
+	assert.Equal(t, 256.0, LowerBoundary(2, -2))  // (2^(2^2))^2 = 2^8 = 16^2
+	assert.Equal(t, 4096.0, LowerBoundary(3, -2)) // (2^(2^2))^3 = 2^12 = 16^3
 }
 
-func TestLowerBoundaryScale0(t *testing.T) {
-	// LowerBoundaryNegativeScale produces exact powers of two and may be compared directly
-	assert.Equal(t, 1.0, LowerBoundaryNegativeScale(0, 0))
-	assert.Equal(t, 2.0, LowerBoundaryNegativeScale(1, 0))
-	assert.Equal(t, 4.0, LowerBoundaryNegativeScale(2, 0))
-	assert.Equal(t, 8.0, LowerBoundaryNegativeScale(3, 0))
+func BenchmarkLowerBoundary(b *testing.B) {
+	b.Run("positive scale", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			LowerBoundary(10, 1)
+		}
+	})
+
+	b.Run("scale 0", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			LowerBoundary(10, 0)
+		}
+	})
+
+	b.Run("negative scale", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			LowerBoundary(10, -1)
+		}
+	})
 }
 
-func TestLowerBoundaryNegativeScale(t *testing.T) {
-	// LowerBoundaryNegativeScale produces exact powers of two and may be compared directly
-	assert.Equal(t, 1.0, LowerBoundaryNegativeScale(0, -1))
-	assert.Equal(t, 4.0, LowerBoundaryNegativeScale(1, -1))
-	assert.Equal(t, 16.0, LowerBoundaryNegativeScale(2, -1))
-	assert.Equal(t, 64.0, LowerBoundaryNegativeScale(3, -1))
+func BenchmarkLowerBoundaryNegativeScale(b *testing.B) {
+	b.Run("reference", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			LowerBoundaryNegativeScale(10, -9)
+		}
+	})
 }
 
 func BenchmarkConvertFromOtel(b *testing.B) {
@@ -803,13 +846,13 @@ func BenchmarkConvertFromOtel(b *testing.B) {
 	histogramDP := histogramDPS.AppendEmpty()
 	posBucketCounts := make([]uint64, 60)
 	for i := range posBucketCounts {
-		posBucketCounts[i] = uint64(i % 5)
+		posBucketCounts[i] = uint64(i % 5) //nolint:gosec
 	}
 	histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
 	histogramDP.SetZeroCount(2)
 	negBucketCounts := make([]uint64, 60)
 	for i := range negBucketCounts {
-		negBucketCounts[i] = uint64(i % 5)
+		negBucketCounts[i] = uint64(i % 5) //nolint:gosec
 	}
 	histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
 	histogramDP.SetSum(1000)
@@ -826,25 +869,5 @@ func BenchmarkConvertFromOtel(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		h := NewExpHistogramDistribution()
 		h.ConvertFromOtel(histogramDP, "count")
-	}
-}
-
-func BenchmarkAddDistributionWithWeight(b *testing.B) {
-	exph := NewExpHistogramDistribution()
-	exph.scale = 0
-	exph.positiveBuckets = make([]uint64, 120)
-	exph.negativeBuckets = make([]uint64, 120)
-	for i := range exph.positiveBuckets {
-		exph.positiveBuckets[i] = uint64(i + 1)
-	}
-	exph.zeroCount = 10
-	for i := range exph.negativeBuckets {
-		exph.negativeBuckets[i] = uint64(i + 1)
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		//exph.AddDistributionWithWeight()
 	}
 }
