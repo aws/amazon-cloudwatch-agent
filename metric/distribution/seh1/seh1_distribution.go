@@ -159,36 +159,36 @@ func (seh1Distribution *SEH1Distribution) AddDistributionWithWeight(distribution
 
 // ConvertToOtel could convert an SEH1Distribution to pmetric.ExponentialHistogram.
 // But there is no need because it will just get converted bak to a SEH1Distribution.
-func (sd *SEH1Distribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
-	dp.SetMax(sd.maximum)
-	dp.SetMin(sd.minimum)
-	dp.SetCount(uint64(sd.sampleCount))
-	dp.SetSum(sd.sum)
-	dp.ExplicitBounds().EnsureCapacity(len(sd.buckets))
-	dp.BucketCounts().EnsureCapacity(len(sd.buckets))
-	for k, v := range sd.buckets {
+func (seh1Distribution *SEH1Distribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
+	dp.SetMax(seh1Distribution.maximum)
+	dp.SetMin(seh1Distribution.minimum)
+	dp.SetCount(uint64(seh1Distribution.sampleCount))
+	dp.SetSum(seh1Distribution.sum)
+	dp.ExplicitBounds().EnsureCapacity(len(seh1Distribution.buckets))
+	dp.BucketCounts().EnsureCapacity(len(seh1Distribution.buckets))
+	for k, v := range seh1Distribution.buckets {
 		dp.ExplicitBounds().Append(float64(k))
 		// Beware of potential loss of precision due to type conversion.
 		dp.BucketCounts().Append(uint64(v))
 	}
 }
 
-func (sd *SEH1Distribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
-	sd.maximum = dp.Max()
-	sd.minimum = dp.Min()
-	sd.sampleCount = float64(dp.Count())
-	sd.sum = dp.Sum()
-	sd.unit = unit
+func (seh1Distribution *SEH1Distribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
+	seh1Distribution.maximum = dp.Max()
+	seh1Distribution.minimum = dp.Min()
+	seh1Distribution.sampleCount = float64(dp.Count())
+	seh1Distribution.sum = dp.Sum()
+	seh1Distribution.unit = unit
 	for i := 0; i < dp.ExplicitBounds().Len(); i++ {
 		k := dp.ExplicitBounds().At(i)
 		v := dp.BucketCounts().At(i)
-		sd.buckets[int16(k)] = float64(v)
+		seh1Distribution.buckets[int16(k)] = float64(v)
 	}
 }
 
-func (sd *SEH1Distribution) Resize(listMaxSize int) []distribution.Distribution {
+func (seh1Distribution *SEH1Distribution) Resize(_ int) []distribution.Distribution {
 	// it has already considered the list max size.
-	return []distribution.Distribution{sd}
+	return []distribution.Distribution{seh1Distribution}
 }
 
 func (seh1Distribution *SEH1Distribution) CanAdd(value float64, sizeLimit int) bool {

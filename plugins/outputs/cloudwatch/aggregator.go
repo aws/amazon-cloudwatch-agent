@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exphbuckets"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
@@ -29,7 +29,7 @@ type aggregationDatum struct {
 	cloudwatch.MetricDatum
 	aggregationInterval time.Duration
 	distribution        distribution.Distribution
-	expHistDistribution *exphbuckets.ExpHistogramDistribution
+	expHistDistribution *exph.ExpHistogramDistribution
 	entity              cloudwatch.Entity
 }
 
