@@ -148,44 +148,36 @@ func (regularDist *RegularDistribution) AddDistributionWithWeight(distribution d
 	}
 }
 
-func (rd *RegularDistribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
-	dp.SetMax(rd.maximum)
-	dp.SetMin(rd.minimum)
-	dp.SetCount(uint64(rd.sampleCount))
-	dp.SetSum(rd.sum)
-	dp.ExplicitBounds().EnsureCapacity(len(rd.buckets))
-	dp.BucketCounts().EnsureCapacity(len(rd.buckets))
-	for k, v := range rd.buckets {
+func (regularDist *RegularDistribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
+	dp.SetMax(regularDist.maximum)
+	dp.SetMin(regularDist.minimum)
+	dp.SetCount(uint64(regularDist.sampleCount))
+	dp.SetSum(regularDist.sum)
+	dp.ExplicitBounds().EnsureCapacity(len(regularDist.buckets))
+	dp.BucketCounts().EnsureCapacity(len(regularDist.buckets))
+	for k, v := range regularDist.buckets {
 		dp.ExplicitBounds().Append(k)
 		// Beware of potential loss of precision due to type conversion.
 		dp.BucketCounts().Append(uint64(v))
 	}
 }
 
-func (rd *RegularDistribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
-	rd.maximum = dp.Max()
-	rd.minimum = dp.Min()
-	rd.sampleCount = float64(dp.Count())
-	rd.sum = dp.Sum()
-	rd.unit = unit
+func (regularDist *RegularDistribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
+	regularDist.maximum = dp.Max()
+	regularDist.minimum = dp.Min()
+	regularDist.sampleCount = float64(dp.Count())
+	regularDist.sum = dp.Sum()
+	regularDist.unit = unit
 	for i := 0; i < dp.ExplicitBounds().Len(); i++ {
 		k := dp.ExplicitBounds().At(i)
 		v := dp.BucketCounts().At(i)
-		rd.buckets[k] = float64(v)
+		regularDist.buckets[k] = float64(v)
 	}
 }
 
-func (rd *RegularDistribution) ConvertToOtelExpHistogram(_ pmetric.ExponentialHistogramDataPoint) {
-	return
-}
-
-func (rd *RegularDistribution) ConvertFromOtelExpHistogram(_ pmetric.ExponentialHistogramDataPoint) {
-	return
-}
-
-func (rd *RegularDistribution) Resize(listMaxSize int) []distribution.Distribution {
+func (regularDist *RegularDistribution) Resize(listMaxSize int) []distribution.Distribution {
 	distList := []distribution.Distribution{}
-	values, _ := rd.ValuesAndCounts()
+	values, _ := regularDist.ValuesAndCounts()
 	sort.Float64s(values)
 	newSEH1Dist := seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
 	for i := 0; i < len(values); i++ {
@@ -193,7 +185,7 @@ func (rd *RegularDistribution) Resize(listMaxSize int) []distribution.Distributi
 			distList = append(distList, newSEH1Dist)
 			newSEH1Dist = seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
 		}
-		newSEH1Dist.AddEntry(values[i], rd.GetCount(values[i]))
+		newSEH1Dist.AddEntry(values[i], regularDist.GetCount(values[i]))
 	}
 	if newSEH1Dist.Size() > 0 {
 		distList = append(distList, newSEH1Dist)

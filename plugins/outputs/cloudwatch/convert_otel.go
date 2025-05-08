@@ -4,7 +4,6 @@
 package cloudwatch
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -15,7 +14,7 @@ import (
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exphbuckets"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
@@ -84,7 +83,7 @@ func ConvertOtelNumberDataPoints(
 	unit string,
 	scale float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum {
+) []*aggregationDatum { //nolint:revive
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
@@ -119,7 +118,7 @@ func ConvertOtelHistogramDataPoints(
 	unit string,
 	scale float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum {
+) []*aggregationDatum { //nolint:revive
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
@@ -152,11 +151,10 @@ func ConvertOtelExponentialHistogramDataPoints(
 	dataPoints pmetric.ExponentialHistogramDataPointSlice,
 	name string,
 	unit string,
-	scale float64,
+	_ float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum {
+) []*aggregationDatum { //nolint:revive
 
-	fmt.Println("ConvertOtelExponentialHistogramDataPoints")
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
@@ -176,7 +174,7 @@ func ConvertOtelExponentialHistogramDataPoints(
 			entity:              entity,
 		}
 		// Assume function pointer is valid.
-		ad.expHistDistribution = exphbuckets.NewExpHistogramDistribution()
+		ad.expHistDistribution = exph.NewExpHistogramDistribution()
 		ad.expHistDistribution.ConvertFromOtel(dp, unit)
 		datums = append(datums, &ad)
 	}
