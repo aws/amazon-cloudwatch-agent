@@ -28,5 +28,5 @@ const (
 	ResourceDetectionASG      = "ec2.tag.aws:autoscaling:groupName"
 
 	// ApplicationSignals behaviour-changing attributes
-	AwsApplicationSignalsMetricResourceKeys = "aws.application_signals.metric_resource_keys"
+	AWSApplicationSignalsMetricResourceKeys = "aws.application_signals.metric_resource_keys"
 )

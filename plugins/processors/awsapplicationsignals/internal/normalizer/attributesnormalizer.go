@@ -12,6 +12,7 @@ import (
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
@@ -82,29 +83,29 @@ var resourceToMetricAttributes = map[string]string{
 // Below resource attributes are already effectively copied as metric attributes and should not be copied twice.
 var normalizedResourceAttributeKeys = constructNormalizedResourceAttributeKeys()
 
-func constructNormalizedResourceAttributeKeys() map[string]struct{} {
-	keys := make(map[string]struct{})
+func constructNormalizedResourceAttributeKeys() collections.Set[string] {
+	keys := collections.NewSet[string]()
 
 	// Add keys from attributesRenamingForMetric
 	for key := range attributesRenamingForMetric {
-		keys[key] = struct{}{}
+		keys.Add(key)
 	}
 
 	// Add keys from resourceToMetricAttributes
 	for key := range resourceToMetricAttributes {
-		keys[key] = struct{}{}
+		keys.Add(key)
 	}
 
 	// Add keys from resolver & normalization logic.
-	keys[attr.AWSHostedInEnvironment] = struct{}{}
-	keys[attr.ResourceDetectionHostId] = struct{}{}
-	keys[deprecatedsemconv.AttributeTelemetryAutoVersion] = struct{}{}
-	keys[semconv.AttributeServiceName] = struct{}{}
-	keys[semconv.AttributeTelemetryDistroName] = struct{}{}
-	keys[semconv.AttributeTelemetryDistroVersion] = struct{}{}
-	keys[semconv.AttributeTelemetrySDKLanguage] = struct{}{}
-	keys[semconv.AttributeTelemetrySDKName] = struct{}{}
-	keys[semconv.AttributeTelemetrySDKVersion] = struct{}{}
+	keys.Add(attr.AWSHostedInEnvironment)
+	keys.Add(attr.ResourceDetectionHostId)
+	keys.Add(deprecatedsemconv.AttributeTelemetryAutoVersion)
+	keys.Add(semconv.AttributeServiceName)
+	keys.Add(semconv.AttributeTelemetryDistroName)
+	keys.Add(semconv.AttributeTelemetryDistroVersion)
+	keys.Add(semconv.AttributeTelemetrySDKLanguage)
+	keys.Add(semconv.AttributeTelemetrySDKName)
+	keys.Add(semconv.AttributeTelemetrySDKVersion)
 
 	return keys
 }
@@ -112,6 +113,7 @@ func constructNormalizedResourceAttributeKeys() map[string]struct{} {
 const (
 	instrumentationModeAuto   = "Auto"
 	instrumentationModeManual = "Manual"
+	otelResourcePrefix        = "otel.resource."
 )
 
 func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
@@ -157,7 +159,7 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 		}
 	}
 	// Copy resource attributes to metric attributes if specified or all resource attributes if not.
-	metricResourceKeysString, ok := resourceAttributes.Get(attr.AwsApplicationSignalsMetricResourceKeys)
+	metricResourceKeysString, ok := resourceAttributes.Get(attr.AWSApplicationSignalsMetricResourceKeys)
 	if ok && metricResourceKeysString.AsString() == "all_attributes" {
 		n.logger.Debug("all metric resource keys specified for copying")
 		resourceAttributes.Range(func(key string, value pcommon.Value) bool {
@@ -246,8 +248,8 @@ func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resource
 
 // Copy resource attribute to metric attributes with prefix (to avoid collisions) only if we did not already copy it over in other normalization logic.
 func copyNonDuplicateResourceAttributeToMetricAttributes(key string, value pcommon.Value, attributes pcommon.Map) {
-	if _, ok := normalizedResourceAttributeKeys[key]; !ok {
-		attributes.PutStr("otel.resource."+key, value.AsString())
+	if !normalizedResourceAttributeKeys.Contains(key) {
+		attributes.PutStr(otelResourcePrefix+key, value.AsString())
 	}
 }
 

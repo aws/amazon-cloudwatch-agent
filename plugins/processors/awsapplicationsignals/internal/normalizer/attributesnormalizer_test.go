@@ -120,7 +120,7 @@ func TestCopyResourceAttributesToAttributes_NoCopyDuplicateResourceAttributes(t 
 	for resourceAttrKey := range normalizedResourceAttributeKeys {
 		resourceAttributes.PutStr(resourceAttrKey, resourceAttrKey+"-value")
 	}
-	resourceAttributes.PutStr(attr.AwsApplicationSignalsMetricResourceKeys, "all_attributes")
+	resourceAttributes.PutStr(attr.AWSApplicationSignalsMetricResourceKeys, "all_attributes")
 	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
 
 	for resourceAttrKey := range normalizedResourceAttributeKeys {
@@ -134,14 +134,14 @@ func TestCopyResourceAttributesToAttributes_CopyAllResourceAttributes(t *testing
 	for i := 1; i <= 10; i++ {
 		resourceAttributes.PutStr(strconv.Itoa(i), strconv.Itoa(i))
 	}
-	resourceAttributes.PutStr(attr.AwsApplicationSignalsMetricResourceKeys, "all_attributes")
+	resourceAttributes.PutStr(attr.AWSApplicationSignalsMetricResourceKeys, "all_attributes")
 	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
 
 	assert.Equal(t, attributes.Len(), 11)
 	for i := 1; i <= 10; i++ {
 		assertStringAttributeEqual(t, attributes, "otel.resource."+strconv.Itoa(i), strconv.Itoa(i))
 	}
-	assertStringAttributeEqual(t, attributes, "otel.resource."+attr.AwsApplicationSignalsMetricResourceKeys, "all_attributes")
+	assertStringAttributeEqual(t, attributes, "otel.resource."+attr.AWSApplicationSignalsMetricResourceKeys, "all_attributes")
 }
 
 func TestCopyResourceAttributesToAttributes_CopySpecificResourceAttributes(t *testing.T) {
@@ -149,7 +149,7 @@ func TestCopyResourceAttributesToAttributes_CopySpecificResourceAttributes(t *te
 	for i := 1; i <= 10; i++ {
 		resourceAttributes.PutStr(strconv.Itoa(i), strconv.Itoa(i))
 	}
-	resourceAttributes.PutStr(attr.AwsApplicationSignalsMetricResourceKeys, "1&3&20&9")
+	resourceAttributes.PutStr(attr.AWSApplicationSignalsMetricResourceKeys, "1&3&20&9")
 	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
 
 	assert.Equal(t, attributes.Len(), 3)
