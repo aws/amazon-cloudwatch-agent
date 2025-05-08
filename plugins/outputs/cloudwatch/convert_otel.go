@@ -15,7 +15,7 @@ import (
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exphbuckets"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
@@ -176,79 +176,11 @@ func ConvertOtelExponentialHistogramDataPoints(
 			entity:              entity,
 		}
 		// Assume function pointer is valid.
-		ad.expHistDistribution = exph.NewExpHistogramDistribution()
+		ad.expHistDistribution = exphbuckets.NewExpHistogramDistribution()
 		ad.expHistDistribution.ConvertFromOtel(dp, unit)
 		datums = append(datums, &ad)
 	}
 	return datums
-}
-
-func ConvertOtelExponentialHistogramDataPoint(
-	metric pmetric.ExponentialHistogramDataPoint,
-	name string,
-	unit string,
-	scale float64,
-	entity cloudwatch.Entity,
-) []*aggregationDatum {
-	attrs := metric.Attributes()
-	storageResolution := checkHighResolution(&attrs)
-	aggregationInterval := getAggregationInterval(&attrs)
-	dimensions := ConvertOtelDimensions(attrs)
-
-	return []*aggregationDatum{{
-		MetricDatum: cloudwatch.MetricDatum{
-			Dimensions:        dimensions,
-			MetricName:        aws.String(name),
-			Unit:              aws.String(unit),
-			Timestamp:         aws.Time(metric.Timestamp().AsTime()),
-			StorageResolution: aws.Int64(storageResolution),
-			StatisticValues: &cloudwatch.StatisticSet{
-				SampleCount: aws.Float64(float64(metric.Count())),
-				Sum:         aws.Float64(metric.Sum()),
-				Maximum:     aws.Float64(metric.Max()),
-				Minimum:     aws.Float64(metric.Min()),
-			},
-		},
-		aggregationInterval: aggregationInterval,
-		entity:              entity,
-	}}
-
-}
-
-// The SampleCount of CloudWatch metrics will be calculated by the sum of the 'Counts' array.
-// The 'Count' field should be same as the sum of the 'Counts' array and will be ignored in CloudWatch.
-type cWMetricHistogram struct {
-	Values []float64
-	Counts []float64
-	Max    float64
-	Min    float64
-	Count  uint64
-	Sum    float64
-}
-
-type dataPointSplit struct {
-	cWMetricHistogram *cWMetricHistogram
-	length            int
-	capacity          int
-}
-
-func (split *dataPointSplit) isNotFull() bool {
-	return split.length < split.capacity
-}
-
-func (split *dataPointSplit) setMax(maxVal float64) {
-	split.cWMetricHistogram.Max = maxVal
-}
-
-func (split *dataPointSplit) setMin(minVal float64) {
-	split.cWMetricHistogram.Min = minVal
-}
-
-func (split *dataPointSplit) appendMetricData(metricVal float64, count uint64) {
-	split.cWMetricHistogram.Values = append(split.cWMetricHistogram.Values, metricVal)
-	split.cWMetricHistogram.Counts = append(split.cWMetricHistogram.Counts, float64(count))
-	split.length++
-	split.cWMetricHistogram.Count += count
 }
 
 // ConvertOtelMetric creates a list of datums from the datapoints in the given
