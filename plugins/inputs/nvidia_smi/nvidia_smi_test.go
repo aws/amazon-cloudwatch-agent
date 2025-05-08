@@ -227,6 +227,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pcie_link_gen_current":         1,
 						"pcie_link_width_current":       8,
 						"power_draw":                    float64(4.61),
+						"power_limit":                   float64(75),
 						"serial":                        "0322218049033",
 						"temperature_gpu":               34,
 						"utilization_gpu":               0,
