@@ -7,6 +7,6 @@ package nvme
 
 import "errors"
 
-func GetMetrics(devicePath string) (EBSMetrics, error) {
+func GetMetrics(_ string) (EBSMetrics, error) {
 	return EBSMetrics{}, errors.New("ebs metrics not supported")
 }

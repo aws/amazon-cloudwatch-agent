@@ -10,31 +10,38 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 )
 
 func TestNewK8sAttributeScraper(t *testing.T) {
 	scraper := NewK8sAttributeScraper("test")
 	assert.Equal(t, "test", scraper.Cluster)
+	assert.Empty(t, scraper.Namespace)
+	assert.Empty(t, scraper.Workload)
+	assert.Empty(t, scraper.Node)
 }
 
 func Test_k8sattributescraper_Scrape(t *testing.T) {
-
 	tests := []struct {
 		name        string
 		clusterName string
 		args        pcommon.Resource
+		podMeta     k8sclient.PodMetadata
 		want        *K8sAttributeScraper
 	}{
 		{
 			name:        "Empty",
 			clusterName: "",
 			args:        pcommon.NewResource(),
+			podMeta:     k8sclient.PodMetadata{},
 			want:        &K8sAttributeScraper{},
 		},
 		{
 			name:        "ClusterOnly",
 			clusterName: "test-cluster",
 			args:        pcommon.NewResource(),
+			podMeta:     k8sclient.PodMetadata{},
 			want: &K8sAttributeScraper{
 				Cluster: "test-cluster",
 			},
@@ -42,7 +49,12 @@ func Test_k8sattributescraper_Scrape(t *testing.T) {
 		{
 			name:        "AllAppSignalAttributes",
 			clusterName: "test-cluster",
-			args:        generateResourceMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node"),
+			args: generateResourceMetrics(
+				semconv.AttributeK8SNamespaceName, "test-namespace",
+				semconv.AttributeK8SDeploymentName, "test-workload",
+				semconv.AttributeK8SNodeName, "test-node",
+			),
+			podMeta: k8sclient.PodMetadata{},
 			want: &K8sAttributeScraper{
 				Cluster:   "test-cluster",
 				Namespace: "test-namespace",
@@ -50,12 +62,67 @@ func Test_k8sattributescraper_Scrape(t *testing.T) {
 				Node:      "test-node",
 			},
 		},
+		{
+			name:        "PodMetadataOnly",
+			clusterName: "my-cluster",
+			args:        pcommon.NewResource(),
+			podMeta: k8sclient.PodMetadata{
+				Namespace: "podmeta-namespace",
+				Workload:  "podmeta-workload",
+				Node:      "podmeta-node",
+			},
+			want: &K8sAttributeScraper{
+				Cluster:   "my-cluster",
+				Namespace: "podmeta-namespace",
+				Workload:  "podmeta-workload",
+				Node:      "podmeta-node",
+			},
+		},
+		{
+			name:        "MixedResourceAndPodMeta",
+			clusterName: "test-cluster",
+			args: generateResourceMetrics(
+				semconv.AttributeK8SNamespaceName, "resource-namespace",
+				semconv.AttributeK8SDeploymentName, "resource-workload",
+				semconv.AttributeK8SNodeName, "resource-node",
+			),
+			podMeta: k8sclient.PodMetadata{
+				Workload: "podmeta-workload",
+			},
+			want: &K8sAttributeScraper{
+				Cluster:   "test-cluster",
+				Namespace: "resource-namespace",
+				Workload:  "resource-workload",
+				Node:      "resource-node",
+			},
+		},
+		{
+			name:        "ResourceAttrsOverridePodMeta",
+			clusterName: "test-cluster",
+			args: generateResourceMetrics(
+				semconv.AttributeK8SNamespaceName, "resource-namespace",
+				semconv.AttributeK8SDeploymentName, "resource-workload",
+				semconv.AttributeK8SNodeName, "resource-node",
+			),
+			podMeta: k8sclient.PodMetadata{
+				Namespace: "override-namespace",
+				Workload:  "override-workload",
+				Node:      "override-node",
+			},
+			want: &K8sAttributeScraper{
+				Cluster:   "test-cluster",
+				Namespace: "resource-namespace",
+				Workload:  "resource-workload",
+				Node:      "resource-node",
+			},
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := NewK8sAttributeScraper(tt.clusterName)
-			e.Scrape(tt.args)
-			assert.Equal(t, e, tt.want)
+			e.Scrape(tt.args, tt.podMeta)
+			assert.Equal(t, tt.want, e)
 		})
 	}
 }
@@ -115,14 +182,21 @@ func Test_k8sattributescraper_reset(t *testing.T) {
 
 func Test_k8sattributescraper_scrapeNamespace(t *testing.T) {
 	tests := []struct {
-		name string
-		args pcommon.Map
-		want string
+		name  string
+		nsArg string
+		args  pcommon.Map
+		want  string
 	}{
 		{
 			name: "Empty",
 			args: getAttributeMap(map[string]any{"": ""}),
 			want: "",
+		},
+		{
+			name:  "DirectOverride",
+			nsArg: "direct-namespace",
+			args:  getAttributeMap(map[string]any{semconv.AttributeK8SNamespaceName: "namespace-name"}),
+			want:  "namespace-name",
 		},
 		{
 			name: "AppSignalNodeExists",
@@ -138,7 +212,7 @@ func Test_k8sattributescraper_scrapeNamespace(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &K8sAttributeScraper{}
-			e.scrapeNamespace(tt.args)
+			e.scrapeNamespace(tt.args, tt.nsArg)
 			assert.Equal(t, tt.want, e.Namespace)
 		})
 	}
@@ -146,14 +220,21 @@ func Test_k8sattributescraper_scrapeNamespace(t *testing.T) {
 
 func Test_k8sattributescraper_scrapeNode(t *testing.T) {
 	tests := []struct {
-		name string
-		args pcommon.Map
-		want string
+		name  string
+		ndArg string
+		args  pcommon.Map
+		want  string
 	}{
 		{
 			name: "Empty",
 			args: getAttributeMap(map[string]any{"": ""}),
 			want: "",
+		},
+		{
+			name:  "DirectOverride",
+			ndArg: "direct-node",
+			args:  getAttributeMap(map[string]any{semconv.AttributeK8SNodeName: "resource-node"}),
+			want:  "resource-node",
 		},
 		{
 			name: "AppsignalNodeExists",
@@ -169,7 +250,7 @@ func Test_k8sattributescraper_scrapeNode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &K8sAttributeScraper{}
-			e.scrapeNode(tt.args)
+			e.scrapeNode(tt.args, tt.ndArg)
 			assert.Equal(t, tt.want, e.Node)
 		})
 	}
@@ -177,9 +258,10 @@ func Test_k8sattributescraper_scrapeNode(t *testing.T) {
 
 func Test_k8sattributescraper_scrapeWorkload(t *testing.T) {
 	tests := []struct {
-		name string
-		args pcommon.Map
-		want string
+		name  string
+		wlArg string
+		args  pcommon.Map
+		want  string
 	}{
 		{
 			name: "Empty",
@@ -212,17 +294,29 @@ func Test_k8sattributescraper_scrapeWorkload(t *testing.T) {
 			want: "test-container",
 		},
 		{
+			name:  "DirectOverride",
+			wlArg: "direct-workload",
+			args:  getAttributeMap(map[string]any{semconv.AttributeK8SDeploymentName: "resource-workload"}),
+			want:  "resource-workload",
+		},
+		{
 			name: "MultipleWorkloads",
 			args: getAttributeMap(map[string]any{
 				semconv.AttributeK8SDeploymentName: "test-deployment",
-				semconv.AttributeK8SContainerName:  "test-container"}),
+				semconv.AttributeK8SContainerName:  "test-container",
+			}),
 			want: "test-deployment",
+		},
+		{
+			name: "NoArgNoResource",
+			args: getAttributeMap(map[string]any{"foo": "bar"}),
+			want: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &K8sAttributeScraper{}
-			e.scrapeWorkload(tt.args)
+			e.scrapeWorkload(tt.args, tt.wlArg)
 			assert.Equal(t, tt.want, e.Workload)
 		})
 	}

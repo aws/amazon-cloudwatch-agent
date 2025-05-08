@@ -108,6 +108,19 @@ const (
 	NeuronHardware                              = "neuron_hardware"
 	NeuronExecutionLatency                      = "neuron_execution_latency"
 
+	// Converted metrics for NVME metrics
+	NvmeReadOpsTotal        = "diskio_ebs_total_read_ops"
+	NvmeWriteOpsTotal       = "diskio_ebs_total_write_ops"
+	NvmeReadBytesTotal      = "diskio_ebs_total_read_bytes"
+	NvmeWriteBytesTotal     = "diskio_ebs_total_write_bytes"
+	NvmeReadTime            = "diskio_ebs_total_read_time"
+	NvmeWriteTime           = "diskio_ebs_total_write_time"
+	NvmeExceededIOPSTime    = "diskio_ebs_volume_performance_exceeded_iops"
+	NvmeExceededTPTime      = "diskio_ebs_volume_performance_exceeded_tp"
+	NvmeExceededEC2IOPSTime = "diskio_ebs_ec2_instance_performance_exceeded_iops"
+	NvmeExceededEC2TPTime   = "diskio_ebs_ec2_instance_performance_exceeded_tp"
+	NvmeVolumeQueueLength   = "diskio_ebs_volume_queue_length"
+
 	KueuePendingWorkloads          = "kueue_pending_workloads"
 	KueueEvictedWorkloadsTotal     = "kueue_evicted_workloads_total"
 	KueueAdmittedActiveWorkloads   = "kueue_admitted_active_workloads"
@@ -133,6 +146,7 @@ const (
 	TypeGpuPod         = "PodGPU"
 	TypeGpuNode        = "NodeGPU"
 	TypeGpuCluster     = "ClusterGPU"
+	TypeNodeEBS        = "NodeEBS"
 
 	TypePod             = "Pod"
 	TypePodNet          = "PodNet"

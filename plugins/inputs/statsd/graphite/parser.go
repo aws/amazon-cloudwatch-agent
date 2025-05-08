@@ -151,7 +151,7 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	if errStr != "" {
-		return metrics, fmt.Errorf(strings.TrimSpace(errStr))
+		return metrics, fmt.Errorf("%s", strings.TrimSpace(errStr))
 	}
 	return metrics, nil
 }
