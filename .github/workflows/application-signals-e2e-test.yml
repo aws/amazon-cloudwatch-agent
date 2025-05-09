@@ -48,15 +48,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  java-eks-e2e-test:
-    needs: CheckBuildTestArtifacts
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
-      caller-workflow-name: 'main-build'
-
   java-ec2-default-e2e-test:
     needs: CheckBuildTestArtifacts
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-test.yml@main
@@ -73,40 +64,6 @@ jobs:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
-  java-metric-limiter-e2e-test:
-    needs: [ CheckBuildTestArtifacts, java-eks-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/metric-limiter-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
-      caller-workflow-name: 'main-build'
-
-  java-k8s-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  java-ecs-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ecs-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  python-eks-e2e-test:
-    needs: [ CheckBuildTestArtifacts, java-metric-limiter-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
-      caller-workflow-name: 'main-build'
-
   python-ec2-default-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-test.yml@main
@@ -118,98 +75,6 @@ jobs:
   python-ec2-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  python-k8s-e2e-test:
-    needs: [ CheckBuildTestArtifacts, java-k8s-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  python-ecs-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ecs-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  node-eks-e2e-test:
-    # Because we share the same eks cluster for different languages, we want to run the tests sequentially to avoid interference
-    needs: [ CheckBuildTestArtifacts, python-eks-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/node-eks-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
-      caller-workflow-name: 'main-build'
-
-  node-ec2-default-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/node-ec2-default-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  node-ec2-asg-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/node-ec2-asg-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  node-k8s-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/node-k8s-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  node-ecs-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/node-ecs-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  dotnet-ec2-default-v8-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-default-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-      dotnet-version: '8.0'
-
-  dotnet-ec2-windows-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-windows-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
-
-  dotnet-eks-e2e-test:
-    needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-eks-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
-      caller-workflow-name: 'main-build'
-
-  dotnet-k8s-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-k8s-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
