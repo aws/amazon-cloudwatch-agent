@@ -5,25 +5,26 @@ package useragent
 
 import (
 	"context"
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"go.uber.org/atomic"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"go.uber.org/atomic"
 )
 
 const (
 	handlerID          = "cloudwatchagent.UserAgent"
 	headerKeyUserAgent = "User-Agent"
 
-	metricPluginNVME = "cinvme"
+	metricPluginEBS = "ci_ebs"
 )
 
 // MetricPluginMapping defines what user agent string to look for
 // and what plugin name to add when found
 var metricPluginMapping = map[string]string{
-	"NVME": metricPluginNVME,
+	"EBS": metricPluginEBS,
 }
 
 type userAgentHandler struct {
@@ -52,7 +53,6 @@ func (uah *userAgentHandler) HandleRequest(_ context.Context, r *http.Request) {
 	if current != "" {
 		newHeader += separator + current
 	}
-	log.Printf("current user agent header is: %s, new user agent header is: %s", current, newHeader)
 	r.Header.Set(headerKeyUserAgent, newHeader)
 }
 
