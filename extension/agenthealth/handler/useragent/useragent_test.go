@@ -208,6 +208,55 @@ func TestJmx(t *testing.T) {
 	assert.Equal(t, "outputs:(nop)", ua.outputsStr.Load())
 }
 
+func TestAddInput(t *testing.T) {
+	testCases := map[string]struct {
+		initialInputs []string
+		newInput      string
+		wantStr       string
+		wantInputs    []string
+	}{
+		"AddToEmpty": {
+			initialInputs: []string{},
+			newInput:      "new_input",
+			wantStr:       "inputs:(new_input)",
+			wantInputs:    []string{"new_input"},
+		},
+		"AddToExisting": {
+			initialInputs: []string{"existing_input"},
+			newInput:      "new_input",
+			wantStr:       "inputs:(existing_input new_input)",
+			wantInputs:    []string{"existing_input", "new_input"},
+		},
+		"AddDuplicate": {
+			initialInputs: []string{"existing_input"},
+			newInput:      "existing_input",
+			wantStr:       "inputs:(existing_input)",
+			wantInputs:    []string{"existing_input"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ua := newUserAgent()
+
+			for _, input := range tc.initialInputs {
+				ua.inputs.Add(input)
+			}
+			ua.inputsStr.Store(componentsStr(typeInputs, ua.inputs))
+
+			ua.AddInput(tc.newInput)
+
+			assert.Equal(t, tc.wantStr, ua.inputsStr.Load())
+
+			assert.Equal(t, len(tc.wantInputs), len(ua.inputs), "inputs set size mismatch")
+			for _, expectedInput := range tc.wantInputs {
+				assert.True(t, ua.inputs.Contains(expectedInput), "expected input %s not found in set", expectedInput)
+			}
+
+		})
+	}
+}
+
 func TestSingleton(t *testing.T) {
 	assert.Equal(t, Get().(*userAgent).id, Get().(*userAgent).id)
 }
