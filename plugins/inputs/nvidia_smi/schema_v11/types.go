@@ -32,6 +32,7 @@ type GPU struct {
 	Utilization   UtilizationStats   `xml:"utilization"`
 	UUID          string             `xml:"uuid"`
 	VbiosVersion  string             `xml:"vbios_version"`
+	Processes     ProcessesInfo      `xml:"processes"`
 }
 
 // ECCMode defines the structure of the ecc portions in the smi output.
@@ -118,4 +119,14 @@ type ClockStats struct {
 	SM       string `xml:"sm_clock"`       // int
 	Memory   string `xml:"mem_clock"`      // int
 	Video    string `xml:"video_clock"`    // int
+}
+
+// ProcessesInfo defines the structure of the processes portion of the smi output.
+type ProcessesInfo struct {
+	ProcessInfo []struct {
+		Pid         string `xml:"pid"`          // str
+		Type        string `xml:"type"`         // str
+		ProcessName string `xml:"process_name"` // str
+		UsedMemory  string `xml:"used_memory"`  // int
+	} `xml:"process_info"`
 }

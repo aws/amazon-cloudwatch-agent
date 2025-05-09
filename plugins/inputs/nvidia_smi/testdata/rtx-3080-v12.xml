@@ -280,7 +280,7 @@
 				<supported_graphics_clock>1545 MHz</supported_graphics_clock>
 				<supported_graphics_clock>1530 MHz</supported_graphics_clock>
 				<supported_graphics_clock>1515 MHz</supported_graphics_clock>
-                                <supported_graphics_clock>1500 MHz</supported_graphics_clock>
+				<supported_graphics_clock>1500 MHz</supported_graphics_clock>
 				<supported_graphics_clock>1485 MHz</supported_graphics_clock>
 				<supported_graphics_clock>1470 MHz</supported_graphics_clock>
 				<supported_graphics_clock>1455 MHz</supported_graphics_clock>
@@ -778,6 +778,22 @@
 			</supported_mem_clock>
 		</supported_clocks>
 		<processes>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>675</pid>
+				<type>G</type>
+				<process_name>/usr/lib/xorg/Xorg</process_name>
+				<used_memory>22 MiB</used_memory>
+			</process_info>
+			<process_info>
+				<gpu_instance_id>N/A</gpu_instance_id>
+				<compute_instance_id>N/A</compute_instance_id>
+				<pid>5762</pid>
+				<type>C</type>
+				<process_name>python</process_name>
+				<used_memory>1005 MiB</used_memory>
+			</process_info>
 		</processes>
 		<accounted_processes>
 		</accounted_processes>
