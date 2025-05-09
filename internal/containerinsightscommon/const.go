@@ -17,6 +17,7 @@ const (
 	MetricType              = "Type"
 	SourcesKey              = "Sources"
 	GpuDeviceKey            = "GpuDevice"
+	UltraServerKey          = "UltraServer"
 
 	ClusterQueueNameKey     = "ClusterQueue"
 	ClusterQueueStatusKey   = "Status"
