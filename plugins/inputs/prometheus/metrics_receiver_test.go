@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	kitlog "github.com/go-kit/log"
-	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
@@ -121,7 +121,7 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 	defer os.Unsetenv("POD_NAME")
 	configFile := filepath.Join("testdata", "target_allocator.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	logLevel := promlog.AllowedLevel{}
+	logLevel := promslog.AllowedLevel{}
 	logLevel.Set("DEBUG")
 	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")
@@ -140,7 +140,7 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 	os.Setenv("POD_NAME", "collector-1")
 	defer os.Unsetenv("POD_NAME")
 	configFile := filepath.Join("testdata", "base-k8.yaml")
-	logLevel := promlog.AllowedLevel{}
+	logLevel := promslog.AllowedLevel{}
 	logLevel.Set("DEBUG")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
 	var reloadHandler = func(cfg *config.Config) error {
@@ -156,7 +156,7 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 func Test_loadConfigFromFileEC2(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	logLevel := promlog.AllowedLevel{}
+	logLevel := promslog.AllowedLevel{}
 	logLevel.Set("DEBUG")
 	var reloadHandler = func(cfg *config.Config) error {
 		logger.Log("reloaded")

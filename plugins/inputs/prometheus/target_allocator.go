@@ -6,6 +6,7 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/common/promslog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/go-kit/log/level"
 	otelpromreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	tamanager "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
-	"github.com/prometheus/common/promlog"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
@@ -77,7 +77,7 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 }
 
 // Adapter from go-kit/log to zap.Logger
-func createLogger(level *promlog.AllowedLevel) (*zap.Logger, error) {
+func createLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
 	zapLevel, err := zapcore.ParseLevel(level.String())
 	if err != nil {
 		err = fmt.Errorf("Error parsing level: %v. Defaulting to info.", err)
@@ -94,7 +94,7 @@ func createLogger(level *promlog.AllowedLevel) (*zap.Logger, error) {
 	return zapLogger, err
 }
 
-func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *promlog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
+func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *promslog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled:             false,
 		manager:             nil,
@@ -121,7 +121,7 @@ func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *
 	}
 	return &tam
 }
-func (tam *TargetAllocatorManager) loadManager(logLevel *promlog.AllowedLevel) {
+func (tam *TargetAllocatorManager) loadManager(logLevel *promslog.AllowedLevel) {
 	logger, err := createLogger(logLevel)
 	if err != nil {
 		level.Error(tam.logger).Log("msg", "Error creating logger", "err", err)
