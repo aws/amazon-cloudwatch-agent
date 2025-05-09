@@ -4,6 +4,10 @@
 package awsentity
 
 import (
+	"errors"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
 	"go.opentelemetry.io/collector/component"
 )
 
@@ -23,11 +27,34 @@ type Config struct {
 	// EntityType determines the type of entity processing done for
 	// telemetry. Possible values are Service and Resource
 	EntityType string `mapstructure:"entity_type,omitempty"`
+	// OverrideEntity contains configuration for overriding entity attributes
+	OverrideEntity *entityoverrider.EntityOverride `mapstructure:"override_entity,omitempty" yaml:"override_entity,omitempty"`
 }
 
 // Verify Config implements Processor interface.
 var _ component.Config = (*Config)(nil)
 
 func (cfg *Config) Validate() error {
+	if cfg.OverrideEntity != nil {
+		// Validate key attributes
+		for _, keyAttr := range cfg.OverrideEntity.KeyAttributes {
+			if !entityattributes.IsAllowedKeyAttribute(keyAttr.Key) {
+				return errors.New("Invalid key attribute name for entity: " + keyAttr.Key)
+			}
+			if keyAttr.Value == "" {
+				return errors.New("empty value for entity key attribute")
+			}
+		}
+
+		// Validate regular attributes
+		for _, attr := range cfg.OverrideEntity.Attributes {
+			if !entityattributes.IsAllowedAttribute(attr.Key) {
+				return errors.New("Invalid attribute name for entity: " + attr.Key)
+			}
+			if attr.Value == "" {
+				return errors.New("empty value for entity attribute")
+			}
+		}
+	}
 	return nil
 }
