@@ -5,6 +5,7 @@ package awsentity
 
 import (
 	"context"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
 	"os"
 	"strings"
 
@@ -126,16 +127,18 @@ var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
 type awsEntityProcessor struct {
-	config     *Config
-	k8sscraper scraper
-	logger     *zap.Logger
+	config         *Config
+	k8sscraper     scraper
+	entityReplacer *entityoverrider.EntityOverrider
+	logger         *zap.Logger
 }
 
 func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcessor {
 	return &awsEntityProcessor{
-		config:     config,
-		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
-		logger:     logger,
+		config:         config,
+		k8sscraper:     k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
+		entityReplacer: entityoverrider.NewEntityOverrider(config.OverrideEntity, logger),
+		logger:         logger,
 	}
 }
 
@@ -305,6 +308,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
+					if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
+						p.entityReplacer.ApplyOverrides(resourceAttrs)
+					}
+
 				}
 			}
 			if logGroupNames == EMPTY || (serviceName == EMPTY && environmentName == EMPTY) {

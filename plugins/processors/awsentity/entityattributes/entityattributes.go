@@ -89,6 +89,62 @@ var attributeEntityToShortNameMap = map[string]string{
 	AttributeEntityServiceNameSource: ServiceNameSource,
 }
 
+// shortNameToEntityMap is the reverse mapping of keyAttributeEntityToShortNameMap
+var keyAttributeEntityToLongNameMap = map[string]string{
+	EntityType:            AttributeEntityType,
+	ResourceType:          AttributeEntityResourceType,
+	Identifier:            AttributeEntityIdentifier,
+	AwsAccountId:          AttributeEntityAwsAccountId,
+	ServiceName:           AttributeEntityServiceName,
+	DeploymentEnvironment: AttributeEntityDeploymentEnvironment,
+}
+
+// shortNameToAttributeMap is the reverse mapping of attributeEntityToShortNameMap
+var attributeEntityToLongNameMap = map[string]string{
+	NamespaceField:    AttributeEntityNamespace,
+	Workload:          AttributeEntityWorkload,
+	Node:              AttributeEntityNode,
+	Platform:          AttributeEntityPlatformType,
+	InstanceID:        AttributeEntityInstanceID,
+	AutoscalingGroup:  AttributeEntityAutoScalingGroup,
+	ServiceNameSource: AttributeEntityServiceNameSource,
+}
+
+// GetFullAttributeName returns the full attribute name for a given short name
+func GetFullAttributeName(shortName string) (string, bool) {
+	// First check key attributes
+	if fullName, ok := keyAttributeEntityToLongNameMap[shortName]; ok {
+		return fullName, true
+	}
+	// Then check regular attributes
+	if fullName, ok := attributeEntityToLongNameMap[shortName]; ok {
+		return fullName, true
+	}
+	return "", false
+}
+
+// IsAllowedKeyAttribute checks if the given key is an allowed entity key attribute name
+func IsAllowedKeyAttribute(key string) bool {
+	// Check if the key matches any of the values in keyAttributeEntityToShortNameMap
+	for _, shortName := range keyAttributeEntityToShortNameMap {
+		if key == shortName {
+			return true
+		}
+	}
+	return false
+}
+
+// IsAllowedAttribute checks if the given key is an allowed attribute name
+func IsAllowedAttribute(key string) bool {
+	// Check if the key matches any of the values in attributeEntityToShortNameMap
+	for _, shortName := range attributeEntityToShortNameMap {
+		if key == shortName {
+			return true
+		}
+	}
+	return false
+}
+
 func CreateCloudWatchEntityFromAttributes(resourceAttributes pcommon.Map) cloudwatch.Entity {
 	keyAttributesMap := map[string]*string{}
 	attributeMap := map[string]*string{}
