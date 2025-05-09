@@ -54,7 +54,7 @@ jobs:
     secrets: inherit
     with:
       aws-region: us-east-1
-      caller-workflow-name: 'main-build'
+      caller-workflow-name: 'test'
 
   java-ec2-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
@@ -62,7 +62,7 @@ jobs:
     secrets: inherit
     with:
       aws-region: us-east-1
-      caller-workflow-name: 'main-build'
+      caller-workflow-name: 'test'
 
   python-ec2-default-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
@@ -70,7 +70,7 @@ jobs:
     secrets: inherit
     with:
       aws-region: us-east-1
-      caller-workflow-name: 'main-build'
+      caller-workflow-name: 'test'
 
   python-ec2-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
@@ -78,4 +78,4 @@ jobs:
     secrets: inherit
     with:
       aws-region: us-east-1
-      caller-workflow-name: 'main-build'
+      caller-workflow-name: 'test'
