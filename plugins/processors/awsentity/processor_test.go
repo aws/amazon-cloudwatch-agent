@@ -554,7 +554,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 		{
 			name:                          "ResourceAttributeWithEntityOverride",
 			platform:                      config.ModeEC2,
-			metrics:                       generateMetrics(attributeServiceName, "test-service"),
+			metrics:                       generateMetrics(),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
 			mockGetAutoScalingGroup:       newMockGetAutoScalingGroupFromEntityStore("auto-scaling"),
 			want: map[string]any{
@@ -568,8 +568,42 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				entityattributes.AttributeEntityDeploymentEnvironment: "ec2:auto-scaling",
 			},
 			config: &Config{
-				ScrapeDatapointAttribute: true,
-				EntityType:               attributeService,
+				EntityType: attributeService,
+				OverrideEntity: &entityoverrider.EntityOverride{
+					KeyAttributes: []entityoverrider.KeyPair{
+						{
+							Key:   "Name",
+							Value: "override-service",
+						},
+					},
+					Attributes: []entityoverrider.KeyPair{
+						{
+							Key:   "AWS.ServiceNameSource",
+							Value: "UserConfiguration",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:                          "ResourceAttributeWithEntityOverrideAndInstrumentation",
+			platform:                      config.ModeEC2,
+			metrics:                       generateMetrics(attributeServiceName, "test-service"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:       newMockGetAutoScalingGroupFromEntityStore("auto-scaling"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityServiceNameSource:     "Instrumentation",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
+				entityattributes.AttributeEntityAutoScalingGroup:      "auto-scaling",
+				entityattributes.AttributeEntityDeploymentEnvironment: "ec2:auto-scaling",
+				attributeServiceName:                                  "test-service",
+			},
+			config: &Config{
+				EntityType: attributeService,
 				OverrideEntity: &entityoverrider.EntityOverride{
 					KeyAttributes: []entityoverrider.KeyPair{
 						{
@@ -603,7 +637,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			}
 			config := tt.config
 			if config == nil {
-				config = &Config{ScrapeDatapointAttribute: true, EntityType: attributeService, ClusterName: tt.clusterName}
+				config = &Config{EntityType: attributeService, ClusterName: tt.clusterName}
 			}
 			p := newAwsEntityProcessor(config, logger)
 			p.config.Platform = tt.platform

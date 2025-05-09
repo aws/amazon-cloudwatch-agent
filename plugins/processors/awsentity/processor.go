@@ -309,6 +309,9 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
 					if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
+						// Instrumentation Service Name Source has highest priority
+						// Therefore only apply when service name source is not
+						// Instrumentation
 						p.entityReplacer.ApplyOverrides(resourceAttrs)
 					}
 
