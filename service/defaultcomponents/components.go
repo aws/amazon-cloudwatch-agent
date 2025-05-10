@@ -42,6 +42,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
@@ -70,85 +71,84 @@ import (
 )
 
 func Factories() (otelcol.Factories, error) {
-	var factories otelcol.Factories
-	var err error
+	factories := otelcol.Factories{}
 
-	if factories.Receivers, err = receiver.MakeFactoryMap(
-		awscontainerinsightreceiver.NewFactory(),
-		awscontainerinsightskueuereceiver.NewFactory(),
-		awsecscontainermetricsreceiver.NewFactory(),
-		awsebsnvmereceiver.NewFactory(),
-		awsxrayreceiver.NewFactory(),
-		filelogreceiver.NewFactory(),
-		jaegerreceiver.NewFactory(),
-		jmxreceiver.NewFactory(),
-		kafkareceiver.NewFactory(),
-		nopreceiver.NewFactory(),
-		otlpreceiver.NewFactory(),
-		prometheusreceiver.NewFactory(),
-		statsdreceiver.NewFactory(),
-		tcplogreceiver.NewFactory(),
-		udplogreceiver.NewFactory(),
-		zipkinreceiver.NewFactory(),
-	); err != nil {
-		return otelcol.Factories{}, err
+	// Create a map for receivers
+	receivers := map[component.Type]receiver.Factory{
+		awscontainerinsightreceiver.NewFactory().Type():       awscontainerinsightreceiver.NewFactory(),
+		awscontainerinsightskueuereceiver.NewFactory().Type(): awscontainerinsightskueuereceiver.NewFactory(),
+		awsecscontainermetricsreceiver.NewFactory().Type():    awsecscontainermetricsreceiver.NewFactory(),
+		awsebsnvmereceiver.NewFactory().Type():                awsebsnvmereceiver.NewFactory(),
+		awsxrayreceiver.NewFactory().Type():                   awsxrayreceiver.NewFactory(),
+		filelogreceiver.NewFactory().Type():                   filelogreceiver.NewFactory(),
+		jaegerreceiver.NewFactory().Type():                    jaegerreceiver.NewFactory(),
+		jmxreceiver.NewFactory().Type():                       jmxreceiver.NewFactory(),
+		kafkareceiver.NewFactory().Type():                     kafkareceiver.NewFactory(),
+		nopreceiver.NewFactory().Type():                       nopreceiver.NewFactory(),
+		otlpreceiver.NewFactory().Type():                      otlpreceiver.NewFactory(),
+		prometheusreceiver.NewFactory().Type():                prometheusreceiver.NewFactory(),
+		statsdreceiver.NewFactory().Type():                    statsdreceiver.NewFactory(),
+		tcplogreceiver.NewFactory().Type():                    tcplogreceiver.NewFactory(),
+		udplogreceiver.NewFactory().Type():                    udplogreceiver.NewFactory(),
+		zipkinreceiver.NewFactory().Type():                    zipkinreceiver.NewFactory(),
 	}
+	factories.Receivers = receivers
 
-	if factories.Processors, err = processor.MakeFactoryMap(
-		attributesprocessor.NewFactory(),
-		awsapplicationsignals.NewFactory(),
-		awsentity.NewFactory(),
-		batchprocessor.NewFactory(),
-		cumulativetodeltaprocessor.NewFactory(),
-		deltatocumulativeprocessor.NewFactory(),
-		deltatorateprocessor.NewFactory(),
-		ec2tagger.NewFactory(),
-		filterprocessor.NewFactory(),
-		gpuattributes.NewFactory(),
-		kueueattributes.NewFactory(),
-		groupbytraceprocessor.NewFactory(),
-		k8sattributesprocessor.NewFactory(),
-		memorylimiterprocessor.NewFactory(),
-		metricsgenerationprocessor.NewFactory(),
-		metricstransformprocessor.NewFactory(),
-		probabilisticsamplerprocessor.NewFactory(),
-		resourceprocessor.NewFactory(),
-		resourcedetectionprocessor.NewFactory(),
-		rollupprocessor.NewFactory(),
-		spanprocessor.NewFactory(),
-		tailsamplingprocessor.NewFactory(),
-		transformprocessor.NewFactory(),
-	); err != nil {
-		return otelcol.Factories{}, err
+	// Create a map for processors
+	processors := map[component.Type]processor.Factory{
+		attributesprocessor.NewFactory().Type():           attributesprocessor.NewFactory(),
+		awsapplicationsignals.NewFactory().Type():         awsapplicationsignals.NewFactory(),
+		awsentity.NewFactory().Type():                     awsentity.NewFactory(),
+		batchprocessor.NewFactory().Type():                batchprocessor.NewFactory(),
+		cumulativetodeltaprocessor.NewFactory().Type():    cumulativetodeltaprocessor.NewFactory(),
+		deltatocumulativeprocessor.NewFactory().Type():    deltatocumulativeprocessor.NewFactory(),
+		deltatorateprocessor.NewFactory().Type():          deltatorateprocessor.NewFactory(),
+		ec2tagger.NewFactory().Type():                     ec2tagger.NewFactory(),
+		filterprocessor.NewFactory().Type():               filterprocessor.NewFactory(),
+		gpuattributes.NewFactory().Type():                 gpuattributes.NewFactory(),
+		kueueattributes.NewFactory().Type():               kueueattributes.NewFactory(),
+		groupbytraceprocessor.NewFactory().Type():         groupbytraceprocessor.NewFactory(),
+		k8sattributesprocessor.NewFactory().Type():        k8sattributesprocessor.NewFactory(),
+		memorylimiterprocessor.NewFactory().Type():        memorylimiterprocessor.NewFactory(),
+		metricsgenerationprocessor.NewFactory().Type():    metricsgenerationprocessor.NewFactory(),
+		metricstransformprocessor.NewFactory().Type():     metricstransformprocessor.NewFactory(),
+		probabilisticsamplerprocessor.NewFactory().Type(): probabilisticsamplerprocessor.NewFactory(),
+		resourceprocessor.NewFactory().Type():             resourceprocessor.NewFactory(),
+		resourcedetectionprocessor.NewFactory().Type():    resourcedetectionprocessor.NewFactory(),
+		rollupprocessor.NewFactory().Type():               rollupprocessor.NewFactory(),
+		spanprocessor.NewFactory().Type():                 spanprocessor.NewFactory(),
+		tailsamplingprocessor.NewFactory().Type():         tailsamplingprocessor.NewFactory(),
+		transformprocessor.NewFactory().Type():            transformprocessor.NewFactory(),
 	}
+	factories.Processors = processors
 
-	if factories.Exporters, err = exporter.MakeFactoryMap(
-		awscloudwatchlogsexporter.NewFactory(),
-		awsemfexporter.NewFactory(),
-		awsxrayexporter.NewFactory(),
-		cloudwatch.NewFactory(),
-		debugexporter.NewFactory(),
-		nopexporter.NewFactory(),
-		prometheusremotewriteexporter.NewFactory(),
-	); err != nil {
-		return otelcol.Factories{}, err
+	// Create a map for exporters
+	exporters := map[component.Type]exporter.Factory{
+		awscloudwatchlogsexporter.NewFactory().Type():     awscloudwatchlogsexporter.NewFactory(),
+		awsemfexporter.NewFactory().Type():                awsemfexporter.NewFactory(),
+		awsxrayexporter.NewFactory().Type():               awsxrayexporter.NewFactory(),
+		cloudwatch.NewFactory().Type():                    cloudwatch.NewFactory(),
+		debugexporter.NewFactory().Type():                 debugexporter.NewFactory(),
+		nopexporter.NewFactory().Type():                   nopexporter.NewFactory(),
+		prometheusremotewriteexporter.NewFactory().Type(): prometheusremotewriteexporter.NewFactory(),
 	}
+	factories.Exporters = exporters
 
-	if factories.Extensions, err = extension.MakeFactoryMap(
-		agenthealth.NewFactory(),
-		awsproxy.NewFactory(),
-		entitystore.NewFactory(),
-		k8smetadata.NewFactory(),
-		server.NewFactory(),
-		ecsobserver.NewFactory(),
-		filestorage.NewFactory(),
-		healthcheckextension.NewFactory(),
-		pprofextension.NewFactory(),
-		sigv4authextension.NewFactory(),
-		zpagesextension.NewFactory(),
-	); err != nil {
-		return otelcol.Factories{}, err
+	// Create a map for extensions
+	extensions := map[component.Type]extension.Factory{
+		agenthealth.NewFactory().Type():          agenthealth.NewFactory(),
+		awsproxy.NewFactory().Type():             awsproxy.NewFactory(),
+		entitystore.NewFactory().Type():          entitystore.NewFactory(),
+		k8smetadata.NewFactory().Type():          k8smetadata.NewFactory(),
+		server.NewFactory().Type():               server.NewFactory(),
+		ecsobserver.NewFactory().Type():          ecsobserver.NewFactory(),
+		filestorage.NewFactory().Type():          filestorage.NewFactory(),
+		healthcheckextension.NewFactory().Type(): healthcheckextension.NewFactory(),
+		pprofextension.NewFactory().Type():       pprofextension.NewFactory(),
+		sigv4authextension.NewFactory().Type():   sigv4authextension.NewFactory(),
+		zpagesextension.NewFactory().Type():      zpagesextension.NewFactory(),
 	}
+	factories.Extensions = extensions
 
 	return factories, nil
 }

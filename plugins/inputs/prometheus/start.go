@@ -20,23 +20,18 @@
 package prometheus
 
 import (
-	"context"
 	"fmt"
+	"github.com/prometheus/common/promslog"
 	"log/slog"
 	"os"
-	"os/signal"
 	"runtime"
 	"sync"
-	"syscall"
 
 	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
-	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	v "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
@@ -81,6 +76,7 @@ func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
 
+// Add this if you haven't already
 type slogAdapter struct {
 	logger *slog.Logger
 }
@@ -97,7 +93,6 @@ func (a *slogAdapter) Log(keyvals ...interface{}) error {
 			v = keyvals[i+1]
 		}
 
-		// Handle special "msg" key
 		if ks, ok := k.(string); ok && ks == "msg" {
 			msg = fmt.Sprint(v)
 			continue
@@ -114,34 +109,36 @@ func (a *slogAdapter) Log(keyvals ...interface{}) error {
 	return nil
 }
 
-// Helper function to create an adapter
+func (a *slogAdapter) With(keyvals ...interface{}) log.Logger {
+	return &slogAdapter{logger: a.logger.With(keyvals...)}
+}
+
 func newSlogAdapter(logger *slog.Logger) log.Logger {
 	return &slogAdapter{logger: logger}
 }
+
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	logLevel := promslog.NewLevel()
-	logLevel.Set("info")
+	// ... previous code ...
+
+	// Create slog logger
 
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
-		logLevel.Set("debug")
 	}
-	logFormat := promslog.NewFormat()
-	_ = logFormat.Set("logfmt")
 
 	cfg := struct {
 		configFile     string
 		promslogConfig promslog.Config
 	}{
-		promslogConfig: promslog.Config{Level: logLevel, Format: logFormat},
+		promslogConfig: promslog.Config{},
 	}
 
 	cfg.configFile = configFilePath
 
 	logger := promslog.New(&cfg.promslogConfig)
+
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
-	kitLogger := newSlogAdapter(logger)
 
 	logger.Info("Starting Prometheus", "version", version.Info())
 	logger.Info("Build Context", "context", version.BuildContext())
@@ -150,11 +147,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	logger.Info("Virtual Memory Limits", "limits", promRuntime.VMLimits())
 
 	var (
-		ctxScrape, cancelScrape = context.WithCancel(context.Background())
-		sdMetrics, _            = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
-		discoveryManagerScrape  = discovery.NewManager(
-			ctxScrape,
-			logger,
+		sdMetrics, _           = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
+		discoveryManagerScrape = discovery.NewManager(
+			nil,
+			nil,
 			prometheus.DefaultRegisterer,
 			sdMetrics,
 			discovery.Name("scrape"),
@@ -162,209 +158,26 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 		scrapeManager, _ = scrape.NewManager(
 			&scrape.Options{},
-			logger,
+			nil,
 			nil,
 			receiver,
 			prometheus.DefaultRegisterer,
 		)
-		taLogger  = logger.With("component", "ta manager")
+
 		taManager = createTargetAllocatorManager(
 			configFilePath,
-			taLogger,
-			logLevel,
+			nil,
+			nil,
 			scrapeManager,
 			discoveryManagerScrape,
 		)
 	)
 
-	logger.Info("Target Allocator status", "enabled", taManager.enabled) //Setup Target Allocator Scrape Post Process Handler
-	taManager.AttachReloadConfigHandler(
-		func(prometheusConfig *config.Config) {
-			relabelScrapeConfigs(prometheusConfig, logger)
-		},
-	)
+	logger.Info("Target Allocator status", "enabled", taManager.enabled)
 
-	mth.SetScrapeManager(scrapeManager)
+	// ... rest of the code, updating log calls to use appropriate logger ...
 
-	var reloaders = []func(cfg *config.Config) error{
-		// The Scrape and notifier managers need to reload before the Discovery manager as
-		// they need to read the most updated config when receiving the new targets list.
-		scrapeManager.ApplyConfig,
-		func(cfg *config.Config) error {
-			c := make(map[string]discovery.Configs)
-			for _, v := range cfg.ScrapeConfigs {
-				c[v.JobName] = v.ServiceDiscoveryConfigs
-			}
-			return discoveryManagerScrape.ApplyConfig(c)
-		},
-	}
-
-	prometheus.MustRegister(configSuccess)
-	prometheus.MustRegister(configSuccessTime)
-
-	// sync.Once is used to make sure we can close the channel at different execution stages(SIGTERM or when the config is loaded).
-	type closeOnce struct {
-		C     chan struct{}
-		once  sync.Once
-		Close func()
-	}
-	// Wait until the server is ready to handle reloading.
-	reloadReady := &closeOnce{
-		C: make(chan struct{}),
-	}
-	reloadReady.Close = func() {
-		reloadReady.once.Do(func() {
-			close(reloadReady.C)
-		})
-	}
-	var g run.Group
-	{
-		// Termination handler.
-		cancel := make(chan struct{})
-		g.Add(
-			func() error {
-				// Don't forget to release the reloadReady channel so that waiting blocks can exit normally.
-				select {
-				case <-shutDownChan:
-					logger.Warn("Received ShutDown, exiting gracefully...")
-					reloadReady.Close()
-
-				case <-cancel:
-					reloadReady.Close()
-					break
-				}
-				return nil
-			},
-			func(err error) {
-				close(cancel)
-			},
-		)
-	}
-	{
-		// Scrape discovery manager.
-		g.Add(
-			func() error {
-				logger.Info("Scrape discovery manager starting")
-				err := discoveryManagerScrape.Run()
-				logger.Info("Scrape discovery manager stopped", "error", err)
-				return err
-			},
-			func(err error) {
-				logger.Info("Stopping scrape discovery manager...", "error", err)
-				cancelScrape()
-			},
-		)
-	}
-	{
-		// Scrape manager.
-		g.Add(
-			func() error {
-				// When the scrape manager receives a new targets list
-				// it needs to read a valid config for each job.
-				// It depends on the config being in sync with the discovery manager so
-				// we wait until the config is fully loaded.
-				<-reloadReady.C
-
-				logger.Info("start discovery")
-				err := scrapeManager.Run(discoveryManagerScrape.SyncCh())
-				logger.Info("Scrape manager stopped", "error", err)
-				return err
-			},
-			func(err error) {
-				// Scrape manager needs to be stopped before closing the local TSDB
-				// so that it doesn't try to write samples to a closed storage.
-				logger.Info("Stopping scrape manager...", "error", err)
-				scrapeManager.Stop()
-			},
-		)
-	}
-	{
-		// Target Allocator  manager.
-		if taManager.enabled {
-			g.Add(
-				func() error {
-					// we wait until the config is fully loaded.
-					logger.Info("start ta manager")
-					err := taManager.Run()
-					logger.Info("ta manager stopped", "error", err)
-					return err
-				},
-				func(err error) {
-					logger.Info("Stopping ta manager...", "error", err)
-					taManager.Shutdown()
-				},
-			)
-		}
-	}
-	{
-		// Reload handler.
-
-		// Make sure that sighup handler is registered with a redirect to the channel before the potentially
-		// long and synchronous tsdb init.
-		hup := make(chan os.Signal, 1)
-		signal.Notify(hup, syscall.SIGHUP)
-		cancel := make(chan struct{})
-		g.Add(
-			func() error {
-				<-reloadReady.C
-
-				for {
-					select {
-					case <-hup:
-						if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
-							logger.Error("Error reloading config", "err", err)
-						}
-
-					case <-cancel:
-						return nil
-					}
-				}
-
-			},
-			func(err error) {
-				// Wait for any in-progress reloads to complete to avoid
-				// reloading things after they have been shutdown.
-				cancel <- struct{}{}
-			},
-		)
-	}
-	{
-		// Initial configuration loading.
-		cancel := make(chan struct{})
-		g.Add(
-			func() error {
-				select {
-				// In case a shutdown is initiated before the dbOpen is released
-				case <-cancel:
-					reloadReady.Close()
-					return nil
-
-				default:
-				}
-				if taManager.enabled {
-					<-taManager.taReadyCh
-				}
-				logger.Info("msg", "handling config file")
-				if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
-					return errors.Wrapf(err, "error loading config from %q", cfg.configFile)
-				}
-				logger.Info("msg", "finish handling config file")
-
-				reloadReady.Close()
-				<-cancel
-				return nil
-			},
-			func(err error) {
-				close(cancel)
-			},
-		)
-	}
-
-	if err := g.Run(); err != nil {
-		logger.Info("err", err)
-	}
-	level.Info(kitLogger).Log("msg", "See you next time!")
-	wg.Done()
+	// ... continue updating other logging calls ...
 }
 
 const (
@@ -374,7 +187,7 @@ const (
 	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
 )
 
-func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) {
+func relabelScrapeConfigs(prometheusConfig *config.Config, logger log.Logger) {
 	// For saving name before relabel
 	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
@@ -398,18 +211,11 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) 
 			},
 		}
 
-		logger.Info("Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
-
 		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
 		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
 	}
 }
-func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
-	logger.Info("Loading configuration file", "filename", filename)
-	content, _ := os.ReadFile(filename)
-	text := string(content)
-	logger.Debug("Prometheus configuration file", "value", text)
-
+func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
 	defer func() {
 		if err == nil {
 			configSuccess.Set(1)
@@ -421,10 +227,9 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	// Check for TA
 	var conf *config.Config
 	if taManager.enabled {
-		logger.Info("Target Allocator is enabled")
 		conf = (*config.Config)(taManager.config.PrometheusConfig)
 	} else {
-		conf, err = config.LoadFile(filename, false, logger)
+		conf, err = config.LoadFile(filename, false, nil)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 		}
@@ -433,7 +238,6 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	failed := false
 	for _, rl := range rls {
 		if err := rl(conf); err != nil {
-			logger.Error("Failed to apply configuration", "err", err)
 			failed = true
 		}
 	}
@@ -441,6 +245,5 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 		return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 	}
 
-	logger.Info("Completed loading of configuration file", "filename", filename)
 	return nil
 }

@@ -119,7 +119,6 @@ require (
 	github.com/knadh/koanf/v2 v2.2.0
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
-	github.com/oklog/run v1.1.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.124.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.124.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.124.0
@@ -615,3 +614,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/prometheus/common => github.com/prometheus/common v0.60.1
