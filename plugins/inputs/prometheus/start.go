@@ -119,7 +119,7 @@ func newSlogAdapter(logger *slog.Logger) log.Logger {
 	return &slogAdapter{logger: logger}
 }
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	logLevel := &promslog.AllowedLevel{}
+	logLevel := promslog.NewLevel()
 	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
@@ -127,7 +127,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		runtime.SetMutexProfileFraction(20)
 		logLevel.Set("debug")
 	}
-	logFormat := &promslog.AllowedFormat{}
+	logFormat := promslog.NewFormat()
 	_ = logFormat.Set("logfmt")
 
 	cfg := struct {
@@ -154,7 +154,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		sdMetrics, _            = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
 		discoveryManagerScrape  = discovery.NewManager(
 			ctxScrape,
-			log.With(kitLogger, "component", "discovery manager scrape"),
+			logger,
 			prometheus.DefaultRegisterer,
 			sdMetrics,
 			discovery.Name("scrape"),
@@ -162,13 +162,15 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 		scrapeManager, _ = scrape.NewManager(
 			&scrape.Options{},
-			log.With(kitLogger, "component", "scrape manager"),
+			logger,
+			nil,
 			receiver,
 			prometheus.DefaultRegisterer,
 		)
+		taLogger  = logger.With("component", "ta manager")
 		taManager = createTargetAllocatorManager(
 			configFilePath,
-			log.With(kitLogger, "component", "ta manager"),
+			taLogger,
 			logLevel,
 			scrapeManager,
 			discoveryManagerScrape,
@@ -178,7 +180,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	logger.Info("Target Allocator status", "enabled", taManager.enabled) //Setup Target Allocator Scrape Post Process Handler
 	taManager.AttachReloadConfigHandler(
 		func(prometheusConfig *config.Config) {
-			relabelScrapeConfigs(prometheusConfig, kitLogger)
+			relabelScrapeConfigs(prometheusConfig, logger)
 		},
 	)
 
@@ -309,7 +311,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 				for {
 					select {
 					case <-hup:
-						if err := reloadConfig(cfg.configFile, kitLogger, taManager, reloaders...); err != nil {
+						if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 							logger.Error("Error reloading config", "err", err)
 						}
 
@@ -343,7 +345,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 					<-taManager.taReadyCh
 				}
 				logger.Info("msg", "handling config file")
-				if err := reloadConfig(cfg.configFile, kitLogger, taManager, reloaders...); err != nil {
+				if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 					return errors.Wrapf(err, "error loading config from %q", cfg.configFile)
 				}
 				logger.Info("msg", "finish handling config file")
@@ -372,7 +374,7 @@ const (
 	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
 )
 
-func relabelScrapeConfigs(prometheusConfig *config.Config, logger log.Logger) {
+func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) {
 	// For saving name before relabel
 	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
@@ -396,17 +398,17 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger log.Logger) {
 			},
 		}
 
-		level.Debug(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
+		logger.Info("Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
 
 		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
 		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
 	}
 }
-func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
-	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
+func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
+	logger.Info("Loading configuration file", "filename", filename)
 	content, _ := os.ReadFile(filename)
 	text := string(content)
-	level.Debug(logger).Log("msg", "Prometheus configuration file", "value", text)
+	logger.Debug("Prometheus configuration file", "value", text)
 
 	defer func() {
 		if err == nil {
@@ -419,10 +421,10 @@ func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocator
 	// Check for TA
 	var conf *config.Config
 	if taManager.enabled {
-		level.Info(logger).Log("msg", "Target Allocator is enabled")
+		logger.Info("Target Allocator is enabled")
 		conf = (*config.Config)(taManager.config.PrometheusConfig)
 	} else {
-		conf, err = config.LoadFile(filename, false, false, logger)
+		conf, err = config.LoadFile(filename, false, logger)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 		}
@@ -431,7 +433,7 @@ func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocator
 	failed := false
 	for _, rl := range rls {
 		if err := rl(conf); err != nil {
-			level.Error(logger).Log("msg", "Failed to apply configuration", "err", err)
+			logger.Error("Failed to apply configuration", "err", err)
 			failed = true
 		}
 	}
@@ -439,6 +441,6 @@ func reloadConfig(filename string, logger log.Logger, taManager *TargetAllocator
 		return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 	}
 
-	level.Info(logger).Log("msg", "Completed loading of configuration file", "filename", filename)
+	logger.Info("Completed loading of configuration file", "filename", filename)
 	return nil
 }
