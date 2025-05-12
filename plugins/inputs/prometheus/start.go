@@ -119,7 +119,7 @@ func newSlogAdapter(logger *slog.Logger) log.Logger {
 	return &slogAdapter{logger: logger}
 }
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	logLevel := promslog.NewLevel()
+	logLevel := &promslog.AllowedLevel{}
 	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
@@ -127,7 +127,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		runtime.SetMutexProfileFraction(20)
 		logLevel.Set("debug")
 	}
-	logFormat := promslog.NewFormat()
+	logFormat := &promslog.AllowedFormat{}
 	_ = logFormat.Set("logfmt")
 
 	cfg := struct {
@@ -167,10 +167,9 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			receiver,
 			prometheus.DefaultRegisterer,
 		)
-		taLogger  = logger.With("component", "ta manager")
 		taManager = createTargetAllocatorManager(
 			configFilePath,
-			taLogger,
+			logger,
 			logLevel,
 			scrapeManager,
 			discoveryManagerScrape,
@@ -344,11 +343,11 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 				if taManager.enabled {
 					<-taManager.taReadyCh
 				}
-				logger.Info("msg", "handling config file")
+				logger.Info("handling config file")
 				if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 					return errors.Wrapf(err, "error loading config from %q", cfg.configFile)
 				}
-				logger.Info("msg", "finish handling config file")
+				logger.Info("finish handling config file")
 
 				reloadReady.Close()
 				<-cancel
@@ -361,7 +360,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	}
 
 	if err := g.Run(); err != nil {
-		logger.Info("err", err)
+		logger.Error("error occurred", "error", err)
 	}
 	level.Info(kitLogger).Log("msg", "See you next time!")
 	wg.Done()
@@ -398,7 +397,7 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) 
 			},
 		}
 
-		logger.Info("Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
+		logger.Debug("Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
 
 		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
 		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
@@ -408,7 +407,7 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	logger.Info("Loading configuration file", "filename", filename)
 	content, _ := os.ReadFile(filename)
 	text := string(content)
-	logger.Debug("Prometheus configuration file", "value", text)
+	logger.Info("Prometheus configuration file", "value", text)
 
 	defer func() {
 		if err == nil {
@@ -433,7 +432,7 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	failed := false
 	for _, rl := range rls {
 		if err := rl(conf); err != nil {
-			logger.Error("Failed to apply configuration", "err", err)
+			logger.Info("Failed to apply configuration", "err", err)
 			failed = true
 		}
 	}

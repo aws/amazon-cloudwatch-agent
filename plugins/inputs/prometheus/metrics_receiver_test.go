@@ -4,6 +4,8 @@
 package prometheus
 
 import (
+	"github.com/stretchr/testify/require"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -121,16 +123,13 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 
 	configFile := filepath.Join("testdata", "target_allocator.yaml")
 
-	// Create slog logger
-	logLevel := promslog.NewLevel()
-	logLevel.Set("DEBUG")
+	logLevel := &promslog.AllowedLevel{}
+	err := logLevel.Set("info")
+	require.NoError(t, err)
 
-	logConfig := &promslog.Config{
-		Level:  logLevel,
-		Format: promslog.NewFormat(),
-		Writer: os.Stdout,
-	}
-	logger := promslog.New(logConfig)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
 
 	var reloadHandler = func(cfg *config.Config) error {
 		logger.Info("reloaded")
@@ -138,7 +137,7 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 	}
 
 	taManager := createTargetAllocatorManager(configFile, logger, logLevel, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloadHandler)
+	err = reloadConfig(configFile, logger, taManager, reloadHandler)
 
 	assert.NoError(t, err)
 	assert.True(t, taManager.enabled)
@@ -152,13 +151,19 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 
-	// Create slog logger
-	logLevel := promslog.NewLevel()
-	logLevel.Set("DEBUG")
+	// Create logger configuration
+	logLevel := &promslog.AllowedLevel{}
+	err := logLevel.Set("debug")
+	require.NoError(t, err)
+
+	format := &promslog.AllowedFormat{}
+	err = format.Set("logfmt")
+	require.NoError(t, err)
 
 	logConfig := &promslog.Config{
 		Level:  logLevel,
-		Format: promslog.NewFormat(),
+		Format: format,
+		Style:  promslog.SlogStyle,
 		Writer: os.Stdout,
 	}
 	logger := promslog.New(logConfig)
@@ -169,21 +174,28 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 	}
 
 	taManager := createTargetAllocatorManager(configFile, logger, logLevel, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloadHandler)
+	err = reloadConfig(configFile, logger, taManager, reloadHandler)
 
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
 }
+
 func Test_loadConfigFromFileEC2(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 
-	// Create slog logger
-	logLevel := promslog.NewLevel()
-	logLevel.Set("DEBUG")
+	// Create logger configuration
+	logLevel := &promslog.AllowedLevel{}
+	err := logLevel.Set("debug")
+	require.NoError(t, err)
+
+	format := &promslog.AllowedFormat{}
+	err = format.Set("logfmt")
+	require.NoError(t, err)
 
 	logConfig := &promslog.Config{
 		Level:  logLevel,
-		Format: promslog.NewFormat(),
+		Format: format,
+		Style:  promslog.SlogStyle,
 		Writer: os.Stdout,
 	}
 	logger := promslog.New(logConfig)
@@ -194,7 +206,7 @@ func Test_loadConfigFromFileEC2(t *testing.T) {
 	}
 
 	taManager := createTargetAllocatorManager(configFile, logger, logLevel, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloadHandler)
+	err = reloadConfig(configFile, logger, taManager, reloadHandler)
 
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
