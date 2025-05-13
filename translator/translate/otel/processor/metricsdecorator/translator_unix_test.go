@@ -45,9 +45,9 @@ func TestTranslate(t *testing.T) {
 	sort.Strings(actualCfg.MetricStatements[0].Statements)
 }
 
-//TestMetricDecoration - This test is used to verify that metrics are receiving decorations correctly.
-//This is done by using a test TransformProcessor yaml configuration, starting the processor
-//and having it consume test metrics.
+// TestMetricDecoration - This test is used to verify that metrics are receiving decorations correctly.
+// This is done by using a test TransformProcessor yaml configuration, starting the processor
+// and having it consume test metrics.
 func TestMetricDecoration(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)

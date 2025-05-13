@@ -4,6 +4,8 @@
 package prometheusremotewrite
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
@@ -43,10 +45,10 @@ func TestTranslator(t *testing.T) {
 			},
 			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: AMPSectionKey + " or " + common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)},
 		},
-		//"WithAMPDestination": {
-		//	input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-		//	want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
-		//},
+		"WithAMPDestination": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
