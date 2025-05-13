@@ -3,14 +3,15 @@
 
 package awsentity
 
-import "go.opentelemetry.io/collector/pdata/pcommon"
+import (
+	"slices"
+
+	"go.opentelemetry.io/collector/pdata/pcommon"
+)
 
 func (p *awsEntityProcessor) PutAttribute(resourceAttributes pcommon.Map, k string, v string) {
-	attributeAllowList := p.config.AttributeAllowList
-	for _, allowedAttribute := range attributeAllowList {
-		if k == allowedAttribute {
-			resourceAttributes.PutStr(k, v)
-		}
+	if len(p.config.AttributeAllowList) == 0 || slices.Contains(p.config.AttributeAllowList, k) {
+		resourceAttributes.PutStr(k, v)
 	}
 }
 
