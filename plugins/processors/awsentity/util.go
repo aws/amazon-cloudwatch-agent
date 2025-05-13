@@ -5,8 +5,17 @@ package awsentity
 
 import "go.opentelemetry.io/collector/pdata/pcommon"
 
-func AddAttributeIfNonEmpty(p pcommon.Map, key string, value string) {
+func (p *awsEntityProcessor) PutAttribute(resourceAttributes pcommon.Map, k string, v string) {
+	attributeAllowList := p.config.AttributeAllowList
+	for _, allowedAttribute := range attributeAllowList {
+		if k == allowedAttribute {
+			resourceAttributes.PutStr(k, v)
+		}
+	}
+}
+
+func (p *awsEntityProcessor) AddAttributeIfNonEmpty(resourceAttributes pcommon.Map, key string, value string) {
 	if value != "" {
-		p.PutStr(key, value)
+		p.PutAttribute(resourceAttributes, key, value)
 	}
 }
