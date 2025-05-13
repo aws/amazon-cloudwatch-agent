@@ -13,8 +13,6 @@ import (
 	"testing"
 )
 
-//
-
 func TestCompleteConfigUnix(t *testing.T) {
 	resetContext(t)
 	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
@@ -31,7 +29,6 @@ func TestCompleteConfigUnix(t *testing.T) {
 	checkTranslation(t, "complete_linux_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
 }
-
 
 func TestAMPConfig(t *testing.T) {
 	resetContext(t)
