@@ -49,6 +49,8 @@ func startAgent(writer io.WriteCloser) error {
 	log.Printf("I! Detected runAsUser: %v", runAsUser)
 
 	_, err = user.ChangeUser(runAsUser)
+	log.Println("I! User changed?!", err)
+
 	if err != nil {
 		log.Printf("E! Failed to ChangeUser: %v ", err)
 		return err
