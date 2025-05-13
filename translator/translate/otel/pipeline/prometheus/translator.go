@@ -71,7 +71,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			Processors: common.NewTranslatorMap(
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
-			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
+			Exporters: common.NewTranslatorMap(awsemf.NewTranslator()),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 		}, nil
