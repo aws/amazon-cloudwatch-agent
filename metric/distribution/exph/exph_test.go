@@ -68,7 +68,7 @@ func TestSize(t *testing.T) {
 			exph.negativeBuckets = map[int]uint64{}
 			exph.zeroCount = tt.zeroCount
 
-			for i := 0; i < len(exph.positiveBuckets); i++ {
+			for i := 0; i < tt.posBucketCount; i++ {
 				exph.positiveBuckets[i] = uint64(i + 1) //nolint:gosec
 			}
 
