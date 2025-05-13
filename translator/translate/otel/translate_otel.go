@@ -6,6 +6,7 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"log"
 	"time"
 
@@ -111,7 +112,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
 	}
-	if err = cfg.Validate(); err != nil {
+	if err = xconfmap.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid otel config: %w", err)
 	}
 	return cfg, nil

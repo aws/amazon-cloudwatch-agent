@@ -38,10 +38,6 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	if agent.Global_Config.Role_arn != "" {
 		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
 	}
-	//this need to be added
-	if cfg.AssumeRole.STSRegion == "" && cfg.Region != "" {
-		cfg.AssumeRole.STSRegion = cfg.Region
-	}
 
 	return cfg, nil
 }

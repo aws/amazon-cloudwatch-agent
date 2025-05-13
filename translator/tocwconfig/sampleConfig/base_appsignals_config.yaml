@@ -18,89 +18,89 @@ exporters:
         metric_declarations:
             - dimensions:
                 - - Environment
-                  - Service
                   - Operation
+                  - Service
                 - - Environment
                   - Service
               label_matchers:
                 - label_names:
                     - Telemetry.Source
                   regex: ^(ServerSpan|LocalRootSpan)$
-                  separator: ""
+                  separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
             - dimensions:
                 - - Environment
-                  - Service
                   - Operation
-                  - RemoteService
-                  - RemoteOperation
                   - RemoteEnvironment
+                  - RemoteOperation
                   - RemoteResourceIdentifier
                   - RemoteResourceType
-                - - Environment
+                  - RemoteService
                   - Service
+                - - Environment
                   - Operation
-                  - RemoteService
-                  - RemoteOperation
                   - RemoteEnvironment
-                - - Environment
+                  - RemoteOperation
+                  - RemoteService
                   - Service
+                - - Environment
                   - Operation
-                  - RemoteService
                   - RemoteOperation
                   - RemoteResourceIdentifier
                   - RemoteResourceType
-                - - Environment
+                  - RemoteService
                   - Service
+                - - Environment
                   - Operation
-                  - RemoteService
                   - RemoteOperation
-                - - Environment
-                  - Service
                   - RemoteService
+                  - Service
+                - - Environment
                   - RemoteEnvironment
-                - - Environment
-                  - Service
                   - RemoteService
-                - - Environment
                   - Service
+                - - Environment
                   - RemoteService
-                  - RemoteOperation
+                  - Service
+                - - Environment
                   - RemoteEnvironment
+                  - RemoteOperation
                   - RemoteResourceIdentifier
                   - RemoteResourceType
-                - - Environment
-                  - Service
                   - RemoteService
-                  - RemoteOperation
+                  - Service
+                - - Environment
                   - RemoteEnvironment
-                - - Environment
-                  - Service
+                  - RemoteOperation
                   - RemoteService
+                  - Service
+                - - Environment
                   - RemoteOperation
                   - RemoteResourceIdentifier
                   - RemoteResourceType
-                - - Environment
-                  - Service
                   - RemoteService
+                  - Service
+                - - Environment
                   - RemoteOperation
-                - - Environment
-                  - Service
                   - RemoteService
+                  - Service
+                - - Environment
                   - RemoteResourceIdentifier
                   - RemoteResourceType
-                - - RemoteService
-                  - RemoteResourceIdentifier
+                  - RemoteService
+                  - Service
+                - - RemoteResourceIdentifier
                   - RemoteResourceType
+                  - RemoteService
                 - - RemoteService
               label_matchers:
                 - label_names:
                     - Telemetry.Source
                   regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
-                  separator: ""
+                  separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
@@ -112,7 +112,7 @@ exporters:
                 - label_names:
                     - Telemetry.Source
                   regex: ^RuntimeMetric$
-                  separator: ""
+                  separator: ;
               metric_name_selectors:
                 - ^.*$
         middleware: agenthealth/logs

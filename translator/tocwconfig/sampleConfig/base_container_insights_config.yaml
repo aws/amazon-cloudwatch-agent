@@ -53,13 +53,13 @@ exporters:
         max_retries: 2
         metric_declarations:
             - dimensions:
-                - - PodName
-                  - Namespace
-                  - ClusterName
                 - - ClusterName
-                - - Service
                   - Namespace
-                  - ClusterName
+                  - PodName
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                  - Service
                 - - ClusterName
                   - Namespace
               metric_name_selectors:
@@ -70,23 +70,23 @@ exporters:
                 - pod_cpu_utilization_over_pod_limit
                 - pod_memory_utilization_over_pod_limit
             - dimensions:
-                - - PodName
+                - - ClusterName
                   - Namespace
-                  - ClusterName
+                  - PodName
               metric_name_selectors:
                 - pod_number_of_container_restarts
             - dimensions:
-                - - PodName
+                - - ClusterName
                   - Namespace
-                  - ClusterName
+                  - PodName
                 - - ClusterName
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
             - dimensions:
-                - - NodeName
+                - - ClusterName
                   - InstanceId
-                  - ClusterName
+                  - NodeName
                 - - ClusterName
               metric_name_selectors:
                 - node_cpu_utilization
@@ -104,22 +104,22 @@ exporters:
                 - node_memory_working_set
                 - node_memory_limit
             - dimensions:
-                - - NodeName
+                - - ClusterName
                   - InstanceId
-                  - ClusterName
+                  - NodeName
                 - - ClusterName
               metric_name_selectors:
                 - node_filesystem_utilization
             - dimensions:
-                - - Service
+                - - ClusterName
                   - Namespace
-                  - ClusterName
+                  - Service
                 - - ClusterName
               metric_name_selectors:
                 - service_number_of_running_pods
             - dimensions:
-                - - Namespace
-                  - ClusterName
+                - - ClusterName
+                  - Namespace
                 - - ClusterName
               metric_name_selectors:
                 - namespace_number_of_running_pods
@@ -128,7 +128,6 @@ exporters:
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: ContainerInsights
         no_verify_ssl: false
