@@ -6,7 +6,6 @@ package prometheus
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -136,62 +135,91 @@ func getScrapeTargetInfo(pmb PrometheusMetricBatch) (job string, instance string
 // Decorate the Metrics with Metric Types.
 // Filter out Summary, Histogram and untyped Metrics and adding logging.
 func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result PrometheusMetricBatch) {
+	fmt.Println("\n=== START: Handle PrometheusMetricBatch ===")
+	fmt.Printf("Batch size: %d\n", len(pmb))
+
 	if len(pmb) == 0 {
-		log.Printf("D! Skip empty batch")
+		fmt.Println("Skip empty batch")
 		return nil
+	}
+
+	// Print initial batch details
+	fmt.Println("\nInitial Batch Metrics:")
+	for i, pm := range pmb {
+		fmt.Printf("\nMetric #%d:\n", i+1)
+		fmt.Printf("  Name: %s\n", pm.metricName)
+		fmt.Printf("  Name Before Relabel: %s\n", pm.metricNameBeforeRelabel)
+		fmt.Printf("  Job Before Relabel: %s\n", pm.jobBeforeRelabel)
+		fmt.Printf("  Instance Before Relabel: %s\n", pm.instanceBeforeRelabel)
+		fmt.Printf("  Value: %f\n", pm.metricValue)
+		fmt.Printf("  Type: %s\n", pm.metricType)
+		fmt.Printf("  Time: %d\n", pm.timeInMS)
+		fmt.Printf("  Tags: %+v\n", pm.tags)
 	}
 
 	jobName, instanceId, err := getScrapeTargetInfo(pmb)
 	if err != nil {
-		log.Printf("E! Failed to get Job Name and Instance ID from scrape targetss %s", err)
+		fmt.Printf("ERROR: Failed to get Job Name and Instance ID: %v\n", err)
 		return nil
 	}
+	fmt.Printf("\nScrape Target Info:\n  Job Name: %s\n  Instance ID: %s\n", jobName, instanceId)
 
 	mc, err := mth.ms.Get(jobName, instanceId)
 	if err != nil {
-		log.Printf("E! metricsTypeHandler.mc.Get(jobName, instanceId) error. jobName: %s  instanceId: %s: %v", jobName, instanceId, err)
-		// The Pod has been terminated when we are going to handle its Prometheus metrics in the channel
-		// Drop the metrics directly
+		fmt.Printf("ERROR: Failed to get metrics context for job %s, instance %s: %v\n",
+			jobName, instanceId, err)
 		return result
 	}
-	for _, pm := range pmb {
-		// log for https://github.com/aws/amazon-cloudwatch-agent/issues/190
+	fmt.Println("Successfully got metrics context")
+
+	fmt.Println("\nProcessing individual metrics:")
+	for i, pm := range pmb {
+		fmt.Printf("\nProcessing metric #%d: %s\n", i+1, pm.metricName)
+
 		if pm.metricNameBeforeRelabel != pm.metricName {
-			log.Printf("D! metric name changed from %q to %q during relabel", pm.metricNameBeforeRelabel, pm.metricName)
+			fmt.Printf("Metric name changed: %q -> %q\n",
+				pm.metricNameBeforeRelabel, pm.metricName)
 		}
-		// normalize the summary metric first, then if metric name == standardMetricName, it means it is not been normalized by summary
-		// , then normalize the counter suffix if it failed to find metadata.
+
 		standardMetricName := normalizeMetricName(pm.metricNameBeforeRelabel, histogramSummarySuffixes)
+		fmt.Printf("Normalized metric name (histogram/summary): %s\n", standardMetricName)
+
 		mm, ok := mc.Metadata(standardMetricName)
 		if !ok {
+			fmt.Printf("Initial metadata lookup failed for %s\n", standardMetricName)
 			if pm.metricName != standardMetricName {
-				// perform a 2nd lookup with the original metric name
-				// It could happen if non histogram/summary ends with one of those _count/_sum suffixes
+				fmt.Printf("Attempting second lookup with original name: %s\n",
+					pm.metricNameBeforeRelabel)
 				mm, ok = mc.Metadata(pm.metricNameBeforeRelabel)
 			} else {
-				// normalize the counter type suffixes, like "_total" suffix
 				standardMetricName = normalizeMetricName(pm.metricNameBeforeRelabel, counterSuffixes)
+				fmt.Printf("Attempting lookup with normalized counter name: %s\n",
+					standardMetricName)
 				mm, ok = mc.Metadata(standardMetricName)
 			}
 		}
+
 		if ok {
+			fmt.Printf("Found metadata. Setting type to: %s\n", mm.Type)
 			pm.metricType = string(mm.Type)
 			pm.tags[prometheusMetricTypeKey] = pm.metricType
 		} else {
 			if !isInternalMetric(pm.metricName) {
-				log.Printf("E! metricsHandler NO metaData for %v | %v | %v \n", pm.metricName, instanceId, jobName)
+				fmt.Printf("WARNING: No metadata found for metric: %s\n", pm.metricName)
 			}
 		}
 
 		if pm.metricType == "" && !isInternalMetric(pm.metricName) {
-			log.Printf("E! metric_type ERROR: %v|%v|%v|%v  \n", pm.metricName, jobName, instanceId, pm.metricType)
-
-			// skip the non-internal metrics with empty metric type due to cache not ready
+			fmt.Printf("ERROR: Empty metric type for non-internal metric: %s\n", pm.metricName)
 			continue
 		}
 
 		result = append(result, pm)
+		fmt.Printf("Successfully processed metric: %s\n", pm.metricName)
 	}
+
+	fmt.Printf("\nFinal result batch size: %d\n", len(result))
+	fmt.Println("=== END: Handle PrometheusMetricBatch ===\n")
 
 	return result
 }
