@@ -8,22 +8,21 @@ package metricsdecorator
 
 import (
 	"context"
-	"path/filepath"
-	"sort"
-	"testing"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/consumer/consumertest"
-	"go.opentelemetry.io/collector/pdata/pmetric"
-	"go.opentelemetry.io/collector/processor/processortest"
-
 	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/processor/processortest"
+	"path/filepath"
+	"sort"
+	"testing"
 )
 
 func TestTranslate(t *testing.T) {
@@ -46,9 +45,9 @@ func TestTranslate(t *testing.T) {
 	sort.Strings(actualCfg.MetricStatements[0].Statements)
 }
 
-// TestMetricDecoration - This test is used to verify that metrics are receiving decorations correctly.
-// This is done by using a test TransformProcessor yaml configuration, starting the processor
-// and having it consume test metrics.
+//TestMetricDecoration - This test is used to verify that metrics are receiving decorations correctly.
+//This is done by using a test TransformProcessor yaml configuration, starting the processor
+//and having it consume test metrics.
 func TestMetricDecoration(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
@@ -64,7 +63,7 @@ func TestMetricDecoration(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("other_metric", "none", 0.0, 0, 0, nil)
 
 	ctx := context.Background()
-	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(), cfg, sink)
+	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(component.MustNewType("transform")), cfg, sink)
 	require.NotNil(t, proc)
 	require.NoError(t, err)
 	actualMetrics := pmetric.NewMetrics()

@@ -111,14 +111,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	contextStatement, err := t.getContextStatement(conf)
 	if err != nil {
-		return nil, fmt.Errorf("unable to translate context statements: %v", err)
+		return nil, errors.New("unable to translate context statement")
 	}
 
 	c := confmap.NewFromStringMap(map[string]any{
 		"metric_statements": []ContextStatement{contextStatement},
 	})
 	if err := c.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal metric decoration processor: %w", err)
+		return nil, errors.New("unable to unmarshal metric decoration processor")
 	}
 	return cfg, nil
 }
