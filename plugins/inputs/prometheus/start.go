@@ -21,6 +21,7 @@ package prometheus
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -106,6 +107,9 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	logger := promslog.New(&cfg.promslogConfig)
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
+	log.Println("starting prometheus!!", version.Info())
+	log.Println("build context", version.BuildContext())
+	log.Println("host details", promRuntime.Uname())
 	logger.Info("Starting Prometheus", "version", version.Info())
 	logger.Info("Build Context", "context", version.BuildContext())
 	logger.Info("Host Details", "uname", promRuntime.Uname())
