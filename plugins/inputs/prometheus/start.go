@@ -39,6 +39,7 @@ import (
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
+	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	_ "github.com/prometheus/prometheus/discovery/install"
 	"github.com/prometheus/prometheus/model/relabel"
@@ -118,6 +119,7 @@ func (a *slogAdapter) Log(keyvals ...interface{}) error {
 func newSlogAdapter(logger *slog.Logger) log.Logger {
 	return &slogAdapter{logger: logger}
 }
+
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	logLevel := &promslog.AllowedLevel{}
 	logLevel.Set("info")
@@ -426,6 +428,15 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 		conf, err = config.LoadFile(filename, false, logger)
 		if err != nil {
 			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
+		}
+	}
+	scrapeConfigs, err := conf.GetScrapeConfigs()
+	if err != nil {
+		return errors.Wrap(err, "couldn't get scrape configs")
+	}
+	for _, sc := range scrapeConfigs {
+		if sc.ScrapeFallbackProtocol == "" {
+			sc.ScrapeFallbackProtocol = promconfig.PrometheusText1_0_0
 		}
 	}
 	relabelScrapeConfigs(conf, logger)
