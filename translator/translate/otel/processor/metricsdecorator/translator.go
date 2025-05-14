@@ -26,6 +26,7 @@ import (
 type ContextStatement struct {
 	Context    string   `mapstructure:"context"`
 	Statements []string `mapstructure:"statements"`
+	ErrorMode  string   `mapstructure:"error_mode"`
 }
 
 type Translator interface {
@@ -175,6 +176,7 @@ func (t *translator) getContextStatementList(conf *confmap.Conf) ([]interface{},
 		map[string]interface{}{
 			"context":    "metric",
 			"statements": sliceToInterfaceSlice(statements),
+			"error_mode": "propagate", // Add this line
 		},
 	}, nil
 }
