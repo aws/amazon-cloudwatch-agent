@@ -101,6 +101,7 @@ func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int6
 		metricValue:             v,
 		timeInMS:                t,
 	}
+	log.Println("this is prometheus metric:", pm)
 
 	// Remove magic labels
 	delete(labelMap, savedScrapeNameLabel)
