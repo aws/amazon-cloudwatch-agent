@@ -19,7 +19,7 @@ import (
 const (
 	otelConfigParsingError = "has invalid keys: global"
 	defaultTlsCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
-	defaultScrapeProtocol  = "http" // Add default scrape protocol
+	defaultScrapeProtocol  = "PrometheusText0.0.4"
 )
 
 var (
@@ -41,6 +41,14 @@ func NewTranslator(opts ...Option) common.ComponentTranslator {
 		opt(t)
 	}
 	return t
+}
+
+func WithName(name string) Option {
+	return func(a any) {
+		if t, ok := a.(*translator); ok {
+			t.name = name
+		}
+	}
 }
 
 func (t *translator) ID() component.ID {
@@ -71,10 +79,42 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, err
 	}
 
-	// Add metric type hints through scrape_config
+	// Add global config if not present
+	if _, exists := stringMap["global"]; !exists {
+		stringMap["global"] = map[string]interface{}{
+			"metric_name_validation_scheme": "utf8",
+			"scrape_interval":               "1m",
+			"scrape_timeout":                "10s",
+			"evaluation_interval":           "1m",
+			"scrape_protocols": []string{
+				"OpenMetricsText1.0.0",
+				"PrometheusText0.0.4",
+			},
+		}
+	}
+
+	// Update scrape configs with Prometheus 3.0 requirements
 	if scrapeConfigs, ok := stringMap["scrape_configs"].([]interface{}); ok {
-		for _, sc := range scrapeConfigs {
+		for i, sc := range scrapeConfigs {
 			if config, ok := sc.(map[string]interface{}); ok {
+				// Add fallback scrape protocol if not present
+				if _, exists := config["fallback_scrape_protocol"]; !exists {
+					config["fallback_scrape_protocol"] = defaultScrapeProtocol
+				}
+
+				// Add scrape protocols if not present
+				if _, exists := config["scrape_protocols"]; !exists {
+					config["scrape_protocols"] = []string{
+						"OpenMetricsText1.0.0",
+						"PrometheusText0.0.4",
+					}
+				}
+
+				// Add always_scrape_classic_histograms
+				if _, exists := config["always_scrape_classic_histograms"]; !exists {
+					config["always_scrape_classic_histograms"] = true
+				}
+
 				// Add metric relabel configs if not present
 				if _, exists := config["metric_relabel_configs"]; !exists {
 					config["metric_relabel_configs"] = []map[string]interface{}{
@@ -98,8 +138,16 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 						},
 					}
 				}
+
+				// Validate the scrape config
+				if err := validateScrapeConfig(config); err != nil {
+					return nil, fmt.Errorf("invalid scrape config at index %d: %w", i, err)
+				}
+
+				scrapeConfigs[i] = config
 			}
 		}
+		stringMap["scrape_configs"] = scrapeConfigs
 	}
 
 	componentParser := confmap.NewFromStringMap(stringMap)
@@ -132,4 +180,30 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func validateScrapeConfig(config map[string]interface{}) error {
+	// Validate scrape protocols
+	if protocols, ok := config["scrape_protocols"].([]string); ok {
+		for _, protocol := range protocols {
+			switch protocol {
+			case "PrometheusText0.0.4", "OpenMetricsText1.0.0", "PrometheusProto":
+				continue
+			default:
+				return fmt.Errorf("unsupported scrape protocol: %s", protocol)
+			}
+		}
+	}
+
+	// Validate fallback protocol
+	if fallback, ok := config["fallback_scrape_protocol"].(string); ok {
+		switch fallback {
+		case "PrometheusText0.0.4", "OpenMetricsText1.0.0", "PrometheusProto":
+			// valid
+		default:
+			return fmt.Errorf("unsupported fallback scrape protocol: %s", fallback)
+		}
+	}
+
+	return nil
 }

@@ -144,7 +144,19 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 		return nil
 	}
 
-	// ... existing logging code ...
+	// Print initial batch details
+	log.Println("\nInitial Batch Metrics:")
+	for i, pm := range pmb {
+		log.Printf("\nMetric #%d:\n", i+1)
+		log.Printf("  Name: %s\n", pm.metricName)
+		log.Printf("  Name Before Relabel: %s\n", pm.metricNameBeforeRelabel)
+		log.Printf("  Job Before Relabel: %s\n", pm.jobBeforeRelabel)
+		log.Printf("  Instance Before Relabel: %s\n", pm.instanceBeforeRelabel)
+		log.Printf("  Value: %f\n", pm.metricValue)
+		log.Printf("  Type: %s\n", pm.metricType)
+		log.Printf("  Time: %d\n", pm.timeInMS)
+		log.Printf("  Tags: %+v\n", pm.tags)
+	}
 
 	jobName, instanceId, err := getScrapeTargetInfo(pmb)
 	if err != nil {
@@ -155,10 +167,11 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 
 	mc, err := mth.ms.Get(jobName, instanceId)
 	if err != nil {
-		log.Printf("WARNING: Failed to get metrics context for job %s, instance %s: %v\n",
+		log.Printf("ERROR: Failed to get metrics context for job %s, instance %s: %v\n",
 			jobName, instanceId, err)
-		// Continue processing with fallback type detection
+		return result
 	}
+	log.Println("Successfully got metrics context")
 
 	log.Println("\nProcessing individual metrics:")
 	for i, pm := range pmb {
@@ -169,72 +182,45 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 				pm.metricNameBeforeRelabel, pm.metricName)
 		}
 
-		// Try to get type from metadata first
-		if mc != nil {
-			standardMetricName := normalizeMetricName(pm.metricNameBeforeRelabel, histogramSummarySuffixes)
-			log.Printf("Normalized metric name (histogram/summary): %s\n", standardMetricName)
+		standardMetricName := normalizeMetricName(pm.metricNameBeforeRelabel, histogramSummarySuffixes)
+		log.Printf("Normalized metric name (histogram/summary): %s\n", standardMetricName)
 
-			mm, ok := mc.Metadata(standardMetricName)
-			if !ok {
-				log.Printf("Initial metadata lookup failed for %s\n", standardMetricName)
-				if pm.metricName != standardMetricName {
-					mm, ok = mc.Metadata(pm.metricNameBeforeRelabel)
-				} else {
-					standardMetricName = normalizeMetricName(pm.metricNameBeforeRelabel, counterSuffixes)
-					mm, ok = mc.Metadata(standardMetricName)
-				}
-			}
-
-			if ok {
-				log.Printf("Found metadata. Setting type to: %s\n", mm.Type)
-				pm.metricType = string(mm.Type)
-				pm.tags[prometheusMetricTypeKey] = pm.metricType
+		mm, ok := mc.Metadata(standardMetricName)
+		if !ok {
+			log.Printf("Initial metadata lookup failed for %s\n", standardMetricName)
+			if pm.metricName != standardMetricName {
+				log.Printf("Attempting second lookup with original name: %s\n",
+					pm.metricNameBeforeRelabel)
+				mm, ok = mc.Metadata(pm.metricNameBeforeRelabel)
+			} else {
+				standardMetricName = normalizeMetricName(pm.metricNameBeforeRelabel, counterSuffixes)
+				log.Printf("Attempting lookup with normalized counter name: %s\n",
+					standardMetricName)
+				mm, ok = mc.Metadata(standardMetricName)
 			}
 		}
 
-		// If no type was found from metadata, try to infer it from the metric name
-		if pm.metricType == "" && !isInternalMetric(pm.metricName) {
-			inferredType := inferMetricType(pm.metricName)
-			if inferredType != "" {
-				log.Printf("Inferred metric type from name: %s\n", inferredType)
-				pm.metricType = inferredType
-				pm.tags[prometheusMetricTypeKey] = inferredType
-			} else {
-				// Default to gauge if we can't determine the type
-				log.Printf("Defaulting to gauge for metric: %s\n", pm.metricName)
-				pm.metricType = string(v1.MetricTypeGauge)
-				pm.tags[prometheusMetricTypeKey] = string(v1.MetricTypeGauge)
+		if ok {
+			log.Printf("Found metadata. Setting type to: %s\n", mm.Type)
+			pm.metricType = string(mm.Type)
+			pm.tags[prometheusMetricTypeKey] = pm.metricType
+		} else {
+			if !isInternalMetric(pm.metricName) {
+				log.Printf("WARNING: No metadata found for metric: %s\n", pm.metricName)
 			}
+		}
+
+		if pm.metricType == "" && !isInternalMetric(pm.metricName) {
+			log.Printf("ERROR: Empty metric type for non-internal metric: %s\n", pm.metricName)
+			continue
 		}
 
 		result = append(result, pm)
-		log.Printf("Successfully processed metric: %s with type: %s\n", pm.metricName, pm.metricType)
+		log.Printf("Successfully processed metric: %s\n", pm.metricName)
 	}
 
 	log.Printf("\nFinal result batch size: %d\n", len(result))
 	log.Println("=== END: Handle PrometheusMetricBatch ===\n")
 
 	return result
-}
-
-// Add this new function to infer metric type from name
-func inferMetricType(metricName string) string {
-	// Check for histogram suffixes
-	if strings.HasSuffix(metricName, histogramBucketSuffix) ||
-		(strings.HasSuffix(metricName, histogramSummaryCountSuffix) && strings.Contains(metricName, "bucket")) {
-		return string(v1.MetricTypeHistogram)
-	}
-
-	// Check for summary suffixes
-	if strings.HasSuffix(metricName, histogramSummaryCountSuffix) ||
-		strings.HasSuffix(metricName, histogramSummarySumSuffix) {
-		return string(v1.MetricTypeSummary)
-	}
-
-	// Check for counter suffix
-	if strings.HasSuffix(metricName, counterSuffix) {
-		return string(v1.MetricTypeCounter)
-	}
-
-	return ""
 }
