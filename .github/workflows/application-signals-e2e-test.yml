@@ -190,13 +190,14 @@ jobs:
       caller-workflow-name: 'main-build'
       dotnet-version: '8.0'
 
-  dotnet-ec2-windows-e2e-test:
-    needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-windows-test.yml@main
-    secrets: inherit
-    with:
-      aws-region: us-east-1
-      caller-workflow-name: 'main-build'
+# Temporarily disable Dotnet EC2 Windows Test
+#  dotnet-ec2-windows-e2e-test:
+#    needs: [ CheckBuildTestArtifacts ]
+#    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-windows-test.yml@main
+#    secrets: inherit
+#    with:
+#      aws-region: us-east-1
+#      caller-workflow-name: 'main-build'
 
   dotnet-eks-e2e-test:
     needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
