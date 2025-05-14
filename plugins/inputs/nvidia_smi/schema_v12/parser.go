@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/common"
 )
 
+// Parse parses the XML-encoded data from nvidia-smi and adds measurements.
 func Parse(acc telegraf.Accumulator, buf []byte) error {
 	var s smi
 	if err := xml.Unmarshal(buf, &s); err != nil {
@@ -80,8 +81,13 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
 		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.InstantPowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.PowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.InstantPowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.InstantPowerDraw)
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
 
 		for _, device := range gpu.MigDevices.MigDevice {
@@ -106,6 +112,18 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 			common.SetIfUsed("int", fields, "memory_bar1_free", device.Bar1MemoryUsage.Free)
 
 			acc.AddFields("nvidia_smi_mig", fields, tags, timestamp)
+		}
+
+		for _, process := range gpu.Processes.ProcessInfo {
+			tags := make(map[string]string, 2)
+			common.SetTagIfUsed(tags, "name", process.ProcessName)
+			common.SetTagIfUsed(tags, "type", process.Type)
+
+			fields := make(map[string]interface{}, 2)
+			common.SetIfUsed("int", fields, "pid", process.Pid)
+			common.SetIfUsed("int", fields, "used_memory", process.UsedMemory)
+
+			acc.AddFields("nvidia_smi_process", fields, tags, timestamp)
 		}
 	}
 

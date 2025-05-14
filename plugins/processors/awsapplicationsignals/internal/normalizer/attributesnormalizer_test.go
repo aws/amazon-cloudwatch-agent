@@ -4,6 +4,7 @@
 package normalizer
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,10 +77,26 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 	}
 }
 
-func TestCopyResourceAttributesToAttributes(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	normalizer := NewAttributesNormalizer(logger)
+func TestNormalizedResourceAttributeKeys(t *testing.T) {
+	assert.Equal(t, 31, len(normalizedResourceAttributeKeys))
+	for key := range attributesRenamingForMetric {
+		assert.Contains(t, normalizedResourceAttributeKeys, key)
+	}
+	for key := range resourceToMetricAttributes {
+		assert.Contains(t, normalizedResourceAttributeKeys, key)
+	}
+	assert.Contains(t, normalizedResourceAttributeKeys, attr.AWSHostedInEnvironment)
+	assert.Contains(t, normalizedResourceAttributeKeys, attr.ResourceDetectionHostId)
+	assert.Contains(t, normalizedResourceAttributeKeys, deprecatedsemconv.AttributeTelemetryAutoVersion)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeServiceName)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetryDistroName)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetryDistroVersion)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetrySDKLanguage)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetrySDKName)
+	assert.Contains(t, normalizedResourceAttributeKeys, semconv.AttributeTelemetrySDKVersion)
+}
 
+func TestCopyResourceAttributesToAttributes_ResourceToMetricAttributesAndLocalServiceCopied(t *testing.T) {
 	// Create a pcommon.Map for resourceAttributes with some attributes
 	resourceAttributes := pcommon.NewMap()
 	for resourceAttrKey, attrKey := range resourceToMetricAttributes {
@@ -87,12 +104,7 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 	}
 	resourceAttributes.PutStr("host.id", "i-01ef7d37f42caa168")
 	resourceAttributes.PutStr("aws.local.service", "test-app")
-
-	// Create a pcommon.Map for attributes
-	attributes := pcommon.NewMap()
-
-	// Call the process method
-	normalizer.copyResourceAttributesToAttributes(attributes, resourceAttributes, false)
+	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
 
 	// Check that the attribute has been copied correctly
 	for _, attrKey := range resourceToMetricAttributes {
@@ -101,6 +113,49 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 
 	assertStringAttributeEqual(t, attributes, "K8s.Node", "i-01ef7d37f42caa168")
 	assertStringAttributeEqual(t, attributes, "aws.local.service", "test-app")
+}
+
+func TestCopyResourceAttributesToAttributes_NoCopyDuplicateResourceAttributes(t *testing.T) {
+	resourceAttributes := pcommon.NewMap()
+	for resourceAttrKey := range normalizedResourceAttributeKeys {
+		resourceAttributes.PutStr(resourceAttrKey, resourceAttrKey+"-value")
+	}
+	resourceAttributes.PutStr(attr.AWSApplicationSignalsMetricResourceKeys, "all_attributes")
+	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
+
+	for resourceAttrKey := range normalizedResourceAttributeKeys {
+		_, exists := attributes.Get("otel.resource." + resourceAttrKey)
+		assert.False(t, exists, "%v unexpectedly found in attributes", "otel.resource."+resourceAttrKey)
+	}
+}
+
+func TestCopyResourceAttributesToAttributes_CopyAllResourceAttributes(t *testing.T) {
+	resourceAttributes := pcommon.NewMap()
+	for i := 1; i <= 10; i++ {
+		resourceAttributes.PutStr(strconv.Itoa(i), strconv.Itoa(i))
+	}
+	resourceAttributes.PutStr(attr.AWSApplicationSignalsMetricResourceKeys, "all_attributes")
+	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
+
+	assert.Equal(t, attributes.Len(), 11)
+	for i := 1; i <= 10; i++ {
+		assertStringAttributeEqual(t, attributes, "otel.resource."+strconv.Itoa(i), strconv.Itoa(i))
+	}
+	assertStringAttributeEqual(t, attributes, "otel.resource."+attr.AWSApplicationSignalsMetricResourceKeys, "all_attributes")
+}
+
+func TestCopyResourceAttributesToAttributes_CopySpecificResourceAttributes(t *testing.T) {
+	resourceAttributes := pcommon.NewMap()
+	for i := 1; i <= 10; i++ {
+		resourceAttributes.PutStr(strconv.Itoa(i), strconv.Itoa(i))
+	}
+	resourceAttributes.PutStr(attr.AWSApplicationSignalsMetricResourceKeys, "1&3&20&9")
+	attributes := GenerateCopiedMetricAttributes(resourceAttributes)
+
+	assert.Equal(t, attributes.Len(), 3)
+	for _, i := range []int{1, 3, 9} {
+		assertStringAttributeEqual(t, attributes, "otel.resource."+strconv.Itoa(i), strconv.Itoa(i))
+	}
 }
 
 func TestTruncateAttributes(t *testing.T) {
@@ -261,4 +316,14 @@ func assertStringAttributeEqual(t *testing.T, attributes pcommon.Map, attrKey, a
 	} else {
 		t.Errorf("Attribute %s is not found", attrKey)
 	}
+}
+
+func GenerateCopiedMetricAttributes(resourceAttributes pcommon.Map) pcommon.Map {
+	logger, _ := zap.NewDevelopment()
+	normalizer := NewAttributesNormalizer(logger)
+	// Create a pcommon.Map for attributes
+	attributes := pcommon.NewMap()
+	// Call the process method
+	normalizer.copyResourceAttributesToAttributes(attributes, resourceAttributes, false)
+	return attributes
 }

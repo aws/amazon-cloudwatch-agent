@@ -26,4 +26,7 @@ const (
 	ResourceDetectionHostId   = "host.id"
 	ResourceDetectionHostName = "host.name"
 	ResourceDetectionASG      = "ec2.tag.aws:autoscaling:groupName"
+
+	// ApplicationSignals behaviour-changing attributes
+	AWSApplicationSignalsMetricResourceKeys = "aws.application_signals.metric_resource_keys"
 )
