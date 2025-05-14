@@ -21,7 +21,6 @@ package prometheus
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -29,8 +28,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -85,39 +82,6 @@ type slogAdapter struct {
 	logger *slog.Logger
 }
 
-func (a *slogAdapter) Log(keyvals ...interface{}) error {
-	// Convert key-value pairs to attributes
-	attrs := make([]any, 0, len(keyvals))
-	var msg string
-
-	for i := 0; i < len(keyvals); i += 2 {
-		k := keyvals[i]
-		var v interface{} = "missing value"
-		if i+1 < len(keyvals) {
-			v = keyvals[i+1]
-		}
-
-		// Handle special "msg" key
-		if ks, ok := k.(string); ok && ks == "msg" {
-			msg = fmt.Sprint(v)
-			continue
-		}
-
-		attrs = append(attrs, fmt.Sprint(k), v)
-	}
-
-	if msg == "" {
-		msg = "log event"
-	}
-
-	a.logger.Info(msg, attrs...)
-	return nil
-}
-
-// Helper function to create an adapter
-func newSlogAdapter(logger *slog.Logger) log.Logger {
-	return &slogAdapter{logger: logger}
-}
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	logLevel := &promslog.AllowedLevel{}
 	logLevel.Set("info")
@@ -141,7 +105,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 	logger := promslog.New(&cfg.promslogConfig)
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
-	kitLogger := newSlogAdapter(logger)
 
 	logger.Info("Starting Prometheus", "version", version.Info())
 	logger.Info("Build Context", "context", version.BuildContext())
@@ -362,7 +325,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	if err := g.Run(); err != nil {
 		logger.Error("error occurred", "error", err)
 	}
-	level.Info(kitLogger).Log("msg", "See you next time!")
 	wg.Done()
 }
 
