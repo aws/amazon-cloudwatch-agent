@@ -5,6 +5,7 @@ package host
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"log"
 	"slices"
 	"strings"
@@ -16,8 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/k8smetadata"
@@ -133,7 +132,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	switch t.Destination() {
 	case common.DefaultDestination, common.CloudWatchKey:
-		translators.Exporters.Set(awscloudwatch.NewTranslator())
+		translators.Exporters.Set(debug.NewTranslator())
 		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}))
 		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
 	case common.AMPKey:
@@ -147,7 +146,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Extensions.Set(sigv4auth.NewTranslator())
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
-		translators.Exporters.Set(awsemf.NewTranslator())
+		translators.Exporters.Set(debug.NewTranslator())
 		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
 	default:
