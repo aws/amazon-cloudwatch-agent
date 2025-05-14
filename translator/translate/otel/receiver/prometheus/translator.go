@@ -1,6 +1,3 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
 package prometheus
 
 import (
@@ -22,6 +19,7 @@ import (
 const (
 	otelConfigParsingError = "has invalid keys: global"
 	defaultTlsCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
+	defaultScrapeProtocol  = "http" // Add default scrape protocol
 )
 
 var (
@@ -66,18 +64,52 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
 	}
+
 	var stringMap map[string]interface{}
 	err = yaml.Unmarshal(content, &stringMap)
 	if err != nil {
 		return nil, err
 	}
+
+	// Add metric type hints through scrape_config
+	if scrapeConfigs, ok := stringMap["scrape_configs"].([]interface{}); ok {
+		for _, sc := range scrapeConfigs {
+			if config, ok := sc.(map[string]interface{}); ok {
+				// Add metric relabel configs if not present
+				if _, exists := config["metric_relabel_configs"]; !exists {
+					config["metric_relabel_configs"] = []map[string]interface{}{
+						{
+							"source_labels": []string{"__name__"},
+							"regex":         "^.*_total$",
+							"target_label":  "__type__",
+							"replacement":   "counter",
+						},
+						{
+							"source_labels": []string{"__name__"},
+							"regex":         "^.*_(sum|count)$",
+							"target_label":  "__type__",
+							"replacement":   "counter",
+						},
+						{
+							"source_labels": []string{"__name__"},
+							"regex":         "^.*_bucket$",
+							"target_label":  "__type__",
+							"replacement":   "histogram",
+						},
+					}
+				}
+			}
+		}
+	}
+
 	componentParser := confmap.NewFromStringMap(stringMap)
 	if componentParser == nil {
 		return nil, fmt.Errorf("unable to parse config from filename %s", configPath)
 	}
+
 	err = componentParser.Unmarshal(&cfg)
 	if err != nil {
-		// passed in prometheus config is in plain prometheus format and not otel wrapper
+		// Handle plain prometheus format
 		if !strings.Contains(err.Error(), otelConfigParsingError) {
 			return nil, fmt.Errorf("unable to unmarshall config to otel prometheus config from filename %s", configPath)
 		}
@@ -87,12 +119,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to unmarshall config to prometheus config from filename %s", configPath)
 		}
+
 		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
 		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
 		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
 	} else {
-		// given prometheus config is in otel format so check if target allocator is being used
-		// then add the default cert for TargetAllocator
+		// Handle OTel format
 		if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
 			cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTlsCaPath
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
