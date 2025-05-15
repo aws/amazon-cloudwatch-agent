@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -31,6 +32,10 @@ var (
 	baseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	eksKey  = common.ConfigKey(baseKey, common.KubernetesKey)
 	ecsKey  = common.ConfigKey(baseKey, common.ECSKey)
+
+	entityAllowList = []string{
+		entityattributes.AttributeEntityPlatformType,
+	}
 )
 
 type translator struct {
@@ -78,7 +83,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	switch t.pipelineName {
 	case ciPipelineName:
 		if conf.IsSet(eksKey) {
-			processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Resource, common.PipelineNameContainerInsights, false))
+			processors.Set(awsentity.NewTranslatorWithEntityTypeAndAllowList(awsentity.Resource, common.PipelineNameContainerInsights, false, entityAllowList))
 		}
 		// add aws container insights receiver
 		receivers = common.NewTranslatorMap(awscontainerinsight.NewTranslator())

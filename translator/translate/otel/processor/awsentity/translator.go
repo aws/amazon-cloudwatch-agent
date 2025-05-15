@@ -27,6 +27,7 @@ type translator struct {
 	entityType               string
 	name                     string
 	scrapeDatapointAttribute bool
+	attributeAllowList       []string
 }
 
 func NewTranslator() common.ComponentTranslator {
@@ -46,6 +47,21 @@ func NewTranslatorWithEntityType(entityType string, name string, scrapeDatapoint
 		entityType:               entityType,
 		name:                     pipelineName,
 		scrapeDatapointAttribute: scrapeDatapointAttribute,
+	}
+}
+
+func NewTranslatorWithEntityTypeAndAllowList(entityType string, name string, scrapeDatapointAttribute bool, allowList []string) common.ComponentTranslator {
+	pipelineName := strings.ToLower(entityType)
+	if name != "" {
+		pipelineName = pipelineName + "/" + name
+	}
+
+	return &translator{
+		factory:                  awsentity.NewFactory(),
+		entityType:               entityType,
+		name:                     pipelineName,
+		scrapeDatapointAttribute: scrapeDatapointAttribute,
+		attributeAllowList:       allowList,
 	}
 }
 
@@ -88,5 +104,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	// processor can perform different logics for EKS
 	// in EC2 or Non-EC2
 	cfg.Platform = ctx.Mode()
+
+	cfg.AttributeAllowList = t.attributeAllowList
+
 	return cfg, nil
 }
