@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
+	"golang.org/x/time/rate"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -23,6 +24,9 @@ const (
 	baseRetryDelay      = 1 * time.Second
 	maxRetryDelayTarget = 10 * time.Second
 	numBackoffRetries   = 5
+	// DescribeLogGroups/PutRetentionPolicy limiter
+	limiterBurstSize  = 1
+	limiterRefillRate = 1
 )
 
 type Target struct {
@@ -39,21 +43,25 @@ type targetManager struct {
 	logger  telegraf.Logger
 	service cloudWatchLogsService
 	// cache of initialized targets
-	cache    map[Target]time.Time
-	cacheTTL time.Duration
-	mu       sync.Mutex
-	dlg      chan Target
-	prp      chan Target
+	cache      map[Target]time.Time
+	cacheTTL   time.Duration
+	mu         sync.Mutex
+	dlg        chan Target
+	prp        chan Target
+	dlgLimiter *rate.Limiter
+	prpLimiter *rate.Limiter
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) TargetManager {
 	tm := &targetManager{
-		logger:   logger,
-		service:  service,
-		cache:    make(map[Target]time.Time),
-		cacheTTL: cacheTTL,
-		dlg:      make(chan Target, retentionChannelSize),
-		prp:      make(chan Target, retentionChannelSize),
+		logger:     logger,
+		service:    service,
+		cache:      make(map[Target]time.Time),
+		cacheTTL:   cacheTTL,
+		dlg:        make(chan Target, retentionChannelSize),
+		prp:        make(chan Target, retentionChannelSize),
+		dlgLimiter: rate.NewLimiter(limiterRefillRate, limiterBurstSize),
+		prpLimiter: rate.NewLimiter(limiterRefillRate, limiterBurstSize),
 	}
 
 	go tm.processDescribeLogGroup()
@@ -176,6 +184,9 @@ func (m *targetManager) createLogStream(t Target) error {
 func (m *targetManager) processDescribeLogGroup() {
 	for target := range m.dlg {
 		for attempt := 0; attempt < numBackoffRetries; attempt++ {
+			resv := m.dlgLimiter.Reserve()
+			time.Sleep(resv.Delay())
+
 			currentRetention, err := m.getRetention(target)
 			if err != nil {
 				m.logger.Errorf("failed to describe log group retention for target %v: %v", target, err)
@@ -218,6 +229,9 @@ func (m *targetManager) processPutRetentionPolicy() {
 	for target := range m.prp {
 		var updated bool
 		for attempt := 0; attempt < numBackoffRetries; attempt++ {
+			resv := m.prpLimiter.Reserve()
+			time.Sleep(resv.Delay())
+
 			err := m.updateRetentionPolicy(target)
 			if err == nil {
 				updated = true

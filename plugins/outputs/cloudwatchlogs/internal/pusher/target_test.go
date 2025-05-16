@@ -355,6 +355,108 @@ func TestCalculateBackoff(t *testing.T) {
 	assert.True(t, totalDelay <= 30*time.Second, "Total delay across all attempts should not exceed 30 seconds, but was %v", totalDelay)
 }
 
+func TestTargetManager_RateLimiter(t *testing.T) {
+	logger := testutil.NewNopLogger()
+
+	t.Run("DescribeLogGroupsRateLimited", func(t *testing.T) {
+		targets := []Target{
+			{Group: "G1", Stream: "S1", Retention: 7},
+			{Group: "G2", Stream: "S2", Retention: 14},
+			{Group: "G3", Stream: "S3", Retention: 30},
+		}
+
+		mockService := new(mockLogsService)
+		var callTimes []time.Time
+
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil)
+		mockService.On("DescribeLogGroups", mock.Anything).Run(func(args mock.Arguments) {
+			callTimes = append(callTimes, time.Now())
+		}).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String("G1"),
+					RetentionInDays: aws.Int64(0),
+				},
+				{
+					LogGroupName:    aws.String("G2"),
+					RetentionInDays: aws.Int64(0),
+				},
+				{
+					LogGroupName:    aws.String("G3"),
+					RetentionInDays: aws.Int64(0),
+				},
+			},
+		}, nil)
+		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil)
+
+		manager := NewTargetManager(logger, mockService)
+
+		for _, target := range targets {
+			err := manager.InitTarget(target)
+			assert.NoError(t, err)
+		}
+		time.Sleep(5 * time.Second)
+
+		assertCacheLen(t, manager, 3)
+
+		// Check that there was at least 1 second between calls (rate limit is 1 per second)
+		for i := 1; i < len(callTimes); i++ {
+			timeDiff := callTimes[i].Sub(callTimes[i-1])
+			assert.GreaterOrEqual(t, timeDiff, time.Second,
+				"Expected at least ~1 second between DescribeLogGroups calls due to rate limiting: got %v", timeDiff)
+		}
+	})
+
+	t.Run("PutRetentionPolicyRateLimited", func(t *testing.T) {
+		targets := []Target{
+			{Group: "G1", Stream: "S1", Retention: 7},
+			{Group: "G2", Stream: "S2", Retention: 14},
+			{Group: "G3", Stream: "S3", Retention: 30},
+		}
+
+		mockService := new(mockLogsService)
+		var callTimes []time.Time
+
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil)
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String("G1"),
+					RetentionInDays: aws.Int64(0),
+				},
+				{
+					LogGroupName:    aws.String("G2"),
+					RetentionInDays: aws.Int64(0),
+				},
+				{
+					LogGroupName:    aws.String("G3"),
+					RetentionInDays: aws.Int64(0),
+				},
+			},
+		}, nil)
+		mockService.On("PutRetentionPolicy", mock.Anything).Run(func(args mock.Arguments) {
+			callTimes = append(callTimes, time.Now())
+		}).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil)
+
+		manager := NewTargetManager(logger, mockService)
+
+		for _, target := range targets {
+			err := manager.InitTarget(target)
+			assert.NoError(t, err)
+		}
+		time.Sleep(5 * time.Second)
+
+		assertCacheLen(t, manager, 3)
+
+		// Check that there was at least 1 second between calls (rate limit is 1 per second)
+		for i := 1; i < len(callTimes); i++ {
+			timeDiff := callTimes[i].Sub(callTimes[i-1])
+			assert.GreaterOrEqual(t, timeDiff, time.Second,
+				"Expected at least ~1 second between PutRetentionPolicy calls due to rate limiting: got %v", timeDiff)
+		}
+	})
+}
+
 func assertCacheLen(t *testing.T, manager TargetManager, count int) {
 	t.Helper()
 	tm := manager.(*targetManager)
