@@ -7,7 +7,6 @@ Features:
 Enhancements:
 * [Application Signals] Enable customizable attribute copying from resources to metrics for better metric organization
 * [Explore Related] Add automatic EC2 metadata enrichment for OpenTelemetry data collection
-* [Explore Related] Fix service name detection to properly recognize instrumented application names
 
 Bug Fixes:
 * [ContainerInsights] Fix endpoint slice to capture service name instead of slice name
