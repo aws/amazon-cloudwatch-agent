@@ -4,8 +4,10 @@
 package exph
 
 import (
+	"cmp"
 	"fmt"
 	"log"
+	"maps"
 	"math"
 	"slices"
 
@@ -77,12 +79,9 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	counts := []float64{}
 
 	// iterate through positive buckets in descending order
-	posOffsetIndicies := make([]int, 0, len(d.positiveBuckets))
-	for offsetIndex := range d.positiveBuckets {
-		posOffsetIndicies = append(posOffsetIndicies, offsetIndex)
-	}
-	slices.Sort(posOffsetIndicies)
-	slices.Reverse(posOffsetIndicies)
+	posOffsetIndicies := slices.SortedFunc(maps.Keys(d.positiveBuckets), func(a, b int) int {
+		return cmp.Compare(b, a)
+	})
 	for _, offsetIndex := range posOffsetIndicies {
 		counter := d.positiveBuckets[offsetIndex]
 		bucketBegin := LowerBoundary(offsetIndex, int(d.scale))
@@ -98,11 +97,7 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	}
 
 	// iterate through negative buckets in ascending order
-	negOffsetIndicies := make([]int, 0, len(d.negativeBuckets))
-	for offsetIndex := range d.negativeBuckets {
-		negOffsetIndicies = append(negOffsetIndicies, offsetIndex)
-	}
-	slices.Sort(negOffsetIndicies)
+	negOffsetIndicies := slices.Sorted(maps.Keys(d.negativeBuckets))
 	for _, offsetIndex := range negOffsetIndicies {
 		counter := d.negativeBuckets[offsetIndex]
 		bucketBegin := LowerBoundary(offsetIndex, int(d.scale))
@@ -228,62 +223,6 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 }
 
 func (d *ExpHistogramDistribution) Resize(_ int) []*ExpHistogramDistribution {
-	// for now, do not split data points into separate PMD requests
+	// TODO: split data points into separate PMD requests if the number of buckets exceeds the API limit
 	return []*ExpHistogramDistribution{d}
-}
-
-// MapToIndexScale0 computes a bucket index at scale 0.
-func MapToIndexScale0(value float64) int {
-	// Note: Frexp() rounds submnormal values to the smallest normal
-	// value and returns an exponent corresponding to fractions in the
-	// range [0.5, 1), whereas an exponent for the range [1, 2), so
-	// subtract 1 from the exponent immediately.
-	frac, exp := math.Frexp(value)
-	exp--
-
-	if frac == 0.5 && value > 0 {
-		// Special case for positive powers of two: they fall into the bucket
-		// numbered one less.
-		exp--
-	}
-	return exp
-}
-
-// MapToIndexNegativeScale computes a bucket index for scales <= 0.
-func MapToIndexNegativeScale(value float64, scale int) int {
-	return MapToIndexScale0(value) >> -scale
-}
-
-// MapToIndex for any scale
-//
-// Values near a boundary could be mapped into the incorrect bucket due to float point calculation inaccuracy.
-func MapToIndex(value float64, scale int) int {
-	// Special case for power-of-two values.
-	if frac, exp := math.Frexp(value); frac == 0.5 {
-		return ((exp - 1) << scale) - 1
-	}
-	scaleFactor := math.Ldexp(math.Log2E, scale)
-	// The use of math.Log() to calculate the bucket index is not guaranteed to be exactly correct near powers of two.
-	return int(math.Floor(math.Log(math.Abs(value)) * scaleFactor))
-}
-
-// LowerBoundaryNegativeScale computes the lower boundary for index
-// with scales <= 0.
-func LowerBoundaryNegativeScale(index int, scale int) float64 {
-	return math.Ldexp(1, index<<-scale)
-}
-
-func LowerBoundary(index, scale int) float64 {
-	if scale <= 0 {
-		return LowerBoundaryNegativeScale(index, scale)
-	}
-	return LowerBoundaryPositiveScale(index, scale)
-}
-
-// LowerBoundary computes the bucket boundary for positive scales.
-//
-// The returned value may be inaccurate due to accumulated floating point calculation errors
-func LowerBoundaryPositiveScale(index, scale int) float64 {
-	inverseFactor := math.Ldexp(math.Ln2, -scale)
-	return math.Exp(float64(index) * inverseFactor)
 }
