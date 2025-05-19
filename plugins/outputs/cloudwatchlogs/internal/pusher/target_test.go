@@ -372,7 +372,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 		service.cls = func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
 		}
-		service.dlg = func(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+		service.dlg = func(*cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 			mu.Lock()
 			callTimes = append(callTimes, time.Now())
 			mu.Unlock()
@@ -393,7 +393,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 				},
 			}, nil
 		}
-		service.prp = func(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+		service.prp = func(*cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
 			return &cloudwatchlogs.PutRetentionPolicyOutput{}, nil
 		}
 
@@ -438,7 +438,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 		service.cls = func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
 		}
-		service.dlg = func(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+		service.dlg = func(*cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 			return &cloudwatchlogs.DescribeLogGroupsOutput{
 				LogGroups: []*cloudwatchlogs.LogGroup{
 					{
@@ -456,7 +456,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 				},
 			}, nil
 		}
-		service.prp = func(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+		service.prp = func(*cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
 			mu.Lock()
 			callTimes = append(callTimes, time.Now())
 			mu.Unlock()
