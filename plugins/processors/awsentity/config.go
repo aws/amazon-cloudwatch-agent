@@ -29,7 +29,7 @@ type Config struct {
 	// telemetry. Possible values are Service and Resource
 	EntityType string `mapstructure:"entity_type,omitempty"`
 	// OverrideEntity contains configuration for overriding entity attributes
-	OverrideEntity *entityoverrider.EntityOverride `mapstructure:"override_entity,omitempty" yaml:"override_entity,omitempty"`
+	OverrideEntity *entityoverrider.EntityOverride `mapstructure:"override_entity,omitempty"`
 }
 
 // Verify Config implements Processor interface.
