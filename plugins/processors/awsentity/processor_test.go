@@ -6,7 +6,6 @@ package awsentity
 import (
 	"bytes"
 	"context"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
 	"os"
 	"testing"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 

@@ -1,9 +1,13 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package entityoverrider
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 
 // KeyPair represents a key-value pair for entity attributes

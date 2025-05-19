@@ -4,12 +4,13 @@
 package awsentity
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
 )
 
 func TestUnmarshalDefaultConfig(t *testing.T) {

@@ -6,9 +6,10 @@ package awsentity
 import (
 	"errors"
 
+	"go.opentelemetry.io/collector/component"
+
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
-	"go.opentelemetry.io/collector/component"
 )
 
 type Config struct {
