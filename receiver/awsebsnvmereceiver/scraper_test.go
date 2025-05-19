@@ -6,6 +6,7 @@ package awsebsnvmereceiver
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/collector/component"
 	"reflect"
 	"testing"
 
@@ -78,7 +79,7 @@ func mockGetMetricsError(_ string) (nvme.EBSMetrics, error) {
 
 func TestScraper_Start(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]())
 
 	err := scraper.start(context.Background(), componenttest.NewNopHost())
 	assert.NoError(t, err)
@@ -86,7 +87,7 @@ func TestScraper_Start(t *testing.T) {
 
 func TestScraper_Shutdown(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]())
 
 	err := scraper.shutdown(context.Background())
 	assert.NoError(t, err)
@@ -96,7 +97,7 @@ func TestScraper_Scrape_NoDevices(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]())
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -109,7 +110,7 @@ func TestScraper_Scrape_GetAllDevicesError(t *testing.T) {
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{}, errors.New("failed to get devices"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]())
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]())
 
 	_, err := scraper.scrape(context.Background())
 	assert.Error(t, err)
@@ -134,7 +135,7 @@ func TestScraper_Scrape_Success(t *testing.T) {
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
 	// Allow all devices with empty map
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -173,7 +174,7 @@ func TestScraper_Scrape_NonEbsDevice(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -190,7 +191,7 @@ func TestScraper_Scrape_IsEbsDeviceError(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("IsEbsDevice", &device1).Return(false, errors.New("failed to check device"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -208,7 +209,7 @@ func TestScraper_Scrape_GetDeviceSerialError(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("", errors.New("failed to get serial"))
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -226,7 +227,7 @@ func TestScraper_Scrape_InvalidSerialPrefix(t *testing.T) {
 	mockUtil.On("IsEbsDevice", &device1).Return(true, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("invalid-serial", nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -254,7 +255,7 @@ func TestScraper_Scrape_GetMetricsError(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	settings := receivertest.NewNopSettings()
+	settings := receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver"))
 	settings.TelemetrySettings.Logger = logger
 
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
@@ -296,7 +297,7 @@ func TestScraper_Scrape_MultipleDevices(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device2).Return("vol0987654321fedcba", nil)
 	mockUtil.On("DevicePath", "nvme1n1").Return("/dev/nvme1n1", nil)
 
-	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(), mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
@@ -328,7 +329,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	settings := receivertest.NewNopSettings()
+	settings := receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver"))
 	settings.TelemetrySettings.Logger = logger
 
 	// Only allow nvme0n1
@@ -374,7 +375,7 @@ func TestScraper_Scrape_MultipleDevicesSameController(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	settings := receivertest.NewNopSettings()
+	settings := receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver"))
 	settings.TelemetrySettings.Logger = logger
 
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
@@ -434,7 +435,7 @@ func TestScraper_Scrape_DevicePathError(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
-	settings := receivertest.NewNopSettings()
+	settings := receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver"))
 	settings.TelemetrySettings.Logger = logger
 
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))

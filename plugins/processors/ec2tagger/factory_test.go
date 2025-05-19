@@ -5,6 +5,7 @@ package ec2tagger
 
 import (
 	"context"
+	"go.opentelemetry.io/collector/component"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,7 @@ func TestCreateProcessor(t *testing.T) {
 	require.NotNil(t, factory)
 
 	cfg := factory.CreateDefaultConfig()
-	setting := processortest.NewNopSettings()
+	setting := processortest.NewNopSettings(component.MustNewType("ec2tagger"))
 
 	tProcessor, err := factory.CreateTraces(context.Background(), setting, cfg, consumertest.NewNop())
 	assert.Equal(t, err, pipeline.ErrSignalNotSupported)

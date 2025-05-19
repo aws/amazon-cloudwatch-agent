@@ -26,6 +26,7 @@ import (
 type ContextStatement struct {
 	Context    string   `mapstructure:"context"`
 	Statements []string `mapstructure:"statements"`
+	ErrorMode  string   `mapstructure:"error_mode"`
 }
 
 type Translator interface {
@@ -109,17 +110,20 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
-	contextStatement, err := t.getContextStatement(conf)
+
+	metricStatements, err := t.getContextStatementList(conf)
 	if err != nil {
-		return nil, fmt.Errorf("unable to translate context statements: %v", err)
+		return nil, fmt.Errorf("unable to generate metric statements: %w", err)
 	}
 
-	c := confmap.NewFromStringMap(map[string]any{
-		"metric_statements": []ContextStatement{contextStatement},
+	c := confmap.NewFromStringMap(map[string]interface{}{
+		"metric_statements": metricStatements,
 	})
+
 	if err := c.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal metric decoration processor: %w", err)
 	}
+
 	return cfg, nil
 }
 
@@ -142,21 +146,24 @@ func (t *translator) IsSet(conf *confmap.Conf) bool {
 	return false
 }
 
-func (t *translator) getContextStatement(conf *confmap.Conf) (ContextStatement, error) {
+func (t *translator) getContextStatementList(conf *confmap.Conf) ([]interface{}, error) {
 	var statements []string
 	measurementMaps := t.getMeasurementsByPlugin(conf)
+
 	for plugin, measurementMap := range measurementMaps {
 		plugin = metricsconfig.GetRealPluginName(plugin)
+
 		var standardizeNameFn transformFn
 		if t.configKey == defaultConfigKey {
 			standardizeNameFn = decorateMetricNameFn(translatorcontext.CurrentContext().Os(), plugin)
 		}
+
 		for _, entry := range measurementMap {
 			switch val := entry.(type) {
 			case map[string]any:
 				ms, err := getMetricStatements(val, standardizeNameFn)
 				if err != nil {
-					return ContextStatement{}, err
+					return nil, err
 				}
 				statements = append(statements, ms...)
 			default:
@@ -164,10 +171,22 @@ func (t *translator) getContextStatement(conf *confmap.Conf) (ContextStatement, 
 			}
 		}
 	}
-	return ContextStatement{
-		Context:    "metric",
-		Statements: statements,
+
+	return []interface{}{
+		map[string]interface{}{
+			"context":    "metric",
+			"statements": sliceToInterfaceSlice(statements),
+			"error_mode": "propagate", // Add this line
+		},
 	}, nil
+}
+
+func sliceToInterfaceSlice(strs []string) []interface{} {
+	result := make([]interface{}, len(strs))
+	for i, s := range strs {
+		result[i] = s
+	}
+	return result
 }
 
 func (t *translator) getMeasurementsByPlugin(conf *confmap.Conf) map[string][]any {

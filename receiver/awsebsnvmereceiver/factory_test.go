@@ -5,6 +5,7 @@ package awsebsnvmereceiver
 
 import (
 	"context"
+	"go.opentelemetry.io/collector/component"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,7 @@ func TestCreateMetricsReceiver(t *testing.T) {
 
 			receiver, err := createMetricsReceiver(
 				context.Background(),
-				receivertest.NewNopSettings(),
+				receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")),
 				cfg,
 				consumertest.NewNop(),
 			)

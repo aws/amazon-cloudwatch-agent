@@ -5,6 +5,7 @@ package agenthealth
 
 import (
 	"context"
+	"go.opentelemetry.io/collector/component"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	cfg := &Config{}
-	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(component.MustNewType("agenthealth")), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }
