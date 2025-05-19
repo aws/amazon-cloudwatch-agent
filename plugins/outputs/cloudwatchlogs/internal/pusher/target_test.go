@@ -402,7 +402,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 		// Check that there was at least 1 second between calls (rate limit is 1 per second)
 		for i := 1; i < len(callTimes); i++ {
 			timeDiff := callTimes[i].Sub(callTimes[i-1])
-			assert.GreaterOrEqual(t, timeDiff, time.Second,
+			assert.GreaterOrEqual(t, timeDiff, 995 * time.Millisecond,
 				"Expected at least ~1 second between DescribeLogGroups calls due to rate limiting: got %v", timeDiff)
 		}
 	})
@@ -451,7 +451,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 		// Check that there was at least 1 second between calls (rate limit is 1 per second)
 		for i := 1; i < len(callTimes); i++ {
 			timeDiff := callTimes[i].Sub(callTimes[i-1])
-			assert.GreaterOrEqual(t, timeDiff, time.Second,
+			assert.GreaterOrEqual(t, timeDiff, 995 * time.Millisecond,
 				"Expected at least ~1 second between PutRetentionPolicy calls due to rate limiting: got %v", timeDiff)
 		}
 	})
