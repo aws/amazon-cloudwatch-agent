@@ -369,7 +369,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 		var callTimes []time.Time
 
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil)
-		mockService.On("DescribeLogGroups", mock.Anything).Run(func(args mock.Arguments) {
+		mockService.On("DescribeLogGroups", mock.Anything).Run(func(_ mock.Arguments) {
 			callTimes = append(callTimes, time.Now())
 		}).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
 			LogGroups: []*cloudwatchlogs.LogGroup{
@@ -434,7 +434,7 @@ func TestTargetManager_RateLimiter(t *testing.T) {
 				},
 			},
 		}, nil)
-		mockService.On("PutRetentionPolicy", mock.Anything).Run(func(args mock.Arguments) {
+		mockService.On("PutRetentionPolicy", mock.Anything).Run(func(_ mock.Arguments) {
 			callTimes = append(callTimes, time.Now())
 		}).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil)
 
