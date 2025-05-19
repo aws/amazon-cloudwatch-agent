@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	cacheTTL             = 5 * time.Second
 	retentionChannelSize = 100
 	// max wait time with backoff and jittering:
 	// 0 + 2.4 + 4.8 + 9.6 + 10 ~= 26.8 sec
@@ -38,19 +39,21 @@ type targetManager struct {
 	logger  telegraf.Logger
 	service cloudWatchLogsService
 	// cache of initialized targets
-	cache map[Target]struct{}
-	mu    sync.Mutex
-	dlg   chan Target
-	prp   chan Target
+	cache    map[Target]time.Time
+	cacheTTL time.Duration
+	mu       sync.Mutex
+	dlg      chan Target
+	prp      chan Target
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) TargetManager {
 	tm := &targetManager{
-		logger:  logger,
-		service: service,
-		cache:   make(map[Target]struct{}),
-		dlg:     make(chan Target, retentionChannelSize),
-		prp:     make(chan Target, retentionChannelSize),
+		logger:   logger,
+		service:  service,
+		cache:    make(map[Target]time.Time),
+		cacheTTL: cacheTTL,
+		dlg:      make(chan Target, retentionChannelSize),
+		prp:      make(chan Target, retentionChannelSize),
 	}
 
 	go tm.processDescribeLogGroup()
@@ -58,11 +61,14 @@ func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) Tar
 	return tm
 }
 
-// InitTarget initializes a Target if it hasn't been initialized before.
+// InitTarget initializes a Target if it hasn't been initialized before. Stores a timestamp of the last successful
+// initialization of the Target. If the timestamp is older than the TTL, allows the creation attempt again.
 func (m *targetManager) InitTarget(target Target) error {
+	now := time.Now()
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if _, ok := m.cache[target]; !ok {
+	lastHit, ok := m.cache[target]
+	if !ok || now.Sub(lastHit) > m.cacheTTL {
 		newGroup, err := m.createLogGroupAndStream(target)
 		if err != nil {
 			return err
@@ -76,7 +82,7 @@ func (m *targetManager) InitTarget(target Target) error {
 				m.dlg <- target
 			}
 		}
-		m.cache[target] = struct{}{}
+		m.cache[target] = time.Now()
 	}
 	return nil
 }
