@@ -153,9 +153,9 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 			if p.config.KubernetesMode != "" {
 				switch p.config.KubernetesMode {
 				case config.ModeEKS:
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityEKSPlatform)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityEKSPlatform)
 				default:
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityK8sPlatform)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityPlatformType, entityattributes.AttributeEntityK8sPlatform)
 				}
 			} else if p.config.Platform == config.ModeEC2 {
 				// ec2tagger processor may have picked up the ASG name from an ec2:DescribeTags call
@@ -166,11 +166,11 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				}
 				ec2Info = getEC2InfoFromEntityStore()
 				if ec2Info.GetInstanceID() != EMPTY {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityType, entityattributes.AttributeEntityAWSResource)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityResourceType, entityattributes.AttributeEntityEC2InstanceResource)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.GetInstanceID())
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.AttributeEntityAWSResource)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityResourceType, entityattributes.AttributeEntityEC2InstanceResource)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityIdentifier, ec2Info.GetInstanceID())
 				}
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 			}
 		case entityattributes.Service:
 			if logGroupNamesAttr, ok := resourceAttrs.Get(attributeAwsLogGroupNames); ok {
@@ -249,22 +249,22 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					InstanceId:        ec2Info.GetInstanceID(),
 					ServiceNameSource: entityServiceNameSource,
 				}
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
 
 				if err := validate.Struct(eksAttributes); err == nil {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityCluster, eksAttributes.Cluster)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
-					resourceAttrs.PutStr(entityattributes.AttributeEntityNode, eksAttributes.Node)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityPlatformType, entityPlatformType)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityCluster, eksAttributes.Cluster)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityNode, eksAttributes.Node)
 					//Add Instance id attribute only if the application node is same as agent node
 					if eksAttributes.Node == os.Getenv("K8S_NODE_NAME") {
-						AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, eksAttributes.InstanceId)
+						p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, eksAttributes.InstanceId)
 					}
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
+					p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
+					p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
 				}
 				p.k8sscraper.Reset()
 			} else if p.config.Platform == config.ModeEC2 {
@@ -290,10 +290,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					}
 				}
 
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+				p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 
 				ec2Attributes := EC2ServiceAttributes{
 					InstanceId:        ec2Info.GetInstanceID(),
@@ -301,10 +301,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					ServiceNameSource: entityServiceNameSource,
 				}
 				if err := validate.Struct(ec2Attributes); err == nil {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
+					p.PutAttribute(resourceAttrs, entityattributes.AttributeEntityPlatformType, entityPlatformType)
+					p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
+					p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
+					p.AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
 				}
 			}
 			if logGroupNames == EMPTY || (serviceName == EMPTY && environmentName == EMPTY) {

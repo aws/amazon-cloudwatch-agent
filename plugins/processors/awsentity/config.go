@@ -23,6 +23,9 @@ type Config struct {
 	// EntityType determines the type of entity processing done for
 	// telemetry. Possible values are Service and Resource
 	EntityType string `mapstructure:"entity_type,omitempty"`
+	// AttributeAllowList is a list of entity resource attributes to append to the metric
+	// If this is not specified, the processor will append all entity attributes
+	AttributeAllowList []string `mapstructure:"attribute_allow_list,omitempty"`
 }
 
 // Verify Config implements Processor interface.

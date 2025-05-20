@@ -198,6 +198,7 @@ processors:
     awsentity/resource/containerinsights:
         entity_type: Resource
         platform: ec2
+        attribute_allow_list: [ "com.amazonaws.cloudwatch.entity.internal.platform.type" ]
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
