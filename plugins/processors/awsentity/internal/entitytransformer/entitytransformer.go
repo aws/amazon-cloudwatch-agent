@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package entityoverrider
+package entitytransformer
 
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -16,31 +16,31 @@ type KeyPair struct {
 	Value string `mapstructure:"value"`
 }
 
-// EntityOverride contains configuration for overriding entity attributes
-type EntityOverride struct {
+// EntityTransform contains configuration for overriding entity attributes
+type EntityTransform struct {
 	KeyAttributes []KeyPair `mapstructure:"key_attributes"`
 	Attributes    []KeyPair `mapstructure:"attributes"`
 }
 
-type EntityOverrider struct {
-	overrides *EntityOverride
+type EntityTransformer struct {
+	transform *EntityTransform
 	logger    *zap.Logger
 }
 
-func NewEntityOverrider(overrides *EntityOverride, logger *zap.Logger) *EntityOverrider {
-	return &EntityOverrider{
-		overrides: overrides,
+func NewEntityTransformer(transform *EntityTransform, logger *zap.Logger) *EntityTransformer {
+	return &EntityTransformer{
+		transform: transform,
 		logger:    logger,
 	}
 }
 
-func (p *EntityOverrider) ApplyOverrides(resourceAttrs pcommon.Map) {
-	if p.overrides == nil {
+func (p *EntityTransformer) ApplyTransforms(resourceAttrs pcommon.Map) {
+	if p.transform == nil {
 		return
 	}
 
 	// Apply key attributes
-	for _, keyAttr := range p.overrides.KeyAttributes {
+	for _, keyAttr := range p.transform.KeyAttributes {
 		if fullName, ok := entityattributes.GetFullAttributeName(keyAttr.Key); ok {
 			resourceAttrs.PutStr(fullName, keyAttr.Value)
 		} else {
@@ -49,7 +49,7 @@ func (p *EntityOverrider) ApplyOverrides(resourceAttrs pcommon.Map) {
 	}
 
 	// Apply additional attributes
-	for _, attr := range p.overrides.Attributes {
+	for _, attr := range p.transform.Attributes {
 		if fullName, ok := entityattributes.GetFullAttributeName(attr.Key); ok {
 			resourceAttrs.PutStr(fullName, attr.Value)
 		} else {
@@ -58,19 +58,19 @@ func (p *EntityOverrider) ApplyOverrides(resourceAttrs pcommon.Map) {
 	}
 }
 
-func (p *EntityOverrider) GetOverriddenServiceName() (string, string) {
-	if p.overrides == nil {
+func (p *EntityTransformer) GetOverriddenServiceName() (string, string) {
+	if p.transform == nil {
 		return "", ""
 	}
 
 	var serviceName, source string
-	for _, keyAttr := range p.overrides.KeyAttributes {
+	for _, keyAttr := range p.transform.KeyAttributes {
 		if keyAttr.Key == entityattributes.ServiceName {
 			serviceName = keyAttr.Value
 		}
 	}
 
-	for _, attr := range p.overrides.Attributes {
+	for _, attr := range p.transform.Attributes {
 		if attr.Key == entityattributes.ServiceNameSource {
 			source = attr.Value
 		}

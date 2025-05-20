@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityoverrider"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entitytransformer"
 )
 
 func TestUnmarshalDefaultConfig(t *testing.T) {
@@ -32,7 +32,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			conf: confmap.NewFromStringMap(map[string]interface{}{
 				"entity_type": entityattributes.Service,
 				"platform":    "ec2",
-				"override_entity": map[string]interface{}{
+				"transform_entity": map[string]interface{}{
 					"key_attributes": []interface{}{
 						map[string]interface{}{
 							"key":   entityattributes.ServiceName,
@@ -54,8 +54,8 @@ func TestUnmarshalConfig(t *testing.T) {
 			expected: &Config{
 				EntityType: entityattributes.Service,
 				Platform:   "ec2",
-				OverrideEntity: &entityoverrider.EntityOverride{
-					KeyAttributes: []entityoverrider.KeyPair{
+				TransformEntity: &entitytransformer.EntityTransform{
+					KeyAttributes: []entitytransformer.KeyPair{
 						{
 							Key:   entityattributes.ServiceName,
 							Value: "config-service-name",
@@ -65,7 +65,7 @@ func TestUnmarshalConfig(t *testing.T) {
 							Value: "config-environment-name",
 						},
 					},
-					Attributes: []entityoverrider.KeyPair{
+					Attributes: []entitytransformer.KeyPair{
 						{
 							Key:   entityattributes.ServiceNameSource,
 							Value: "UserConfiguration",
@@ -80,7 +80,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			conf: confmap.NewFromStringMap(map[string]interface{}{
 				"entity_type": entityattributes.Service,
 				"platform":    "ec2",
-				"override_entity": map[string]interface{}{
+				"transform_entity": map[string]interface{}{
 					"key_attributes": []interface{}{
 						map[string]interface{}{
 							"key":   "InvalidKey",
@@ -106,7 +106,7 @@ func TestUnmarshalConfig(t *testing.T) {
 		{
 			name: "TestMissingRequiredFieldEntityOverride",
 			conf: confmap.NewFromStringMap(map[string]interface{}{
-				"override_entity": map[string]interface{}{
+				"transform_entity": map[string]interface{}{
 					"key_attributes": []interface{}{
 						map[string]interface{}{
 							"key":   entityattributes.ServiceName,

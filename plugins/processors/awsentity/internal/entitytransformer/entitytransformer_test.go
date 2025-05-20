@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package entityoverrider
+package entitytransformer
 
 import (
 	"testing"
@@ -13,8 +13,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 
-func TestNewEntityOverrider(t *testing.T) {
-	overrides := &EntityOverride{
+func TestNewEntityTransformer(t *testing.T) {
+	entityTransform := &EntityTransform{
 		KeyAttributes: []KeyPair{
 			{
 				Key:   entityattributes.ServiceName,
@@ -22,20 +22,20 @@ func TestNewEntityOverrider(t *testing.T) {
 			},
 		},
 	}
-	overrider := NewEntityOverrider(overrides, zap.NewNop())
-	assert.Equal(t, overrides, overrider.overrides)
+	entityTransformer := NewEntityTransformer(entityTransform, zap.NewNop())
+	assert.Equal(t, entityTransform, entityTransformer.transform)
 }
 
-func TestEntityOverrider_ApplyOverrides(t *testing.T) {
+func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 	tests := []struct {
-		name      string
-		overrides *EntityOverride
-		initial   map[string]string
-		expected  map[string]string
+		name       string
+		transforms *EntityTransform
+		initial    map[string]string
+		expected   map[string]string
 	}{
 		{
 			name: "TestValidEntityAttributes",
-			overrides: &EntityOverride{
+			transforms: &EntityTransform{
 				KeyAttributes: []KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
@@ -64,8 +64,8 @@ func TestEntityOverrider_ApplyOverrides(t *testing.T) {
 			},
 		},
 		{
-			name:      "TestNilOverride",
-			overrides: nil,
+			name:       "TestNilTransform",
+			transforms: nil,
 			initial: map[string]string{
 				"existing.attribute": "value",
 			},
@@ -74,8 +74,8 @@ func TestEntityOverrider_ApplyOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "TestInvalidKeyAttributeOverride",
-			overrides: &EntityOverride{
+			name: "TestInvalidKeyAttributeTransform",
+			transforms: &EntityTransform{
 				KeyAttributes: []KeyPair{
 					{
 						Key:   "InvalidKey",
@@ -91,8 +91,8 @@ func TestEntityOverrider_ApplyOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "TestInvalidAttributeOverride",
-			overrides: &EntityOverride{
+			name: "TestInvalidAttributeTransform",
+			transforms: &EntityTransform{
 				Attributes: []KeyPair{
 					{
 						Key:   "InvalidAttribute",
@@ -111,13 +111,13 @@ func TestEntityOverrider_ApplyOverrides(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			overrider := NewEntityOverrider(tt.overrides, zap.NewNop())
+			transformer := NewEntityTransformer(tt.transforms, zap.NewNop())
 			resourceAttrs := pcommon.NewMap()
 			for k, v := range tt.initial {
 				resourceAttrs.PutStr(k, v)
 			}
 
-			overrider.ApplyOverrides(resourceAttrs)
+			transformer.ApplyTransforms(resourceAttrs)
 
 			assert.Equal(t, len(tt.expected), resourceAttrs.Len())
 			for k, v := range tt.expected {
@@ -129,16 +129,16 @@ func TestEntityOverrider_ApplyOverrides(t *testing.T) {
 	}
 }
 
-func TestEntityOverrider_GetOverriddenServiceName(t *testing.T) {
+func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 	tests := []struct {
 		name        string
-		overrides   *EntityOverride
+		transform   *EntityTransform
 		wantService string
 		wantSource  string
 	}{
 		{
-			name: "TestServiceNameAndSourceOverride",
-			overrides: &EntityOverride{
+			name: "TestServiceNameAndSourceTransform",
+			transform: &EntityTransform{
 				KeyAttributes: []KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
@@ -156,8 +156,8 @@ func TestEntityOverrider_GetOverriddenServiceName(t *testing.T) {
 			wantSource:  "UserConfiguration",
 		},
 		{
-			name: "TestServiceNameOverride",
-			overrides: &EntityOverride{
+			name: "TestServiceNameTransform",
+			transform: &EntityTransform{
 				KeyAttributes: []KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
@@ -169,8 +169,8 @@ func TestEntityOverrider_GetOverriddenServiceName(t *testing.T) {
 			wantSource:  "",
 		},
 		{
-			name: "TestServiceSourceOverride",
-			overrides: &EntityOverride{
+			name: "TestServiceSourceTransform",
+			transform: &EntityTransform{
 				Attributes: []KeyPair{
 					{
 						Key:   entityattributes.ServiceNameSource,
@@ -182,8 +182,8 @@ func TestEntityOverrider_GetOverriddenServiceName(t *testing.T) {
 			wantSource:  "UserConfiguration",
 		},
 		{
-			name:        "TestNilOverride",
-			overrides:   nil,
+			name:        "TestNilTransform",
+			transform:   nil,
 			wantService: "",
 			wantSource:  "",
 		},
@@ -191,8 +191,8 @@ func TestEntityOverrider_GetOverriddenServiceName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			overrider := NewEntityOverrider(tt.overrides, zap.NewNop())
-			service, source := overrider.GetOverriddenServiceName()
+			transformer := NewEntityTransformer(tt.transform, zap.NewNop())
+			service, source := transformer.GetOverriddenServiceName()
 			assert.Equal(t, tt.wantService, service)
 			assert.Equal(t, tt.wantSource, source)
 		})
