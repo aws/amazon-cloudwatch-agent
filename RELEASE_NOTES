@@ -1,4 +1,25 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300056.0 (2025-05-16)
+========================================================================
+Features:
+* [ContainerInsights] Ingest EBS NVME metrics exposed by aws-ebs-csi-driver
+
+Enhancements:
+* [Application Signals] Enable customizable attribute copying from resources to metrics for better metric organization
+* [Explore Related] Add automatic EC2 metadata enrichment for OpenTelemetry data collection
+
+Bug Fixes:
+* [ContainerInsights] Fix endpoint slice to capture service name instead of slice name
+* [Exporter/awsemfexporter] Fix output of count/sum metrics for detailed summary metrics
+* [Metrics/nvidia_gpu] Update V12 XML schema for missing power_draw
+
+========================================================================
+Amazon CloudWatch Agent 1.300055.1 (2025-04-30)
+========================================================================
+Enhancements:
+* Go1.24 dependency bump
+
+========================================================================
 Amazon CloudWatch Agent 1.300055.0 (2025-04-15)
 ========================================================================
 Features:

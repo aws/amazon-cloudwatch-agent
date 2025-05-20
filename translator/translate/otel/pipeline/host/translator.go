@@ -111,6 +111,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		if currentContext.KubernetesMode() != "" {
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
 			translators.Extensions.Set(k8smetadata.NewTranslator())
+		} else if currentContext.Mode() == config.ModeEC2 {
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
 		}
 	case common.PipelineNameHostCustomMetrics:
 		if !currentContext.RunInContainer() {
