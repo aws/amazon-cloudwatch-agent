@@ -5,11 +5,11 @@ package awsentity
 
 import (
 	"errors"
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 
 	"go.opentelemetry.io/collector/component"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entitytransformer"
 )
 
 type Config struct {
@@ -29,7 +29,7 @@ type Config struct {
 	// telemetry. Possible values are Service and Resource
 	EntityType string `mapstructure:"entity_type,omitempty"`
 	// TransformEntity contains configuration for overriding entity attributes
-	TransformEntity *entitytransformer.EntityTransform `mapstructure:"transform_entity,omitempty"`
+	TransformEntity *entity.EntityTransform `mapstructure:"transform_entity,omitempty"`
 }
 
 // Verify Config implements Processor interface.

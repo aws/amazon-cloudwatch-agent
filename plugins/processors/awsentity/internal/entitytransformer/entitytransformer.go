@@ -7,27 +7,16 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 
-// KeyPair represents a key-value pair for entity attributes
-type KeyPair struct {
-	Key   string `mapstructure:"key"`
-	Value string `mapstructure:"value"`
-}
-
-// EntityTransform contains configuration for overriding entity attributes
-type EntityTransform struct {
-	KeyAttributes []KeyPair `mapstructure:"key_attributes"`
-	Attributes    []KeyPair `mapstructure:"attributes"`
-}
-
 type EntityTransformer struct {
-	transform *EntityTransform
+	transform *entity.EntityTransform
 	logger    *zap.Logger
 }
 
-func NewEntityTransformer(transform *EntityTransform, logger *zap.Logger) *EntityTransformer {
+func NewEntityTransformer(transform *entity.EntityTransform, logger *zap.Logger) *EntityTransformer {
 	return &EntityTransformer{
 		transform: transform,
 		logger:    logger,

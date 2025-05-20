@@ -4,13 +4,13 @@
 package awsentity
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entitytransformer"
 )
 
 func TestUnmarshalDefaultConfig(t *testing.T) {
@@ -54,8 +54,8 @@ func TestUnmarshalConfig(t *testing.T) {
 			expected: &Config{
 				EntityType: entityattributes.Service,
 				Platform:   "ec2",
-				TransformEntity: &entitytransformer.EntityTransform{
-					KeyAttributes: []entitytransformer.KeyPair{
+				TransformEntity: &entity.EntityTransform{
+					KeyAttributes: []entity.KeyPair{
 						{
 							Key:   entityattributes.ServiceName,
 							Value: "config-service-name",
@@ -65,7 +65,7 @@ func TestUnmarshalConfig(t *testing.T) {
 							Value: "config-environment-name",
 						},
 					},
-					Attributes: []entitytransformer.KeyPair{
+					Attributes: []entity.KeyPair{
 						{
 							Key:   entityattributes.ServiceNameSource,
 							Value: "UserConfiguration",

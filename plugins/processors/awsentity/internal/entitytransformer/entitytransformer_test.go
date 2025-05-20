@@ -4,6 +4,7 @@
 package entitytransformer
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +15,8 @@ import (
 )
 
 func TestNewEntityTransformer(t *testing.T) {
-	entityTransform := &EntityTransform{
-		KeyAttributes: []KeyPair{
+	entityTransform := &entity.EntityTransform{
+		KeyAttributes: []entity.KeyPair{
 			{
 				Key:   entityattributes.ServiceName,
 				Value: "test-service",
@@ -29,14 +30,14 @@ func TestNewEntityTransformer(t *testing.T) {
 func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 	tests := []struct {
 		name       string
-		transforms *EntityTransform
+		transforms *entity.EntityTransform
 		initial    map[string]string
 		expected   map[string]string
 	}{
 		{
 			name: "TestValidEntityAttributes",
-			transforms: &EntityTransform{
-				KeyAttributes: []KeyPair{
+			transforms: &entity.EntityTransform{
+				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
 						Value: "test-service",
@@ -46,7 +47,7 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 						Value: "test-env",
 					},
 				},
-				Attributes: []KeyPair{
+				Attributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceNameSource,
 						Value: "UserConfiguration",
@@ -75,8 +76,8 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 		},
 		{
 			name: "TestInvalidKeyAttributeTransform",
-			transforms: &EntityTransform{
-				KeyAttributes: []KeyPair{
+			transforms: &entity.EntityTransform{
+				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   "InvalidKey",
 						Value: "test-value",
@@ -92,8 +93,8 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 		},
 		{
 			name: "TestInvalidAttributeTransform",
-			transforms: &EntityTransform{
-				Attributes: []KeyPair{
+			transforms: &entity.EntityTransform{
+				Attributes: []entity.KeyPair{
 					{
 						Key:   "InvalidAttribute",
 						Value: "test-value",
@@ -132,20 +133,20 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 	tests := []struct {
 		name        string
-		transform   *EntityTransform
+		transform   *entity.EntityTransform
 		wantService string
 		wantSource  string
 	}{
 		{
 			name: "TestServiceNameAndSourceTransform",
-			transform: &EntityTransform{
-				KeyAttributes: []KeyPair{
+			transform: &entity.EntityTransform{
+				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
 						Value: "test-service",
 					},
 				},
-				Attributes: []KeyPair{
+				Attributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceNameSource,
 						Value: "UserConfiguration",
@@ -157,8 +158,8 @@ func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 		},
 		{
 			name: "TestServiceNameTransform",
-			transform: &EntityTransform{
-				KeyAttributes: []KeyPair{
+			transform: &entity.EntityTransform{
+				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
 						Value: "test-service",
@@ -170,8 +171,8 @@ func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 		},
 		{
 			name: "TestServiceSourceTransform",
-			transform: &EntityTransform{
-				Attributes: []KeyPair{
+			transform: &entity.EntityTransform{
+				Attributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceNameSource,
 						Value: "UserConfiguration",
