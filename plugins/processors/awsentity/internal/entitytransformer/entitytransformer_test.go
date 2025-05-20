@@ -4,13 +4,13 @@
 package entitytransformer
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 

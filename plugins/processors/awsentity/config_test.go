@@ -4,12 +4,12 @@
 package awsentity
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 

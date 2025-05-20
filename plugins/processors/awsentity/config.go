@@ -5,10 +5,10 @@ package awsentity
 
 import (
 	"errors"
-	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 
 	"go.opentelemetry.io/collector/component"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 
