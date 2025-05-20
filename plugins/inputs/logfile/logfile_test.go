@@ -18,6 +18,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
@@ -192,39 +193,29 @@ func TestCompressedFile(t *testing.T) {
 
 func TestRestoreState(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfolder, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpfolder)
+	tmpfolder := t.TempDir()
 
 	logFilePath := "/tmp/logfile.log"
 	logFileStateFileName := "_tmp_logfile.log"
 
-	offset := int64(9323)
-	err = os.WriteFile(
-		tmpfolder+string(filepath.Separator)+logFileStateFileName,
-		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
-		os.ModePerm)
-	require.NoError(t, err)
+	offset := state.NewFileOffset(9323)
 
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileStateFolder = tmpfolder
-	roffset, err := tt.restoreState(logFilePath)
+	m := state.NewFileOffsetManager(state.ManagerConfig{StateFileDir: tmpfolder, Name: logFilePath})
+	assert.NoError(t, m.Save(offset))
+
+	roffset, err := m.Restore()
 	require.NoError(t, err)
-	assert.Equal(t, offset, roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+	assert.Equal(t, 0, roffset.Compare(offset), fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset.Get(), offset.Get()))
 
 	// Test negative offset.
-	offset = int64(-8675)
 	err = os.WriteFile(
-		tmpfolder+string(filepath.Separator)+logFileStateFileName,
-		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
-		os.ModePerm)
+		state.FilePath(tmpfolder, logFileStateFileName),
+		[]byte(strconv.FormatInt(-8675, 10)+"\n"+logFilePath),
+		state.FileMode)
 	require.NoError(t, err)
-	roffset, err = tt.restoreState(logFilePath)
+	roffset, err = m.Restore()
 	require.Error(t, err)
-	assert.Equal(t, int64(0), roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
-
-	tt.Stop()
+	assert.Equal(t, uint64(0), roffset.Get(), fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset.Get(), 0))
 }
 
 func TestMultipleFilesForSameConfig(t *testing.T) {
@@ -671,7 +662,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
@@ -721,7 +712,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("100")
@@ -777,7 +768,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
