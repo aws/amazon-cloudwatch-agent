@@ -12,11 +12,11 @@ import (
 )
 
 type EntityTransformer struct {
-	transform *entity.EntityTransform
+	transform *entity.Transform
 	logger    *zap.Logger
 }
 
-func NewEntityTransformer(transform *entity.EntityTransform, logger *zap.Logger) *EntityTransformer {
+func NewEntityTransformer(transform *entity.Transform, logger *zap.Logger) *EntityTransformer {
 	return &EntityTransformer{
 		transform: transform,
 		logger:    logger,

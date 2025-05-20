@@ -9,8 +9,8 @@ type KeyPair struct {
 	Value string `mapstructure:"value"`
 }
 
-// EntityTransform contains configuration for overriding entity attributes
-type EntityTransform struct {
+// Transform contains configuration for overriding entity attributes
+type Transform struct {
 	KeyAttributes []KeyPair `mapstructure:"key_attributes"`
 	Attributes    []KeyPair `mapstructure:"attributes"`
 }

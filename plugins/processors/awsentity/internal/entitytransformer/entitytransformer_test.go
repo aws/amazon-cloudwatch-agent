@@ -15,7 +15,7 @@ import (
 )
 
 func TestNewEntityTransformer(t *testing.T) {
-	entityTransform := &entity.EntityTransform{
+	entityTransform := &entity.Transform{
 		KeyAttributes: []entity.KeyPair{
 			{
 				Key:   entityattributes.ServiceName,
@@ -30,13 +30,13 @@ func TestNewEntityTransformer(t *testing.T) {
 func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 	tests := []struct {
 		name       string
-		transforms *entity.EntityTransform
+		transforms *entity.Transform
 		initial    map[string]string
 		expected   map[string]string
 	}{
 		{
 			name: "TestValidEntityAttributes",
-			transforms: &entity.EntityTransform{
+			transforms: &entity.Transform{
 				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
@@ -76,7 +76,7 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 		},
 		{
 			name: "TestInvalidKeyAttributeTransform",
-			transforms: &entity.EntityTransform{
+			transforms: &entity.Transform{
 				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   "InvalidKey",
@@ -93,7 +93,7 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 		},
 		{
 			name: "TestInvalidAttributeTransform",
-			transforms: &entity.EntityTransform{
+			transforms: &entity.Transform{
 				Attributes: []entity.KeyPair{
 					{
 						Key:   "InvalidAttribute",
@@ -133,13 +133,13 @@ func TestEntityTransformer_ApplyTransformer(t *testing.T) {
 func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 	tests := []struct {
 		name        string
-		transform   *entity.EntityTransform
+		transform   *entity.Transform
 		wantService string
 		wantSource  string
 	}{
 		{
 			name: "TestServiceNameAndSourceTransform",
-			transform: &entity.EntityTransform{
+			transform: &entity.Transform{
 				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
@@ -158,7 +158,7 @@ func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 		},
 		{
 			name: "TestServiceNameTransform",
-			transform: &entity.EntityTransform{
+			transform: &entity.Transform{
 				KeyAttributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceName,
@@ -171,7 +171,7 @@ func TestEntityTransformer_GetTransformedServiceName(t *testing.T) {
 		},
 		{
 			name: "TestServiceSourceTransform",
-			transform: &entity.EntityTransform{
+			transform: &entity.Transform{
 				Attributes: []entity.KeyPair{
 					{
 						Key:   entityattributes.ServiceNameSource,

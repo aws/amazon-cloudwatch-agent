@@ -54,7 +54,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			expected: &Config{
 				EntityType: entityattributes.Service,
 				Platform:   "ec2",
-				TransformEntity: &entity.EntityTransform{
+				TransformEntity: &entity.Transform{
 					KeyAttributes: []entity.KeyPair{
 						{
 							Key:   entityattributes.ServiceName,

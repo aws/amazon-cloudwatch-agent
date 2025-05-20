@@ -569,7 +569,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			},
 			config: &Config{
 				EntityType: attributeService,
-				TransformEntity: &entity.EntityTransform{
+				TransformEntity: &entity.Transform{
 					KeyAttributes: []entity.KeyPair{
 						{
 							Key:   "Name",
@@ -604,7 +604,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			},
 			config: &Config{
 				EntityType: attributeService,
-				TransformEntity: &entity.EntityTransform{
+				TransformEntity: &entity.Transform{
 					KeyAttributes: []entity.KeyPair{
 						{
 							Key:   "Name",
