@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
@@ -47,8 +49,13 @@ func ExecuteAgentCommand(command string, flags map[string]*string) error {
 
 	log.Printf("Executing %s with arguments: %v", paths.AgentBinaryPath, args)
 
+	agentPath, err := findAgentBinary(paths.AgentBinaryPath)
+	if err != nil {
+		// Handle error appropriately
+		return err
+	}
 	// Use execCommand instead of exec.Command directly
-	cmd := execCommand(paths.AgentBinaryPath, args...)
+	cmd := execCommand(agentPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -59,9 +66,34 @@ func ExecuteAgentCommand(command string, flags map[string]*string) error {
 			log.Panicf("E! Translation process exited with non-zero status: %d, err: %v",
 				exitErr.ExitCode(), exitErr)
 		}
-		log.Panicf("E! Translation process failed. Error: %v", err)
+		log.Panicf("E! %s failed. Error: %v", command, err)
 		return err
 	}
 
 	return nil
+}
+
+func findAgentBinary(path string) (string, error) {
+	// check if the binary is at the normal path
+	if _, err := os.Stat(path); err == nil {
+		return path, nil
+	}
+
+	// if not, check in the current executable's directory
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current executable path: %w", err)
+	}
+	execDir := filepath.Dir(execPath)
+	alternatePath := filepath.Join(execDir, "amazon-cloudwatch-agent")
+	if runtime.GOOS == "windows" {
+		alternatePath += ".exe"
+	}
+
+	// check again with alternate path
+	if _, err := os.Stat(alternatePath); err == nil {
+		return alternatePath, nil
+	}
+
+	return "", fmt.Errorf("amazon-cloudwatch-agent binary cannot be found")
 }
