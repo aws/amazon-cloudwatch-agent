@@ -4,6 +4,9 @@
 package pusher
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -14,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
@@ -27,7 +31,8 @@ func TestTargetManager(t *testing.T) {
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 
 		assert.NoError(t, err)
@@ -44,7 +49,8 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 
 		assert.NoError(t, err)
@@ -61,7 +67,8 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 
 		assert.NoError(t, err)
@@ -78,7 +85,8 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.AccessDeniedException{}).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 
 		assert.Error(t, err)
@@ -95,7 +103,8 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 
 		assert.NoError(t, err)
@@ -112,7 +121,8 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("CreateLogGroup", mock.Anything).
 			Return(&cloudwatchlogs.CreateLogGroupOutput{}, awserr.New("SomeAWSError", "Failed to create log group", nil)).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 
 		assert.Error(t, err)
@@ -135,7 +145,8 @@ func TestTargetManager(t *testing.T) {
 		}, nil).Once()
 		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 		// Wait for async operations to complete
@@ -158,7 +169,8 @@ func TestTargetManager(t *testing.T) {
 			},
 		}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 		time.Sleep(100 * time.Millisecond)
@@ -176,7 +188,8 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("DescribeLogGroups", mock.Anything).
 			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 		time.Sleep(30 * time.Second)
@@ -203,7 +216,8 @@ func TestTargetManager(t *testing.T) {
 			Return(&cloudwatchlogs.PutRetentionPolicyOutput{},
 				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 		time.Sleep(30 * time.Second)
@@ -216,7 +230,8 @@ func TestTargetManager(t *testing.T) {
 
 		mockService := new(mockLogsService)
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		manager.PutRetentionPolicy(target)
 
 		mockService.AssertNotCalled(t, "PutRetentionPolicy", mock.Anything)
@@ -237,7 +252,8 @@ func TestTargetManager(t *testing.T) {
 			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
 		}
 
-		manager := NewTargetManager(logger, service)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, service, tempDir)
 		var wg sync.WaitGroup
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
@@ -263,7 +279,8 @@ func TestTargetManager(t *testing.T) {
 			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
 		}
 
-		manager := NewTargetManager(logger, service)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, service, tempDir)
 		manager.(*targetManager).cacheTTL = 50 * time.Millisecond
 		for i := 0; i < 10; i++ {
 			err := manager.InitTarget(target)
@@ -288,7 +305,8 @@ func TestTargetManager(t *testing.T) {
 		mockService := new(mockLogsService)
 		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 
@@ -311,7 +329,8 @@ func TestTargetManager(t *testing.T) {
 			return *input.LogGroupName == target.Group && *input.RetentionInDays == int64(target.Retention)
 		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 
@@ -332,7 +351,8 @@ func TestTargetManager(t *testing.T) {
 		// fails but should retry
 		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, awserr.New("InternalError", "Internal error", nil)).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
+		tempDir := t.TempDir()
+		manager := NewTargetManager(logger, mockService, tempDir)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 
@@ -341,6 +361,103 @@ func TestTargetManager(t *testing.T) {
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "DescribeLogGroups")
 		assertCacheLen(t, manager, 1)
+	})
+}
+
+func TestTargetManagerWithTTL(t *testing.T) {
+	logger := testutil.NewNopLogger()
+
+	t.Run("TTLExpired_CallsAPI", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := Target{Group: "TestGroup", Stream: "TestStream", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String(target.Group),
+					RetentionInDays: aws.Int64(0),
+				},
+			},
+		}, nil).Once()
+		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService, tempDir)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+		time.Sleep(200 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
+
+		manager.Stop()
+		time.Sleep(200 * time.Millisecond)
+
+		ttlFilePath := filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName)
+		content, err := os.ReadFile(ttlFilePath)
+		assert.NoError(t, err)
+		assert.Contains(t, string(content), escapeLogGroup(target.Group))
+	})
+
+	t.Run("TTLNotExpired_SkipsAPI", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := Target{Group: "TestGroup", Stream: "TestStream", Retention: 7}
+
+		// Create a TTL file with a recent timestamp
+		ttlFilePath := filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName)
+		now := time.Now()
+		content := escapeLogGroup(target.Group) + ":" + strconv.FormatInt(now.UnixMilli(), 10) + "\n"
+		err := os.WriteFile(ttlFilePath, []byte(content), 0644)
+		assert.NoError(t, err)
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		// DescribeLogGroups should not be called because TTL is not expired
+
+		manager := NewTargetManager(logger, mockService, tempDir)
+		err = manager.InitTarget(target)
+		assert.NoError(t, err)
+		time.Sleep(100 * time.Millisecond)
+
+		manager.Stop()
+		time.Sleep(100 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
+		mockService.AssertNotCalled(t, "DescribeLogGroups")
+		mockService.AssertNotCalled(t, "PutRetentionPolicy")
+
+		_, err = os.Stat(ttlFilePath)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Stop_SavesTTLState", func(t *testing.T) {
+		tempDir := t.TempDir()
+		target := Target{Group: "TestGroup", Stream: "TestStream", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String(target.Group),
+					RetentionInDays: aws.Int64(0),
+				},
+			},
+		}, nil).Once()
+		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService, tempDir)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+		time.Sleep(200 * time.Millisecond)
+
+		manager.Stop()
+		time.Sleep(200 * time.Millisecond)
+
+		ttlFilePath := filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName)
+		content, err := os.ReadFile(ttlFilePath)
+		assert.NoError(t, err)
+		assert.Contains(t, string(content), escapeLogGroup(target.Group))
 	})
 }
 
