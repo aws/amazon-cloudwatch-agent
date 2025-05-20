@@ -552,7 +552,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			},
 		},
 		{
-			name:                          "ResourceAttributeWithEntityOverride",
+			name:                          "ResourceAttributeWithEntityTransform",
 			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
@@ -586,7 +586,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			},
 		},
 		{
-			name:                          "ResourceAttributeWithEntityOverrideAndInstrumentation",
+			name:                          "ResourceAttributeWithEntityTransformAndInstrumentation",
 			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeServiceName, "test-service"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),

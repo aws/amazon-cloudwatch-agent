@@ -28,7 +28,7 @@ func TestUnmarshalConfig(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "TestValidEntityOverride",
+			name: "TestValidEntityTransform",
 			conf: confmap.NewFromStringMap(map[string]interface{}{
 				"entity_type": entityattributes.Service,
 				"platform":    "ec2",
@@ -76,7 +76,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "TestInvalidEntityOverride",
+			name: "TestInvalidEntityTransform",
 			conf: confmap.NewFromStringMap(map[string]interface{}{
 				"entity_type": entityattributes.Service,
 				"platform":    "ec2",
@@ -92,7 +92,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "TestEmptyEntityOverride",
+			name: "TestEmptyEntityTransform",
 			conf: confmap.NewFromStringMap(map[string]interface{}{
 				"entity_type": entityattributes.Service,
 				"platform":    "ec2",
@@ -104,7 +104,7 @@ func TestUnmarshalConfig(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "TestMissingRequiredFieldEntityOverride",
+			name: "TestMissingRequiredFieldEntityTransform",
 			conf: confmap.NewFromStringMap(map[string]interface{}{
 				"transform_entity": map[string]interface{}{
 					"key_attributes": []interface{}{
