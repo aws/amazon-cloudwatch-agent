@@ -311,7 +311,9 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
 						// Instrumentation Service Name Source has highest priority
 						// Therefore only apply when service name source is not
-						// Instrumentation
+						// Instrumentation. Service instrumented with "unknown_service" name
+						// will not be an issue since we have logics to modify it with propoer
+						// service name and source
 						p.entityTransformer.ApplyTransforms(resourceAttrs)
 					}
 
