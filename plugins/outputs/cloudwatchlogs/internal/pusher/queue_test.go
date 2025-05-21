@@ -678,7 +678,8 @@ func testPreparationWithLogger(
 	t.Helper()
 	stop := make(chan struct{})
 	tempDir := t.TempDir()
-	os.Create(filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName))
+	file, _ := os.Create(filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName))
+	file.Close()
 	tm := NewTargetManager(logger, service, tempDir)
 	s := newSender(logger, service, tm, retryDuration, stop)
 	q := newQueue(
