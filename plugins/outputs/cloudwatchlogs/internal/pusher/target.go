@@ -46,7 +46,7 @@ type targetManager struct {
 	dlg      chan Target
 	prp      chan Target
 	// cache of most recent retention policy changes
-	retentionPolicyTTL *retentionPolicyTTL
+	retentionPolicyTTL *RetentionPolicyTTL
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService, fileStateFolder string) TargetManager {

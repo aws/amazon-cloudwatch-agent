@@ -144,7 +144,7 @@ func TestRetentionPolicyTTL(t *testing.T) {
 		content := "group1:" + strconv.FormatInt(nowMillis, 10) + "\n" +
 			"group2:" + strconv.FormatInt(nowMillis+60000, 10) + "\n"
 
-		err := os.WriteFile(stateFilePath, []byte(content), 0644)
+		err := os.WriteFile(stateFilePath, []byte(content), 0644) // nolint:gosec
 		assert.NoError(t, err)
 
 		// Create a new TTL instance that will load the file
@@ -172,7 +172,7 @@ func TestRetentionPolicyTTL(t *testing.T) {
 			"\n" + // Empty line should be skipped
 			"invalid_line_no_separator\n"
 
-		err := os.WriteFile(stateFilePath, []byte(content), 0644)
+		err := os.WriteFile(stateFilePath, []byte(content), 0644) // nolint:gosec
 		assert.NoError(t, err)
 
 		ttl := NewRetentionPolicyTTL(logger, tempDir)

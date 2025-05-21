@@ -27,7 +27,7 @@ type payload struct {
 	timestamp time.Time
 }
 
-type retentionPolicyTTL struct {
+type RetentionPolicyTTL struct {
 	logger        telegraf.Logger
 	stateFilePath string
 	// oldTimestamps come from the TTL file on agent start. Key is escaped group name
@@ -39,8 +39,8 @@ type retentionPolicyTTL struct {
 	done          chan struct{}
 }
 
-func NewRetentionPolicyTTL(logger telegraf.Logger, fileStatePath string) *retentionPolicyTTL {
-	r := &retentionPolicyTTL{
+func NewRetentionPolicyTTL(logger telegraf.Logger, fileStatePath string) *RetentionPolicyTTL {
+	r := &RetentionPolicyTTL{
 		logger:        logger,
 		stateFilePath: filepath.Join(fileStatePath, logscommon.RetentionPolicyTTLFileName),
 		oldTimestamps: make(map[string]time.Time),
@@ -55,19 +55,19 @@ func NewRetentionPolicyTTL(logger telegraf.Logger, fileStatePath string) *retent
 }
 
 // Update will update the newTimestamps to the current time that will later be persisted to disk.
-func (r *retentionPolicyTTL) Update(group string) {
+func (r *RetentionPolicyTTL) Update(group string) {
 	r.ch <- payload{
 		group:     group,
 		timestamp: time.Now(),
 	}
 }
 
-func (r *retentionPolicyTTL) Done() {
+func (r *RetentionPolicyTTL) Done() {
 	close(r.done)
 }
 
 // IsExpired checks from the timestamps in the read state file at the agent start.
-func (r *retentionPolicyTTL) IsExpired(group string) bool {
+func (r *RetentionPolicyTTL) IsExpired(group string) bool {
 	if ts, ok := r.oldTimestamps[escapeLogGroup(group)]; ok {
 		return ts.Add(ttlTime).Before(time.Now())
 	}
@@ -76,7 +76,7 @@ func (r *retentionPolicyTTL) IsExpired(group string) bool {
 }
 
 // UpdateFromFile updates the newTimestamps cache using the timestamp from the loaded state file.
-func (r *retentionPolicyTTL) UpdateFromFile(group string) {
+func (r *RetentionPolicyTTL) UpdateFromFile(group string) {
 	if oldTs, ok := r.oldTimestamps[escapeLogGroup(group)]; ok {
 		r.ch <- payload{
 			group:     group,
@@ -85,7 +85,7 @@ func (r *retentionPolicyTTL) UpdateFromFile(group string) {
 	}
 }
 
-func (r *retentionPolicyTTL) loadTTLState() {
+func (r *RetentionPolicyTTL) loadTTLState() {
 	if _, err := os.Stat(r.stateFilePath); err != nil {
 		r.logger.Debug("retention policy ttl state file does not exist")
 		return
@@ -125,7 +125,7 @@ func (r *retentionPolicyTTL) loadTTLState() {
 	}
 }
 
-func (r *retentionPolicyTTL) process() {
+func (r *RetentionPolicyTTL) process() {
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -142,13 +142,13 @@ func (r *retentionPolicyTTL) process() {
 	}
 }
 
-func (r *retentionPolicyTTL) updateTimestamp(group string, timestamp time.Time) {
+func (r *RetentionPolicyTTL) updateTimestamp(group string, timestamp time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.newTimestamps[escapeLogGroup(group)] = timestamp
 }
 
-func (r *retentionPolicyTTL) saveTTLState() {
+func (r *RetentionPolicyTTL) saveTTLState() {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -157,16 +157,16 @@ func (r *retentionPolicyTTL) saveTTLState() {
 		buf.Write([]byte(group + ":" + strconv.FormatInt(timestamp.UnixMilli(), 10) + "\n"))
 	}
 
-	err := os.WriteFile(r.stateFilePath, buf.Bytes(), 0644)
+	err := os.WriteFile(r.stateFilePath, buf.Bytes(), 0644) // nolint:gosec
 	if err != nil {
 		r.logger.Errorf("unable to write retention policy ttl state file: %v", err)
 	}
 }
 
-func escapeLogGroup(group string) (escapedLogGroup string) {
-	escapedLogGroup = filepath.ToSlash(group)
+func escapeLogGroup(group string) string {
+	escapedLogGroup := filepath.ToSlash(group)
 	escapedLogGroup = strings.Replace(escapedLogGroup, "/", "_", -1)
 	escapedLogGroup = strings.Replace(escapedLogGroup, " ", "_", -1)
 	escapedLogGroup = strings.Replace(escapedLogGroup, ":", "_", -1)
-	return
+	return escapedLogGroup
 }

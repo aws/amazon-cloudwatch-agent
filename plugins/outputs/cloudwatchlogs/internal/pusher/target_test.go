@@ -407,7 +407,7 @@ func TestTargetManagerWithTTL(t *testing.T) {
 		ttlFilePath := filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName)
 		now := time.Now()
 		content := escapeLogGroup(target.Group) + ":" + strconv.FormatInt(now.UnixMilli(), 10) + "\n"
-		err := os.WriteFile(ttlFilePath, []byte(content), 0644)
+		err := os.WriteFile(ttlFilePath, []byte(content), 0644) // nolint:gosec
 		assert.NoError(t, err)
 
 		mockService := new(mockLogsService)
