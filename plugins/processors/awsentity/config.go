@@ -4,7 +4,12 @@
 package awsentity
 
 import (
+	"errors"
+
 	"go.opentelemetry.io/collector/component"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 )
 
 type Config struct {
@@ -23,11 +28,34 @@ type Config struct {
 	// EntityType determines the type of entity processing done for
 	// telemetry. Possible values are Service and Resource
 	EntityType string `mapstructure:"entity_type,omitempty"`
+	// TransformEntity contains configuration for overriding entity attributes
+	TransformEntity *entity.Transform `mapstructure:"transform_entity,omitempty"`
 }
 
 // Verify Config implements Processor interface.
 var _ component.Config = (*Config)(nil)
 
 func (cfg *Config) Validate() error {
+	if cfg.TransformEntity != nil {
+		// Validate key attributes
+		for _, keyAttr := range cfg.TransformEntity.KeyAttributes {
+			if !entityattributes.IsAllowedKeyAttribute(keyAttr.Key) {
+				return errors.New("Invalid key attribute name for entity: " + keyAttr.Key)
+			}
+			if keyAttr.Value == "" {
+				return errors.New("empty value for entity key attribute")
+			}
+		}
+
+		// Validate regular attributes
+		for _, attr := range cfg.TransformEntity.Attributes {
+			if !entityattributes.IsAllowedAttribute(attr.Key) {
+				return errors.New("Invalid attribute name for entity: " + attr.Key)
+			}
+			if attr.Value == "" {
+				return errors.New("empty value for entity attribute")
+			}
+		}
+	}
 	return nil
 }
