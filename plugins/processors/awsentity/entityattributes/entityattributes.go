@@ -125,24 +125,14 @@ func GetFullAttributeName(shortName string) (string, bool) {
 
 // IsAllowedKeyAttribute checks if the given key is an allowed entity key attribute name
 func IsAllowedKeyAttribute(key string) bool {
-	// Check if the key matches any of the values in keyAttributeEntityToShortNameMap
-	for _, shortName := range keyAttributeEntityToShortNameMap {
-		if key == shortName {
-			return true
-		}
-	}
-	return false
+	_, exists := keyAttributeEntityToLongNameMap[key]
+	return exists
 }
 
 // IsAllowedAttribute checks if the given key is an allowed attribute name
 func IsAllowedAttribute(key string) bool {
-	// Check if the key matches any of the values in attributeEntityToShortNameMap
-	for _, shortName := range attributeEntityToShortNameMap {
-		if key == shortName {
-			return true
-		}
-	}
-	return false
+	_, exists := attributeEntityToLongNameMap[key]
+	return exists
 }
 
 func CreateCloudWatchEntityFromAttributes(resourceAttributes pcommon.Map) cloudwatch.Entity {

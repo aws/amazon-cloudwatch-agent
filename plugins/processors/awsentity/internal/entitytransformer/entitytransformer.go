@@ -46,24 +46,3 @@ func (p *EntityTransformer) ApplyTransforms(resourceAttrs pcommon.Map) {
 		}
 	}
 }
-
-func (p *EntityTransformer) GetOverriddenServiceName() (string, string) {
-	if p.transform == nil {
-		return "", ""
-	}
-
-	var serviceName, source string
-	for _, keyAttr := range p.transform.KeyAttributes {
-		if keyAttr.Key == entityattributes.ServiceName {
-			serviceName = keyAttr.Value
-		}
-	}
-
-	for _, attr := range p.transform.Attributes {
-		if attr.Key == entityattributes.ServiceNameSource {
-			source = attr.Value
-		}
-	}
-
-	return serviceName, source
-}
