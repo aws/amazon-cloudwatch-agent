@@ -19,7 +19,45 @@ exporters:
               - InstanceType
             - - d1
             - []
+    awsemf:
+        add_entity: true
+        certificate_file_path: ""
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: https://logs-fips.us-west-2.amazonaws.com
+        enhanced_container_insights: false
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/cwagent
+        log_retention: 0
+        log_stream_name: ""
+        max_retries: 2
+        middleware: agenthealth/logs
+        namespace: CWAgent
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: log_role_arn_value_test
+        version: "0"
 extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/metrics:
         is_usage_data_enabled: true
         stats:
@@ -43,6 +81,49 @@ processors:
         entity_type: Service
         platform: ec2
         scrape_datapoint_attribute: true
+    awsentity/service/otlp/cloudwatch:
+        entity_type: Service
+        platform: ec2
+        transform_entity:
+            key_attributes:
+                - key: Name
+                  value: agent-level-service
+                - key: Environment
+                  value: agent-level-environment
+            attributes:
+                - key: AWS.ServiceNameSource
+                  value: UserConfiguration
+    awsentity/service/otlp/cloudwatchlogs:
+        entity_type: Service
+        platform: ec2
+        transform_entity:
+            key_attributes:
+                - key: Name
+                  value: agent-level-service
+                - key: Environment
+                  value: agent-level-environment
+            attributes:
+                - key: AWS.ServiceNameSource
+                  value: UserConfiguration
+    batch/hostOtlpMetrics/cloudwatchlogs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    cumulativetodelta/hostOtlpMetrics:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -55,6 +136,29 @@ processors:
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
+    otlp/metrics:
+        protocols:
+            grpc:
+                dialer:
+                    timeout: 0s
+                endpoint: 127.0.0.1:4317
+                include_metadata: false
+                max_concurrent_streams: 0
+                max_recv_msg_size_mib: 0
+                read_buffer_size: 524288
+                transport: tcp
+                write_buffer_size: 0
+            http:
+                endpoint: 127.0.0.1:4318
+                idle_timeout: 0s
+                include_metadata: false
+                logs_url_path: /v1/logs
+                max_request_body_size: 0
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
     telegraf_socket_listener:
         collection_interval: 10s
         initial_delay: 1s
@@ -67,6 +171,7 @@ service:
     extensions:
         - agenthealth/metrics
         - agenthealth/statuscode
+        - agenthealth/logs
         - entitystore
     pipelines:
         metrics/hostCustomMetrics:
@@ -78,6 +183,24 @@ service:
             receivers:
                 - telegraf_statsd
                 - telegraf_socket_listener
+        metrics/hostOtlpMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - awsentity/service/otlp/cloudwatch
+                - cumulativetodelta/hostOtlpMetrics
+                - ec2tagger
+            receivers:
+                - otlp/metrics
+        metrics/hostOtlpMetrics/cloudwatchlogs:
+            exporters:
+                - awsemf
+            processors:
+                - awsentity/service/otlp/cloudwatchlogs
+                - batch/hostOtlpMetrics/cloudwatchlogs
+                - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+            receivers:
+                - otlp/metrics
     telemetry:
         logs:
             development: false

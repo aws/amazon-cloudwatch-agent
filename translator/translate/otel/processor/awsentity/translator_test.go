@@ -9,9 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -21,6 +23,7 @@ func TestTranslate(t *testing.T) {
 		mode           string
 		kubernetesMode string
 		envClusterName string
+		inputTransform *entity.Transform
 		want           *awsentity.Config
 	}{
 		"OnlyProfile": {
@@ -113,6 +116,41 @@ func TestTranslate(t *testing.T) {
 			mode:  config.ModeECS,
 			want:  nil,
 		},
+		"EC2WithTransform": {
+			input: map[string]interface{}{},
+			mode:  config.ModeEC2,
+			inputTransform: &entity.Transform{
+				KeyAttributes: []entity.KeyPair{
+					{
+						Key:   "Name",
+						Value: "test-service",
+					},
+				},
+				Attributes: []entity.KeyPair{
+					{
+						Key:   "AWS.ServiceNameSource",
+						Value: "UserConfiguration",
+					},
+				},
+			},
+			want: &awsentity.Config{
+				Platform: config.ModeEC2,
+				TransformEntity: &entity.Transform{
+					KeyAttributes: []entity.KeyPair{
+						{
+							Key:   "Name",
+							Value: "test-service",
+						},
+					},
+					Attributes: []entity.KeyPair{
+						{
+							Key:   "AWS.ServiceNameSource",
+							Value: "UserConfiguration",
+						},
+					},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -130,7 +168,12 @@ func TestTranslate(t *testing.T) {
 			} else {
 				t.Setenv("K8S_CLUSTER_NAME", "")
 			}
-			tt := NewTranslator()
+			var tt common.ComponentTranslator
+			if testCase.inputTransform != nil {
+				tt = NewTranslatorWithEntityTypeAndTransform("", "", false, testCase.inputTransform)
+			} else {
+				tt = NewTranslator()
+			}
 			assert.Equal(t, "awsentity", tt.ID().String())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)

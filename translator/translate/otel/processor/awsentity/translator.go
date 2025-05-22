@@ -10,7 +10,9 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
@@ -27,6 +29,7 @@ type translator struct {
 	entityType               string
 	name                     string
 	scrapeDatapointAttribute bool
+	transform                *entity.Transform
 }
 
 func NewTranslator() common.ComponentTranslator {
@@ -46,6 +49,21 @@ func NewTranslatorWithEntityType(entityType string, name string, scrapeDatapoint
 		entityType:               entityType,
 		name:                     pipelineName,
 		scrapeDatapointAttribute: scrapeDatapointAttribute,
+	}
+}
+
+func NewTranslatorWithEntityTypeAndTransform(entityType string, name string, scrapeDatapointAttribute bool, transform *entity.Transform) common.ComponentTranslator {
+	pipelineName := strings.ToLower(entityType)
+	if name != "" {
+		pipelineName = pipelineName + "/" + name
+	}
+
+	return &translator{
+		factory:                  awsentity.NewFactory(),
+		entityType:               entityType,
+		name:                     pipelineName,
+		scrapeDatapointAttribute: scrapeDatapointAttribute,
+		transform:                transform,
 	}
 }
 
@@ -72,6 +90,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.KubernetesMode = ctx.KubernetesMode()
+	// We want to keep platform config variable to be
+	// anything that is non-Kubernetes related so the
+	// processor can perform different logics for EKS
+	// in EC2 or Non-EC2
+	cfg.Platform = ctx.Mode()
 
 	if cfg.KubernetesMode != "" {
 		clusterName, clusterNameConfigured := common.GetHostedIn(conf)
@@ -81,12 +104,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 
 		cfg.ClusterName = clusterName
+	} else if cfg.Platform == config.ModeEC2 {
+		if t.transform != nil {
+			cfg.TransformEntity = t.transform
+		}
 	}
 
-	// We want to keep platform config variable to be
-	// anything that is non-Kubernetes related so the
-	// processor can perform different logics for EKS
-	// in EC2 or Non-EC2
-	cfg.Platform = ctx.Mode()
 	return cfg, nil
 }

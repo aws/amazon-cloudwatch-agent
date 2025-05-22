@@ -15,6 +15,12 @@
     "deployment.environment": "agent-level-environment"
   },
   "logs": {
+    "metrics_collected": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    },
     "logs_collected": {
       "files": {
         "collect_list": [
@@ -48,6 +54,10 @@
   },
   "metrics": {
     "metrics_collected": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      },
       "collectd": {
         "service_address": "udp://127.0.0.1:25826",
         "name_prefix": "collectd_",
