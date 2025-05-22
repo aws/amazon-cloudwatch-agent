@@ -45,6 +45,8 @@ type Distribution interface {
 	ConvertToOtel(dp pmetric.HistogramDataPoint)
 
 	ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string)
+
+	Resize(listMaxSize int) []Distribution
 }
 
 var NewDistribution func() Distribution
