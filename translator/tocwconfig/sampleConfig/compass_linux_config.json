@@ -17,6 +17,8 @@
   "logs": {
     "metrics_collected": {
       "otlp": {
+        "service.name": "otlp-level-service",
+        "deployment.environment": "otlp-level-environment",
         "grpc_endpoint": "127.0.0.1:4317",
         "http_endpoint": "127.0.0.1:4318"
       }

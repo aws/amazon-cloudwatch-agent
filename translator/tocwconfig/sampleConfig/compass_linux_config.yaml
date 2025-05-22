@@ -99,9 +99,9 @@ processors:
         transform_entity:
             key_attributes:
                 - key: Name
-                  value: agent-level-service
+                  value: otlp-level-service
                 - key: Environment
-                  value: agent-level-environment
+                  value: otlp-level-environment
             attributes:
                 - key: AWS.ServiceNameSource
                   value: UserConfiguration
