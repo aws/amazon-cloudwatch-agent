@@ -14,6 +14,12 @@ Bug Fixes:
 * [Metrics/nvidia_gpu] Update V12 XML schema for missing power_draw
 
 ========================================================================
+Amazon CloudWatch Agent 1.300055.2 (2025-05-14)
+========================================================================
+Bug Fixes:
+* [ContainerInsights] Fix endpoint slice to capture service name instead of slice name
+
+========================================================================
 Amazon CloudWatch Agent 1.300055.1 (2025-04-30)
 ========================================================================
 Enhancements:
