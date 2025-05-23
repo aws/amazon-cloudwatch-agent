@@ -66,7 +66,7 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, string, stateManager state.FileOffsetManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileOffsetManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -144,7 +144,8 @@ func (w *windowsEventLog) run() {
 			shouldResubscribe = true
 		case <-ticker.C:
 			if shouldResubscribe {
-				w.eventOffset = w.loadState()
+				offset, _ := w.stateManager.Restore()
+				w.eventOffset = offset.Get()
 				if err := w.resubscribe(); err != nil {
 					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
 					retryCount++

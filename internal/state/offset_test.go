@@ -174,6 +174,7 @@ func TestFileOffsetManager(t *testing.T) {
 		assert.Equal(t, offset2.Get(), restored.Get())
 
 		close(notification.Done)
+		wg.Wait()
 	})
 	t.Run("Run/Notification/Delete", func(t *testing.T) {
 		t.Parallel()
