@@ -94,7 +94,5 @@ func createProcessor(
 	if !ok {
 		return nil, errors.New("could not initialize awsapplicationsignalsprocessor")
 	}
-	ap := &awsapplicationsignalsprocessor{logger: params.Logger, config: pCfg}
-
-	return ap, nil
+	return newProcessor(params.Logger, pCfg), nil
 }

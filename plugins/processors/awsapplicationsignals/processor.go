@@ -5,6 +5,7 @@ package awsapplicationsignals
 
 import (
 	"context"
+	"fmt"
 	"unicode"
 
 	"go.opentelemetry.io/collector/component"
@@ -29,8 +30,6 @@ const (
 	failedToProcessAttributeWithLimiter = "failed to process attributes with limiter, keep the data"
 )
 
-var metricCaser = cases.Title(language.English)
-
 // this is used to Process some attributes (like IP addresses) to a generic form to reduce high cardinality
 type attributesMutator interface {
 	Process(attributes, resourceAttributes pcommon.Map, isTrace bool) error
@@ -54,6 +53,11 @@ type awsapplicationsignalsprocessor struct {
 	limiter            cardinalitycontrol.Limiter
 	aggregationMutator metrichandlers.AggregationMutator
 	stoppers           []stopper
+	caser              transform.Transformer
+}
+
+func newProcessor(logger *zap.Logger, cfg *appsignalsconfig.Config) *awsapplicationsignalsprocessor {
+	return &awsapplicationsignalsprocessor{logger: logger, config: cfg, caser: cases.Title(language.English)}
 }
 
 func (ap *awsapplicationsignalsprocessor) StartMetrics(ctx context.Context, _ component.Host) error {
@@ -139,22 +143,21 @@ func (ap *awsapplicationsignalsprocessor) processMetrics(ctx context.Context, md
 		resourceAttributes := rs.Resource().Attributes()
 		for j := 0; j < ilms.Len(); j++ {
 			ils := ilms.At(j)
-			metrics := ils.Metrics()
-			for k := 0; k < metrics.Len(); k++ {
-				m := metrics.At(k)
+			ils.Metrics().RemoveIf(func(m pmetric.Metric) bool {
 				name := m.Name()
 				// Check if the first letter of the metric name is not capitalized
 				if len(name) > 0 && !unicode.IsUpper(rune(name[0])) {
-					result, _, err := transform.String(metricCaser, name) // Ensure metric name is in sentence case
+					result, err := safeCapitalize(ap.caser, name) // Ensure metric name is in sentence case
 					if err != nil {
 						ap.logger.Error("Failed to capitalize name. Skipping metric.", zap.String("name", name), zap.Error(err))
-						continue
+						return true
 					}
 					m.SetName(result)
 				}
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 				ap.aggregationMutator.ProcessMetrics(ctx, m, resourceAttributes)
-			}
+				return false
+			})
 		}
 	}
 	return md, nil
@@ -344,4 +347,15 @@ func (ap *awsapplicationsignalsprocessor) processMetricAttributes(_ context.Cont
 	default:
 		ap.logger.Debug("Ignore unknown metric type", zap.String("type", m.Type().String()))
 	}
+}
+
+func safeCapitalize(caser transform.Transformer, name string) (result string, err error) { //nolint:nonamedreturns
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("unable to capitalize: %v", r)
+		}
+	}()
+
+	result, _, err = transform.String(caser, name)
+	return result, err
 }
