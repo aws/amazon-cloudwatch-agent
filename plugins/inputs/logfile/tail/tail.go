@@ -87,7 +87,7 @@ type Tail struct {
 
 	lk sync.Mutex
 
-	FileDeletedCh chan bool
+	FileDeletedCh chan struct{}
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -103,7 +103,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		Filename:      filename,
 		Lines:         make(chan *Line),
 		Config:        config,
-		FileDeletedCh: make(chan bool),
+		FileDeletedCh: make(chan struct{}),
 	}
 
 	// when Logger was not specified in config, create new one
