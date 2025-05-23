@@ -73,7 +73,11 @@ func TestAddFlags(t *testing.T) {
 func TestExecuteAgentCommand_HappyPath(t *testing.T) {
 	// Save the original execCommand and restore it after the test
 	originalExecCommand := execCommand
-	defer func() { execCommand = originalExecCommand }()
+	originalFindAgentBinary := findAgentBinary
+	defer func() {
+		execCommand = originalExecCommand
+		findAgentBinary = originalFindAgentBinary
+	}()
 
 	var capturedPath string
 	var capturedArgs []string
@@ -86,6 +90,10 @@ func TestExecuteAgentCommand_HappyPath(t *testing.T) {
 		// Use "echo" as a no-op command that will succeed
 		cmd := exec.Command("echo", "1")
 		return cmd
+	}
+	// Mock findAgentBinary to always return the agent binary path without checking if it exists
+	findAgentBinary = func(path string) (string, error) {
+		return paths.AgentBinaryPath, nil
 	}
 
 	// Test data
