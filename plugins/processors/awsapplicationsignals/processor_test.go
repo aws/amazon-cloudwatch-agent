@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
+	"golang.org/x/text/transform"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
@@ -58,13 +59,10 @@ var testRules = []rules.Rule{
 
 func TestProcessMetrics(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	ap := &awsapplicationsignalsprocessor{
-		logger: logger,
-		config: &config.Config{
-			Resolvers: []config.Resolver{config.NewGenericResolver("")},
-			Rules:     testRules,
-		},
-	}
+	ap := newProcessor(logger, &config.Config{
+		Resolvers: []config.Resolver{config.NewGenericResolver("")},
+		Rules:     testRules,
+	})
 
 	ctx := context.Background()
 	ap.StartMetrics(ctx, nil)
@@ -106,13 +104,10 @@ func TestProcessMetrics(t *testing.T) {
 
 func TestProcessMetricsLowercase(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	ap := &awsapplicationsignalsprocessor{
-		logger: logger,
-		config: &config.Config{
-			Resolvers: []config.Resolver{config.NewGenericResolver("")},
-			Rules:     testRules,
-		},
-	}
+	ap := newProcessor(logger, &config.Config{
+		Resolvers: []config.Resolver{config.NewGenericResolver("")},
+		Rules:     testRules,
+	})
 
 	ctx := context.Background()
 	ap.StartMetrics(ctx, nil)
@@ -131,15 +126,37 @@ func TestProcessMetricsLowercase(t *testing.T) {
 	assert.Equal(t, "Fault", lowercaseMetrics.ResourceMetrics().At(2).ScopeMetrics().At(0).Metrics().At(0).Name())
 }
 
+func TestProcessMetricsLowercasePanic(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ap := newProcessor(logger, &config.Config{
+		Resolvers: []config.Resolver{config.NewGenericResolver("")},
+		Rules:     testRules,
+	})
+	ap.caser = &panicTransformer{}
+
+	ctx := context.Background()
+	ap.StartMetrics(ctx, nil)
+
+	lowercaseMetrics := pmetric.NewMetrics()
+	errorMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	errorMetric.SetName("error")
+	latencyMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	latencyMetric.SetName("latency")
+	faultMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	faultMetric.SetName("fault")
+
+	ap.processMetrics(ctx, lowercaseMetrics)
+	assert.Zero(t, lowercaseMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+	assert.Zero(t, lowercaseMetrics.ResourceMetrics().At(1).ScopeMetrics().At(0).Metrics().Len())
+	assert.Zero(t, lowercaseMetrics.ResourceMetrics().At(2).ScopeMetrics().At(0).Metrics().Len())
+}
+
 func TestProcessTraces(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	ap := &awsapplicationsignalsprocessor{
-		logger: logger,
-		config: &config.Config{
-			Resolvers: []config.Resolver{config.NewGenericResolver("")},
-			Rules:     testRules,
-		},
-	}
+	ap := newProcessor(logger, &config.Config{
+		Resolvers: []config.Resolver{config.NewGenericResolver("")},
+		Rules:     testRules,
+	})
 
 	ctx := context.Background()
 	ap.StartTraces(ctx, nil)
@@ -269,3 +286,16 @@ func isMetricNil(m pmetric.Metrics) bool {
 	}
 	return true
 }
+
+type panicTransformer struct {
+}
+
+func (m panicTransformer) Transform(_, _ []byte, _ bool) (int, int, error) {
+	panic("implement me")
+}
+
+func (m panicTransformer) Reset() {
+	panic("implement me")
+}
+
+var _ transform.Transformer = (*panicTransformer)(nil)
