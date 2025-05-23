@@ -422,5 +422,5 @@ func TestTranslateJMX(t *testing.T) {
 	require.True(t, ok)
 	assert.Nil(t, gotCfg.GRPC)
 	assert.NotNil(t, gotCfg.HTTP)
-	assert.Equal(t, "0.0.0.0:4314", gotCfg.HTTP.Endpoint)
+	assert.Equal(t, "0.0.0.0:4314", gotCfg.HTTP.ServerConfig.Endpoint)
 }

@@ -53,6 +53,15 @@ func (m *metricAppender) AppendCTZeroSample(storage.SeriesRef, labels.Labels, in
 	return 0, nil
 }
 
+func (ma *metricAppender) SetOptions(opts *storage.AppendOptions) {
+	// Implement if needed, or leave empty if no special handling is required
+}
+
+func (ma *metricAppender) AppendHistogramCTZeroSample(ref storage.SeriesRef, l labels.Labels, t int64, ct int64, h *histogram.Histogram, fh *histogram.FloatHistogram) (storage.SeriesRef, error) {
+	// Implement basic handling or return nil if not needed
+	return 0, nil
+}
+
 func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
 }

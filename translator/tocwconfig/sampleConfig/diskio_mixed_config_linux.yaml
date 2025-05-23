@@ -53,6 +53,8 @@ processors:
 receivers:
     awsebsnvmereceiver:
         collection_interval: 1m0s
+        devices:
+            - nvme0n1
         initial_delay: 1s
         metrics:
             diskio_ebs_ec2_instance_performance_exceeded_iops:
@@ -80,8 +82,6 @@ receivers:
         resource_attributes:
             VolumeId:
                 enabled: true
-        devices:
-            - nvme0n1
         timeout: 0s
     telegraf_diskio:
         collection_interval: 1m0s
@@ -105,9 +105,6 @@ service:
                 - awsebsnvmereceiver
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -118,7 +115,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

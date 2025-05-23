@@ -3,6 +3,7 @@ exporters:
         certificate_file_path: /etc/test/ca_bundle.pem
         emf_only: true
         endpoint: https://fake_endpoint
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
@@ -27,9 +28,13 @@ exporters:
             randomization_factor: 0.5
         role_arn: ""
         sending_queue:
+            block_on_overflow: false
+            blocking: false
             enabled: true
             num_consumers: 1
             queue_size: 1000
+            sizer: {}
+            wait_for_result: false
     awsemf/containerinsights:
         add_entity: true
         certificate_file_path: /etc/test/ca_bundle.pem
@@ -39,6 +44,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: false
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -199,6 +205,7 @@ receivers:
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
+        external_id: ""
         host_ip: ""
         host_name: ""
         imds_retries: 1
@@ -268,9 +275,6 @@ service:
                 - awscontainerinsightreceiver
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -279,7 +283,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

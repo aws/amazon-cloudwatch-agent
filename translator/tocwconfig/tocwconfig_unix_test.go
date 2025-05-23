@@ -7,11 +7,10 @@
 package tocwconfig
 
 import (
-	"testing"
-
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"testing"
 )
 
 func TestCompleteConfigUnix(t *testing.T) {
