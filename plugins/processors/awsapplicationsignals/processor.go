@@ -28,8 +28,6 @@ const (
 	failedToProcessAttributeWithLimiter = "failed to process attributes with limiter, keep the data"
 )
 
-var metricCaser = cases.Title(language.English)
-
 // this is used to Process some attributes (like IP addresses) to a generic form to reduce high cardinality
 type attributesMutator interface {
 	Process(attributes, resourceAttributes pcommon.Map, isTrace bool) error
@@ -143,7 +141,7 @@ func (ap *awsapplicationsignalsprocessor) processMetrics(ctx context.Context, md
 				m := metrics.At(k)
 				// Check if the first letter of the metric name is not capitalized
 				if len(m.Name()) > 0 && !unicode.IsUpper(rune(m.Name()[0])) {
-					m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
+					m.SetName(cases.Title(language.English).String(m.Name())) // Ensure metric name is in sentence case
 				}
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 				ap.aggregationMutator.ProcessMetrics(ctx, m, resourceAttributes)
