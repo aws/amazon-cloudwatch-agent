@@ -21,6 +21,4 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-
-	// TODO-hsookim: check multi-config
 }
