@@ -12,13 +12,9 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
-	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
@@ -33,6 +29,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -117,9 +114,9 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		} else if currentContext.Mode() == config.ModeEC2 {
 			switch t.Destination() {
 			case common.DefaultDestination, common.CloudWatchKey:
-				entityProcessor = createEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
+				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			case common.CloudWatchLogsKey:
-				entityProcessor = createEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchLogsKey, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
+				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchLogsKey, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			}
 		}
 	case common.PipelineNameHostCustomMetrics:
@@ -178,44 +175,4 @@ func determinePipeline(name string) string {
 		return common.PipelineNameHost
 	}
 	return ""
-}
-
-func createEntityProcessorFromConfig(name string, configSection string, conf *confmap.Conf) common.ComponentTranslator {
-	serviceName, _ := common.GetString(conf, common.ConfigKey(configSection, semconv.AttributeServiceName))
-	environment, _ := common.GetString(conf, common.ConfigKey(configSection, semconv.AttributeDeploymentEnvironment))
-	if serviceName == "" {
-		serviceName = agent.Global_Config.ServiceName
-	}
-	if environment == "" {
-		environment = agent.Global_Config.DeploymentEnvironment
-	}
-	// Only create transform if at least one attribute is present
-	if serviceName != "" || environment != "" {
-		transform := &entity.Transform{
-			KeyAttributes: make([]entity.KeyPair, 0),
-			Attributes:    make([]entity.KeyPair, 0),
-		}
-
-		if serviceName != "" {
-			transform.KeyAttributes = append(transform.KeyAttributes, entity.KeyPair{
-				Key:   entityattributes.ServiceName,
-				Value: serviceName,
-			})
-			transform.Attributes = append(transform.Attributes, entity.KeyPair{
-				Key:   entityattributes.ServiceNameSource,
-				Value: entityattributes.AttributeServiceNameSourceUserConfig,
-			})
-		}
-
-		if environment != "" {
-			transform.KeyAttributes = append(transform.KeyAttributes, entity.KeyPair{
-				Key:   entityattributes.DeploymentEnvironment,
-				Value: environment,
-			})
-		}
-
-		return awsentity.NewTranslatorWithEntityTypeAndTransform(awsentity.Service, name, false, transform)
-	}
-
-	return awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
 }

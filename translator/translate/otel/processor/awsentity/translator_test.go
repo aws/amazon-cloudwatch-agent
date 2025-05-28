@@ -151,6 +151,52 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 		},
+		"KubernetesWithTransform": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "k8s-cluster",
+						},
+					},
+				},
+			},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
+			inputTransform: &entity.Transform{
+				KeyAttributes: []entity.KeyPair{
+					{
+						Key:   "Name",
+						Value: "k8s-service",
+					},
+				},
+				Attributes: []entity.KeyPair{
+					{
+						Key:   "AWS.ServiceNameSource",
+						Value: "UserConfiguration",
+					},
+				},
+			},
+			want: &awsentity.Config{
+				ClusterName:    "k8s-cluster",
+				KubernetesMode: config.ModeEKS,
+				Platform:       config.ModeEC2,
+				TransformEntity: &entity.Transform{
+					KeyAttributes: []entity.KeyPair{
+						{
+							Key:   "Name",
+							Value: "k8s-service",
+						},
+					},
+					Attributes: []entity.KeyPair{
+						{
+							Key:   "AWS.ServiceNameSource",
+							Value: "UserConfiguration",
+						},
+					},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

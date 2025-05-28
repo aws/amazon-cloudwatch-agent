@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/entity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
@@ -96,6 +95,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	// in EC2 or Non-EC2
 	cfg.Platform = ctx.Mode()
 
+	if t.transform != nil {
+		cfg.TransformEntity = t.transform
+	}
+
 	if cfg.KubernetesMode != "" {
 		clusterName, clusterNameConfigured := common.GetHostedIn(conf)
 
@@ -104,10 +107,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 
 		cfg.ClusterName = clusterName
-	} else if cfg.Platform == config.ModeEC2 {
-		if t.transform != nil {
-			cfg.TransformEntity = t.transform
-		}
 	}
 
 	return cfg, nil
