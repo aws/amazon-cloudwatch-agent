@@ -190,7 +190,6 @@ func (ts *tailerSrc) runTail() {
 	var init string
 	var msgBuf bytes.Buffer
 	var cnt int
-	//fo := &fileOffset{}
 	fo := state.FileOffset{}
 	ignoreUntilNextEvent := false
 

@@ -136,7 +136,8 @@ func (m *fileOffsetManager) Enqueue(offset FileOffset) {
 	select {
 	case m.offsetCh <- offset:
 	default:
-		<-m.offsetCh
+		o := <-m.offsetCh
+		log.Printf("D! Offset queue is full for %s. Dropping oldest offset: %d", m.stateFilePath, o.Get())
 		m.offsetCh <- offset
 	}
 }

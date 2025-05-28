@@ -35,6 +35,52 @@ func TestFileOffset(t *testing.T) {
 		assert.EqualValues(t, 50, offset.GetInt64())
 		assert.EqualValues(t, 1, offset.seq)
 	})
+	t.Run("Unmarshal", func(t *testing.T) {
+		t.Parallel()
+		testCases := map[string]struct {
+			content []byte
+			want    uint64
+			wantErr bool
+		}{
+			"Invalid/1": {
+				content: []byte("test"),
+				want:    0,
+				wantErr: true,
+			},
+			"Invalid/2": {
+				content: []byte("-1\ntest"),
+				want:    0,
+				wantErr: true,
+			},
+			"Valid/1": {
+				content: []byte("100"),
+				want:    100,
+				wantErr: false,
+			},
+			"Valid/2": {
+				content: []byte("100\ntest"),
+				want:    100,
+				wantErr: false,
+			},
+			"Valid/3": {
+				content: []byte("100\n200\ntest"),
+				want:    100,
+				wantErr: false,
+			},
+		}
+		for name, testCase := range testCases {
+			t.Run(name, func(t *testing.T) {
+				var offset FileOffset
+				err := offset.UnmarshalText(testCase.content)
+				if testCase.wantErr {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+				assert.Equal(t, testCase.want, offset.Get())
+			})
+		}
+	})
 	t.Run("Unmarshal/Loop", func(t *testing.T) {
 		t.Parallel()
 		offset := NewFileOffset(100)
@@ -45,12 +91,6 @@ func TestFileOffset(t *testing.T) {
 		var restored FileOffset
 		assert.NoError(t, restored.UnmarshalText(data))
 		assert.EqualValues(t, offset.Get(), restored.Get())
-	})
-	t.Run("Unmarshal/Invalid", func(t *testing.T) {
-		t.Parallel()
-		var offset FileOffset
-		assert.Error(t, offset.UnmarshalText([]byte("test")))
-		assert.Zero(t, offset.Get())
 	})
 	t.Run("Compare", func(t *testing.T) {
 		t.Parallel()
@@ -141,8 +181,18 @@ func TestFileOffsetManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		manager := NewFileOffsetManager(ManagerConfig{StateFileDir: tmpDir, Name: "missing.log"})
-		_, err := manager.Restore()
+		got, err := manager.Restore()
 		assert.Error(t, err)
+		assert.Zero(t, got.Get())
+	})
+	t.Run("Restore/Invalid", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		manager := NewFileOffsetManager(ManagerConfig{StateFileDir: tmpDir, Name: "missing.log"})
+		assert.NoError(t, os.WriteFile(manager.(*fileOffsetManager).stateFilePath, []byte("invalid"), FileMode))
+		got, err := manager.Restore()
+		assert.Error(t, err)
+		assert.Zero(t, got.Get())
 	})
 	t.Run("Enqueue/Multiple", func(t *testing.T) {
 		t.Parallel()
