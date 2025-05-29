@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/prometheusadapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
 )
@@ -66,6 +67,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return &common.ComponentTranslators{
 			Receivers: common.NewTranslatorMap(otelprom.NewTranslator(otelprom.WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)))),
 			Processors: common.NewTranslatorMap(
+				prometheusadapter.NewTranslatorWithName(t.name),                        // converts otelprom receiver outputs to look like telegraf prometheus outputs
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
