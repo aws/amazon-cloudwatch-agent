@@ -23,13 +23,30 @@ on:
       - synchronize
       - reopened
       - ready_for_review
+      - labeled
+      - unlabeled
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
+  CheckLabel:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.has_label }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
+            echo "has_label=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_label=false" >> $GITHUB_OUTPUT
+          fi
+
   BuildAndUpload:
+    needs: [ CheckLabel ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -43,6 +60,8 @@ jobs:
 
   OutputEnvVariables:
     name: 'OutputEnvVariables'
+    needs: [ CheckLabel ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     outputs:
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
@@ -77,7 +96,8 @@ jobs:
 
   StartLocalStack:
     name: 'StartLocalStack'
-    needs: [OutputEnvVariables]
+    needs: [ CheckLabel, OutputEnvVariables ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
@@ -93,8 +113,9 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   GenerateTestMatrix:
-    needs: [OutputEnvVariables]
     name: 'GenerateTestMatrix'
+    needs: [ CheckLabel, OutputEnvVariables ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     outputs:
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
@@ -136,8 +157,9 @@ jobs:
 
 
   EC2LinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     name: 'EC2LinuxTests'
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
       build_id: ${{ github.sha }}
@@ -155,8 +177,9 @@ jobs:
     secrets: inherit
 
   EC2SELinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
     name: 'EC2SELinuxTests'
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
       build_id: ${{ github.sha }}
@@ -175,8 +198,8 @@ jobs:
 
   StopLocalStack:
     name: 'StopLocalStack'
-    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    needs: [ CheckLabel, StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    if: ${{ always() && needs.StartLocalStack.result == 'success' && needs.CheckLabel.outputs.should_run == 'true'}}
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
