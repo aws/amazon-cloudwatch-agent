@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	TypeStr, _            = component.NewType("prometheusadapater")
+	TypeStr, _            = component.NewType("prometheusadapter")
 	processorCapabilities = consumer.Capabilities{MutatesData: true}
 )
 

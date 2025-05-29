@@ -76,7 +76,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
-    prometheusadapater/prometheus/cloudwatchlogs: {}
+    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
     prometheus:
         config:
@@ -122,7 +122,7 @@ service:
             exporters:
                 - awsemf/prometheus
             processors:
-                - prometheusadapater/prometheus/cloudwatchlogs
+                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
                 - prometheus

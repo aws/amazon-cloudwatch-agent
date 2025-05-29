@@ -79,7 +79,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
 		translators := &common.ComponentTranslators{
-			Receivers: common.NewTranslatorMap(otelprom.NewTranslator()),
+			Receivers: common.NewTranslatorMap(otelprom.NewTranslator(otelprom.WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey)))),
 			Processors: common.NewTranslatorMap(
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
 				// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics

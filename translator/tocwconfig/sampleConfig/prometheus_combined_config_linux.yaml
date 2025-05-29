@@ -155,7 +155,7 @@ processors:
     deltatocumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
-    prometheusadapater/prometheus/cloudwatchlogs: {}
+    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
     prometheus:
         config:
@@ -210,7 +210,7 @@ service:
             exporters:
                 - awsemf/prometheus
             processors:
-                - prometheusadapater/prometheus/cloudwatchlogs
+                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
                 - prometheus

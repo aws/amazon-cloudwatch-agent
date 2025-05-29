@@ -83,7 +83,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/prometheus/cloudwatchlogs",
 				receivers:  []string{"prometheus"},
-				processors: []string{"prometheusadapater/prometheus/cloudwatchlogs", "batch/prometheus/cloudwatchlogs"},
+				processors: []string{"prometheusadapter/prometheus/cloudwatchlogs", "batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -124,7 +124,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/prometheus/cloudwatchlogs",
 				receivers:  []string{"prometheus"},
-				processors: []string{"prometheusadapater/prometheus/cloudwatchlogs", "batch/prometheus/cloudwatchlogs"},
+				processors: []string{"prometheusadapter/prometheus/cloudwatchlogs", "batch/prometheus/cloudwatchlogs"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
