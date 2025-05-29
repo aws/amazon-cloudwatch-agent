@@ -4,13 +4,13 @@
 package cloudwatchlogs
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
@@ -75,7 +75,7 @@ func TestCreateDestination(t *testing.T) {
 				AccessKey:      "access_key",
 				SecretKey:      "secret_key",
 				pusherStopChan: make(chan struct{}),
-				cwDests:        make(map[pusher.Target]*cwDest),
+				cwDests:        sync.Map{},
 			}
 			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, testCase.cfgLogClass, testCase.cfgTailerSrc).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
@@ -92,7 +92,7 @@ func TestDuplicateDestination(t *testing.T) {
 		Log:            testutil.Logger{Name: "test"},
 		AccessKey:      "access_key",
 		SecretKey:      "secret_key",
-		cwDests:        make(map[pusher.Target]*cwDest),
+		cwDests:        sync.Map{},
 		pusherStopChan: make(chan struct{}),
 	}
 	// Given the same log group, log stream, same retention, and logClass
