@@ -9048,9 +9048,9 @@ func (e eventTypeForStartLiveTailEventStreamOutputEvent) UnmarshalerForEventName
 //
 // These events are:
 //
-//     * LiveTailSessionStart
-//     * LiveTailSessionUpdate
-//     * StartLiveTailResponseStreamUnknownEvent
+//   - LiveTailSessionStart
+//   - LiveTailSessionUpdate
+//   - StartLiveTailResponseStreamUnknownEvent
 func (es *StartLiveTailEventStream) Events() <-chan StartLiveTailResponseStreamEvent {
 	return es.Reader.Events()
 }
