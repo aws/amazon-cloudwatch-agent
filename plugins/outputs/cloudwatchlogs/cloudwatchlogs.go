@@ -91,7 +91,7 @@ func (c *CloudWatchLogs) Close() error {
 	close(c.pusherStopChan)
 	c.pusherWaitGroup.Wait()
 
-	c.cwDests.Range(func(key, value interface{}) bool {
+	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
 			d.Stop()
 		}
