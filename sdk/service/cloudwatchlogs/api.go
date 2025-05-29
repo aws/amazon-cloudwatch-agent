@@ -72,8 +72,8 @@ func (c *CloudWatchLogs) AssociateKmsKeyRequest(input *AssociateKmsKeyInput) (re
 // or the resourceIdentifier parameter. You can't specify both of those parameters
 // in the same operation.
 //
-//   - Specify the logGroupName parameter to cause all log events stored in
-//     the log group to be encrypted with that key. Only the log events ingested
+//   - Specify the logGroupName parameter to cause log events ingested into
+//     that log group to be encrypted with that key. Only the log events ingested
 //     after the key is associated are encrypted with that key. Associating a
 //     KMS key with a log group overrides any existing associations between the
 //     log group and a KMS key. After a KMS key is associated with a log group,
@@ -100,9 +100,9 @@ func (c *CloudWatchLogs) AssociateKmsKeyRequest(input *AssociateKmsKeyInput) (re
 // results, then all the associated stored log events or query results that
 // were encrypted with that key will be unencryptable and unusable.
 //
-// CloudWatch Logs supports only symmetric KMS keys. Do not use an associate
-// an asymmetric KMS key with your log group or query results. For more information,
-// see Using Symmetric and Asymmetric Keys (https://docs.aws.amazon.com/kms/latest/developerguide/symmetric-asymmetric.html).
+// CloudWatch Logs supports only symmetric KMS keys. Do not associate an asymmetric
+// KMS key with your log group or query results. For more information, see Using
+// Symmetric and Asymmetric Keys (https://docs.aws.amazon.com/kms/latest/developerguide/symmetric-asymmetric.html).
 //
 // It can take up to 5 minutes for this operation to take effect.
 //
@@ -321,7 +321,8 @@ func (c *CloudWatchLogs) CreateDeliveryRequest(input *CreateDeliveryInput) (req 
 // to configure multiple delivery sources to send logs to the same delivery
 // destination.
 //
-// You can't update an existing delivery. You can only create and delete deliveries.
+// To update an existing delivery configuration, use UpdateDeliveryConfiguration
+// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UpdateDeliveryConfiguration.html).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -439,6 +440,11 @@ func (c *CloudWatchLogs) CreateExportTaskRequest(input *CreateExportTaskInput) (
 // You can export logs from multiple log groups or multiple time ranges to the
 // same S3 bucket. To separate log data for each export task, specify a prefix
 // to be used as the Amazon S3 key prefix for all exported objects.
+//
+// We recommend that you don't regularly export to Amazon S3 as a way to continuously
+// archive your logs. For that use case, we instead recommend that you use subscriptions.
+// For more information about subscriptions, see Real-time processing of log
+// data with subscriptions (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Subscriptions.html).
 //
 // Time-based sorting on chunks of log data inside an exported file is not guaranteed.
 // You can sort the exported log field data by using Linux utilities.
@@ -881,9 +887,10 @@ func (c *CloudWatchLogs) DeleteAccountPolicyRequest(input *DeleteAccountPolicyIn
 
 // DeleteAccountPolicy API operation for Amazon CloudWatch Logs.
 //
-// Deletes a CloudWatch Logs account policy. This stops the policy from applying
-// to all log groups or a subset of log groups in the account. Log-group level
-// policies will still be in effect.
+// Deletes a CloudWatch Logs account policy. This stops the account-wide policy
+// from applying to log groups in the account. If you delete a data protection
+// policy or subscription filter policy, any log-group level policies of those
+// types remain in effect.
 //
 // To use this operation, you must be signed on with the correct permissions
 // depending on the type of policy that you are deleting.
@@ -893,6 +900,16 @@ func (c *CloudWatchLogs) DeleteAccountPolicyRequest(input *DeleteAccountPolicyIn
 //
 //   - To delete a subscription filter policy, you must have the logs:DeleteSubscriptionFilter
 //     and logs:DeleteAccountPolicy permissions.
+//
+//   - To delete a transformer policy, you must have the logs:DeleteTransformer
+//     and logs:DeleteAccountPolicy permissions.
+//
+//   - To delete a field index policy, you must have the logs:DeleteIndexPolicy
+//     and logs:DeleteAccountPolicy permissions.
+//
+// If you delete a field index policy, the indexing of the log events that happened
+// before you deleted the policy will still be used for up to 30 days to improve
+// CloudWatch Logs Insights queries.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -1073,7 +1090,7 @@ func (c *CloudWatchLogs) DeleteDeliveryRequest(input *DeleteDeliveryInput) (req 
 
 // DeleteDelivery API operation for Amazon CloudWatch Logs.
 //
-// Deletes s delivery. A delivery is a connection between a logical delivery
+// Deletes a delivery. A delivery is a connection between a logical delivery
 // source and a logical delivery destination. Deleting a delivery only deletes
 // the connection between the delivery source and delivery destination. It does
 // not delete the delivery destination or the delivery source.
@@ -1505,6 +1522,202 @@ func (c *CloudWatchLogs) DeleteDestination(input *DeleteDestinationInput) (*Dele
 // for more information on using Contexts.
 func (c *CloudWatchLogs) DeleteDestinationWithContext(ctx aws.Context, input *DeleteDestinationInput, opts ...request.Option) (*DeleteDestinationOutput, error) {
 	req, out := c.DeleteDestinationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDeleteIndexPolicy = "DeleteIndexPolicy"
+
+// DeleteIndexPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteIndexPolicy operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DeleteIndexPolicy for more information on using the DeleteIndexPolicy
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the DeleteIndexPolicyRequest method.
+//	req, resp := client.DeleteIndexPolicyRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DeleteIndexPolicy
+func (c *CloudWatchLogs) DeleteIndexPolicyRequest(input *DeleteIndexPolicyInput) (req *request.Request, output *DeleteIndexPolicyOutput) {
+	op := &request.Operation{
+		Name:       opDeleteIndexPolicy,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeleteIndexPolicyInput{}
+	}
+
+	output = &DeleteIndexPolicyOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DeleteIndexPolicy API operation for Amazon CloudWatch Logs.
+//
+// Deletes a log-group level field index policy that was applied to a single
+// log group. The indexing of the log events that happened before you delete
+// the policy will still be used for as many as 30 days to improve CloudWatch
+// Logs Insights queries.
+//
+// You can't use this operation to delete an account-level index policy. Instead,
+// use DeletAccountPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DeleteAccountPolicy.html).
+//
+// If you delete a log-group level field index policy and there is an account-level
+// field index policy, in a few minutes the log group begins using that account-wide
+// policy to index new incoming log events.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation DeleteIndexPolicy for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - LimitExceededException
+//     You have reached the maximum number of resources that can be created.
+//
+//   - OperationAbortedException
+//     Multiple concurrent requests to update the same resource were in conflict.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DeleteIndexPolicy
+func (c *CloudWatchLogs) DeleteIndexPolicy(input *DeleteIndexPolicyInput) (*DeleteIndexPolicyOutput, error) {
+	req, out := c.DeleteIndexPolicyRequest(input)
+	return out, req.Send()
+}
+
+// DeleteIndexPolicyWithContext is the same as DeleteIndexPolicy with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DeleteIndexPolicy for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DeleteIndexPolicyWithContext(ctx aws.Context, input *DeleteIndexPolicyInput, opts ...request.Option) (*DeleteIndexPolicyOutput, error) {
+	req, out := c.DeleteIndexPolicyRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDeleteIntegration = "DeleteIntegration"
+
+// DeleteIntegrationRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteIntegration operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DeleteIntegration for more information on using the DeleteIntegration
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the DeleteIntegrationRequest method.
+//	req, resp := client.DeleteIntegrationRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DeleteIntegration
+func (c *CloudWatchLogs) DeleteIntegrationRequest(input *DeleteIntegrationInput) (req *request.Request, output *DeleteIntegrationOutput) {
+	op := &request.Operation{
+		Name:       opDeleteIntegration,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeleteIntegrationInput{}
+	}
+
+	output = &DeleteIntegrationOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DeleteIntegration API operation for Amazon CloudWatch Logs.
+//
+// Deletes the integration between CloudWatch Logs and OpenSearch Service. If
+// your integration has active vended logs dashboards, you must specify true
+// for the force parameter, otherwise the operation will fail. If you delete
+// the integration by setting force to true, all your vended logs dashboards
+// powered by OpenSearch Service will be deleted and the data that was on them
+// will no longer be accessible.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation DeleteIntegration for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - ValidationException
+//     One of the parameters for the request is not valid.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DeleteIntegration
+func (c *CloudWatchLogs) DeleteIntegration(input *DeleteIntegrationInput) (*DeleteIntegrationOutput, error) {
+	req, out := c.DeleteIntegrationRequest(input)
+	return out, req.Send()
+}
+
+// DeleteIntegrationWithContext is the same as DeleteIntegration with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DeleteIntegration for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DeleteIntegrationWithContext(ctx aws.Context, input *DeleteIntegrationInput, opts ...request.Option) (*DeleteIntegrationOutput, error) {
+	req, out := c.DeleteIntegrationRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -2227,6 +2440,105 @@ func (c *CloudWatchLogs) DeleteSubscriptionFilterWithContext(ctx aws.Context, in
 	return out, req.Send()
 }
 
+const opDeleteTransformer = "DeleteTransformer"
+
+// DeleteTransformerRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteTransformer operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DeleteTransformer for more information on using the DeleteTransformer
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the DeleteTransformerRequest method.
+//	req, resp := client.DeleteTransformerRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DeleteTransformer
+func (c *CloudWatchLogs) DeleteTransformerRequest(input *DeleteTransformerInput) (req *request.Request, output *DeleteTransformerOutput) {
+	op := &request.Operation{
+		Name:       opDeleteTransformer,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DeleteTransformerInput{}
+	}
+
+	output = &DeleteTransformerOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// DeleteTransformer API operation for Amazon CloudWatch Logs.
+//
+// Deletes the log transformer for the specified log group. As soon as you do
+// this, the transformation of incoming log events according to that transformer
+// stops. If this account has an account-level transformer that applies to this
+// log group, the log group begins using that account-level transformer when
+// this log-group level transformer is deleted.
+//
+// After you delete a transformer, be sure to edit any metric filters or subscription
+// filters that relied on the transformed versions of the log events.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation DeleteTransformer for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - OperationAbortedException
+//     Multiple concurrent requests to update the same resource were in conflict.
+//
+//   - InvalidOperationException
+//     The operation is not valid on the specified resource.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DeleteTransformer
+func (c *CloudWatchLogs) DeleteTransformer(input *DeleteTransformerInput) (*DeleteTransformerOutput, error) {
+	req, out := c.DeleteTransformerRequest(input)
+	return out, req.Send()
+}
+
+// DeleteTransformerWithContext is the same as DeleteTransformer with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DeleteTransformer for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DeleteTransformerWithContext(ctx aws.Context, input *DeleteTransformerInput, opts ...request.Option) (*DeleteTransformerOutput, error) {
+	req, out := c.DeleteTransformerRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opDescribeAccountPolicies = "DescribeAccountPolicies"
 
 // DescribeAccountPoliciesRequest generates a "aws/request.Request" representing the
@@ -2272,6 +2584,21 @@ func (c *CloudWatchLogs) DescribeAccountPoliciesRequest(input *DescribeAccountPo
 //
 // Returns a list of all CloudWatch Logs account policies in the account.
 //
+// To use this operation, you must be signed on with the correct permissions
+// depending on the type of policy that you are retrieving information for.
+//
+//   - To see data protection policies, you must have the logs:GetDataProtectionPolicy
+//     and logs:DescribeAccountPolicies permissions.
+//
+//   - To see subscription filter policies, you must have the logs:DescribeSubscriptionFilters
+//     and logs:DescribeAccountPolicies permissions.
+//
+//   - To see transformer policies, you must have the logs:GetTransformer and
+//     logs:DescribeAccountPolicies permissions.
+//
+//   - To see field index policies, you must have the logs:DescribeIndexPolicies
+//     and logs:DescribeAccountPolicies permissions.
+//
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
 // the error.
@@ -2313,6 +2640,154 @@ func (c *CloudWatchLogs) DescribeAccountPoliciesWithContext(ctx aws.Context, inp
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+const opDescribeConfigurationTemplates = "DescribeConfigurationTemplates"
+
+// DescribeConfigurationTemplatesRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeConfigurationTemplates operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeConfigurationTemplates for more information on using the DescribeConfigurationTemplates
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the DescribeConfigurationTemplatesRequest method.
+//	req, resp := client.DescribeConfigurationTemplatesRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DescribeConfigurationTemplates
+func (c *CloudWatchLogs) DescribeConfigurationTemplatesRequest(input *DescribeConfigurationTemplatesInput) (req *request.Request, output *DescribeConfigurationTemplatesOutput) {
+	op := &request.Operation{
+		Name:       opDescribeConfigurationTemplates,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "limit",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &DescribeConfigurationTemplatesInput{}
+	}
+
+	output = &DescribeConfigurationTemplatesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeConfigurationTemplates API operation for Amazon CloudWatch Logs.
+//
+// Use this operation to return the valid and default values that are used when
+// creating delivery sources, delivery destinations, and deliveries. For more
+// information about deliveries, see CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation DescribeConfigurationTemplates for usage and error information.
+//
+// Returned Error Types:
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - ValidationException
+//     One of the parameters for the request is not valid.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ThrottlingException
+//     The request was throttled because of quota limits.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DescribeConfigurationTemplates
+func (c *CloudWatchLogs) DescribeConfigurationTemplates(input *DescribeConfigurationTemplatesInput) (*DescribeConfigurationTemplatesOutput, error) {
+	req, out := c.DescribeConfigurationTemplatesRequest(input)
+	return out, req.Send()
+}
+
+// DescribeConfigurationTemplatesWithContext is the same as DescribeConfigurationTemplates with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeConfigurationTemplates for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DescribeConfigurationTemplatesWithContext(ctx aws.Context, input *DescribeConfigurationTemplatesInput, opts ...request.Option) (*DescribeConfigurationTemplatesOutput, error) {
+	req, out := c.DescribeConfigurationTemplatesRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// DescribeConfigurationTemplatesPages iterates over the pages of a DescribeConfigurationTemplates operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See DescribeConfigurationTemplates method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//	// Example iterating over at most 3 pages of a DescribeConfigurationTemplates operation.
+//	pageNum := 0
+//	err := client.DescribeConfigurationTemplatesPages(params,
+//	    func(page *cloudwatchlogs.DescribeConfigurationTemplatesOutput, lastPage bool) bool {
+//	        pageNum++
+//	        fmt.Println(page)
+//	        return pageNum <= 3
+//	    })
+func (c *CloudWatchLogs) DescribeConfigurationTemplatesPages(input *DescribeConfigurationTemplatesInput, fn func(*DescribeConfigurationTemplatesOutput, bool) bool) error {
+	return c.DescribeConfigurationTemplatesPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// DescribeConfigurationTemplatesPagesWithContext same as DescribeConfigurationTemplatesPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DescribeConfigurationTemplatesPagesWithContext(ctx aws.Context, input *DescribeConfigurationTemplatesInput, fn func(*DescribeConfigurationTemplatesOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		EndPageOnSameToken: true,
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *DescribeConfigurationTemplatesInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeConfigurationTemplatesRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*DescribeConfigurationTemplatesOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
 }
 
 const opDescribeDeliveries = "DescribeDeliveries"
@@ -2987,6 +3462,202 @@ func (c *CloudWatchLogs) DescribeExportTasksWithContext(ctx aws.Context, input *
 	return out, req.Send()
 }
 
+const opDescribeFieldIndexes = "DescribeFieldIndexes"
+
+// DescribeFieldIndexesRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeFieldIndexes operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeFieldIndexes for more information on using the DescribeFieldIndexes
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the DescribeFieldIndexesRequest method.
+//	req, resp := client.DescribeFieldIndexesRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DescribeFieldIndexes
+func (c *CloudWatchLogs) DescribeFieldIndexesRequest(input *DescribeFieldIndexesInput) (req *request.Request, output *DescribeFieldIndexesOutput) {
+	op := &request.Operation{
+		Name:       opDescribeFieldIndexes,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeFieldIndexesInput{}
+	}
+
+	output = &DescribeFieldIndexesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeFieldIndexes API operation for Amazon CloudWatch Logs.
+//
+// Returns a list of field indexes listed in the field index policies of one
+// or more log groups. For more information about field index policies, see
+// PutIndexPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutIndexPolicy.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation DescribeFieldIndexes for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - LimitExceededException
+//     You have reached the maximum number of resources that can be created.
+//
+//   - OperationAbortedException
+//     Multiple concurrent requests to update the same resource were in conflict.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DescribeFieldIndexes
+func (c *CloudWatchLogs) DescribeFieldIndexes(input *DescribeFieldIndexesInput) (*DescribeFieldIndexesOutput, error) {
+	req, out := c.DescribeFieldIndexesRequest(input)
+	return out, req.Send()
+}
+
+// DescribeFieldIndexesWithContext is the same as DescribeFieldIndexes with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeFieldIndexes for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DescribeFieldIndexesWithContext(ctx aws.Context, input *DescribeFieldIndexesInput, opts ...request.Option) (*DescribeFieldIndexesOutput, error) {
+	req, out := c.DescribeFieldIndexesRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDescribeIndexPolicies = "DescribeIndexPolicies"
+
+// DescribeIndexPoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeIndexPolicies operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See DescribeIndexPolicies for more information on using the DescribeIndexPolicies
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the DescribeIndexPoliciesRequest method.
+//	req, resp := client.DescribeIndexPoliciesRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DescribeIndexPolicies
+func (c *CloudWatchLogs) DescribeIndexPoliciesRequest(input *DescribeIndexPoliciesInput) (req *request.Request, output *DescribeIndexPoliciesOutput) {
+	op := &request.Operation{
+		Name:       opDescribeIndexPolicies,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeIndexPoliciesInput{}
+	}
+
+	output = &DescribeIndexPoliciesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeIndexPolicies API operation for Amazon CloudWatch Logs.
+//
+// Returns the field index policies of one or more log groups. For more information
+// about field index policies, see PutIndexPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutIndexPolicy.html).
+//
+// If a specified log group has a log-group level index policy, that policy
+// is returned by this operation.
+//
+// If a specified log group doesn't have a log-group level index policy, but
+// an account-wide index policy applies to it, that account-wide policy is returned
+// by this operation.
+//
+// To find information about only account-level policies, use DescribeAccountPolicies
+// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeAccountPolicies.html)
+// instead.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation DescribeIndexPolicies for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - LimitExceededException
+//     You have reached the maximum number of resources that can be created.
+//
+//   - OperationAbortedException
+//     Multiple concurrent requests to update the same resource were in conflict.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/DescribeIndexPolicies
+func (c *CloudWatchLogs) DescribeIndexPolicies(input *DescribeIndexPoliciesInput) (*DescribeIndexPoliciesOutput, error) {
+	req, out := c.DescribeIndexPoliciesRequest(input)
+	return out, req.Send()
+}
+
+// DescribeIndexPoliciesWithContext is the same as DescribeIndexPolicies with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeIndexPolicies for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) DescribeIndexPoliciesWithContext(ctx aws.Context, input *DescribeIndexPoliciesInput, opts ...request.Option) (*DescribeIndexPoliciesOutput, error) {
+	req, out := c.DescribeIndexPoliciesRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opDescribeLogGroups = "DescribeLogGroups"
 
 // DescribeLogGroupsRequest generates a "aws/request.Request" representing the
@@ -3036,15 +3707,15 @@ func (c *CloudWatchLogs) DescribeLogGroupsRequest(input *DescribeLogGroupsInput)
 
 // DescribeLogGroups API operation for Amazon CloudWatch Logs.
 //
-// Lists the specified log groups. You can list all your log groups or filter
-// the results by prefix. The results are ASCII-sorted by log group name.
+// Returns information about log groups. You can return all your log groups
+// or filter the results by prefix. The results are ASCII-sorted by log group
+// name.
 //
-// CloudWatch Logs doesn’t support IAM policies that control access to the
-// DescribeLogGroups action by using the aws:ResourceTag/key-name condition
-// key. Other CloudWatch Logs actions do support the use of the aws:ResourceTag/key-name
-// condition key to control access. For more information about using tags to
-// control access, see Controlling access to Amazon Web Services resources using
-// tags (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_tags.html).
+// CloudWatch Logs doesn't support IAM policies that control access to the DescribeLogGroups
+// action by using the aws:ResourceTag/key-name condition key. Other CloudWatch
+// Logs actions do support the use of the aws:ResourceTag/key-name condition
+// key to control access. For more information about using tags to control access,
+// see Controlling access to Amazon Web Services resources using tags (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_tags.html).
 //
 // If you are using CloudWatch cross-account observability, you can use this
 // operation in a monitoring account and view data from the linked source accounts.
@@ -3196,7 +3867,7 @@ func (c *CloudWatchLogs) DescribeLogStreamsRequest(input *DescribeLogStreamsInpu
 // or logGroupName. You must include one of these two parameters, but you can't
 // include both.
 //
-// This operation has a limit of five transactions per second, after which transactions
+// This operation has a limit of 25 transactions per second, after which transactions
 // are throttled.
 //
 // If you are using CloudWatch cross-account observability, you can use this
@@ -4003,8 +4674,14 @@ func (c *CloudWatchLogs) FilterLogEventsRequest(input *FilterLogEventsInput) (re
 // FilterLogEvents API operation for Amazon CloudWatch Logs.
 //
 // Lists log events from the specified log group. You can list all the log events
-// or filter the results using a filter pattern, a time range, and the name
-// of the log stream.
+// or filter the results using one or more of the following:
+//
+//   - A filter pattern
+//
+//   - A time range
+//
+//   - The log stream name, or a log stream name prefix that matches mutltiple
+//     log streams
 //
 // You must have the logs:FilterLogEvents permission to perform this operation.
 //
@@ -4012,12 +4689,21 @@ func (c *CloudWatchLogs) FilterLogEventsRequest(input *FilterLogEventsInput) (re
 // or logGroupName. You must include one of these two parameters, but you can't
 // include both.
 //
-// By default, this operation returns as many log events as can fit in 1 MB
-// (up to 10,000 log events) or all the events found within the specified time
-// range. If the results include a token, that means there are more log events
-// available. You can get additional results by specifying the token in a subsequent
-// call. This operation can return empty results while there are more log events
-// available through the token.
+// FilterLogEvents is a paginated operation. Each page returned can contain
+// up to 1 MB of log events or up to 10,000 log events. A returned page might
+// only be partially full, or even empty. For example, if the result of a query
+// would return 15,000 log events, the first page isn't guaranteed to have 10,000
+// log events even if they all fit into 1 MB.
+//
+// Partially full or empty pages don't necessarily mean that pagination is finished.
+// If the results include a nextToken, there might be more log events available.
+// You can return these additional log events by providing the nextToken in
+// a subsequent FilterLogEvents operation. If the results don't include a nextToken,
+// then pagination is finished.
+//
+// Specifying the limit parameter only guarantees that a single page doesn't
+// return more log events than the specified limit, but it might return fewer
+// events than the limit. This is the expected API behavior.
 //
 // The returned log events are sorted by event timestamp, the timestamp when
 // the event was ingested by CloudWatch Logs, and the ID of the PutLogEvents
@@ -4026,6 +4712,11 @@ func (c *CloudWatchLogs) FilterLogEventsRequest(input *FilterLogEventsInput) (re
 // If you are using CloudWatch cross-account observability, you can use this
 // operation in a monitoring account and view data from the linked source accounts.
 // For more information, see CloudWatch cross-account observability (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Unified-Cross-Account.html).
+//
+// If you are using log transformation (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html),
+// the FilterLogEvents operation returns only the original versions of log events,
+// before they were transformed. To view the transformed versions, you must
+// use a CloudWatch Logs query. (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html)
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -4579,6 +5270,92 @@ func (c *CloudWatchLogs) GetDeliverySourceWithContext(ctx aws.Context, input *Ge
 	return out, req.Send()
 }
 
+const opGetIntegration = "GetIntegration"
+
+// GetIntegrationRequest generates a "aws/request.Request" representing the
+// client's request for the GetIntegration operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See GetIntegration for more information on using the GetIntegration
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the GetIntegrationRequest method.
+//	req, resp := client.GetIntegrationRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/GetIntegration
+func (c *CloudWatchLogs) GetIntegrationRequest(input *GetIntegrationInput) (req *request.Request, output *GetIntegrationOutput) {
+	op := &request.Operation{
+		Name:       opGetIntegration,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &GetIntegrationInput{}
+	}
+
+	output = &GetIntegrationOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// GetIntegration API operation for Amazon CloudWatch Logs.
+//
+// Returns information about one integration between CloudWatch Logs and OpenSearch
+// Service.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation GetIntegration for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/GetIntegration
+func (c *CloudWatchLogs) GetIntegration(input *GetIntegrationInput) (*GetIntegrationOutput, error) {
+	req, out := c.GetIntegrationRequest(input)
+	return out, req.Send()
+}
+
+// GetIntegrationWithContext is the same as GetIntegration with the addition of
+// the ability to pass a context and additional request options.
+//
+// See GetIntegration for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) GetIntegrationWithContext(ctx aws.Context, input *GetIntegrationInput, opts ...request.Option) (*GetIntegrationOutput, error) {
+	req, out := c.GetIntegrationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opGetLogAnomalyDetector = "GetLogAnomalyDetector"
 
 // GetLogAnomalyDetectorRequest generates a "aws/request.Request" representing the
@@ -4622,7 +5399,8 @@ func (c *CloudWatchLogs) GetLogAnomalyDetectorRequest(input *GetLogAnomalyDetect
 
 // GetLogAnomalyDetector API operation for Amazon CloudWatch Logs.
 //
-// Retrieves information about the log anomaly detector that you specify.
+// Retrieves information about the log anomaly detector that you specify. The
+// KMS key ARN detected is valid.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -4719,11 +5497,24 @@ func (c *CloudWatchLogs) GetLogEventsRequest(input *GetLogEventsInput) (req *req
 // Lists log events from the specified log stream. You can list all of the log
 // events or filter using a time range.
 //
-// By default, this operation returns as many log events as can fit in a response
-// size of 1MB (up to 10,000 log events). You can get additional log events
-// by specifying one of the tokens in a subsequent call. This operation can
-// return empty results while there are more log events available through the
-// token.
+// GetLogEvents is a paginated operation. Each page returned can contain up
+// to 1 MB of log events or up to 10,000 log events. A returned page might only
+// be partially full, or even empty. For example, if the result of a query would
+// return 15,000 log events, the first page isn't guaranteed to have 10,000
+// log events even if they all fit into 1 MB.
+//
+// Partially full or empty pages don't necessarily mean that pagination is finished.
+// As long as the nextBackwardToken or nextForwardToken returned is NOT equal
+// to the nextToken that you passed into the API call, there might be more log
+// events available. The token that you use depends on the direction you want
+// to move in along the log stream. The returned tokens are never null.
+//
+// If you set startFromHead to true and you don’t include endTime in your
+// request, you can end up in a situation where the pagination doesn't terminate.
+// This can happen when the new log events are being added to the target log
+// streams faster than they are being read. This situation is a good use case
+// for the CloudWatch Logs Live Tail (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs_LiveTail.html)
+// feature.
 //
 // If you are using CloudWatch cross-account observability, you can use this
 // operation in a monitoring account and view data from the linked source accounts.
@@ -4732,6 +5523,11 @@ func (c *CloudWatchLogs) GetLogEventsRequest(input *GetLogEventsInput) (req *req
 // You can specify the log group to search by using either logGroupIdentifier
 // or logGroupName. You must include one of these two parameters, but you can't
 // include both.
+//
+// If you are using log transformation (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html),
+// the GetLogEvents operation returns only the original versions of log events,
+// before they were transformed. To view the transformed versions, you must
+// use a CloudWatch Logs query. (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html)
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -5127,6 +5923,99 @@ func (c *CloudWatchLogs) GetQueryResultsWithContext(ctx aws.Context, input *GetQ
 	return out, req.Send()
 }
 
+const opGetTransformer = "GetTransformer"
+
+// GetTransformerRequest generates a "aws/request.Request" representing the
+// client's request for the GetTransformer operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See GetTransformer for more information on using the GetTransformer
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the GetTransformerRequest method.
+//	req, resp := client.GetTransformerRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/GetTransformer
+func (c *CloudWatchLogs) GetTransformerRequest(input *GetTransformerInput) (req *request.Request, output *GetTransformerOutput) {
+	op := &request.Operation{
+		Name:       opGetTransformer,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &GetTransformerInput{}
+	}
+
+	output = &GetTransformerOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// GetTransformer API operation for Amazon CloudWatch Logs.
+//
+// Returns the information about the log transformer associated with this log
+// group.
+//
+// This operation returns data only for transformers created at the log group
+// level. To get information for an account-level transformer, use DescribeAccountPolicies
+// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeAccountPolicies.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation GetTransformer for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - InvalidOperationException
+//     The operation is not valid on the specified resource.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/GetTransformer
+func (c *CloudWatchLogs) GetTransformer(input *GetTransformerInput) (*GetTransformerOutput, error) {
+	req, out := c.GetTransformerRequest(input)
+	return out, req.Send()
+}
+
+// GetTransformerWithContext is the same as GetTransformer with the addition of
+// the ability to pass a context and additional request options.
+//
+// See GetTransformer for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) GetTransformerWithContext(ctx aws.Context, input *GetTransformerInput, opts ...request.Option) (*GetTransformerOutput, error) {
+	req, out := c.GetTransformerRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opListAnomalies = "ListAnomalies"
 
 // ListAnomaliesRequest generates a "aws/request.Request" representing the
@@ -5275,6 +6164,90 @@ func (c *CloudWatchLogs) ListAnomaliesPagesWithContext(ctx aws.Context, input *L
 	return p.Err()
 }
 
+const opListIntegrations = "ListIntegrations"
+
+// ListIntegrationsRequest generates a "aws/request.Request" representing the
+// client's request for the ListIntegrations operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListIntegrations for more information on using the ListIntegrations
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the ListIntegrationsRequest method.
+//	req, resp := client.ListIntegrationsRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/ListIntegrations
+func (c *CloudWatchLogs) ListIntegrationsRequest(input *ListIntegrationsInput) (req *request.Request, output *ListIntegrationsOutput) {
+	op := &request.Operation{
+		Name:       opListIntegrations,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ListIntegrationsInput{}
+	}
+
+	output = &ListIntegrationsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListIntegrations API operation for Amazon CloudWatch Logs.
+//
+// Returns a list of integrations between CloudWatch Logs and other services
+// in this account. Currently, only one integration can be created in an account,
+// and this integration must be with OpenSearch Service.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation ListIntegrations for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/ListIntegrations
+func (c *CloudWatchLogs) ListIntegrations(input *ListIntegrationsInput) (*ListIntegrationsOutput, error) {
+	req, out := c.ListIntegrationsRequest(input)
+	return out, req.Send()
+}
+
+// ListIntegrationsWithContext is the same as ListIntegrations with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListIntegrations for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) ListIntegrationsWithContext(ctx aws.Context, input *ListIntegrationsInput, opts ...request.Option) (*ListIntegrationsOutput, error) {
+	req, out := c.ListIntegrationsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opListLogAnomalyDetectors = "ListLogAnomalyDetectors"
 
 // ListLogAnomalyDetectorsRequest generates a "aws/request.Request" representing the
@@ -5414,6 +6387,252 @@ func (c *CloudWatchLogs) ListLogAnomalyDetectorsPagesWithContext(ctx aws.Context
 
 	for p.Next() {
 		if !fn(p.Page().(*ListLogAnomalyDetectorsOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
+const opListLogGroups = "ListLogGroups"
+
+// ListLogGroupsRequest generates a "aws/request.Request" representing the
+// client's request for the ListLogGroups operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListLogGroups for more information on using the ListLogGroups
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the ListLogGroupsRequest method.
+//	req, resp := client.ListLogGroupsRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/ListLogGroups
+func (c *CloudWatchLogs) ListLogGroupsRequest(input *ListLogGroupsInput) (req *request.Request, output *ListLogGroupsOutput) {
+	op := &request.Operation{
+		Name:       opListLogGroups,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &ListLogGroupsInput{}
+	}
+
+	output = &ListLogGroupsOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListLogGroups API operation for Amazon CloudWatch Logs.
+//
+// Returns a list of log groups in the Region in your account. If you are performing
+// this action in a monitoring account, you can choose to also return log groups
+// from source accounts that are linked to the monitoring account. For more
+// information about using cross-account observability to set up monitoring
+// accounts and source accounts, see CloudWatch cross-account observability
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Unified-Cross-Account.html).
+//
+// You can optionally filter the list by log group class and by using regular
+// expressions in your request to match strings in the log group names.
+//
+// This operation is paginated. By default, your first use of this operation
+// returns 50 results, and includes a token to use in a subsequent operation
+// to return more results.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation ListLogGroups for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/ListLogGroups
+func (c *CloudWatchLogs) ListLogGroups(input *ListLogGroupsInput) (*ListLogGroupsOutput, error) {
+	req, out := c.ListLogGroupsRequest(input)
+	return out, req.Send()
+}
+
+// ListLogGroupsWithContext is the same as ListLogGroups with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListLogGroups for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) ListLogGroupsWithContext(ctx aws.Context, input *ListLogGroupsInput, opts ...request.Option) (*ListLogGroupsOutput, error) {
+	req, out := c.ListLogGroupsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opListLogGroupsForQuery = "ListLogGroupsForQuery"
+
+// ListLogGroupsForQueryRequest generates a "aws/request.Request" representing the
+// client's request for the ListLogGroupsForQuery operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListLogGroupsForQuery for more information on using the ListLogGroupsForQuery
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the ListLogGroupsForQueryRequest method.
+//	req, resp := client.ListLogGroupsForQueryRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/ListLogGroupsForQuery
+func (c *CloudWatchLogs) ListLogGroupsForQueryRequest(input *ListLogGroupsForQueryInput) (req *request.Request, output *ListLogGroupsForQueryOutput) {
+	op := &request.Operation{
+		Name:       opListLogGroupsForQuery,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"nextToken"},
+			OutputTokens:    []string{"nextToken"},
+			LimitToken:      "maxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &ListLogGroupsForQueryInput{}
+	}
+
+	output = &ListLogGroupsForQueryOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListLogGroupsForQuery API operation for Amazon CloudWatch Logs.
+//
+// Returns a list of the log groups that were analyzed during a single CloudWatch
+// Logs Insights query. This can be useful for queries that use log group name
+// prefixes or the filterIndex command, because the log groups are dynamically
+// selected in these cases.
+//
+// For more information about field indexes, see Create field indexes to improve
+// query performance and reduce costs (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs-Field-Indexing.html).
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation ListLogGroupsForQuery for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - AccessDeniedException
+//     You don't have sufficient permissions to perform this action.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/ListLogGroupsForQuery
+func (c *CloudWatchLogs) ListLogGroupsForQuery(input *ListLogGroupsForQueryInput) (*ListLogGroupsForQueryOutput, error) {
+	req, out := c.ListLogGroupsForQueryRequest(input)
+	return out, req.Send()
+}
+
+// ListLogGroupsForQueryWithContext is the same as ListLogGroupsForQuery with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListLogGroupsForQuery for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) ListLogGroupsForQueryWithContext(ctx aws.Context, input *ListLogGroupsForQueryInput, opts ...request.Option) (*ListLogGroupsForQueryOutput, error) {
+	req, out := c.ListLogGroupsForQueryRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// ListLogGroupsForQueryPages iterates over the pages of a ListLogGroupsForQuery operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListLogGroupsForQuery method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//	// Example iterating over at most 3 pages of a ListLogGroupsForQuery operation.
+//	pageNum := 0
+//	err := client.ListLogGroupsForQueryPages(params,
+//	    func(page *cloudwatchlogs.ListLogGroupsForQueryOutput, lastPage bool) bool {
+//	        pageNum++
+//	        fmt.Println(page)
+//	        return pageNum <= 3
+//	    })
+func (c *CloudWatchLogs) ListLogGroupsForQueryPages(input *ListLogGroupsForQueryInput, fn func(*ListLogGroupsForQueryOutput, bool) bool) error {
+	return c.ListLogGroupsForQueryPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListLogGroupsForQueryPagesWithContext same as ListLogGroupsForQueryPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) ListLogGroupsForQueryPagesWithContext(ctx aws.Context, input *ListLogGroupsForQueryInput, fn func(*ListLogGroupsForQueryOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		EndPageOnSameToken: true,
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListLogGroupsForQueryInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListLogGroupsForQueryRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListLogGroupsForQueryOutput), !p.HasNextPage()) {
 			break
 		}
 	}
@@ -5645,8 +6864,24 @@ func (c *CloudWatchLogs) PutAccountPolicyRequest(input *PutAccountPolicyInput) (
 
 // PutAccountPolicy API operation for Amazon CloudWatch Logs.
 //
-// Creates an account-level data protection policy or subscription filter policy
-// that applies to all log groups or a subset of log groups in the account.
+// Creates an account-level data protection policy, subscription filter policy,
+// or field index policy that applies to all log groups or a subset of log groups
+// in the account.
+//
+// To use this operation, you must be signed on with the correct permissions
+// depending on the type of policy that you are creating.
+//
+//   - To create a data protection policy, you must have the logs:PutDataProtectionPolicy
+//     and logs:PutAccountPolicy permissions.
+//
+//   - To create a subscription filter policy, you must have the logs:PutSubscriptionFilter
+//     and logs:PutccountPolicy permissions.
+//
+//   - To create a transformer policy, you must have the logs:PutTransformer
+//     and logs:PutAccountPolicy permissions.
+//
+//   - To create a field index policy, you must have the logs:PutIndexPolicy
+//     and logs:PutAccountPolicy permissions.
 //
 // # Data protection policy
 //
@@ -5717,6 +6952,95 @@ func (c *CloudWatchLogs) PutAccountPolicyRequest(input *PutAccountPolicyInput) (
 // in PolicyName. To perform a PutAccountPolicy subscription filter operation
 // for any destination except a Lambda function, you must also have the iam:PassRole
 // permission.
+//
+// # Transformer policy
+//
+// Creates or updates a log transformer policy for your account. You use log
+// transformers to transform log events into a different format, making them
+// easier for you to process and analyze. You can also transform logs from different
+// sources into standardized formats that contain relevant, source-specific
+// information. After you have created a transformer, CloudWatch Logs performs
+// this transformation at the time of log ingestion. You can then refer to the
+// transformed versions of the logs during operations such as querying with
+// CloudWatch Logs Insights or creating metric filters or subscription filters.
+//
+// You can also use a transformer to copy metadata from metadata keys into the
+// log events themselves. This metadata can include log group name, log stream
+// name, account ID and Region.
+//
+// A transformer for a log group is a series of processors, where each processor
+// applies one type of transformation to the log events ingested into this log
+// group. For more information about the available processors to use in a transformer,
+// see Processors that you can use (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-Processors).
+//
+// Having log events in standardized format enables visibility across your applications
+// for your log analysis, reporting, and alarming needs. CloudWatch Logs provides
+// transformation for common log types with out-of-the-box transformation templates
+// for major Amazon Web Services log sources such as VPC flow logs, Lambda,
+// and Amazon RDS. You can use pre-built transformation templates or create
+// custom transformation policies.
+//
+// You can create transformers only for the log groups in the Standard log class.
+//
+// You can have one account-level transformer policy that applies to all log
+// groups in the account. Or you can create as many as 20 account-level transformer
+// policies that are each scoped to a subset of log groups with the selectionCriteria
+// parameter. If you have multiple account-level transformer policies with selection
+// criteria, no two of them can use the same or overlapping log group name prefixes.
+// For example, if you have one policy filtered to log groups that start with
+// my-log, you can't have another field index policy filtered to my-logpprod
+// or my-logging.
+//
+// You can also set up a transformer at the log-group level. For more information,
+// see PutTransformer (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutTransformer.html).
+// If there is both a log-group level transformer created with PutTransformer
+// and an account-level transformer that could apply to the same log group,
+// the log group uses only the log-group level transformer. It ignores the account-level
+// transformer.
+//
+// # Field index policy
+//
+// You can use field index policies to create indexes on fields found in log
+// events in the log group. Creating field indexes can help lower the scan volume
+// for CloudWatch Logs Insights queries that reference those fields, because
+// these queries attempt to skip the processing of log events that are known
+// to not match the indexed field. Good fields to index are fields that you
+// often need to query for and fields or values that match only a small fraction
+// of the total log events. Common examples of indexes include request ID, session
+// ID, user IDs, or instance IDs. For more information, see Create field indexes
+// to improve query performance and reduce costs (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs-Field-Indexing.html)
+//
+// To find the fields that are in your log group events, use the GetLogGroupFields
+// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogGroupFields.html)
+// operation.
+//
+// For example, suppose you have created a field index for requestId. Then,
+// any CloudWatch Logs Insights query on that log group that includes requestId
+// = value or requestId in [value, value, ...] will attempt to process only
+// the log events where the indexed field matches the specified value.
+//
+// Matches of log events to the names of indexed fields are case-sensitive.
+// For example, an indexed field of RequestId won't match a log event containing
+// requestId.
+//
+// You can have one account-level field index policy that applies to all log
+// groups in the account. Or you can create as many as 20 account-level field
+// index policies that are each scoped to a subset of log groups with the selectionCriteria
+// parameter. If you have multiple account-level index policies with selection
+// criteria, no two of them can use the same or overlapping log group name prefixes.
+// For example, if you have one policy filtered to log groups that start with
+// my-log, you can't have another field index policy filtered to my-logpprod
+// or my-logging.
+//
+// If you create an account-level field index policy in a monitoring account
+// in cross-account observability, the policy is applied only to the monitoring
+// account and not to any source accounts.
+//
+// If you want to create a field index policy for a single log group, you can
+// use PutIndexPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutIndexPolicy.html)
+// instead of PutAccountPolicy. If you do so, that log group will use only that
+// log-group level policy, and will ignore the account-level policy that you
+// create with PutAccountPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutAccountPolicy.html).
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -5934,8 +7258,9 @@ func (c *CloudWatchLogs) PutDeliveryDestinationRequest(input *PutDeliveryDestina
 //     the resource that is actually sending the logs. For more information,
 //     see PutDeliverySource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliverySource.html).
 //
-//   - Use PutDeliveryDestination to create a delivery destination, which is
-//     a logical object that represents the actual delivery destination.
+//   - Use PutDeliveryDestination to create a delivery destination in the same
+//     account of the actual delivery destination. The delivery destination that
+//     you create is a logical object that represents the actual delivery destination.
 //
 //   - If you are delivering logs cross-account, you must use PutDeliveryDestinationPolicy
 //     (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliveryDestinationPolicy.html)
@@ -6440,6 +7765,232 @@ func (c *CloudWatchLogs) PutDestinationPolicyWithContext(ctx aws.Context, input 
 	return out, req.Send()
 }
 
+const opPutIndexPolicy = "PutIndexPolicy"
+
+// PutIndexPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the PutIndexPolicy operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See PutIndexPolicy for more information on using the PutIndexPolicy
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the PutIndexPolicyRequest method.
+//	req, resp := client.PutIndexPolicyRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutIndexPolicy
+func (c *CloudWatchLogs) PutIndexPolicyRequest(input *PutIndexPolicyInput) (req *request.Request, output *PutIndexPolicyOutput) {
+	op := &request.Operation{
+		Name:       opPutIndexPolicy,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &PutIndexPolicyInput{}
+	}
+
+	output = &PutIndexPolicyOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// PutIndexPolicy API operation for Amazon CloudWatch Logs.
+//
+// Creates or updates a field index policy for the specified log group. Only
+// log groups in the Standard log class support field index policies. For more
+// information about log classes, see Log classes (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html).
+//
+// You can use field index policies to create field indexes on fields found
+// in log events in the log group. Creating field indexes speeds up and lowers
+// the costs for CloudWatch Logs Insights queries that reference those field
+// indexes, because these queries attempt to skip the processing of log events
+// that are known to not match the indexed field. Good fields to index are fields
+// that you often need to query for and fields or values that match only a small
+// fraction of the total log events. Common examples of indexes include request
+// ID, session ID, userID, and instance IDs. For more information, see Create
+// field indexes to improve query performance and reduce costs (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs-Field-Indexing.html).
+//
+// To find the fields that are in your log group events, use the GetLogGroupFields
+// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogGroupFields.html)
+// operation.
+//
+// For example, suppose you have created a field index for requestId. Then,
+// any CloudWatch Logs Insights query on that log group that includes requestId
+// = value or requestId IN [value, value, ...] will process fewer log events
+// to reduce costs, and have improved performance.
+//
+// Each index policy has the following quotas and restrictions:
+//
+//   - As many as 20 fields can be included in the policy.
+//
+//   - Each field name can include as many as 100 characters.
+//
+// Matches of log events to the names of indexed fields are case-sensitive.
+// For example, a field index of RequestId won't match a log event containing
+// requestId.
+//
+// Log group-level field index policies created with PutIndexPolicy override
+// account-level field index policies created with PutAccountPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutAccountPolicy.html).
+// If you use PutIndexPolicy to create a field index policy for a log group,
+// that log group uses only that policy. The log group ignores any account-wide
+// field index policy that you might have created.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation PutIndexPolicy for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - LimitExceededException
+//     You have reached the maximum number of resources that can be created.
+//
+//   - OperationAbortedException
+//     Multiple concurrent requests to update the same resource were in conflict.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutIndexPolicy
+func (c *CloudWatchLogs) PutIndexPolicy(input *PutIndexPolicyInput) (*PutIndexPolicyOutput, error) {
+	req, out := c.PutIndexPolicyRequest(input)
+	return out, req.Send()
+}
+
+// PutIndexPolicyWithContext is the same as PutIndexPolicy with the addition of
+// the ability to pass a context and additional request options.
+//
+// See PutIndexPolicy for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) PutIndexPolicyWithContext(ctx aws.Context, input *PutIndexPolicyInput, opts ...request.Option) (*PutIndexPolicyOutput, error) {
+	req, out := c.PutIndexPolicyRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opPutIntegration = "PutIntegration"
+
+// PutIntegrationRequest generates a "aws/request.Request" representing the
+// client's request for the PutIntegration operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See PutIntegration for more information on using the PutIntegration
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the PutIntegrationRequest method.
+//	req, resp := client.PutIntegrationRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutIntegration
+func (c *CloudWatchLogs) PutIntegrationRequest(input *PutIntegrationInput) (req *request.Request, output *PutIntegrationOutput) {
+	op := &request.Operation{
+		Name:       opPutIntegration,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &PutIntegrationInput{}
+	}
+
+	output = &PutIntegrationOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// PutIntegration API operation for Amazon CloudWatch Logs.
+//
+// Creates an integration between CloudWatch Logs and another service in this
+// account. Currently, only integrations with OpenSearch Service are supported,
+// and currently you can have only one integration in your account.
+//
+// Integrating with OpenSearch Service makes it possible for you to create curated
+// vended logs dashboards, powered by OpenSearch Service analytics. For more
+// information, see Vended log dashboards powered by Amazon OpenSearch Service
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs-OpenSearch-Dashboards.html).
+//
+// You can use this operation only to create a new integration. You can't modify
+// an existing integration.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation PutIntegration for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - LimitExceededException
+//     You have reached the maximum number of resources that can be created.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - ValidationException
+//     One of the parameters for the request is not valid.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutIntegration
+func (c *CloudWatchLogs) PutIntegration(input *PutIntegrationInput) (*PutIntegrationOutput, error) {
+	req, out := c.PutIntegrationRequest(input)
+	return out, req.Send()
+}
+
+// PutIntegrationWithContext is the same as PutIntegration with the addition of
+// the ability to pass a context and additional request options.
+//
+// See PutIntegration for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) PutIntegrationWithContext(ctx aws.Context, input *PutIntegrationInput, opts ...request.Option) (*PutIntegrationOutput, error) {
+	req, out := c.PutIntegrationRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opPutLogEvents = "PutLogEvents"
 
 // PutLogEventsRequest generates a "aws/request.Request" representing the
@@ -6512,7 +8063,7 @@ func (c *CloudWatchLogs) PutLogEventsRequest(input *PutLogEventsInput) (req *req
 //   - A batch of log events in a single request cannot span more than 24 hours.
 //     Otherwise, the operation fails.
 //
-//   - Each log event can be no larger than 256 KB.
+//   - Each log event can be no larger than 1 MB.
 //
 //   - The maximum number of log events in a batch is 10,000.
 //
@@ -6632,12 +8183,12 @@ func (c *CloudWatchLogs) PutMetricFilterRequest(input *PutMetricFilterInput) (re
 // The maximum number of metric filters that can be associated with a log group
 // is 100.
 //
-// Using regular expressions to create metric filters is supported. For these
-// filters, there is a quotas of quota of two regular expression patterns within
-// a single filter pattern. There is also a quota of five regular expression
-// patterns per log group. For more information about using regular expressions
-// in metric filters, see Filter pattern syntax for metric filters, subscription
-// filters, filter log events, and Live Tail (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html).
+// Using regular expressions in filter patterns is supported. For these filters,
+// there is a quota of two regular expression patterns within a single filter
+// pattern. There is also a quota of five regular expression patterns per log
+// group. For more information about using regular expressions in filter patterns,
+// see Filter pattern syntax for metric filters, subscription filters, filter
+// log events, and Live Tail (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html).
 //
 // When you create a metric filter, you can also optionally assign a unit and
 // dimensions to the metric that is created.
@@ -6677,6 +8228,9 @@ func (c *CloudWatchLogs) PutMetricFilterRequest(input *PutMetricFilterInput) (re
 //
 //   - ServiceUnavailableException
 //     The service cannot complete the request.
+//
+//   - InvalidOperationException
+//     The operation is not valid on the specified resource.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutMetricFilter
 func (c *CloudWatchLogs) PutMetricFilter(input *PutMetricFilterInput) (*PutMetricFilterOutput, error) {
@@ -6935,13 +8489,13 @@ func (c *CloudWatchLogs) PutRetentionPolicyRequest(input *PutRetentionPolicyInpu
 // can configure the number of days for which to retain log events in the specified
 // log group.
 //
-// CloudWatch Logs doesn’t immediately delete log events when they reach their
+// CloudWatch Logs doesn't immediately delete log events when they reach their
 // retention setting. It typically takes up to 72 hours after that before log
 // events are deleted, but in rare situations might take longer.
 //
 // To illustrate, imagine that you change a log group to have a longer retention
 // setting when it contains log events that are past the expiration date, but
-// haven’t been deleted. Those log events will take up to 72 hours to be deleted
+// haven't been deleted. Those log events will take up to 72 hours to be deleted
 // after the new retention date is reached. To make sure that log data is deleted
 // permanently, keep a log group at its lower retention setting until 72 hours
 // after the previous retention period ends. Alternatively, wait to change the
@@ -7066,12 +8620,12 @@ func (c *CloudWatchLogs) PutSubscriptionFilterRequest(input *PutSubscriptionFilt
 // If you are updating an existing filter, you must specify the correct name
 // in filterName.
 //
-// Using regular expressions to create subscription filters is supported. For
-// these filters, there is a quotas of quota of two regular expression patterns
-// within a single filter pattern. There is also a quota of five regular expression
-// patterns per log group. For more information about using regular expressions
-// in subscription filters, see Filter pattern syntax for metric filters, subscription
-// filters, filter log events, and Live Tail (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html).
+// Using regular expressions in filter patterns is supported. For these filters,
+// there is a quotas of quota of two regular expression patterns within a single
+// filter pattern. There is also a quota of five regular expression patterns
+// per log group. For more information about using regular expressions in filter
+// patterns, see Filter pattern syntax for metric filters, subscription filters,
+// filter log events, and Live Tail (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html).
 //
 // To perform a PutSubscriptionFilter operation for any destination except a
 // Lambda function, you must also have the iam:PassRole permission.
@@ -7100,6 +8654,9 @@ func (c *CloudWatchLogs) PutSubscriptionFilterRequest(input *PutSubscriptionFilt
 //   - ServiceUnavailableException
 //     The service cannot complete the request.
 //
+//   - InvalidOperationException
+//     The operation is not valid on the specified resource.
+//
 // See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutSubscriptionFilter
 func (c *CloudWatchLogs) PutSubscriptionFilter(input *PutSubscriptionFilterInput) (*PutSubscriptionFilterOutput, error) {
 	req, out := c.PutSubscriptionFilterRequest(input)
@@ -7117,6 +8674,136 @@ func (c *CloudWatchLogs) PutSubscriptionFilter(input *PutSubscriptionFilterInput
 // for more information on using Contexts.
 func (c *CloudWatchLogs) PutSubscriptionFilterWithContext(ctx aws.Context, input *PutSubscriptionFilterInput, opts ...request.Option) (*PutSubscriptionFilterOutput, error) {
 	req, out := c.PutSubscriptionFilterRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opPutTransformer = "PutTransformer"
+
+// PutTransformerRequest generates a "aws/request.Request" representing the
+// client's request for the PutTransformer operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See PutTransformer for more information on using the PutTransformer
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the PutTransformerRequest method.
+//	req, resp := client.PutTransformerRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutTransformer
+func (c *CloudWatchLogs) PutTransformerRequest(input *PutTransformerInput) (req *request.Request, output *PutTransformerOutput) {
+	op := &request.Operation{
+		Name:       opPutTransformer,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &PutTransformerInput{}
+	}
+
+	output = &PutTransformerOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// PutTransformer API operation for Amazon CloudWatch Logs.
+//
+// Creates or updates a log transformer for a single log group. You use log
+// transformers to transform log events into a different format, making them
+// easier for you to process and analyze. You can also transform logs from different
+// sources into standardized formats that contains relevant, source-specific
+// information.
+//
+// After you have created a transformer, CloudWatch Logs performs the transformations
+// at the time of log ingestion. You can then refer to the transformed versions
+// of the logs during operations such as querying with CloudWatch Logs Insights
+// or creating metric filters or subscription filers.
+//
+// You can also use a transformer to copy metadata from metadata keys into the
+// log events themselves. This metadata can include log group name, log stream
+// name, account ID and Region.
+//
+// A transformer for a log group is a series of processors, where each processor
+// applies one type of transformation to the log events ingested into this log
+// group. The processors work one after another, in the order that you list
+// them, like a pipeline. For more information about the available processors
+// to use in a transformer, see Processors that you can use (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-Processors).
+//
+// Having log events in standardized format enables visibility across your applications
+// for your log analysis, reporting, and alarming needs. CloudWatch Logs provides
+// transformation for common log types with out-of-the-box transformation templates
+// for major Amazon Web Services log sources such as VPC flow logs, Lambda,
+// and Amazon RDS. You can use pre-built transformation templates or create
+// custom transformation policies.
+//
+// You can create transformers only for the log groups in the Standard log class.
+//
+// You can also set up a transformer at the account level. For more information,
+// see PutAccountPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutAccountPolicy.html).
+// If there is both a log-group level transformer created with PutTransformer
+// and an account-level transformer that could apply to the same log group,
+// the log group uses only the log-group level transformer. It ignores the account-level
+// transformer.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation PutTransformer for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - LimitExceededException
+//     You have reached the maximum number of resources that can be created.
+//
+//   - OperationAbortedException
+//     Multiple concurrent requests to update the same resource were in conflict.
+//
+//   - InvalidOperationException
+//     The operation is not valid on the specified resource.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/PutTransformer
+func (c *CloudWatchLogs) PutTransformer(input *PutTransformerInput) (*PutTransformerOutput, error) {
+	req, out := c.PutTransformerRequest(input)
+	return out, req.Send()
+}
+
+// PutTransformerWithContext is the same as PutTransformer with the addition of
+// the ability to pass a context and additional request options.
+//
+// See PutTransformer for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) PutTransformerWithContext(ctx aws.Context, input *PutTransformerInput, opts ...request.Option) (*PutTransformerOutput, error) {
+	req, out := c.PutTransformerRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -7208,6 +8895,10 @@ func (c *CloudWatchLogs) StartLiveTailRequest(input *StartLiveTailInput) (req *r
 //   - A SessionTimeoutException (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_StartLiveTailResponseStream.html#CWL-Type-StartLiveTailResponseStream-SessionTimeoutException)
 //     object is returned when the session times out, after it has been kept
 //     open for three hours.
+//
+// The StartLiveTail API routes requests to streaming-logs.Region.amazonaws.com
+// using SDK host prefix injection. VPC endpoint support is not available for
+// this API.
 //
 // You can end a session before it times out by closing the session stream or
 // by closing the client that is receiving the stream. The session also ends
@@ -7357,9 +9048,9 @@ func (e eventTypeForStartLiveTailEventStreamOutputEvent) UnmarshalerForEventName
 //
 // These events are:
 //
-//   - LiveTailSessionStart
-//   - LiveTailSessionUpdate
-//   - StartLiveTailResponseStreamUnknownEvent
+//     * LiveTailSessionStart
+//     * LiveTailSessionUpdate
+//     * StartLiveTailResponseStreamUnknownEvent
 func (es *StartLiveTailEventStream) Events() <-chan StartLiveTailResponseStreamEvent {
 	return es.Reader.Events()
 }
@@ -7495,14 +9186,26 @@ func (c *CloudWatchLogs) StartQueryRequest(input *StartQueryInput) (req *request
 
 // StartQuery API operation for Amazon CloudWatch Logs.
 //
-// Schedules a query of a log group using CloudWatch Logs Insights. You specify
-// the log group and time range to query and the query string to use.
+// Starts a query of one or more log groups using CloudWatch Logs Insights.
+// You specify the log groups and time range to query and the query string to
+// use.
 //
 // For more information, see CloudWatch Logs Insights Query Syntax (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html).
 //
 // After you run a query using StartQuery, the query results are stored by CloudWatch
 // Logs. You can use GetQueryResults (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetQueryResults.html)
 // to retrieve the results of a query, using the queryId that StartQuery returns.
+//
+// To specify the log groups to query, a StartQuery operation must include one
+// of the following:
+//
+//   - Either exactly one of the following parameters: logGroupName, logGroupNames,
+//     or logGroupIdentifiers
+//
+//   - Or the queryString must include a SOURCE command to select log groups
+//     for the query. The SOURCE command can select log groups based on log group
+//     name prefix, account ID, and log class. For more information about the
+//     SOURCE command, see SOURCE (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-Source.html).
 //
 // If you have associated a KMS key with the query results in this account,
 // then StartQuery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_StartQuery.html)
@@ -7722,7 +9425,7 @@ func (c *CloudWatchLogs) TagLogGroupRequest(input *TagLogGroupInput) (req *reque
 // Logs (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Working-with-log-groups-and-streams.html#log-group-tagging)
 // in the Amazon CloudWatch Logs User Guide.
 //
-// CloudWatch Logs doesn’t support IAM policies that prevent users from assigning
+// CloudWatch Logs doesn't support IAM policies that prevent users from assigning
 // specified tags to log groups using the aws:Resource/key-name or aws:TagKeys
 // condition keys. For more information about using tags to control access,
 // see Controlling access to Amazon Web Services resources using tags (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_tags.html).
@@ -7958,6 +9661,93 @@ func (c *CloudWatchLogs) TestMetricFilterWithContext(ctx aws.Context, input *Tes
 	return out, req.Send()
 }
 
+const opTestTransformer = "TestTransformer"
+
+// TestTransformerRequest generates a "aws/request.Request" representing the
+// client's request for the TestTransformer operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See TestTransformer for more information on using the TestTransformer
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the TestTransformerRequest method.
+//	req, resp := client.TestTransformerRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/TestTransformer
+func (c *CloudWatchLogs) TestTransformerRequest(input *TestTransformerInput) (req *request.Request, output *TestTransformerOutput) {
+	op := &request.Operation{
+		Name:       opTestTransformer,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &TestTransformerInput{}
+	}
+
+	output = &TestTransformerOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// TestTransformer API operation for Amazon CloudWatch Logs.
+//
+// Use this operation to test a log transformer. You enter the transformer configuration
+// and a set of log events to test with. The operation responds with an array
+// that includes the original log events and the transformed versions.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation TestTransformer for usage and error information.
+//
+// Returned Error Types:
+//
+//   - InvalidParameterException
+//     A parameter is specified incorrectly.
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - InvalidOperationException
+//     The operation is not valid on the specified resource.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/TestTransformer
+func (c *CloudWatchLogs) TestTransformer(input *TestTransformerInput) (*TestTransformerOutput, error) {
+	req, out := c.TestTransformerRequest(input)
+	return out, req.Send()
+}
+
+// TestTransformerWithContext is the same as TestTransformer with the addition of
+// the ability to pass a context and additional request options.
+//
+// See TestTransformer for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) TestTransformerWithContext(ctx aws.Context, input *TestTransformerInput, opts ...request.Option) (*TestTransformerOutput, error) {
+	req, out := c.TestTransformerRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
 const opUntagLogGroup = "UntagLogGroup"
 
 // UntagLogGroupRequest generates a "aws/request.Request" representing the
@@ -8016,7 +9806,7 @@ func (c *CloudWatchLogs) UntagLogGroupRequest(input *UntagLogGroupInput) (req *r
 // To list the tags for a log group, use ListTagsForResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListTagsForResource.html).
 // To add tags, use TagResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_TagResource.html).
 //
-// CloudWatch Logs doesn’t support IAM policies that prevent users from assigning
+// CloudWatch Logs doesn't support IAM policies that prevent users from assigning
 // specified tags to log groups using the aws:Resource/key-name or aws:TagKeys
 // condition keys.
 //
@@ -8188,9 +9978,9 @@ func (c *CloudWatchLogs) UpdateAnomalyRequest(input *UpdateAnomalyInput) (req *r
 // UpdateAnomaly API operation for Amazon CloudWatch Logs.
 //
 // Use this operation to suppress anomaly detection for a specified anomaly
-// or pattern. If you suppress an anomaly, CloudWatch Logs won’t report new
+// or pattern. If you suppress an anomaly, CloudWatch Logs won't report new
 // occurrences of that anomaly and won't update that anomaly with new data.
-// If you suppress a pattern, CloudWatch Logs won’t report any anomalies related
+// If you suppress a pattern, CloudWatch Logs won't report any anomalies related
 // to that pattern.
 //
 // You must specify either anomalyId or patternId, but you can't specify both
@@ -8239,6 +10029,103 @@ func (c *CloudWatchLogs) UpdateAnomaly(input *UpdateAnomalyInput) (*UpdateAnomal
 // for more information on using Contexts.
 func (c *CloudWatchLogs) UpdateAnomalyWithContext(ctx aws.Context, input *UpdateAnomalyInput, opts ...request.Option) (*UpdateAnomalyOutput, error) {
 	req, out := c.UpdateAnomalyRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opUpdateDeliveryConfiguration = "UpdateDeliveryConfiguration"
+
+// UpdateDeliveryConfigurationRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateDeliveryConfiguration operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See UpdateDeliveryConfiguration for more information on using the UpdateDeliveryConfiguration
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the UpdateDeliveryConfigurationRequest method.
+//	req, resp := client.UpdateDeliveryConfigurationRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/UpdateDeliveryConfiguration
+func (c *CloudWatchLogs) UpdateDeliveryConfigurationRequest(input *UpdateDeliveryConfigurationInput) (req *request.Request, output *UpdateDeliveryConfigurationOutput) {
+	op := &request.Operation{
+		Name:       opUpdateDeliveryConfiguration,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &UpdateDeliveryConfigurationInput{}
+	}
+
+	output = &UpdateDeliveryConfigurationOutput{}
+	req = c.newRequest(op, input, output)
+	req.Handlers.Unmarshal.Swap(jsonrpc.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
+	return
+}
+
+// UpdateDeliveryConfiguration API operation for Amazon CloudWatch Logs.
+//
+// Use this operation to update the configuration of a delivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_Delivery.html)
+// to change either the S3 path pattern or the format of the delivered logs.
+// You can't use this operation to change the source or destination of the delivery.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch Logs's
+// API operation UpdateDeliveryConfiguration for usage and error information.
+//
+// Returned Error Types:
+//
+//   - ServiceUnavailableException
+//     The service cannot complete the request.
+//
+//   - ConflictException
+//     This operation attempted to create a resource that already exists.
+//
+//   - ResourceNotFoundException
+//     The specified resource does not exist.
+//
+//   - ValidationException
+//     One of the parameters for the request is not valid.
+//
+//   - AccessDeniedException
+//     You don't have sufficient permissions to perform this action.
+//
+//   - ThrottlingException
+//     The request was throttled because of quota limits.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/logs-2014-03-28/UpdateDeliveryConfiguration
+func (c *CloudWatchLogs) UpdateDeliveryConfiguration(input *UpdateDeliveryConfigurationInput) (*UpdateDeliveryConfigurationOutput, error) {
+	req, out := c.UpdateDeliveryConfigurationRequest(input)
+	return out, req.Send()
+}
+
+// UpdateDeliveryConfigurationWithContext is the same as UpdateDeliveryConfiguration with the addition of
+// the ability to pass a context and additional request options.
+//
+// See UpdateDeliveryConfiguration for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatchLogs) UpdateDeliveryConfigurationWithContext(ctx aws.Context, input *UpdateDeliveryConfigurationInput, opts ...request.Option) (*UpdateDeliveryConfigurationOutput, error) {
+	req, out := c.UpdateDeliveryConfigurationRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -8421,7 +10308,7 @@ type AccountPolicy struct {
 	// The scope of the account policy.
 	Scope *string `locationName:"scope" type:"string" enum:"Scope"`
 
-	// The log group selection criteria for this subscription filter policy.
+	// The log group selection criteria that is used for this policy.
 	SelectionCriteria *string `locationName:"selectionCriteria" type:"string"`
 }
 
@@ -8482,6 +10369,149 @@ func (s *AccountPolicy) SetScope(v string) *AccountPolicy {
 // SetSelectionCriteria sets the SelectionCriteria field's value.
 func (s *AccountPolicy) SetSelectionCriteria(v string) *AccountPolicy {
 	s.SelectionCriteria = &v
+	return s
+}
+
+// This object defines one key that will be added with the addKeys (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-addKey)
+// processor.
+type AddKeyEntry struct {
+	_ struct{} `type:"structure"`
+
+	// The key of the new entry to be added to the log event
+	//
+	// Key is a required field
+	Key *string `locationName:"key" min:"1" type:"string" required:"true"`
+
+	// Specifies whether to overwrite the value if the key already exists in the
+	// log event. If you omit this, the default is false.
+	OverwriteIfExists *bool `locationName:"overwriteIfExists" type:"boolean"`
+
+	// The value of the new entry to be added to the log event
+	//
+	// Value is a required field
+	Value *string `locationName:"value" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AddKeyEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AddKeyEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *AddKeyEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "AddKeyEntry"}
+	if s.Key == nil {
+		invalidParams.Add(request.NewErrParamRequired("Key"))
+	}
+	if s.Key != nil && len(*s.Key) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Key", 1))
+	}
+	if s.Value == nil {
+		invalidParams.Add(request.NewErrParamRequired("Value"))
+	}
+	if s.Value != nil && len(*s.Value) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Value", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetKey sets the Key field's value.
+func (s *AddKeyEntry) SetKey(v string) *AddKeyEntry {
+	s.Key = &v
+	return s
+}
+
+// SetOverwriteIfExists sets the OverwriteIfExists field's value.
+func (s *AddKeyEntry) SetOverwriteIfExists(v bool) *AddKeyEntry {
+	s.OverwriteIfExists = &v
+	return s
+}
+
+// SetValue sets the Value field's value.
+func (s *AddKeyEntry) SetValue(v string) *AddKeyEntry {
+	s.Value = &v
+	return s
+}
+
+// This processor adds new key-value pairs to the log event.
+//
+// For more information about this processor including examples, see addKeys
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-addKeys)
+// in the CloudWatch Logs User Guide.
+type AddKeys struct {
+	_ struct{} `type:"structure"`
+
+	// An array of objects, where each object contains the information about one
+	// key to add to the log event.
+	//
+	// Entries is a required field
+	Entries []*AddKeyEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AddKeys) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AddKeys) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *AddKeys) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "AddKeys"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *AddKeys) SetEntries(v []*AddKeyEntry) *AddKeys {
+	s.Entries = v
 	return s
 }
 
@@ -8764,7 +10794,7 @@ type AnomalyDetector struct {
 	// in the log event message.
 	FilterPattern *string `locationName:"filterPattern" type:"string"`
 
-	// The ID of the KMS key assigned to this anomaly detector, if any.
+	// The ARN of the KMS key assigned to this anomaly detector, if any.
 	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
 
 	// The date and time when this anomaly detector was most recently modified.
@@ -8962,6 +10992,94 @@ func (s AssociateKmsKeyOutput) GoString() string {
 	return s.String()
 }
 
+// The CSV processor parses comma-separated values (CSV) from the log events
+// into columns.
+//
+// For more information about this processor including examples, see csv (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-csv)
+// in the CloudWatch Logs User Guide.
+type CSV struct {
+	_ struct{} `type:"structure"`
+
+	// An array of names to use for the columns in the transformed log event.
+	//
+	// If you omit this, default column names ([column_1, column_2 ...]) are used.
+	Columns []*string `locationName:"columns" type:"list"`
+
+	// The character used to separate each column in the original comma-separated
+	// value log event. If you omit this, the processor looks for the comma , character
+	// as the delimiter.
+	Delimiter *string `locationName:"delimiter" min:"1" type:"string"`
+
+	// The character used used as a text qualifier for a single column of data.
+	// If you omit this, the double quotation mark " character is used.
+	QuoteCharacter *string `locationName:"quoteCharacter" min:"1" type:"string"`
+
+	// The path to the field in the log event that has the comma separated values
+	// to be parsed. If you omit this value, the whole log message is processed.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s CSV) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s CSV) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *CSV) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "CSV"}
+	if s.Delimiter != nil && len(*s.Delimiter) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Delimiter", 1))
+	}
+	if s.QuoteCharacter != nil && len(*s.QuoteCharacter) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("QuoteCharacter", 1))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetColumns sets the Columns field's value.
+func (s *CSV) SetColumns(v []*string) *CSV {
+	s.Columns = v
+	return s
+}
+
+// SetDelimiter sets the Delimiter field's value.
+func (s *CSV) SetDelimiter(v string) *CSV {
+	s.Delimiter = &v
+	return s
+}
+
+// SetQuoteCharacter sets the QuoteCharacter field's value.
+func (s *CSV) SetQuoteCharacter(v string) *CSV {
+	s.QuoteCharacter = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *CSV) SetSource(v string) *CSV {
+	s.Source = &v
+	return s
+}
+
 type CancelExportTaskInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9033,6 +11151,195 @@ func (s CancelExportTaskOutput) GoString() string {
 	return s.String()
 }
 
+// A structure containing information about the deafult settings and available
+// settings that you can use to configure a delivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_Delivery.html)
+// or a delivery destination (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DeliveryDestination.html).
+type ConfigurationTemplate struct {
+	_ struct{} `type:"structure"`
+
+	// The action permissions that a caller needs to have to be able to successfully
+	// create a delivery source on the desired resource type when calling PutDeliverySource
+	// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliverySource.html).
+	AllowedActionForAllowVendedLogsDeliveryForResource *string `locationName:"allowedActionForAllowVendedLogsDeliveryForResource" type:"string"`
+
+	// The valid values that a caller can use as field delimiters when calling CreateDelivery
+	// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+	// or UpdateDeliveryConfiguration (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UpdateDeliveryConfiguration.html)
+	// on a delivery that delivers in Plain, W3C, or Raw format.
+	AllowedFieldDelimiters []*string `locationName:"allowedFieldDelimiters" type:"list"`
+
+	// The allowed fields that a caller can use in the recordFields parameter of
+	// a CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+	// or UpdateDeliveryConfiguration (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UpdateDeliveryConfiguration.html)
+	// operation.
+	AllowedFields []*RecordField `locationName:"allowedFields" type:"list"`
+
+	// The list of delivery destination output formats that are supported by this
+	// log source.
+	AllowedOutputFormats []*string `locationName:"allowedOutputFormats" type:"list" enum:"OutputFormat"`
+
+	// The list of variable fields that can be used in the suffix path of a delivery
+	// that delivers to an S3 bucket.
+	AllowedSuffixPathFields []*string `locationName:"allowedSuffixPathFields" type:"list"`
+
+	// A mapping that displays the default value of each property within a delivery's
+	// configuration, if it is not specified in the request.
+	DefaultDeliveryConfigValues *ConfigurationTemplateDeliveryConfigValues `locationName:"defaultDeliveryConfigValues" type:"structure"`
+
+	// A string specifying which destination type this configuration template applies
+	// to.
+	DeliveryDestinationType *string `locationName:"deliveryDestinationType" type:"string" enum:"DeliveryDestinationType"`
+
+	// A string specifying which log type this configuration template applies to.
+	LogType *string `locationName:"logType" min:"1" type:"string"`
+
+	// A string specifying which resource type this configuration template applies
+	// to.
+	ResourceType *string `locationName:"resourceType" min:"1" type:"string"`
+
+	// A string specifying which service this configuration template applies to.
+	// For more information about supported services see Enable logging from Amazon
+	// Web Services services. (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AWS-logs-and-resource-policy.html).
+	Service *string `locationName:"service" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ConfigurationTemplate) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ConfigurationTemplate) GoString() string {
+	return s.String()
+}
+
+// SetAllowedActionForAllowVendedLogsDeliveryForResource sets the AllowedActionForAllowVendedLogsDeliveryForResource field's value.
+func (s *ConfigurationTemplate) SetAllowedActionForAllowVendedLogsDeliveryForResource(v string) *ConfigurationTemplate {
+	s.AllowedActionForAllowVendedLogsDeliveryForResource = &v
+	return s
+}
+
+// SetAllowedFieldDelimiters sets the AllowedFieldDelimiters field's value.
+func (s *ConfigurationTemplate) SetAllowedFieldDelimiters(v []*string) *ConfigurationTemplate {
+	s.AllowedFieldDelimiters = v
+	return s
+}
+
+// SetAllowedFields sets the AllowedFields field's value.
+func (s *ConfigurationTemplate) SetAllowedFields(v []*RecordField) *ConfigurationTemplate {
+	s.AllowedFields = v
+	return s
+}
+
+// SetAllowedOutputFormats sets the AllowedOutputFormats field's value.
+func (s *ConfigurationTemplate) SetAllowedOutputFormats(v []*string) *ConfigurationTemplate {
+	s.AllowedOutputFormats = v
+	return s
+}
+
+// SetAllowedSuffixPathFields sets the AllowedSuffixPathFields field's value.
+func (s *ConfigurationTemplate) SetAllowedSuffixPathFields(v []*string) *ConfigurationTemplate {
+	s.AllowedSuffixPathFields = v
+	return s
+}
+
+// SetDefaultDeliveryConfigValues sets the DefaultDeliveryConfigValues field's value.
+func (s *ConfigurationTemplate) SetDefaultDeliveryConfigValues(v *ConfigurationTemplateDeliveryConfigValues) *ConfigurationTemplate {
+	s.DefaultDeliveryConfigValues = v
+	return s
+}
+
+// SetDeliveryDestinationType sets the DeliveryDestinationType field's value.
+func (s *ConfigurationTemplate) SetDeliveryDestinationType(v string) *ConfigurationTemplate {
+	s.DeliveryDestinationType = &v
+	return s
+}
+
+// SetLogType sets the LogType field's value.
+func (s *ConfigurationTemplate) SetLogType(v string) *ConfigurationTemplate {
+	s.LogType = &v
+	return s
+}
+
+// SetResourceType sets the ResourceType field's value.
+func (s *ConfigurationTemplate) SetResourceType(v string) *ConfigurationTemplate {
+	s.ResourceType = &v
+	return s
+}
+
+// SetService sets the Service field's value.
+func (s *ConfigurationTemplate) SetService(v string) *ConfigurationTemplate {
+	s.Service = &v
+	return s
+}
+
+// This structure contains the default values that are used for each configuration
+// parameter when you use CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+// to create a deliver under the current service type, resource type, and log
+// type.
+type ConfigurationTemplateDeliveryConfigValues struct {
+	_ struct{} `type:"structure"`
+
+	// The default field delimiter that is used in a CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+	// operation when the field delimiter is not specified in that operation. The
+	// field delimiter is used only when the final output delivery is in Plain,
+	// W3C, or Raw format.
+	FieldDelimiter *string `locationName:"fieldDelimiter" type:"string"`
+
+	// The default record fields that will be delivered when a list of record fields
+	// is not provided in a CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+	// operation.
+	RecordFields []*string `locationName:"recordFields" type:"list"`
+
+	// The delivery parameters that are used when you create a delivery to a delivery
+	// destination that is an S3 Bucket.
+	S3DeliveryConfiguration *S3DeliveryConfiguration `locationName:"s3DeliveryConfiguration" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ConfigurationTemplateDeliveryConfigValues) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ConfigurationTemplateDeliveryConfigValues) GoString() string {
+	return s.String()
+}
+
+// SetFieldDelimiter sets the FieldDelimiter field's value.
+func (s *ConfigurationTemplateDeliveryConfigValues) SetFieldDelimiter(v string) *ConfigurationTemplateDeliveryConfigValues {
+	s.FieldDelimiter = &v
+	return s
+}
+
+// SetRecordFields sets the RecordFields field's value.
+func (s *ConfigurationTemplateDeliveryConfigValues) SetRecordFields(v []*string) *ConfigurationTemplateDeliveryConfigValues {
+	s.RecordFields = v
+	return s
+}
+
+// SetS3DeliveryConfiguration sets the S3DeliveryConfiguration field's value.
+func (s *ConfigurationTemplateDeliveryConfigValues) SetS3DeliveryConfiguration(v *S3DeliveryConfiguration) *ConfigurationTemplateDeliveryConfigValues {
+	s.S3DeliveryConfiguration = v
+	return s
+}
+
 // This operation attempted to create a resource that already exists.
 type ConflictException struct {
 	_            struct{}                  `type:"structure"`
@@ -9097,6 +11404,151 @@ func (s *ConflictException) RequestID() string {
 	return s.RespMetadata.RequestID
 }
 
+// This processor copies values within a log event. You can also use this processor
+// to add metadata to log events by copying the values of the following metadata
+// keys into the log events: @logGroupName, @logGroupStream, @accountId, @regionName.
+//
+// For more information about this processor including examples, see copyValue
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-copyValue)
+// in the CloudWatch Logs User Guide.
+type CopyValue struct {
+	_ struct{} `type:"structure"`
+
+	// An array of CopyValueEntry objects, where each object contains the information
+	// about one field value to copy.
+	//
+	// Entries is a required field
+	Entries []*CopyValueEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s CopyValue) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s CopyValue) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *CopyValue) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "CopyValue"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *CopyValue) SetEntries(v []*CopyValueEntry) *CopyValue {
+	s.Entries = v
+	return s
+}
+
+// This object defines one value to be copied with the copyValue (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-copoyValue)
+// processor.
+type CopyValueEntry struct {
+	_ struct{} `type:"structure"`
+
+	// Specifies whether to overwrite the value if the destination key already exists.
+	// If you omit this, the default is false.
+	OverwriteIfExists *bool `locationName:"overwriteIfExists" type:"boolean"`
+
+	// The key to copy.
+	//
+	// Source is a required field
+	Source *string `locationName:"source" min:"1" type:"string" required:"true"`
+
+	// The key of the field to copy the value to.
+	//
+	// Target is a required field
+	Target *string `locationName:"target" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s CopyValueEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s CopyValueEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *CopyValueEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "CopyValueEntry"}
+	if s.Source == nil {
+		invalidParams.Add(request.NewErrParamRequired("Source"))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+	if s.Target == nil {
+		invalidParams.Add(request.NewErrParamRequired("Target"))
+	}
+	if s.Target != nil && len(*s.Target) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Target", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetOverwriteIfExists sets the OverwriteIfExists field's value.
+func (s *CopyValueEntry) SetOverwriteIfExists(v bool) *CopyValueEntry {
+	s.OverwriteIfExists = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *CopyValueEntry) SetSource(v string) *CopyValueEntry {
+	s.Source = &v
+	return s
+}
+
+// SetTarget sets the Target field's value.
+func (s *CopyValueEntry) SetTarget(v string) *CopyValueEntry {
+	s.Target = &v
+	return s
+}
+
 type CreateDeliveryInput struct {
 	_ struct{} `type:"structure"`
 
@@ -9109,6 +11561,19 @@ type CreateDeliveryInput struct {
 	//
 	// DeliverySourceName is a required field
 	DeliverySourceName *string `locationName:"deliverySourceName" min:"1" type:"string" required:"true"`
+
+	// The field delimiter to use between record fields when the final output format
+	// of a delivery is in Plain, W3C, or Raw format.
+	FieldDelimiter *string `locationName:"fieldDelimiter" type:"string"`
+
+	// The list of record fields to be delivered to the destination, in order. If
+	// the delivery's log source has mandatory fields, they must be included in
+	// this list.
+	RecordFields []*string `locationName:"recordFields" type:"list"`
+
+	// This structure contains parameters that are valid only when the delivery's
+	// delivery destination is an S3 bucket.
+	S3DeliveryConfiguration *S3DeliveryConfiguration `locationName:"s3DeliveryConfiguration" type:"structure"`
 
 	// An optional list of key-value pairs to associate with the resource.
 	//
@@ -9150,6 +11615,11 @@ func (s *CreateDeliveryInput) Validate() error {
 	if s.Tags != nil && len(s.Tags) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("Tags", 1))
 	}
+	if s.S3DeliveryConfiguration != nil {
+		if err := s.S3DeliveryConfiguration.Validate(); err != nil {
+			invalidParams.AddNested("S3DeliveryConfiguration", err.(request.ErrInvalidParams))
+		}
+	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -9166,6 +11636,24 @@ func (s *CreateDeliveryInput) SetDeliveryDestinationArn(v string) *CreateDeliver
 // SetDeliverySourceName sets the DeliverySourceName field's value.
 func (s *CreateDeliveryInput) SetDeliverySourceName(v string) *CreateDeliveryInput {
 	s.DeliverySourceName = &v
+	return s
+}
+
+// SetFieldDelimiter sets the FieldDelimiter field's value.
+func (s *CreateDeliveryInput) SetFieldDelimiter(v string) *CreateDeliveryInput {
+	s.FieldDelimiter = &v
+	return s
+}
+
+// SetRecordFields sets the RecordFields field's value.
+func (s *CreateDeliveryInput) SetRecordFields(v []*string) *CreateDeliveryInput {
+	s.RecordFields = v
+	return s
+}
+
+// SetS3DeliveryConfiguration sets the S3DeliveryConfiguration field's value.
+func (s *CreateDeliveryInput) SetS3DeliveryConfiguration(v *S3DeliveryConfiguration) *CreateDeliveryInput {
+	s.S3DeliveryConfiguration = v
 	return s
 }
 
@@ -9217,6 +11705,10 @@ type CreateExportTaskInput struct {
 
 	// The prefix used as the start of the key for every object exported. If you
 	// don't specify a value, the default is exportedlogs.
+	//
+	// The length of this parameter must comply with the S3 object key name length
+	// limits. The object key name is a sequence of Unicode characters with UTF-8
+	// encoding, and can be up to 1,024 bytes.
 	DestinationPrefix *string `locationName:"destinationPrefix" type:"string"`
 
 	// The start time of the range for the request, expressed as the number of milliseconds
@@ -9405,8 +11897,9 @@ type CreateLogAnomalyDetectorInput struct {
 	// a user must have permissions for both this key and for the anomaly detector
 	// to retrieve information about the anomalies that it finds.
 	//
-	// For more information about using a KMS key and to see the required IAM policy,
-	// see Use a KMS key with an anomaly detector (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/LogsAnomalyDetection-KMS.html).
+	// Make sure the value provided is a valid KMS key ARN. For more information
+	// about using a KMS key and to see the required IAM policy, see Use a KMS key
+	// with an anomaly detector (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/LogsAnomalyDetection-KMS.html).
 	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
 
 	// An array containing the ARN of the log group that this anomaly detector will
@@ -9543,12 +12036,18 @@ type CreateLogGroupInput struct {
 	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
 
 	// Use this parameter to specify the log group class for this log group. There
-	// are two classes:
+	// are three classes:
 	//
 	//    * The Standard log class supports all CloudWatch Logs features.
 	//
 	//    * The Infrequent Access log class supports a subset of CloudWatch Logs
 	//    features and incurs lower costs.
+	//
+	//    * Use the Delivery log class only for delivering Lambda logs to store
+	//    in Amazon S3 or Amazon Data Firehose. Log events in log groups in the
+	//    Delivery class are kept in CloudWatch Logs for only one day. This log
+	//    class doesn't offer rich CloudWatch Logs capabilities such as CloudWatch
+	//    Logs Insights queries.
 	//
 	// If you omit this parameter, the default of STANDARD is used.
 	//
@@ -9813,6 +12312,147 @@ func (s *DataAlreadyAcceptedException) StatusCode() int {
 // RequestID returns the service's response RequestID for request.
 func (s *DataAlreadyAcceptedException) RequestID() string {
 	return s.RespMetadata.RequestID
+}
+
+// This processor converts a datetime string into a format that you specify.
+//
+// For more information about this processor including examples, see datetimeConverter
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-datetimeConverter)
+// in the CloudWatch Logs User Guide.
+type DateTimeConverter struct {
+	_ struct{} `type:"structure"`
+
+	// The locale of the source field. If you omit this, the default of locale.ROOT
+	// is used.
+	Locale *string `locationName:"locale" min:"1" type:"string"`
+
+	// A list of patterns to match against the source field.
+	//
+	// MatchPatterns is a required field
+	MatchPatterns []*string `locationName:"matchPatterns" min:"1" type:"list" required:"true"`
+
+	// The key to apply the date conversion to.
+	//
+	// Source is a required field
+	Source *string `locationName:"source" min:"1" type:"string" required:"true"`
+
+	// The time zone of the source field. If you omit this, the default used is
+	// the UTC zone.
+	SourceTimezone *string `locationName:"sourceTimezone" min:"1" type:"string"`
+
+	// The JSON field to store the result in.
+	//
+	// Target is a required field
+	Target *string `locationName:"target" min:"1" type:"string" required:"true"`
+
+	// The datetime format to use for the converted data in the target field.
+	//
+	// If you omit this, the default of yyyy-MM-dd'T'HH:mm:ss.SSS'Z is used.
+	TargetFormat *string `locationName:"targetFormat" min:"1" type:"string"`
+
+	// The time zone of the target field. If you omit this, the default used is
+	// the UTC zone.
+	TargetTimezone *string `locationName:"targetTimezone" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DateTimeConverter) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DateTimeConverter) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DateTimeConverter) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DateTimeConverter"}
+	if s.Locale != nil && len(*s.Locale) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Locale", 1))
+	}
+	if s.MatchPatterns == nil {
+		invalidParams.Add(request.NewErrParamRequired("MatchPatterns"))
+	}
+	if s.MatchPatterns != nil && len(s.MatchPatterns) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("MatchPatterns", 1))
+	}
+	if s.Source == nil {
+		invalidParams.Add(request.NewErrParamRequired("Source"))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+	if s.SourceTimezone != nil && len(*s.SourceTimezone) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("SourceTimezone", 1))
+	}
+	if s.Target == nil {
+		invalidParams.Add(request.NewErrParamRequired("Target"))
+	}
+	if s.Target != nil && len(*s.Target) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Target", 1))
+	}
+	if s.TargetFormat != nil && len(*s.TargetFormat) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TargetFormat", 1))
+	}
+	if s.TargetTimezone != nil && len(*s.TargetTimezone) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TargetTimezone", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLocale sets the Locale field's value.
+func (s *DateTimeConverter) SetLocale(v string) *DateTimeConverter {
+	s.Locale = &v
+	return s
+}
+
+// SetMatchPatterns sets the MatchPatterns field's value.
+func (s *DateTimeConverter) SetMatchPatterns(v []*string) *DateTimeConverter {
+	s.MatchPatterns = v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *DateTimeConverter) SetSource(v string) *DateTimeConverter {
+	s.Source = &v
+	return s
+}
+
+// SetSourceTimezone sets the SourceTimezone field's value.
+func (s *DateTimeConverter) SetSourceTimezone(v string) *DateTimeConverter {
+	s.SourceTimezone = &v
+	return s
+}
+
+// SetTarget sets the Target field's value.
+func (s *DateTimeConverter) SetTarget(v string) *DateTimeConverter {
+	s.Target = &v
+	return s
+}
+
+// SetTargetFormat sets the TargetFormat field's value.
+func (s *DateTimeConverter) SetTargetFormat(v string) *DateTimeConverter {
+	s.TargetFormat = &v
+	return s
+}
+
+// SetTargetTimezone sets the TargetTimezone field's value.
+func (s *DateTimeConverter) SetTargetTimezone(v string) *DateTimeConverter {
+	s.TargetTimezone = &v
+	return s
 }
 
 type DeleteAccountPolicyInput struct {
@@ -10327,6 +12967,217 @@ func (s DeleteDestinationOutput) String() string {
 // value will be replaced with "sensitive".
 func (s DeleteDestinationOutput) GoString() string {
 	return s.String()
+}
+
+type DeleteIndexPolicyInput struct {
+	_ struct{} `type:"structure"`
+
+	// The log group to delete the index policy for. You can specify either the
+	// name or the ARN of the log group.
+	//
+	// LogGroupIdentifier is a required field
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIndexPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIndexPolicyInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeleteIndexPolicyInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeleteIndexPolicyInput"}
+	if s.LogGroupIdentifier == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifier"))
+	}
+	if s.LogGroupIdentifier != nil && len(*s.LogGroupIdentifier) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifier", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *DeleteIndexPolicyInput) SetLogGroupIdentifier(v string) *DeleteIndexPolicyInput {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+type DeleteIndexPolicyOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIndexPolicyOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIndexPolicyOutput) GoString() string {
+	return s.String()
+}
+
+type DeleteIntegrationInput struct {
+	_ struct{} `type:"structure"`
+
+	// Specify true to force the deletion of the integration even if vended logs
+	// dashboards currently exist.
+	//
+	// The default is false.
+	Force *bool `locationName:"force" type:"boolean"`
+
+	// The name of the integration to delete. To find the name of your integration,
+	// use ListIntegrations (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListIntegrations.html).
+	//
+	// IntegrationName is a required field
+	IntegrationName *string `locationName:"integrationName" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIntegrationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIntegrationInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeleteIntegrationInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeleteIntegrationInput"}
+	if s.IntegrationName == nil {
+		invalidParams.Add(request.NewErrParamRequired("IntegrationName"))
+	}
+	if s.IntegrationName != nil && len(*s.IntegrationName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("IntegrationName", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetForce sets the Force field's value.
+func (s *DeleteIntegrationInput) SetForce(v bool) *DeleteIntegrationInput {
+	s.Force = &v
+	return s
+}
+
+// SetIntegrationName sets the IntegrationName field's value.
+func (s *DeleteIntegrationInput) SetIntegrationName(v string) *DeleteIntegrationInput {
+	s.IntegrationName = &v
+	return s
+}
+
+type DeleteIntegrationOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIntegrationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteIntegrationOutput) GoString() string {
+	return s.String()
+}
+
+// This processor deletes entries from a log event. These entries are key-value
+// pairs.
+//
+// For more information about this processor including examples, see deleteKeys
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-deleteKeys)
+// in the CloudWatch Logs User Guide.
+type DeleteKeys struct {
+	_ struct{} `type:"structure"`
+
+	// The list of keys to delete.
+	//
+	// WithKeys is a required field
+	WithKeys []*string `locationName:"withKeys" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteKeys) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteKeys) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeleteKeys) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeleteKeys"}
+	if s.WithKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("WithKeys"))
+	}
+	if s.WithKeys != nil && len(s.WithKeys) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("WithKeys", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetWithKeys sets the WithKeys field's value.
+func (s *DeleteKeys) SetWithKeys(v []*string) *DeleteKeys {
+	s.WithKeys = v
+	return s
 }
 
 type DeleteLogAnomalyDetectorInput struct {
@@ -10941,6 +13792,79 @@ func (s DeleteSubscriptionFilterOutput) GoString() string {
 	return s.String()
 }
 
+type DeleteTransformerInput struct {
+	_ struct{} `type:"structure"`
+
+	// Specify either the name or ARN of the log group to delete the transformer
+	// for. If the log group is in a source account and you are using a monitoring
+	// account, you must use the log group ARN.
+	//
+	// LogGroupIdentifier is a required field
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteTransformerInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteTransformerInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DeleteTransformerInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DeleteTransformerInput"}
+	if s.LogGroupIdentifier == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifier"))
+	}
+	if s.LogGroupIdentifier != nil && len(*s.LogGroupIdentifier) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifier", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *DeleteTransformerInput) SetLogGroupIdentifier(v string) *DeleteTransformerInput {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+type DeleteTransformerOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteTransformerOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DeleteTransformerOutput) GoString() string {
+	return s.String()
+}
+
 // This structure contains information about one delivery in your account.
 //
 // A delivery is a connection between a logical delivery source and a logical
@@ -10948,7 +13872,8 @@ func (s DeleteSubscriptionFilterOutput) GoString() string {
 //
 // For more information, see CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html).
 //
-// You can't update an existing delivery. You can only create and delete deliveries.
+// To update an existing delivery configuration, use UpdateDeliveryConfiguration
+// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UpdateDeliveryConfiguration.html).
 type Delivery struct {
 	_ struct{} `type:"structure"`
 
@@ -10965,8 +13890,19 @@ type Delivery struct {
 	// The name of the delivery source that is associated with this delivery.
 	DeliverySourceName *string `locationName:"deliverySourceName" min:"1" type:"string"`
 
+	// The field delimiter that is used between record fields when the final output
+	// format of a delivery is in Plain, W3C, or Raw format.
+	FieldDelimiter *string `locationName:"fieldDelimiter" type:"string"`
+
 	// The unique ID that identifies this delivery in your account.
 	Id *string `locationName:"id" min:"1" type:"string"`
+
+	// The record fields used in this delivery.
+	RecordFields []*string `locationName:"recordFields" type:"list"`
+
+	// This structure contains delivery configurations that apply only when the
+	// delivery destination resource is an S3 bucket.
+	S3DeliveryConfiguration *S3DeliveryConfiguration `locationName:"s3DeliveryConfiguration" type:"structure"`
 
 	// The tags that have been assigned to this delivery.
 	Tags map[string]*string `locationName:"tags" min:"1" type:"map"`
@@ -11014,9 +13950,27 @@ func (s *Delivery) SetDeliverySourceName(v string) *Delivery {
 	return s
 }
 
+// SetFieldDelimiter sets the FieldDelimiter field's value.
+func (s *Delivery) SetFieldDelimiter(v string) *Delivery {
+	s.FieldDelimiter = &v
+	return s
+}
+
 // SetId sets the Id field's value.
 func (s *Delivery) SetId(v string) *Delivery {
 	s.Id = &v
+	return s
+}
+
+// SetRecordFields sets the RecordFields field's value.
+func (s *Delivery) SetRecordFields(v []*string) *Delivery {
+	s.RecordFields = v
+	return s
+}
+
+// SetS3DeliveryConfiguration sets the S3DeliveryConfiguration field's value.
+func (s *Delivery) SetS3DeliveryConfiguration(v *S3DeliveryConfiguration) *Delivery {
+	s.S3DeliveryConfiguration = v
 	return s
 }
 
@@ -11303,6 +14257,10 @@ type DescribeAccountPoliciesInput struct {
 	// If you omit this parameter, only the policy in the current account is returned.
 	AccountIdentifiers []*string `locationName:"accountIdentifiers" type:"list"`
 
+	// The token for the next set of items to return. (You received this token from
+	// a previous call.)
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+
 	// Use this parameter to limit the returned policies to only the policy with
 	// the name that you specify.
 	PolicyName *string `locationName:"policyName" type:"string"`
@@ -11335,6 +14293,9 @@ func (s DescribeAccountPoliciesInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *DescribeAccountPoliciesInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "DescribeAccountPoliciesInput"}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
 	if s.PolicyType == nil {
 		invalidParams.Add(request.NewErrParamRequired("PolicyType"))
 	}
@@ -11348,6 +14309,12 @@ func (s *DescribeAccountPoliciesInput) Validate() error {
 // SetAccountIdentifiers sets the AccountIdentifiers field's value.
 func (s *DescribeAccountPoliciesInput) SetAccountIdentifiers(v []*string) *DescribeAccountPoliciesInput {
 	s.AccountIdentifiers = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeAccountPoliciesInput) SetNextToken(v string) *DescribeAccountPoliciesInput {
+	s.NextToken = &v
 	return s
 }
 
@@ -11369,6 +14336,10 @@ type DescribeAccountPoliciesOutput struct {
 	// An array of structures that contain information about the CloudWatch Logs
 	// account policies that match the specified filters.
 	AccountPolicies []*AccountPolicy `locationName:"accountPolicies" type:"list"`
+
+	// The token to use when requesting the next set of items. The token expires
+	// after 24 hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
 }
 
 // String returns the string representation.
@@ -11392,6 +14363,165 @@ func (s DescribeAccountPoliciesOutput) GoString() string {
 // SetAccountPolicies sets the AccountPolicies field's value.
 func (s *DescribeAccountPoliciesOutput) SetAccountPolicies(v []*AccountPolicy) *DescribeAccountPoliciesOutput {
 	s.AccountPolicies = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeAccountPoliciesOutput) SetNextToken(v string) *DescribeAccountPoliciesOutput {
+	s.NextToken = &v
+	return s
+}
+
+type DescribeConfigurationTemplatesInput struct {
+	_ struct{} `type:"structure"`
+
+	// Use this parameter to filter the response to include only the configuration
+	// templates that apply to the delivery destination types that you specify here.
+	DeliveryDestinationTypes []*string `locationName:"deliveryDestinationTypes" min:"1" type:"list" enum:"DeliveryDestinationType"`
+
+	// Use this parameter to limit the number of configuration templates that are
+	// returned in the response.
+	Limit *int64 `locationName:"limit" min:"1" type:"integer"`
+
+	// Use this parameter to filter the response to include only the configuration
+	// templates that apply to the log types that you specify here.
+	LogTypes []*string `locationName:"logTypes" min:"1" type:"list"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+
+	// Use this parameter to filter the response to include only the configuration
+	// templates that apply to the resource types that you specify here.
+	ResourceTypes []*string `locationName:"resourceTypes" min:"1" type:"list"`
+
+	// Use this parameter to filter the response to include only the configuration
+	// templates that apply to the Amazon Web Services service that you specify
+	// here.
+	Service *string `locationName:"service" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeConfigurationTemplatesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeConfigurationTemplatesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeConfigurationTemplatesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeConfigurationTemplatesInput"}
+	if s.DeliveryDestinationTypes != nil && len(s.DeliveryDestinationTypes) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("DeliveryDestinationTypes", 1))
+	}
+	if s.Limit != nil && *s.Limit < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("Limit", 1))
+	}
+	if s.LogTypes != nil && len(s.LogTypes) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogTypes", 1))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.ResourceTypes != nil && len(s.ResourceTypes) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceTypes", 1))
+	}
+	if s.Service != nil && len(*s.Service) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Service", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDeliveryDestinationTypes sets the DeliveryDestinationTypes field's value.
+func (s *DescribeConfigurationTemplatesInput) SetDeliveryDestinationTypes(v []*string) *DescribeConfigurationTemplatesInput {
+	s.DeliveryDestinationTypes = v
+	return s
+}
+
+// SetLimit sets the Limit field's value.
+func (s *DescribeConfigurationTemplatesInput) SetLimit(v int64) *DescribeConfigurationTemplatesInput {
+	s.Limit = &v
+	return s
+}
+
+// SetLogTypes sets the LogTypes field's value.
+func (s *DescribeConfigurationTemplatesInput) SetLogTypes(v []*string) *DescribeConfigurationTemplatesInput {
+	s.LogTypes = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeConfigurationTemplatesInput) SetNextToken(v string) *DescribeConfigurationTemplatesInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetResourceTypes sets the ResourceTypes field's value.
+func (s *DescribeConfigurationTemplatesInput) SetResourceTypes(v []*string) *DescribeConfigurationTemplatesInput {
+	s.ResourceTypes = v
+	return s
+}
+
+// SetService sets the Service field's value.
+func (s *DescribeConfigurationTemplatesInput) SetService(v string) *DescribeConfigurationTemplatesInput {
+	s.Service = &v
+	return s
+}
+
+type DescribeConfigurationTemplatesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array of objects, where each object describes one configuration template
+	// that matches the filters that you specified in the request.
+	ConfigurationTemplates []*ConfigurationTemplate `locationName:"configurationTemplates" type:"list"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeConfigurationTemplatesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeConfigurationTemplatesOutput) GoString() string {
+	return s.String()
+}
+
+// SetConfigurationTemplates sets the ConfigurationTemplates field's value.
+func (s *DescribeConfigurationTemplatesOutput) SetConfigurationTemplates(v []*ConfigurationTemplate) *DescribeConfigurationTemplatesOutput {
+	s.ConfigurationTemplates = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeConfigurationTemplatesOutput) SetNextToken(v string) *DescribeConfigurationTemplatesOutput {
+	s.NextToken = &v
 	return s
 }
 
@@ -11927,35 +15057,265 @@ func (s *DescribeExportTasksOutput) SetNextToken(v string) *DescribeExportTasksO
 	return s
 }
 
+type DescribeFieldIndexesInput struct {
+	_ struct{} `type:"structure"`
+
+	// An array containing the names or ARNs of the log groups that you want to
+	// retrieve field indexes for.
+	//
+	// LogGroupIdentifiers is a required field
+	LogGroupIdentifiers []*string `locationName:"logGroupIdentifiers" min:"1" type:"list" required:"true"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeFieldIndexesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeFieldIndexesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeFieldIndexesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeFieldIndexesInput"}
+	if s.LogGroupIdentifiers == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifiers"))
+	}
+	if s.LogGroupIdentifiers != nil && len(s.LogGroupIdentifiers) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifiers", 1))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifiers sets the LogGroupIdentifiers field's value.
+func (s *DescribeFieldIndexesInput) SetLogGroupIdentifiers(v []*string) *DescribeFieldIndexesInput {
+	s.LogGroupIdentifiers = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeFieldIndexesInput) SetNextToken(v string) *DescribeFieldIndexesInput {
+	s.NextToken = &v
+	return s
+}
+
+type DescribeFieldIndexesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array containing the field index information.
+	FieldIndexes []*FieldIndex `locationName:"fieldIndexes" type:"list"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeFieldIndexesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeFieldIndexesOutput) GoString() string {
+	return s.String()
+}
+
+// SetFieldIndexes sets the FieldIndexes field's value.
+func (s *DescribeFieldIndexesOutput) SetFieldIndexes(v []*FieldIndex) *DescribeFieldIndexesOutput {
+	s.FieldIndexes = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeFieldIndexesOutput) SetNextToken(v string) *DescribeFieldIndexesOutput {
+	s.NextToken = &v
+	return s
+}
+
+type DescribeIndexPoliciesInput struct {
+	_ struct{} `type:"structure"`
+
+	// An array containing the name or ARN of the log group that you want to retrieve
+	// field index policies for.
+	//
+	// LogGroupIdentifiers is a required field
+	LogGroupIdentifiers []*string `locationName:"logGroupIdentifiers" min:"1" type:"list" required:"true"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeIndexPoliciesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeIndexPoliciesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeIndexPoliciesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeIndexPoliciesInput"}
+	if s.LogGroupIdentifiers == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifiers"))
+	}
+	if s.LogGroupIdentifiers != nil && len(s.LogGroupIdentifiers) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifiers", 1))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifiers sets the LogGroupIdentifiers field's value.
+func (s *DescribeIndexPoliciesInput) SetLogGroupIdentifiers(v []*string) *DescribeIndexPoliciesInput {
+	s.LogGroupIdentifiers = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeIndexPoliciesInput) SetNextToken(v string) *DescribeIndexPoliciesInput {
+	s.NextToken = &v
+	return s
+}
+
+type DescribeIndexPoliciesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array containing the field index policies.
+	IndexPolicies []*IndexPolicy `locationName:"indexPolicies" type:"list"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeIndexPoliciesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DescribeIndexPoliciesOutput) GoString() string {
+	return s.String()
+}
+
+// SetIndexPolicies sets the IndexPolicies field's value.
+func (s *DescribeIndexPoliciesOutput) SetIndexPolicies(v []*IndexPolicy) *DescribeIndexPoliciesOutput {
+	s.IndexPolicies = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeIndexPoliciesOutput) SetNextToken(v string) *DescribeIndexPoliciesOutput {
+	s.NextToken = &v
+	return s
+}
+
 type DescribeLogGroupsInput struct {
 	_ struct{} `type:"structure"`
 
-	// When includeLinkedAccounts is set to True, use this parameter to specify
+	// When includeLinkedAccounts is set to true, use this parameter to specify
 	// the list of accounts to search. You can specify as many as 20 account IDs
 	// in the array.
 	AccountIdentifiers []*string `locationName:"accountIdentifiers" type:"list"`
 
-	// If you are using a monitoring account, set this to True to have the operation
+	// If you are using a monitoring account, set this to true to have the operation
 	// return log groups in the accounts listed in accountIdentifiers.
 	//
 	// If this parameter is set to true and accountIdentifiers contains a null value,
 	// the operation returns all log groups in the monitoring account and all log
 	// groups in all source accounts that are linked to the monitoring account.
+	//
+	// The default for this parameter is false.
 	IncludeLinkedAccounts *bool `locationName:"includeLinkedAccounts" type:"boolean"`
 
 	// The maximum number of items returned. If you don't specify a value, the default
 	// is up to 50 items.
 	Limit *int64 `locationName:"limit" min:"1" type:"integer"`
 
-	// Specifies the log group class for this log group. There are two classes:
+	// Use this parameter to limit the results to only those log groups in the specified
+	// log group class. If you omit this parameter, log groups of all classes can
+	// be returned.
+	//
+	// Specifies the log group class for this log group. There are three classes:
 	//
 	//    * The Standard log class supports all CloudWatch Logs features.
 	//
 	//    * The Infrequent Access log class supports a subset of CloudWatch Logs
 	//    features and incurs lower costs.
 	//
+	//    * Use the Delivery log class only for delivering Lambda logs to store
+	//    in Amazon S3 or Amazon Data Firehose. Log events in log groups in the
+	//    Delivery class are kept in CloudWatch Logs for only one day. This log
+	//    class doesn't offer rich CloudWatch Logs capabilities such as CloudWatch
+	//    Logs Insights queries.
+	//
 	// For details about the features supported by each class, see Log classes (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html)
 	LogGroupClass *string `locationName:"logGroupClass" type:"string" enum:"LogGroupClass"`
+
+	// Use this array to filter the list of log groups returned. If you specify
+	// this parameter, the only other filter that you can choose to specify is includeLinkedAccounts.
+	//
+	// If you are using this operation in a monitoring account, you can specify
+	// the ARNs of log groups in source accounts and in the monitoring account itself.
+	// If you are using this operation in an account that is not a cross-account
+	// monitoring account, you can specify only log group names in the same account
+	// as the operation.
+	LogGroupIdentifiers []*string `locationName:"logGroupIdentifiers" min:"1" type:"list"`
 
 	// If you specify a string for this parameter, the operation returns only log
 	// groups that have names that match the string based on a case-sensitive substring
@@ -12004,6 +15364,9 @@ func (s *DescribeLogGroupsInput) Validate() error {
 	if s.Limit != nil && *s.Limit < 1 {
 		invalidParams.Add(request.NewErrParamMinValue("Limit", 1))
 	}
+	if s.LogGroupIdentifiers != nil && len(s.LogGroupIdentifiers) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifiers", 1))
+	}
 	if s.LogGroupNamePrefix != nil && len(*s.LogGroupNamePrefix) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("LogGroupNamePrefix", 1))
 	}
@@ -12041,6 +15404,12 @@ func (s *DescribeLogGroupsInput) SetLogGroupClass(v string) *DescribeLogGroupsIn
 	return s
 }
 
+// SetLogGroupIdentifiers sets the LogGroupIdentifiers field's value.
+func (s *DescribeLogGroupsInput) SetLogGroupIdentifiers(v []*string) *DescribeLogGroupsInput {
+	s.LogGroupIdentifiers = v
+	return s
+}
+
 // SetLogGroupNamePattern sets the LogGroupNamePattern field's value.
 func (s *DescribeLogGroupsInput) SetLogGroupNamePattern(v string) *DescribeLogGroupsInput {
 	s.LogGroupNamePattern = &v
@@ -12062,10 +15431,8 @@ func (s *DescribeLogGroupsInput) SetNextToken(v string) *DescribeLogGroupsInput 
 type DescribeLogGroupsOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The log groups.
-	//
-	// If the retentionInDays value is not included for a log group, then that log
-	// group's events do not expire.
+	// An array of structures, where each structure contains the information about
+	// one log group.
 	LogGroups []*LogGroup `locationName:"logGroups" type:"list"`
 
 	// The token for the next set of items to return. The token expires after 24
@@ -12436,6 +15803,10 @@ type DescribeQueriesInput struct {
 	// hours.
 	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
 
+	// Limits the returned queries to only the queries that use the specified query
+	// language.
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
+
 	// Limits the returned queries to only those that have the specified status.
 	// Valid values are Cancelled, Complete, Failed, Running, and Scheduled.
 	Status *string `locationName:"status" type:"string" enum:"QueryStatus"`
@@ -12493,6 +15864,12 @@ func (s *DescribeQueriesInput) SetMaxResults(v int64) *DescribeQueriesInput {
 // SetNextToken sets the NextToken field's value.
 func (s *DescribeQueriesInput) SetNextToken(v string) *DescribeQueriesInput {
 	s.NextToken = &v
+	return s
+}
+
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *DescribeQueriesInput) SetQueryLanguage(v string) *DescribeQueriesInput {
+	s.QueryLanguage = &v
 	return s
 }
 
@@ -12556,6 +15933,10 @@ type DescribeQueryDefinitionsInput struct {
 	// Use this parameter to filter your results to only the query definitions that
 	// have names that start with the prefix you specify.
 	QueryDefinitionNamePrefix *string `locationName:"queryDefinitionNamePrefix" min:"1" type:"string"`
+
+	// The query language used for this query. For more information about the query
+	// languages that CloudWatch Logs supports, see Supported query languages (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData_Languages.html).
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
 }
 
 // String returns the string representation.
@@ -12610,6 +15991,12 @@ func (s *DescribeQueryDefinitionsInput) SetNextToken(v string) *DescribeQueryDef
 // SetQueryDefinitionNamePrefix sets the QueryDefinitionNamePrefix field's value.
 func (s *DescribeQueryDefinitionsInput) SetQueryDefinitionNamePrefix(v string) *DescribeQueryDefinitionsInput {
 	s.QueryDefinitionNamePrefix = &v
+	return s
+}
+
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *DescribeQueryDefinitionsInput) SetQueryLanguage(v string) *DescribeQueryDefinitionsInput {
+	s.QueryLanguage = &v
 	return s
 }
 
@@ -13057,11 +16444,28 @@ func (s DisassociateKmsKeyOutput) GoString() string {
 	return s.String()
 }
 
+// The entity associated with the log events in a PutLogEvents call.
 type Entity struct {
 	_ struct{} `type:"structure"`
 
+	// Additional attributes of the entity that are not used to specify the identity
+	// of the entity. A list of key-value pairs.
+	//
+	// For details about how to use the attributes, see How to add related information
+	// to telemetry (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/adding-your-own-related-telemetry.html)
+	// in the CloudWatch User Guide.
 	Attributes map[string]*string `locationName:"attributes" type:"map"`
 
+	// The attributes of the entity which identify the specific entity, as a list
+	// of key-value pairs. Entities with the same keyAttributes are considered to
+	// be the same entity.
+	//
+	// There are five allowed attributes (key names): Type, ResourceType, Identifier
+	// Name, and Environment.
+	//
+	// For details about how to use the key attributes, see How to add related information
+	// to telemetry (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/adding-your-own-related-telemetry.html)
+	// in the CloudWatch User Guide.
 	KeyAttributes map[string]*string `locationName:"keyAttributes" min:"2" type:"map"`
 }
 
@@ -13298,6 +16702,79 @@ func (s *ExportTaskStatus) SetMessage(v string) *ExportTaskStatus {
 	return s
 }
 
+// This structure describes one log event field that is used as an index in
+// at least one index policy in this account.
+type FieldIndex struct {
+	_ struct{} `type:"structure"`
+
+	// The string that this field index matches.
+	FieldIndexName *string `locationName:"fieldIndexName" min:"1" type:"string"`
+
+	// The time and date of the earliest log event that matches this field index,
+	// after the index policy that contains it was created.
+	FirstEventTime *int64 `locationName:"firstEventTime" type:"long"`
+
+	// The time and date of the most recent log event that matches this field index.
+	LastEventTime *int64 `locationName:"lastEventTime" type:"long"`
+
+	// The most recent time that CloudWatch Logs scanned ingested log events to
+	// search for this field index to improve the speed of future CloudWatch Logs
+	// Insights queries that search for this field index.
+	LastScanTime *int64 `locationName:"lastScanTime" type:"long"`
+
+	// If this field index appears in an index policy that applies only to a single
+	// log group, the ARN of that log group is displayed here.
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s FieldIndex) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s FieldIndex) GoString() string {
+	return s.String()
+}
+
+// SetFieldIndexName sets the FieldIndexName field's value.
+func (s *FieldIndex) SetFieldIndexName(v string) *FieldIndex {
+	s.FieldIndexName = &v
+	return s
+}
+
+// SetFirstEventTime sets the FirstEventTime field's value.
+func (s *FieldIndex) SetFirstEventTime(v int64) *FieldIndex {
+	s.FirstEventTime = &v
+	return s
+}
+
+// SetLastEventTime sets the LastEventTime field's value.
+func (s *FieldIndex) SetLastEventTime(v int64) *FieldIndex {
+	s.LastEventTime = &v
+	return s
+}
+
+// SetLastScanTime sets the LastScanTime field's value.
+func (s *FieldIndex) SetLastScanTime(v int64) *FieldIndex {
+	s.LastScanTime = &v
+	return s
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *FieldIndex) SetLogGroupIdentifier(v string) *FieldIndex {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
 type FilterLogEventsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -13490,6 +16967,8 @@ type FilterLogEventsOutput struct {
 
 	// The token to use when requesting the next set of items. The token expires
 	// after 24 hours.
+	//
+	// If the results don't include a nextToken, then pagination is finished.
 	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
 
 	// Important As of May 15, 2020, this parameter is no longer supported. This
@@ -14026,6 +17505,117 @@ func (s *GetDeliverySourceOutput) SetDeliverySource(v *DeliverySource) *GetDeliv
 	return s
 }
 
+type GetIntegrationInput struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the integration that you want to find information about. To find
+	// the name of your integration, use ListIntegrations (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListIntegrations.html)
+	//
+	// IntegrationName is a required field
+	IntegrationName *string `locationName:"integrationName" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetIntegrationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetIntegrationInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *GetIntegrationInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "GetIntegrationInput"}
+	if s.IntegrationName == nil {
+		invalidParams.Add(request.NewErrParamRequired("IntegrationName"))
+	}
+	if s.IntegrationName != nil && len(*s.IntegrationName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("IntegrationName", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetIntegrationName sets the IntegrationName field's value.
+func (s *GetIntegrationInput) SetIntegrationName(v string) *GetIntegrationInput {
+	s.IntegrationName = &v
+	return s
+}
+
+type GetIntegrationOutput struct {
+	_ struct{} `type:"structure"`
+
+	// A structure that contains information about the integration configuration.
+	// For an integration with OpenSearch Service, this includes information about
+	// OpenSearch Service resources such as the collection, the workspace, and policies.
+	IntegrationDetails *IntegrationDetails `locationName:"integrationDetails" type:"structure"`
+
+	// The name of the integration.
+	IntegrationName *string `locationName:"integrationName" min:"1" type:"string"`
+
+	// The current status of this integration.
+	IntegrationStatus *string `locationName:"integrationStatus" type:"string" enum:"IntegrationStatus"`
+
+	// The type of integration. Integrations with OpenSearch Service have the type
+	// OPENSEARCH.
+	IntegrationType *string `locationName:"integrationType" type:"string" enum:"IntegrationType"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetIntegrationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetIntegrationOutput) GoString() string {
+	return s.String()
+}
+
+// SetIntegrationDetails sets the IntegrationDetails field's value.
+func (s *GetIntegrationOutput) SetIntegrationDetails(v *IntegrationDetails) *GetIntegrationOutput {
+	s.IntegrationDetails = v
+	return s
+}
+
+// SetIntegrationName sets the IntegrationName field's value.
+func (s *GetIntegrationOutput) SetIntegrationName(v string) *GetIntegrationOutput {
+	s.IntegrationName = &v
+	return s
+}
+
+// SetIntegrationStatus sets the IntegrationStatus field's value.
+func (s *GetIntegrationOutput) SetIntegrationStatus(v string) *GetIntegrationOutput {
+	s.IntegrationStatus = &v
+	return s
+}
+
+// SetIntegrationType sets the IntegrationType field's value.
+func (s *GetIntegrationOutput) SetIntegrationType(v string) *GetIntegrationOutput {
+	s.IntegrationType = &v
+	return s
+}
+
 type GetLogAnomalyDetectorInput struct {
 	_ struct{} `type:"structure"`
 
@@ -14109,7 +17699,7 @@ type GetLogAnomalyDetectorOutput struct {
 	// in the log event message.
 	FilterPattern *string `locationName:"filterPattern" type:"string"`
 
-	// The ID of the KMS key assigned to this anomaly detector, if any.
+	// The ARN of the KMS key assigned to this anomaly detector, if any.
 	KmsKeyId *string `locationName:"kmsKeyId" type:"string"`
 
 	// The date and time when this anomaly detector was most recently modified.
@@ -14658,6 +18248,10 @@ type GetQueryResultsOutput struct {
 	// stores them.
 	EncryptionKey *string `locationName:"encryptionKey" type:"string"`
 
+	// The query language used for this query. For more information about the query
+	// languages that CloudWatch Logs supports, see Supported query languages (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData_Languages.html).
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
+
 	// The log events that matched the query criteria during the most recent time
 	// it ran.
 	//
@@ -14705,6 +18299,12 @@ func (s *GetQueryResultsOutput) SetEncryptionKey(v string) *GetQueryResultsOutpu
 	return s
 }
 
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *GetQueryResultsOutput) SetQueryLanguage(v string) *GetQueryResultsOutput {
+	s.QueryLanguage = &v
+	return s
+}
+
 // SetResults sets the Results field's value.
 func (s *GetQueryResultsOutput) SetResults(v [][]*ResultField) *GetQueryResultsOutput {
 	s.Results = v
@@ -14723,12 +18323,262 @@ func (s *GetQueryResultsOutput) SetStatus(v string) *GetQueryResultsOutput {
 	return s
 }
 
+type GetTransformerInput struct {
+	_ struct{} `type:"structure"`
+
+	// Specify either the name or ARN of the log group to return transformer information
+	// for. If the log group is in a source account and you are using a monitoring
+	// account, you must use the log group ARN.
+	//
+	// LogGroupIdentifier is a required field
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetTransformerInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetTransformerInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *GetTransformerInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "GetTransformerInput"}
+	if s.LogGroupIdentifier == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifier"))
+	}
+	if s.LogGroupIdentifier != nil && len(*s.LogGroupIdentifier) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifier", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *GetTransformerInput) SetLogGroupIdentifier(v string) *GetTransformerInput {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+type GetTransformerOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The creation time of the transformer, expressed as the number of milliseconds
+	// after Jan 1, 1970 00:00:00 UTC.
+	CreationTime *int64 `locationName:"creationTime" type:"long"`
+
+	// The date and time when this transformer was most recently modified, expressed
+	// as the number of milliseconds after Jan 1, 1970 00:00:00 UTC.
+	LastModifiedTime *int64 `locationName:"lastModifiedTime" type:"long"`
+
+	// The ARN of the log group that you specified in your request.
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string"`
+
+	// This sructure contains the configuration of the requested transformer.
+	TransformerConfig []*Processor `locationName:"transformerConfig" min:"1" type:"list"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetTransformerOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s GetTransformerOutput) GoString() string {
+	return s.String()
+}
+
+// SetCreationTime sets the CreationTime field's value.
+func (s *GetTransformerOutput) SetCreationTime(v int64) *GetTransformerOutput {
+	s.CreationTime = &v
+	return s
+}
+
+// SetLastModifiedTime sets the LastModifiedTime field's value.
+func (s *GetTransformerOutput) SetLastModifiedTime(v int64) *GetTransformerOutput {
+	s.LastModifiedTime = &v
+	return s
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *GetTransformerOutput) SetLogGroupIdentifier(v string) *GetTransformerOutput {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+// SetTransformerConfig sets the TransformerConfig field's value.
+func (s *GetTransformerOutput) SetTransformerConfig(v []*Processor) *GetTransformerOutput {
+	s.TransformerConfig = v
+	return s
+}
+
+// This processor uses pattern matching to parse and structure unstructured
+// data. This processor can also extract fields from log messages.
+//
+// For more information about this processor including examples, see grok (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-Grok)
+// in the CloudWatch Logs User Guide.
+type Grok struct {
+	_ struct{} `type:"structure"`
+
+	// The grok pattern to match against the log event. For a list of supported
+	// grok patterns, see Supported grok patterns (https://docs.aws.amazon.com/mazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation-Processors.html#Grok-Patterns).
+	//
+	// Match is a required field
+	Match *string `locationName:"match" min:"1" type:"string" required:"true"`
+
+	// The path to the field in the log event that you want to parse. If you omit
+	// this value, the whole log message is parsed.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s Grok) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s Grok) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *Grok) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "Grok"}
+	if s.Match == nil {
+		invalidParams.Add(request.NewErrParamRequired("Match"))
+	}
+	if s.Match != nil && len(*s.Match) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Match", 1))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMatch sets the Match field's value.
+func (s *Grok) SetMatch(v string) *Grok {
+	s.Match = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *Grok) SetSource(v string) *Grok {
+	s.Source = &v
+	return s
+}
+
+// This structure contains information about one field index policy in this
+// account.
+type IndexPolicy struct {
+	_ struct{} `type:"structure"`
+
+	// The date and time that this index policy was most recently updated.
+	LastUpdateTime *int64 `locationName:"lastUpdateTime" type:"long"`
+
+	// The ARN of the log group that this index policy applies to.
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string"`
+
+	// The policy document for this index policy, in JSON format.
+	PolicyDocument *string `locationName:"policyDocument" min:"1" type:"string"`
+
+	// The name of this policy. Responses about log group-level field index policies
+	// don't have this field, because those policies don't have names.
+	PolicyName *string `locationName:"policyName" type:"string"`
+
+	// This field indicates whether this is an account-level index policy or an
+	// index policy that applies only to a single log group.
+	Source *string `locationName:"source" type:"string" enum:"IndexSource"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s IndexPolicy) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s IndexPolicy) GoString() string {
+	return s.String()
+}
+
+// SetLastUpdateTime sets the LastUpdateTime field's value.
+func (s *IndexPolicy) SetLastUpdateTime(v int64) *IndexPolicy {
+	s.LastUpdateTime = &v
+	return s
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *IndexPolicy) SetLogGroupIdentifier(v string) *IndexPolicy {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+// SetPolicyDocument sets the PolicyDocument field's value.
+func (s *IndexPolicy) SetPolicyDocument(v string) *IndexPolicy {
+	s.PolicyDocument = &v
+	return s
+}
+
+// SetPolicyName sets the PolicyName field's value.
+func (s *IndexPolicy) SetPolicyName(v string) *IndexPolicy {
+	s.PolicyName = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *IndexPolicy) SetSource(v string) *IndexPolicy {
+	s.Source = &v
+	return s
+}
+
 // Represents a log event, which is a record of activity that was recorded by
 // the application or resource being monitored.
 type InputLogEvent struct {
 	_ struct{} `type:"structure"`
 
-	// The raw event message. Each log event can be no larger than 256 KB.
+	// The raw event message. Each log event can be no larger than 1 MB.
 	//
 	// Message is a required field
 	Message *string `locationName:"message" min:"1" type:"string" required:"true"`
@@ -14786,6 +18636,97 @@ func (s *InputLogEvent) SetMessage(v string) *InputLogEvent {
 // SetTimestamp sets the Timestamp field's value.
 func (s *InputLogEvent) SetTimestamp(v int64) *InputLogEvent {
 	s.Timestamp = &v
+	return s
+}
+
+// This structure contains information about the integration configuration.
+// For an integration with OpenSearch Service, this includes information about
+// OpenSearch Service resources such as the collection, the workspace, and policies.
+//
+// This structure is returned by a GetIntegration (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetIntegration.html)
+// operation.
+type IntegrationDetails struct {
+	_ struct{} `type:"structure"`
+
+	// This structure contains complete information about one integration between
+	// CloudWatch Logs and OpenSearch Service.
+	OpenSearchIntegrationDetails *OpenSearchIntegrationDetails `locationName:"openSearchIntegrationDetails" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s IntegrationDetails) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s IntegrationDetails) GoString() string {
+	return s.String()
+}
+
+// SetOpenSearchIntegrationDetails sets the OpenSearchIntegrationDetails field's value.
+func (s *IntegrationDetails) SetOpenSearchIntegrationDetails(v *OpenSearchIntegrationDetails) *IntegrationDetails {
+	s.OpenSearchIntegrationDetails = v
+	return s
+}
+
+// This structure contains information about one CloudWatch Logs integration.
+// This structure is returned by a ListIntegrations (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListIntegrations.html)
+// operation.
+type IntegrationSummary struct {
+	_ struct{} `type:"structure"`
+
+	// The name of this integration.
+	IntegrationName *string `locationName:"integrationName" min:"1" type:"string"`
+
+	// The current status of this integration.
+	IntegrationStatus *string `locationName:"integrationStatus" type:"string" enum:"IntegrationStatus"`
+
+	// The type of integration. Integrations with OpenSearch Service have the type
+	// OPENSEARCH.
+	IntegrationType *string `locationName:"integrationType" type:"string" enum:"IntegrationType"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s IntegrationSummary) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s IntegrationSummary) GoString() string {
+	return s.String()
+}
+
+// SetIntegrationName sets the IntegrationName field's value.
+func (s *IntegrationSummary) SetIntegrationName(v string) *IntegrationSummary {
+	s.IntegrationName = &v
+	return s
+}
+
+// SetIntegrationStatus sets the IntegrationStatus field's value.
+func (s *IntegrationSummary) SetIntegrationStatus(v string) *IntegrationSummary {
+	s.IntegrationStatus = &v
+	return s
+}
+
+// SetIntegrationType sets the IntegrationType field's value.
+func (s *IntegrationSummary) SetIntegrationType(v string) *IntegrationSummary {
+	s.IntegrationType = &v
 	return s
 }
 
@@ -15174,6 +19115,103 @@ func (s *ListAnomaliesOutput) SetNextToken(v string) *ListAnomaliesOutput {
 	return s
 }
 
+type ListIntegrationsInput struct {
+	_ struct{} `type:"structure"`
+
+	// To limit the results to integrations that start with a certain name prefix,
+	// specify that name prefix here.
+	IntegrationNamePrefix *string `locationName:"integrationNamePrefix" min:"1" type:"string"`
+
+	// To limit the results to integrations with a certain status, specify that
+	// status here.
+	IntegrationStatus *string `locationName:"integrationStatus" type:"string" enum:"IntegrationStatus"`
+
+	// To limit the results to integrations of a certain type, specify that type
+	// here.
+	IntegrationType *string `locationName:"integrationType" type:"string" enum:"IntegrationType"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListIntegrationsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListIntegrationsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListIntegrationsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListIntegrationsInput"}
+	if s.IntegrationNamePrefix != nil && len(*s.IntegrationNamePrefix) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("IntegrationNamePrefix", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetIntegrationNamePrefix sets the IntegrationNamePrefix field's value.
+func (s *ListIntegrationsInput) SetIntegrationNamePrefix(v string) *ListIntegrationsInput {
+	s.IntegrationNamePrefix = &v
+	return s
+}
+
+// SetIntegrationStatus sets the IntegrationStatus field's value.
+func (s *ListIntegrationsInput) SetIntegrationStatus(v string) *ListIntegrationsInput {
+	s.IntegrationStatus = &v
+	return s
+}
+
+// SetIntegrationType sets the IntegrationType field's value.
+func (s *ListIntegrationsInput) SetIntegrationType(v string) *ListIntegrationsInput {
+	s.IntegrationType = &v
+	return s
+}
+
+type ListIntegrationsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array, where each object in the array contains information about one CloudWatch
+	// Logs integration in this account.
+	IntegrationSummaries []*IntegrationSummary `locationName:"integrationSummaries" type:"list"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListIntegrationsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListIntegrationsOutput) GoString() string {
+	return s.String()
+}
+
+// SetIntegrationSummaries sets the IntegrationSummaries field's value.
+func (s *ListIntegrationsOutput) SetIntegrationSummaries(v []*IntegrationSummary) *ListIntegrationsOutput {
+	s.IntegrationSummaries = v
+	return s
+}
+
 type ListLogAnomalyDetectorsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -15283,6 +19321,287 @@ func (s *ListLogAnomalyDetectorsOutput) SetAnomalyDetectors(v []*AnomalyDetector
 
 // SetNextToken sets the NextToken field's value.
 func (s *ListLogAnomalyDetectorsOutput) SetNextToken(v string) *ListLogAnomalyDetectorsOutput {
+	s.NextToken = &v
+	return s
+}
+
+type ListLogGroupsForQueryInput struct {
+	_ struct{} `type:"structure"`
+
+	// Limits the number of returned log groups to the specified number.
+	MaxResults *int64 `locationName:"maxResults" min:"50" type:"integer"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+
+	// The ID of the query to use. This query ID is from the response to your StartQuery
+	// (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_StartQuery.html)
+	// operation.
+	//
+	// QueryId is a required field
+	QueryId *string `locationName:"queryId" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsForQueryInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsForQueryInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListLogGroupsForQueryInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListLogGroupsForQueryInput"}
+	if s.MaxResults != nil && *s.MaxResults < 50 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 50))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.QueryId == nil {
+		invalidParams.Add(request.NewErrParamRequired("QueryId"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMaxResults sets the MaxResults field's value.
+func (s *ListLogGroupsForQueryInput) SetMaxResults(v int64) *ListLogGroupsForQueryInput {
+	s.MaxResults = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListLogGroupsForQueryInput) SetNextToken(v string) *ListLogGroupsForQueryInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetQueryId sets the QueryId field's value.
+func (s *ListLogGroupsForQueryInput) SetQueryId(v string) *ListLogGroupsForQueryInput {
+	s.QueryId = &v
+	return s
+}
+
+type ListLogGroupsForQueryOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array of the names and ARNs of the log groups that were processed in the
+	// query.
+	LogGroupIdentifiers []*string `locationName:"logGroupIdentifiers" type:"list"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsForQueryOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsForQueryOutput) GoString() string {
+	return s.String()
+}
+
+// SetLogGroupIdentifiers sets the LogGroupIdentifiers field's value.
+func (s *ListLogGroupsForQueryOutput) SetLogGroupIdentifiers(v []*string) *ListLogGroupsForQueryOutput {
+	s.LogGroupIdentifiers = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListLogGroupsForQueryOutput) SetNextToken(v string) *ListLogGroupsForQueryOutput {
+	s.NextToken = &v
+	return s
+}
+
+type ListLogGroupsInput struct {
+	_ struct{} `type:"structure"`
+
+	// When includeLinkedAccounts is set to true, use this parameter to specify
+	// the list of accounts to search. You can specify as many as 20 account IDs
+	// in the array.
+	AccountIdentifiers []*string `locationName:"accountIdentifiers" type:"list"`
+
+	// If you are using a monitoring account, set this to true to have the operation
+	// return log groups in the accounts listed in accountIdentifiers.
+	//
+	// If this parameter is set to true and accountIdentifiers contains a null value,
+	// the operation returns all log groups in the monitoring account and all log
+	// groups in all source accounts that are linked to the monitoring account.
+	//
+	// The default for this parameter is false.
+	IncludeLinkedAccounts *bool `locationName:"includeLinkedAccounts" type:"boolean"`
+
+	// The maximum number of log groups to return. If you omit this parameter, the
+	// default is up to 50 log groups.
+	Limit *int64 `locationName:"limit" min:"1" type:"integer"`
+
+	// Use this parameter to limit the results to only those log groups in the specified
+	// log group class. If you omit this parameter, log groups of all classes can
+	// be returned.
+	LogGroupClass *string `locationName:"logGroupClass" type:"string" enum:"LogGroupClass"`
+
+	// Use this parameter to limit the returned log groups to only those with names
+	// that match the pattern that you specify. This parameter is a regular expression
+	// that can match prefixes and substrings, and supports wildcard matching and
+	// matching multiple patterns, as in the following examples.
+	//
+	//    * Use ^ to match log group names by prefix.
+	//
+	//    * For a substring match, specify the string to match. All matches are
+	//    case sensitive
+	//
+	//    * To match multiple patterns, separate them with a | as in the example
+	//    ^/aws/lambda|discovery
+	//
+	// You can specify as many as five different regular expression patterns in
+	// this field, each of which must be between 3 and 24 characters. You can include
+	// the ^ symbol as many as five times, and include the | symbol as many as four
+	// times.
+	LogGroupNamePattern *string `locationName:"logGroupNamePattern" min:"3" type:"string"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListLogGroupsInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListLogGroupsInput"}
+	if s.Limit != nil && *s.Limit < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("Limit", 1))
+	}
+	if s.LogGroupNamePattern != nil && len(*s.LogGroupNamePattern) < 3 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupNamePattern", 3))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAccountIdentifiers sets the AccountIdentifiers field's value.
+func (s *ListLogGroupsInput) SetAccountIdentifiers(v []*string) *ListLogGroupsInput {
+	s.AccountIdentifiers = v
+	return s
+}
+
+// SetIncludeLinkedAccounts sets the IncludeLinkedAccounts field's value.
+func (s *ListLogGroupsInput) SetIncludeLinkedAccounts(v bool) *ListLogGroupsInput {
+	s.IncludeLinkedAccounts = &v
+	return s
+}
+
+// SetLimit sets the Limit field's value.
+func (s *ListLogGroupsInput) SetLimit(v int64) *ListLogGroupsInput {
+	s.Limit = &v
+	return s
+}
+
+// SetLogGroupClass sets the LogGroupClass field's value.
+func (s *ListLogGroupsInput) SetLogGroupClass(v string) *ListLogGroupsInput {
+	s.LogGroupClass = &v
+	return s
+}
+
+// SetLogGroupNamePattern sets the LogGroupNamePattern field's value.
+func (s *ListLogGroupsInput) SetLogGroupNamePattern(v string) *ListLogGroupsInput {
+	s.LogGroupNamePattern = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListLogGroupsInput) SetNextToken(v string) *ListLogGroupsInput {
+	s.NextToken = &v
+	return s
+}
+
+type ListLogGroupsOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array of structures, where each structure contains the information about
+	// one log group.
+	LogGroups []*LogGroupSummary `locationName:"logGroups" type:"list"`
+
+	// The token for the next set of items to return. The token expires after 24
+	// hours.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListLogGroupsOutput) GoString() string {
+	return s.String()
+}
+
+// SetLogGroups sets the LogGroups field's value.
+func (s *ListLogGroupsOutput) SetLogGroups(v []*LogGroupSummary) *ListLogGroupsOutput {
+	s.LogGroups = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListLogGroupsOutput) SetNextToken(v string) *ListLogGroupsOutput {
 	s.NextToken = &v
 	return s
 }
@@ -15453,6 +19772,128 @@ func (s ListTagsLogGroupOutput) GoString() string {
 // SetTags sets the Tags field's value.
 func (s *ListTagsLogGroupOutput) SetTags(v map[string]*string) *ListTagsLogGroupOutput {
 	s.Tags = v
+	return s
+}
+
+// This processor takes a list of objects that contain key fields, and converts
+// them into a map of target keys.
+//
+// For more information about this processor including examples, see listToMap
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation-Processors.html#CloudWatch-Logs-Transformation-listToMap)
+// in the CloudWatch Logs User Guide.
+type ListToMap struct {
+	_ struct{} `type:"structure"`
+
+	// A Boolean value to indicate whether the list will be flattened into single
+	// items. Specify true to flatten the list. The default is false
+	Flatten *bool `locationName:"flatten" type:"boolean"`
+
+	// If you set flatten to true, use flattenedElement to specify which element,
+	// first or last, to keep.
+	//
+	// You must specify this parameter if flatten is true
+	FlattenedElement *string `locationName:"flattenedElement" type:"string" enum:"FlattenedElement"`
+
+	// The key of the field to be extracted as keys in the generated map
+	//
+	// Key is a required field
+	Key *string `locationName:"key" min:"1" type:"string" required:"true"`
+
+	// The key in the log event that has a list of objects that will be converted
+	// to a map.
+	//
+	// Source is a required field
+	Source *string `locationName:"source" min:"1" type:"string" required:"true"`
+
+	// The key of the field that will hold the generated map
+	Target *string `locationName:"target" min:"1" type:"string"`
+
+	// If this is specified, the values that you specify in this parameter will
+	// be extracted from the source objects and put into the values of the generated
+	// map. Otherwise, original objects in the source list will be put into the
+	// values of the generated map.
+	ValueKey *string `locationName:"valueKey" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListToMap) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListToMap) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListToMap) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListToMap"}
+	if s.Key == nil {
+		invalidParams.Add(request.NewErrParamRequired("Key"))
+	}
+	if s.Key != nil && len(*s.Key) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Key", 1))
+	}
+	if s.Source == nil {
+		invalidParams.Add(request.NewErrParamRequired("Source"))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+	if s.Target != nil && len(*s.Target) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Target", 1))
+	}
+	if s.ValueKey != nil && len(*s.ValueKey) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ValueKey", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetFlatten sets the Flatten field's value.
+func (s *ListToMap) SetFlatten(v bool) *ListToMap {
+	s.Flatten = &v
+	return s
+}
+
+// SetFlattenedElement sets the FlattenedElement field's value.
+func (s *ListToMap) SetFlattenedElement(v string) *ListToMap {
+	s.FlattenedElement = &v
+	return s
+}
+
+// SetKey sets the Key field's value.
+func (s *ListToMap) SetKey(v string) *ListToMap {
+	s.Key = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *ListToMap) SetSource(v string) *ListToMap {
+	s.Source = &v
+	return s
+}
+
+// SetTarget sets the Target field's value.
+func (s *ListToMap) SetTarget(v string) *ListToMap {
+	s.Target = &v
+	return s
+}
+
+// SetValueKey sets the ValueKey field's value.
+func (s *ListToMap) SetValueKey(v string) *ListToMap {
+	s.ValueKey = &v
 	return s
 }
 
@@ -15846,14 +20287,21 @@ type LogGroup struct {
 	//    and ListTagsForResource (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListTagsForResource.html).
 	LogGroupArn *string `locationName:"logGroupArn" type:"string"`
 
-	// This specifies the log group class for this log group. There are two classes:
+	// This specifies the log group class for this log group. There are three classes:
 	//
 	//    * The Standard log class supports all CloudWatch Logs features.
 	//
 	//    * The Infrequent Access log class supports a subset of CloudWatch Logs
 	//    features and incurs lower costs.
 	//
-	// For details about the features supported by each class, see Log classes (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html)
+	//    * Use the Delivery log class only for delivering Lambda logs to store
+	//    in Amazon S3 or Amazon Data Firehose. Log events in log groups in the
+	//    Delivery class are kept in CloudWatch Logs for only one day. This log
+	//    class doesn't offer rich CloudWatch Logs capabilities such as CloudWatch
+	//    Logs Insights queries.
+	//
+	// For details about the features supported by the Standard and Infrequent Access
+	// classes, see Log classes (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html)
 	LogGroupClass *string `locationName:"logGroupClass" type:"string" enum:"LogGroupClass"`
 
 	// The name of the log group.
@@ -16000,6 +20448,57 @@ func (s *LogGroupField) SetPercent(v int64) *LogGroupField {
 	return s
 }
 
+// This structure contains information about one log group in your account.
+type LogGroupSummary struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the log group.
+	LogGroupArn *string `locationName:"logGroupArn" type:"string"`
+
+	// The log group class for this log group. For details about the features supported
+	// by each log group class, see Log classes (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html)
+	LogGroupClass *string `locationName:"logGroupClass" type:"string" enum:"LogGroupClass"`
+
+	// The name of the log group.
+	LogGroupName *string `locationName:"logGroupName" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s LogGroupSummary) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s LogGroupSummary) GoString() string {
+	return s.String()
+}
+
+// SetLogGroupArn sets the LogGroupArn field's value.
+func (s *LogGroupSummary) SetLogGroupArn(v string) *LogGroupSummary {
+	s.LogGroupArn = &v
+	return s
+}
+
+// SetLogGroupClass sets the LogGroupClass field's value.
+func (s *LogGroupSummary) SetLogGroupClass(v string) *LogGroupSummary {
+	s.LogGroupClass = &v
+	return s
+}
+
+// SetLogGroupName sets the LogGroupName field's value.
+func (s *LogGroupSummary) SetLogGroupName(v string) *LogGroupSummary {
+	s.LogGroupName = &v
+	return s
+}
+
 // Represents a log stream, which is a sequence of log events from a single
 // emitter of logs.
 type LogStream struct {
@@ -16115,6 +20614,60 @@ func (s *LogStream) SetUploadSequenceToken(v string) *LogStream {
 	return s
 }
 
+// This processor converts a string to lowercase.
+//
+// For more information about this processor including examples, see lowerCaseString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-lowerCaseString)
+// in the CloudWatch Logs User Guide.
+type LowerCaseString struct {
+	_ struct{} `type:"structure"`
+
+	// The array caontaining the keys of the fields to convert to lowercase.
+	//
+	// WithKeys is a required field
+	WithKeys []*string `locationName:"withKeys" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s LowerCaseString) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s LowerCaseString) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *LowerCaseString) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "LowerCaseString"}
+	if s.WithKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("WithKeys"))
+	}
+	if s.WithKeys != nil && len(s.WithKeys) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("WithKeys", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetWithKeys sets the WithKeys field's value.
+func (s *LowerCaseString) SetWithKeys(v []*string) *LowerCaseString {
+	s.WithKeys = v
+	return s
+}
+
 // The query string is not valid. Details about this error are displayed in
 // a QueryCompileError object. For more information, see QueryCompileError (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_QueryCompileError.html).
 //
@@ -16192,6 +20745,13 @@ func (s *MalformedQueryException) RequestID() string {
 type MetricFilter struct {
 	_ struct{} `type:"structure"`
 
+	// This parameter is valid only for log groups that have an active log transformer.
+	// For more information about log transformers, see PutTransformer (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutTransformer.html).
+	//
+	// If this value is true, the metric filter is applied on the transformed version
+	// of the log events instead of the original ingested log events.
+	ApplyOnTransformedLogs *bool `locationName:"applyOnTransformedLogs" type:"boolean"`
+
 	// The creation time of the metric filter, expressed as the number of milliseconds
 	// after Jan 1, 1970 00:00:00 UTC.
 	CreationTime *int64 `locationName:"creationTime" type:"long"`
@@ -16228,6 +20788,12 @@ func (s MetricFilter) String() string {
 // value will be replaced with "sensitive".
 func (s MetricFilter) GoString() string {
 	return s.String()
+}
+
+// SetApplyOnTransformedLogs sets the ApplyOnTransformedLogs field's value.
+func (s *MetricFilter) SetApplyOnTransformedLogs(v bool) *MetricFilter {
+	s.ApplyOnTransformedLogs = &v
+	return s
 }
 
 // SetCreationTime sets the CreationTime field's value.
@@ -16431,6 +20997,844 @@ func (s *MetricTransformation) SetUnit(v string) *MetricTransformation {
 	return s
 }
 
+// This object defines one key that will be moved with the moveKey (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-moveKey)
+// processor.
+type MoveKeyEntry struct {
+	_ struct{} `type:"structure"`
+
+	// Specifies whether to overwrite the value if the destination key already exists.
+	// If you omit this, the default is false.
+	OverwriteIfExists *bool `locationName:"overwriteIfExists" type:"boolean"`
+
+	// The key to move.
+	//
+	// Source is a required field
+	Source *string `locationName:"source" min:"1" type:"string" required:"true"`
+
+	// The key to move to.
+	//
+	// Target is a required field
+	Target *string `locationName:"target" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MoveKeyEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MoveKeyEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MoveKeyEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MoveKeyEntry"}
+	if s.Source == nil {
+		invalidParams.Add(request.NewErrParamRequired("Source"))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+	if s.Target == nil {
+		invalidParams.Add(request.NewErrParamRequired("Target"))
+	}
+	if s.Target != nil && len(*s.Target) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Target", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetOverwriteIfExists sets the OverwriteIfExists field's value.
+func (s *MoveKeyEntry) SetOverwriteIfExists(v bool) *MoveKeyEntry {
+	s.OverwriteIfExists = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *MoveKeyEntry) SetSource(v string) *MoveKeyEntry {
+	s.Source = &v
+	return s
+}
+
+// SetTarget sets the Target field's value.
+func (s *MoveKeyEntry) SetTarget(v string) *MoveKeyEntry {
+	s.Target = &v
+	return s
+}
+
+// This processor moves a key from one field to another. The original key is
+// deleted.
+//
+// For more information about this processor including examples, see moveKeys
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-moveKeys)
+// in the CloudWatch Logs User Guide.
+type MoveKeys struct {
+	_ struct{} `type:"structure"`
+
+	// An array of objects, where each object contains the information about one
+	// key to move.
+	//
+	// Entries is a required field
+	Entries []*MoveKeyEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MoveKeys) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MoveKeys) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MoveKeys) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MoveKeys"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *MoveKeys) SetEntries(v []*MoveKeyEntry) *MoveKeys {
+	s.Entries = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service application
+// used for this integration. An OpenSearch Service application is the web application
+// created by the integration with CloudWatch Logs. It hosts the vended logs
+// dashboards.
+type OpenSearchApplication struct {
+	_ struct{} `type:"structure"`
+
+	// The Amazon Resource Name (ARN) of the application.
+	ApplicationArn *string `locationName:"applicationArn" type:"string"`
+
+	// The endpoint of the application.
+	ApplicationEndpoint *string `locationName:"applicationEndpoint" min:"1" type:"string"`
+
+	// The ID of the application.
+	ApplicationId *string `locationName:"applicationId" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchApplication) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchApplication) GoString() string {
+	return s.String()
+}
+
+// SetApplicationArn sets the ApplicationArn field's value.
+func (s *OpenSearchApplication) SetApplicationArn(v string) *OpenSearchApplication {
+	s.ApplicationArn = &v
+	return s
+}
+
+// SetApplicationEndpoint sets the ApplicationEndpoint field's value.
+func (s *OpenSearchApplication) SetApplicationEndpoint(v string) *OpenSearchApplication {
+	s.ApplicationEndpoint = &v
+	return s
+}
+
+// SetApplicationId sets the ApplicationId field's value.
+func (s *OpenSearchApplication) SetApplicationId(v string) *OpenSearchApplication {
+	s.ApplicationId = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchApplication) SetStatus(v *OpenSearchResourceStatus) *OpenSearchApplication {
+	s.Status = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service collection
+// used for this integration. An OpenSearch Service collection is a logical
+// grouping of one or more indexes that represent an analytics workload. For
+// more information, see Creating and managing OpenSearch Service Serverless
+// collections (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-collections.html).
+type OpenSearchCollection struct {
+	_ struct{} `type:"structure"`
+
+	// The ARN of the collection.
+	CollectionArn *string `locationName:"collectionArn" type:"string"`
+
+	// The endpoint of the collection.
+	CollectionEndpoint *string `locationName:"collectionEndpoint" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchCollection) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchCollection) GoString() string {
+	return s.String()
+}
+
+// SetCollectionArn sets the CollectionArn field's value.
+func (s *OpenSearchCollection) SetCollectionArn(v string) *OpenSearchCollection {
+	s.CollectionArn = &v
+	return s
+}
+
+// SetCollectionEndpoint sets the CollectionEndpoint field's value.
+func (s *OpenSearchCollection) SetCollectionEndpoint(v string) *OpenSearchCollection {
+	s.CollectionEndpoint = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchCollection) SetStatus(v *OpenSearchResourceStatus) *OpenSearchCollection {
+	s.Status = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service data access
+// policy used for this integration. The access policy defines the access controls
+// for the collection. This data access policy was automatically created as
+// part of the integration setup. For more information about OpenSearch Service
+// data access policies, see Data access control for Amazon OpenSearch Serverless
+// (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-data-access.html)
+// in the OpenSearch Service Developer Guide.
+type OpenSearchDataAccessPolicy struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the data access policy.
+	PolicyName *string `locationName:"policyName" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchDataAccessPolicy) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchDataAccessPolicy) GoString() string {
+	return s.String()
+}
+
+// SetPolicyName sets the PolicyName field's value.
+func (s *OpenSearchDataAccessPolicy) SetPolicyName(v string) *OpenSearchDataAccessPolicy {
+	s.PolicyName = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchDataAccessPolicy) SetStatus(v *OpenSearchResourceStatus) *OpenSearchDataAccessPolicy {
+	s.Status = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service data source
+// used for this integration. This data source was created as part of the integration
+// setup. An OpenSearch Service data source defines the source and destination
+// for OpenSearch Service queries. It includes the role required to execute
+// queries and write to collections.
+//
+// For more information about OpenSearch Service data sources , see Creating
+// OpenSearch Service data source integrations with Amazon S3. (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/direct-query-s3-creating.html)
+type OpenSearchDataSource struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the OpenSearch Service data source.
+	DataSourceName *string `locationName:"dataSourceName" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchDataSource) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchDataSource) GoString() string {
+	return s.String()
+}
+
+// SetDataSourceName sets the DataSourceName field's value.
+func (s *OpenSearchDataSource) SetDataSourceName(v string) *OpenSearchDataSource {
+	s.DataSourceName = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchDataSource) SetStatus(v *OpenSearchResourceStatus) *OpenSearchDataSource {
+	s.Status = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service encryption
+// policy used for this integration. The encryption policy was created automatically
+// when you created the integration. For more information, see Encryption policies
+// (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-encryption.html#serverless-encryption-policies)
+// in the OpenSearch Service Developer Guide.
+type OpenSearchEncryptionPolicy struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the encryption policy.
+	PolicyName *string `locationName:"policyName" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchEncryptionPolicy) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchEncryptionPolicy) GoString() string {
+	return s.String()
+}
+
+// SetPolicyName sets the PolicyName field's value.
+func (s *OpenSearchEncryptionPolicy) SetPolicyName(v string) *OpenSearchEncryptionPolicy {
+	s.PolicyName = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchEncryptionPolicy) SetStatus(v *OpenSearchResourceStatus) *OpenSearchEncryptionPolicy {
+	s.Status = v
+	return s
+}
+
+// This structure contains complete information about one CloudWatch Logs integration.
+// This structure is returned by a GetIntegration (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetIntegration.html)
+// operation.
+type OpenSearchIntegrationDetails struct {
+	_ struct{} `type:"structure"`
+
+	// This structure contains information about the OpenSearch Service data access
+	// policy used for this integration. The access policy defines the access controls
+	// for the collection. This data access policy was automatically created as
+	// part of the integration setup. For more information about OpenSearch Service
+	// data access policies, see Data access control for Amazon OpenSearch Serverless
+	// (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-data-access.html)
+	// in the OpenSearch Service Developer Guide.
+	AccessPolicy *OpenSearchDataAccessPolicy `locationName:"accessPolicy" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service application
+	// used for this integration. An OpenSearch Service application is the web application
+	// that was created by the integration with CloudWatch Logs. It hosts the vended
+	// logs dashboards.
+	Application *OpenSearchApplication `locationName:"application" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service collection
+	// used for this integration. This collection was created as part of the integration
+	// setup. An OpenSearch Service collection is a logical grouping of one or more
+	// indexes that represent an analytics workload. For more information, see Creating
+	// and managing OpenSearch Service Serverless collections (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-collections.html).
+	Collection *OpenSearchCollection `locationName:"collection" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service data source
+	// used for this integration. This data source was created as part of the integration
+	// setup. An OpenSearch Service data source defines the source and destination
+	// for OpenSearch Service queries. It includes the role required to execute
+	// queries and write to collections.
+	//
+	// For more information about OpenSearch Service data sources , see Creating
+	// OpenSearch Service data source integrations with Amazon S3. (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/direct-query-s3-creating.html)
+	DataSource *OpenSearchDataSource `locationName:"dataSource" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service encryption
+	// policy used for this integration. The encryption policy was created automatically
+	// when you created the integration. For more information, see Encryption policies
+	// (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-encryption.html#serverless-encryption-policies)
+	// in the OpenSearch Service Developer Guide.
+	EncryptionPolicy *OpenSearchEncryptionPolicy `locationName:"encryptionPolicy" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service data lifecycle
+	// policy used for this integration. The lifecycle policy determines the lifespan
+	// of the data in the collection. It was automatically created as part of the
+	// integration setup.
+	//
+	// For more information, see Using data lifecycle policies with OpenSearch Service
+	// Serverless (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-lifecycle.html)
+	// in the OpenSearch Service Developer Guide.
+	LifecyclePolicy *OpenSearchLifecyclePolicy `locationName:"lifecyclePolicy" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service network
+	// policy used for this integration. The network policy assigns network access
+	// settings to collections. For more information, see Network policies (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-network.html#serverless-network-policies)
+	// in the OpenSearch Service Developer Guide.
+	NetworkPolicy *OpenSearchNetworkPolicy `locationName:"networkPolicy" type:"structure"`
+
+	// This structure contains information about the OpenSearch Service workspace
+	// used for this integration. An OpenSearch Service workspace is the collection
+	// of dashboards along with other OpenSearch Service tools. This workspace was
+	// created automatically as part of the integration setup. For more information,
+	// see Centralized OpenSearch user interface (Dashboards) with OpenSearch Service
+	// (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/application.html).
+	Workspace *OpenSearchWorkspace `locationName:"workspace" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchIntegrationDetails) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchIntegrationDetails) GoString() string {
+	return s.String()
+}
+
+// SetAccessPolicy sets the AccessPolicy field's value.
+func (s *OpenSearchIntegrationDetails) SetAccessPolicy(v *OpenSearchDataAccessPolicy) *OpenSearchIntegrationDetails {
+	s.AccessPolicy = v
+	return s
+}
+
+// SetApplication sets the Application field's value.
+func (s *OpenSearchIntegrationDetails) SetApplication(v *OpenSearchApplication) *OpenSearchIntegrationDetails {
+	s.Application = v
+	return s
+}
+
+// SetCollection sets the Collection field's value.
+func (s *OpenSearchIntegrationDetails) SetCollection(v *OpenSearchCollection) *OpenSearchIntegrationDetails {
+	s.Collection = v
+	return s
+}
+
+// SetDataSource sets the DataSource field's value.
+func (s *OpenSearchIntegrationDetails) SetDataSource(v *OpenSearchDataSource) *OpenSearchIntegrationDetails {
+	s.DataSource = v
+	return s
+}
+
+// SetEncryptionPolicy sets the EncryptionPolicy field's value.
+func (s *OpenSearchIntegrationDetails) SetEncryptionPolicy(v *OpenSearchEncryptionPolicy) *OpenSearchIntegrationDetails {
+	s.EncryptionPolicy = v
+	return s
+}
+
+// SetLifecyclePolicy sets the LifecyclePolicy field's value.
+func (s *OpenSearchIntegrationDetails) SetLifecyclePolicy(v *OpenSearchLifecyclePolicy) *OpenSearchIntegrationDetails {
+	s.LifecyclePolicy = v
+	return s
+}
+
+// SetNetworkPolicy sets the NetworkPolicy field's value.
+func (s *OpenSearchIntegrationDetails) SetNetworkPolicy(v *OpenSearchNetworkPolicy) *OpenSearchIntegrationDetails {
+	s.NetworkPolicy = v
+	return s
+}
+
+// SetWorkspace sets the Workspace field's value.
+func (s *OpenSearchIntegrationDetails) SetWorkspace(v *OpenSearchWorkspace) *OpenSearchIntegrationDetails {
+	s.Workspace = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service data lifecycle
+// policy used for this integration. The lifecycle policy determines the lifespan
+// of the data in the collection. It was automatically created as part of the
+// integration setup.
+//
+// For more information, see Using data lifecycle policies with OpenSearch Service
+// Serverless (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-lifecycle.html)
+// in the OpenSearch Service Developer Guide.
+type OpenSearchLifecyclePolicy struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the lifecycle policy.
+	PolicyName *string `locationName:"policyName" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchLifecyclePolicy) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchLifecyclePolicy) GoString() string {
+	return s.String()
+}
+
+// SetPolicyName sets the PolicyName field's value.
+func (s *OpenSearchLifecyclePolicy) SetPolicyName(v string) *OpenSearchLifecyclePolicy {
+	s.PolicyName = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchLifecyclePolicy) SetStatus(v *OpenSearchResourceStatus) *OpenSearchLifecyclePolicy {
+	s.Status = v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service network
+// policy used for this integration. The network policy assigns network access
+// settings to collections. For more information, see Network policies (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-network.html#serverless-network-policies)
+// in the OpenSearch Service Developer Guide.
+type OpenSearchNetworkPolicy struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the network policy.
+	PolicyName *string `locationName:"policyName" min:"1" type:"string"`
+
+	// This structure contains information about the status of this OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchNetworkPolicy) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchNetworkPolicy) GoString() string {
+	return s.String()
+}
+
+// SetPolicyName sets the PolicyName field's value.
+func (s *OpenSearchNetworkPolicy) SetPolicyName(v string) *OpenSearchNetworkPolicy {
+	s.PolicyName = &v
+	return s
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchNetworkPolicy) SetStatus(v *OpenSearchResourceStatus) *OpenSearchNetworkPolicy {
+	s.Status = v
+	return s
+}
+
+// This structure contains configuration details about an integration between
+// CloudWatch Logs and OpenSearch Service.
+type OpenSearchResourceConfig struct {
+	_ struct{} `type:"structure"`
+
+	// If you want to use an existing OpenSearch Service application for your integration
+	// with OpenSearch Service, specify it here. If you omit this, a new application
+	// will be created.
+	ApplicationArn *string `locationName:"applicationArn" type:"string"`
+
+	// Specify the ARNs of IAM roles and IAM users who you want to grant permission
+	// to for viewing the dashboards.
+	//
+	// In addition to specifying these users here, you must also grant them the
+	// CloudWatchOpenSearchDashboardAccess IAM policy. For more information, see
+	// IAM policies for users (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/OpenSearch-Dashboards-UserRoles.html).
+	//
+	// DashboardViewerPrincipals is a required field
+	DashboardViewerPrincipals []*string `locationName:"dashboardViewerPrincipals" type:"list" required:"true"`
+
+	// Specify the ARN of an IAM role that CloudWatch Logs will use to create the
+	// integration. This role must have the permissions necessary to access the
+	// OpenSearch Service collection to be able to create the dashboards. For more
+	// information about the permissions needed, see Permissions that the integration
+	// needs (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/OpenSearch-Dashboards-CreateRole.html)
+	// in the CloudWatch Logs User Guide.
+	//
+	// DataSourceRoleArn is a required field
+	DataSourceRoleArn *string `locationName:"dataSourceRoleArn" type:"string" required:"true"`
+
+	// To have the vended dashboard data encrypted with KMS instead of the CloudWatch
+	// Logs default encryption method, specify the ARN of the KMS key that you want
+	// to use.
+	KmsKeyArn *string `locationName:"kmsKeyArn" type:"string"`
+
+	// Specify how many days that you want the data derived by OpenSearch Service
+	// to be retained in the index that the dashboard refers to. This also sets
+	// the maximum time period that you can choose when viewing data in the dashboard.
+	// Choosing a longer time frame will incur additional costs.
+	//
+	// RetentionDays is a required field
+	RetentionDays *int64 `locationName:"retentionDays" min:"1" type:"integer" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchResourceConfig) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchResourceConfig) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *OpenSearchResourceConfig) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "OpenSearchResourceConfig"}
+	if s.DashboardViewerPrincipals == nil {
+		invalidParams.Add(request.NewErrParamRequired("DashboardViewerPrincipals"))
+	}
+	if s.DataSourceRoleArn == nil {
+		invalidParams.Add(request.NewErrParamRequired("DataSourceRoleArn"))
+	}
+	if s.RetentionDays == nil {
+		invalidParams.Add(request.NewErrParamRequired("RetentionDays"))
+	}
+	if s.RetentionDays != nil && *s.RetentionDays < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("RetentionDays", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetApplicationArn sets the ApplicationArn field's value.
+func (s *OpenSearchResourceConfig) SetApplicationArn(v string) *OpenSearchResourceConfig {
+	s.ApplicationArn = &v
+	return s
+}
+
+// SetDashboardViewerPrincipals sets the DashboardViewerPrincipals field's value.
+func (s *OpenSearchResourceConfig) SetDashboardViewerPrincipals(v []*string) *OpenSearchResourceConfig {
+	s.DashboardViewerPrincipals = v
+	return s
+}
+
+// SetDataSourceRoleArn sets the DataSourceRoleArn field's value.
+func (s *OpenSearchResourceConfig) SetDataSourceRoleArn(v string) *OpenSearchResourceConfig {
+	s.DataSourceRoleArn = &v
+	return s
+}
+
+// SetKmsKeyArn sets the KmsKeyArn field's value.
+func (s *OpenSearchResourceConfig) SetKmsKeyArn(v string) *OpenSearchResourceConfig {
+	s.KmsKeyArn = &v
+	return s
+}
+
+// SetRetentionDays sets the RetentionDays field's value.
+func (s *OpenSearchResourceConfig) SetRetentionDays(v int64) *OpenSearchResourceConfig {
+	s.RetentionDays = &v
+	return s
+}
+
+// This structure contains information about the status of an OpenSearch Service
+// resource.
+type OpenSearchResourceStatus struct {
+	_ struct{} `type:"structure"`
+
+	// The current status of this resource.
+	Status *string `locationName:"status" type:"string" enum:"OpenSearchResourceStatusType"`
+
+	// A message with additional information about the status of this resource.
+	StatusMessage *string `locationName:"statusMessage" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchResourceStatus) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchResourceStatus) GoString() string {
+	return s.String()
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchResourceStatus) SetStatus(v string) *OpenSearchResourceStatus {
+	s.Status = &v
+	return s
+}
+
+// SetStatusMessage sets the StatusMessage field's value.
+func (s *OpenSearchResourceStatus) SetStatusMessage(v string) *OpenSearchResourceStatus {
+	s.StatusMessage = &v
+	return s
+}
+
+// This structure contains information about the OpenSearch Service workspace
+// used for this integration. An OpenSearch Service workspace is the collection
+// of dashboards along with other OpenSearch Service tools. This workspace was
+// created automatically as part of the integration setup. For more information,
+// see Centralized OpenSearch user interface (Dashboards) with OpenSearch Service
+// (https://docs.aws.amazon.com/opensearch-service/latest/developerguide/application.html).
+type OpenSearchWorkspace struct {
+	_ struct{} `type:"structure"`
+
+	// This structure contains information about the status of an OpenSearch Service
+	// resource.
+	Status *OpenSearchResourceStatus `locationName:"status" type:"structure"`
+
+	// The ID of this workspace.
+	WorkspaceId *string `locationName:"workspaceId" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchWorkspace) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s OpenSearchWorkspace) GoString() string {
+	return s.String()
+}
+
+// SetStatus sets the Status field's value.
+func (s *OpenSearchWorkspace) SetStatus(v *OpenSearchResourceStatus) *OpenSearchWorkspace {
+	s.Status = v
+	return s
+}
+
+// SetWorkspaceId sets the WorkspaceId field's value.
+func (s *OpenSearchWorkspace) SetWorkspaceId(v string) *OpenSearchWorkspace {
+	s.WorkspaceId = &v
+	return s
+}
+
 // Multiple concurrent requests to update the same resource were in conflict.
 type OperationAbortedException struct {
 	_            struct{}                  `type:"structure"`
@@ -16547,7 +21951,471 @@ func (s *OutputLogEvent) SetTimestamp(v int64) *OutputLogEvent {
 	return s
 }
 
-// A tructures that contains information about one pattern token related to
+// This processor parses CloudFront vended logs, extract fields, and convert
+// them into JSON format. Encoded field values are decoded. Values that are
+// integers and doubles are treated as such. For more information about this
+// processor including examples, see parseCloudfront (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseCloudfront)
+//
+// For more information about CloudFront log format, see Configure and use standard
+// logs (access logs) (https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html).
+//
+// If you use this processor, it must be the first processor in your transformer.
+type ParseCloudfront struct {
+	_ struct{} `type:"structure"`
+
+	// Omit this parameter and the whole log message will be processed by this processor.
+	// No other value than @message is allowed for source.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseCloudfront) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseCloudfront) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParseCloudfront) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParseCloudfront"}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetSource sets the Source field's value.
+func (s *ParseCloudfront) SetSource(v string) *ParseCloudfront {
+	s.Source = &v
+	return s
+}
+
+// This processor parses log events that are in JSON format. It can extract
+// JSON key-value pairs and place them under a destination that you specify.
+//
+// Additionally, because you must have at least one parse-type processor in
+// a transformer, you can use ParseJSON as that processor for JSON-format logs,
+// so that you can also apply other processors, such as mutate processors, to
+// these logs.
+//
+// For more information about this processor including examples, see parseJSON
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseJSON)
+// in the CloudWatch Logs User Guide.
+type ParseJSON struct {
+	_ struct{} `type:"structure"`
+
+	// The location to put the parsed key value pair into. If you omit this parameter,
+	// it is placed under the root node.
+	Destination *string `locationName:"destination" min:"1" type:"string"`
+
+	// Path to the field in the log event that will be parsed. Use dot notation
+	// to access child fields. For example, store.book
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseJSON) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseJSON) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParseJSON) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParseJSON"}
+	if s.Destination != nil && len(*s.Destination) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Destination", 1))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDestination sets the Destination field's value.
+func (s *ParseJSON) SetDestination(v string) *ParseJSON {
+	s.Destination = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *ParseJSON) SetSource(v string) *ParseJSON {
+	s.Source = &v
+	return s
+}
+
+// This processor parses a specified field in the original log event into key-value
+// pairs.
+//
+// For more information about this processor including examples, see parseKeyValue
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseKeyValue)
+// in the CloudWatch Logs User Guide.
+type ParseKeyValue struct {
+	_ struct{} `type:"structure"`
+
+	// The destination field to put the extracted key-value pairs into
+	Destination *string `locationName:"destination" min:"1" type:"string"`
+
+	// The field delimiter string that is used between key-value pairs in the original
+	// log events. If you omit this, the ampersand & character is used.
+	FieldDelimiter *string `locationName:"fieldDelimiter" min:"1" type:"string"`
+
+	// If you want to add a prefix to all transformed keys, specify it here.
+	KeyPrefix *string `locationName:"keyPrefix" min:"1" type:"string"`
+
+	// The delimiter string to use between the key and value in each pair in the
+	// transformed log event.
+	//
+	// If you omit this, the equal = character is used.
+	KeyValueDelimiter *string `locationName:"keyValueDelimiter" min:"1" type:"string"`
+
+	// A value to insert into the value field in the result, when a key-value pair
+	// is not successfully split.
+	NonMatchValue *string `locationName:"nonMatchValue" min:"1" type:"string"`
+
+	// Specifies whether to overwrite the value if the destination key already exists.
+	// If you omit this, the default is false.
+	OverwriteIfExists *bool `locationName:"overwriteIfExists" type:"boolean"`
+
+	// Path to the field in the log event that will be parsed. Use dot notation
+	// to access child fields. For example, store.book
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseKeyValue) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseKeyValue) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParseKeyValue) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParseKeyValue"}
+	if s.Destination != nil && len(*s.Destination) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Destination", 1))
+	}
+	if s.FieldDelimiter != nil && len(*s.FieldDelimiter) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("FieldDelimiter", 1))
+	}
+	if s.KeyPrefix != nil && len(*s.KeyPrefix) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("KeyPrefix", 1))
+	}
+	if s.KeyValueDelimiter != nil && len(*s.KeyValueDelimiter) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("KeyValueDelimiter", 1))
+	}
+	if s.NonMatchValue != nil && len(*s.NonMatchValue) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NonMatchValue", 1))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDestination sets the Destination field's value.
+func (s *ParseKeyValue) SetDestination(v string) *ParseKeyValue {
+	s.Destination = &v
+	return s
+}
+
+// SetFieldDelimiter sets the FieldDelimiter field's value.
+func (s *ParseKeyValue) SetFieldDelimiter(v string) *ParseKeyValue {
+	s.FieldDelimiter = &v
+	return s
+}
+
+// SetKeyPrefix sets the KeyPrefix field's value.
+func (s *ParseKeyValue) SetKeyPrefix(v string) *ParseKeyValue {
+	s.KeyPrefix = &v
+	return s
+}
+
+// SetKeyValueDelimiter sets the KeyValueDelimiter field's value.
+func (s *ParseKeyValue) SetKeyValueDelimiter(v string) *ParseKeyValue {
+	s.KeyValueDelimiter = &v
+	return s
+}
+
+// SetNonMatchValue sets the NonMatchValue field's value.
+func (s *ParseKeyValue) SetNonMatchValue(v string) *ParseKeyValue {
+	s.NonMatchValue = &v
+	return s
+}
+
+// SetOverwriteIfExists sets the OverwriteIfExists field's value.
+func (s *ParseKeyValue) SetOverwriteIfExists(v bool) *ParseKeyValue {
+	s.OverwriteIfExists = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *ParseKeyValue) SetSource(v string) *ParseKeyValue {
+	s.Source = &v
+	return s
+}
+
+// Use this processor to parse RDS for PostgreSQL vended logs, extract fields,
+// and and convert them into a JSON format. This processor always processes
+// the entire log event message. For more information about this processor including
+// examples, see parsePostGres (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parsePostGres).
+//
+// For more information about RDS for PostgreSQL log format, see RDS for PostgreSQL
+// database log filesTCP flag sequence (https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_LogAccess.Concepts.PostgreSQL.html#USER_LogAccess.Concepts.PostgreSQL.Log_Format.log-line-prefix).
+//
+// If you use this processor, it must be the first processor in your transformer.
+type ParsePostgres struct {
+	_ struct{} `type:"structure"`
+
+	// Omit this parameter and the whole log message will be processed by this processor.
+	// No other value than @message is allowed for source.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParsePostgres) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParsePostgres) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParsePostgres) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParsePostgres"}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetSource sets the Source field's value.
+func (s *ParsePostgres) SetSource(v string) *ParsePostgres {
+	s.Source = &v
+	return s
+}
+
+// Use this processor to parse Route 53 vended logs, extract fields, and and
+// convert them into a JSON format. This processor always processes the entire
+// log event message. For more information about this processor including examples,
+// see parseRoute53 (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseRoute53).
+//
+// If you use this processor, it must be the first processor in your transformer.
+type ParseRoute53 struct {
+	_ struct{} `type:"structure"`
+
+	// Omit this parameter and the whole log message will be processed by this processor.
+	// No other value than @message is allowed for source.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseRoute53) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseRoute53) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParseRoute53) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParseRoute53"}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetSource sets the Source field's value.
+func (s *ParseRoute53) SetSource(v string) *ParseRoute53 {
+	s.Source = &v
+	return s
+}
+
+// Use this processor to parse Amazon VPC vended logs, extract fields, and and
+// convert them into a JSON format. This processor always processes the entire
+// log event message.
+//
+// This processor doesn't support custom log formats, such as NAT gateway logs.
+// For more information about custom log formats in Amazon VPC, see parseVPC
+// (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-records-examples.html#flow-log-example-tcp-flag)
+// For more information about this processor including examples, see parseVPC
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseVPC).
+//
+// If you use this processor, it must be the first processor in your transformer.
+type ParseVPC struct {
+	_ struct{} `type:"structure"`
+
+	// Omit this parameter and the whole log message will be processed by this processor.
+	// No other value than @message is allowed for source.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseVPC) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseVPC) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParseVPC) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParseVPC"}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetSource sets the Source field's value.
+func (s *ParseVPC) SetSource(v string) *ParseVPC {
+	s.Source = &v
+	return s
+}
+
+// Use this processor to parse WAF vended logs, extract fields, and and convert
+// them into a JSON format. This processor always processes the entire log event
+// message. For more information about this processor including examples, see
+// parseWAF (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parsePostGres).
+//
+// For more information about WAF log format, see Log examples for web ACL traffic
+// (https://docs.aws.amazon.com/waf/latest/developerguide/logging-examples.html).
+//
+// If you use this processor, it must be the first processor in your transformer.
+type ParseWAF struct {
+	_ struct{} `type:"structure"`
+
+	// Omit this parameter and the whole log message will be processed by this processor.
+	// No other value than @message is allowed for source.
+	Source *string `locationName:"source" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseWAF) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ParseWAF) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ParseWAF) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ParseWAF"}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetSource sets the Source field's value.
+func (s *ParseWAF) SetSource(v string) *ParseWAF {
+	s.Source = &v
+	return s
+}
+
+// A structure that contains information about one pattern token related to
 // an anomaly.
 //
 // For more information about patterns and tokens, see CreateLogAnomalyDetector
@@ -16563,6 +22431,17 @@ type PatternToken struct {
 	// Contains the values found for a dynamic token, and the number of times each
 	// value was found.
 	Enumerations map[string]*int64 `locationName:"enumerations" type:"map"`
+
+	// A name that CloudWatch Logs assigned to this dynamic token to make the pattern
+	// more readable. The string part of the inferredTokenName gives you a clearer
+	// idea of the content of this token. The number part of the inferredTokenName
+	// shows where in the pattern this token appears, compared to other dynamic
+	// tokens. CloudWatch Logs assigns the string part of the name based on analyzing
+	// the content of the log events that contain it.
+	//
+	// For example, an inferred token name of IPAddress-3 means that the token represents
+	// an IP address, and this token is the third dynamic token in the pattern.
+	InferredTokenName *string `locationName:"inferredTokenName" min:"1" type:"string"`
 
 	// Specifies whether this is a dynamic token.
 	IsDynamic *bool `locationName:"isDynamic" type:"boolean"`
@@ -16599,6 +22478,12 @@ func (s *PatternToken) SetDynamicTokenPosition(v int64) *PatternToken {
 // SetEnumerations sets the Enumerations field's value.
 func (s *PatternToken) SetEnumerations(v map[string]*int64) *PatternToken {
 	s.Enumerations = v
+	return s
+}
+
+// SetInferredTokenName sets the InferredTokenName field's value.
+func (s *PatternToken) SetInferredTokenName(v string) *PatternToken {
+	s.InferredTokenName = &v
 	return s
 }
 
@@ -16643,6 +22528,379 @@ func (s Policy) GoString() string {
 // SetDeliveryDestinationPolicy sets the DeliveryDestinationPolicy field's value.
 func (s *Policy) SetDeliveryDestinationPolicy(v string) *Policy {
 	s.DeliveryDestinationPolicy = &v
+	return s
+}
+
+// This structure contains the information about one processor in a log transformer.
+type Processor struct {
+	_ struct{} `type:"structure"`
+
+	// Use this parameter to include the addKeys (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-addKeys)
+	// processor in your transformer.
+	AddKeys *AddKeys `locationName:"addKeys" type:"structure"`
+
+	// Use this parameter to include the copyValue (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-copyValue)
+	// processor in your transformer.
+	CopyValue *CopyValue `locationName:"copyValue" type:"structure"`
+
+	// Use this parameter to include the CSV (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-CSV)
+	// processor in your transformer.
+	Csv *CSV `locationName:"csv" type:"structure"`
+
+	// Use this parameter to include the datetimeConverter (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-datetimeConverter)
+	// processor in your transformer.
+	DateTimeConverter *DateTimeConverter `locationName:"dateTimeConverter" type:"structure"`
+
+	// Use this parameter to include the deleteKeys (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-deleteKeys)
+	// processor in your transformer.
+	DeleteKeys *DeleteKeys `locationName:"deleteKeys" type:"structure"`
+
+	// Use this parameter to include the grok (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-grok)
+	// processor in your transformer.
+	Grok *Grok `locationName:"grok" type:"structure"`
+
+	// Use this parameter to include the listToMap (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-listToMap)
+	// processor in your transformer.
+	ListToMap *ListToMap `locationName:"listToMap" type:"structure"`
+
+	// Use this parameter to include the lowerCaseString (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-lowerCaseString)
+	// processor in your transformer.
+	LowerCaseString *LowerCaseString `locationName:"lowerCaseString" type:"structure"`
+
+	// Use this parameter to include the moveKeys (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-moveKeys)
+	// processor in your transformer.
+	MoveKeys *MoveKeys `locationName:"moveKeys" type:"structure"`
+
+	// Use this parameter to include the parseCloudfront (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseCloudfront)
+	// processor in your transformer.
+	//
+	// If you use this processor, it must be the first processor in your transformer.
+	ParseCloudfront *ParseCloudfront `locationName:"parseCloudfront" type:"structure"`
+
+	// Use this parameter to include the parseJSON (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseJSON)
+	// processor in your transformer.
+	ParseJSON *ParseJSON `locationName:"parseJSON" type:"structure"`
+
+	// Use this parameter to include the parseKeyValue (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseKeyValue)
+	// processor in your transformer.
+	ParseKeyValue *ParseKeyValue `locationName:"parseKeyValue" type:"structure"`
+
+	// Use this parameter to include the parsePostGres (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parsePostGres)
+	// processor in your transformer.
+	//
+	// If you use this processor, it must be the first processor in your transformer.
+	ParsePostgres *ParsePostgres `locationName:"parsePostgres" type:"structure"`
+
+	// Use this parameter to include the parseRoute53 (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseRoute53)
+	// processor in your transformer.
+	//
+	// If you use this processor, it must be the first processor in your transformer.
+	ParseRoute53 *ParseRoute53 `locationName:"parseRoute53" type:"structure"`
+
+	// Use this parameter to include the parseVPC (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseVPC)
+	// processor in your transformer.
+	//
+	// If you use this processor, it must be the first processor in your transformer.
+	ParseVPC *ParseVPC `locationName:"parseVPC" type:"structure"`
+
+	// Use this parameter to include the parseWAF (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-parseWAF)
+	// processor in your transformer.
+	//
+	// If you use this processor, it must be the first processor in your transformer.
+	ParseWAF *ParseWAF `locationName:"parseWAF" type:"structure"`
+
+	// Use this parameter to include the renameKeys (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-renameKeys)
+	// processor in your transformer.
+	RenameKeys *RenameKeys `locationName:"renameKeys" type:"structure"`
+
+	// Use this parameter to include the splitString (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-splitString)
+	// processor in your transformer.
+	SplitString *SplitString `locationName:"splitString" type:"structure"`
+
+	// Use this parameter to include the substituteString (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-substituteString)
+	// processor in your transformer.
+	SubstituteString *SubstituteString `locationName:"substituteString" type:"structure"`
+
+	// Use this parameter to include the trimString (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-trimString)
+	// processor in your transformer.
+	TrimString *TrimString `locationName:"trimString" type:"structure"`
+
+	// Use this parameter to include the typeConverter (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-typeConverter)
+	// processor in your transformer.
+	TypeConverter *TypeConverter `locationName:"typeConverter" type:"structure"`
+
+	// Use this parameter to include the upperCaseString (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-upperCaseString)
+	// processor in your transformer.
+	UpperCaseString *UpperCaseString `locationName:"upperCaseString" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s Processor) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s Processor) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *Processor) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "Processor"}
+	if s.AddKeys != nil {
+		if err := s.AddKeys.Validate(); err != nil {
+			invalidParams.AddNested("AddKeys", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.CopyValue != nil {
+		if err := s.CopyValue.Validate(); err != nil {
+			invalidParams.AddNested("CopyValue", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.Csv != nil {
+		if err := s.Csv.Validate(); err != nil {
+			invalidParams.AddNested("Csv", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.DateTimeConverter != nil {
+		if err := s.DateTimeConverter.Validate(); err != nil {
+			invalidParams.AddNested("DateTimeConverter", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.DeleteKeys != nil {
+		if err := s.DeleteKeys.Validate(); err != nil {
+			invalidParams.AddNested("DeleteKeys", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.Grok != nil {
+		if err := s.Grok.Validate(); err != nil {
+			invalidParams.AddNested("Grok", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ListToMap != nil {
+		if err := s.ListToMap.Validate(); err != nil {
+			invalidParams.AddNested("ListToMap", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.LowerCaseString != nil {
+		if err := s.LowerCaseString.Validate(); err != nil {
+			invalidParams.AddNested("LowerCaseString", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.MoveKeys != nil {
+		if err := s.MoveKeys.Validate(); err != nil {
+			invalidParams.AddNested("MoveKeys", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParseCloudfront != nil {
+		if err := s.ParseCloudfront.Validate(); err != nil {
+			invalidParams.AddNested("ParseCloudfront", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParseJSON != nil {
+		if err := s.ParseJSON.Validate(); err != nil {
+			invalidParams.AddNested("ParseJSON", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParseKeyValue != nil {
+		if err := s.ParseKeyValue.Validate(); err != nil {
+			invalidParams.AddNested("ParseKeyValue", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParsePostgres != nil {
+		if err := s.ParsePostgres.Validate(); err != nil {
+			invalidParams.AddNested("ParsePostgres", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParseRoute53 != nil {
+		if err := s.ParseRoute53.Validate(); err != nil {
+			invalidParams.AddNested("ParseRoute53", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParseVPC != nil {
+		if err := s.ParseVPC.Validate(); err != nil {
+			invalidParams.AddNested("ParseVPC", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.ParseWAF != nil {
+		if err := s.ParseWAF.Validate(); err != nil {
+			invalidParams.AddNested("ParseWAF", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.RenameKeys != nil {
+		if err := s.RenameKeys.Validate(); err != nil {
+			invalidParams.AddNested("RenameKeys", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.SplitString != nil {
+		if err := s.SplitString.Validate(); err != nil {
+			invalidParams.AddNested("SplitString", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.SubstituteString != nil {
+		if err := s.SubstituteString.Validate(); err != nil {
+			invalidParams.AddNested("SubstituteString", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.TrimString != nil {
+		if err := s.TrimString.Validate(); err != nil {
+			invalidParams.AddNested("TrimString", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.TypeConverter != nil {
+		if err := s.TypeConverter.Validate(); err != nil {
+			invalidParams.AddNested("TypeConverter", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.UpperCaseString != nil {
+		if err := s.UpperCaseString.Validate(); err != nil {
+			invalidParams.AddNested("UpperCaseString", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAddKeys sets the AddKeys field's value.
+func (s *Processor) SetAddKeys(v *AddKeys) *Processor {
+	s.AddKeys = v
+	return s
+}
+
+// SetCopyValue sets the CopyValue field's value.
+func (s *Processor) SetCopyValue(v *CopyValue) *Processor {
+	s.CopyValue = v
+	return s
+}
+
+// SetCsv sets the Csv field's value.
+func (s *Processor) SetCsv(v *CSV) *Processor {
+	s.Csv = v
+	return s
+}
+
+// SetDateTimeConverter sets the DateTimeConverter field's value.
+func (s *Processor) SetDateTimeConverter(v *DateTimeConverter) *Processor {
+	s.DateTimeConverter = v
+	return s
+}
+
+// SetDeleteKeys sets the DeleteKeys field's value.
+func (s *Processor) SetDeleteKeys(v *DeleteKeys) *Processor {
+	s.DeleteKeys = v
+	return s
+}
+
+// SetGrok sets the Grok field's value.
+func (s *Processor) SetGrok(v *Grok) *Processor {
+	s.Grok = v
+	return s
+}
+
+// SetListToMap sets the ListToMap field's value.
+func (s *Processor) SetListToMap(v *ListToMap) *Processor {
+	s.ListToMap = v
+	return s
+}
+
+// SetLowerCaseString sets the LowerCaseString field's value.
+func (s *Processor) SetLowerCaseString(v *LowerCaseString) *Processor {
+	s.LowerCaseString = v
+	return s
+}
+
+// SetMoveKeys sets the MoveKeys field's value.
+func (s *Processor) SetMoveKeys(v *MoveKeys) *Processor {
+	s.MoveKeys = v
+	return s
+}
+
+// SetParseCloudfront sets the ParseCloudfront field's value.
+func (s *Processor) SetParseCloudfront(v *ParseCloudfront) *Processor {
+	s.ParseCloudfront = v
+	return s
+}
+
+// SetParseJSON sets the ParseJSON field's value.
+func (s *Processor) SetParseJSON(v *ParseJSON) *Processor {
+	s.ParseJSON = v
+	return s
+}
+
+// SetParseKeyValue sets the ParseKeyValue field's value.
+func (s *Processor) SetParseKeyValue(v *ParseKeyValue) *Processor {
+	s.ParseKeyValue = v
+	return s
+}
+
+// SetParsePostgres sets the ParsePostgres field's value.
+func (s *Processor) SetParsePostgres(v *ParsePostgres) *Processor {
+	s.ParsePostgres = v
+	return s
+}
+
+// SetParseRoute53 sets the ParseRoute53 field's value.
+func (s *Processor) SetParseRoute53(v *ParseRoute53) *Processor {
+	s.ParseRoute53 = v
+	return s
+}
+
+// SetParseVPC sets the ParseVPC field's value.
+func (s *Processor) SetParseVPC(v *ParseVPC) *Processor {
+	s.ParseVPC = v
+	return s
+}
+
+// SetParseWAF sets the ParseWAF field's value.
+func (s *Processor) SetParseWAF(v *ParseWAF) *Processor {
+	s.ParseWAF = v
+	return s
+}
+
+// SetRenameKeys sets the RenameKeys field's value.
+func (s *Processor) SetRenameKeys(v *RenameKeys) *Processor {
+	s.RenameKeys = v
+	return s
+}
+
+// SetSplitString sets the SplitString field's value.
+func (s *Processor) SetSplitString(v *SplitString) *Processor {
+	s.SplitString = v
+	return s
+}
+
+// SetSubstituteString sets the SubstituteString field's value.
+func (s *Processor) SetSubstituteString(v *SubstituteString) *Processor {
+	s.SubstituteString = v
+	return s
+}
+
+// SetTrimString sets the TrimString field's value.
+func (s *Processor) SetTrimString(v *TrimString) *Processor {
+	s.TrimString = v
+	return s
+}
+
+// SetTypeConverter sets the TypeConverter field's value.
+func (s *Processor) SetTypeConverter(v *TypeConverter) *Processor {
+	s.TypeConverter = v
+	return s
+}
+
+// SetUpperCaseString sets the UpperCaseString field's value.
+func (s *Processor) SetUpperCaseString(v *UpperCaseString) *Processor {
+	s.UpperCaseString = v
 	return s
 }
 
@@ -16712,6 +22970,26 @@ type PutAccountPolicyInput struct {
 	//    set to Random for a more even distribution. This property is only applicable
 	//    when the destination is an Kinesis Data Streams data stream.
 	//
+	// Transformer policy
+	//
+	// A transformer policy must include one JSON block with the array of processors
+	// and their configurations. For more information about available processors,
+	// see Processors that you can use (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-Processors).
+	//
+	// Field index policy
+	//
+	// A field index filter policy can include the following attribute in a JSON
+	// block:
+	//
+	//    * Fields The array of field indexes to create.
+	//
+	// It must contain at least one field index.
+	//
+	// The following is an example of an index policy document that creates two
+	// indexes, RequestId and TransactionId.
+	//
+	// "policyDocument": "{ \"Fields\": [ \"RequestId\", \"TransactionId\" ] }"
+	//
 	// PolicyDocument is a required field
 	PolicyDocument *string `locationName:"policyDocument" type:"string" required:"true"`
 
@@ -16730,16 +23008,24 @@ type PutAccountPolicyInput struct {
 	// If you omit this parameter, the default of ALL is used.
 	Scope *string `locationName:"scope" type:"string" enum:"Scope"`
 
-	// Use this parameter to apply the subscription filter policy to a subset of
-	// log groups in the account. Currently, the only supported filter is LogGroupName
-	// NOT IN []. The selectionCriteria string can be up to 25KB in length. The
-	// length is determined by using its UTF-8 bytes.
+	// Use this parameter to apply the new policy to a subset of log groups in the
+	// account.
 	//
-	// Using the selectionCriteria parameter is useful to help prevent infinite
-	// loops. For more information, see Log recursion prevention (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Subscriptions-recursion-prevention.html).
+	// Specifing selectionCriteria is valid only when you specify SUBSCRIPTION_FILTER_POLICY,
+	// FIELD_INDEX_POLICY or TRANSFORMER_POLICYfor policyType.
 	//
-	// Specifing selectionCriteria is valid only when you specify SUBSCRIPTION_FILTER_POLICY
-	// for policyType.
+	// If policyType is SUBSCRIPTION_FILTER_POLICY, the only supported selectionCriteria
+	// filter is LogGroupName NOT IN []
+	//
+	// If policyType is FIELD_INDEX_POLICY or TRANSFORMER_POLICY, the only supported
+	// selectionCriteria filter is LogGroupNamePrefix
+	//
+	// The selectionCriteria string can be up to 25KB in length. The length is determined
+	// by using its UTF-8 bytes.
+	//
+	// Using the selectionCriteria parameter with SUBSCRIPTION_FILTER_POLICY is
+	// useful to help prevent infinite loops. For more information, see Log recursion
+	// prevention (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Subscriptions-recursion-prevention.html).
 	SelectionCriteria *string `locationName:"selectionCriteria" type:"string"`
 }
 
@@ -17213,12 +23499,25 @@ type PutDeliverySourceInput struct {
 	//
 	//    * For Amazon Bedrock, the valid value is APPLICATION_LOGS.
 	//
+	//    * For CloudFront, the valid value is ACCESS_LOGS.
+	//
 	//    * For Amazon CodeWhisperer, the valid value is EVENT_LOGS.
+	//
+	//    * For Elemental MediaPackage, the valid values are EGRESS_ACCESS_LOGS
+	//    and INGRESS_ACCESS_LOGS.
+	//
+	//    * For Elemental MediaTailor, the valid values are AD_DECISION_SERVER_LOGS,
+	//    MANIFEST_SERVICE_LOGS, and TRANSCODE_LOGS.
 	//
 	//    * For IAM Identity Center, the valid value is ERROR_LOGS.
 	//
+	//    * For Amazon Q, the valid value is EVENT_LOGS.
+	//
+	//    * For Amazon SES mail manager, the valid value is APPLICATION_LOG.
+	//
 	//    * For Amazon WorkMail, the valid values are ACCESS_CONTROL_LOGS, AUTHENTICATION_LOGS,
-	//    WORKMAIL_AVAILABILITY_PROVIDER_LOGS, and WORKMAIL_MAILBOX_ACCESS_LOGS.
+	//    WORKMAIL_AVAILABILITY_PROVIDER_LOGS, WORKMAIL_MAILBOX_ACCESS_LOGS, and
+	//    WORKMAIL_PERSONAL_ACCESS_TOKEN_LOGS.
 	//
 	// LogType is a required field
 	LogType *string `locationName:"logType" min:"1" type:"string" required:"true"`
@@ -17581,9 +23880,242 @@ func (s PutDestinationPolicyOutput) GoString() string {
 	return s.String()
 }
 
+type PutIndexPolicyInput struct {
+	_ struct{} `type:"structure"`
+
+	// Specify either the log group name or log group ARN to apply this field index
+	// policy to. If you specify an ARN, use the format arn:aws:logs:region:account-id:log-group:log_group_name
+	// Don't include an * at the end.
+	//
+	// LogGroupIdentifier is a required field
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string" required:"true"`
+
+	// The index policy document, in JSON format. The following is an example of
+	// an index policy document that creates two indexes, RequestId and TransactionId.
+	//
+	// "policyDocument": "{ "Fields": [ "RequestId", "TransactionId" ] }"
+	//
+	// The policy document must include at least one field index. For more information
+	// about the fields that can be included and other restrictions, see Field index
+	// syntax and quotas (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs-Field-Indexing-Syntax.html).
+	//
+	// PolicyDocument is a required field
+	PolicyDocument *string `locationName:"policyDocument" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIndexPolicyInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIndexPolicyInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PutIndexPolicyInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PutIndexPolicyInput"}
+	if s.LogGroupIdentifier == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifier"))
+	}
+	if s.LogGroupIdentifier != nil && len(*s.LogGroupIdentifier) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifier", 1))
+	}
+	if s.PolicyDocument == nil {
+		invalidParams.Add(request.NewErrParamRequired("PolicyDocument"))
+	}
+	if s.PolicyDocument != nil && len(*s.PolicyDocument) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("PolicyDocument", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *PutIndexPolicyInput) SetLogGroupIdentifier(v string) *PutIndexPolicyInput {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+// SetPolicyDocument sets the PolicyDocument field's value.
+func (s *PutIndexPolicyInput) SetPolicyDocument(v string) *PutIndexPolicyInput {
+	s.PolicyDocument = &v
+	return s
+}
+
+type PutIndexPolicyOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The index policy that you just created or updated.
+	IndexPolicy *IndexPolicy `locationName:"indexPolicy" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIndexPolicyOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIndexPolicyOutput) GoString() string {
+	return s.String()
+}
+
+// SetIndexPolicy sets the IndexPolicy field's value.
+func (s *PutIndexPolicyOutput) SetIndexPolicy(v *IndexPolicy) *PutIndexPolicyOutput {
+	s.IndexPolicy = v
+	return s
+}
+
+type PutIntegrationInput struct {
+	_ struct{} `type:"structure"`
+
+	// A name for the integration.
+	//
+	// IntegrationName is a required field
+	IntegrationName *string `locationName:"integrationName" min:"1" type:"string" required:"true"`
+
+	// The type of integration. Currently, the only supported type is OPENSEARCH.
+	//
+	// IntegrationType is a required field
+	IntegrationType *string `locationName:"integrationType" type:"string" required:"true" enum:"IntegrationType"`
+
+	// A structure that contains configuration information for the integration that
+	// you are creating.
+	//
+	// ResourceConfig is a required field
+	ResourceConfig *ResourceConfig `locationName:"resourceConfig" type:"structure" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIntegrationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIntegrationInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PutIntegrationInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PutIntegrationInput"}
+	if s.IntegrationName == nil {
+		invalidParams.Add(request.NewErrParamRequired("IntegrationName"))
+	}
+	if s.IntegrationName != nil && len(*s.IntegrationName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("IntegrationName", 1))
+	}
+	if s.IntegrationType == nil {
+		invalidParams.Add(request.NewErrParamRequired("IntegrationType"))
+	}
+	if s.ResourceConfig == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceConfig"))
+	}
+	if s.ResourceConfig != nil {
+		if err := s.ResourceConfig.Validate(); err != nil {
+			invalidParams.AddNested("ResourceConfig", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetIntegrationName sets the IntegrationName field's value.
+func (s *PutIntegrationInput) SetIntegrationName(v string) *PutIntegrationInput {
+	s.IntegrationName = &v
+	return s
+}
+
+// SetIntegrationType sets the IntegrationType field's value.
+func (s *PutIntegrationInput) SetIntegrationType(v string) *PutIntegrationInput {
+	s.IntegrationType = &v
+	return s
+}
+
+// SetResourceConfig sets the ResourceConfig field's value.
+func (s *PutIntegrationInput) SetResourceConfig(v *ResourceConfig) *PutIntegrationInput {
+	s.ResourceConfig = v
+	return s
+}
+
+type PutIntegrationOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the integration that you just created.
+	IntegrationName *string `locationName:"integrationName" min:"1" type:"string"`
+
+	// The status of the integration that you just created.
+	//
+	// After you create an integration, it takes a few minutes to complete. During
+	// this time, you'll see the status as PROVISIONING.
+	IntegrationStatus *string `locationName:"integrationStatus" type:"string" enum:"IntegrationStatus"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIntegrationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutIntegrationOutput) GoString() string {
+	return s.String()
+}
+
+// SetIntegrationName sets the IntegrationName field's value.
+func (s *PutIntegrationOutput) SetIntegrationName(v string) *PutIntegrationOutput {
+	s.IntegrationName = &v
+	return s
+}
+
+// SetIntegrationStatus sets the IntegrationStatus field's value.
+func (s *PutIntegrationOutput) SetIntegrationStatus(v string) *PutIntegrationOutput {
+	s.IntegrationStatus = &v
+	return s
+}
+
 type PutLogEventsInput struct {
 	_ struct{} `type:"structure"`
 
+	// The entity associated with the log events.
 	Entity *Entity `locationName:"entity" type:"structure"`
 
 	// The log events.
@@ -17718,6 +24250,10 @@ type PutLogEventsOutput struct {
 	// nextSequenceToken value.
 	NextSequenceToken *string `locationName:"nextSequenceToken" min:"1" type:"string"`
 
+	// Information about why the entity is rejected when calling PutLogEvents. Only
+	// returned when the entity is rejected.
+	//
+	// When the entity is rejected, the events may still be accepted.
 	RejectedEntityInfo *RejectedEntityInfo `locationName:"rejectedEntityInfo" type:"structure"`
 
 	// The rejected events.
@@ -17762,6 +24298,14 @@ func (s *PutLogEventsOutput) SetRejectedLogEventsInfo(v *RejectedLogEventsInfo) 
 
 type PutMetricFilterInput struct {
 	_ struct{} `type:"structure"`
+
+	// This parameter is valid only for log groups that have an active log transformer.
+	// For more information about log transformers, see PutTransformer (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutTransformer.html).
+	//
+	// If the log group uses either a log-group level or account-level transformer,
+	// and you specify true, the metric filter will be applied on the transformed
+	// version of the log events instead of the original ingested log events.
+	ApplyOnTransformedLogs *bool `locationName:"applyOnTransformedLogs" type:"boolean"`
 
 	// A name for the metric filter.
 	//
@@ -17843,6 +24387,12 @@ func (s *PutMetricFilterInput) Validate() error {
 	return nil
 }
 
+// SetApplyOnTransformedLogs sets the ApplyOnTransformedLogs field's value.
+func (s *PutMetricFilterInput) SetApplyOnTransformedLogs(v bool) *PutMetricFilterInput {
+	s.ApplyOnTransformedLogs = &v
+	return s
+}
+
 // SetFilterName sets the FilterName field's value.
 func (s *PutMetricFilterInput) SetFilterName(v string) *PutMetricFilterInput {
 	s.FilterName = &v
@@ -17897,9 +24447,12 @@ type PutQueryDefinitionInput struct {
 	ClientToken *string `locationName:"clientToken" min:"36" type:"string" idempotencyToken:"true"`
 
 	// Use this parameter to include specific log groups as part of your query definition.
+	// If your query uses the OpenSearch Service query language, you specify the
+	// log group names inside the querystring instead of here.
 	//
-	// If you are updating a query definition and you omit this parameter, then
-	// the updated definition will contain no log groups.
+	// If you are updating an existing query definition for the Logs Insights QL
+	// or OpenSearch Service PPL and you omit this parameter, then the updated definition
+	// will contain no log groups.
 	LogGroupNames []*string `locationName:"logGroupNames" type:"list"`
 
 	// A name for the query definition. If you are saving numerous query definitions,
@@ -17919,6 +24472,11 @@ type PutQueryDefinitionInput struct {
 	// generates a unique ID for the new query definition and include it in the
 	// response to this operation.
 	QueryDefinitionId *string `locationName:"queryDefinitionId" type:"string"`
+
+	// Specify the query language to use for this query. The options are Logs Insights
+	// QL, OpenSearch PPL, and OpenSearch SQL. For more information about the query
+	// languages that CloudWatch Logs supports, see Supported query languages (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData_Languages.html).
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
 
 	// The query string to use for this definition. For more information, see CloudWatch
 	// Logs Insights Query Syntax (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html).
@@ -17991,6 +24549,12 @@ func (s *PutQueryDefinitionInput) SetName(v string) *PutQueryDefinitionInput {
 // SetQueryDefinitionId sets the QueryDefinitionId field's value.
 func (s *PutQueryDefinitionInput) SetQueryDefinitionId(v string) *PutQueryDefinitionInput {
 	s.QueryDefinitionId = &v
+	return s
+}
+
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *PutQueryDefinitionInput) SetQueryLanguage(v string) *PutQueryDefinitionInput {
+	s.QueryLanguage = &v
 	return s
 }
 
@@ -18229,6 +24793,14 @@ func (s PutRetentionPolicyOutput) GoString() string {
 type PutSubscriptionFilterInput struct {
 	_ struct{} `type:"structure"`
 
+	// This parameter is valid only for log groups that have an active log transformer.
+	// For more information about log transformers, see PutTransformer (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutTransformer.html).
+	//
+	// If the log group uses either a log-group level or account-level transformer,
+	// and you specify true, the subscription filter will be applied on the transformed
+	// version of the log events instead of the original ingested log events.
+	ApplyOnTransformedLogs *bool `locationName:"applyOnTransformedLogs" type:"boolean"`
+
 	// The ARN of the destination to deliver matching log events to. Currently,
 	// the supported destinations are:
 	//
@@ -18333,6 +24905,12 @@ func (s *PutSubscriptionFilterInput) Validate() error {
 	return nil
 }
 
+// SetApplyOnTransformedLogs sets the ApplyOnTransformedLogs field's value.
+func (s *PutSubscriptionFilterInput) SetApplyOnTransformedLogs(v bool) *PutSubscriptionFilterInput {
+	s.ApplyOnTransformedLogs = &v
+	return s
+}
+
 // SetDestinationArn sets the DestinationArn field's value.
 func (s *PutSubscriptionFilterInput) SetDestinationArn(v string) *PutSubscriptionFilterInput {
 	s.DestinationArn = &v
@@ -18388,6 +24966,107 @@ func (s PutSubscriptionFilterOutput) String() string {
 // be included in the string output. The member name will be present, but the
 // value will be replaced with "sensitive".
 func (s PutSubscriptionFilterOutput) GoString() string {
+	return s.String()
+}
+
+type PutTransformerInput struct {
+	_ struct{} `type:"structure"`
+
+	// Specify either the name or ARN of the log group to create the transformer
+	// for.
+	//
+	// LogGroupIdentifier is a required field
+	LogGroupIdentifier *string `locationName:"logGroupIdentifier" min:"1" type:"string" required:"true"`
+
+	// This structure contains the configuration of this log transformer. A log
+	// transformer is an array of processors, where each processor applies one type
+	// of transformation to the log events that are ingested.
+	//
+	// TransformerConfig is a required field
+	TransformerConfig []*Processor `locationName:"transformerConfig" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutTransformerInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutTransformerInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PutTransformerInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PutTransformerInput"}
+	if s.LogGroupIdentifier == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogGroupIdentifier"))
+	}
+	if s.LogGroupIdentifier != nil && len(*s.LogGroupIdentifier) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogGroupIdentifier", 1))
+	}
+	if s.TransformerConfig == nil {
+		invalidParams.Add(request.NewErrParamRequired("TransformerConfig"))
+	}
+	if s.TransformerConfig != nil && len(s.TransformerConfig) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TransformerConfig", 1))
+	}
+	if s.TransformerConfig != nil {
+		for i, v := range s.TransformerConfig {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "TransformerConfig", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogGroupIdentifier sets the LogGroupIdentifier field's value.
+func (s *PutTransformerInput) SetLogGroupIdentifier(v string) *PutTransformerInput {
+	s.LogGroupIdentifier = &v
+	return s
+}
+
+// SetTransformerConfig sets the TransformerConfig field's value.
+func (s *PutTransformerInput) SetTransformerConfig(v []*Processor) *PutTransformerInput {
+	s.TransformerConfig = v
+	return s
+}
+
+type PutTransformerOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutTransformerOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutTransformerOutput) GoString() string {
 	return s.String()
 }
 
@@ -18491,6 +25170,10 @@ type QueryDefinition struct {
 	// The unique ID of the query definition.
 	QueryDefinitionId *string `locationName:"queryDefinitionId" type:"string"`
 
+	// The query language used for this query. For more information about the query
+	// languages that CloudWatch Logs supports, see Supported query languages (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData_Languages.html).
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
+
 	// The query string to use for this definition. For more information, see CloudWatch
 	// Logs Insights Query Syntax (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html).
 	QueryString *string `locationName:"queryString" min:"1" type:"string"`
@@ -18538,6 +25221,12 @@ func (s *QueryDefinition) SetQueryDefinitionId(v string) *QueryDefinition {
 	return s
 }
 
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *QueryDefinition) SetQueryLanguage(v string) *QueryDefinition {
+	s.QueryLanguage = &v
+	return s
+}
+
 // SetQueryString sets the QueryString field's value.
 func (s *QueryDefinition) SetQueryString(v string) *QueryDefinition {
 	s.QueryString = &v
@@ -18557,6 +25246,10 @@ type QueryInfo struct {
 
 	// The unique ID number of this query.
 	QueryId *string `locationName:"queryId" type:"string"`
+
+	// The query language used for this query. For more information about the query
+	// languages that CloudWatch Logs supports, see Supported query languages (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData_Languages.html).
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
 
 	// The query string used in this query.
 	QueryString *string `locationName:"queryString" type:"string"`
@@ -18602,6 +25295,12 @@ func (s *QueryInfo) SetQueryId(v string) *QueryInfo {
 	return s
 }
 
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *QueryInfo) SetQueryLanguage(v string) *QueryInfo {
+	s.QueryLanguage = &v
+	return s
+}
+
 // SetQueryString sets the QueryString field's value.
 func (s *QueryInfo) SetQueryString(v string) *QueryInfo {
 	s.QueryString = &v
@@ -18617,11 +25316,32 @@ func (s *QueryInfo) SetStatus(v string) *QueryInfo {
 // Contains the number of log events scanned by the query, the number of log
 // events that matched the query criteria, and the total number of bytes in
 // the log events that were scanned.
+//
+// If the query involved log groups that have field index policies, the estimated
+// number of skipped log events and the total bytes of those skipped log events
+// are included. Using field indexes to skip log events in queries reduces scan
+// volume and improves performance. For more information, see Create field indexes
+// to improve query performance and reduce scan volume (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogs-Field-Indexing.html).
 type QueryStatistics struct {
 	_ struct{} `type:"structure"`
 
 	// The total number of bytes in the log events scanned during the query.
 	BytesScanned *float64 `locationName:"bytesScanned" type:"double"`
+
+	// An estimate of the number of bytes in the log events that were skipped when
+	// processing this query, because the query contained an indexed field. Skipping
+	// these entries lowers query costs and improves the query performance time.
+	// For more information about field indexes, see PutIndexPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutIndexPolicy.html).
+	EstimatedBytesSkipped *float64 `locationName:"estimatedBytesSkipped" type:"double"`
+
+	// An estimate of the number of log events that were skipped when processing
+	// this query, because the query contained an indexed field. Skipping these
+	// entries lowers query costs and improves the query performance time. For more
+	// information about field indexes, see PutIndexPolicy (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutIndexPolicy.html).
+	EstimatedRecordsSkipped *float64 `locationName:"estimatedRecordsSkipped" type:"double"`
+
+	// The number of log groups that were scanned by this query.
+	LogGroupsScanned *float64 `locationName:"logGroupsScanned" type:"double"`
 
 	// The number of log events that matched the query string.
 	RecordsMatched *float64 `locationName:"recordsMatched" type:"double"`
@@ -18654,6 +25374,24 @@ func (s *QueryStatistics) SetBytesScanned(v float64) *QueryStatistics {
 	return s
 }
 
+// SetEstimatedBytesSkipped sets the EstimatedBytesSkipped field's value.
+func (s *QueryStatistics) SetEstimatedBytesSkipped(v float64) *QueryStatistics {
+	s.EstimatedBytesSkipped = &v
+	return s
+}
+
+// SetEstimatedRecordsSkipped sets the EstimatedRecordsSkipped field's value.
+func (s *QueryStatistics) SetEstimatedRecordsSkipped(v float64) *QueryStatistics {
+	s.EstimatedRecordsSkipped = &v
+	return s
+}
+
+// SetLogGroupsScanned sets the LogGroupsScanned field's value.
+func (s *QueryStatistics) SetLogGroupsScanned(v float64) *QueryStatistics {
+	s.LogGroupsScanned = &v
+	return s
+}
+
 // SetRecordsMatched sets the RecordsMatched field's value.
 func (s *QueryStatistics) SetRecordsMatched(v float64) *QueryStatistics {
 	s.RecordsMatched = &v
@@ -18666,10 +25404,62 @@ func (s *QueryStatistics) SetRecordsScanned(v float64) *QueryStatistics {
 	return s
 }
 
+// A structure that represents a valid record field header and whether it is
+// mandatory.
+type RecordField struct {
+	_ struct{} `type:"structure"`
+
+	// If this is true, the record field must be present in the recordFields parameter
+	// provided to a CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+	// or UpdateDeliveryConfiguration (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UpdateDeliveryConfiguration.html)
+	// operation.
+	Mandatory *bool `locationName:"mandatory" type:"boolean"`
+
+	// The name to use when specifying this record field in a CreateDelivery (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_CreateDelivery.html)
+	// or UpdateDeliveryConfiguration (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_UpdateDeliveryConfiguration.html)
+	// operation.
+	Name *string `locationName:"name" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RecordField) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RecordField) GoString() string {
+	return s.String()
+}
+
+// SetMandatory sets the Mandatory field's value.
+func (s *RecordField) SetMandatory(v bool) *RecordField {
+	s.Mandatory = &v
+	return s
+}
+
+// SetName sets the Name field's value.
+func (s *RecordField) SetName(v string) *RecordField {
+	s.Name = &v
+	return s
+}
+
+// If an entity is rejected when a PutLogEvents request was made, this includes
+// details about the reason for the rejection.
 type RejectedEntityInfo struct {
 	_ struct{} `type:"structure"`
 
-	ErrorType *string `locationName:"errorType" type:"string" enum:"EntityRejectionErrorType"`
+	// The type of error that caused the rejection of the entity when calling PutLogEvents.
+	//
+	// ErrorType is a required field
+	ErrorType *string `locationName:"errorType" type:"string" required:"true" enum:"EntityRejectionErrorType"`
 }
 
 // String returns the string representation.
@@ -18746,6 +25536,149 @@ func (s *RejectedLogEventsInfo) SetTooOldLogEventEndIndex(v int64) *RejectedLogE
 	return s
 }
 
+// This object defines one key that will be renamed with the renameKey (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-renameKey)
+// processor.
+type RenameKeyEntry struct {
+	_ struct{} `type:"structure"`
+
+	// The key to rename
+	//
+	// Key is a required field
+	Key *string `locationName:"key" min:"1" type:"string" required:"true"`
+
+	// Specifies whether to overwrite the existing value if the destination key
+	// already exists. The default is false
+	OverwriteIfExists *bool `locationName:"overwriteIfExists" type:"boolean"`
+
+	// The string to use for the new key name
+	//
+	// RenameTo is a required field
+	RenameTo *string `locationName:"renameTo" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RenameKeyEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RenameKeyEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *RenameKeyEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "RenameKeyEntry"}
+	if s.Key == nil {
+		invalidParams.Add(request.NewErrParamRequired("Key"))
+	}
+	if s.Key != nil && len(*s.Key) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Key", 1))
+	}
+	if s.RenameTo == nil {
+		invalidParams.Add(request.NewErrParamRequired("RenameTo"))
+	}
+	if s.RenameTo != nil && len(*s.RenameTo) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("RenameTo", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetKey sets the Key field's value.
+func (s *RenameKeyEntry) SetKey(v string) *RenameKeyEntry {
+	s.Key = &v
+	return s
+}
+
+// SetOverwriteIfExists sets the OverwriteIfExists field's value.
+func (s *RenameKeyEntry) SetOverwriteIfExists(v bool) *RenameKeyEntry {
+	s.OverwriteIfExists = &v
+	return s
+}
+
+// SetRenameTo sets the RenameTo field's value.
+func (s *RenameKeyEntry) SetRenameTo(v string) *RenameKeyEntry {
+	s.RenameTo = &v
+	return s
+}
+
+// Use this processor to rename keys in a log event.
+//
+// For more information about this processor including examples, see renameKeys
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-renameKeys)
+// in the CloudWatch Logs User Guide.
+type RenameKeys struct {
+	_ struct{} `type:"structure"`
+
+	// An array of RenameKeyEntry objects, where each object contains the information
+	// about a single key to rename.
+	//
+	// Entries is a required field
+	Entries []*RenameKeyEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RenameKeys) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s RenameKeys) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *RenameKeys) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "RenameKeys"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *RenameKeys) SetEntries(v []*RenameKeyEntry) *RenameKeys {
+	s.Entries = v
+	return s
+}
+
 // The specified resource already exists.
 type ResourceAlreadyExistsException struct {
 	_            struct{}                  `type:"structure"`
@@ -18808,6 +25741,55 @@ func (s *ResourceAlreadyExistsException) StatusCode() int {
 // RequestID returns the service's response RequestID for request.
 func (s *ResourceAlreadyExistsException) RequestID() string {
 	return s.RespMetadata.RequestID
+}
+
+// This structure contains configuration details about an integration between
+// CloudWatch Logs and another entity.
+type ResourceConfig struct {
+	_ struct{} `type:"structure"`
+
+	// This structure contains configuration details about an integration between
+	// CloudWatch Logs and OpenSearch Service.
+	OpenSearchResourceConfig *OpenSearchResourceConfig `locationName:"openSearchResourceConfig" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ResourceConfig) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ResourceConfig) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ResourceConfig) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ResourceConfig"}
+	if s.OpenSearchResourceConfig != nil {
+		if err := s.OpenSearchResourceConfig.Validate(); err != nil {
+			invalidParams.AddNested("OpenSearchResourceConfig", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetOpenSearchResourceConfig sets the OpenSearchResourceConfig field's value.
+func (s *ResourceConfig) SetOpenSearchResourceConfig(v *OpenSearchResourceConfig) *ResourceConfig {
+	s.OpenSearchResourceConfig = v
+	return s
 }
 
 // The specified resource does not exist.
@@ -18968,6 +25950,66 @@ func (s *ResultField) SetField(v string) *ResultField {
 // SetValue sets the Value field's value.
 func (s *ResultField) SetValue(v string) *ResultField {
 	s.Value = &v
+	return s
+}
+
+// This structure contains delivery configurations that apply only when the
+// delivery destination resource is an S3 bucket.
+type S3DeliveryConfiguration struct {
+	_ struct{} `type:"structure"`
+
+	// This parameter causes the S3 objects that contain delivered logs to use a
+	// prefix structure that allows for integration with Apache Hive.
+	EnableHiveCompatiblePath *bool `locationName:"enableHiveCompatiblePath" type:"boolean"`
+
+	// This string allows re-configuring the S3 object prefix to contain either
+	// static or variable sections. The valid variables to use in the suffix path
+	// will vary by each log source. To find the values supported for the suffix
+	// path for each log source, use the DescribeConfigurationTemplates (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_DescribeConfigurationTemplates.html)
+	// operation and check the allowedSuffixPathFields field in the response.
+	SuffixPath *string `locationName:"suffixPath" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s S3DeliveryConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s S3DeliveryConfiguration) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *S3DeliveryConfiguration) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "S3DeliveryConfiguration"}
+	if s.SuffixPath != nil && len(*s.SuffixPath) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("SuffixPath", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEnableHiveCompatiblePath sets the EnableHiveCompatiblePath field's value.
+func (s *S3DeliveryConfiguration) SetEnableHiveCompatiblePath(v bool) *S3DeliveryConfiguration {
+	s.EnableHiveCompatiblePath = &v
+	return s
+}
+
+// SetSuffixPath sets the SuffixPath field's value.
+func (s *S3DeliveryConfiguration) SetSuffixPath(v string) *S3DeliveryConfiguration {
+	s.SuffixPath = &v
 	return s
 }
 
@@ -19140,7 +26182,8 @@ func (s *ServiceUnavailableException) RequestID() string {
 	return s.RespMetadata.RequestID
 }
 
-// his exception is returned if an unknown error occurs during a Live Tail session.
+// This exception is returned if an unknown error occurs during a Live Tail
+// session.
 type SessionStreamingException struct {
 	_            struct{}                  `type:"structure"`
 	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
@@ -19325,6 +26368,141 @@ func (s *SessionTimeoutException) StatusCode() int {
 // RequestID returns the service's response RequestID for request.
 func (s *SessionTimeoutException) RequestID() string {
 	return s.RespMetadata.RequestID
+}
+
+// Use this processor to split a field into an array of strings using a delimiting
+// character.
+//
+// For more information about this processor including examples, see splitString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-splitString)
+// in the CloudWatch Logs User Guide.
+type SplitString struct {
+	_ struct{} `type:"structure"`
+
+	// An array of SplitStringEntry objects, where each object contains the information
+	// about one field to split.
+	//
+	// Entries is a required field
+	Entries []*SplitStringEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SplitString) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SplitString) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SplitString) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SplitString"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *SplitString) SetEntries(v []*SplitStringEntry) *SplitString {
+	s.Entries = v
+	return s
+}
+
+// This object defines one log field that will be split with the splitString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-splitString)
+// processor.
+type SplitStringEntry struct {
+	_ struct{} `type:"structure"`
+
+	// The separator characters to split the string entry on.
+	//
+	// Delimiter is a required field
+	Delimiter *string `locationName:"delimiter" min:"1" type:"string" required:"true"`
+
+	// The key of the field to split.
+	//
+	// Source is a required field
+	Source *string `locationName:"source" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SplitStringEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SplitStringEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SplitStringEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SplitStringEntry"}
+	if s.Delimiter == nil {
+		invalidParams.Add(request.NewErrParamRequired("Delimiter"))
+	}
+	if s.Delimiter != nil && len(*s.Delimiter) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Delimiter", 1))
+	}
+	if s.Source == nil {
+		invalidParams.Add(request.NewErrParamRequired("Source"))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDelimiter sets the Delimiter field's value.
+func (s *SplitStringEntry) SetDelimiter(v string) *SplitStringEntry {
+	s.Delimiter = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *SplitStringEntry) SetSource(v string) *SplitStringEntry {
+	s.Source = &v
+	return s
 }
 
 type StartLiveTailInput struct {
@@ -19668,7 +26846,7 @@ type StartQueryInput struct {
 
 	// The maximum number of log events to return in the query. If the query string
 	// uses the fields command, only the specified fields and their values are returned.
-	// The default is 1000.
+	// The default is 10,000.
 	Limit *int64 `locationName:"limit" min:"1" type:"integer"`
 
 	// The list of log groups to query. You can include up to 50 log groups.
@@ -19678,23 +26856,35 @@ type StartQueryInput struct {
 	// must specify the ARN of the log group here. The query definition must also
 	// be defined in the monitoring account.
 	//
-	// If you specify an ARN, the ARN can't end with an asterisk (*).
+	// If you specify an ARN, use the format arn:aws:logs:region:account-id:log-group:log_group_name
+	// Don't include an * at the end.
 	//
 	// A StartQuery operation must include exactly one of the following parameters:
-	// logGroupName, logGroupNames, or logGroupIdentifiers.
+	// logGroupName, logGroupNames, or logGroupIdentifiers. The exception is queries
+	// using the OpenSearch Service SQL query language, where you specify the log
+	// group names inside the querystring instead of here.
 	LogGroupIdentifiers []*string `locationName:"logGroupIdentifiers" type:"list"`
 
 	// The log group on which to perform the query.
 	//
 	// A StartQuery operation must include exactly one of the following parameters:
-	// logGroupName, logGroupNames, or logGroupIdentifiers.
+	// logGroupName, logGroupNames, or logGroupIdentifiers. The exception is queries
+	// using the OpenSearch Service SQL query language, where you specify the log
+	// group names inside the querystring instead of here.
 	LogGroupName *string `locationName:"logGroupName" min:"1" type:"string"`
 
 	// The list of log groups to be queried. You can include up to 50 log groups.
 	//
 	// A StartQuery operation must include exactly one of the following parameters:
-	// logGroupName, logGroupNames, or logGroupIdentifiers.
+	// logGroupName, logGroupNames, or logGroupIdentifiers. The exception is queries
+	// using the OpenSearch Service SQL query language, where you specify the log
+	// group names inside the querystring instead of here.
 	LogGroupNames []*string `locationName:"logGroupNames" type:"list"`
+
+	// Specify the query language to use for this query. The options are Logs Insights
+	// QL, OpenSearch PPL, and OpenSearch SQL. For more information about the query
+	// languages that CloudWatch Logs supports, see Supported query languages (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData_Languages.html).
+	QueryLanguage *string `locationName:"queryLanguage" type:"string" enum:"QueryLanguage"`
 
 	// The query string to use. For more information, see CloudWatch Logs Insights
 	// Query Syntax (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html).
@@ -19780,6 +26970,12 @@ func (s *StartQueryInput) SetLogGroupName(v string) *StartQueryInput {
 // SetLogGroupNames sets the LogGroupNames field's value.
 func (s *StartQueryInput) SetLogGroupNames(v []*string) *StartQueryInput {
 	s.LogGroupNames = v
+	return s
+}
+
+// SetQueryLanguage sets the QueryLanguage field's value.
+func (s *StartQueryInput) SetQueryLanguage(v string) *StartQueryInput {
+	s.QueryLanguage = &v
 	return s
 }
 
@@ -19907,6 +27103,13 @@ func (s *StopQueryOutput) SetSuccess(v bool) *StopQueryOutput {
 type SubscriptionFilter struct {
 	_ struct{} `type:"structure"`
 
+	// This parameter is valid only for log groups that have an active log transformer.
+	// For more information about log transformers, see PutTransformer (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutTransformer.html).
+	//
+	// If this value is true, the subscription filter is applied on the transformed
+	// version of the log events instead of the original ingested log events.
+	ApplyOnTransformedLogs *bool `locationName:"applyOnTransformedLogs" type:"boolean"`
+
 	// The creation time of the subscription filter, expressed as the number of
 	// milliseconds after Jan 1, 1970 00:00:00 UTC.
 	CreationTime *int64 `locationName:"creationTime" type:"long"`
@@ -19951,6 +27154,12 @@ func (s SubscriptionFilter) GoString() string {
 	return s.String()
 }
 
+// SetApplyOnTransformedLogs sets the ApplyOnTransformedLogs field's value.
+func (s *SubscriptionFilter) SetApplyOnTransformedLogs(v bool) *SubscriptionFilter {
+	s.ApplyOnTransformedLogs = &v
+	return s
+}
+
 // SetCreationTime sets the CreationTime field's value.
 func (s *SubscriptionFilter) SetCreationTime(v int64) *SubscriptionFilter {
 	s.CreationTime = &v
@@ -19990,6 +27199,161 @@ func (s *SubscriptionFilter) SetLogGroupName(v string) *SubscriptionFilter {
 // SetRoleArn sets the RoleArn field's value.
 func (s *SubscriptionFilter) SetRoleArn(v string) *SubscriptionFilter {
 	s.RoleArn = &v
+	return s
+}
+
+// This processor matches a key’s value against a regular expression and replaces
+// all matches with a replacement string.
+//
+// For more information about this processor including examples, see substituteString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-substituteString)
+// in the CloudWatch Logs User Guide.
+type SubstituteString struct {
+	_ struct{} `type:"structure"`
+
+	// An array of objects, where each object contains the information about one
+	// key to match and replace.
+	//
+	// Entries is a required field
+	Entries []*SubstituteStringEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SubstituteString) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SubstituteString) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SubstituteString) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SubstituteString"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *SubstituteString) SetEntries(v []*SubstituteStringEntry) *SubstituteString {
+	s.Entries = v
+	return s
+}
+
+// This object defines one log field key that will be replaced using the substituteString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-substituteString)
+// processor.
+type SubstituteStringEntry struct {
+	_ struct{} `type:"structure"`
+
+	// The regular expression string to be replaced. Special regex characters such
+	// as [ and ] must be escaped using \\ when using double quotes and with \ when
+	// using single quotes. For more information, see Class Pattern (https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html)
+	// on the Oracle web site.
+	//
+	// From is a required field
+	From *string `locationName:"from" min:"1" type:"string" required:"true"`
+
+	// The key to modify
+	//
+	// Source is a required field
+	Source *string `locationName:"source" min:"1" type:"string" required:"true"`
+
+	// The string to be substituted for each match of from
+	//
+	// To is a required field
+	To *string `locationName:"to" min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SubstituteStringEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s SubstituteStringEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *SubstituteStringEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "SubstituteStringEntry"}
+	if s.From == nil {
+		invalidParams.Add(request.NewErrParamRequired("From"))
+	}
+	if s.From != nil && len(*s.From) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("From", 1))
+	}
+	if s.Source == nil {
+		invalidParams.Add(request.NewErrParamRequired("Source"))
+	}
+	if s.Source != nil && len(*s.Source) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Source", 1))
+	}
+	if s.To == nil {
+		invalidParams.Add(request.NewErrParamRequired("To"))
+	}
+	if s.To != nil && len(*s.To) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("To", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetFrom sets the From field's value.
+func (s *SubstituteStringEntry) SetFrom(v string) *SubstituteStringEntry {
+	s.From = &v
+	return s
+}
+
+// SetSource sets the Source field's value.
+func (s *SubstituteStringEntry) SetSource(v string) *SubstituteStringEntry {
+	s.Source = &v
+	return s
+}
+
+// SetTo sets the To field's value.
+func (s *SubstituteStringEntry) SetTo(v string) *SubstituteStringEntry {
+	s.To = &v
 	return s
 }
 
@@ -20317,6 +27681,116 @@ func (s *TestMetricFilterOutput) SetMatches(v []*MetricFilterMatchRecord) *TestM
 	return s
 }
 
+type TestTransformerInput struct {
+	_ struct{} `type:"structure"`
+
+	// An array of the raw log events that you want to use to test this transformer.
+	//
+	// LogEventMessages is a required field
+	LogEventMessages []*string `locationName:"logEventMessages" min:"1" type:"list" required:"true"`
+
+	// This structure contains the configuration of this log transformer that you
+	// want to test. A log transformer is an array of processors, where each processor
+	// applies one type of transformation to the log events that are ingested.
+	//
+	// TransformerConfig is a required field
+	TransformerConfig []*Processor `locationName:"transformerConfig" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TestTransformerInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TestTransformerInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TestTransformerInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TestTransformerInput"}
+	if s.LogEventMessages == nil {
+		invalidParams.Add(request.NewErrParamRequired("LogEventMessages"))
+	}
+	if s.LogEventMessages != nil && len(s.LogEventMessages) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("LogEventMessages", 1))
+	}
+	if s.TransformerConfig == nil {
+		invalidParams.Add(request.NewErrParamRequired("TransformerConfig"))
+	}
+	if s.TransformerConfig != nil && len(s.TransformerConfig) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TransformerConfig", 1))
+	}
+	if s.TransformerConfig != nil {
+		for i, v := range s.TransformerConfig {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "TransformerConfig", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLogEventMessages sets the LogEventMessages field's value.
+func (s *TestTransformerInput) SetLogEventMessages(v []*string) *TestTransformerInput {
+	s.LogEventMessages = v
+	return s
+}
+
+// SetTransformerConfig sets the TransformerConfig field's value.
+func (s *TestTransformerInput) SetTransformerConfig(v []*Processor) *TestTransformerInput {
+	s.TransformerConfig = v
+	return s
+}
+
+type TestTransformerOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array where each member of the array includes both the original version
+	// and the transformed version of one of the log events that you input.
+	TransformedLogs []*TransformedLogRecord `locationName:"transformedLogs" type:"list"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TestTransformerOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TestTransformerOutput) GoString() string {
+	return s.String()
+}
+
+// SetTransformedLogs sets the TransformedLogs field's value.
+func (s *TestTransformerOutput) SetTransformedLogs(v []*TransformedLogRecord) *TestTransformerOutput {
+	s.TransformedLogs = v
+	return s
+}
+
 // The request was throttled because of quota limits.
 type ThrottlingException struct {
 	_            struct{}                  `type:"structure"`
@@ -20446,6 +27920,246 @@ func (s *TooManyTagsException) StatusCode() int {
 // RequestID returns the service's response RequestID for request.
 func (s *TooManyTagsException) RequestID() string {
 	return s.RespMetadata.RequestID
+}
+
+// This structure contains information for one log event that has been processed
+// by a log transformer.
+type TransformedLogRecord struct {
+	_ struct{} `type:"structure"`
+
+	// The original log event message before it was transformed.
+	EventMessage *string `locationName:"eventMessage" min:"1" type:"string"`
+
+	// The event number.
+	EventNumber *int64 `locationName:"eventNumber" type:"long"`
+
+	// The log event message after being transformed.
+	TransformedEventMessage *string `locationName:"transformedEventMessage" min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TransformedLogRecord) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TransformedLogRecord) GoString() string {
+	return s.String()
+}
+
+// SetEventMessage sets the EventMessage field's value.
+func (s *TransformedLogRecord) SetEventMessage(v string) *TransformedLogRecord {
+	s.EventMessage = &v
+	return s
+}
+
+// SetEventNumber sets the EventNumber field's value.
+func (s *TransformedLogRecord) SetEventNumber(v int64) *TransformedLogRecord {
+	s.EventNumber = &v
+	return s
+}
+
+// SetTransformedEventMessage sets the TransformedEventMessage field's value.
+func (s *TransformedLogRecord) SetTransformedEventMessage(v string) *TransformedLogRecord {
+	s.TransformedEventMessage = &v
+	return s
+}
+
+// Use this processor to remove leading and trailing whitespace.
+//
+// For more information about this processor including examples, see trimString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-trimString)
+// in the CloudWatch Logs User Guide.
+type TrimString struct {
+	_ struct{} `type:"structure"`
+
+	// The array containing the keys of the fields to trim.
+	//
+	// WithKeys is a required field
+	WithKeys []*string `locationName:"withKeys" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TrimString) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TrimString) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TrimString) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TrimString"}
+	if s.WithKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("WithKeys"))
+	}
+	if s.WithKeys != nil && len(s.WithKeys) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("WithKeys", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetWithKeys sets the WithKeys field's value.
+func (s *TrimString) SetWithKeys(v []*string) *TrimString {
+	s.WithKeys = v
+	return s
+}
+
+// Use this processor to convert a value type associated with the specified
+// key to the specified type. It's a casting processor that changes the types
+// of the specified fields. Values can be converted into one of the following
+// datatypes: integer, double, string and boolean.
+//
+// For more information about this processor including examples, see trimString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-trimString)
+// in the CloudWatch Logs User Guide.
+type TypeConverter struct {
+	_ struct{} `type:"structure"`
+
+	// An array of TypeConverterEntry objects, where each object contains the information
+	// about one field to change the type of.
+	//
+	// Entries is a required field
+	Entries []*TypeConverterEntry `locationName:"entries" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TypeConverter) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TypeConverter) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TypeConverter) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TypeConverter"}
+	if s.Entries == nil {
+		invalidParams.Add(request.NewErrParamRequired("Entries"))
+	}
+	if s.Entries != nil && len(s.Entries) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Entries", 1))
+	}
+	if s.Entries != nil {
+		for i, v := range s.Entries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Entries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetEntries sets the Entries field's value.
+func (s *TypeConverter) SetEntries(v []*TypeConverterEntry) *TypeConverter {
+	s.Entries = v
+	return s
+}
+
+// This object defines one value type that will be converted using the typeConverter
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-typeConverter)
+// processor.
+type TypeConverterEntry struct {
+	_ struct{} `type:"structure"`
+
+	// The key with the value that is to be converted to a different type.
+	//
+	// Key is a required field
+	Key *string `locationName:"key" min:"1" type:"string" required:"true"`
+
+	// The type to convert the field value to. Valid values are integer, double,
+	// string and boolean.
+	//
+	// Type is a required field
+	Type *string `locationName:"type" type:"string" required:"true" enum:"Type"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TypeConverterEntry) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TypeConverterEntry) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *TypeConverterEntry) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "TypeConverterEntry"}
+	if s.Key == nil {
+		invalidParams.Add(request.NewErrParamRequired("Key"))
+	}
+	if s.Key != nil && len(*s.Key) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Key", 1))
+	}
+	if s.Type == nil {
+		invalidParams.Add(request.NewErrParamRequired("Type"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetKey sets the Key field's value.
+func (s *TypeConverterEntry) SetKey(v string) *TypeConverterEntry {
+	s.Key = &v
+	return s
+}
+
+// SetType sets the Type field's value.
+func (s *TypeConverterEntry) SetType(v string) *TypeConverterEntry {
+	s.Type = &v
+	return s
 }
 
 // The most likely cause is an Amazon Web Services access key ID or secret key
@@ -20707,6 +28421,14 @@ type UpdateAnomalyInput struct {
 	// operation.
 	AnomalyId *string `locationName:"anomalyId" min:"36" type:"string"`
 
+	// Set this to true to prevent CloudWatch Logs from displaying this behavior
+	// as an anomaly in the future. The behavior is then treated as baseline behavior.
+	// However, if similar but more severe occurrences of this behavior occur in
+	// the future, those will still be reported as anomalies.
+	//
+	// The default is false
+	Baseline *bool `locationName:"baseline" type:"boolean"`
+
 	// If you are suppressing or unsuppressing an pattern, specify its unique ID
 	// here. You can find pattern IDs by using the ListAnomalies (https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_ListAnomalies.html)
 	// operation.
@@ -20774,6 +28496,12 @@ func (s *UpdateAnomalyInput) SetAnomalyId(v string) *UpdateAnomalyInput {
 	return s
 }
 
+// SetBaseline sets the Baseline field's value.
+func (s *UpdateAnomalyInput) SetBaseline(v bool) *UpdateAnomalyInput {
+	s.Baseline = &v
+	return s
+}
+
 // SetPatternId sets the PatternId field's value.
 func (s *UpdateAnomalyInput) SetPatternId(v string) *UpdateAnomalyInput {
 	s.PatternId = &v
@@ -20811,6 +28539,113 @@ func (s UpdateAnomalyOutput) String() string {
 // be included in the string output. The member name will be present, but the
 // value will be replaced with "sensitive".
 func (s UpdateAnomalyOutput) GoString() string {
+	return s.String()
+}
+
+type UpdateDeliveryConfigurationInput struct {
+	_ struct{} `type:"structure"`
+
+	// The field delimiter to use between record fields when the final output format
+	// of a delivery is in Plain, W3C, or Raw format.
+	FieldDelimiter *string `locationName:"fieldDelimiter" type:"string"`
+
+	// The ID of the delivery to be updated by this request.
+	//
+	// Id is a required field
+	Id *string `locationName:"id" min:"1" type:"string" required:"true"`
+
+	// The list of record fields to be delivered to the destination, in order. If
+	// the delivery's log source has mandatory fields, they must be included in
+	// this list.
+	RecordFields []*string `locationName:"recordFields" type:"list"`
+
+	// This structure contains parameters that are valid only when the delivery's
+	// delivery destination is an S3 bucket.
+	S3DeliveryConfiguration *S3DeliveryConfiguration `locationName:"s3DeliveryConfiguration" type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s UpdateDeliveryConfigurationInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s UpdateDeliveryConfigurationInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *UpdateDeliveryConfigurationInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "UpdateDeliveryConfigurationInput"}
+	if s.Id == nil {
+		invalidParams.Add(request.NewErrParamRequired("Id"))
+	}
+	if s.Id != nil && len(*s.Id) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Id", 1))
+	}
+	if s.S3DeliveryConfiguration != nil {
+		if err := s.S3DeliveryConfiguration.Validate(); err != nil {
+			invalidParams.AddNested("S3DeliveryConfiguration", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetFieldDelimiter sets the FieldDelimiter field's value.
+func (s *UpdateDeliveryConfigurationInput) SetFieldDelimiter(v string) *UpdateDeliveryConfigurationInput {
+	s.FieldDelimiter = &v
+	return s
+}
+
+// SetId sets the Id field's value.
+func (s *UpdateDeliveryConfigurationInput) SetId(v string) *UpdateDeliveryConfigurationInput {
+	s.Id = &v
+	return s
+}
+
+// SetRecordFields sets the RecordFields field's value.
+func (s *UpdateDeliveryConfigurationInput) SetRecordFields(v []*string) *UpdateDeliveryConfigurationInput {
+	s.RecordFields = v
+	return s
+}
+
+// SetS3DeliveryConfiguration sets the S3DeliveryConfiguration field's value.
+func (s *UpdateDeliveryConfigurationInput) SetS3DeliveryConfiguration(v *S3DeliveryConfiguration) *UpdateDeliveryConfigurationInput {
+	s.S3DeliveryConfiguration = v
+	return s
+}
+
+type UpdateDeliveryConfigurationOutput struct {
+	_ struct{} `type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s UpdateDeliveryConfigurationOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s UpdateDeliveryConfigurationOutput) GoString() string {
 	return s.String()
 }
 
@@ -20937,6 +28772,60 @@ func (s UpdateLogAnomalyDetectorOutput) String() string {
 // value will be replaced with "sensitive".
 func (s UpdateLogAnomalyDetectorOutput) GoString() string {
 	return s.String()
+}
+
+// This processor converts a string field to uppercase.
+//
+// For more information about this processor including examples, see upperCaseString
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html#CloudWatch-Logs-Transformation-upperCaseString)
+// in the CloudWatch Logs User Guide.
+type UpperCaseString struct {
+	_ struct{} `type:"structure"`
+
+	// The array of containing the keys of the field to convert to uppercase.
+	//
+	// WithKeys is a required field
+	WithKeys []*string `locationName:"withKeys" min:"1" type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s UpperCaseString) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s UpperCaseString) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *UpperCaseString) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "UpperCaseString"}
+	if s.WithKeys == nil {
+		invalidParams.Add(request.NewErrParamRequired("WithKeys"))
+	}
+	if s.WithKeys != nil && len(s.WithKeys) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("WithKeys", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetWithKeys sets the WithKeys field's value.
+func (s *UpperCaseString) SetWithKeys(v []*string) *UpperCaseString {
+	s.WithKeys = v
+	return s
 }
 
 // One of the parameters for the request is not valid.
@@ -21198,6 +29087,38 @@ func ExportTaskStatusCode_Values() []string {
 }
 
 const (
+	// FlattenedElementFirst is a FlattenedElement enum value
+	FlattenedElementFirst = "first"
+
+	// FlattenedElementLast is a FlattenedElement enum value
+	FlattenedElementLast = "last"
+)
+
+// FlattenedElement_Values returns all elements of the FlattenedElement enum
+func FlattenedElement_Values() []string {
+	return []string{
+		FlattenedElementFirst,
+		FlattenedElementLast,
+	}
+}
+
+const (
+	// IndexSourceAccount is a IndexSource enum value
+	IndexSourceAccount = "ACCOUNT"
+
+	// IndexSourceLogGroup is a IndexSource enum value
+	IndexSourceLogGroup = "LOG_GROUP"
+)
+
+// IndexSource_Values returns all elements of the IndexSource enum
+func IndexSource_Values() []string {
+	return []string{
+		IndexSourceAccount,
+		IndexSourceLogGroup,
+	}
+}
+
+const (
 	// InheritedPropertyAccountDataProtection is a InheritedProperty enum value
 	InheritedPropertyAccountDataProtection = "ACCOUNT_DATA_PROTECTION"
 )
@@ -21210,11 +29131,46 @@ func InheritedProperty_Values() []string {
 }
 
 const (
+	// IntegrationStatusProvisioning is a IntegrationStatus enum value
+	IntegrationStatusProvisioning = "PROVISIONING"
+
+	// IntegrationStatusActive is a IntegrationStatus enum value
+	IntegrationStatusActive = "ACTIVE"
+
+	// IntegrationStatusFailed is a IntegrationStatus enum value
+	IntegrationStatusFailed = "FAILED"
+)
+
+// IntegrationStatus_Values returns all elements of the IntegrationStatus enum
+func IntegrationStatus_Values() []string {
+	return []string{
+		IntegrationStatusProvisioning,
+		IntegrationStatusActive,
+		IntegrationStatusFailed,
+	}
+}
+
+const (
+	// IntegrationTypeOpensearch is a IntegrationType enum value
+	IntegrationTypeOpensearch = "OPENSEARCH"
+)
+
+// IntegrationType_Values returns all elements of the IntegrationType enum
+func IntegrationType_Values() []string {
+	return []string{
+		IntegrationTypeOpensearch,
+	}
+}
+
+const (
 	// LogGroupClassStandard is a LogGroupClass enum value
 	LogGroupClassStandard = "STANDARD"
 
 	// LogGroupClassInfrequentAccess is a LogGroupClass enum value
 	LogGroupClassInfrequentAccess = "INFREQUENT_ACCESS"
+
+	// LogGroupClassDelivery is a LogGroupClass enum value
+	LogGroupClassDelivery = "DELIVERY"
 )
 
 // LogGroupClass_Values returns all elements of the LogGroupClass enum
@@ -21222,6 +29178,27 @@ func LogGroupClass_Values() []string {
 	return []string{
 		LogGroupClassStandard,
 		LogGroupClassInfrequentAccess,
+		LogGroupClassDelivery,
+	}
+}
+
+const (
+	// OpenSearchResourceStatusTypeActive is a OpenSearchResourceStatusType enum value
+	OpenSearchResourceStatusTypeActive = "ACTIVE"
+
+	// OpenSearchResourceStatusTypeNotFound is a OpenSearchResourceStatusType enum value
+	OpenSearchResourceStatusTypeNotFound = "NOT_FOUND"
+
+	// OpenSearchResourceStatusTypeError is a OpenSearchResourceStatusType enum value
+	OpenSearchResourceStatusTypeError = "ERROR"
+)
+
+// OpenSearchResourceStatusType_Values returns all elements of the OpenSearchResourceStatusType enum
+func OpenSearchResourceStatusType_Values() []string {
+	return []string{
+		OpenSearchResourceStatusTypeActive,
+		OpenSearchResourceStatusTypeNotFound,
+		OpenSearchResourceStatusTypeError,
 	}
 }
 
@@ -21275,6 +29252,12 @@ const (
 
 	// PolicyTypeSubscriptionFilterPolicy is a PolicyType enum value
 	PolicyTypeSubscriptionFilterPolicy = "SUBSCRIPTION_FILTER_POLICY"
+
+	// PolicyTypeFieldIndexPolicy is a PolicyType enum value
+	PolicyTypeFieldIndexPolicy = "FIELD_INDEX_POLICY"
+
+	// PolicyTypeTransformerPolicy is a PolicyType enum value
+	PolicyTypeTransformerPolicy = "TRANSFORMER_POLICY"
 )
 
 // PolicyType_Values returns all elements of the PolicyType enum
@@ -21282,6 +29265,28 @@ func PolicyType_Values() []string {
 	return []string{
 		PolicyTypeDataProtectionPolicy,
 		PolicyTypeSubscriptionFilterPolicy,
+		PolicyTypeFieldIndexPolicy,
+		PolicyTypeTransformerPolicy,
+	}
+}
+
+const (
+	// QueryLanguageCwli is a QueryLanguage enum value
+	QueryLanguageCwli = "CWLI"
+
+	// QueryLanguageSql is a QueryLanguage enum value
+	QueryLanguageSql = "SQL"
+
+	// QueryLanguagePpl is a QueryLanguage enum value
+	QueryLanguagePpl = "PPL"
+)
+
+// QueryLanguage_Values returns all elements of the QueryLanguage enum
+func QueryLanguage_Values() []string {
+	return []string{
+		QueryLanguageCwli,
+		QueryLanguageSql,
+		QueryLanguagePpl,
 	}
 }
 
@@ -21518,5 +29523,29 @@ func SuppressionUnit_Values() []string {
 		SuppressionUnitSeconds,
 		SuppressionUnitMinutes,
 		SuppressionUnitHours,
+	}
+}
+
+const (
+	// TypeBoolean is a Type enum value
+	TypeBoolean = "boolean"
+
+	// TypeInteger is a Type enum value
+	TypeInteger = "integer"
+
+	// TypeDouble is a Type enum value
+	TypeDouble = "double"
+
+	// TypeString is a Type enum value
+	TypeString = "string"
+)
+
+// Type_Values returns all elements of the Type enum
+func Type_Values() []string {
+	return []string{
+		TypeBoolean,
+		TypeInteger,
+		TypeDouble,
+		TypeString,
 	}
 }
