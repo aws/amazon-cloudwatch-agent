@@ -100,7 +100,8 @@ const (
 	// ErrCodeSessionStreamingException for service response error code
 	// "SessionStreamingException".
 	//
-	// his exception is returned if an unknown error occurs during a Live Tail session.
+	// This exception is returned if an unknown error occurs during a Live Tail
+	// session.
 	ErrCodeSessionStreamingException = "SessionStreamingException"
 
 	// ErrCodeSessionTimeoutException for service response error code
