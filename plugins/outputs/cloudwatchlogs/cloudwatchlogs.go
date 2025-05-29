@@ -63,8 +63,9 @@ type CloudWatchLogs struct {
 	Token            string `toml:"token"`
 
 	//log group and stream names
-	LogStreamName string `toml:"log_stream_name"`
-	LogGroupName  string `toml:"log_group_name"`
+	LogStreamName   string `toml:"log_stream_name"`
+	LogGroupName    string `toml:"log_group_name"`
+	FileStateFolder string `toml:"file_state_folder"`
 
 	// Retention for log group
 	RetentionInDays int `toml:"retention_in_days"`
@@ -96,6 +97,9 @@ func (c *CloudWatchLogs) Close() error {
 	}
 	if c.workerPool != nil {
 		c.workerPool.Stop()
+	}
+	if c.targetManager != nil {
+		c.targetManager.Stop()
 	}
 
 	return nil
@@ -144,7 +148,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		if c.Concurrency > 0 {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
 		}
-		c.targetManager = pusher.NewTargetManager(c.Log, client)
+		c.targetManager = pusher.NewTargetManager(c.Log, client, c.FileStateFolder)
 	})
 	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
