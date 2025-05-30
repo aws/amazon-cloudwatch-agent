@@ -75,33 +75,6 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 	return &cfg, nil
 }
 
-// Adapter from go-kit/log to zap.Logger
-func createLogger(level *promslog.AllowedLevel) (*slog.Logger, error) {
-	var logLevel slog.Level
-	switch level.String() {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "info":
-		logLevel = slog.LevelInfo
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
-	default:
-		logLevel = slog.LevelInfo
-		return nil, fmt.Errorf("invalid log level: %s, defaulting to info", level.String())
-	}
-
-	opts := &slog.HandlerOptions{
-		Level: logLevel,
-	}
-
-	handler := slog.NewJSONHandler(os.Stdout, opts)
-	logger := slog.New(handler)
-
-	return logger, nil
-}
-
 func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel *promslog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled:             false,
@@ -160,7 +133,6 @@ func createZapLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
 	case "error":
 		zapLevel = zapcore.ErrorLevel
 	default:
-		zapLevel = zapcore.InfoLevel
 		return nil, fmt.Errorf("invalid log level: %s, defaulting to info", level.String())
 	}
 

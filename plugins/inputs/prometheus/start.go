@@ -405,22 +405,30 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) 
 		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
 	}
 }
-func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) (err error) {
+
+func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) error {
 	logger.Info("Loading configuration file", "filename", filename)
-	content, _ := os.ReadFile(filename)
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't read configuration file %q", filename)
+	}
 	text := string(content)
 	logger.Info("Prometheus configuration file", "value", text)
 
+	var conf *config.Config
+	success := false
+
+	// Defer the metrics update
 	defer func() {
-		if err == nil {
+		if success {
 			configSuccess.Set(1)
 			configSuccessTime.SetToCurrentTime()
 		} else {
 			configSuccess.Set(0)
 		}
 	}()
+
 	// Check for TA
-	var conf *config.Config
 	if taManager.enabled {
 		logger.Info("Target Allocator is enabled")
 		conf = (*config.Config)(taManager.config.PrometheusConfig)
@@ -430,27 +438,29 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 			return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 		}
 	}
+
 	scrapeConfigs, err := conf.GetScrapeConfigs()
 	if err != nil {
 		return errors.Wrap(err, "couldn't get scrape configs")
 	}
+
 	for _, sc := range scrapeConfigs {
 		if sc.ScrapeFallbackProtocol == "" {
-			sc.ScrapeFallbackProtocol = promconfig.PrometheusText1_0_0
+			sc.ScrapeFallbackProtocol = promconfig.PrometheusText0_0_4
 		}
 	}
+
 	relabelScrapeConfigs(conf, logger)
-	failed := false
+
+	// Apply reload functions
 	for _, rl := range rls {
 		if err := rl(conf); err != nil {
 			logger.Info("Failed to apply configuration", "err", err)
-			failed = true
+			return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 		}
-	}
-	if failed {
-		return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 	}
 
 	logger.Info("Completed loading of configuration file", "filename", filename)
+	success = true
 	return nil
 }
