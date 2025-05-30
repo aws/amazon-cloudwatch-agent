@@ -142,7 +142,7 @@ build-for-docker-fast-windows-amd64: build-for-docker-windows-amd64
 	rm -rf tmp
 
 install-goimports:
-	GOBIN=$(TOOLS_BIN_DIR) go install -mod=mod golang.org/x/tools/cmd/goimports
+	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 
 install-shfmt:
 	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
@@ -153,7 +153,7 @@ install-impi:
 install-addlicense:
 	# Using 04bfe4e to get SPDX template changes that are not present in the most recent tag v1.0.0
 	# This is required to be able to easily omit the year in our license header.
-	GOBIN=$(TOOLS_BIN_DIR) go install -mod=mod github.com/google/addlicense@04bfe4e
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/google/addlicense@04bfe4e
 
 install-golangci-lint:
 	#Install from source for golangci-lint is not recommended based on https://golangci-lint.run/usage/install/#install-from-source so using binary
@@ -173,11 +173,25 @@ impi: install-impi
 	@echo "Check import order/grouping finished"
 
 addlicense: install-addlicense
-	@echo "Skipping license check"
-
+	@ADDLICENSEOUT=`$(ADDLICENSE) -y="" -s=only -l="mit" -c="Amazon.com, Inc. or its affiliates. All Rights Reserved." $(ALL_SRC) 2>&1`; \
+    		if [ "$$ADDLICENSEOUT" ]; then \
+    			echo "$(ADDLICENSE) FAILED => add License errors:\n"; \
+    			echo "$$ADDLICENSEOUT\n"; \
+    			exit 1; \
+    		else \
+    			echo "Add License finished successfully"; \
+    		fi
 
 checklicense: install-addlicense
-	@echo "Skipping license check"
+	@ADDLICENSEOUT=`$(ADDLICENSE) -check $(ALL_SRC) 2>&1`; \
+    		if [ "$$ADDLICENSEOUT" ]; then \
+    			echo "$(ADDLICENSE) FAILED => add License errors:\n"; \
+    			echo "$$ADDLICENSEOUT\n"; \
+    			echo "Use 'make addlicense' to fix this."; \
+    			exit 1; \
+    		else \
+    			echo "Check License finished successfully"; \
+    		fi
 
 simple-lint: checklicense impi
 
