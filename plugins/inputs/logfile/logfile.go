@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
@@ -187,10 +187,15 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				}
 			}
 
+			stateManager := state.NewFileOffsetManager(state.ManagerConfig{
+				StateFileDir: t.FileStateFolder,
+				Name:         filename,
+			})
+
 			var seekFile *tail.SeekInfo
-			offset, err := t.restoreState(filename)
+			offset, err := stateManager.Restore()
 			if err == nil { // Missing state file would be an error too
-				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset}
+				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset.GetInt64()}
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}
@@ -243,7 +248,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			src := NewTailerSrc(
 				groupName, streamName,
 				t.Destination,
-				t.getStateFilePath(filename),
+				stateManager,
 				fileconfig.LogGroupClass,
 				fileconfig.FilePath,
 				tailer,
@@ -326,42 +331,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	return targetFileList, nil
 }
 
-// The plugin will look at the state folder, and restore the offset of the file seeked if such state exists.
-func (t *LogFile) restoreState(filename string) (int64, error) {
-	filePath := t.getStateFilePath(filename)
-
-	if _, err := os.Stat(filePath); err != nil {
-		t.Log.Debugf("The state file %s for %s does not exist: %v", filePath, filename, err)
-		return 0, err
-	}
-
-	byteArray, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Log.Warnf("Issue encountered when reading offset from file %s: %v", filename, err)
-		return 0, err
-	}
-
-	offset, err := strconv.ParseInt(strings.Split(string(byteArray), "\n")[0], 10, 64)
-	if err != nil {
-		t.Log.Warnf("Issue encountered when parsing offset value %v: %v", byteArray, err)
-		return 0, err
-	}
-
-	if offset < 0 {
-		return 0, fmt.Errorf("negative state file offset, %v, %v", filePath, offset)
-	}
-	t.Log.Infof("Reading from offset %v in %s", offset, filename)
-	return offset, nil
-}
-
-func (t *LogFile) getStateFilePath(filename string) string {
-	if t.FileStateFolder == "" {
-		return ""
-	}
-
-	return filepath.Join(t.FileStateFolder, escapeFilePath(filename))
-}
-
 func (t *LogFile) cleanupStateFolder() {
 	files, err := filepath.Glob(t.FileStateFolder + string(filepath.Separator) + "*")
 	if err != nil {
@@ -428,14 +397,6 @@ func isCompressedFile(filename string) bool {
 		return true
 	}
 	return false
-}
-
-func escapeFilePath(filePath string) string {
-	escapedFilePath := filepath.ToSlash(filePath)
-	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
-	return escapedFilePath
 }
 
 func generateLogGroupName(fileName string) string {
