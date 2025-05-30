@@ -60,7 +60,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - set(unit, "Count") where name == "diskio_iops_in_progress"
                 - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"

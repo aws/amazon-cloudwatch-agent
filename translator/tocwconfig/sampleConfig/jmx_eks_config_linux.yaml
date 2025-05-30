@@ -167,7 +167,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
@@ -178,7 +178,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
