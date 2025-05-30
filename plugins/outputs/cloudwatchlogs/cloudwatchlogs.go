@@ -76,7 +76,7 @@ type CloudWatchLogs struct {
 
 	pusherStopChan  chan struct{}
 	pusherWaitGroup sync.WaitGroup
-	cwDests         map[pusher.Target]*cwDest
+	cwDests         sync.Map
 	workerPool      pusher.WorkerPool
 	targetManager   pusher.TargetManager
 	once            sync.Once
@@ -91,9 +91,13 @@ func (c *CloudWatchLogs) Close() error {
 	close(c.pusherStopChan)
 	c.pusherWaitGroup.Wait()
 
-	for _, d := range c.cwDests {
-		d.Stop()
-	}
+	c.cwDests.Range(func(_, value interface{}) bool {
+		if d, ok := value.(*cwDest); ok {
+			d.Stop()
+		}
+		return true
+	})
+
 	if c.workerPool != nil {
 		c.workerPool.Stop()
 	}
@@ -129,8 +133,8 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 }
 
 func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
-	if cwd, ok := c.cwDests[t]; ok {
-		return cwd
+	if cwd, ok := c.cwDests.Load(t); ok {
+		return cwd.(*cwDest)
 	}
 
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
@@ -148,7 +152,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	})
 	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
-	c.cwDests[t] = cwd
+	c.cwDests.Store(t, cwd)
 	return cwd
 }
 
@@ -400,7 +404,7 @@ func init() {
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),
-			cwDests:            make(map[pusher.Target]*cwDest),
+			cwDests:            sync.Map{},
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
