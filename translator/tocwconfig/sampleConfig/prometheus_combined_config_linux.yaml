@@ -155,6 +155,7 @@ processors:
     deltatocumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
+    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
     prometheus:
         config:
@@ -190,10 +191,6 @@ receivers:
         start_time_metric_regex: ""
         trim_metric_suffixes: false
         use_start_time_metric: false
-    telegraf_prometheus:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -213,9 +210,10 @@ service:
             exporters:
                 - awsemf/prometheus
             processors:
+                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
-                - telegraf_prometheus
+                - prometheus
     telemetry:
         logs:
             development: false

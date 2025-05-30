@@ -2,7 +2,7 @@
   "metrics": {
     "metrics_collected": {
       "prometheus": {
-        "prometheus_config_path": "./testdata/config_prom.yaml"
+        "prometheus_config_path": "./testdata/metrics_emf/config_prom.yaml"
       }
     }
   }
