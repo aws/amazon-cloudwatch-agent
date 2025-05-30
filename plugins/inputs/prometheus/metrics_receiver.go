@@ -53,16 +53,16 @@ func (ma *metricAppender) AppendCTZeroSample(storage.SeriesRef, labels.Labels, i
 	return 0, nil
 }
 
-func (ma *metricAppender) SetOptions(opts *storage.AppendOptions) {
+func (ma *metricAppender) SetOptions(_ *storage.AppendOptions) {
 	// Implement if needed, or leave empty if no special handling is required
 }
 
-func (ma *metricAppender) AppendHistogramCTZeroSample(ref storage.SeriesRef, l labels.Labels, t int64, ct int64, h *histogram.Histogram, fh *histogram.FloatHistogram) (storage.SeriesRef, error) {
+func (ma *metricAppender) AppendHistogramCTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
 	// Implement basic handling or return nil if not needed
 	return 0, nil
 }
 
-func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
+func (mr *metricsReceiver) Appender(_ context.Context) storage.Appender {
 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
 }
 
@@ -75,7 +75,7 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 	return nil
 }
 
-func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
+func (ma *metricAppender) Append(_ storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
 	metricName := ""
 
 	labelMap := make(map[string]string, len(ls))
@@ -127,12 +127,12 @@ func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels,
 	return 0, nil
 }
 
-func (ma *metricAppender) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m metadata.Metadata) (storage.SeriesRef, error) {
+func (ma *metricAppender) UpdateMetadata(ref storage.SeriesRef, _ labels.Labels, _ metadata.Metadata) (storage.SeriesRef, error) {
 	// This code should no longer be used
 	return ref, nil
 }
 
-func (ma *metricAppender) AppendHistogram(ref storage.SeriesRef, l labels.Labels, t int64, h *histogram.Histogram, fh *histogram.FloatHistogram) (storage.SeriesRef, error) {
+func (ma *metricAppender) AppendHistogram(ref storage.SeriesRef, _ labels.Labels, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
 	// This code should no longer be used
 	return ref, nil
 }
