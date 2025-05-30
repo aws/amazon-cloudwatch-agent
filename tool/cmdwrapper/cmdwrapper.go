@@ -49,7 +49,7 @@ var findAgentBinary = func(path string) (string, error) {
 		return alternatePath, nil
 	}
 
-	return "", fmt.Errorf("amazon-cloudwatch-agent binary cannot be found")
+	return "", fmt.Errorf("amazon-cloudwatch-agent binary not found. expected in one of the following paths: %s or %s", path, execDir)
 }
 
 func AddFlags(prefix string, flagConfigs map[string]Flag) map[string]*string {
