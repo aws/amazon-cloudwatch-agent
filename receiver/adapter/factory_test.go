@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
-	"go.opentelemetry.io/collector/receiver/scraperhelper"
+	"go.opentelemetry.io/collector/scraper/scraperhelper"
 )
 
 func Test_Type(t *testing.T) {
@@ -61,7 +61,7 @@ func Test_CreateMetricsReceiver(t *testing.T) {
 	adapter := NewAdapter(c)
 	factory := adapter.NewReceiverFactory("cpu")
 
-	set := receivertest.NewNopSettings()
+	set := receivertest.NewNopSettings(component.MustNewType("telegraf_cpu"))
 	set.ID = component.NewIDWithName(factory.Type(), "cpu")
 
 	metricsReceiver, err := factory.CreateMetrics(
@@ -92,7 +92,7 @@ func Test_CreateInvalidMetricsReceiver(t *testing.T) {
 	factory := adapter.NewReceiverFactory("mem")
 	metricsReceiver, err := factory.CreateMetrics(
 		context.Background(),
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("telegraf_mem")),
 		&Config{
 			ControllerConfig: scraperhelper.ControllerConfig{
 				CollectionInterval: time.Minute,

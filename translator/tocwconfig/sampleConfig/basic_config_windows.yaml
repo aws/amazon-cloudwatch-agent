@@ -67,13 +67,10 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/4283769065
+                - telegraf_win_perf_counters/1492679118
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -84,7 +81,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

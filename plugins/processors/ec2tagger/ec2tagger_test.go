@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -268,7 +269,7 @@ func TestStartFailWithNoMetadata(t *testing.T) {
 	_, cancel := context.WithCancel(context.Background())
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: nil},
 		volumeSerialCache: &mockVolumeCache{cache: make(map[string]string)},
@@ -303,7 +304,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -348,7 +349,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -404,7 +405,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -450,7 +451,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -544,7 +545,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -609,7 +610,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	defaultRefreshInterval = 180 * time.Second
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		ec2Provider:       ec2Provider,
@@ -641,7 +642,7 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 
 	tagger := &Tagger{
 		Config:            cfg,
-		logger:            processortest.NewNopSettings().Logger,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
 		cancelFunc:        cancel,
 		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 		volumeSerialCache: &mockVolumeCache{cache: make(map[string]string)},

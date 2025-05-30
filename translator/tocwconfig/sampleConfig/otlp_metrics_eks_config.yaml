@@ -63,44 +63,25 @@ receivers:
     otlp/metrics:
         protocols:
             grpc:
-                dialer:
-                    timeout: 0s
                 endpoint: 0.0.0.0:1234
-                include_metadata: false
-                max_concurrent_streams: 0
-                max_recv_msg_size_mib: 0
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
                 read_buffer_size: 524288
                 tls:
-                    ca_file: ""
                     cert_file: /path/to/cert.pem
-                    client_ca_file: ""
-                    client_ca_file_reload: false
-                    include_system_ca_certs_pool: false
                     key_file: /path/to/key.pem
-                    max_version: ""
-                    min_version: ""
-                    reload_interval: 0s
                 transport: tcp
-                write_buffer_size: 0
             http:
+                cors: {}
                 endpoint: 0.0.0.0:2345
                 idle_timeout: 0s
-                include_metadata: false
                 logs_url_path: /v1/logs
-                max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                read_timeout: 0s
                 tls:
-                    ca_file: ""
                     cert_file: /path/to/cert.pem
-                    client_ca_file: ""
-                    client_ca_file_reload: false
-                    include_system_ca_certs_pool: false
                     key_file: /path/to/key.pem
-                    max_version: ""
-                    min_version: ""
-                    reload_interval: 0s
                 traces_url_path: /v1/traces
                 write_timeout: 0s
 service:
@@ -122,9 +103,6 @@ service:
                 - otlp/metrics
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -133,7 +111,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

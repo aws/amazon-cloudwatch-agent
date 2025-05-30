@@ -82,6 +82,7 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
+
 func TestContainerInsightsJMX(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
