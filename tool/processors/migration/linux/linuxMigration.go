@@ -14,13 +14,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/logs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
 )
 
 const (
-	genericSectionName                = "general"
-	anyExistingLinuxConfigQuestion    = "Do you have any existing CloudWatch Log Agent (http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AgentReference.html) configuration file to import for migration?"
-	filePathLinuxConfigQuestion       = "What is the file path for the existing cloudwatch log agent configuration file?"
-	DefaultFilePathLinuxConfiguration = "/var/awslogs/etc/awslogs.conf"
+	genericSectionName             = "general"
+	anyExistingLinuxConfigQuestion = "Do you have any existing CloudWatch Log Agent (http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AgentReference.html) configuration file to import for migration?"
+	filePathLinuxConfigQuestion    = "What is the file path for the existing cloudwatch log agent configuration file?"
 )
 
 var Processor processors.Processor = &processor{}
@@ -31,7 +31,7 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 	if ctx.HasExistingLinuxConfig || util.No(anyExistingLinuxConfigQuestion) {
 		filePath := ctx.ConfigFilePath
 		if filePath == "" {
-			filePath = util.AskWithDefault(filePathLinuxConfigQuestion, DefaultFilePathLinuxConfiguration)
+			filePath = util.AskWithDefault(filePathLinuxConfigQuestion, flags.DefaultFilePathLinuxConfiguration)
 		}
 		processConfigFromPythonConfigParserFile(filePath, config.LogsConf())
 	}
