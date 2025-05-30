@@ -4,7 +4,6 @@
 package prometheus
 
 import (
-	"github.com/stretchr/testify/require"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_metricAppender_Add_BadMetricName(t *testing.T) {

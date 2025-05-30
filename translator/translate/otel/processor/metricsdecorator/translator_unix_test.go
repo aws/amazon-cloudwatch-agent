@@ -8,10 +8,10 @@ package metricsdecorator
 
 import (
 	"context"
-	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"path/filepath"
+	"sort"
+	"testing"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,9 +20,11 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/processor/processortest"
-	"path/filepath"
-	"sort"
-	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func TestTranslate(t *testing.T) {

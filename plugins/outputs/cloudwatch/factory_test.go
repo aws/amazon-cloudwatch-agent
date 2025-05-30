@@ -5,10 +5,10 @@ package cloudwatch
 
 import (
 	"context"
-	"go.opentelemetry.io/collector/component"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/pipeline"

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -22,6 +21,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/processor/processortest"
 	"golang.org/x/exp/maps"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 )
 
 type mockEC2Client struct {

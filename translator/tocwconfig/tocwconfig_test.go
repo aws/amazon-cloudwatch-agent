@@ -9,9 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -30,6 +27,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -39,8 +37,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
