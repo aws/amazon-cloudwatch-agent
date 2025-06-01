@@ -104,7 +104,8 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	cfg.configFile = configFilePath
 
 	logger := promlog.New(&cfg.promlogConfig)
-
+	logLevel.Set("info") // This sets it to info level
+	log2.Println("Setting log level")
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
 	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())
