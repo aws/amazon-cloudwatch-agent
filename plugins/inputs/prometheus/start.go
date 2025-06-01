@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	log2 "log"
 	"os/signal"
 	"runtime"
 	"sync"
@@ -84,6 +85,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	logLevel := &promlog.AllowedLevel{}
 	logLevel.Set("info")
 
+	log2.Println("In start function of prometheus")
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
@@ -106,6 +108,8 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
 	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())
+	log2.Println("Printing out Starting Prometheus")
+
 	level.Info(logger).Log("build_context", version.BuildContext())
 	level.Info(logger).Log("host_details", promRuntime.Uname())
 	level.Info(logger).Log("fd_limits", promRuntime.FdLimits())
