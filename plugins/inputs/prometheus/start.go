@@ -87,48 +87,43 @@ type zapLogAdapter struct {
 }
 
 func (l *zapLogAdapter) Log(keyvals ...interface{}) error {
-	// Convert go-kit key-values to zap fields
+	// Extract message and fields
 	fields := make([]zap.Field, 0, len(keyvals)/2)
+	msg := "prometheus event"
+
 	for i := 0; i < len(keyvals); i += 2 {
-		if i+1 < len(keyvals) {
-			key, ok := keyvals[i].(string)
-			if !ok {
-				key = fmt.Sprintf("%v", keyvals[i])
-			}
-			fields = append(fields, zap.Any(key, keyvals[i+1]))
+		key, ok := keyvals[i].(string)
+		if !ok {
+			key = fmt.Sprintf("%v", keyvals[i])
 		}
+
+		var value interface{} = "missing value"
+		if i+1 < len(keyvals) {
+			value = keyvals[i+1]
+		}
+
+		// Handle special "msg" key
+		if key == "msg" {
+			msg = fmt.Sprint(value)
+			continue
+		}
+
+		// Handle special "level" key
+		if key == "level" {
+			continue // Skip level as we'll handle it separately
+		}
+
+		fields = append(fields, zap.Any(key, value))
 	}
 
-	// Log using zap
-	l.zapLogger.Info("", fields...)
+	// Log with appropriate level
+	l.zapLogger.Info(msg, fields...)
 	return nil
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler, zapLogger *zap.Logger) {
-	// Create a go-kit logger adapter for Zap
-	zapAdapter := log.LoggerFunc(func(keyvals ...interface{}) error {
-		// Convert go-kit key-values to zap fields
-		fields := make([]zap.Field, 0, len(keyvals)/2)
-		var msg string
-		for i := 0; i < len(keyvals); i += 2 {
-			key := fmt.Sprint(keyvals[i])
-			var value interface{} = "missing value"
-			if i+1 < len(keyvals) {
-				value = keyvals[i+1]
-			}
-			if key == "msg" {
-				msg = fmt.Sprint(value)
-			} else {
-				fields = append(fields, zap.Any(key, value))
-			}
-		}
-		if msg == "" {
-			msg = "prometheus event"
-		}
-		zapLogger.Info(msg, fields...)
-		return nil
-	})
-
+	logger := &zapLogAdapter{zapLogger: zapLogger}
+	zapLogger.Info("Starting prometheus component")
 	logLevel := &promlog.AllowedLevel{}
 	logLevel.Set("info")
 
@@ -149,7 +144,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 	cfg.configFile = configFilePath
 
-	logger := zapAdapter
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 	log2.Println("New Commit printing starting prometheus")
 	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())

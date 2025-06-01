@@ -77,6 +77,8 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 
 	// Start scraping prometheus metrics from prometheus endpoints
 	p.wg.Add(1)
+	logger := zap.NewExample()
+	p.logger = logger
 	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth, p.logger)
 
 	// Start filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
