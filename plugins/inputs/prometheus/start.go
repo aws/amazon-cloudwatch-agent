@@ -107,13 +107,13 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	log2.Println("Setting log level")
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
-	level.Debug(logger).Log("msg", "Starting Prometheus", "version", version.Info())
+	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())
 	log2.Println("Printing out Starting Prometheus")
 
-	level.Debug(logger).Log("build_context", version.BuildContext())
-	level.Debug(logger).Log("host_details", promRuntime.Uname())
-	level.Debug(logger).Log("fd_limits", promRuntime.FdLimits())
-	level.Debug(logger).Log("vm_limits", promRuntime.VMLimits())
+	level.Info(logger).Log("build_context", version.BuildContext())
+	level.Info(logger).Log("host_details", promRuntime.Uname())
+	level.Info(logger).Log("fd_limits", promRuntime.FdLimits())
+	level.Info(logger).Log("vm_limits", promRuntime.VMLimits())
 
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
