@@ -22,6 +22,7 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	log2 "log"
 	"os"
 	"os/signal"
@@ -81,11 +82,56 @@ func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
 
-func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
+type zapLogAdapter struct {
+	zapLogger *zap.Logger
+}
+
+func (l *zapLogAdapter) Log(keyvals ...interface{}) error {
+	// Convert go-kit key-values to zap fields
+	fields := make([]zap.Field, 0, len(keyvals)/2)
+	for i := 0; i < len(keyvals); i += 2 {
+		if i+1 < len(keyvals) {
+			key, ok := keyvals[i].(string)
+			if !ok {
+				key = fmt.Sprintf("%v", keyvals[i])
+			}
+			fields = append(fields, zap.Any(key, keyvals[i+1]))
+		}
+	}
+
+	// Log using zap
+	l.zapLogger.Info("", fields...)
+	return nil
+}
+
+func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler, zapLogger *zap.Logger) {
+	// Create a go-kit logger adapter for Zap
+	zapAdapter := log.LoggerFunc(func(keyvals ...interface{}) error {
+		// Convert go-kit key-values to zap fields
+		fields := make([]zap.Field, 0, len(keyvals)/2)
+		var msg string
+		for i := 0; i < len(keyvals); i += 2 {
+			key := fmt.Sprint(keyvals[i])
+			var value interface{} = "missing value"
+			if i+1 < len(keyvals) {
+				value = keyvals[i+1]
+			}
+			if key == "msg" {
+				msg = fmt.Sprint(value)
+			} else {
+				fields = append(fields, zap.Any(key, value))
+			}
+		}
+		if msg == "" {
+			msg = "prometheus event"
+		}
+		zapLogger.Info(msg, fields...)
+		return nil
+	})
+
 	logLevel := &promlog.AllowedLevel{}
 	logLevel.Set("info")
 
-	log2.Println("In start function of prometheus")
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
@@ -103,13 +149,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 	cfg.configFile = configFilePath
 
-	logger := promlog.New(&cfg.promlogConfig)
-	log2.Println("Setting log level")
+	logger := zapAdapter
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
-
+	log2.Println("New Commit printing starting prometheus")
 	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())
-	log2.Println("Printing out Starting Prometheus")
-
 	level.Info(logger).Log("build_context", version.BuildContext())
 	level.Info(logger).Log("host_details", promRuntime.Uname())
 	level.Info(logger).Log("fd_limits", promRuntime.FdLimits())
@@ -125,7 +168,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	)
 
 	level.Info(logger).Log("msg", fmt.Sprintf("Target Allocator  is %t", taManager.enabled))
-	//Setup Target Allocator Scrape Post Process Handler
+
 	taManager.AttachReloadConfigHandler(
 		func(prometheusConfig *config.Config) {
 			relabelScrapeConfigs(prometheusConfig, logger)
@@ -135,8 +178,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	mth.SetScrapeManager(scrapeManager)
 
 	var reloaders = []func(cfg *config.Config) error{
-		// The Scrape and notifier managers need to reload before the Discovery manager as
-		// they need to read the most updated config when receiving the new targets list.
 		scrapeManager.ApplyConfig,
 		func(cfg *config.Config) error {
 			c := make(map[string]discovery.Configs)
@@ -150,13 +191,12 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	prometheus.MustRegister(configSuccess)
 	prometheus.MustRegister(configSuccessTime)
 
-	// sync.Once is used to make sure we can close the channel at different execution stages(SIGTERM or when the config is loaded).
 	type closeOnce struct {
 		C     chan struct{}
 		once  sync.Once
 		Close func()
 	}
-	// Wait until the server is ready to handle reloading.
+
 	reloadReady := &closeOnce{
 		C: make(chan struct{}),
 	}
@@ -165,21 +205,18 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			close(reloadReady.C)
 		})
 	}
+
 	var g run.Group
 	{
-		// Termination handler.
 		cancel := make(chan struct{})
 		g.Add(
 			func() error {
-				// Don't forget to release the reloadReady channel so that waiting blocks can exit normally.
 				select {
 				case <-shutDownChan:
 					level.Warn(logger).Log("msg", "Received ShutDown, exiting gracefully...")
 					reloadReady.Close()
-
 				case <-cancel:
 					reloadReady.Close()
-					break
 				}
 				return nil
 			},
@@ -189,10 +226,9 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		)
 	}
 	{
-		// Scrape discovery manager.
 		g.Add(
 			func() error {
-				level.Info(logger).Log("msg", "Scrape discovery manager  starting")
+				level.Info(logger).Log("msg", "Scrape discovery manager starting")
 				err := discoveryManagerScrape.Run()
 				level.Info(logger).Log("msg", "Scrape discovery manager stopped", "error", err)
 				return err
@@ -204,34 +240,24 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		)
 	}
 	{
-		// Scrape manager.
 		g.Add(
 			func() error {
-				// When the scrape manager receives a new targets list
-				// it needs to read a valid config for each job.
-				// It depends on the config being in sync with the discovery manager so
-				// we wait until the config is fully loaded.
 				<-reloadReady.C
-
 				level.Info(logger).Log("msg", "start discovery")
 				err := scrapeManager.Run(discoveryManagerScrape.SyncCh())
 				level.Info(logger).Log("msg", "Scrape manager stopped", "error", err)
 				return err
 			},
 			func(err error) {
-				// Scrape manager needs to be stopped before closing the local TSDB
-				// so that it doesn't try to write samples to a closed storage.
 				level.Info(logger).Log("msg", "Stopping scrape manager...", "error", err)
 				scrapeManager.Stop()
 			},
 		)
 	}
 	{
-		// Target Allocator  manager.
 		if taManager.enabled {
 			g.Add(
 				func() error {
-					// we wait until the config is fully loaded.
 					level.Info(logger).Log("msg", "start ta manager")
 					err := taManager.Run()
 					level.Info(logger).Log("msg", "ta manager stopped", "error", err)
@@ -245,48 +271,36 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		}
 	}
 	{
-		// Reload handler.
-
-		// Make sure that sighup handler is registered with a redirect to the channel before the potentially
-		// long and synchronous tsdb init.
 		hup := make(chan os.Signal, 1)
 		signal.Notify(hup, syscall.SIGHUP)
 		cancel := make(chan struct{})
 		g.Add(
 			func() error {
 				<-reloadReady.C
-
 				for {
 					select {
 					case <-hup:
 						if err := reloadConfig(cfg.configFile, logger, taManager, reloaders...); err != nil {
 							level.Error(logger).Log("msg", "Error reloading config", "err", err)
 						}
-
 					case <-cancel:
 						return nil
 					}
 				}
-
 			},
 			func(err error) {
-				// Wait for any in-progress reloads to complete to avoid
-				// reloading things after they have been shutdown.
 				cancel <- struct{}{}
 			},
 		)
 	}
 	{
-		// Initial configuration loading.
 		cancel := make(chan struct{})
 		g.Add(
 			func() error {
 				select {
-				// In case a shutdown is initiated before the dbOpen is released
 				case <-cancel:
 					reloadReady.Close()
 					return nil
-
 				default:
 				}
 				if taManager.enabled {

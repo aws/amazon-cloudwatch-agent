@@ -28,6 +28,7 @@ type Prometheus struct {
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
 	middleware           awsmiddleware.Middleware
+	logger               *zap.Logger
 }
 
 func (p *Prometheus) SampleConfig() string {
@@ -76,7 +77,7 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 
 	// Start scraping prometheus metrics from prometheus endpoints
 	p.wg.Add(1)
-	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
+	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth, p.logger)
 
 	// Start filter our prometheus metrics, calculate delta value if its a Counter or Summary count sum
 	// and convert Prometheus metrics to Telegraf Metrics
@@ -93,9 +94,11 @@ func (p *Prometheus) Stop() {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
+		logger := zap.L()
 		return &Prometheus{
 			mbCh:         make(chan PrometheusMetricBatch, 10000),
 			shutDownChan: make(chan interface{}),
+			logger:       logger,
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{
