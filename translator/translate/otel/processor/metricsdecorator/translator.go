@@ -172,21 +172,13 @@ func (t *translator) getContextStatementList(conf *confmap.Conf) ([]interface{},
 		}
 	}
 
-	return []interface{}{
-		map[string]interface{}{
-			"context":    "metric",
-			"statements": sliceToInterfaceSlice(statements),
-			"error_mode": "propagate", // Add this line
-		},
-	}, nil
-}
-
-func sliceToInterfaceSlice(strs []string) []interface{} {
-	result := make([]interface{}, len(strs))
-	for i, s := range strs {
-		result[i] = s
+	contextStatement := ContextStatement{
+		Context:    "metric",
+		Statements: statements,
+		ErrorMode:  "propagate",
 	}
-	return result
+
+	return []interface{}{contextStatement}, nil
 }
 
 func (t *translator) getMeasurementsByPlugin(conf *confmap.Conf) map[string][]any {
