@@ -68,7 +68,7 @@ func TestMetricDecoration(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("Connections_Established", "none", 0.0, 0, 0, nil)
 
 	ctx := context.Background()
-	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(component.MustNewType("metricsdecorator")), cfg, sink)
+	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(component.MustNewType("transform")), cfg, sink)
 	require.NotNil(t, proc)
 	require.NoError(t, err)
 	actualMetrics := pmetric.NewMetrics()
