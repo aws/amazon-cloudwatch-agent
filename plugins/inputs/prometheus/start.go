@@ -146,10 +146,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	kitLogger := newSlogAdapter(logger)
 
 	logger.Info("Starting Prometheus", "version", version.Info())
-	logger.Info("Build Context", "context", version.BuildContext())
-	logger.Info("Host Details", "uname", promRuntime.Uname())
-	logger.Info("File Descriptor Limits", "limits", promRuntime.FdLimits())
-	logger.Info("Virtual Memory Limits", "limits", promRuntime.VMLimits())
+	logger.Info("build_context", "context", version.BuildContext())
+	logger.Info("host_details", "uname", promRuntime.Uname())
+	logger.Info("fd_limits", "limits", promRuntime.FdLimits())
+	logger.Info("vm_limits", "limits", promRuntime.VMLimits())
 
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
@@ -362,7 +362,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	}
 
 	if err := g.Run(); err != nil {
-		logger.Error("error occurred", "error", err)
+		logger.Error("err", "error", err)
 	}
 	level.Info(kitLogger).Log("msg", "See you next time!")
 	wg.Done()
@@ -455,7 +455,7 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	// Apply reload functions
 	for _, rl := range rls {
 		if err := rl(conf); err != nil {
-			logger.Info("Failed to apply configuration", "err", err)
+			logger.Error("Failed to apply configuration", "err", err)
 			return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 		}
 	}

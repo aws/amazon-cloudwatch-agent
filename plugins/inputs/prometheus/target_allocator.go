@@ -90,7 +90,7 @@ func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel
 	}
 	err := tam.loadConfig(filename)
 	if err != nil {
-		logger.Error("Could not load config for target allocator from file", "filename", filename, "err", err)
+		logger.Warn("Could not load config for target allocator from file", "filename", filename, "err", err)
 		return &tam
 	}
 	if tam.config == nil {
