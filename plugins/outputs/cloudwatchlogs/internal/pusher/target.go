@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	cacheTTL             = 5 * time.Second
-	retentionChannelSize = 100
+	cacheTTL                      = 5 * time.Second
+	logGroupIdentifierLimit       = 50
+	describeLogGroupChannelSize   = 50
+	putRetentionPolicyChannelSize = 100
 	// max wait time with backoff and jittering:
 	// 0 + 2.4 + 4.8 + 9.6 + 10 ~= 26.8 sec
 	baseRetryDelay      = 1 * time.Second
@@ -52,8 +54,8 @@ func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) Tar
 		service:  service,
 		cache:    make(map[Target]time.Time),
 		cacheTTL: cacheTTL,
-		dlg:      make(chan Target, retentionChannelSize),
-		prp:      make(chan Target, retentionChannelSize),
+		dlg:      make(chan Target, describeLogGroupChannelSize),
+		prp:      make(chan Target, putRetentionPolicyChannelSize),
 	}
 
 	go tm.processDescribeLogGroup()
@@ -174,44 +176,55 @@ func (m *targetManager) createLogStream(t Target) error {
 }
 
 func (m *targetManager) processDescribeLogGroup() {
-	for target := range m.dlg {
-		for attempt := 0; attempt < numBackoffRetries; attempt++ {
-			currentRetention, err := m.getRetention(target)
-			if err != nil {
-				m.logger.Errorf("failed to describe log group retention for target %v: %v", target, err)
-				time.Sleep(m.calculateBackoff(attempt))
-				continue
-			}
+	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
 
-			if currentRetention != target.Retention && target.Retention > 0 {
-				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
-				m.prp <- target
+	batch := make(map[string]Target, logGroupIdentifierLimit)
+
+	for {
+		select {
+		case target := <-m.dlg:
+			batch[target.Group] = target
+			if len(batch) == logGroupIdentifierLimit {
+				m.updateTargetBatch(batch)
+				// Reset batch
+				batch = make(map[string]Target, logGroupIdentifierLimit)
 			}
-			break // no change in retention
+		case <-t.C:
+			if len(batch) > 0 {
+				m.updateTargetBatch(batch)
+				// Reset batch
+				batch = make(map[string]Target, logGroupIdentifierLimit)
+			}
 		}
 	}
 }
 
-func (m *targetManager) getRetention(target Target) (int, error) {
-	input := &cloudwatchlogs.DescribeLogGroupsInput{
-		LogGroupNamePrefix: aws.String(target.Group),
+func (m *targetManager) updateTargetBatch(targets map[string]Target) {
+	var identifiers []*string
+	for logGroup := range targets {
+		identifiers = append(identifiers, aws.String(logGroup))
 	}
-
-	output, err := m.service.DescribeLogGroups(input)
-	if err != nil {
-		return 0, fmt.Errorf("describe log groups failed: %w", err)
+	describeLogGroupsInput := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupIdentifiers: identifiers,
 	}
-
-	for _, group := range output.LogGroups {
-		if *group.LogGroupName == target.Group {
-			if group.RetentionInDays == nil {
-				return 0, nil
-			}
-			return int(*group.RetentionInDays), nil
+	for attempt := 0; attempt < numBackoffRetries; attempt++ {
+		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
+		if err != nil {
+			m.logger.Errorf("failed to describe log group retention for targets %v: %v", targets, err)
+			time.Sleep(m.calculateBackoff(attempt))
+			continue
 		}
-	}
 
-	return 0, fmt.Errorf("log group %v not found", target.Group)
+		for _, logGroups := range output.LogGroups {
+			target := targets[*logGroups.LogGroupName]
+			if target.Retention != int(*logGroups.RetentionInDays) && target.Retention > 0 {
+				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
+				m.prp <- target
+			}
+		}
+		break
+	}
 }
 
 func (m *targetManager) processPutRetentionPolicy() {
