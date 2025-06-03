@@ -38,12 +38,27 @@ func TestRangeTree_Insert(t *testing.T) {
 	assert.Equal(t, "[0-30]", tree.String())
 }
 
-func TestRangeTree_MarshalText(t *testing.T) {
-
-}
-
 func TestRangeTree_UnmarshalText(t *testing.T) {
+	tree := NewRangeTree()
+	assert.NoError(t, tree.UnmarshalText([]byte("50\n0-5,20-30,45-50\ntest")))
+	assert.Equal(t, 3, tree.tree.Len())
+	got, err := tree.MarshalText()
+	assert.NoError(t, err)
+	assert.Equal(t, "50\n0-5,20-30,45-50", string(got))
 
+	tree = NewRangeTree()
+	assert.Error(t, tree.UnmarshalText([]byte("0-5,20-30,45-50\ntest")))
+	assert.Equal(t, 0, tree.tree.Len())
+	got, err = tree.MarshalText()
+	assert.NoError(t, err)
+	assert.Equal(t, "0\n", string(got))
+
+	tree = NewRangeTree()
+	assert.Error(t, tree.UnmarshalText([]byte("50\ntest")))
+	assert.Equal(t, 1, tree.tree.Len())
+	got, err = tree.MarshalText()
+	assert.NoError(t, err)
+	assert.Equal(t, "50\n0-50", string(got))
 }
 
 func TestRangeTree_Gaps(t *testing.T) {

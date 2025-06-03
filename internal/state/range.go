@@ -6,6 +6,7 @@ package state
 import (
 	"bytes"
 	"encoding"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -146,12 +147,17 @@ func (t *RangeTree) String() string {
 }
 
 func (t *RangeTree) MarshalText() ([]byte, error) {
-	var buf bytes.Buffer
+	var rangeBuf bytes.Buffer
+	var maxEnd uint64
 	first := true
 	var err error
+
 	t.tree.Ascend(func(item Range) bool {
+		if item.end > maxEnd {
+			maxEnd = item.end
+		}
 		if !first {
-			buf.WriteByte(',')
+			rangeBuf.WriteByte(',')
 		}
 		first = false
 		var text []byte
@@ -159,9 +165,19 @@ func (t *RangeTree) MarshalText() ([]byte, error) {
 		if err != nil {
 			return false
 		}
-		buf.Write(text)
+		rangeBuf.Write(text)
 		return true
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	_, err = fmt.Fprintf(&buf, "%d\n", maxEnd)
+	if err != nil {
+		return nil, err
+	}
+	_, err = buf.Write(rangeBuf.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -172,15 +188,23 @@ func (t *RangeTree) UnmarshalText(text []byte) error {
 	if len(text) == 0 {
 		return nil
 	}
-	firstLine := text
-	index := bytes.IndexByte(text, '\n')
-	if index != -1 {
-		firstLine = text[:index]
+	lines := bytes.Split(text, []byte("\n"))
+	if len(lines) < 2 {
+		return errors.New("invalid format: missing newline separator")
 	}
-	parts := strings.Split(string(firstLine), ",")
+	maxEnd, err := strconv.ParseUint(string(lines[0]), 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid end: %w", err)
+	}
+	defer func() {
+		if t.tree.Len() == 0 {
+			t.Insert(Range{start: 0, end: maxEnd})
+		}
+	}()
+	parts := bytes.Split(lines[1], []byte(","))
 	for _, part := range parts {
 		var r Range
-		if err := r.UnmarshalText([]byte(part)); err != nil {
+		if err := r.UnmarshalText(part); err != nil {
 			return fmt.Errorf("invalid range %q: %w", part, err)
 		}
 		t.Insert(r)

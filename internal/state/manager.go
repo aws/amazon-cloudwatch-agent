@@ -50,7 +50,6 @@ func (m *rangeManager) Enqueue(item Range) {
 
 // Restore the offset of the file if the state file exists.
 func (m *rangeManager) Restore() (*RangeTree, error) {
-	var tree RangeTree
 	content, err := os.ReadFile(m.stateFilePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -60,12 +59,13 @@ func (m *rangeManager) Restore() (*RangeTree, error) {
 		}
 		return nil, err
 	}
+	tree := NewRangeTree()
 	if err = tree.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return nil, err
 	}
 	log.Printf("I! Reading from offset %v in %s", tree.String(), m.name)
-	return &tree, nil
+	return tree, nil
 }
 
 // Save the offset in the state file.
