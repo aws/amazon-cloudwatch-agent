@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
@@ -39,10 +38,7 @@ var findAgentBinary = func(path string) (string, error) {
 		return "", fmt.Errorf("failed to get current executable path: %w", err)
 	}
 	execDir := filepath.Dir(execPath)
-	alternatePath := filepath.Join(execDir, "amazon-cloudwatch-agent")
-	if runtime.GOOS == "windows" {
-		alternatePath += ".exe"
-	}
+	alternatePath := filepath.Join(execDir, paths.AgentBinaryName)
 
 	// check again with alternate path
 	if _, err := os.Stat(alternatePath); err == nil {
