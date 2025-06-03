@@ -26,7 +26,7 @@ type DeltaCalculator struct {
 
 func (dc *DeltaCalculator) calculate(pm *PrometheusMetric) (res *PrometheusMetric) {
 	metricKey := getUniqMetricKey(pm)
-
+	log.Println("This is pm value", pm)
 	if !pm.isValueValid() {
 		log.Printf("D! DeltaCalculator.calculate: Drop metric with NaN or Inf value: %v", pm)
 		//When the raws values are like this: 1, 2, 3, 4, NaN, NaN, NaN, ..., 100, 101, 102,
