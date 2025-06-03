@@ -50,7 +50,7 @@ const (
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
 	NeuronCoreTag                                 = "neuroncore"
-	NeuronCorePerDevice  						  = 2
+	NeuronCorePerDevice                           = 2
 )
 
 type AwsNeuronMetricModifier struct {
