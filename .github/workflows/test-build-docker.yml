@@ -60,7 +60,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -112,6 +112,7 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
           platforms: linux/amd64
+          provenance: false
 
       - name: Build Cloudwatch Agent Image arm64
         uses: docker/build-push-action@v6
@@ -123,6 +124,7 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
           platforms: linux/arm64
+          provenance: false
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -141,7 +143,7 @@ jobs:
           go-version: ~1.22.2
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -194,7 +196,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -269,7 +271,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -349,7 +351,7 @@ jobs:
         run: sudo apt install rpm
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -386,12 +388,8 @@ jobs:
           docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
           docker manifest push $REGISTRY/$REPOSITORYWindows
 
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd | jq '.manifests[0]' > linux-amd.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm | jq '.manifests[0]' > linux-arm.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[0]' > 2019.json
-          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[1]' > 2022.json
-
-          docker buildx imagetools create -f linux-amd.json -f linux-arm.json -f 2019.json -f 2022.json --tag $REGISTRY/$OrigREPOSITORY
+          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019 --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
+          docker manifest push $REGISTRY/$OrigREPOSITORY
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignWindowsPackage:
@@ -405,7 +403,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2

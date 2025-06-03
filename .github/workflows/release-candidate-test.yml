@@ -1,0 +1,62 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Test Release Candidate
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+  S3_RELEASE_BUCKET: amazon-cloud-watch-agent
+  S3_RELEASE_REPO: cloudwatch-agent
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: 'The build ID (release candidate build number or GitHub commit SHA)'
+        type: string
+        required: true
+      test_repo_branch:
+        description: 'Override for the test repo branch (default is main)'
+        type: string
+
+jobs:
+  OutputEnvVariables:
+    name: 'OutputEnvVariables'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+    steps:
+      - name: SetOutputs
+        id: set-outputs
+        run: |
+          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
+
+      - name: Echo test variables
+        run: |
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
+  RepackageArtifacts:
+    name: 'RepackageArtifacts'
+    uses: ./.github/workflows/repackage-release-artifacts.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      build_id: ${{ inputs.build_id }}
+
+  StartIntegrationTests:
+    needs: [ RepackageArtifacts, OutputEnvVariables ]
+    runs-on: ubuntu-latest
+    steps:
+      # Avoid the limit of 5 nested workflows by executing the workflow in this manner
+      - run: gh workflow run test-artifacts.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_id=${{ inputs.build_id }} -f test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

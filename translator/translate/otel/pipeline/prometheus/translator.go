@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
@@ -32,9 +33,9 @@ type translator struct {
 	common.DestinationProvider
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.ComponentTranslators] {
+func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
 	t := &translator{name: common.PipelineNamePrometheus}
 	for _, opt := range opts {
 		opt(t)
@@ -45,8 +46,8 @@ func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.Co
 	return t
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, t.name)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, t.name)
 }
 
 // Translate creates a pipeline for prometheus if the logs.metrics_collected.prometheus
@@ -71,16 +72,20 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
-			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}),
-				agenthealth.NewTranslatorWithStatusCode(component.MustNewType("statuscode"), nil, true)),
+			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
+				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 		}, nil
 	case common.AMPKey:
 		if !conf.IsSet(MetricsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
 		translators := &common.ComponentTranslators{
-			Receivers:  common.NewTranslatorMap(otelprom.NewTranslator()),
-			Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey)),
+			Receivers: common.NewTranslatorMap(otelprom.NewTranslator()),
+			Processors: common.NewTranslatorMap(
+				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
+				// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics
+				deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)),
+			),
 			Exporters:  common.NewTranslatorMap(prometheusremotewrite.NewTranslatorWithName(common.AMPKey)),
 			Extensions: common.NewTranslatorMap(sigv4auth.NewTranslator()),
 		}

@@ -31,6 +31,7 @@ exporters:
             num_consumers: 1
             queue_size: 1000
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: /etc/test/ca_bundle.pem
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -140,6 +141,7 @@ exporters:
         role_arn: ""
         version: "0"
     awsemf/kueueContainerInsights:
+        add_entity: false
         certificate_file_path: /etc/test/ca_bundle.pem
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -237,6 +239,9 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -252,6 +257,34 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    filter/containerinsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
+    filter/kueueContainerInsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
     kueueattributes/kueueContainerInsights: {}
 receivers:
     awscontainerinsightreceiver:
@@ -331,6 +364,8 @@ service:
                 - awsemf/containerinsights
             processors:
                 - batch/containerinsights
+                - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         metrics/kueueContainerInsights:
@@ -338,6 +373,7 @@ service:
                 - awsemf/kueueContainerInsights
             processors:
                 - batch/kueueContainerInsights
+                - filter/kueueContainerInsights
                 - kueueattributes/kueueContainerInsights
             receivers:
                 - awscontainerinsightskueuereceiver
@@ -356,4 +392,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

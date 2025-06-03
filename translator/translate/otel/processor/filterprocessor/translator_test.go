@@ -144,3 +144,17 @@ func TestContainerInsightsJmx(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, len(expectedCfg.Metrics.Include.MetricNames), len(actualCfg.Metrics.Include.MetricNames))
 }
+
+func TestContainerInsights(t *testing.T) {
+	transl := NewTranslator(common.WithName(common.PipelineNameContainerInsights)).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*filterprocessor.Config)
+	c := testutil.GetConf(t, "filter_containerinsights_config.yaml")
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*filterprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.Metrics.Exclude.MetricNames), len(actualCfg.Metrics.Exclude.MetricNames))
+}

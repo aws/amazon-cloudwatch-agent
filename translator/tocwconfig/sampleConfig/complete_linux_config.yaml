@@ -111,6 +111,7 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     awsentity/service/telegraf:
         entity_type: Service
         platform: ec2
@@ -131,6 +132,7 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
+                - diskio_ebs_volume_queue_length
         include:
             match_type: ""
         initial_value: 2
@@ -151,7 +153,8 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
     filter/jmx/0:
         error_mode: propagate
         logs: {}
@@ -198,11 +201,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx/0:
         error_mode: propagate
@@ -211,9 +214,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -303,11 +306,47 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:2222
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
+    awsebsnvmereceiver:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        metrics:
+            diskio_ebs_ec2_instance_performance_exceeded_iops:
+                enabled: false
+            diskio_ebs_ec2_instance_performance_exceeded_tp:
+                enabled: false
+            diskio_ebs_total_read_bytes:
+                enabled: true
+            diskio_ebs_total_read_ops:
+                enabled: false
+            diskio_ebs_total_read_time:
+                enabled: false
+            diskio_ebs_total_write_bytes:
+                enabled: false
+            diskio_ebs_total_write_ops:
+                enabled: false
+            diskio_ebs_total_write_time:
+                enabled: false
+            diskio_ebs_volume_performance_exceeded_iops:
+                enabled: false
+            diskio_ebs_volume_performance_exceeded_tp:
+                enabled: false
+            diskio_ebs_volume_queue_length:
+                enabled: false
+        resource_attributes:
+            VolumeId:
+                enabled: true
+        devices:
+            - '*'
+        timeout: 0s
     telegraf_cpu:
         collection_interval: 10s
         initial_delay: 1s
@@ -387,38 +426,39 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
-                - telegraf_swap
-                - telegraf_cpu
                 - telegraf_netstat
-                - telegraf_procstat/1917393364
-                - telegraf_mem
+                - telegraf_swap
                 - telegraf_disk
+                - telegraf_mem
+                - telegraf_cpu
                 - telegraf_processes
+                - telegraf_procstat/1917393364
         metrics/hostCustomMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/service/telegraf
                 - ec2tagger
                 - transform
+                - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics/cloudwatch
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
+                - awsebsnvmereceiver
         metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch
@@ -466,4 +506,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

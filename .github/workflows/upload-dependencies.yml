@@ -1,0 +1,57 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Upload Dependencies and Test Repo to S3
+
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+
+on:
+  workflow_call:
+    inputs:
+      region:
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      github_sha:
+        required: true
+        type: string
+      s3_integration_bucket:
+        required: true
+        type: string
+      terraform_assume_role:
+        type: string
+
+jobs:
+  UploadDependenciesAndTestRepo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.test_repo_name }}
+          ref: ${{ inputs.test_repo_branch }}
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ~1.22.2
+
+      - name: Upload Dependencies and Test Repo
+        run: |
+          go mod tidy
+          go mod vendor
+          mkdir test-repo
+          tar -czf ./test-repo/amazon-cloudwatch-agent-test.tar.gz --exclude='test-repo' .
+          aws s3 cp ./test-repo/amazon-cloudwatch-agent-test.tar.gz s3://${{ inputs.s3_integration_bucket }}/integration-test/cloudwatch-agent-test-repo/${{ inputs.github_sha }}.tar.gz --quiet

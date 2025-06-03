@@ -31,12 +31,14 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
+                - diskio_ebs_volume_queue_length
         include:
             match_type: ""
         initial_value: 2
@@ -50,7 +52,8 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
     transform:
         error_mode: propagate
         flatten_data: false
@@ -80,10 +83,10 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform
+                - awsentity/resource
             receivers:
                 - telegraf_diskio
     telemetry:
@@ -103,4 +106,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

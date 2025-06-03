@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -27,7 +28,7 @@ func TestTranslatorTraces(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeTraces)
+	tt := NewTranslator(pipeline.SignalTraces)
 	assert.EqualValues(t, "traces/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
@@ -103,7 +104,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeMetrics)
+	tt := NewTranslator(pipeline.SignalMetrics)
 	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input          map[string]interface{}
@@ -129,7 +130,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				receivers:  []string{"otlp/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
-				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
 			detector:       eksdetector.TestEKSDetector,
 			isEKSCache:     eksdetector.TestIsEKSCacheEKS,
@@ -150,7 +151,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				receivers:  []string{"otlp/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
-				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
 			detector:       eksdetector.TestEKSDetector,
 			isEKSCache:     eksdetector.TestIsEKSCacheEKS,
@@ -168,7 +169,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				receivers:  []string{"otlp/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
-				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
 			detector:       eksdetector.TestK8sDetector,
 			isEKSCache:     eksdetector.TestIsEKSCacheK8s,
@@ -204,7 +205,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeMetrics)
+	tt := NewTranslator(pipeline.SignalMetrics)
 	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
@@ -284,7 +285,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(component.DataTypeMetrics)
+	tt := NewTranslator(pipeline.SignalMetrics)
 	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}

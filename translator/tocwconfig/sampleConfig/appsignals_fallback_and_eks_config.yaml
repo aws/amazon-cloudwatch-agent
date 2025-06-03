@@ -1,5 +1,6 @@
 exporters:
     awsemf/application_signals:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -129,6 +130,7 @@ exporters:
         role_arn: ""
         version: "1"
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -306,6 +308,10 @@ extensions:
         kubernetes_mode: EKS
         mode: ec2
         region: us-east-1
+    k8smetadata:
+        objects:
+            - endpointslices
+            - services
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
@@ -327,11 +333,30 @@ processors:
         entity_type: Service
         kubernetes_mode: EKS
         platform: ec2
+    awsentity/resource/containerinsights:
+        cluster_name: TestCluster
+        entity_type: Resource
+        kubernetes_mode: EKS
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    filter/containerinsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
     metricstransform/application_signals:
         transforms:
             - action: update
@@ -1385,7 +1410,9 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
+        max_conns_per_host: 0
         max_idle_conns: 100
+        max_idle_conns_per_host: 0
         middleware: agenthealth/statuscode
         openshift:
             address: ""
@@ -1508,10 +1535,13 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:4316
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 tls:
                     ca_file: ""
                     cert_file: path/to/cert.crt
@@ -1523,12 +1553,14 @@ receivers:
                     min_version: ""
                     reload_interval: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - agenthealth/logs
         - agenthealth/statuscode
         - awsproxy/application_signals
         - agenthealth/traces
+        - k8smetadata
         - entitystore
         - server
     pipelines:
@@ -1547,6 +1579,8 @@ service:
                 - awsemf/containerinsights
             processors:
                 - batch/containerinsights
+                - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         traces/application_signals:
@@ -1572,4 +1606,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

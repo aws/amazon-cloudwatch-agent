@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator"
@@ -121,6 +122,90 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithBothEbsAndAdaptedDiskio": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"io_time", "ebs_total_read_bytes"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"telegraf_diskio", "awsebsnvmereceiver"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_diskio", "awsebsnvmereceiver"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithoutEbsoMetrics": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"io_time"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"telegraf_diskio"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"telegraf_diskio"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithEbsMetrics": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"ebs_total_read_bytes"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"awsebsnvmereceiver"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"awsebsnvmereceiver"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
 		"WithOtlpMetrics/CloudWatch": {
 			input: map[string]any{
 				"metrics": map[string]any{
@@ -181,7 +266,7 @@ func TestTranslators(t *testing.T) {
 			} else {
 				require.NotNil(t, got)
 				assert.Equal(t, len(testCase.want), got.Len())
-				got.Range(func(tr common.Translator[*common.ComponentTranslators]) {
+				got.Range(func(tr common.Translator[*common.ComponentTranslators, pipeline.ID]) {
 					w, ok := testCase.want[tr.ID().String()]
 					require.True(t, ok)
 					g, err := tr.Translate(conf)

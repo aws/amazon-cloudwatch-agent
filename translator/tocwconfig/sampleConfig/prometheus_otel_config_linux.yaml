@@ -10,7 +10,11 @@ exporters:
             enabled: false
         http2_ping_timeout: 0s
         http2_read_idle_timeout: 0s
+        idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
+        max_conns_per_host: 0
+        max_idle_conns: 100
+        max_idle_conns_per_host: 0
         namespace: ""
         proxy_url: ""
         read_buffer_size: 0
@@ -58,6 +62,9 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
+    deltatocumulative/prometheus/amp:
+        max_stale: 336h0m0s
+        max_streams: 9223372036854775807
 receivers:
     prometheus:
         config:
@@ -103,6 +110,7 @@ service:
                 - prometheusremotewrite/amp
             processors:
                 - batch/prometheus/amp
+                - deltatocumulative/prometheus/amp
             receivers:
                 - prometheus
     telemetry:
@@ -120,4 +128,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

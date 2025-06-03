@@ -40,6 +40,7 @@ type LogFile struct {
 }
 
 func NewLogFile() *LogFile {
+
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
@@ -76,6 +77,7 @@ const sampleConfig = `
       timestamp_regex = "^(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}).*$"
       timestamp_layout = ["_2 Jan 2006 15:04:05"]
       timezone = "UTC"
+      trim_timestamp = false
       multi_line_start_pattern = "{timestamp_regex}"
       ## Read file from beginning.
       from_beginning = false
@@ -253,6 +255,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
+				fileconfig.BackpressureMode,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {
@@ -286,8 +289,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileName string
 	var targetModTime time.Time
 	for matchedFileName, matchedFileInfo := range g.Match() {
-
-		// we do not allow customer to monitor the file in t.FileStateFolder, it will monitor all of the state files
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
 			continue
 		}
@@ -303,7 +304,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 			continue
 		}
 
-		// Add another file blacklist here
 		fileBaseName := filepath.Base(matchedFileName)
 		if blacklistP != nil && blacklistP.MatchString(fileBaseName) {
 			continue
@@ -315,6 +315,7 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 			}
 		} else {
 			targetFileList = append(targetFileList, matchedFileName)
+			t.Log.Debugf("Multi-log mode - added file: %s", matchedFileName)
 		}
 	}
 	//If targetFileName != "", it means customer doesn't enable publish_multi_logs feature, targetFileList should be empty in this case.

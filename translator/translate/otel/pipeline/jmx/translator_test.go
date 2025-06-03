@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -36,7 +37,7 @@ func TestTranslator(t *testing.T) {
 			input: map[string]any{},
 			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx"),
 				JsonKey: "metrics::metrics_collected::jmx",
 			},
 		},
@@ -50,7 +51,7 @@ func TestTranslator(t *testing.T) {
 			},
 			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx"),
 				JsonKey: "metrics::metrics_collected::jmx::<target-system>::measurement",
 			},
 		},
@@ -66,7 +67,7 @@ func TestTranslator(t *testing.T) {
 			},
 			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx"),
 				JsonKey: "metrics::metrics_collected::jmx::<target-system>::measurement",
 			},
 		},
@@ -89,7 +90,7 @@ func TestTranslator(t *testing.T) {
 			},
 			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx"),
 				JsonKey: "metrics::metrics_collected::jmx::<target-system>::measurement",
 			},
 		},
@@ -103,7 +104,7 @@ func TestTranslator(t *testing.T) {
 			},
 			index: 1,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx/1"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/1"),
 				JsonKey: "metrics::metrics_collected::jmx[1]::<target-system>::measurement",
 			},
 		},
@@ -207,7 +208,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp"},
+				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp", "deltatocumulative/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -237,7 +238,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "batch/jmx/amp"},
+				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "batch/jmx/amp", "deltatocumulative/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -337,7 +338,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp/0",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx/0", "metricstransform/jmx", "transform/jmx/drop", "transform/jmx/0", "batch/jmx/amp/0"},
+				processors: []string{"filter/jmx/0", "metricstransform/jmx", "transform/jmx/drop", "transform/jmx/0", "batch/jmx/amp/0", "deltatocumulative/jmx/amp/0"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},

@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -25,14 +24,14 @@ type translator struct {
 	factory receiver.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 // NewTranslator creates a new aws container insight receiver translator.
-func NewTranslator() common.Translator[component.Config] {
+func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
+func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{
 		name:    name,
 		factory: awscontainerinsightskueuereceiver.NewFactory(),
@@ -60,12 +59,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) setClusterName(conf *confmap.Conf, cfg *awscontainerinsightskueuereceiver.Config) error {
-	clusterNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "cluster_name")
-	if clusterName, ok := common.GetString(conf, clusterNameKey); ok {
-		cfg.ClusterName = clusterName
-	} else {
-		cfg.ClusterName = util.GetClusterNameFromEc2Tagger()
-	}
+	cfg.ClusterName = common.GetClusterName(conf)
 
 	if cfg.ClusterName == "" {
 		return errors.New("cluster name is not provided and was not auto-detected from EC2 tags")

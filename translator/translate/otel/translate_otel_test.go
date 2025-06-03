@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -229,7 +229,7 @@ func TestTranslator(t *testing.T) {
 }
 
 type testTranslator struct {
-	id      component.ID
+	id      pipeline.ID
 	version int
 }
 
@@ -237,23 +237,25 @@ func (t testTranslator) Translate(_ *confmap.Conf) (*common.ComponentTranslators
 	return nil, nil
 }
 
-func (t testTranslator) ID() component.ID {
+func (t testTranslator) ID() pipeline.ID {
 	return t.id
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*testTranslator)(nil)
+var _ common.PipelineTranslator = (*testTranslator)(nil)
 
 func TestRegisterPipeline(t *testing.T) {
-	testType, _ := component.NewType("test")
-	original := &testTranslator{id: component.NewID(testType), version: 1}
+
+	original := &testTranslator{id: pipeline.NewID(pipeline.SignalLogs), version: 1}
 	tm := common.NewTranslatorMap[*common.ComponentTranslators](original)
 	assert.Equal(t, 0, registry.Len())
-	first := &testTranslator{id: component.NewID(testType), version: 2}
-	second := &testTranslator{id: component.NewID(testType), version: 3}
+
+	first := &testTranslator{id: pipeline.NewID(pipeline.SignalLogs), version: 2}
+	second := &testTranslator{id: pipeline.NewID(pipeline.SignalLogs), version: 3}
 	RegisterPipeline(first, second)
 	assert.Equal(t, 1, registry.Len())
+
 	tm.Merge(registry)
-	got, ok := tm.Get(component.NewID(testType))
+	got, ok := tm.Get(pipeline.NewID(pipeline.SignalLogs))
 	assert.True(t, ok)
 	assert.Equal(t, second.version, got.(*testTranslator).version)
 	assert.NotEqual(t, first.version, got.(*testTranslator).version)

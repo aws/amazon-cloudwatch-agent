@@ -5,15 +5,22 @@ package host
 
 import (
 	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsebsnvme"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+)
+
+const (
+	diskIOPrefix    = "diskio_"
+	diskIOEbsPrefix = "ebs_"
 )
 
 var (
@@ -21,12 +28,12 @@ var (
 	LogsKey    = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 )
 
-func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.TranslatorMap, error) {
-	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
-	hostReceivers := common.NewTranslatorMap[component.Config]()
-	hostCustomReceivers := common.NewTranslatorMap[component.Config]()
-	deltaReceivers := common.NewTranslatorMap[component.Config]()
-	otlpReceivers := common.NewTranslatorMap[component.Config]()
+func NewTranslators(conf *confmap.Conf, configSection, os string) (common.TranslatorMap[*common.ComponentTranslators, pipeline.ID], error) {
+	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
+	hostReceivers := common.NewTranslatorMap[component.Config, component.ID]()
+	hostCustomReceivers := common.NewTranslatorMap[component.Config, component.ID]()
+	deltaReceivers := common.NewTranslatorMap[component.Config, component.ID]()
+	otlpReceivers := common.NewTranslatorMap[component.Config, component.ID]()
 
 	// Gather adapter receivers
 	if configSection == MetricsKey {
@@ -34,7 +41,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 		if err != nil {
 			return nil, fmt.Errorf("error finding receivers in config: %w", err)
 		}
-		adapterReceivers.Range(func(translator common.Translator[component.Config]) {
+		adapterReceivers.Range(func(translator common.ComponentTranslator) {
 			if translator.ID().Type() == adapter.Type(common.DiskIOKey) || translator.ID().Type() == adapter.Type(common.NetKey) {
 				deltaReceivers.Set(translator)
 			} else if translator.ID().Type() == adapter.Type(common.StatsDMetricKey) || translator.ID().Type() == adapter.Type(common.CollectDPluginKey) {
@@ -45,19 +52,23 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 		})
 	}
 
+	if shouldAddEbsReceiver(conf, configSection) {
+		deltaReceivers.Set(awsebsnvme.NewTranslator())
+	}
+
 	// Gather OTLP receivers
 	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
 	case []any:
 		for index := range v {
 			otlpReceivers.Set(otlpreceiver.NewTranslator(
-				otlpreceiver.WithDataType(component.DataTypeMetrics),
+				otlpreceiver.WithSignal(pipeline.SignalMetrics),
 				otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 				common.WithIndex(index),
 			))
 		}
 	case map[string]any:
 		otlpReceivers.Set(otlpreceiver.NewTranslator(
-			otlpreceiver.WithDataType(component.DataTypeMetrics),
+			otlpreceiver.WithSignal(pipeline.SignalMetrics),
 			otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 		))
 	}
@@ -79,7 +90,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 		switch destination {
 		case common.AMPKey:
 			// PRW exporter does not need the delta conversion.
-			receivers := common.NewTranslatorMap[component.Config]()
+			receivers := common.NewTranslatorMap[component.Config, component.ID]()
 			receivers.Merge(hostReceivers)
 			receivers.Merge(deltaReceivers)
 			receivers.Merge(otlpReceivers)
@@ -120,4 +131,20 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (pipeline.Tran
 	}
 
 	return translators, nil
+}
+
+func shouldAddEbsReceiver(conf *confmap.Conf, configSection string) bool {
+	diskioMap := conf.Get(common.ConfigKey(configSection, common.DiskIOKey))
+	if diskioMap == nil {
+		return false
+	}
+
+	measurements := common.GetMeasurements(diskioMap.(map[string]any))
+	for _, measurement := range measurements {
+		measurement = strings.TrimPrefix(measurement, diskIOPrefix)
+		if strings.HasPrefix(measurement, diskIOEbsPrefix) {
+			return true
+		}
+	}
+	return false
 }

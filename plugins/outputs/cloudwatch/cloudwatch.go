@@ -174,6 +174,19 @@ func (c *CloudWatch) pushMetricDatum() {
 		case metric := <-c.metricChan:
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
+			/* We currently do not account for entity information as a part of the payload size.
+			This is by design and should be revisited once the SDK protocol changes.
+			In the meantime there has been a payload limit increase applied in the background to accommodate this decision
+
+			Otherwise to include entity size you would do something like this:
+			c.metricDatumBatch.Size += calculateEntitySize(entity)
+
+			In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
+			added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
+			c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
+
+			File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
+			*/
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
 				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])
@@ -428,6 +441,11 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 			continue
 		}
 		if len(distList) == 0 {
+			if metric.Value == nil {
+				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
+				continue
+			}
+
 			if !distribution.IsSupportedValue(*metric.Value, distribution.MinValue, distribution.MaxValue) {
 				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
 				continue

@@ -14,18 +14,20 @@ import (
 	"golang.org/x/text/encoding"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
-	stateFileMode = 0644
-	bufferLimit   = 50
+	stateFileMode      = 0644
+	tailCloseThreshold = 3 * time.Second
 )
 
 var (
 	multilineWaitPeriod = 1 * time.Second
+	defaultBufferSize   = 1
 )
 
 type fileOffset struct {
@@ -67,19 +69,22 @@ type tailerSrc struct {
 	stateFilePath   string
 	tailer          *tail.Tail
 	autoRemoval     bool
-	timestampFn     func(string) time.Time
+	timestampFn     func(string) (time.Time, string)
 	enc             encoding.Encoding
 	maxEventSize    int
 	truncateSuffix  string
 	retentionInDays int
 
-	outputFn        func(logs.LogEvent)
-	isMLStart       func(string) bool
-	filters         []*LogFilter
-	offsetCh        chan fileOffset
-	done            chan struct{}
-	startTailerOnce sync.Once
-	cleanUpFns      []func()
+	outputFn           func(logs.LogEvent)
+	isMLStart          func(string) bool
+	filters            []*LogFilter
+	offsetCh           chan fileOffset
+	done               chan struct{}
+	startTailerOnce    sync.Once
+	cleanUpFns         []func()
+	backpressureFdDrop bool
+	buffer             chan *LogEvent
+	stopOnce           sync.Once
 }
 
 // Verify tailerSrc implements LogSrc
@@ -91,31 +96,37 @@ func NewTailerSrc(
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
 	filters []*LogFilter,
-	timestampFn func(string) time.Time,
+	timestampFn func(string) (time.Time, string),
 	enc encoding.Encoding,
 	maxEventSize int,
 	truncateSuffix string,
 	retentionInDays int,
+	backpressureMode logscommon.BackpressureMode,
 ) *tailerSrc {
 	ts := &tailerSrc{
-		group:           group,
-		stream:          stream,
-		destination:     destination,
-		stateFilePath:   stateFilePath,
-		class:           logClass,
-		fileGlobPath:    fileGlobPath,
-		tailer:          tailer,
-		autoRemoval:     autoRemoval,
-		isMLStart:       isMultilineStartFn,
-		filters:         filters,
-		timestampFn:     timestampFn,
-		enc:             enc,
-		maxEventSize:    maxEventSize,
-		truncateSuffix:  truncateSuffix,
-		retentionInDays: retentionInDays,
+		group:              group,
+		stream:             stream,
+		destination:        destination,
+		stateFilePath:      stateFilePath,
+		class:              logClass,
+		fileGlobPath:       fileGlobPath,
+		tailer:             tailer,
+		autoRemoval:        autoRemoval,
+		isMLStart:          isMultilineStartFn,
+		filters:            filters,
+		timestampFn:        timestampFn,
+		enc:                enc,
+		maxEventSize:       maxEventSize,
+		truncateSuffix:     truncateSuffix,
+		retentionInDays:    retentionInDays,
+		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeFDRelease,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
+	}
+
+	if ts.backpressureFdDrop {
+		ts.buffer = make(chan *LogEvent, defaultBufferSize)
 	}
 	go ts.runSaveState()
 	return ts
@@ -126,7 +137,12 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 		return
 	}
 	ts.outputFn = fn
-	ts.startTailerOnce.Do(func() { go ts.runTail() })
+	ts.startTailerOnce.Do(func() {
+		go ts.runTail()
+		if ts.backpressureFdDrop {
+			go ts.runSender()
+		}
+	})
 }
 
 func (ts *tailerSrc) Group() string {
@@ -163,7 +179,12 @@ func (ts *tailerSrc) Done(offset fileOffset) {
 }
 
 func (ts *tailerSrc) Stop() {
-	close(ts.done)
+	ts.stopOnce.Do(func() {
+		close(ts.done)
+		if ts.buffer != nil {
+			close(ts.buffer)
+		}
+	})
 }
 
 func (ts *tailerSrc) AddCleanUpFn(f func()) {
@@ -186,26 +207,13 @@ func (ts *tailerSrc) runTail() {
 	var msgBuf bytes.Buffer
 	var cnt int
 	fo := &fileOffset{}
-
 	ignoreUntilNextEvent := false
-	for {
 
+	for {
 		select {
 		case line, ok := <-ts.tailer.Lines:
 			if !ok {
-				if msgBuf.Len() > 0 {
-					msg := msgBuf.String()
-					e := &LogEvent{
-						msg:    msg,
-						t:      ts.timestampFn(msg),
-						offset: *fo,
-						src:    ts,
-					}
-
-					if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
-						ts.outputFn(e)
-					}
-				}
+				ts.publishEvent(msgBuf, fo)
 				return
 			}
 
@@ -247,21 +255,7 @@ func (ts *tailerSrc) runTail() {
 				continue
 			}
 
-			if msgBuf.Len() > 0 {
-				msg := msgBuf.String()
-				e := &LogEvent{
-					msg:    msg,
-					t:      ts.timestampFn(msg),
-					offset: *fo,
-					src:    ts,
-				}
-				// Note: This only checks against the truncated log message, so it is not necessary to load
-				//       the entire log message for filtering.
-				if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
-					ts.outputFn(e)
-				}
-			}
-
+			ts.publishEvent(msgBuf, fo)
 			msgBuf.Reset()
 			msgBuf.WriteString(init)
 			fo.SetOffset(line.Offset)
@@ -271,23 +265,88 @@ func (ts *tailerSrc) runTail() {
 				cnt++
 			}
 
-			if cnt < 5 {
-				continue
+			if cnt >= 5 {
+				ts.publishEvent(msgBuf, fo)
+				msgBuf.Reset()
+				cnt = 0
 			}
-
-			msg := msgBuf.String()
-			e := &LogEvent{
-				msg:    msg,
-				t:      ts.timestampFn(msg),
-				offset: *fo,
-				src:    ts,
-			}
-			if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
-				ts.outputFn(e)
-			}
-			msgBuf.Reset()
-			cnt = 0
 		case <-ts.done:
+			return
+		}
+	}
+}
+
+func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
+	// helper to handle event publishing
+	if msgBuf.Len() == 0 {
+		return
+	}
+	msg := msgBuf.String()
+	timestamp, modifiedMsg := ts.timestampFn(msg)
+	e := &LogEvent{
+		msg:    modifiedMsg,
+		t:      timestamp,
+		offset: *fo,
+		src:    ts,
+	}
+	if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
+		if ts.backpressureFdDrop {
+			select {
+			case ts.buffer <- e:
+				// successfully sent
+			case <-ts.done:
+				return
+			default:
+				// sender buffer is full. start timer to close file then retry
+				timer := time.NewTimer(tailCloseThreshold)
+				defer timer.Stop()
+
+				for {
+					select {
+					case ts.buffer <- e:
+						// sent event after buffer gets freed up
+						if ts.tailer.IsFileClosed() { // skip file closing if not already closed
+							if err := ts.tailer.Reopen(false); err != nil {
+								log.Printf("E! [logfile] error reopening file %s: %v", ts.tailer.Filename, err)
+							}
+						}
+						return
+					case <-timer.C:
+						// timer expired without successful send, close file
+						log.Printf("D! [logfile] tailer sender buffer blocked after retrying, closing file %v", ts.tailer.Filename)
+						ts.tailer.CloseFile()
+					case <-ts.done:
+						return
+					}
+				}
+			}
+		} else {
+			ts.outputFn(e)
+		}
+	}
+}
+
+func (ts *tailerSrc) runSender() {
+	log.Printf("D! [logfile] runSender starting for %s", ts.tailer.Filename)
+
+	for {
+		select {
+		case e, ok := <-ts.buffer:
+			if !ok { // buffer was closed
+				log.Printf("D! [logfile] runSender buffer was closed for %s", ts.tailer.Filename)
+				return
+			}
+			// Check done before sending
+			select {
+			case <-ts.done:
+				return
+			default:
+				if e != nil {
+					ts.outputFn(e)
+				}
+			}
+		case <-ts.done:
+			log.Printf("D! [logfile] runSender received done signal for %s", ts.tailer.Filename)
 			return
 		}
 	}

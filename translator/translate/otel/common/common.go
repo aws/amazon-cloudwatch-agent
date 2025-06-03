@@ -6,6 +6,7 @@ package common
 import (
 	"container/list"
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -13,7 +14,10 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 )
 
 const (
@@ -56,6 +60,7 @@ const (
 	ForceFlushIntervalKey              = "force_flush_interval"
 	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
 	EnhancedContainerInsights          = "enhanced_container_insights"
+	ResourcesKey                       = "resources"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
 	EnableKueueContainerInsights       = "kueue_container_insights"
@@ -115,6 +120,7 @@ const (
 	PipelineNameContainerInsightsJmx = "containerinsightsjmx"
 	PipelineNameEmfLogs              = "emf_logs"
 	PipelineNamePrometheus           = "prometheus"
+	PipelineNameKueue                = "kueueContainerInsights"
 	AppSignals                       = "application_signals"
 	AppSignalsFallback               = "app_signals"
 	AppSignalsRules                  = "rules"
@@ -126,9 +132,9 @@ var (
 	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
 	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
 
-	AppSignalsConfigKeys = map[component.DataType][]string{
-		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
-		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
+	AppSignalsConfigKeys = map[pipeline.Signal][]string{
+		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
+		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
 	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
 	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
@@ -137,40 +143,48 @@ var (
 
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
+	OTLPLogsKey                     = ConfigKey(LogsKey, MetricsCollectedKey, OtlpKey)
+	OTLPMetricsKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, OtlpKey)
 )
+
+type TranslatorID interface {
+	component.ID | pipeline.ID
+
+	Name() string
+}
 
 // Translator is used to translate the JSON config into an
 // OTEL config.
-type Translator[C any] interface {
+type Translator[C any, ID TranslatorID] interface {
 	Translate(*confmap.Conf) (C, error)
-	ID() component.ID
+	ID() ID
 }
 
 // TranslatorMap is a set of translators by their types.
-type TranslatorMap[C any] interface {
+type TranslatorMap[C any, ID TranslatorID] interface {
 	// Set a translator to the map. If the ID is already present, replaces the translator.
 	// Otherwise, adds it to the end of the list.
-	Set(Translator[C])
+	Set(Translator[C, ID])
 	// Get the translator for the component.ID.
-	Get(component.ID) (Translator[C], bool)
+	Get(ID) (Translator[C, ID], bool)
 	// Merge another translator map in.
-	Merge(TranslatorMap[C])
+	Merge(TranslatorMap[C, ID])
 	// Keys is the ordered component.IDs.
-	Keys() []component.ID
+	Keys() []ID
 	// Range iterates over each translator in order and calls the callback function on each.
-	Range(func(Translator[C]))
+	Range(func(Translator[C, ID]))
 	// Len is the number of translators in the map.
 	Len() int
 }
 
-type translatorMap[C any] struct {
+type translatorMap[C any, ID TranslatorID] struct {
 	// list stores the ordered translators.
 	list *list.List
 	// lookup stores the list.Elements containing the translators by ID.
-	lookup map[component.ID]*list.Element
+	lookup map[ID]*list.Element
 }
 
-func (t translatorMap[C]) Set(translator Translator[C]) {
+func (t translatorMap[C, ID]) Set(translator Translator[C, ID]) {
 	if element, ok := t.lookup[translator.ID()]; ok {
 		element.Value = translator
 	} else {
@@ -179,43 +193,43 @@ func (t translatorMap[C]) Set(translator Translator[C]) {
 	}
 }
 
-func (t translatorMap[C]) Get(id component.ID) (Translator[C], bool) {
+func (t translatorMap[C, ID]) Get(id ID) (Translator[C, ID], bool) {
 	element, ok := t.lookup[id]
 	if !ok {
 		return nil, ok
 	}
-	return element.Value.(Translator[C]), ok
+	return element.Value.(Translator[C, ID]), ok
 }
 
-func (t translatorMap[C]) Merge(other TranslatorMap[C]) {
+func (t translatorMap[C, ID]) Merge(other TranslatorMap[C, ID]) {
 	if other != nil {
 		other.Range(t.Set)
 	}
 }
 
-func (t translatorMap[C]) Keys() []component.ID {
-	keys := make([]component.ID, 0, t.Len())
-	t.Range(func(translator Translator[C]) {
+func (t translatorMap[C, ID]) Keys() []ID {
+	keys := make([]ID, 0, t.Len())
+	t.Range(func(translator Translator[C, ID]) {
 		keys = append(keys, translator.ID())
 	})
 	return keys
 }
 
-func (t translatorMap[C]) Range(callback func(translator Translator[C])) {
+func (t translatorMap[C, ID]) Range(callback func(translator Translator[C, ID])) {
 	for element := t.list.Front(); element != nil; element = element.Next() {
-		callback(element.Value.(Translator[C]))
+		callback(element.Value.(Translator[C, ID]))
 	}
 }
 
-func (t translatorMap[C]) Len() int {
+func (t translatorMap[C, ID]) Len() int {
 	return t.list.Len()
 }
 
 // NewTranslatorMap creates a TranslatorMap from the translators.
-func NewTranslatorMap[C any](translators ...Translator[C]) TranslatorMap[C] {
-	t := translatorMap[C]{
+func NewTranslatorMap[C any, ID TranslatorID](translators ...Translator[C, ID]) TranslatorMap[C, ID] {
+	t := translatorMap[C, ID]{
 		list:   list.New(),
-		lookup: make(map[component.ID]*list.Element, len(translators)),
+		lookup: make(map[ID]*list.Element, len(translators)),
 	}
 	for _, translator := range translators {
 		t.Set(translator)
@@ -223,11 +237,15 @@ func NewTranslatorMap[C any](translators ...Translator[C]) TranslatorMap[C] {
 	return t
 }
 
+type ID interface {
+	String() string
+}
+
 // A MissingKeyError occurs when a translator is used for a JSON
 // config that does not have a required key. This typically means
 // that the pipeline was configured incorrectly.
 type MissingKeyError struct {
-	ID      component.ID
+	ID      ID
 	JsonKey string
 }
 
@@ -235,13 +253,25 @@ func (e *MissingKeyError) Error() string {
 	return fmt.Sprintf("%q missing key in JSON: %q", e.ID, e.JsonKey)
 }
 
+// ComponentTranslator is a Translator that converts a JSON config into a component
+type ComponentTranslator = Translator[component.Config, component.ID]
+
+// ComponentTranslatorMap is a map-like container which stores ComponentTranslators
+type ComponentTranslatorMap = TranslatorMap[component.Config, component.ID]
+
 // ComponentTranslators is a component ID and respective service pipeline.
 type ComponentTranslators struct {
-	Receivers  TranslatorMap[component.Config]
-	Processors TranslatorMap[component.Config]
-	Exporters  TranslatorMap[component.Config]
-	Extensions TranslatorMap[component.Config]
+	Receivers  ComponentTranslatorMap
+	Processors ComponentTranslatorMap
+	Exporters  ComponentTranslatorMap
+	Extensions ComponentTranslatorMap
 }
+
+// PipelineTranslator is a Translator that converts a JSON config into a pipeline
+type PipelineTranslator = Translator[*ComponentTranslators, pipeline.ID]
+
+// PipelineTranslatorMap is a map-like container which stores PipelineTranslators
+type PipelineTranslatorMap = TranslatorMap[*ComponentTranslators, pipeline.ID]
 
 // ConfigKey joins the keys separated by confmap.KeyDelimiter.
 // This helps translators navigate the confmap.Conf that the
@@ -453,4 +483,18 @@ func IsAnySet(conf *confmap.Conf, keys []string) bool {
 
 func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
 	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
+}
+
+func GetClusterName(conf *confmap.Conf) string {
+	val, ok := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
+	if ok && val != "" {
+		return val
+	}
+
+	envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
+	if envVarClusterName != "" {
+		return envVarClusterName
+	}
+
+	return util.GetClusterNameFromEc2Tagger()
 }

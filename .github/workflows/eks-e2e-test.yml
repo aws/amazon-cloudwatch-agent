@@ -65,6 +65,9 @@ on:
       sample_app:
         required: true
         type: string
+      eks_installation_type:
+        required: true
+        type: string
 
 jobs:
   EKSE2ETest:
@@ -84,34 +87,25 @@ jobs:
           ref: ${{inputs.test_repo_branch}}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Cache if success
-        id: cache_if_success
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Install Terraform
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -143,7 +137,8 @@ jobs:
               -var="agent_config=${{ inputs.agent_config }}" \
               -var="prometheus_config=${{ inputs.prometheus_config }}" \
               -var="otel_config=${{ inputs.otel_config }}" \
-              -var="sample_app=${{ inputs.sample_app }}"; then
+              -var="sample_app=${{ inputs.sample_app }}" \
+              -var="eks_installation_type=${{ inputs.eks_installation_type }}"; then
               terraform destroy --auto-approve
             else
               terraform destroy --auto-approve && exit 1

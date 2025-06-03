@@ -182,7 +182,8 @@
             "log_group_name": "amazon-cloudwatch-agent.log",
             "log_stream_name": "amazon-cloudwatch-agent.log",
             "timezone": "UTC",
-            "retention_in_days": 5
+            "retention_in_days": 5,
+            "trim_timestamp": true
           },
           {
             "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -35,7 +36,7 @@ func TestTranslator(t *testing.T) {
 			input:       map[string]any{},
 			destination: common.AMPKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/amp"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/amp"),
 				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
@@ -43,7 +44,7 @@ func TestTranslator(t *testing.T) {
 			input:       map[string]any{},
 			destination: common.CloudWatchLogsKey,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "prometheus/cloudwatchlogs"),
+				ID:      pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/cloudwatchlogs"),
 				JsonKey: "metrics::metrics_collected::prometheus or logs::metrics_collected::prometheus",
 			},
 		},
@@ -106,7 +107,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/prometheus/amp",
 				receivers:  []string{"prometheus"},
-				processors: []string{"batch/prometheus/amp"},
+				processors: []string{"batch/prometheus/amp", "deltatocumulative/prometheus/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},

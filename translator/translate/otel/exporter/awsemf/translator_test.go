@@ -483,21 +483,29 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
 							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes",
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
 							"pod_efa_rx_bytes", "pod_efa_tx_bytes", "pod_efa_rx_dropped", "pod_efa_rdma_read_bytes", "pod_efa_rdma_write_bytes", "pod_efa_rdma_write_recv_bytes",
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
 							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "VolumeId"}},
+						MetricNameSelectors: []string{
+							"node_diskio_ebs_total_read_ops", "node_diskio_ebs_total_write_ops", "node_diskio_ebs_total_read_bytes", "node_diskio_ebs_total_write_bytes",
+							"node_diskio_ebs_total_read_time", "node_diskio_ebs_total_write_time", "node_diskio_ebs_volume_performance_exceeded_iops", "node_diskio_ebs_volume_performance_exceeded_tp",
+							"node_diskio_ebs_ec2_instance_performance_exceeded_iops", "node_diskio_ebs_ec2_instance_performance_exceeded_tp", "node_diskio_ebs_volume_queue_length",
 						},
 					},
 				},
@@ -929,7 +937,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -945,7 +953,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -961,7 +969,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -977,7 +985,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -993,7 +1001,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -1009,7 +1017,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -1025,7 +1033,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            true,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
@@ -1041,7 +1049,7 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("awsemf_default_appsignals.yaml"), map[string]any{
-				"local_mode":            "false",
+				"local_mode":            false,
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",

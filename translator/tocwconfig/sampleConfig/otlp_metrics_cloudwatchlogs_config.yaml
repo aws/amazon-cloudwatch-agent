@@ -1,5 +1,6 @@
 exporters:
     awsemf:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -48,6 +49,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity/service/otlp:
+        entity_type: Service
+        platform: ec2
     batch/hostOtlpMetrics/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -85,10 +89,13 @@ receivers:
                 write_buffer_size: 0
             http:
                 endpoint: 0.0.0.0:2345
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 tls:
                     ca_file: ""
                     cert_file: /path/to/cert.pem
@@ -100,6 +107,7 @@ receivers:
                     min_version: ""
                     reload_interval: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -110,6 +118,7 @@ service:
             exporters:
                 - awsemf
             processors:
+                - awsentity/service/otlp
                 - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
@@ -131,4 +140,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

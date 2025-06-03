@@ -34,7 +34,7 @@ var (
 		// DiskIO: https://github.com/shirou/gopsutil/blob/master/disk/disk.go#L32-L47
 		// Net: https://github.com/shirou/gopsutil/blob/master/net/net.go#L13-L25
 		// https://github.com/aws/amazon-cloudwatch-agent/blob/5ace5aa6d817684cf82f4e6aa82d9596fb56d74b/translator/translate/metrics/util/deltasutil.go#L33-L65
-		diskioKey: {"iops_in_progress", "diskio_iops_in_progress"},
+		diskioKey: {"iops_in_progress", "diskio_iops_in_progress", "diskio_ebs_volume_queue_length"},
 	}
 )
 
@@ -56,10 +56,10 @@ type translator struct {
 	keys []string
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+var _ common.ComponentTranslator = (*translator)(nil)
 var _ common.NameSetter = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[component.Config] {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: cumulativetodeltaprocessor.NewFactory()}
 	for _, opt := range opts {
 		opt(t)

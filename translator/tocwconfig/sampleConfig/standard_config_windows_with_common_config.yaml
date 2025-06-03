@@ -35,17 +35,19 @@ processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
+        scrape_datapoint_attribute: true
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 2
         middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
         shared_credential_file: fake-path
 receivers:
     telegraf_win_perf_counters/1492679118:
@@ -83,14 +85,14 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/resource
                 - ec2tagger
+                - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
                 - telegraf_win_perf_counters/3446270237
+                - telegraf_win_perf_counters/3762679655
     telemetry:
         logs:
             development: false
@@ -108,4 +110,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None

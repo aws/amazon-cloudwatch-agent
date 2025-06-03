@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
@@ -48,6 +49,8 @@ type FileConfig struct {
 	TimestampLayout []string `toml:"timestamp_layout"`
 	//The time zone used to parse the timestampFromLogLine in the log entry.
 	Timezone string `toml:"timezone"`
+	//Trim timestamp from log line
+	TrimTimestamp bool `toml:"trim_timestamp"`
 
 	//Indicate whether it is a start of multiline.
 	//If this config is not present, it means the multiline mode is disabled.
@@ -58,6 +61,9 @@ type FileConfig struct {
 	// automatically remove the file / symlink after uploading.
 	// This auto removal does not support the case where other log rotation mechanism is already in place.
 	AutoRemoval bool `toml:"auto_removal"`
+	// strategy during backpressure in log processing where AutoRemoval take higher priority. supported values
+	// fd_release: release file descriptor when there is backpressure then reopen the file once backpressure condition is cleared
+	BackpressureMode logscommon.BackpressureMode `toml:"backpressure_mode"`
 
 	//Indicate whether to tail the log file from the beginning or not.
 	//The default value for this field should be set as true in configuration.
@@ -108,7 +114,7 @@ func (config *FileConfig) init() error {
 		if config.Enc, _ = charset.Lookup(config.Encoding); config.Enc == nil {
 			if config.Enc, _ = ianaindex.IANA.Encoding(config.Encoding); config.Enc == nil {
 				msg := fmt.Sprintf("E! the encoding %s is not supported.", config.Encoding)
-				log.Printf(msg)
+				log.Print(msg)
 				return errors.New(msg)
 			}
 		}
@@ -171,9 +177,9 @@ func (config *FileConfig) init() error {
 // Try to parse the timestampFromLogLine value from the log entry line.
 // The parser logic will be based on the timestampFromLogLine regex, and time zone info.
 // If the parsing operation encounters any issue, int64(0) is returned.
-func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
+func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, string) {
 	if config.TimestampRegexP == nil {
-		return time.Time{}
+		return time.Time{}, logValue
 	}
 	index := config.TimestampRegexP.FindStringSubmatchIndex(logValue)
 	if len(index) > 3 {
@@ -196,7 +202,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 		}
 		if err != nil {
 			log.Printf("E! Error parsing timestampFromLogLine: %s", err)
-			return time.Time{}
+			return time.Time{}, logValue
 		}
 		if timestamp.Year() == 0 {
 			now := time.Now()
@@ -208,9 +214,14 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 				timestamp = timestamp.AddDate(-1, 0, 0)
 			}
 		}
-		return timestamp
+		if config.TrimTimestamp {
+			// Trim the entire timestamp portion and leading whitespaces
+			// The whitespace characters being removed are: space, tab, newline, and carriage return ( " \t\n\r")
+			return timestamp, strings.TrimLeft(logValue[:index[0]]+logValue[index[1]:], " \t\n\r")
+		}
+		return timestamp, logValue
 	}
-	return time.Time{}
+	return time.Time{}, logValue
 }
 
 // This method determine whether the line is a start line for multiline log entry.

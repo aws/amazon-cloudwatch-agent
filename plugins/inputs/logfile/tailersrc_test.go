@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -30,6 +31,8 @@ type tailerTestResources struct {
 	consumed  *int32
 	file      *os.File
 	statefile *os.File
+	tailer    *tail.Tail
+	ts        *tailerSrc
 }
 
 func TestTailerSrc(t *testing.T) {
@@ -72,6 +75,7 @@ func TestTailerSrc(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -184,6 +188,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -276,7 +281,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	resources := setupTailer(t, nil, defaultMaxEventSize)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, "")
 	defer teardown(resources)
 
 	n := 100
@@ -299,6 +304,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		t,
 		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
 		defaultMaxEventSize,
+		false, "",
 	)
 	defer teardown(resources)
 
@@ -324,7 +330,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
 
-func parseRFC3339Timestamp(line string) time.Time {
+func parseRFC3339Timestamp(line string) (time.Time, string) {
 	// Use RFC3339 for testing `2006-01-02T15:04:05Z07:00`
 	re := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`)
 	tstr := re.FindString(line)
@@ -332,7 +338,7 @@ func parseRFC3339Timestamp(line string) time.Time {
 	if tstr != "" {
 		t, _ = time.Parse(time.RFC3339, tstr)
 	}
-	return t
+	return t, line
 }
 
 func logLine(s string, l int, t time.Time) string {
@@ -354,7 +360,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop logscommon.BackpressureMode) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -396,7 +402,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		"tailsrctest-*.log",
 		statefile.Name(),
 		tailer,
-		false, // AutoRemoval
+		autoRemoval,
 		multiLineFn,
 		config.Filters,
 		parseRFC3339Timestamp,
@@ -404,6 +410,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		maxEventSize,
 		defaultTruncateSuffix,
 		1,
+		backpressureDrop,
 	)
 
 	ts.SetOutput(func(evt logs.LogEvent) {
@@ -420,6 +427,8 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		consumed:  &consumed,
 		file:      file,
 		statefile: statefile,
+		tailer:    tailer,
+		ts:        ts,
 	}
 }
 
@@ -464,6 +473,86 @@ func resetState(originWaitDuration time.Duration) {
 }
 
 func teardown(resources tailerTestResources) {
+	if resources.file != nil {
+		resources.file.Close()
+	}
+	if resources.statefile != nil {
+		resources.statefile.Close()
+	}
 	os.Remove(resources.file.Name())
 	os.Remove(resources.statefile.Name())
+
+	// Wait for file operations to complete
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, logscommon.LogBackpressureModeFDRelease)
+
+	doneCh := make(chan struct{})
+	var consumed int32
+	blockCh := make(chan struct{})
+
+	defer func() {
+		close(blockCh)
+		time.Sleep(100 * time.Millisecond)
+		resources.ts.Stop()
+		<-doneCh
+		teardown(resources)
+	}()
+
+	initialCount := tail.OpenFileCount.Load()
+	resources.ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(doneCh)
+			return
+		}
+		atomic.AddInt32(&consumed, 1)
+		t.Logf("Processed log: %s", evt.Message())
+		select {
+		case <-blockCh:
+			return
+		default:
+			<-blockCh
+		}
+	})
+
+	// Write logs to fill the buffer
+	logCount := defaultBufferSize + 5
+	for i := 0; i < logCount; i++ {
+		_, err := fmt.Fprintf(resources.file, "ERROR: Test log line %d\n", i)
+		require.NoError(t, err)
+	}
+	resources.file.Sync()
+
+	// Wait for buffer to fill and file operations to complete
+	maxRetries := 10
+	var currentCount int64
+	for i := 0; i < maxRetries; i++ {
+		time.Sleep(100 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		if currentCount <= initialCount {
+			break
+		}
+	}
+
+	t.Logf("OpenFileCount after buffer full: %d", currentCount)
+	assert.LessOrEqual(t, currentCount, initialCount, "File count should not increase when buffer is full")
+
+	// Allow processing to continue
+	for i := 0; i < 3; i++ {
+		blockCh <- struct{}{}
+		time.Sleep(50 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		t.Logf("OpenFileCount during processing %d: %d", i, currentCount)
+	}
+
+	// Verify that some logs were processed
+	processedCount := atomic.LoadInt32(&consumed)
+	t.Logf("Processed %d logs", processedCount)
+	assert.Greater(t, processedCount, int32(0), "Should have processed some logs")
+
+	// Final check of OpenFileCount
+	finalCount := tail.OpenFileCount.Load()
+	assert.LessOrEqual(t, finalCount, initialCount, "File count should not increase")
 }

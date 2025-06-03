@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -18,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
@@ -39,9 +41,9 @@ type translator struct {
 	common.DestinationProvider
 }
 
-var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
+var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.ComponentTranslators] {
+func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
 	t := &translator{name: common.PipelineNameJmx}
 	t.SetIndex(-1)
 	for _, opt := range opts {
@@ -56,8 +58,8 @@ func NewTranslator(opts ...common.TranslatorOption) common.Translator[*common.Co
 	return t
 }
 
-func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, t.name)
+func (t *translator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, t.name)
 }
 
 // Translate creates a pipeline for jmx if jmx metrics are collected
@@ -76,12 +78,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config](),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](),
 		Processors: common.NewTranslatorMap(
 			filterprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())),
 		),
-		Exporters:  common.NewTranslatorMap[component.Config](),
-		Extensions: common.NewTranslatorMap[component.Config](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 
 	if context.CurrentContext().RunInContainer() {
@@ -113,12 +115,14 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	case common.DefaultDestination, common.CloudWatchKey:
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)))
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}, true))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}, true))
 	case common.AMPKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
 			translators.Processors.Set(rollupprocessor.NewTranslator())
 		}
+		// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics
+		translators.Processors.Set(deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
 	default:

@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -26,7 +26,7 @@ func TestTranslatorWithoutDataType(t *testing.T) {
 }
 
 func TestTracesTranslator(t *testing.T) {
-	tt := NewTranslator(WithDataType(component.DataTypeTraces), WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)))
+	tt := NewTranslator(WithSignal(pipeline.SignalTraces), WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)))
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
@@ -117,7 +117,7 @@ func TestMetricsTranslator(t *testing.T) {
 			input: map[string]interface{}{"metrics": map[string]interface{}{}},
 			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      NewTranslator(WithDataType(component.DataTypeMetrics)).ID(),
+				ID:      NewTranslator(WithSignal(pipeline.SignalMetrics)).ID(),
 				JsonKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey),
 			},
 		},
@@ -173,9 +173,9 @@ func TestMetricsTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(WithDataType(component.DataTypeMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)))
+			tt := NewTranslator(WithSignal(pipeline.SignalMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)))
 			if testCase.index != -1 {
-				tt = NewTranslator(WithDataType(component.DataTypeMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)), common.WithIndex(testCase.index))
+				tt = NewTranslator(WithSignal(pipeline.SignalMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)), common.WithIndex(testCase.index))
 			}
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -214,7 +214,7 @@ func TestMetricsEmfTranslator(t *testing.T) {
 			input: map[string]interface{}{"logs": map[string]interface{}{}},
 			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      NewTranslator(WithDataType(component.DataTypeMetrics)).ID(),
+				ID:      NewTranslator(WithSignal(pipeline.SignalMetrics)).ID(),
 				JsonKey: common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey),
 			},
 		},
@@ -271,7 +271,7 @@ func TestMetricsEmfTranslator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			tt := NewTranslator(
-				WithDataType(component.DataTypeMetrics),
+				WithSignal(pipeline.SignalMetrics),
 				WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)),
 				common.WithIndex(testCase.index),
 			)
@@ -290,7 +290,7 @@ func TestMetricsEmfTranslator(t *testing.T) {
 }
 
 func TestTranslateAppSignals(t *testing.T) {
-	tt := NewTranslator(common.WithName(common.AppSignals), WithDataType(component.DataTypeTraces))
+	tt := NewTranslator(common.WithName(common.AppSignals), WithSignal(pipeline.SignalTraces))
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf

@@ -1,5 +1,6 @@
 exporters:
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -109,6 +110,7 @@ exporters:
         role_arn: ""
         version: "0"
     awsemf/containerinsightsjmx:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -193,6 +195,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -205,6 +210,20 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
+    filter/containerinsights:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            exclude:
+                match_type: strict
+                metric_names:
+                    - up
+                    - scrape_duration_seconds
+                    - scrape_samples_scraped
+                    - scrape_series_added
+                    - scrape_samples_post_metric_relabeling
+        spans: {}
+        traces: {}
     filter/containerinsightsjmx:
         error_mode: propagate
         logs: {}
@@ -517,11 +536,15 @@ receivers:
         protocols:
             http:
                 endpoint: 0.0.0.0:4314
+                idle_timeout: 0s
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                read_timeout: 0s
                 traces_url_path: /v1/traces
+                write_timeout: 0s
 service:
     extensions:
         - agenthealth/logs
@@ -533,6 +556,8 @@ service:
                 - awsemf/containerinsights
             processors:
                 - batch/containerinsights
+                - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         metrics/containerinsightsjmx:
@@ -561,4 +586,5 @@ service:
         metrics:
             address: ""
             level: None
-        traces: {}
+        traces:
+            level: None
