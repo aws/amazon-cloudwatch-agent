@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "type": "pull_request",
+      "conditions": {
+        "base_refs": [
+          "refs/heads/main",
+          "refs/heads/tjstark/github-pr-ruleset"
+        ]
+      },
+      "parameters": {
+        "required_status_checks": {
+          "strict": true,
+          "checks": [
+            {
+              "context": "PR-test"
+            }
+          ]
+        },
+        "allow_force_pushes": false
+      }
+    }
+  ]
+}
