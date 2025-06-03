@@ -19,6 +19,29 @@
         },
         "allow_force_pushes": false
       }
+    },
+    {
+      "type": "branch",
+      "name": "main branch protection",
+      "target": [
+        "main",
+        "tjstark/github-pr-ruleset"
+      ],
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": {
+          "include": ["refs/heads/main"],
+          "exclude": []
+        }
+      },
+      "rules": {
+        "required_status_checks": {
+          "strict": true,
+          "contexts": ["PR-test"]
+        },
+        "allow_force_pushes": false,
+        "allow_deletions": false
+      }
     }
   ]
 }
