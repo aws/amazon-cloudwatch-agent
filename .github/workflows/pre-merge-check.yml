@@ -1,7 +1,12 @@
 name: Pre-merge Workflow Check
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_run:
+    workflows: ["PR Test"]  # Must match the exact name in your pr-test.yml
+    types:
+      - completed
+    branches:
+      - main*
+      - feature*
 
 jobs:
   check-pr-test-workflow:
