@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2019, windows-latest, macos-13]
+        os: [ubuntu-latest, windows-2022, windows-latest, macos-13]
         include:
           - os: ubuntu-latest
             family: linux
@@ -90,7 +90,7 @@ jobs:
             cache-path: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
-          - os: windows-2019
+          - os: windows-2022
             family: windows
             cache-path: |
               ~\AppData\Local\go-build
