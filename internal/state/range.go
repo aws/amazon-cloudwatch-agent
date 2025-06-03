@@ -5,103 +5,217 @@ package state
 
 import (
 	"bytes"
+	"encoding"
 	"fmt"
-	"sort"
+	"math"
 	"strconv"
 	"strings"
+
+	"github.com/google/btree"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
-type FileRange struct {
-	Start, End uint64
+const (
+	defaultBTreeDegree = 2
+)
+
+// Range represents an interval [start, end).
+type Range struct {
+	start, end uint64
 }
 
-func (r FileRange) IsValid() bool {
-	return r.Start < r.End
+var _ encoding.TextMarshaler = (*Range)(nil)
+var _ encoding.TextUnmarshaler = (*Range)(nil)
+
+func (r Range) IsValid() bool {
+	return r.start < r.end
 }
 
-type FileRanges struct {
-	ranges []FileRange
+func (r Range) Equal(other Range) bool {
+	return r.start == other.start && r.end == other.end
 }
 
-func (r *FileRanges) Add(v FileRange) {
-	if !v.IsValid() {
-		return
+func (r Range) Contains(other Range) bool {
+	return r.start <= other.start && r.end >= other.end
+}
+
+func (r Range) String() string {
+	return fmt.Sprintf("%d-%d", r.start, r.end)
+}
+
+func (r Range) MarshalText() ([]byte, error) {
+	return []byte(r.String()), nil
+}
+
+func (r *Range) UnmarshalText(text []byte) error {
+	parts := strings.SplitN(string(text), "-", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid format: %q", text)
 	}
-	index := sort.Search(len(r.ranges), func(i int) bool {
-		return r.ranges[i].Start > v.Start
+	start, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid start: %s", parts[0])
+	}
+	end, err := strconv.ParseUint(parts[1], 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid end: %s", parts[1])
+	}
+	*r = Range{start: start, end: end}
+	return nil
+}
+
+type RangeTree struct {
+	tree *btree.BTreeG[Range]
+}
+
+var _ encoding.TextMarshaler = (*RangeTree)(nil)
+var _ encoding.TextUnmarshaler = (*RangeTree)(nil)
+
+func NewRangeTree() *RangeTree {
+	return &RangeTree{tree: btree.NewG(defaultBTreeDegree, lessRange)}
+}
+
+func (t *RangeTree) Insert(r Range) bool {
+	if !r.IsValid() {
+		return false
+	}
+	toRemove := collections.NewSet[Range]()
+	merged := r
+	var contained bool
+	t.tree.AscendGreaterOrEqual(r, func(item Range) bool {
+		if item.start > merged.end {
+			return false
+		}
+		if item.Contains(r) {
+			contained = true
+			return false
+		}
+		if shouldMerge(item, merged) {
+			toRemove.Add(item)
+			merged = mergeRanges(merged, item)
+		}
+		return true
 	})
-
-	if index > 0 && r.ranges[index-1].End+1 >= v.Start {
-		if v.End > r.ranges[index-1].End {
-			r.ranges[index-1].End = v.End
-		}
-		r.mergeFrom(index - 1)
-		return
+	if contained {
+		return false
 	}
-
-	r.ranges = append(r.ranges, FileRange{})
-	copy(r.ranges[index+1:], r.ranges[index:])
-	r.ranges[index] = v
-	r.mergeFrom(index)
+	t.tree.DescendLessOrEqual(r, func(item Range) bool {
+		if item.end < merged.start {
+			return false
+		}
+		if item.Contains(r) {
+			contained = true
+			return false
+		}
+		if shouldMerge(item, merged) {
+			toRemove.Add(item)
+			merged = mergeRanges(merged, item)
+		}
+		return true
+	})
+	if contained {
+		return false
+	}
+	if len(toRemove) == 1 && toRemove.Contains(merged) {
+		return false
+	}
+	for item := range toRemove {
+		t.tree.Delete(item)
+	}
+	t.tree.ReplaceOrInsert(merged)
+	return true
 }
 
-func (r *FileRanges) mergeFrom(index int) {
-	if index >= len(r.ranges) {
-		return
-	}
-	current := &r.ranges[index]
-	mergeEnd := index
-
-	for i := index + 1; i < len(r.ranges); i++ {
-		if current.End+1 >= r.ranges[i].Start {
-			if r.ranges[i].End > current.End {
-				current.End = r.ranges[i].End
-			}
-			mergeEnd = i
-		} else {
-			break
-		}
-	}
-
-	if mergeEnd > index {
-		r.ranges = append(r.ranges[:index+1], r.ranges[mergeEnd+1:]...)
-	}
+func (t *RangeTree) Ranges() []Range {
+	var ranges []Range
+	t.tree.Ascend(func(item Range) bool {
+		ranges = append(ranges, item)
+		return true
+	})
+	return ranges
 }
 
-func (r FileRanges) MarshalText() ([]byte, error) {
+func (t *RangeTree) String() string {
+	var ranges []string
+	t.tree.Ascend(func(item Range) bool {
+		ranges = append(ranges, item.String())
+		return true
+	})
+	return "[" + strings.Join(ranges, ",") + "]"
+}
+
+func (t *RangeTree) MarshalText() ([]byte, error) {
 	var buf bytes.Buffer
-	for index, v := range r.ranges {
-		if index > 0 {
+	first := true
+	var err error
+	t.tree.Ascend(func(item Range) bool {
+		if !first {
 			buf.WriteByte(',')
 		}
-		_, err := fmt.Fprintf(&buf, "%d-%d", v.Start, v.End)
+		first = false
+		var text []byte
+		text, err = item.MarshalText()
 		if err != nil {
-			return nil, err
+			return false
 		}
+		buf.Write(text)
+		return true
+	})
+	if err != nil {
+		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func (r *FileRanges) UnmarshalText(b []byte) error {
-	r.ranges = make([]FileRange, 0)
-	if len(b) == 0 {
+func (t *RangeTree) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
 		return nil
 	}
-	str := strings.Split(string(b), ",")
-	for _, v := range str {
-		parts := strings.Split(v, "-")
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid range: %s", v)
+	firstLine := text
+	index := bytes.IndexByte(text, '\n')
+	if index != -1 {
+		firstLine = text[:index]
+	}
+	parts := strings.Split(string(firstLine), ",")
+	for _, part := range parts {
+		var r Range
+		if err := r.UnmarshalText([]byte(part)); err != nil {
+			return fmt.Errorf("invalid range %q: %w", part, err)
 		}
-		start, err := strconv.ParseUint(parts[0], 10, 64)
-		if err != nil {
-			return err
-		}
-		end, err := strconv.ParseUint(parts[1], 10, 64)
-		if err != nil {
-			return err
-		}
-		r.Add(FileRange{start, end})
+		t.Insert(r)
 	}
 	return nil
+}
+
+// shouldMerge if the intervals overlap or form a continuous Range.
+func shouldMerge(a, b Range) bool {
+	return a.start <= b.end && b.start <= a.end
+}
+
+// mergeRanges creates a new Range with the min start and max end.
+func mergeRanges(a, b Range) Range {
+	return Range{
+		start: min(a.start, b.start),
+		end:   max(a.end, b.end),
+	}
+}
+
+func lessRange(a, b Range) bool {
+	return a.start < b.start || (a.start == b.start && a.end < b.end)
+}
+
+func Gaps(ranges []Range) []Range {
+	var gaps []Range
+	var prevEnd uint64
+	for _, r := range ranges {
+		if r.start > prevEnd {
+			gaps = append(gaps, Range{start: prevEnd, end: r.start})
+		}
+		if r.end > prevEnd {
+			prevEnd = r.end
+		}
+	}
+	gaps = append(gaps, Range{start: prevEnd, end: math.MaxUint64})
+	return gaps
 }

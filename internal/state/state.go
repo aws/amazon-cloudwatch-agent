@@ -20,13 +20,13 @@ type Comparator[T any] interface {
 }
 
 // Manager handles persistence of state.
-type Manager[T any] interface {
+type Manager[I, O any] interface {
 	// Enqueue the current state in memory.
-	Enqueue(state T)
+	Enqueue(state I)
 	// Restore loads the previous state.
-	Restore() (T, error)
+	Restore() (O, error)
 	// Save persists the current state.
-	Save(state T) error
+	Save(state O) error
 	// Run starts the update/save loop.
 	Run(ch Notification)
 }

@@ -4,18 +4,56 @@
 package state
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFileRanges(t *testing.T) {
-	r := FileRanges{}
-	r.Add(FileRange{Start: 0, End: 10})
-	r.Add(FileRange{Start: 20, End: 25})
-	assert.Len(t, r.ranges, 2)
-	r.Add(FileRange{Start: 10, End: 15})
-	assert.Len(t, r.ranges, 2)
-	r.Add(FileRange{Start: 15, End: 20})
-	assert.Len(t, r.ranges, 1)
+func TestRangeTree_Insert(t *testing.T) {
+	tree := NewRangeTree()
+	assert.True(t, tree.Insert(Range{start: 0, end: 5}))
+	assert.True(t, tree.Insert(Range{start: 20, end: 30}))
+	assert.Equal(t, 2, tree.tree.Len())
+	assert.Equal(t, "[0-5,20-30]", tree.String())
+	// merge continuous
+	assert.True(t, tree.Insert(Range{start: 5, end: 10}))
+	assert.Equal(t, 2, tree.tree.Len())
+	assert.Equal(t, "[0-10,20-30]", tree.String())
+	// merge overlap
+	assert.True(t, tree.Insert(Range{start: 15, end: 25}))
+	assert.Equal(t, 2, tree.tree.Len())
+	assert.Equal(t, "[0-10,15-30]", tree.String())
+	// fully contained
+	assert.False(t, tree.Insert(Range{start: 0, end: 10}))
+	assert.Equal(t, 2, tree.tree.Len())
+	assert.Equal(t, "[0-10,15-30]", tree.String())
+	// invalid range
+	assert.False(t, tree.Insert(Range{start: 10, end: 10}))
+	assert.Equal(t, 2, tree.tree.Len())
+	assert.Equal(t, "[0-10,15-30]", tree.String())
+	// combine
+	assert.True(t, tree.Insert(Range{start: 10, end: 15}))
+	assert.Equal(t, 1, tree.tree.Len())
+	assert.Equal(t, "[0-30]", tree.String())
+}
+
+func TestRangeTree_MarshalText(t *testing.T) {
+
+}
+
+func TestRangeTree_UnmarshalText(t *testing.T) {
+
+}
+
+func TestRangeTree_Gaps(t *testing.T) {
+	tree := NewRangeTree()
+	assert.True(t, tree.Insert(Range{start: 0, end: 10}))
+	assert.True(t, tree.Insert(Range{start: 20, end: 25}))
+	gaps := Gaps(tree.Ranges())
+	expected := []Range{
+		{start: 10, end: 20},
+		{start: 25, end: math.MaxUint64},
+	}
+	assert.Equal(t, expected, gaps)
 }

@@ -112,7 +112,7 @@ type fileOffsetManager struct {
 }
 
 // FileOffsetManager is a state manager that handles the FileOffset.
-type FileOffsetManager Manager[FileOffset]
+type FileOffsetManager Manager[FileOffset, FileOffset]
 
 var _ FileOffsetManager = (*fileOffsetManager)(nil)
 
