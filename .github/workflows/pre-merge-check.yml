@@ -1,7 +1,7 @@
 name: Pre-merge Workflow Check
 on:
   workflow_run:
-    workflows: ["PR Test"]  # Must match the exact name in your pr-test.yml
+    workflows: ["PR Test"]
     types:
       - completed
     branches:
@@ -16,42 +16,63 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { owner, repo } = context.repo;
-            const pr_number = context.payload.pull_request.number;
+            const workflowRun = context.payload.workflow_run;
 
-            // Get the latest workflow run for PR Test
-            const workflows = await github.rest.actions.listWorkflowRuns({
-              owner,
-              repo,
-              workflow_id: '.github/workflows/pr-test.yml',
-              branch: context.payload.pull_request.head.ref
-            });
-
-            const latestRun = workflows.data.workflow_runs[0];
-
-            if (!latestRun) {
-              core.setFailed('PR Test workflow has not been run yet');
+            // Get the PR number from the original workflow run
+            const pullRequests = workflowRun.pull_requests;
+            if (!pullRequests || pullRequests.length === 0) {
+              console.log('No PR associated with this workflow run');
               return;
             }
 
-            // Check if all required jobs completed successfully
+            // Get the PR that triggered the original workflow
+            const originalPR = pullRequests[0];
+
+            // Get the current workflow's triggering event
+            const currentPR = context.payload.workflow_run.head_repository.owner.login === context.repo.owner &&
+                            context.payload.workflow_run.head_repository.name === context.repo.repo
+                            ? await github.rest.pulls.get({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                pull_number: originalPR.number
+                              })
+                            : null;
+
+            if (!currentPR) {
+              core.setFailed('Could not determine current PR context');
+              return;
+            }
+
+            // Verify both workflows are from the same PR
+            if (currentPR.data.number !== originalPR.number) {
+              core.setFailed(`PR mismatch: Original PR #${originalPR.number} vs Current PR #${currentPR.data.number}`);
+              return;
+            }
+
+            console.log(`Checking workflow results for PR #${originalPR.number}`);
+
+            if (workflowRun.conclusion !== 'success') {
+              core.setFailed(`PR Test workflow for PR #${originalPR.number} did not complete successfully`);
+              return;
+            }
+
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: workflowRun.id
+            });
+
             const requiredJobs = [
               'BuildAndUpload',
               'EC2LinuxIntegrationTest',
               'EC2SELinuxIntegrationTest'
             ];
 
-            const jobs = await github.rest.actions.listJobsForWorkflowRun({
-              owner,
-              repo,
-              run_id: latestRun.id
-            });
-
             for (const job of jobs.data.jobs) {
               if (requiredJobs.includes(job.name) && job.conclusion !== 'success') {
-                core.setFailed(`Required job ${job.name} has not completed successfully`);
+                core.setFailed(`Required job ${job.name} has not completed successfully for PR #${originalPR.number}`);
                 return;
               }
             }
 
-            console.log('All required workflow jobs completed successfully');
+            console.log(`All required workflow jobs completed successfully for PR #${originalPR.number}`);
