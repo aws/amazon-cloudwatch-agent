@@ -1,0 +1,52 @@
+name: Pre-merge Workflow Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-pr-test-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR Test Workflow Status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr_number = context.payload.pull_request.number;
+
+            // Get the latest workflow run for PR Test
+            const workflows = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: 'pr-test.yml',
+              branch: context.payload.pull_request.head.ref
+            });
+
+            const latestRun = workflows.data.workflow_runs[0];
+
+            if (!latestRun) {
+              core.setFailed('PR Test workflow has not been run yet');
+              return;
+            }
+
+            // Check if all required jobs completed successfully
+            const requiredJobs = [
+              'BuildAndUpload',
+              'EC2LinuxIntegrationTest',
+              'EC2SELinuxIntegrationTest'
+            ];
+
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id: latestRun.id
+            });
+
+            for (const job of jobs.data.jobs) {
+              if (requiredJobs.includes(job.name) && job.conclusion !== 'success') {
+                core.setFailed(`Required job ${job.name} has not completed successfully`);
+                return;
+              }
+            }
+
+            console.log('All required workflow jobs completed successfully');
