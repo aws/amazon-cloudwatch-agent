@@ -184,6 +184,9 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 		}
 
 		if pm.metricType == "" && !isInternalMetric(pm.metricName) {
+			log.Println("Inside failure, printing prometheus metric struct:")
+			log.Println(pm)
+			log.Println("Prometheus Metric Type:", pm.metricType)
 			log.Printf("E! metric_type ERROR: %v|%v|%v|%v  \n", pm.metricName, jobName, instanceId, pm.metricType)
 
 			// skip the non-internal metrics with empty metric type due to cache not ready
