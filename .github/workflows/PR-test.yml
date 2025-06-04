@@ -7,7 +7,7 @@ env:
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "tjstark/exclude-ol9-userdata-test"
   KEY_NAME: ${{ secrets.KEY_NAME }}
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
