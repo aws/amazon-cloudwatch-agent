@@ -19,22 +19,56 @@ import (
 
 const (
 	defaultBTreeDegree = 2
+	unboundedEnd       = math.MaxUint64
+	minCapacity        = 2
 )
 
 // Range represents an interval [start, end).
 type Range struct {
 	start, end uint64
+	// seq handles file truncation, when file is truncated, we increase the seq
+	seq uint64
 }
 
 var _ encoding.TextMarshaler = (*Range)(nil)
 var _ encoding.TextUnmarshaler = (*Range)(nil)
 
-func (r Range) IsValid() bool {
-	return r.start < r.end
+func (r *Range) Set(start, end uint64) {
+	if start < r.start {
+		r.seq++
+	}
+	r.start = start
+	r.end = end
 }
 
-func (r Range) Equal(other Range) bool {
-	return r.start == other.start && r.end == other.end
+func (r *Range) SetInt64(start, end int64) {
+	if start < 0 || end < 0 {
+		return
+	}
+	r.Set(uint64(start), uint64(end))
+}
+
+func (r Range) Get() (uint64, uint64) {
+	return r.start, r.end
+}
+
+func (r Range) GetInt64() (int64, int64) {
+	var start, end int64
+	if r.start <= math.MaxInt64 {
+		start = int64(r.start)
+	}
+	if r.end <= math.MaxInt64 {
+		end = int64(r.end)
+	}
+	return start, end
+}
+
+func (r Range) IsEndUnbounded() bool {
+	return r.end == unboundedEnd
+}
+
+func (r Range) IsValid() bool {
+	return r.start < r.end
 }
 
 func (r Range) Contains(other Range) bool {
@@ -42,6 +76,9 @@ func (r Range) Contains(other Range) bool {
 }
 
 func (r Range) String() string {
+	if r.IsEndUnbounded() {
+		return fmt.Sprintf("%v-", r.start)
+	}
 	return fmt.Sprintf("%d-%d", r.start, r.end)
 }
 
@@ -58,15 +95,25 @@ func (r *Range) UnmarshalText(text []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid start: %s", parts[0])
 	}
-	end, err := strconv.ParseUint(parts[1], 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid end: %s", parts[1])
+	var end uint64
+	if parts[1] == "" {
+		end = unboundedEnd
+	} else {
+		end, err = strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid end: %s", parts[1])
+		}
 	}
-	*r = Range{start: start, end: end}
+	tmp := Range{start: start, end: end}
+	if !tmp.IsValid() {
+		return fmt.Errorf("invalid range: %q", text)
+	}
+	*r = tmp
 	return nil
 }
 
 type RangeTree struct {
+	cap  int
 	tree *btree.BTreeG[Range]
 }
 
@@ -74,7 +121,14 @@ var _ encoding.TextMarshaler = (*RangeTree)(nil)
 var _ encoding.TextUnmarshaler = (*RangeTree)(nil)
 
 func NewRangeTree() *RangeTree {
-	return &RangeTree{tree: btree.NewG(defaultBTreeDegree, lessRange)}
+	return NewRangeTreeWithCap(-1)
+}
+
+func NewRangeTreeWithCap(capacity int) *RangeTree {
+	return &RangeTree{
+		cap:  capacity,
+		tree: btree.NewG(defaultBTreeDegree, lessRange),
+	}
 }
 
 func (t *RangeTree) Insert(r Range) bool {
@@ -118,18 +172,44 @@ func (t *RangeTree) Insert(r Range) bool {
 	if contained {
 		return false
 	}
-	if len(toRemove) == 1 && toRemove.Contains(merged) {
-		return false
-	}
 	for item := range toRemove {
 		t.tree.Delete(item)
 	}
+	t.tree.ReplaceOrInsert(merged)
+	if t.cap >= minCapacity && t.tree.Len() > t.cap {
+		t.collapseOldest()
+	}
+	return true
+}
+
+func (t *RangeTree) collapseOldest() bool {
+	var first, second *Range
+	var count int
+	t.tree.Ascend(func(item Range) bool {
+		if count == 0 {
+			first = new(Range)
+			*first = item
+		} else if count == 1 {
+			second = new(Range)
+			*second = item
+			return false
+		}
+		count++
+		return true
+	})
+	if first == nil || second == nil {
+		return false
+	}
+	t.tree.Delete(*first)
+	t.tree.Delete(*second)
+
+	merged := mergeRanges(*first, *second)
 	t.tree.ReplaceOrInsert(merged)
 	return true
 }
 
 func (t *RangeTree) Ranges() []Range {
-	var ranges []Range
+	ranges := make([]Range, 0, t.tree.Len())
 	t.tree.Ascend(func(item Range) bool {
 		ranges = append(ranges, item)
 		return true
@@ -137,13 +217,28 @@ func (t *RangeTree) Ranges() []Range {
 	return ranges
 }
 
+func (t *RangeTree) len() int {
+	return t.tree.Len()
+}
+
+func (t *RangeTree) clear() {
+	t.tree.Clear(false)
+}
+
 func (t *RangeTree) String() string {
-	var ranges []string
+	var builder strings.Builder
+	first := true
+	builder.WriteByte('[')
 	t.tree.Ascend(func(item Range) bool {
-		ranges = append(ranges, item.String())
+		if !first {
+			builder.WriteByte(',')
+		}
+		first = false
+		builder.WriteString(item.String())
 		return true
 	})
-	return "[" + strings.Join(ranges, ",") + "]"
+	builder.WriteByte(']')
+	return builder.String()
 }
 
 func (t *RangeTree) MarshalText() ([]byte, error) {
@@ -192,20 +287,20 @@ func (t *RangeTree) UnmarshalText(text []byte) error {
 	if len(lines) < 2 {
 		return errors.New("invalid format: missing newline separator")
 	}
-	maxEnd, err := strconv.ParseUint(string(lines[0]), 10, 64)
+	maxOffset, err := strconv.ParseUint(string(lines[0]), 10, 64)
 	if err != nil {
-		return fmt.Errorf("invalid end: %w", err)
+		return fmt.Errorf("invalid max offset: %w", err)
 	}
 	defer func() {
 		if t.tree.Len() == 0 {
-			t.Insert(Range{start: 0, end: maxEnd})
+			t.Insert(Range{start: 0, end: maxOffset})
 		}
 	}()
 	parts := bytes.Split(lines[1], []byte(","))
 	for _, part := range parts {
 		var r Range
-		if err := r.UnmarshalText(part); err != nil {
-			return fmt.Errorf("invalid range %q: %w", part, err)
+		if err = r.UnmarshalText(part); err != nil {
+			return fmt.Errorf("invalid range: %w", err)
 		}
 		t.Insert(r)
 	}
@@ -229,17 +324,19 @@ func lessRange(a, b Range) bool {
 	return a.start < b.start || (a.start == b.start && a.end < b.end)
 }
 
-func Gaps(ranges []Range) []Range {
-	var gaps []Range
+func Invert(sorted []Range) []Range {
+	inverted := make([]Range, 0, len(sorted)+1)
 	var prevEnd uint64
-	for _, r := range ranges {
+	for _, r := range sorted {
 		if r.start > prevEnd {
-			gaps = append(gaps, Range{start: prevEnd, end: r.start})
+			inverted = append(inverted, Range{start: prevEnd, end: r.start})
 		}
 		if r.end > prevEnd {
 			prevEnd = r.end
 		}
 	}
-	gaps = append(gaps, Range{start: prevEnd, end: math.MaxUint64})
-	return gaps
+	if prevEnd != unboundedEnd {
+		inverted = append(inverted, Range{start: prevEnd, end: unboundedEnd})
+	}
+	return inverted
 }

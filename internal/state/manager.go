@@ -10,11 +10,18 @@ import (
 	"time"
 )
 
+type RangeManagerConfig struct {
+	ManagerConfig
+	MaxRanges int
+}
+
 type rangeManager struct {
 	name          string
 	stateFilePath string
 	queue         chan Range
 	saveInterval  time.Duration
+	maxRanges     int
+	replaceTreeCh chan *RangeTree
 }
 
 // RangeManager is a state manager that handles the Range.
@@ -22,7 +29,7 @@ type RangeManager Manager[Range, *RangeTree]
 
 var _ RangeManager = (*rangeManager)(nil)
 
-func NewFileRangeManager(cfg ManagerConfig) RangeManager {
+func NewFileRangeManager(cfg RangeManagerConfig) RangeManager {
 	if cfg.QueueSize <= 0 {
 		cfg.QueueSize = defaultQueueSize
 	}
@@ -34,6 +41,8 @@ func NewFileRangeManager(cfg ManagerConfig) RangeManager {
 		stateFilePath: cfg.StateFilePath(),
 		queue:         make(chan Range, cfg.QueueSize),
 		saveInterval:  cfg.SaveInterval,
+		maxRanges:     cfg.MaxRanges,
+		replaceTreeCh: make(chan *RangeTree, 1),
 	}
 }
 
@@ -59,11 +68,12 @@ func (m *rangeManager) Restore() (*RangeTree, error) {
 		}
 		return nil, err
 	}
-	tree := NewRangeTree()
+	tree := NewRangeTreeWithCap(m.maxRanges)
 	if err = tree.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return nil, err
 	}
+	m.replaceTreeCh <- tree
 	log.Printf("I! Reading from offset %v in %s", tree.String(), m.name)
 	return tree, nil
 }
@@ -86,11 +96,19 @@ func (m *rangeManager) Run(notification Notification) {
 	t := time.NewTicker(m.saveInterval)
 	defer t.Stop()
 
-	current := NewRangeTree()
+	var lastRange Range
+	current := NewRangeTreeWithCap(m.maxRanges)
 	changedSinceLastSave := false
 	for {
 		select {
+		case replace := <-m.replaceTreeCh:
+			current = replace
 		case item := <-m.queue:
+			// truncation detected, clear tree
+			if item.seq > lastRange.seq {
+				current.clear()
+			}
+			lastRange = item
 			changedSinceLastSave = changedSinceLastSave || current.Insert(item)
 		case <-t.C:
 			if !changedSinceLastSave {
