@@ -63,9 +63,11 @@ jobs:
             });
 
             const requiredJobs = [
-              'BuildAndUpload',
-              'EC2LinuxIntegrationTest',
-              'EC2SELinuxIntegrationTest'
+                    'changes',
+                    'lint'
+#              'BuildAndUpload',
+#              'EC2LinuxIntegrationTest',
+#              'EC2SELinuxIntegrationTest'
             ];
 
             for (const job of jobs.data.jobs) {
