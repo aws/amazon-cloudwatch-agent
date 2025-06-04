@@ -1,7 +1,7 @@
 name: Pre-merge Workflow Check
 on:
   workflow_run:
-    workflows: ["PR Test"]
+    workflows: ["PR Build"]
     types:
       - completed
     branches:
