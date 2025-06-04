@@ -183,6 +183,7 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 			}
 		}
 
+		log.Println("Prometheus Metric Type:", pm.metricType)
 		if pm.metricType == "" && !isInternalMetric(pm.metricName) {
 			log.Println("Inside failure, printing prometheus metric struct:")
 			log.Println(pm)
