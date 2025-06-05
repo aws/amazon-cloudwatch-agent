@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 )
 
@@ -53,11 +54,12 @@ type limiter interface {
 // Config is used to specify how a file must be tailed.
 type Config struct {
 	// File-specifc
-	Location    *SeekInfo // Seek to this location before tailing
-	ReOpen      bool      // Reopen recreated files (tail -F)
-	MustExist   bool      // Fail early if the file does not exist
-	Poll        bool      // Poll for file changes instead of using inotify
-	Pipe        bool      // Is a named pipe (mkfifo)
+	Location    *SeekInfo       // Seek to this location before tailing
+	RangeList   state.RangeList // Seek to these ranges before we seek to Location
+	ReOpen      bool            // Reopen recreated files (tail -F)
+	MustExist   bool            // Fail early if the file does not exist
+	Poll        bool            // Poll for file changes instead of using inotify
+	Pipe        bool            // Is a named pipe (mkfifo)
 	RateLimiter limiter
 
 	// Generic IO
@@ -342,6 +344,43 @@ func (tail *Tail) tailFileSync() {
 	}
 	// openReader should be invoked before seekTo
 	tail.openReader()
+
+	// Send the lines for the gaps found in the state file's ranges
+	if tail.RangeList != nil && len(tail.RangeList) > 0 {
+		for _, seekRange := range tail.RangeList {
+			if seekRange.IsEndOffsetUnbounded() {
+				continue
+			}
+
+			err := tail.seekTo(SeekInfo{Offset: seekRange.StartOffsetInt64(), Whence: io.SeekStart})
+			if err != nil {
+				tail.Logger.Debugf("Failed to seek %s to %d for gaps: %s", tail.Filename, seekRange.StartOffsetInt64(), err)
+				continue
+			}
+
+			for tail.curOffset < seekRange.EndOffsetInt64() {
+				line, err := tail.readLine()
+
+				if err == nil {
+					tail.sendLine(line, tail.curOffset)
+				} else if err == io.EOF {
+					tail.Logger.Debugf("Failed seek due to EOF on %s for gaps: %s", tail.Filename, err)
+					break
+				} else {
+					tail.Logger.Debugf("Failed seek on %s for gaps: %s", tail.Filename, err)
+				}
+
+				select {
+				case <-tail.Dying():
+					if tail.Err() == errStopAtEOF {
+						continue
+					}
+					return
+				default:
+				}
+			}
+		}
+	}
 
 	// Seek to requested location on first open of the file.
 	if tail.Location != nil {
