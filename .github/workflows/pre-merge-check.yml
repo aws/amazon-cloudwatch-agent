@@ -1,5 +1,4 @@
 name: Pre-merge Workflow Check
-
 on:
   workflow_run:
     workflows: ["PR Build", "pr build"]
@@ -9,6 +8,7 @@ on:
 
 jobs:
   log-workflow-id:
+    name: Log Workflow ID
     runs-on: ubuntu-latest
     steps:
       - name: Log Workflow ID
@@ -16,6 +16,7 @@ jobs:
           echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
 
   check-pr-test-workflow:
+    name: Check PR Test Success
     runs-on: ubuntu-latest
     needs: log-workflow-id
     steps:
