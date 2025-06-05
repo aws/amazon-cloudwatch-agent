@@ -5,10 +5,6 @@ on:
     types:
       - completed
       - requested
-    branches:
-      - main*
-      - feature*
-
 jobs:
   check-pr-test-workflow:
     runs-on: ubuntu-latest
