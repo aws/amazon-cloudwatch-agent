@@ -5,10 +5,6 @@
         "collect_list": [
           {
             "event_name": "System",
-            "event_levels": [
-              "INFORMATION",
-              "ERROR"
-            ],
             "event_ids": [
               4562,
               4589
@@ -18,9 +14,9 @@
           },
           {
             "event_name": "Application",
-            "event_levels": [
-              "INFORMATION",
-              "ERROR"
+            "event_ids": [
+              1452,
+              9687
             ],
             "log_group_name": "Application",
             "log_stream_name": "Application"
