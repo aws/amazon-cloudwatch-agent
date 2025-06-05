@@ -188,8 +188,9 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			}
 
 			stateManager := state.NewFileRangeManager(state.ManagerConfig{
-				StateFileDir: t.FileStateFolder,
-				Name:         filename,
+				StateFileDir:    t.FileStateFolder,
+				Name:            filename,
+				MaxPersistItems: 1, // TODO: Base this on the number of threads
 			})
 
 			var seekFile *tail.SeekInfo

@@ -14,11 +14,6 @@ const (
 	FileMode = 0644
 )
 
-// Comparator compares the itself with another of the same type.
-type Comparator[T any] interface {
-	Compare(other T) int
-}
-
 // Manager handles persistence of state.
 type Manager[I, O any] interface {
 	// Enqueue the current state in memory.
@@ -37,14 +32,22 @@ type Notification struct {
 
 // ManagerConfig provides all options available to configure a Manager.
 type ManagerConfig struct {
-	Name            string
-	StateFileDir    string
+	// Name is the metadata that will be persisted in the last line of the state file.
+	Name string
+	// StateFileDir is the directory where the state file will be written to.
+	StateFileDir string
+	// StateFilePrefix is an optional prefix added to the filename. Can be used to group state files.
 	StateFilePrefix string
-	QueueSize       int
-	SaveInterval    time.Duration
+	// QueueSize determines the size of the internal buffer for pending state changes.
+	QueueSize int
+	// SaveInterval determines how often the state is persisted.
+	SaveInterval time.Duration
+	// MaxPersistItems is the maximum number of items to persist in the saved state. If zero or negative, the
+	// persistence is unbounded.
 	MaxPersistItems int
 }
 
+// StateFilePath returns the full path to the state file.
 func (c ManagerConfig) StateFilePath() string {
 	return FilePath(c.StateFileDir, c.StateFilePrefix+c.Name)
 }

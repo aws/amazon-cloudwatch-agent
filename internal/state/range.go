@@ -19,7 +19,6 @@ import (
 const (
 	defaultBTreeDegree = 2
 	unboundedEnd       = math.MaxUint64
-	minCapacity        = 2
 )
 
 // Range represents a pair of offsets [start, end).
@@ -154,13 +153,8 @@ func (r RangeList) Last() Range {
 	return r[len(r)-1]
 }
 
-func (r RangeList) IsOnlyMaxOffset() bool {
-	if len(r) != 1 {
-		return false
-	}
-	return r[0].StartOffset() == 0
-}
-
+// OnlyUseMaxOffset returns true if the RangeList is either empty or only contains a single Range that starts at 0.
+// The intention of this is to maintain backwards compatibility with state files that only store the offset.
 func (r RangeList) OnlyUseMaxOffset() bool {
 	return len(r) == 0 || (len(r) == 1 && r[0].StartOffset() == 0)
 }
@@ -240,7 +234,7 @@ func (t *rangeTree) Insert(r Range) bool {
 		t.tree.Delete(item)
 	}
 	t.tree.ReplaceOrInsert(merged)
-	if t.cap >= minCapacity && t.tree.Len() > t.cap {
+	if t.cap > 0 && t.tree.Len() > t.cap {
 		t.collapseOldest()
 	}
 	return true

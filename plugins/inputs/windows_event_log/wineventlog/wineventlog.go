@@ -66,7 +66,7 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileOffsetManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -87,8 +87,8 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 
 func (w *windowsEventLog) Init() error {
 	go w.stateManager.Run(state.Notification{Done: w.done})
-	offset, _ := w.stateManager.Restore()
-	w.eventOffset = offset.Get()
+	restored, _ := w.stateManager.Restore()
+	w.eventOffset = restored.Last().EndOffset()
 	return w.Open()
 }
 
@@ -136,6 +136,7 @@ func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
 
+	r := state.Range{}
 	retryCount := 0
 	var shouldResubscribe bool
 	for {
@@ -167,10 +168,11 @@ func (w *windowsEventLog) run() {
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
+				r.Shift(recordNumber)
 				evt := &LogEvent{
 					msg:    value,
 					t:      record.System.TimeCreated.SystemTime,
-					offset: recordNumber,
+					offset: r,
 					src:    w,
 				}
 				w.outputFn(evt)
@@ -252,8 +254,8 @@ func (w *windowsEventLog) SetEventOffset(eventOffset uint64) {
 	w.eventOffset = eventOffset
 }
 
-func (w *windowsEventLog) Done(offset uint64) {
-	w.stateManager.Enqueue(state.NewFileOffset(offset))
+func (w *windowsEventLog) Done(offset state.Range) {
+	w.stateManager.Enqueue(offset)
 }
 
 func (w *windowsEventLog) ResubscribeCh() chan struct{} {
@@ -296,7 +298,7 @@ func (w *windowsEventLog) read() []*windowsEventLogRecord {
 type LogEvent struct {
 	msg    string
 	t      time.Time
-	offset uint64
+	offset state.Range
 	src    *windowsEventLog
 }
 

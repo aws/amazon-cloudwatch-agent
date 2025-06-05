@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+const (
+	// defaultSaveInterval is the default duration between state file saves
+	defaultSaveInterval = 100 * time.Millisecond
+	// defaultQueueSize is the default capacity of the offset queue
+	defaultQueueSize = 2000
+)
+
 type rangeManager struct {
 	name            string
 	stateFilePath   string
@@ -41,7 +48,7 @@ func NewFileRangeManager(cfg ManagerConfig) FileRangeManager {
 	}
 }
 
-// Enqueue the offset. Will drop the oldest in the queue if full.
+// Enqueue the Range. Will drop the oldest in the queue if full.
 func (m *rangeManager) Enqueue(item Range) {
 	select {
 	case m.queue <- item:
@@ -52,7 +59,7 @@ func (m *rangeManager) Enqueue(item Range) {
 	}
 }
 
-// Restore the offsets of the file if the state file exists.
+// Restore the ranges if the state file exists.
 func (m *rangeManager) Restore() (RangeList, error) {
 	content, err := os.ReadFile(m.stateFilePath)
 	if err != nil {
@@ -61,12 +68,12 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		} else {
 			log.Printf("W! Failed to read state file for %s: %v", m.name, err)
 		}
-		return nil, err
+		return RangeList{}, err
 	}
 	tree := newRangeTreeWithCap(m.maxPersistItems)
 	if err = tree.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
-		return nil, err
+		return RangeList{}, err
 	}
 	m.replaceTreeCh <- tree
 	log.Printf("I! Reading from offset %v in %s", tree.String(), m.name)

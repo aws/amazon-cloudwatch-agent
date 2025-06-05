@@ -141,6 +141,7 @@ func getStateManagerConfig(plugin *Plugin, ec *EventConfig) (state.ManagerConfig
 		StateFilePrefix: logscommon.WindowsEventLogPrefix,
 		Name:            ec.LogGroupName + "_" + ec.LogStreamName + "_" + ec.Name,
 		QueueSize:       stateQueueSize,
+		MaxPersistItems: 1, // TODO: Base this on thread count
 	}, nil
 }
 

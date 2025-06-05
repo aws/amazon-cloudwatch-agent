@@ -99,12 +99,33 @@ func TestRange(t *testing.T) {
 	})
 }
 
-func TestRanges_Last(t *testing.T) {
-	assert.Equal(t, Range{}, RangeList{}.Last())
-	assert.Equal(t, Range{start: 20, end: 40}, RangeList{
-		Range{start: 0, end: 10},
-		Range{start: 20, end: 40},
-	}.Last())
+func TestRanges(t *testing.T) {
+	t.Run("Last", func(t *testing.T) {
+		assert.Equal(t, Range{}, RangeList{}.Last())
+		assert.Equal(t, Range{start: 20, end: 40}, RangeList{
+			Range{start: 0, end: 10},
+			Range{start: 20, end: 40},
+		}.Last())
+	})
+	t.Run("OnlyUseMaxOffset", func(t *testing.T) {
+		r := RangeList{}
+		assert.True(t, r.OnlyUseMaxOffset())
+		assert.EqualValues(t, 0, r.Last().EndOffset())
+		r = RangeList{
+			Range{start: 0, end: 10},
+		}
+		assert.True(t, r.OnlyUseMaxOffset())
+		assert.EqualValues(t, 10, r.Last().EndOffset())
+		r = RangeList{
+			Range{start: 10, end: 20},
+		}
+		assert.False(t, r.OnlyUseMaxOffset())
+		r = RangeList{
+			Range{start: 0, end: 20},
+			Range{start: 30, end: 40},
+		}
+		assert.False(t, r.OnlyUseMaxOffset())
+	})
 }
 
 func TestRangeTree_Insert(t *testing.T) {

@@ -70,16 +70,58 @@ func TestFileRangeManager(t *testing.T) {
 		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "missing.log"})
 		got, err := manager.Restore()
 		assert.Error(t, err)
-		assert.Empty(t, got)
+		assert.NotNil(t, got)
 	})
 	t.Run("Restore/Invalid", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "missing.log"})
+		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "invalid.log"})
 		assert.NoError(t, os.WriteFile(manager.(*rangeManager).stateFilePath, []byte("invalid"), FileMode))
 		got, err := manager.Restore()
 		assert.Error(t, err)
-		assert.Nil(t, got)
+		assert.NotNil(t, got)
+	})
+	t.Run("Restore/ReplacesExistingTree", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "replace.log"}).(*rangeManager)
+
+		notification := Notification{
+			Delete: make(chan struct{}),
+			Done:   make(chan struct{}),
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			manager.Run(notification)
+		}()
+
+		manager.Enqueue(Range{start: 0, end: 100})
+
+		time.Sleep(2 * defaultSaveInterval)
+
+		tree := newRangeTree()
+		tree.Insert(Range{start: 500, end: 600})
+		assert.NoError(t, manager.save(tree))
+		time.Sleep(2 * defaultSaveInterval)
+
+		restored, err := manager.Restore()
+		assert.NoError(t, err)
+		assert.Equal(t, RangeList{
+			Range{start: 500, end: 600},
+		}, restored)
+		manager.Enqueue(Range{start: 600, end: 700})
+		time.Sleep(2 * defaultSaveInterval)
+		restored, err = manager.Restore()
+		assert.NoError(t, err)
+		assert.Equal(t, RangeList{
+			Range{start: 500, end: 700},
+		}, restored)
+
+		close(notification.Done)
+		wg.Wait()
 	})
 	t.Run("Enqueue/Multiple", func(t *testing.T) {
 		t.Parallel()
