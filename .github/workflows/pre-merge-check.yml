@@ -8,65 +8,58 @@ on:
       - requested
 
 jobs:
-  check-pr-test-workflow:
+  log-workflow-id:
     runs-on: ubuntu-latest
     steps:
+      - name: Log Workflow ID
+        run: |
+          echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+
+  check-pr-test-workflow:
+    runs-on: ubuntu-latest
+    needs: log-workflow-id
+    steps:
       - name: Check PR Test Workflow Status
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const workflowRun = context.payload.workflow_run;
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          # Get workflow run details
+          workflow_run=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/runs/$WORKFLOW_RUN_ID")
 
-            const pullRequests = workflowRun.pull_requests;
-            if (!pullRequests || pullRequests.length === 0) {
-              console.log('No PR associated with this workflow run');
-              return;
-            }
+          # Get associated PRs
+          pull_requests=$(echo "$workflow_run" | jq -r '.pull_requests')
+          if [ "$pull_requests" == "[]" ] || [ -z "$pull_requests" ]; then
+            echo "No PR associated with this workflow run"
+            exit 0
+          fi
 
-            const originalPR = pullRequests[0];
+          # Get PR number
+          pr_number=$(echo "$pull_requests" | jq -r '.[0].number')
+          echo "Checking workflow results for PR #$pr_number"
 
-            const currentPR = context.payload.workflow_run.head_repository.owner.login === context.repo.owner &&
-                            context.payload.workflow_run.head_repository.name === context.repo.repo
-                            ? await github.rest.pulls.get({
-                                owner: context.repo.owner,
-                                repo: context.repo.repo,
-                                pull_number: originalPR.number
-                              })
-                            : null;
+          # Check workflow conclusion
+          conclusion=$(echo "$workflow_run" | jq -r '.conclusion')
+          if [ "$conclusion" != "success" ]; then
+            echo "PR Test workflow for PR #$pr_number did not complete successfully"
+            exit 0
+          fi
 
-            if (!currentPR) {
-              console.log('Could not determine current PR context');
-              return;
-            }
+          # Get jobs for the workflow run
+          jobs=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/runs/$WORKFLOW_RUN_ID/jobs")
 
-            if (currentPR.data.number !== originalPR.number) {
-              console.log(`PR mismatch: Original PR #${originalPR.number} vs Current PR #${currentPR.data.number}`);
-              return;
-            }
+          # Check required jobs
+          required_jobs=("changes" "lint")
+          for job_name in "${required_jobs[@]}"; do
+            job_status=$(echo "$jobs" | jq -r ".jobs[] | select(.name == \"$job_name\") | .conclusion")
+            if [ "$job_status" != "success" ]; then
+              echo "Required job $job_name has not completed successfully for PR #$pr_number"
+              exit 0
+            fi
+          done
 
-            console.log(`Checking workflow results for PR #${originalPR.number}`);
-
-            if (workflowRun.conclusion !== 'success') {
-              console.log(`PR Test workflow for PR #${originalPR.number} did not complete successfully`);
-              return;
-            }
-
-            const jobs = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: workflowRun.id
-            });
-
-            const requiredJobs = [
-              'changes',
-              'lint'
-            ];
-
-            for (const job of jobs.data.jobs) {
-              if (requiredJobs.includes(job.name) && job.conclusion !== 'success') {
-                console.log(`Required job ${job.name} has not completed successfully for PR #${originalPR.number}`);
-                return;
-              }
-            }
-
-            console.log(`All required workflow jobs completed successfully for PR #${originalPR.number}`);
+          echo "All required workflow jobs completed successfully for PR #$pr_number"
