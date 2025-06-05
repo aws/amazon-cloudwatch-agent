@@ -54,7 +54,7 @@ func (m *rangeManager) Enqueue(item Range) {
 	case m.queue <- item:
 	default:
 		old := <-m.queue
-		log.Printf("D! Offset queue is full for %s. Dropping oldest offset: %v", m.stateFilePath, old.String())
+		log.Printf("D! Offset range queue is full for %s. Dropping oldest offset range: %v", m.stateFilePath, old.String())
 		m.queue <- item
 	}
 }
@@ -76,7 +76,7 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		return RangeList{}, err
 	}
 	m.replaceTreeCh <- tree
-	log.Printf("I! Reading from offset %v in %s", tree.String(), m.name)
+	log.Printf("I! Reading from offset range %v in %s", tree.String(), m.name)
 	return tree.Ranges(), nil
 }
 

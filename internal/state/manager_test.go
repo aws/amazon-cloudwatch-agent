@@ -1,9 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//nolint:gosec
 package state
 
 import (
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -84,7 +86,10 @@ func TestFileRangeManager(t *testing.T) {
 	t.Run("Restore/ReplacesExistingTree", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "replace.log"}).(*rangeManager)
+		manager := NewFileRangeManager(ManagerConfig{
+			StateFileDir: tmpDir,
+			Name:         "replace.log"},
+		).(*rangeManager)
 
 		notification := Notification{
 			Delete: make(chan struct{}),
@@ -123,10 +128,10 @@ func TestFileRangeManager(t *testing.T) {
 		close(notification.Done)
 		wg.Wait()
 	})
-	t.Run("Enqueue/Multiple", func(t *testing.T) {
+	t.Run("Enqueue/Merge", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "overwrite.log"})
+		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "merge.log"})
 
 		notification := Notification{
 			Delete: make(chan struct{}),
@@ -157,6 +162,89 @@ func TestFileRangeManager(t *testing.T) {
 
 		close(notification.Done)
 		wg.Wait()
+	})
+	t.Run("Enqueue/QueueOverflow", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		manager := NewFileRangeManager(ManagerConfig{
+			StateFileDir: tmpDir,
+			Name:         "overflow.log",
+			QueueSize:    10,
+		})
+
+		notification := Notification{
+			Done: make(chan struct{}),
+		}
+
+		r := Range{}
+		for i := 0; i <= 20; i++ {
+			r.ShiftInt64(int64(i))
+			manager.Enqueue(r)
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			manager.Run(notification)
+		}()
+
+		time.Sleep(2 * defaultSaveInterval)
+		close(notification.Done)
+		wg.Wait()
+
+		restored, err := manager.Restore()
+		assert.NoError(t, err)
+		assert.Equal(t, RangeList{
+			Range{start: 10, end: 20},
+		}, restored)
+	})
+	t.Run("Enqueue/Concurrent", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		manager := NewFileRangeManager(ManagerConfig{
+			StateFileDir: tmpDir,
+			Name:         "concurrent.log",
+		})
+
+		notification := Notification{
+			Done: make(chan struct{}),
+		}
+
+		var managerWg sync.WaitGroup
+		managerWg.Add(1)
+		go func() {
+			defer managerWg.Done()
+			manager.Run(notification)
+		}()
+
+		var enqueueWg sync.WaitGroup
+		numThreads := uint64(50)
+		rangePerThread := uint64(20)
+		for i := uint64(0); i < numThreads; i++ {
+			enqueueWg.Add(1)
+			go func(id uint64) {
+				defer enqueueWg.Done()
+				start := id * rangePerThread
+				rs := buildTestRanges(t, start, start+rangePerThread, 5)
+				for _, r := range rs {
+					manager.Enqueue(r)
+					time.Sleep(time.Duration(rand.Intn(10)+5) * time.Millisecond)
+				}
+			}(i)
+		}
+		enqueueWg.Wait()
+
+		time.Sleep(2 * defaultSaveInterval)
+
+		close(notification.Done)
+		managerWg.Wait()
+
+		restored, err := manager.Restore()
+		assert.NoError(t, err)
+		assert.Equal(t, RangeList{
+			Range{start: 0, end: numThreads * rangePerThread},
+		}, restored)
 	})
 	t.Run("Run/Notification/Delete", func(t *testing.T) {
 		t.Parallel()
@@ -216,42 +304,6 @@ func TestFileRangeManager(t *testing.T) {
 			Range{start: 100, end: 200},
 		}, restored)
 	})
-	t.Run("Enqueue/QueueOverflow", func(t *testing.T) {
-		t.Parallel()
-		tmpDir := t.TempDir()
-		manager := NewFileRangeManager(ManagerConfig{
-			StateFileDir: tmpDir,
-			Name:         "overflow.log",
-			QueueSize:    10,
-		})
-
-		notification := Notification{
-			Done: make(chan struct{}),
-		}
-
-		r := Range{}
-		for i := 0; i <= 20; i++ {
-			r.ShiftInt64(int64(i))
-			manager.Enqueue(r)
-		}
-
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			manager.Run(notification)
-		}()
-
-		time.Sleep(2 * defaultSaveInterval)
-		close(notification.Done)
-		wg.Wait()
-
-		restored, err := manager.Restore()
-		assert.NoError(t, err)
-		assert.Equal(t, RangeList{
-			Range{start: 10, end: 20},
-		}, restored)
-	})
 	t.Run("Truncation/ClearsTree", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
@@ -288,4 +340,27 @@ func TestFileRangeManager(t *testing.T) {
 			Range{start: 0, end: 100},
 		}, restored)
 	})
+}
+
+func buildTestRanges(t *testing.T, start, end uint64, maxChunkSize int) RangeList {
+	t.Helper()
+	var chunks RangeList
+	if end < start {
+		return nil
+	}
+	current := start
+	for current < end {
+		remaining := end - current
+		size := rand.Intn(maxChunkSize) + 1
+		if uint64(size) > remaining {
+			size = int(remaining)
+		}
+		r := Range{start: current, end: current + uint64(size)}
+		chunks = append(chunks, r)
+		current += uint64(size)
+	}
+	rand.Shuffle(len(chunks), func(i, j int) {
+		chunks[i], chunks[j] = chunks[j], chunks[i]
+	})
+	return chunks
 }

@@ -145,8 +145,8 @@ func (w *windowsEventLog) run() {
 			shouldResubscribe = true
 		case <-ticker.C:
 			if shouldResubscribe {
-				offset, _ := w.stateManager.Restore()
-				w.eventOffset = offset.Get()
+				restored, _ := w.stateManager.Restore()
+				w.eventOffset = restored.Last().EndOffset()
 				if err := w.resubscribe(); err != nil {
 					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
 					retryCount++
