@@ -4,7 +4,9 @@
 package prometheus
 
 import (
+	"github.com/prometheus/prometheus/model/value"
 	"log"
+	"math"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
@@ -27,8 +29,26 @@ type DeltaCalculator struct {
 func (dc *DeltaCalculator) calculate(pm *PrometheusMetric) (res *PrometheusMetric) {
 	metricKey := getUniqMetricKey(pm)
 
+	// Add debug logging to trace the metric value
+	log.Printf("D! Processing metric: name=%s, nameBeforeRelabel=%s, value=%v, tags=%v, type=%s",
+		pm.metricName,
+		pm.metricNameBeforeRelabel,
+		pm.metricValue,
+		pm.tags,
+		pm.metricType)
+
 	if !pm.isValueValid() {
-		log.Printf("D! DeltaCalculator.calculate: Drop metric with NaN or Inf value: %v", pm)
+		log.Printf("D! Invalid value details: IsStaleNaN=%v, IsNaN=%v, IsInf=%v for metric %s (before relabel: %s)",
+			value.IsStaleNaN(pm.metricValue),
+			math.IsNaN(pm.metricValue),
+			math.IsInf(pm.metricValue, 0),
+			pm.metricName,
+			pm.metricNameBeforeRelabel)
+		log.Printf("D! Additional context - job: %s, instance: %s, jobBeforeRelabel: %s, instanceBeforeRelabel: %s",
+			pm.tags["job"],
+			pm.tags["instance"],
+			pm.jobBeforeRelabel,
+			pm.instanceBeforeRelabel)
 		dc.preDataPoints.Delete(metricKey)
 		return nil
 	}
