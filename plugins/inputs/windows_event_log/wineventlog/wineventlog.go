@@ -55,7 +55,7 @@ type windowsEventLog struct {
 	renderFormat  string
 	maxToRead     int // Maximum number returned in one read.
 	destination   string
-	stateManager  state.FileOffsetManager
+	stateManager  state.FileRangeManager
 
 	eventHandle   EvtHandle
 	eventOffset   uint64

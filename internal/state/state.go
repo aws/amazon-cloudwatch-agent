@@ -25,8 +25,6 @@ type Manager[I, O any] interface {
 	Enqueue(state I)
 	// Restore loads the previous state.
 	Restore() (O, error)
-	// Save persists the current state.
-	Save(state O) error
 	// Run starts the update/save loop.
 	Run(ch Notification)
 }
@@ -44,6 +42,7 @@ type ManagerConfig struct {
 	StateFilePrefix string
 	QueueSize       int
 	SaveInterval    time.Duration
+	MaxPersistItems int
 }
 
 func (c ManagerConfig) StateFilePath() string {

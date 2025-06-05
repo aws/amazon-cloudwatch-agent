@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -189,33 +188,6 @@ func TestCompressedFile(t *testing.T) {
 	filepath = "/tmp/logfile.log.gz"
 	compressed = isCompressedFile(filepath)
 	assert.True(t, compressed, "This should be a compressed file.")
-}
-
-func TestRestoreState(t *testing.T) {
-	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfolder := t.TempDir()
-
-	logFilePath := "/tmp/logfile.log"
-	logFileStateFileName := "_tmp_logfile.log"
-
-	offset := state.NewFileOffset(9323)
-
-	m := state.NewFileOffsetManager(state.ManagerConfig{StateFileDir: tmpfolder, Name: logFilePath})
-	assert.NoError(t, m.Save(offset))
-
-	roffset, err := m.Restore()
-	require.NoError(t, err)
-	assert.Equal(t, 0, roffset.Compare(offset), fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset.Get(), offset.Get()))
-
-	// Test negative offset.
-	err = os.WriteFile(
-		state.FilePath(tmpfolder, logFileStateFileName),
-		[]byte(strconv.FormatInt(-8675, 10)+"\n"+logFilePath),
-		state.FileMode)
-	require.NoError(t, err)
-	roffset, err = m.Restore()
-	require.Error(t, err)
-	assert.Equal(t, uint64(0), roffset.Get(), fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset.Get(), 0))
 }
 
 func TestMultipleFilesForSameConfig(t *testing.T) {

@@ -97,7 +97,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		stateManager := state.NewFileOffsetManager(stateManagerCfg)
+		stateManager := state.NewFileRangeManager(stateManagerCfg)
 		destination := eventConfig.Destination
 		if destination == "" {
 			destination = s.Destination

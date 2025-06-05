@@ -10,26 +10,21 @@ import (
 	"time"
 )
 
-type RangeManagerConfig struct {
-	ManagerConfig
-	MaxRanges int
-}
-
 type rangeManager struct {
-	name          string
-	stateFilePath string
-	queue         chan Range
-	saveInterval  time.Duration
-	maxRanges     int
-	replaceTreeCh chan *RangeTree
+	name            string
+	stateFilePath   string
+	queue           chan Range
+	saveInterval    time.Duration
+	maxPersistItems int
+	replaceTreeCh   chan *rangeTree
 }
 
-// RangeManager is a state manager that handles the Range.
-type RangeManager Manager[Range, *RangeTree]
+// FileRangeManager is a state manager that handles the Range.
+type FileRangeManager Manager[Range, RangeList]
 
-var _ RangeManager = (*rangeManager)(nil)
+var _ FileRangeManager = (*rangeManager)(nil)
 
-func NewFileRangeManager(cfg RangeManagerConfig) RangeManager {
+func NewFileRangeManager(cfg ManagerConfig) FileRangeManager {
 	if cfg.QueueSize <= 0 {
 		cfg.QueueSize = defaultQueueSize
 	}
@@ -37,12 +32,12 @@ func NewFileRangeManager(cfg RangeManagerConfig) RangeManager {
 		cfg.SaveInterval = defaultSaveInterval
 	}
 	return &rangeManager{
-		name:          cfg.Name,
-		stateFilePath: cfg.StateFilePath(),
-		queue:         make(chan Range, cfg.QueueSize),
-		saveInterval:  cfg.SaveInterval,
-		maxRanges:     cfg.MaxRanges,
-		replaceTreeCh: make(chan *RangeTree, 1),
+		name:            cfg.Name,
+		stateFilePath:   cfg.StateFilePath(),
+		queue:           make(chan Range, cfg.QueueSize),
+		saveInterval:    cfg.SaveInterval,
+		maxPersistItems: cfg.MaxPersistItems,
+		replaceTreeCh:   make(chan *rangeTree, 1),
 	}
 }
 
@@ -57,8 +52,8 @@ func (m *rangeManager) Enqueue(item Range) {
 	}
 }
 
-// Restore the offset of the file if the state file exists.
-func (m *rangeManager) Restore() (*RangeTree, error) {
+// Restore the offsets of the file if the state file exists.
+func (m *rangeManager) Restore() (RangeList, error) {
 	content, err := os.ReadFile(m.stateFilePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -68,18 +63,18 @@ func (m *rangeManager) Restore() (*RangeTree, error) {
 		}
 		return nil, err
 	}
-	tree := NewRangeTreeWithCap(m.maxRanges)
+	tree := newRangeTreeWithCap(m.maxPersistItems)
 	if err = tree.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return nil, err
 	}
 	m.replaceTreeCh <- tree
 	log.Printf("I! Reading from offset %v in %s", tree.String(), m.name)
-	return tree, nil
+	return tree.Ranges(), nil
 }
 
-// Save the offset in the state file.
-func (m *rangeManager) Save(tree *RangeTree) error {
+// save the ranges in the state file.
+func (m *rangeManager) save(tree *rangeTree) error {
 	if m.stateFilePath == "" {
 		return nil
 	}
@@ -96,29 +91,30 @@ func (m *rangeManager) Run(notification Notification) {
 	t := time.NewTicker(m.saveInterval)
 	defer t.Stop()
 
-	var lastRange Range
-	current := NewRangeTreeWithCap(m.maxRanges)
-	changedSinceLastSave := false
+	var lastSeq uint64
+	current := newRangeTreeWithCap(m.maxPersistItems)
+	shouldSave := false
 	for {
 		select {
 		case replace := <-m.replaceTreeCh:
 			current = replace
 		case item := <-m.queue:
 			// truncation detected, clear tree
-			if item.seq > lastRange.seq {
-				current.clear()
+			if item.seq > lastSeq {
+				lastSeq = item.seq
+				current.Clear()
 			}
-			lastRange = item
-			changedSinceLastSave = changedSinceLastSave || current.Insert(item)
+			changed := current.Insert(item)
+			shouldSave = shouldSave || changed
 		case <-t.C:
-			if !changedSinceLastSave {
+			if !shouldSave {
 				continue
 			}
-			if err := m.Save(current); err != nil {
+			if err := m.save(current); err != nil {
 				log.Printf("E! Error happened when saving state file (%s): %v", m.stateFilePath, err)
 				continue
 			}
-			changedSinceLastSave = false
+			shouldSave = false
 		case <-notification.Delete:
 			log.Printf("W! Deleting state file (%s)", m.stateFilePath)
 			if err := os.Remove(m.stateFilePath); err != nil {
@@ -126,7 +122,7 @@ func (m *rangeManager) Run(notification Notification) {
 			}
 			return
 		case <-notification.Done:
-			if err := m.Save(current); err != nil {
+			if err := m.save(current); err != nil {
 				log.Printf("E! Error happened during final state file (%s) save, duplicate log maybe sent at next start: %v", m.stateFilePath, err)
 			}
 			return

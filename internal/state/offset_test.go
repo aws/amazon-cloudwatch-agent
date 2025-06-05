@@ -4,14 +4,17 @@
 package state
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFileOffset(t *testing.T) {
@@ -230,10 +233,9 @@ func TestFileOffsetManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "delete.log"}
-		manager := NewFileOffsetManager(cfg)
+		manager := NewFileOffsetManager(cfg).(*fileOffsetManager)
 
-		err := manager.Save(NewFileOffset(100))
-		assert.NoError(t, err)
+		assert.NoError(t, manager.save(NewFileOffset(100)))
 
 		notification := Notification{
 			Delete: make(chan struct{}),
@@ -248,7 +250,7 @@ func TestFileOffsetManager(t *testing.T) {
 		close(notification.Delete)
 		wg.Wait()
 
-		_, err = os.Stat(cfg.StateFilePath())
+		_, err := os.Stat(cfg.StateFilePath())
 		assert.True(t, os.IsNotExist(err))
 	})
 	t.Run("Run/Notification/Done", func(t *testing.T) {
@@ -314,4 +316,34 @@ func TestFileOffsetManager(t *testing.T) {
 		assert.NoError(t, err)
 		assert.EqualValues(t, 20, restored.Get())
 	})
+}
+
+func TestRestoreState(t *testing.T) {
+	tmpfolder := t.TempDir()
+
+	logFilePath := "/tmp/logfile.log"
+	logFileStateFileName := "_tmp_logfile.log"
+
+	want := NewFileOffset(9323)
+
+	m := NewFileOffsetManager(ManagerConfig{StateFileDir: tmpfolder, Name: logFilePath})
+	err := os.WriteFile(
+		FilePath(tmpfolder, logFileStateFileName),
+		[]byte(strconv.FormatInt(9323, 10)+"\n"+logFilePath),
+		FileMode)
+	require.NoError(t, err)
+
+	roffset, err := m.Restore()
+	require.NoError(t, err)
+	assert.Equal(t, 0, roffset.Compare(want), fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset.Get(), want))
+
+	// Test negative offset.
+	err = os.WriteFile(
+		FilePath(tmpfolder, logFileStateFileName),
+		[]byte(strconv.FormatInt(-8675, 10)+"\n"+logFilePath),
+		FileMode)
+	require.NoError(t, err)
+	roffset, err = m.Restore()
+	require.Error(t, err)
+	assert.Equal(t, uint64(0), roffset.Get(), fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset.Get(), 0))
 }

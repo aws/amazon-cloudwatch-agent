@@ -65,7 +65,7 @@ func TestTailerSrc(t *testing.T) {
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 
 	stateFilePath := statefile.Name()
-	m := state.NewFileOffsetManager(state.ManagerConfig{
+	m := state.NewFileRangeManager(state.ManagerConfig{
 		StateFileDir: filepath.Dir(stateFilePath),
 		Name:         filepath.Base(stateFilePath),
 	})
@@ -183,7 +183,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 
 	stateFilePath := statefile.Name()
-	m := state.NewFileOffsetManager(state.ManagerConfig{
+	m := state.NewFileRangeManager(state.ManagerConfig{
 		StateFileDir: filepath.Dir(stateFilePath),
 		Name:         filepath.Base(stateFilePath),
 	})
@@ -411,7 +411,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 	assert.NoError(t, err)
 
 	stateFilePath := statefile.Name()
-	m := state.NewFileOffsetManager(state.ManagerConfig{
+	m := state.NewFileRangeManager(state.ManagerConfig{
 		StateFileDir: filepath.Dir(stateFilePath),
 		Name:         filepath.Base(stateFilePath),
 	})

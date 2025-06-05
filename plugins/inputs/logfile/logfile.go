@@ -187,15 +187,15 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				}
 			}
 
-			stateManager := state.NewFileOffsetManager(state.ManagerConfig{
+			stateManager := state.NewFileRangeManager(state.ManagerConfig{
 				StateFileDir: t.FileStateFolder,
 				Name:         filename,
 			})
 
 			var seekFile *tail.SeekInfo
-			offset, err := stateManager.Restore()
+			restored, err := stateManager.Restore()
 			if err == nil { // Missing state file would be an error too
-				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset.GetInt64()}
+				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: restored.Last().EndOffsetInt64()}
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}

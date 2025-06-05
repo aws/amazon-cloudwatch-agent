@@ -6,7 +6,6 @@ package state
 import (
 	"bytes"
 	"encoding"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -23,24 +22,26 @@ const (
 	minCapacity        = 2
 )
 
-// Range represents an interval [start, end).
+// Range represents a pair of offsets [start, end).
 type Range struct {
 	start, end uint64
-	// seq handles file truncation, when file is truncated, we increase the seq
+	// seq handles file truncation, when a file is truncated, we increase the seq
 	seq uint64
 }
 
 var _ encoding.TextMarshaler = (*Range)(nil)
 var _ encoding.TextUnmarshaler = (*Range)(nil)
 
+// Set updates the start and end offsets of the range. If the new start is before the current start, it indicates
+// file truncation and increments the sequence number.
 func (r *Range) Set(start, end uint64) {
 	if start < r.start {
 		r.seq++
 	}
-	r.start = start
-	r.end = end
+	r.start, r.end = start, end
 }
 
+// SetInt64 is the int64 version of Set. If start or end are negative, the range is not updated.
 func (r *Range) SetInt64(start, end int64) {
 	if start < 0 || end < 0 {
 		return
@@ -48,35 +49,64 @@ func (r *Range) SetInt64(start, end int64) {
 	r.Set(uint64(start), uint64(end))
 }
 
-func (r Range) Get() (uint64, uint64) {
-	return r.start, r.end
+// StartOffset returns the inclusive start of the range.
+func (r Range) StartOffset() uint64 {
+	return r.start
 }
 
-func (r Range) GetInt64() (int64, int64) {
-	var start, end int64
-	if r.start <= math.MaxInt64 {
-		start = int64(r.start)
-	}
-	if r.end <= math.MaxInt64 {
-		end = int64(r.end)
-	}
-	return start, end
+// EndOffset returns the exclusive end of the range.
+func (r Range) EndOffset() uint64 {
+	return r.end
 }
 
-func (r Range) IsEndUnbounded() bool {
+// StartOffsetInt64 is the int64 version of StartOffset. If start exceeds math.MaxInt64, returns 0.
+func (r Range) StartOffsetInt64() int64 {
+	return convertInt64(r.start)
+}
+
+// EndOffsetInt64 is the int64 version of EndOffset. If end exceeds math.MaxInt64, returns 0.
+func (r Range) EndOffsetInt64() int64 {
+	return convertInt64(r.end)
+}
+
+// Shift moves the previous end to the start and sets the new end. If the new end is before the previous one, it resets
+// the range to [0, newEnd) and increments the sequence number.
+func (r *Range) Shift(newEnd uint64) {
+	if newEnd < r.end {
+		r.seq++
+		r.start, r.end = 0, newEnd
+	} else {
+		r.start = r.end
+		r.end = newEnd
+	}
+}
+
+// ShiftInt64 is the int64 version of Shift. If newEnd is negative, the range is not updated.
+func (r *Range) ShiftInt64(newEnd int64) {
+	if newEnd < 0 {
+		return
+	}
+	r.Shift(uint64(newEnd))
+}
+
+// IsEndOffsetUnbounded returns true if the end offset is the unbounded representation (i.e. math.MaxUint64).
+func (r Range) IsEndOffsetUnbounded() bool {
 	return r.end == unboundedEnd
 }
 
+// IsValid returns true if the range is ordered (i.e. start < end).
 func (r Range) IsValid() bool {
 	return r.start < r.end
 }
 
+// Contains returns true if the range completely contains the other range.
 func (r Range) Contains(other Range) bool {
 	return r.start <= other.start && r.end >= other.end
 }
 
+// String returns a string representation of the range "start-end". If the end is unbounded, returns "start-".
 func (r Range) String() string {
-	if r.IsEndUnbounded() {
+	if r.IsEndOffsetUnbounded() {
 		return fmt.Sprintf("%v-", r.start)
 	}
 	return fmt.Sprintf("%d-%d", r.start, r.end)
@@ -86,6 +116,7 @@ func (r Range) MarshalText() ([]byte, error) {
 	return []byte(r.String()), nil
 }
 
+// UnmarshalText supports unmarshalling both the "start-end" and "start-" formats.
 func (r *Range) UnmarshalText(text []byte) error {
 	parts := strings.SplitN(string(text), "-", 2)
 	if len(parts) != 2 {
@@ -112,26 +143,59 @@ func (r *Range) UnmarshalText(text []byte) error {
 	return nil
 }
 
-type RangeTree struct {
-	cap  int
+// RangeList is a slice of Range values.
+type RangeList []Range
+
+// Last returns the last Range in the slice. If empty, returns the zero-value Range.
+func (r RangeList) Last() Range {
+	if len(r) == 0 {
+		return Range{}
+	}
+	return r[len(r)-1]
+}
+
+func (r RangeList) IsOnlyMaxOffset() bool {
+	if len(r) != 1 {
+		return false
+	}
+	return r[0].StartOffset() == 0
+}
+
+func (r RangeList) OnlyUseMaxOffset() bool {
+	return len(r) == 0 || (len(r) == 1 && r[0].StartOffset() == 0)
+}
+
+// rangeTree is used to store and merge ranges. It is not thread-safe.
+type rangeTree struct {
+	// cap is the maximum number of ranges that can be in the tree.
+	cap int
+	// tree is the backing B-tree.
 	tree *btree.BTreeG[Range]
 }
 
-var _ encoding.TextMarshaler = (*RangeTree)(nil)
-var _ encoding.TextUnmarshaler = (*RangeTree)(nil)
+var _ encoding.TextMarshaler = (*rangeTree)(nil)
+var _ encoding.TextUnmarshaler = (*rangeTree)(nil)
 
-func NewRangeTree() *RangeTree {
-	return NewRangeTreeWithCap(-1)
+// newRangeTree creates an unbounded rangeTree.
+func newRangeTree() *rangeTree {
+	return newRangeTreeWithCap(-1)
 }
 
-func NewRangeTreeWithCap(capacity int) *RangeTree {
-	return &RangeTree{
+// newRangeTreeWithCap creates a bounded rangeTree based on the capacity. When capacity is exceeded, the oldest ranges
+// are merged/collapsed.
+func newRangeTreeWithCap(capacity int) *rangeTree {
+	return &rangeTree{
 		cap:  capacity,
 		tree: btree.NewG(defaultBTreeDegree, lessRange),
 	}
 }
 
-func (t *RangeTree) Insert(r Range) bool {
+// Insert a Range into the tree. Returns false if the Range is already contained by another Range in the tree or is
+// invalid.
+//
+// If the added Range overlaps or is adjacent with any existing Range, they are merged. If the tree capacity is hit
+// after the insert, merges the two bottom ranges.
+func (t *rangeTree) Insert(r Range) bool {
 	if !r.IsValid() {
 		return false
 	}
@@ -182,7 +246,8 @@ func (t *RangeTree) Insert(r Range) bool {
 	return true
 }
 
-func (t *RangeTree) collapseOldest() bool {
+// collapseOldest takes the two oldest (i.e. smallest start) ranges and merges them.
+func (t *rangeTree) collapseOldest() {
 	var first, second *Range
 	var count int
 	t.tree.Ascend(func(item Range) bool {
@@ -198,18 +263,18 @@ func (t *RangeTree) collapseOldest() bool {
 		return true
 	})
 	if first == nil || second == nil {
-		return false
+		return
 	}
 	t.tree.Delete(*first)
 	t.tree.Delete(*second)
 
 	merged := mergeRanges(*first, *second)
 	t.tree.ReplaceOrInsert(merged)
-	return true
 }
 
-func (t *RangeTree) Ranges() []Range {
-	ranges := make([]Range, 0, t.tree.Len())
+// Ranges returns all ranges in sorted order.
+func (t *rangeTree) Ranges() RangeList {
+	ranges := make(RangeList, 0, t.tree.Len())
 	t.tree.Ascend(func(item Range) bool {
 		ranges = append(ranges, item)
 		return true
@@ -217,15 +282,18 @@ func (t *RangeTree) Ranges() []Range {
 	return ranges
 }
 
-func (t *RangeTree) len() int {
+// Len the number of ranges in the tree.
+func (t *rangeTree) Len() int {
 	return t.tree.Len()
 }
 
-func (t *RangeTree) clear() {
+// Clear removes all ranges in the tree.
+func (t *rangeTree) Clear() {
 	t.tree.Clear(false)
 }
 
-func (t *RangeTree) String() string {
+// String returns a string representation of all stored ranges (e.g. "[0-5,10-15]").
+func (t *rangeTree) String() string {
 	var builder strings.Builder
 	first := true
 	builder.WriteByte('[')
@@ -241,7 +309,9 @@ func (t *RangeTree) String() string {
 	return builder.String()
 }
 
-func (t *RangeTree) MarshalText() ([]byte, error) {
+// MarshalText serializes the tree. The format includes the maximum offset on the first line (for backwards
+// compatibility) followed by comma-separated ranges (e.g. "5\n0-5")
+func (t *rangeTree) MarshalText() ([]byte, error) {
 	var rangeBuf bytes.Buffer
 	var maxEnd uint64
 	first := true
@@ -279,14 +349,14 @@ func (t *RangeTree) MarshalText() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (t *RangeTree) UnmarshalText(text []byte) error {
+// UnmarshalText deserializes the text to populate the tree. For backwards compatibility, if there is a maximum offset
+// but no ranges, populates the tree with [0, maxOffset).
+func (t *rangeTree) UnmarshalText(text []byte) error {
+	t.Clear()
 	if len(text) == 0 {
 		return nil
 	}
 	lines := bytes.Split(text, []byte("\n"))
-	if len(lines) < 2 {
-		return errors.New("invalid format: missing newline separator")
-	}
 	maxOffset, err := strconv.ParseUint(string(lines[0]), 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid max offset: %w", err)
@@ -296,11 +366,16 @@ func (t *RangeTree) UnmarshalText(text []byte) error {
 			t.Insert(Range{start: 0, end: maxOffset})
 		}
 	}()
+	if len(lines) < 2 {
+		return nil
+	}
 	parts := bytes.Split(lines[1], []byte(","))
 	for _, part := range parts {
 		var r Range
 		if err = r.UnmarshalText(part); err != nil {
-			return fmt.Errorf("invalid range: %w", err)
+			// clear any inserted ranges and fallback to offset only case
+			t.Clear()
+			break
 		}
 		t.Insert(r)
 	}
@@ -320,11 +395,21 @@ func mergeRanges(a, b Range) Range {
 	}
 }
 
+// lessRange compares two ranges for sorting.
 func lessRange(a, b Range) bool {
 	return a.start < b.start || (a.start == b.start && a.end < b.end)
 }
 
-func Invert(sorted []Range) []Range {
+// convertInt64 converts a uint64 to int64. Returns 0 if the value exceeds math.MaxInt64.
+func convertInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return 0
+	}
+	return int64(v)
+}
+
+// InvertRanges returns all the gaps between the ranges in sorted order. Assumes that the passed in RangeList is sorted.
+func InvertRanges(sorted RangeList) RangeList {
 	inverted := make([]Range, 0, len(sorted)+1)
 	var prevEnd uint64
 	for _, r := range sorted {

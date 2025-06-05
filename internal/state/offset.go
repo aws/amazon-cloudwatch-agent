@@ -162,8 +162,8 @@ func (m *fileOffsetManager) Restore() (FileOffset, error) {
 	return offset, nil
 }
 
-// Save the offset in the state file.
-func (m *fileOffsetManager) Save(offset FileOffset) error {
+// save the offset in the state file.
+func (m *fileOffsetManager) save(offset FileOffset) error {
 	if m.stateFilePath == "" {
 		return nil
 	}
@@ -191,7 +191,7 @@ func (m *fileOffsetManager) Run(notification Notification) {
 			if offset.Compare(lastSavedOffset) == 0 {
 				continue
 			}
-			if err := m.Save(offset); err != nil {
+			if err := m.save(offset); err != nil {
 				log.Printf("E! Error happened when saving state file (%s): %v", m.stateFilePath, err)
 				continue
 			}
@@ -203,7 +203,7 @@ func (m *fileOffsetManager) Run(notification Notification) {
 			}
 			return
 		case <-notification.Done:
-			if err := m.Save(offset); err != nil {
+			if err := m.save(offset); err != nil {
 				log.Printf("E! Error happened during final state file (%s) save, duplicate log maybe sent at next start: %v", m.stateFilePath, err)
 			}
 			return
