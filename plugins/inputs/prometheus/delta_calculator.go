@@ -29,15 +29,16 @@ func (dc *DeltaCalculator) calculate(pm *PrometheusMetric) (res *PrometheusMetri
 
 	if !pm.isValueValid() {
 		log.Printf("D! DeltaCalculator.calculate: Drop metric with NaN or Inf value: %v", pm)
-		//When the raws values are like this: 1, 2, 3, 4, NaN, NaN, NaN, ..., 100, 101, 102,
-		//and the previous value is not reset, we will get a wrong delta value (at 100) as 100 - 4 = 96
-		//To avoid this issue, we reset the previous value whenever an invalid value is encountered
 		dc.preDataPoints.Delete(metricKey)
 		return nil
 	}
 
 	curVal := pm.metricValue
 	curTimeInMS := pm.timeInMS
+
+	// Always set the result to pm initially
+	res = pm
+
 	if v, ok := dc.preDataPoints.Get(metricKey); ok {
 		preDataPoint := v.(dataPoint)
 		if curTimeInMS > preDataPoint.timeInMS {
@@ -48,7 +49,9 @@ func (dc *DeltaCalculator) calculate(pm *PrometheusMetric) (res *PrometheusMetri
 				pm.metricValue = curVal
 			}
 		}
-		res = pm
+	} else {
+		// For first data point, use the current value
+		pm.metricValue = curVal
 	}
 
 	// Clean up the stale cache periodically
