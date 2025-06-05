@@ -21,7 +21,7 @@ jobs:
           script: |
             const workflowRun = context.payload.workflow_run;
 
-            // check PR matches
+            // check PR matches here
             // Get the PR number from the original workflow run
             const pullRequests = workflowRun.pull_requests;
             if (!pullRequests || pullRequests.length === 0) {
