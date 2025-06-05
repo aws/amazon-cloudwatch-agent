@@ -7,10 +7,6 @@ on:
       - completed
       - requested
 
-permissions:
-  pull-requests: read
-  checks: write
-
 jobs:
   check-pr-test-workflow:
     runs-on: ubuntu-latest
