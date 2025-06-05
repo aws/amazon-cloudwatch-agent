@@ -24,6 +24,7 @@ var (
 	NAME = "Application"
 	// 2 is ERROR
 	LEVELS          = []string{"2"}
+	EVENTID         = []int{100, 101}
 	GROUP_NAME      = "fake"
 	STREAM_NAME     = "fake"
 	RENDER_FMT      = FormatPlainText
@@ -36,7 +37,8 @@ var (
 
 // TestNewEventLog verifies constructor's default values.
 func TestNewEventLog(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := NewEventLog(NAME, LEVELS, EVENTID, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+		STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.Equal(t, NAME, elog.name)
 	assert.Equal(t, uint64(0), elog.eventOffset)
 	assert.Zero(t, elog.eventHandle)
@@ -46,23 +48,34 @@ func TestNewEventLog(t *testing.T) {
 // And fails with invalid inputs.
 func TestOpen(t *testing.T) {
 	// Happy path.
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := NewEventLog(NAME, LEVELS, EVENTID, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+		STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
 	assert.NoError(t, elog.Close())
 	// Bad event log source name does not cause Open() to fail.
 	// But eventHandle will be 0 and Close() will fail because of it.
-	elog = newTestEventLog(t, "FakeBadElogName", LEVELS)
+	elog = NewEventLog("FakeBadElogName", LEVELS, EVENTID, GROUP_NAME, STREAM_NAME,
+		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.NoError(t, elog.Open())
 	assert.Zero(t, elog.eventHandle)
 	assert.Error(t, elog.Close())
 	// bad LEVELS does not cause Open() to fail.
-	elog = newTestEventLog(t, NAME, []string{"498"})
+
+	elog = NewEventLog(NAME, []string{"498"}, EVENTID, GROUP_NAME, STREAM_NAME,
+		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
+	assert.NoError(t, elog.Open())
+	assert.NotZero(t, elog.eventHandle)
+	assert.NoError(t, elog.Close())
+	//bad
+	elog = NewEventLog(NAME, LEVELS, []int{98698}, GROUP_NAME, STREAM_NAME,
+		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
 	assert.NoError(t, elog.Close())
 	// bad wlog.eventOffset does not cause Open() to fail.
-	elog = newTestEventLog(t, NAME, []string{"498"})
+	elog = NewEventLog(NAME, []string{"498"}, EVENTID, GROUP_NAME, STREAM_NAME,
+		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	elog.eventOffset = 9987
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
@@ -72,7 +85,8 @@ func TestOpen(t *testing.T) {
 // TestReadGoodSource will verify we can read events written by a registered
 // event log source.
 func TestReadGoodSource(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := NewEventLog(NAME, LEVELS, EVENTID, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+		STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
@@ -84,7 +98,8 @@ func TestReadGoodSource(t *testing.T) {
 // TestReadBadSource will verify that we cannot read events written by an
 // unregistered event log source.
 func TestReadBadSource(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := NewEventLog(NAME, LEVELS, EVENTID, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+		STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
@@ -97,7 +112,8 @@ func TestReadBadSource(t *testing.T) {
 // registered event log source, even if the batch contains events from an
 // unregistered source too.
 func TestReadWithBothSources(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := NewEventLog(NAME, LEVELS, EVENTID, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+		STATE_FILE_PATH, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)

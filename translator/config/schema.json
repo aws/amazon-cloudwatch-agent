@@ -1058,6 +1058,14 @@
                       "uniqueItems": true
                     }
                   },
+                  "event_ids":{
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
@@ -1078,9 +1086,26 @@
                     ]
                   }
                 },
-                "required": [
-                  "event_name",
-                  "event_levels"
+                "oneOf": [
+                  {
+                    "required": [
+                      "event_name",
+                      "event_levels"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "event_name",
+                      "event_ids"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "event_name",
+                      "event_levels",
+                      "event_ids"
+                    ]
+                  }
                 ],
                 "additionalProperties": false
               },

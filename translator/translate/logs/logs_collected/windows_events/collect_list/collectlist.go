@@ -21,6 +21,7 @@ const (
 	EventConfigTomlKey = "event_config"
 	BatchReadSizeKey   = "batch_read_size"
 	EventLevelsKey     = "event_levels"
+	EventIdKey         = "event_ids"
 	//TODO: Performance test to confirm the proper value here - https://github.com/aws/amazon-cloudwatch-agent/issues/231
 	BatchReadSizeValue = 170
 )
@@ -34,7 +35,7 @@ func RegisterRule(fieldname string, r Rule) {
 type CollectList struct {
 }
 
-var customizedJsonConfigKeys = []string{"event_name", EventLevelsKey}
+var customizedJsonConfigKeys = []string{"event_name", EventLevelsKey, EventIdKey}
 var eventLevelMapping = map[string]string{
 	"VERBOSE":     "5",
 	"INFORMATION": "4",
@@ -118,4 +119,41 @@ func addFixedJsonConfig(result map[string]interface{}) {
 		}
 	}
 	result[EventLevelsKey] = resultEventLevels
+
+	if eventIds, ok := result[EventIdKey]; ok {
+		validatedIds, errorMessages := validateEventIds(eventIds.([]interface{}))
+		for _, err := range errorMessages {
+			translator.AddErrorMessages(GetCurPath(), err)
+		}
+		result[EventIdKey] = validatedIds
+	}
+}
+
+// Validate event_id inputs
+func validateEventIds(inputEventIds []interface{}) ([]interface{}, []string) {
+	validatedIds := []interface{}{}
+	errorMessages := []string{}
+
+	const (
+		minEventId = 0
+		maxEventId = 65535
+	)
+
+	for _, id := range inputEventIds {
+		eventIdFloat, ok := id.(float64)
+		if !ok {
+			errorMessages = append(errorMessages, fmt.Sprintf("Event ID %v is not a number", id))
+			continue
+		}
+		eventIdInt := int(eventIdFloat)
+		if eventIdInt < minEventId || eventIdInt > maxEventId {
+			errorMessages = append(errorMessages, fmt.Sprintf("Event ID %v is not a valid windows event_id.", eventIdInt))
+			continue
+		}
+
+		validatedIds = append(validatedIds, eventIdInt)
+	}
+
+	return validatedIds, errorMessages
+
 }

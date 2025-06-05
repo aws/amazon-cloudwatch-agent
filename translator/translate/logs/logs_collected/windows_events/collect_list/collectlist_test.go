@@ -5,6 +5,7 @@ package collectlist
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,11 @@ func TestApplyRule(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
+		"event_ids": [
+			100,
+			120,
+			300
+		],
         "log_group_name": "System",
 		"log_group_class": "STANDARD"
       },
@@ -34,6 +40,10 @@ func TestApplyRule(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
+		"event_ids": [
+			4625,
+			3568
+		],
         "event_format": "xml",
         "log_group_name": "Application",
 		"retention_in_days": 1
@@ -47,6 +57,7 @@ func TestApplyRule(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
+			"event_ids":         []int{100, 120, 300},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": -1,
@@ -55,6 +66,7 @@ func TestApplyRule(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{4625, 3568},
 			"event_format":      "xml",
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,
@@ -85,6 +97,10 @@ func TestDuplicateRetention(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
+		"event_ids": [
+			100,
+			120
+		],
         "log_group_name": "System",
 		"retention_in_days": 3,
 		"log_group_class": "INFREQUENT_ACCESS"
@@ -96,6 +112,10 @@ func TestDuplicateRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
+		"event_ids": [
+			100,
+			120
+		],
         "event_format": "xml",
         "log_group_name": "System",
 		"retention_in_days": 3,
@@ -108,6 +128,10 @@ func TestDuplicateRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
+		"event_ids": [
+			100,
+			120
+		],
         "event_format": "xml",
         "log_group_name": "System",
 		"retention_in_days": 3,
@@ -122,6 +146,7 @@ func TestDuplicateRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
+			"event_ids":         []int{100, 120},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
@@ -130,6 +155,7 @@ func TestDuplicateRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{100, 120},
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
@@ -139,6 +165,7 @@ func TestDuplicateRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{100, 120},
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
@@ -170,6 +197,10 @@ func TestConflictingRetention(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
+		"event_ids": [
+			100,
+			120
+		],
         "log_group_name": "System",
 		"retention_in_days": 3
       },
@@ -180,6 +211,10 @@ func TestConflictingRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
+		"event_ids": [
+			100,
+			120
+		],
         "event_format": "xml",
         "log_group_name": "System",
 		"retention_in_days": 1
@@ -193,6 +228,7 @@ func TestConflictingRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
+			"event_ids":         []int{100, 120},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
@@ -201,6 +237,7 @@ func TestConflictingRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{100, 120},
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
@@ -220,4 +257,91 @@ func TestConflictingRetention(t *testing.T) {
 	} else {
 		assert.Fail(t, error.Error())
 	}
+}
+
+func TestEventID(t *testing.T) {
+	//Inputs
+	rawJsonString := `{
+        "collect_list": [{
+            "event_name": "System",
+            "event_ids": [100, 101, 102],
+            "event_levels": ["ERROR", "CRITICAL"]
+        }]
+    }`
+
+	var config interface{}
+	err := json.Unmarshal([]byte(rawJsonString), &config)
+	assert.NoError(t, err)
+
+	//process new configutation
+	c := new(CollectList)
+	_, val := c.ApplyRule(config)
+
+	// Verify event_ids in final configuration
+	result := val.([]interface{})[0].(map[string]interface{})
+
+	eventIds, exists := result["event_ids"]
+	assert.True(t, exists, "event_ids should exist in final configuration")
+	assert.Equal(t, []int{100, 101, 102}, eventIds)
+
+}
+
+func TestValidateEventIds(t *testing.T) {
+	test := []struct {
+		name        string
+		input       []interface{}
+		expectedIds []int
+		expectError bool
+	}{
+		{
+			name:        "Valid event IDs",
+			input:       []interface{}{float64(100), float64(200), float64(300)},
+			expectedIds: []int{100, 200, 300},
+			expectError: false,
+		},
+		{
+			name:        "Invalid event ID - UpperBound",
+			input:       []interface{}{float64(65536)},
+			expectedIds: []int{},
+			expectError: true,
+		},
+		{
+			name:        "Invalid event ID - LowerBound",
+			input:       []interface{}{float64(-1)},
+			expectedIds: []int{},
+			expectError: true,
+		},
+		{
+			name:        "Empty input",
+			input:       []interface{}{},
+			expectedIds: []int{},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			validatedIds, errorMessages := validateEventIds(tt.input)
+
+			if !tt.expectError && len(errorMessages) > 0 {
+				t.Errorf("Unexpected error messages: %v", errorMessages)
+			}
+			// Check if validated IDs match expected
+			assert.Equal(t, tt.expectedIds, validatedIds)
+
+		})
+
+	}
+}
+
+func TestDataTypes(t *testing.T) {
+	input := []interface{}{float64(100), float64(200)}
+
+	// Check only validatedIds type
+	validatedIds, _ := validateEventIds(input)
+	fmt.Printf("ValidatedIds type: %T\n", validatedIds)
+
+	// Or check only errorMessages type
+	_, errorMessages := validateEventIds(input)
+	fmt.Printf("ErrorMessages type: %T\n", errorMessages)
 }
