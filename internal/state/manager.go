@@ -64,7 +64,7 @@ func (m *rangeManager) Restore() (RangeList, error) {
 	content, err := os.ReadFile(m.stateFilePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.Printf("D! No state file exists for %s", m.name)
+			log.Printf("D! No state file exists for %s at %s", m.name, m.stateFilePath)
 		} else {
 			log.Printf("W! Failed to read state file for %s: %v", m.name, err)
 		}
@@ -104,6 +104,7 @@ func (m *rangeManager) Run(notification Notification) {
 	for {
 		select {
 		case replace := <-m.replaceTreeCh:
+			log.Printf("D! Replacing in-memory state with restored state")
 			current = replace
 		case item := <-m.queue:
 			// truncation detected, clear tree
@@ -117,6 +118,7 @@ func (m *rangeManager) Run(notification Notification) {
 			if !shouldSave {
 				continue
 			}
+			log.Printf("D! Saving state to %s", m.stateFilePath)
 			if err := m.save(current); err != nil {
 				log.Printf("E! Error happened when saving state file (%s): %v", m.stateFilePath, err)
 				continue
@@ -129,6 +131,7 @@ func (m *rangeManager) Run(notification Notification) {
 			}
 			return
 		case <-notification.Done:
+			log.Printf("D! Saving final state to %s", m.stateFilePath)
 			if err := m.save(current); err != nil {
 				log.Printf("E! Error happened during final state file (%s) save, duplicate log maybe sent at next start: %v", m.stateFilePath, err)
 			}

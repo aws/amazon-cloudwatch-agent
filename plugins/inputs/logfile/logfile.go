@@ -196,9 +196,13 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			var seekFile *tail.SeekInfo
 			restored, err := stateManager.Restore()
 			if err == nil { // Missing state file would be an error too
-				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: restored.Last().EndOffsetInt64()}
+				offset := restored.Last().EndOffsetInt64()
+				t.Log.Debugf("Restored file %q from state file %s, offset: %v", filename, restored, offset)
+				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset}
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
+			} else {
+				t.Log.Debugf("Not restoring state from file due to %v", err)
 			}
 
 			isutf16 := false
