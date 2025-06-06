@@ -4,7 +4,6 @@ on:
     workflows: ["PR Build", "pr build"]
     types:
       - completed
-      - requested
     branches:
       - main*
       - feature*
