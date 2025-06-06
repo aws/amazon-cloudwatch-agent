@@ -1086,26 +1086,10 @@
                     ]
                   }
                 },
-                "oneOf": [
-                  {
-                    "required": [
-                      "event_name",
-                      "event_levels"
-                    ]
-                  },
-                  {
-                    "required": [
-                      "event_name",
-                      "event_ids"
-                    ]
-                  },
-                  {
-                    "required": [
-                      "event_name",
-                      "event_levels",
-                      "event_ids"
-                    ]
-                  }
+                "required": [
+                  "event_name",
+                  "event_levels",
+                  "event_ids"
                 ],
                 "additionalProperties": false
               },
