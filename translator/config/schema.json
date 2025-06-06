@@ -1087,9 +1087,15 @@
                   }
                 },
                 "required": [
-                  "event_name",
-                  "event_levels",
-                  "event_ids"
+                  "event_name"
+                ],
+                "anyOf": [
+                  {
+                    "required": ["event_levels"]
+                  },
+                  {
+                    "required": ["event_ids"]
+                  }
                 ],
                 "additionalProperties": false
               },

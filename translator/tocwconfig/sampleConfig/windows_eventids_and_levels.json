@@ -9,6 +9,10 @@
               "INFORMATION",
               "ERROR"
             ],
+            "event_ids": [
+              4562,
+              4589
+            ],
             "log_group_name": "System",
             "log_stream_name": "System"
           },
@@ -17,6 +21,10 @@
             "event_levels": [
               "INFORMATION",
               "ERROR"
+            ],
+            "event_ids": [
+              1104,
+              3215
             ],
             "log_group_name": "Application",
             "log_stream_name": "Application"
