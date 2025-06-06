@@ -1,5 +1,6 @@
 metric_statements:
   - context: metric
+    error_mode: propagate
     statements:
       - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
       - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"

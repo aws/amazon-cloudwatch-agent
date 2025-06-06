@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/extension/extensiontest"
 )
@@ -20,7 +21,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	cfg := &Config{}
-	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(component.MustNewType("entitystore")), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }

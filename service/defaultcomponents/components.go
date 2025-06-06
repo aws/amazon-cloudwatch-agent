@@ -73,7 +73,7 @@ func Factories() (otelcol.Factories, error) {
 	var factories otelcol.Factories
 	var err error
 
-	if factories.Receivers, err = receiver.MakeFactoryMap(
+	if factories.Receivers, err = otelcol.MakeFactoryMap[receiver.Factory](
 		awscontainerinsightreceiver.NewFactory(),
 		awscontainerinsightskueuereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
@@ -94,7 +94,7 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Processors, err = processor.MakeFactoryMap(
+	if factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory](
 		attributesprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
 		awsentity.NewFactory(),
@@ -122,7 +122,7 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Exporters, err = exporter.MakeFactoryMap(
+	if factories.Exporters, err = otelcol.MakeFactoryMap[exporter.Factory](
 		awscloudwatchlogsexporter.NewFactory(),
 		awsemfexporter.NewFactory(),
 		awsxrayexporter.NewFactory(),
@@ -134,7 +134,7 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Extensions, err = extension.MakeFactoryMap(
+	if factories.Extensions, err = otelcol.MakeFactoryMap[extension.Factory](
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
 		entitystore.NewFactory(),
