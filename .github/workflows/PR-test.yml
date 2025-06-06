@@ -178,7 +178,7 @@ jobs:
 
   EC2SELinuxIntegrationTest:
     name: 'EC2SELinuxTests'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -212,3 +212,41 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       github_sha: ${{ github.sha }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  verify-all:
+    name: Verify All PR Test Jobs
+    needs: [CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
+            GenerateTestMatrix, EC2LinuxIntegrationTest, EC2SELinuxIntegrationTest,
+            StopLocalStack]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Job Status
+        run: |
+          # Convert needs context to JSON and process with jq
+          needs_json='${{ toJSON(needs) }}'
+
+          failed_jobs=()
+          successful_jobs=()
+
+          # Loop through all jobs in needs context
+          for job in $(echo "$needs_json" | jq -r 'keys[]'); do
+            result=$(echo "$needs_json" | jq -r ".[\"$job\"].result")
+
+            if [[ "$result" == "failure" ]]; then
+              failed_jobs+=("$job")
+            elif [[ "$result" == "success" ]]; then
+              successful_jobs+=("$job")
+            fi
+          done
+
+          echo "Successfully validated jobs:"
+          printf '%s\n' "${successful_jobs[@]}"
+
+          if [ ${#failed_jobs[@]} -ne 0 ]; then
+            echo -e "\nFailed jobs:"
+            printf '%s\n' "${failed_jobs[@]}"
+            exit 1
+          fi
+
+          echo -e "\nAll required jobs completed without failures!"
