@@ -62,9 +62,10 @@ func (c *CloudWatch) DeleteAlarmsRequest(input *DeleteAlarmsInput) (req *request
 // you could delete 99 metric alarms and one composite alarms with one operation,
 // but you can't delete two composite alarms with one operation.
 //
-// If you specify an incorrect alarm name or make any other error in the operation,
-// no alarms are deleted. To confirm that alarms were deleted successfully,
-// you can use the DescribeAlarms (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_DescribeAlarms.html)
+// If you specify any incorrect alarm names, the alarms you specify with correct
+// names are still deleted. Other syntax errors might result in no alarms being
+// deleted. To confirm that alarms were deleted successfully, you can use the
+// DescribeAlarms (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_DescribeAlarms.html)
 // operation after using DeleteAlarms.
 //
 // It is possible to create a loop or cycle of composite alarms, where composite
@@ -273,6 +274,9 @@ func (c *CloudWatch) DeleteDashboardsRequest(input *DeleteDashboardsInput) (req 
 //
 //   - ErrCodeInternalServiceFault "InternalServiceError"
 //     Request processing has failed due to some unknown error, exception, or failure.
+//
+//   - ErrCodeConflictException "ConflictException"
+//     This operation attempted to create a resource that already exists.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/DeleteDashboards
 func (c *CloudWatch) DeleteDashboards(input *DeleteDashboardsInput) (*DeleteDashboardsOutput, error) {
@@ -2302,6 +2306,149 @@ func (c *CloudWatch) ListDashboardsPagesWithContext(ctx aws.Context, input *List
 	return p.Err()
 }
 
+const opListManagedInsightRules = "ListManagedInsightRules"
+
+// ListManagedInsightRulesRequest generates a "aws/request.Request" representing the
+// client's request for the ListManagedInsightRules operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See ListManagedInsightRules for more information on using the ListManagedInsightRules
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the ListManagedInsightRulesRequest method.
+//	req, resp := client.ListManagedInsightRulesRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/ListManagedInsightRules
+func (c *CloudWatch) ListManagedInsightRulesRequest(input *ListManagedInsightRulesInput) (req *request.Request, output *ListManagedInsightRulesOutput) {
+	op := &request.Operation{
+		Name:       opListManagedInsightRules,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
+	}
+
+	if input == nil {
+		input = &ListManagedInsightRulesInput{}
+	}
+
+	output = &ListManagedInsightRulesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// ListManagedInsightRules API operation for Amazon CloudWatch.
+//
+// Returns a list that contains the number of managed Contributor Insights rules
+// in your account.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch's
+// API operation ListManagedInsightRules for usage and error information.
+//
+// Returned Error Codes:
+//
+//   - ErrCodeInvalidParameterValueException "InvalidParameterValue"
+//     The value of an input parameter is bad or out-of-range.
+//
+//   - ErrCodeMissingRequiredParameterException "MissingParameter"
+//     An input parameter that is required is missing.
+//
+//   - ErrCodeInvalidNextToken "InvalidNextToken"
+//     The next token specified is invalid.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/ListManagedInsightRules
+func (c *CloudWatch) ListManagedInsightRules(input *ListManagedInsightRulesInput) (*ListManagedInsightRulesOutput, error) {
+	req, out := c.ListManagedInsightRulesRequest(input)
+	return out, req.Send()
+}
+
+// ListManagedInsightRulesWithContext is the same as ListManagedInsightRules with the addition of
+// the ability to pass a context and additional request options.
+//
+// See ListManagedInsightRules for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatch) ListManagedInsightRulesWithContext(ctx aws.Context, input *ListManagedInsightRulesInput, opts ...request.Option) (*ListManagedInsightRulesOutput, error) {
+	req, out := c.ListManagedInsightRulesRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+// ListManagedInsightRulesPages iterates over the pages of a ListManagedInsightRules operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListManagedInsightRules method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//	// Example iterating over at most 3 pages of a ListManagedInsightRules operation.
+//	pageNum := 0
+//	err := client.ListManagedInsightRulesPages(params,
+//	    func(page *cloudwatch.ListManagedInsightRulesOutput, lastPage bool) bool {
+//	        pageNum++
+//	        fmt.Println(page)
+//	        return pageNum <= 3
+//	    })
+func (c *CloudWatch) ListManagedInsightRulesPages(input *ListManagedInsightRulesInput, fn func(*ListManagedInsightRulesOutput, bool) bool) error {
+	return c.ListManagedInsightRulesPagesWithContext(aws.BackgroundContext(), input, fn)
+}
+
+// ListManagedInsightRulesPagesWithContext same as ListManagedInsightRulesPages except
+// it takes a Context and allows setting request options on the pages.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatch) ListManagedInsightRulesPagesWithContext(ctx aws.Context, input *ListManagedInsightRulesInput, fn func(*ListManagedInsightRulesOutput, bool) bool, opts ...request.Option) error {
+	p := request.Pagination{
+		NewRequest: func() (*request.Request, error) {
+			var inCpy *ListManagedInsightRulesInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.ListManagedInsightRulesRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+
+	for p.Next() {
+		if !fn(p.Page().(*ListManagedInsightRulesOutput), !p.HasNextPage()) {
+			break
+		}
+	}
+
+	return p.Err()
+}
+
 const opListMetricStreams = "ListMetricStreams"
 
 // ListMetricStreamsRequest generates a "aws/request.Request" representing the
@@ -3002,6 +3149,9 @@ func (c *CloudWatch) PutDashboardRequest(input *PutDashboardInput) (req *request
 //   - ErrCodeInternalServiceFault "InternalServiceError"
 //     Request processing has failed due to some unknown error, exception, or failure.
 //
+//   - ErrCodeConflictException "ConflictException"
+//     This operation attempted to create a resource that already exists.
+//
 // See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/PutDashboard
 func (c *CloudWatch) PutDashboard(input *PutDashboardInput) (*PutDashboardOutput, error) {
 	req, out := c.PutDashboardRequest(input)
@@ -3111,6 +3261,95 @@ func (c *CloudWatch) PutInsightRule(input *PutInsightRuleInput) (*PutInsightRule
 // for more information on using Contexts.
 func (c *CloudWatch) PutInsightRuleWithContext(ctx aws.Context, input *PutInsightRuleInput, opts ...request.Option) (*PutInsightRuleOutput, error) {
 	req, out := c.PutInsightRuleRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opPutManagedInsightRules = "PutManagedInsightRules"
+
+// PutManagedInsightRulesRequest generates a "aws/request.Request" representing the
+// client's request for the PutManagedInsightRules operation. The "output" return
+// value will be populated with the request's response once the request completes
+// successfully.
+//
+// Use "Send" method on the returned Request to send the API call to the service.
+// the "output" return value is not valid until after Send returns without error.
+//
+// See PutManagedInsightRules for more information on using the PutManagedInsightRules
+// API call, and error handling.
+//
+// This method is useful when you want to inject custom logic or configuration
+// into the SDK's request lifecycle. Such as custom headers, or retry logic.
+//
+//	// Example sending a request using the PutManagedInsightRulesRequest method.
+//	req, resp := client.PutManagedInsightRulesRequest(params)
+//
+//	err := req.Send()
+//	if err == nil { // resp is now filled
+//	    fmt.Println(resp)
+//	}
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/PutManagedInsightRules
+func (c *CloudWatch) PutManagedInsightRulesRequest(input *PutManagedInsightRulesInput) (req *request.Request, output *PutManagedInsightRulesOutput) {
+	op := &request.Operation{
+		Name:       opPutManagedInsightRules,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &PutManagedInsightRulesInput{}
+	}
+
+	output = &PutManagedInsightRulesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// PutManagedInsightRules API operation for Amazon CloudWatch.
+//
+// Creates a managed Contributor Insights rule for a specified Amazon Web Services
+// resource. When you enable a managed rule, you create a Contributor Insights
+// rule that collects data from Amazon Web Services services. You cannot edit
+// these rules with PutInsightRule. The rules can be enabled, disabled, and
+// deleted using EnableInsightRules, DisableInsightRules, and DeleteInsightRules.
+// If a previously created managed rule is currently disabled, a subsequent
+// call to this API will re-enable it. Use ListManagedInsightRules to describe
+// all available rules.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon CloudWatch's
+// API operation PutManagedInsightRules for usage and error information.
+//
+// Returned Error Codes:
+//
+//   - ErrCodeInvalidParameterValueException "InvalidParameterValue"
+//     The value of an input parameter is bad or out-of-range.
+//
+//   - ErrCodeMissingRequiredParameterException "MissingParameter"
+//     An input parameter that is required is missing.
+//
+// See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/PutManagedInsightRules
+func (c *CloudWatch) PutManagedInsightRules(input *PutManagedInsightRulesInput) (*PutManagedInsightRulesOutput, error) {
+	req, out := c.PutManagedInsightRulesRequest(input)
+	return out, req.Send()
+}
+
+// PutManagedInsightRulesWithContext is the same as PutManagedInsightRules with the addition of
+// the ability to pass a context and additional request options.
+//
+// See PutManagedInsightRules for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *CloudWatch) PutManagedInsightRulesWithContext(ctx aws.Context, input *PutManagedInsightRulesInput, opts ...request.Option) (*PutManagedInsightRulesOutput, error) {
+	req, out := c.PutManagedInsightRulesRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -3293,6 +3532,12 @@ func (c *CloudWatch) PutMetricDataRequest(input *PutMetricDataInput) (req *reque
 // creates the metric. When CloudWatch creates a metric, it can take up to fifteen
 // minutes for the metric to appear in calls to ListMetrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html).
 //
+// You can publish metrics with associated entity data (so that related telemetry
+// can be found and viewed together), or publish metric data by itself. To send
+// entity data with your metrics, use the EntityMetricData parameter. To send
+// metrics without entity data, use the MetricData parameter. The EntityMetricData
+// structure includes MetricData structures for the metric data.
+//
 // You can publish either individual values in the Value field, or arrays of
 // values and the number of times each value occurred during the period by using
 // the Values and Counts fields in the MetricData structure. Using the Values
@@ -3302,7 +3547,8 @@ func (c *CloudWatch) PutMetricDataRequest(input *PutMetricDataInput) (req *reque
 //
 // Each PutMetricData request is limited to 1 MB in size for HTTP POST requests.
 // You can send a payload compressed by gzip. Each request is also limited to
-// no more than 1000 different metrics.
+// no more than 1000 different metrics (across both the MetricData and EntityMetricData
+// properties).
 //
 // Although the Value parameter accepts numbers of type Double, CloudWatch rejects
 // values that are either too small or too large. Values must be in the range
@@ -3322,8 +3568,8 @@ func (c *CloudWatch) PutMetricDataRequest(input *PutMetricDataInput) (req *reque
 // 48 hours to become available for GetMetricData (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html)
 // or GetMetricStatistics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricStatistics.html)
 // from the time they are submitted. Data points with time stamps between 3
-// and 24 hours ago can take as much as 2 hours to become available for for
-// GetMetricData (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html)
+// and 24 hours ago can take as much as 2 hours to become available for GetMetricData
+// (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricData.html)
 // or GetMetricStatistics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricStatistics.html).
 //
 // CloudWatch needs raw data points to calculate percentile statistics. If you
@@ -3858,6 +4104,9 @@ func (c *CloudWatch) TagResourceRequest(input *TagResourceInput) (req *request.R
 //   - ErrCodeInternalServiceFault "InternalServiceError"
 //     Request processing has failed due to some unknown error, exception, or failure.
 //
+//   - ErrCodeConflictException "ConflictException"
+//     This operation attempted to create a resource that already exists.
+//
 // See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/TagResource
 func (c *CloudWatch) TagResource(input *TagResourceInput) (*TagResourceOutput, error) {
 	req, out := c.TagResourceRequest(input)
@@ -3946,6 +4195,9 @@ func (c *CloudWatch) UntagResourceRequest(input *UntagResourceInput) (req *reque
 //
 //   - ErrCodeInternalServiceFault "InternalServiceError"
 //     Request processing has failed due to some unknown error, exception, or failure.
+//
+//   - ErrCodeConflictException "ConflictException"
+//     This operation attempted to create a resource that already exists.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/monitoring-2010-08-01/UntagResource
 func (c *CloudWatch) UntagResource(input *UntagResourceInput) (*UntagResourceOutput, error) {
@@ -6337,11 +6589,33 @@ func (s *EnableInsightRulesOutput) SetFailures(v []*PartialFailure) *EnableInsig
 	return s
 }
 
+// An entity associated with metrics, to allow for finding related telemetry.
+// An entity is typically a resource or service within your system. For example,
+// metrics from an Amazon EC2 instance could be associated with that instance
+// as the entity. Similarly, metrics from a service that you own could be associated
+// with that service as the entity.
 type Entity struct {
 	_ struct{} `type:"structure"`
 
+	// Additional attributes of the entity that are not used to specify the identity
+	// of the entity. A list of key-value pairs.
+	//
+	// For details about how to use the attributes, see How to add related information
+	// to telemetry (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/adding-your-own-related-telemetry.html)
+	// in the CloudWatch User Guide.
 	Attributes map[string]*string `type:"map"`
 
+	// The attributes of the entity which identify the specific entity, as a list
+	// of key-value pairs. Entities with the same KeyAttributes are considered to
+	// be the same entity. For an entity to be valid, the KeyAttributes must exist
+	// and be formatted correctly.
+	//
+	// There are five allowed attributes (key names): Type, ResourceType, Identifier,
+	// Name, and Environment.
+	//
+	// For details about how to use the key attributes to specify an entity, see
+	// How to add related information to telemetry (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/adding-your-own-related-telemetry.html)
+	// in the CloudWatch User Guide.
 	KeyAttributes map[string]*string `min:"2" type:"map"`
 }
 
@@ -6388,11 +6662,16 @@ func (s *Entity) SetKeyAttributes(v map[string]*string) *Entity {
 	return s
 }
 
+// A set of metrics that are associated with an entity, such as a specific service
+// or resource. Contains the entity and the list of metric data associated with
+// it.
 type EntityMetricData struct {
 	_ struct{} `type:"structure"`
 
+	// The entity associated with the metrics.
 	Entity *Entity `type:"structure"`
 
+	// The metric data.
 	MetricData []*MetricDatum `type:"list"`
 }
 
@@ -6848,13 +7127,13 @@ type GetMetricDataInput struct {
 	//    * Start time greater than 63 days ago - Round down to the nearest 1-hour
 	//    clock interval. For example, 12:32:34 is rounded down to 12:00:00.
 	//
-	// If you set Period to 5, 10, or 30, the start time of your request is rounded
-	// down to the nearest time that corresponds to even 5-, 10-, or 30-second divisions
-	// of a minute. For example, if you make a query at (HH:mm:ss) 01:05:23 for
-	// the previous 10-second period, the start time of your request is rounded
-	// down and you receive data from 01:05:10 to 01:05:20. If you make a query
-	// at 15:07:17 for the previous 5 minutes of data, using a period of 5 seconds,
-	// you receive data timestamped between 15:02:15 and 15:07:15.
+	// If you set Period to 5, 10, 20, or 30, the start time of your request is
+	// rounded down to the nearest time that corresponds to even 5-, 10-, 20-, or
+	// 30-second divisions of a minute. For example, if you make a query at (HH:mm:ss)
+	// 01:05:23 for the previous 10-second period, the start time of your request
+	// is rounded down and you receive data from 01:05:10 to 01:05:20. If you make
+	// a query at 15:07:17 for the previous 5 minutes of data, using a period of
+	// 5 seconds, you receive data timestamped between 15:02:15 and 15:07:15.
 	//
 	// For better performance, specify StartTime and EndTime values that align with
 	// the value of the metric's Period and sync up with the beginning and end of
@@ -7054,9 +7333,9 @@ type GetMetricStatisticsInput struct {
 	// The granularity, in seconds, of the returned data points. For metrics with
 	// regular resolution, a period can be as short as one minute (60 seconds) and
 	// must be a multiple of 60. For high-resolution metrics that are collected
-	// at intervals of less than one minute, the period can be 1, 5, 10, 30, 60,
-	// or any multiple of 60. High-resolution metrics are those metrics stored by
-	// a PutMetricData call that includes a StorageResolution of 1 second.
+	// at intervals of less than one minute, the period can be 1, 5, 10, 20, 30,
+	// 60, or any multiple of 60. High-resolution metrics are those metrics stored
+	// by a PutMetricData call that includes a StorageResolution of 1 second.
 	//
 	// If the StartTime parameter specifies a time stamp that is greater than 3
 	// hours ago, you must specify the period as follows or no data points in that
@@ -7092,13 +7371,13 @@ type GetMetricStatisticsInput struct {
 	//    * Start time greater than 63 days ago - Round down to the nearest 1-hour
 	//    clock interval. For example, 12:32:34 is rounded down to 12:00:00.
 	//
-	// If you set Period to 5, 10, or 30, the start time of your request is rounded
-	// down to the nearest time that corresponds to even 5-, 10-, or 30-second divisions
-	// of a minute. For example, if you make a query at (HH:mm:ss) 01:05:23 for
-	// the previous 10-second period, the start time of your request is rounded
-	// down and you receive data from 01:05:10 to 01:05:20. If you make a query
-	// at 15:07:17 for the previous 5 minutes of data, using a period of 5 seconds,
-	// you receive data timestamped between 15:02:15 and 15:07:15.
+	// If you set Period to 5, 10, 20, or 30, the start time of your request is
+	// rounded down to the nearest time that corresponds to even 5-, 10-, 20-, or
+	// 30-second divisions of a minute. For example, if you make a query at (HH:mm:ss)
+	// 01:05:23 for the previous 10-second period, the start time of your request
+	// is rounded down and you receive data from 01:05:10 to 01:05:20. If you make
+	// a query at 15:07:17 for the previous 5 minutes of data, using a period of
+	// 5 seconds, you receive data timestamped between 15:02:15 and 15:07:15.
 	//
 	// StartTime is a required field
 	StartTime *time.Time `type:"timestamp" required:"true"`
@@ -7365,7 +7644,7 @@ type GetMetricStreamOutput struct {
 	// The output format for the stream. Valid values are json, opentelemetry1.0,
 	// and opentelemetry0.7. For more information about metric stream output formats,
 	// see Metric streams output formats (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-metric-streams-formats.html).
-	OutputFormat *string `min:"1" type:"string"`
+	OutputFormat *string `min:"1" type:"string" enum:"MetricStreamOutputFormat"`
 
 	// The ARN of the IAM role that is used by this metric stream.
 	RoleArn *string `min:"1" type:"string"`
@@ -7601,6 +7880,11 @@ func (s *GetMetricWidgetImageOutput) SetMetricWidgetImage(v []byte) *GetMetricWi
 type InsightRule struct {
 	_ struct{} `type:"structure"`
 
+	// Displays whether the rule is evaluated on the transformed versions of logs,
+	// for log groups that have Log transformation (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html)
+	// enabled. If this is false, log events are evaluated before they are transformed.
+	ApplyOnTransformedLogs *bool `type:"boolean"`
+
 	// The definition of the rule, as a JSON object. The definition contains the
 	// keywords used to define contributors, the value to aggregate on if this rule
 	// returns a sum instead of a count, and the filters. For details on the valid
@@ -7608,10 +7892,6 @@ type InsightRule struct {
 	//
 	// Definition is a required field
 	Definition *string `min:"1" type:"string" required:"true"`
-
-	DeleteAt *time.Time `type:"timestamp"`
-
-	DisableAt *time.Time `type:"timestamp"`
 
 	// An optional built-in rule that Amazon Web Services manages.
 	ManagedRule *bool `type:"boolean"`
@@ -7651,21 +7931,15 @@ func (s InsightRule) GoString() string {
 	return s.String()
 }
 
+// SetApplyOnTransformedLogs sets the ApplyOnTransformedLogs field's value.
+func (s *InsightRule) SetApplyOnTransformedLogs(v bool) *InsightRule {
+	s.ApplyOnTransformedLogs = &v
+	return s
+}
+
 // SetDefinition sets the Definition field's value.
 func (s *InsightRule) SetDefinition(v string) *InsightRule {
 	s.Definition = &v
-	return s
-}
-
-// SetDeleteAt sets the DeleteAt field's value.
-func (s *InsightRule) SetDeleteAt(v time.Time) *InsightRule {
-	s.DeleteAt = &v
-	return s
-}
-
-// SetDisableAt sets the DisableAt field's value.
-func (s *InsightRule) SetDisableAt(v time.Time) *InsightRule {
-	s.DisableAt = &v
 	return s
 }
 
@@ -8058,6 +8332,121 @@ func (s *ListDashboardsOutput) SetNextToken(v string) *ListDashboardsOutput {
 	return s
 }
 
+type ListManagedInsightRulesInput struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum number of results to return in one operation. If you omit this
+	// parameter, the default number is used. The default number is 100.
+	MaxResults *int64 `min:"1" type:"integer"`
+
+	// Include this value to get the next set of rules if the value was returned
+	// by the previous operation.
+	NextToken *string `type:"string"`
+
+	// The ARN of an Amazon Web Services resource that has managed Contributor Insights
+	// rules.
+	//
+	// ResourceARN is a required field
+	ResourceARN *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListManagedInsightRulesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListManagedInsightRulesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListManagedInsightRulesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListManagedInsightRulesInput"}
+	if s.MaxResults != nil && *s.MaxResults < 1 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 1))
+	}
+	if s.ResourceARN == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceARN"))
+	}
+	if s.ResourceARN != nil && len(*s.ResourceARN) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceARN", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMaxResults sets the MaxResults field's value.
+func (s *ListManagedInsightRulesInput) SetMaxResults(v int64) *ListManagedInsightRulesInput {
+	s.MaxResults = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListManagedInsightRulesInput) SetNextToken(v string) *ListManagedInsightRulesInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetResourceARN sets the ResourceARN field's value.
+func (s *ListManagedInsightRulesInput) SetResourceARN(v string) *ListManagedInsightRulesInput {
+	s.ResourceARN = &v
+	return s
+}
+
+type ListManagedInsightRulesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// The managed rules that are available for the specified Amazon Web Services
+	// resource.
+	ManagedRules []*ManagedRuleDescription `type:"list"`
+
+	// Include this value to get the next set of rules if the value was returned
+	// by the previous operation.
+	NextToken *string `type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListManagedInsightRulesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ListManagedInsightRulesOutput) GoString() string {
+	return s.String()
+}
+
+// SetManagedRules sets the ManagedRules field's value.
+func (s *ListManagedInsightRulesOutput) SetManagedRules(v []*ManagedRuleDescription) *ListManagedInsightRulesOutput {
+	s.ManagedRules = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *ListManagedInsightRulesOutput) SetNextToken(v string) *ListManagedInsightRulesOutput {
+	s.NextToken = &v
+	return s
+}
+
 type ListMetricStreamsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -8156,8 +8545,9 @@ func (s *ListMetricStreamsOutput) SetNextToken(v string) *ListMetricStreamsOutpu
 type ListMetricsInput struct {
 	_ struct{} `type:"structure"`
 
-	// The dimensions to filter against. Only the dimensions that match exactly
-	// will be returned.
+	// The dimensions to filter against. Only the dimension with names that match
+	// exactly will be returned. If you specify one dimension name and a metric
+	// has that dimension and also other dimensions, it will be returned.
 	Dimensions []*DimensionFilter `type:"list"`
 
 	// If you are using this operation in a monitoring account, specify true to
@@ -8189,7 +8579,7 @@ type ListMetricsInput struct {
 	//
 	// The results that are returned are an approximation of the value you specify.
 	// There is a low probability that the returned results include metrics with
-	// last published data as much as 40 minutes more than the specified time interval.
+	// last published data as much as 50 minutes more than the specified time interval.
 	RecentlyActive *string `type:"string" enum:"RecentlyActive"`
 }
 
@@ -8424,6 +8814,205 @@ func (s *ListTagsForResourceOutput) SetTags(v []*Tag) *ListTagsForResourceOutput
 	return s
 }
 
+// Contains the information that's required to enable a managed Contributor
+// Insights rule for an Amazon Web Services resource.
+type ManagedRule struct {
+	_ struct{} `type:"structure"`
+
+	// The ARN of an Amazon Web Services resource that has managed Contributor Insights
+	// rules.
+	//
+	// ResourceARN is a required field
+	ResourceARN *string `min:"1" type:"string" required:"true"`
+
+	// A list of key-value pairs that you can associate with a managed Contributor
+	// Insights rule. You can associate as many as 50 tags with a rule. Tags can
+	// help you organize and categorize your resources. You also can use them to
+	// scope user permissions by granting a user permission to access or change
+	// only the resources that have certain tag values. To associate tags with a
+	// rule, you must have the cloudwatch:TagResource permission in addition to
+	// the cloudwatch:PutInsightRule permission. If you are using this operation
+	// to update an existing Contributor Insights rule, any tags that you specify
+	// in this parameter are ignored. To change the tags of an existing rule, use
+	// TagResource.
+	Tags []*Tag `type:"list"`
+
+	// The template name for the managed Contributor Insights rule, as returned
+	// by ListManagedInsightRules.
+	//
+	// TemplateName is a required field
+	TemplateName *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ManagedRule) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ManagedRule) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ManagedRule) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ManagedRule"}
+	if s.ResourceARN == nil {
+		invalidParams.Add(request.NewErrParamRequired("ResourceARN"))
+	}
+	if s.ResourceARN != nil && len(*s.ResourceARN) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ResourceARN", 1))
+	}
+	if s.TemplateName == nil {
+		invalidParams.Add(request.NewErrParamRequired("TemplateName"))
+	}
+	if s.TemplateName != nil && len(*s.TemplateName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TemplateName", 1))
+	}
+	if s.Tags != nil {
+		for i, v := range s.Tags {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Tags", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetResourceARN sets the ResourceARN field's value.
+func (s *ManagedRule) SetResourceARN(v string) *ManagedRule {
+	s.ResourceARN = &v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *ManagedRule) SetTags(v []*Tag) *ManagedRule {
+	s.Tags = v
+	return s
+}
+
+// SetTemplateName sets the TemplateName field's value.
+func (s *ManagedRule) SetTemplateName(v string) *ManagedRule {
+	s.TemplateName = &v
+	return s
+}
+
+// Contains information about managed Contributor Insights rules, as returned
+// by ListManagedInsightRules.
+type ManagedRuleDescription struct {
+	_ struct{} `type:"structure"`
+
+	// If a managed rule is enabled, this is the ARN for the related Amazon Web
+	// Services resource.
+	ResourceARN *string `min:"1" type:"string"`
+
+	// Describes the state of a managed rule. If present, it contains information
+	// about the Contributor Insights rule that contains information about the related
+	// Amazon Web Services resource.
+	RuleState *ManagedRuleState `type:"structure"`
+
+	// The template name for the managed rule. Used to enable managed rules using
+	// PutManagedInsightRules.
+	TemplateName *string `min:"1" type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ManagedRuleDescription) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ManagedRuleDescription) GoString() string {
+	return s.String()
+}
+
+// SetResourceARN sets the ResourceARN field's value.
+func (s *ManagedRuleDescription) SetResourceARN(v string) *ManagedRuleDescription {
+	s.ResourceARN = &v
+	return s
+}
+
+// SetRuleState sets the RuleState field's value.
+func (s *ManagedRuleDescription) SetRuleState(v *ManagedRuleState) *ManagedRuleDescription {
+	s.RuleState = v
+	return s
+}
+
+// SetTemplateName sets the TemplateName field's value.
+func (s *ManagedRuleDescription) SetTemplateName(v string) *ManagedRuleDescription {
+	s.TemplateName = &v
+	return s
+}
+
+// The status of a managed Contributor Insights rule.
+type ManagedRuleState struct {
+	_ struct{} `type:"structure"`
+
+	// The name of the Contributor Insights rule that contains data for the specified
+	// Amazon Web Services resource.
+	//
+	// RuleName is a required field
+	RuleName *string `min:"1" type:"string" required:"true"`
+
+	// Indicates whether the rule is enabled or disabled.
+	//
+	// State is a required field
+	State *string `min:"1" type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ManagedRuleState) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s ManagedRuleState) GoString() string {
+	return s.String()
+}
+
+// SetRuleName sets the RuleName field's value.
+func (s *ManagedRuleState) SetRuleName(v string) *ManagedRuleState {
+	s.RuleName = &v
+	return s
+}
+
+// SetState sets the State field's value.
+func (s *ManagedRuleState) SetState(v string) *ManagedRuleState {
+	s.State = &v
+	return s
+}
+
 // A message returned by the GetMetricDataAPI, including a code and a description.
 //
 // If a cross-Region GetMetricData operation fails with a code of Forbidden
@@ -8589,6 +9178,12 @@ type MetricAlarm struct {
 	// The number of periods over which data is compared to the specified threshold.
 	EvaluationPeriods *int64 `min:"1" type:"integer"`
 
+	// If the value of this field is PARTIAL_DATA, the alarm is being evaluated
+	// based on only partial data. This happens if the query used for the alarm
+	// returns more than 10,000 metrics. For more information, see Create alarms
+	// on Metrics Insights queries (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Create_Metrics_Insights_Alarm.html).
+	EvaluationState *string `type:"string" enum:"EvaluationState"`
+
 	// The percentile statistic for the metric associated with the alarm. Specify
 	// a value between p0.0 and p100.
 	ExtendedStatistic *string `type:"string"`
@@ -8738,6 +9333,12 @@ func (s *MetricAlarm) SetEvaluateLowSampleCountPercentile(v string) *MetricAlarm
 // SetEvaluationPeriods sets the EvaluationPeriods field's value.
 func (s *MetricAlarm) SetEvaluationPeriods(v int64) *MetricAlarm {
 	s.EvaluationPeriods = &v
+	return s
+}
+
+// SetEvaluationState sets the EvaluationState field's value.
+func (s *MetricAlarm) SetEvaluationState(v string) *MetricAlarm {
+	s.EvaluationState = &v
 	return s
 }
 
@@ -8962,9 +9563,9 @@ type MetricDataQuery struct {
 	// The granularity, in seconds, of the returned data points. For metrics with
 	// regular resolution, a period can be as short as one minute (60 seconds) and
 	// must be a multiple of 60. For high-resolution metrics that are collected
-	// at intervals of less than one minute, the period can be 1, 5, 10, 30, 60,
-	// or any multiple of 60. High-resolution metrics are those metrics stored by
-	// a PutMetricData operation that includes a StorageResolution of 1 second.
+	// at intervals of less than one minute, the period can be 1, 5, 10, 20, 30,
+	// 60, or any multiple of 60. High-resolution metrics are those metrics stored
+	// by a PutMetricData operation that includes a StorageResolution of 1 second.
 	Period *int64 `min:"1" type:"integer"`
 
 	// When used in GetMetricData, this option indicates whether to return the timestamps
@@ -9402,9 +10003,9 @@ type MetricStat struct {
 	// The granularity, in seconds, of the returned data points. For metrics with
 	// regular resolution, a period can be as short as one minute (60 seconds) and
 	// must be a multiple of 60. For high-resolution metrics that are collected
-	// at intervals of less than one minute, the period can be 1, 5, 10, 30, 60,
-	// or any multiple of 60. High-resolution metrics are those metrics stored by
-	// a PutMetricData call that includes a StorageResolution of 1 second.
+	// at intervals of less than one minute, the period can be 1, 5, 10, 20, 30,
+	// 60, or any multiple of 60. High-resolution metrics are those metrics stored
+	// by a PutMetricData call that includes a StorageResolution of 1 second.
 	//
 	// If the StartTime parameter specifies a time stamp that is greater than 3
 	// hours ago, you must specify the period as follows or no data points in that
@@ -9531,7 +10132,7 @@ type MetricStreamEntry struct {
 
 	// The output format of this metric stream. Valid values are json, opentelemetry1.0,
 	// and opentelemetry0.7.
-	OutputFormat *string `min:"1" type:"string"`
+	OutputFormat *string `min:"1" type:"string" enum:"MetricStreamOutputFormat"`
 
 	// The current state of this stream. Valid values are running and stopped.
 	State *string `type:"string"`
@@ -10137,6 +10738,10 @@ type PutCompositeAlarmInput struct {
 	// Systems Manager actions:
 	//
 	// arn:aws:ssm:region:account-id:opsitem:severity
+	//
+	// Start a Amazon Q Developer operational investigation
+	//
+	// arn:aws:aiops:region:account-id:investigation-group:investigation-group-id
 	AlarmActions []*string `type:"list"`
 
 	// The description for the composite alarm.
@@ -10415,8 +11020,6 @@ type PutDashboardInput struct {
 	//
 	// DashboardName is a required field
 	DashboardName *string `type:"string" required:"true"`
-
-	Tags []*Tag `type:"list"`
 }
 
 // String returns the string representation.
@@ -10446,16 +11049,6 @@ func (s *PutDashboardInput) Validate() error {
 	if s.DashboardName == nil {
 		invalidParams.Add(request.NewErrParamRequired("DashboardName"))
 	}
-	if s.Tags != nil {
-		for i, v := range s.Tags {
-			if v == nil {
-				continue
-			}
-			if err := v.Validate(); err != nil {
-				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Tags", i), err.(request.ErrInvalidParams))
-			}
-		}
-	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -10472,12 +11065,6 @@ func (s *PutDashboardInput) SetDashboardBody(v string) *PutDashboardInput {
 // SetDashboardName sets the DashboardName field's value.
 func (s *PutDashboardInput) SetDashboardName(v string) *PutDashboardInput {
 	s.DashboardName = &v
-	return s
-}
-
-// SetTags sets the Tags field's value.
-func (s *PutDashboardInput) SetTags(v []*Tag) *PutDashboardInput {
-	s.Tags = v
 	return s
 }
 
@@ -10522,6 +11109,21 @@ func (s *PutDashboardOutput) SetDashboardValidationMessages(v []*DashboardValida
 
 type PutInsightRuleInput struct {
 	_ struct{} `type:"structure"`
+
+	// Specify true to have this rule evalute log events after they have been transformed
+	// by Log transformation (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch-Logs-Transformation.html).
+	// If you specify true, then the log events in log groups that have transformers
+	// will be evaluated by Contributor Insights after being transformed. Log groups
+	// that don't have transformers will still have their original log events evaluated
+	// by Contributor Insights.
+	//
+	// The default is false
+	//
+	// If a log group has a transformer, and transformation fails for some log events,
+	// those log events won't be evaluated by Contributor Insights. For information
+	// about investigating log transformation failures, see Transformation metrics
+	// and errors (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Transformation-Errors-Metrics.html).
+	ApplyOnTransformedLogs *bool `type:"boolean"`
 
 	// The definition of the rule, as a JSON object. For details on the valid syntax,
 	// see Contributor Insights Rule Syntax (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContributorInsights-RuleSyntax.html).
@@ -10606,6 +11208,12 @@ func (s *PutInsightRuleInput) Validate() error {
 	return nil
 }
 
+// SetApplyOnTransformedLogs sets the ApplyOnTransformedLogs field's value.
+func (s *PutInsightRuleInput) SetApplyOnTransformedLogs(v bool) *PutInsightRuleInput {
+	s.ApplyOnTransformedLogs = &v
+	return s
+}
+
 // SetRuleDefinition sets the RuleDefinition field's value.
 func (s *PutInsightRuleInput) SetRuleDefinition(v string) *PutInsightRuleInput {
 	s.RuleDefinition = &v
@@ -10650,6 +11258,93 @@ func (s PutInsightRuleOutput) String() string {
 // value will be replaced with "sensitive".
 func (s PutInsightRuleOutput) GoString() string {
 	return s.String()
+}
+
+type PutManagedInsightRulesInput struct {
+	_ struct{} `type:"structure"`
+
+	// A list of ManagedRules to enable.
+	//
+	// ManagedRules is a required field
+	ManagedRules []*ManagedRule `type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutManagedInsightRulesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutManagedInsightRulesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PutManagedInsightRulesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PutManagedInsightRulesInput"}
+	if s.ManagedRules == nil {
+		invalidParams.Add(request.NewErrParamRequired("ManagedRules"))
+	}
+	if s.ManagedRules != nil {
+		for i, v := range s.ManagedRules {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "ManagedRules", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetManagedRules sets the ManagedRules field's value.
+func (s *PutManagedInsightRulesInput) SetManagedRules(v []*ManagedRule) *PutManagedInsightRulesInput {
+	s.ManagedRules = v
+	return s
+}
+
+type PutManagedInsightRulesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// An array that lists the rules that could not be enabled.
+	Failures []*PartialFailure `type:"list"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutManagedInsightRulesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PutManagedInsightRulesOutput) GoString() string {
+	return s.String()
+}
+
+// SetFailures sets the Failures field's value.
+func (s *PutManagedInsightRulesOutput) SetFailures(v []*PartialFailure) *PutManagedInsightRulesOutput {
+	s.Failures = v
+	return s
 }
 
 type PutMetricAlarmInput struct {
@@ -10702,6 +11397,10 @@ type PutMetricAlarmInput struct {
 	//    * arn:aws:ssm:region:account-id:opsitem:severity#CATEGORY=category-name
 	//
 	//    * arn:aws:ssm-incidents::account-id:responseplan/response-plan-name
+	//
+	// Start a Amazon Q Developer operational investigation
+	//
+	// arn:aws:aiops:region:account-id:investigation-group:investigation-group-id
 	AlarmActions []*string `type:"list"`
 
 	// The description for the alarm.
@@ -10748,9 +11447,6 @@ type PutMetricAlarmInput struct {
 	// If you are setting an alarm that requires that a number of consecutive data
 	// points be breaching to trigger the alarm, this value specifies that number.
 	// If you are setting an "M out of N" alarm, this value is the N.
-	//
-	// An alarm's total current evaluation period can be no longer than one day,
-	// so this number multiplied by Period cannot be more than 86,400 seconds.
 	//
 	// EvaluationPeriods is a required field
 	EvaluationPeriods *int64 `min:"1" type:"integer" required:"true"`
@@ -10907,24 +11603,26 @@ type PutMetricAlarmInput struct {
 	OKActions []*string `type:"list"`
 
 	// The length, in seconds, used each time the metric specified in MetricName
-	// is evaluated. Valid values are 10, 30, and any multiple of 60.
+	// is evaluated. Valid values are 10, 20, 30, and any multiple of 60.
 	//
 	// Period is required for alarms based on static thresholds. If you are creating
 	// an alarm based on a metric math expression, you specify the period for each
 	// metric within the objects in the Metrics array.
 	//
-	// Be sure to specify 10 or 30 only for metrics that are stored by a PutMetricData
-	// call with a StorageResolution of 1. If you specify a period of 10 or 30 for
-	// a metric that does not have sub-minute resolution, the alarm still attempts
-	// to gather data at the period rate that you specify. In this case, it does
-	// not receive data for the attempts that do not correspond to a one-minute
+	// Be sure to specify 10, 20, or 30 only for metrics that are stored by a PutMetricData
+	// call with a StorageResolution of 1. If you specify a period of 10, 20, or
+	// 30 for a metric that does not have sub-minute resolution, the alarm still
+	// attempts to gather data at the period rate that you specify. In this case,
+	// it does not receive data for the attempts that do not correspond to a one-minute
 	// data resolution, and the alarm might often lapse into INSUFFICENT_DATA status.
-	// Specifying 10 or 30 also sets this alarm as a high-resolution alarm, which
-	// has a higher charge than other alarms. For more information about pricing,
+	// Specifying 10, 20, or 30 also sets this alarm as a high-resolution alarm,
+	// which has a higher charge than other alarms. For more information about pricing,
 	// see Amazon CloudWatch Pricing (https://aws.amazon.com/cloudwatch/pricing/).
 	//
-	// An alarm's total current evaluation period can be no longer than one day,
-	// so Period multiplied by EvaluationPeriods cannot be more than 86,400 seconds.
+	// An alarm's total current evaluation period can be no longer than seven days,
+	// so Period multiplied by EvaluationPeriods can't be more than 604,800 seconds.
+	// For alarms with a period of less than one hour (3,600 seconds), the total
+	// evaluation period can't be longer than one day (86,400 seconds).
 	Period *int64 `min:"1" type:"integer"`
 
 	// The statistic for the metric specified in MetricName, other than percentile.
@@ -11252,13 +11950,21 @@ func (s PutMetricAlarmOutput) GoString() string {
 type PutMetricDataInput struct {
 	_ struct{} `type:"structure"`
 
+	// Data for metrics that contain associated entity information. You can include
+	// up to two EntityMetricData objects, each of which can contain a single Entity
+	// and associated metrics.
+	//
+	// The limit of metrics allowed, 1000, is the sum of both EntityMetricData and
+	// MetricData metrics.
 	EntityMetricData []*EntityMetricData `type:"list"`
 
-	// The data for the metric. The array can include no more than 1000 metrics
-	// per call.
+	// The data for the metrics. Use this parameter if your metrics do not contain
+	// associated entities. The array can include no more than 1000 metrics per
+	// call.
 	//
-	// MetricData is a required field
-	MetricData []*MetricDatum `type:"list" required:"true"`
+	// The limit of metrics allowed, 1000, is the sum of both EntityMetricData and
+	// MetricData metrics.
+	MetricData []*MetricDatum `type:"list"`
 
 	// The namespace for the metric data. You can use ASCII characters for the namespace,
 	// except for control characters which are not supported.
@@ -11269,6 +11975,30 @@ type PutMetricDataInput struct {
 	// Namespace is a required field
 	Namespace *string `min:"1" type:"string" required:"true"`
 
+	// Whether to accept valid metric data when an invalid entity is sent.
+	//
+	//    * When set to true: Any validation error (for entity or metric data) will
+	//    fail the entire request, and no data will be ingested. The failed operation
+	//    will return a 400 result with the error.
+	//
+	//    * When set to false: Validation errors in the entity will not associate
+	//    the metric with the entity, but the metric data will still be accepted
+	//    and ingested. Validation errors in the metric data will fail the entire
+	//    request, and no data will be ingested. In the case of an invalid entity,
+	//    the operation will return a 200 status, but an additional response header
+	//    will contain information about the validation errors. The new header,
+	//    X-Amzn-Failure-Message is an enumeration of the following values: InvalidEntity
+	//    - The provided entity is invalid. InvalidKeyAttributes - The provided
+	//    KeyAttributes of an entity is invalid. InvalidAttributes - The provided
+	//    Attributes of an entity is invalid. InvalidTypeValue - The provided Type
+	//    in the KeyAttributes of an entity is invalid. EntitySizeTooLarge - The
+	//    number of EntityMetricData objects allowed is 2. MissingRequiredFields
+	//    - There are missing required fields in the KeyAttributes for the provided
+	//    Type. For details of the requirements for specifying an entity, see How
+	//    to add related information to telemetry (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/adding-your-own-related-telemetry.html)
+	//    in the CloudWatch User Guide.
+	//
+	// This parameter is required when EntityMetricData is included.
 	StrictEntityValidation *bool `type:"boolean"`
 }
 
@@ -11293,9 +12023,6 @@ func (s PutMetricDataInput) GoString() string {
 // Validate inspects the fields of the type to determine if they are valid.
 func (s *PutMetricDataInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "PutMetricDataInput"}
-	if s.MetricData == nil {
-		invalidParams.Add(request.NewErrParamRequired("MetricData"))
-	}
 	if s.Namespace == nil {
 		invalidParams.Add(request.NewErrParamRequired("Namespace"))
 	}
@@ -11417,7 +12144,7 @@ type PutMetricStreamInput struct {
 	// see Metric streams output formats (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-metric-streams-formats.html).
 	//
 	// OutputFormat is a required field
-	OutputFormat *string `min:"1" type:"string" required:"true"`
+	OutputFormat *string `min:"1" type:"string" required:"true" enum:"MetricStreamOutputFormat"`
 
 	// The ARN of an IAM role that this metric stream will use to access Amazon
 	// Kinesis Data Firehose resources. This IAM role must already exist and must
@@ -12518,6 +13245,18 @@ func ComparisonOperator_Values() []string {
 }
 
 const (
+	// EvaluationStatePartialData is a EvaluationState enum value
+	EvaluationStatePartialData = "PARTIAL_DATA"
+)
+
+// EvaluationState_Values returns all elements of the EvaluationState enum
+func EvaluationState_Values() []string {
+	return []string{
+		EvaluationStatePartialData,
+	}
+}
+
+const (
 	// HistoryItemTypeConfigurationUpdate is a HistoryItemType enum value
 	HistoryItemTypeConfigurationUpdate = "ConfigurationUpdate"
 
@@ -12534,6 +13273,26 @@ func HistoryItemType_Values() []string {
 		HistoryItemTypeConfigurationUpdate,
 		HistoryItemTypeStateUpdate,
 		HistoryItemTypeAction,
+	}
+}
+
+const (
+	// MetricStreamOutputFormatJson is a MetricStreamOutputFormat enum value
+	MetricStreamOutputFormatJson = "json"
+
+	// MetricStreamOutputFormatOpentelemetry07 is a MetricStreamOutputFormat enum value
+	MetricStreamOutputFormatOpentelemetry07 = "opentelemetry0.7"
+
+	// MetricStreamOutputFormatOpentelemetry10 is a MetricStreamOutputFormat enum value
+	MetricStreamOutputFormatOpentelemetry10 = "opentelemetry1.0"
+)
+
+// MetricStreamOutputFormat_Values returns all elements of the MetricStreamOutputFormat enum
+func MetricStreamOutputFormat_Values() []string {
+	return []string{
+		MetricStreamOutputFormatJson,
+		MetricStreamOutputFormatOpentelemetry07,
+		MetricStreamOutputFormatOpentelemetry10,
 	}
 }
 

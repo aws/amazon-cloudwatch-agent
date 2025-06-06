@@ -104,10 +104,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
 	logger.Info("Starting Prometheus", "version", version.Info())
-	logger.Info("build_context", version.BuildContext())
-	logger.Info("host_details", promRuntime.Uname())
-	logger.Info("fd_limits", promRuntime.FdLimits())
-	logger.Info("vm_limits", promRuntime.VMLimits())
+	logger.Info("build_context", "context", version.BuildContext())
+	logger.Info("host_details", "uname", promRuntime.Uname())
+	logger.Info("fd_limits", "limits", promRuntime.FdLimits())
+	logger.Info("vm_limits", "limits", promRuntime.VMLimits())
 
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
@@ -322,7 +322,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	if err := g.Run(); err != nil {
 		logger.Error("err", "error", err)
 	}
-	logger.Info("msg", "See you next time!")
+	logger.Info("See you next time!")
 	wg.Done()
 }
 
