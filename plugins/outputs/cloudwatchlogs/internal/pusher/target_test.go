@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -118,97 +119,6 @@ func TestTargetManager(t *testing.T) {
 		assert.Error(t, err)
 		mockService.AssertExpectations(t)
 		assertCacheLen(t, manager, 0)
-	})
-
-	t.Run("SetRetentionPolicy", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Retention: 7}
-
-		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
-				{
-					LogGroupName:    aws.String(target.Group),
-					RetentionInDays: aws.Int64(0),
-				},
-			},
-		}, nil).Once()
-		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
-
-		manager := NewTargetManager(logger, mockService)
-		err := manager.InitTarget(target)
-		assert.NoError(t, err)
-		// Wait for async operations to complete
-		time.Sleep(100 * time.Millisecond)
-		mockService.AssertExpectations(t)
-		assertCacheLen(t, manager, 1)
-	})
-
-	t.Run("SetRetentionPolicy/NoChange", func(t *testing.T) {
-		target := Target{Group: "G", Stream: "S", Retention: 7}
-
-		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
-				{
-					LogGroupName:    aws.String(target.Group),
-					RetentionInDays: aws.Int64(7),
-				},
-			},
-		}, nil).Once()
-
-		manager := NewTargetManager(logger, mockService)
-		err := manager.InitTarget(target)
-		assert.NoError(t, err)
-		time.Sleep(100 * time.Millisecond)
-		mockService.AssertExpectations(t)
-		mockService.AssertNotCalled(t, "PutRetentionPolicy")
-		assertCacheLen(t, manager, 1)
-	})
-
-	t.Run("SetRetentionPolicy/LogGroupNotFound", func(t *testing.T) {
-		t.Parallel()
-		target := Target{Group: "G", Stream: "S", Retention: 7}
-
-		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).
-			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(numBackoffRetries)
-
-		manager := NewTargetManager(logger, mockService)
-		err := manager.InitTarget(target)
-		assert.NoError(t, err)
-		time.Sleep(30 * time.Second)
-		mockService.AssertExpectations(t)
-		mockService.AssertNotCalled(t, "PutRetentionPolicy")
-		assertCacheLen(t, manager, 1)
-	})
-
-	t.Run("SetRetentionPolicy/Error", func(t *testing.T) {
-		t.Parallel()
-		target := Target{Group: "G", Stream: "S", Retention: 7}
-
-		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
-				{
-					LogGroupName:    aws.String(target.Group),
-					RetentionInDays: aws.Int64(0),
-				},
-			},
-		}, nil).Once()
-		mockService.On("PutRetentionPolicy", mock.Anything).
-			Return(&cloudwatchlogs.PutRetentionPolicyOutput{},
-				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(numBackoffRetries)
-
-		manager := NewTargetManager(logger, mockService)
-		err := manager.InitTarget(target)
-		assert.NoError(t, err)
-		time.Sleep(30 * time.Second)
-		mockService.AssertExpectations(t)
-		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("SetRetentionPolicy/Negative", func(t *testing.T) {
@@ -341,6 +251,147 @@ func TestTargetManager(t *testing.T) {
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "DescribeLogGroups")
 		assertCacheLen(t, manager, 1)
+	})
+}
+
+func TestDescribeLogGroupsBatching(t *testing.T) {
+	logger := testutil.NewNopLogger()
+
+	t.Run("ProcessBatchOnLimit", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// Setup mock to expect a batch of 50 log groups
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) == logGroupIdentifierLimit
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		for i := 0; i < logGroupIdentifierLimit; i++ {
+			target := Target{
+				Group:     fmt.Sprintf("group-%d", i),
+				Stream:    "stream",
+				Retention: 7,
+			}
+			tm.dlg <- target
+		}
+
+		time.Sleep(100 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("ProcessBatchOnTimer", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// Setup mock to expect a batch of less than 50 log groups
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) == 5
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		for i := 0; i < 5; i++ {
+			target := Target{
+				Group:     fmt.Sprintf("group-%d", i),
+				Stream:    "stream",
+				Retention: 7,
+			}
+			tm.dlg <- target
+		}
+
+		// Wait for ticker to fire (slightly longer than 5 seconds)
+		time.Sleep(5100 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("ProcessBatchInvalidGroups", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// Return empty  result
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		batch := make(map[string]Target)
+		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
+		batch["group-2"] = Target{Group: "group-2", Stream: "stream", Retention: 7}
+		tm.updateTargetBatch(batch)
+
+		// Wait for ticker to fire (slightly longer than 5 seconds)
+		time.Sleep(5100 * time.Millisecond)
+
+		mockService.AssertNotCalled(t, "PutRetentionPolicy")
+	})
+
+	t.Run("RetentionPolicyUpdate", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String("group-1"),
+					RetentionInDays: aws.Int64(1),
+				},
+				{
+					LogGroupName:    aws.String("group-2"),
+					RetentionInDays: aws.Int64(7),
+				},
+			},
+		}, nil).Once()
+
+		// Setup mock for PutRetentionPolicy (should only be called for group-1)
+		mockService.On("PutRetentionPolicy", mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
+			return *input.LogGroupName == "group-1" && *input.RetentionInDays == 7
+		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		// Create a batch with two targets, one needing retention update
+		batch := make(map[string]Target)
+		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
+		batch["group-2"] = Target{Group: "group-2", Stream: "stream", Retention: 7}
+
+		tm.updateTargetBatch(batch)
+		time.Sleep(100 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("BatchRetryOnError", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// Setup mock to fail once then succeed
+		mockService.On("DescribeLogGroups", mock.Anything).
+			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, fmt.Errorf("internal error")).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).
+			Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+				LogGroups: []*cloudwatchlogs.LogGroup{},
+			}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		// Create a batch with one target
+		batch := make(map[string]Target)
+		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
+
+		tm.updateTargetBatch(batch)
+		// Sleep enough for retry
+		time.Sleep(2 * time.Second)
+
+		mockService.AssertExpectations(t)
 	})
 }
 
