@@ -486,9 +486,14 @@ func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
 }
 
 func GetClusterName(conf *confmap.Conf) string {
-	val, ok := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
-	if ok && val != "" {
-		return val
+	val1, ok1 := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
+	if ok1 && val1 != "" {
+		return val1
+	}
+
+	val2, ok2 := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, PrometheusKey, "cluster_name"))
+	if ok2 && val2 != "" {
+		return val2
 	}
 
 	envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
