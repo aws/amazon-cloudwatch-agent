@@ -131,7 +131,7 @@ func TestRanges(t *testing.T) {
 func TestRangeTree_Insert(t *testing.T) {
 	t.Run("NonOverlapping", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
 		assert.Equal(t, 2, tree.Len())
@@ -142,7 +142,7 @@ func TestRangeTree_Insert(t *testing.T) {
 	})
 	t.Run("Merge/Adjacent", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
 		assert.True(t, tree.Insert(Range{start: 5, end: 10}))
@@ -154,7 +154,7 @@ func TestRangeTree_Insert(t *testing.T) {
 	})
 	t.Run("Merge/Overlap/Single", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
 		assert.True(t, tree.Insert(Range{start: 15, end: 25}))
@@ -166,7 +166,7 @@ func TestRangeTree_Insert(t *testing.T) {
 	})
 	t.Run("Merge/Overlap/Multiple", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
 		assert.True(t, tree.Insert(Range{start: 10, end: 15}))
@@ -178,7 +178,7 @@ func TestRangeTree_Insert(t *testing.T) {
 	})
 	t.Run("AlreadyContained", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.True(t, tree.Insert(Range{start: 0, end: 20}))
 		assert.False(t, tree.Insert(Range{start: 10, end: 15}))
 		assert.False(t, tree.Insert(Range{start: 0, end: 20}))
@@ -186,7 +186,7 @@ func TestRangeTree_Insert(t *testing.T) {
 	})
 	t.Run("Invalid", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		r := Range{start: 0, end: 0}
 		assert.False(t, r.IsValid())
 		assert.False(t, tree.Insert(r))
@@ -195,7 +195,7 @@ func TestRangeTree_Insert(t *testing.T) {
 	})
 	t.Run("CollapseWhenOverCapacity", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTreeWithCap(2)
+		tree := newRangeTreeWithCap("test", 2)
 		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tree.Insert(Range{start: 10, end: 15}))
 		assert.True(t, tree.Insert(Range{start: 20, end: 25}))
@@ -211,52 +211,59 @@ func TestRangeTree_Unmarshal(t *testing.T) {
 			{start: 20, end: 30},
 			{start: 45, end: 50},
 		}
-		tree := newRangeTree()
-		assert.NoError(t, tree.UnmarshalText([]byte("50\n0-5,20-30,45-50\ntest")))
+		tree := newRangeTree("test")
+		assert.NoError(t, tree.UnmarshalText([]byte("50\ntest\n0-5,20-30,45-50")))
 		assert.Equal(t, 3, tree.Len())
 		assert.Equal(t, want, tree.Ranges())
 		got, err := tree.MarshalText()
 		assert.NoError(t, err)
-		assert.Equal(t, "50\n0-5,20-30,45-50", string(got))
+		assert.Equal(t, "50\ntest\n0-5,20-30,45-50", string(got))
 		tree.Clear()
 		assert.Equal(t, 0, tree.Len())
 		assert.NoError(t, tree.UnmarshalText(got))
 		assert.Equal(t, want, tree.Ranges())
 	})
 	t.Run("Empty", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.NoError(t, tree.UnmarshalText([]byte("")))
 		assert.Equal(t, 0, tree.Len())
 	})
 	t.Run("Invalid/SingleLine", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.Error(t, tree.UnmarshalText([]byte("test")))
 		assert.Equal(t, 0, tree.Len())
 	})
 	t.Run("Invalid/MultiLine", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.Error(t, tree.UnmarshalText([]byte("test\ntest\ntest")))
 		assert.Equal(t, 0, tree.Len())
 	})
 	t.Run("Invalid/MissingMaxOffset", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.Error(t, tree.UnmarshalText([]byte("0-15,20-30\ntest")))
 		assert.Equal(t, 0, tree.Len())
 	})
 	t.Run("Invalid/Range", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.NoError(t, tree.UnmarshalText([]byte("50\ntest-test\ntest")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 50},
 		}, tree.Ranges())
 	})
+	t.Run("Invalid/OutOfOrder", func(t *testing.T) {
+		tree := newRangeTree("test")
+		assert.NoError(t, tree.UnmarshalText([]byte("50\n10-20,30-50\ntest")))
+		assert.Equal(t, RangeList{
+			{start: 0, end: 50},
+		}, tree.Ranges())
+	})
 	t.Run("BackwardsCompatible/Invalid", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.Error(t, tree.UnmarshalText([]byte("-1\ntest")))
 		assert.Equal(t, 0, tree.Len())
 	})
 	t.Run("BackwardsCompatible/Valid", func(t *testing.T) {
-		tree := newRangeTree()
+		tree := newRangeTree("test")
 		assert.NoError(t, tree.UnmarshalText([]byte("20")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 20},
@@ -269,7 +276,7 @@ func TestRangeTree_Unmarshal(t *testing.T) {
 }
 
 func TestRangeTree_Ranges(t *testing.T) {
-	tree := newRangeTree()
+	tree := newRangeTree("test")
 	got := tree.Ranges()
 	assert.NotNil(t, got)
 	assert.Empty(t, got)
@@ -281,7 +288,7 @@ func TestRangeTree_Ranges(t *testing.T) {
 }
 
 func TestInvertRanges(t *testing.T) {
-	tree := newRangeTree()
+	tree := newRangeTree("test")
 	assert.True(t, tree.Insert(Range{start: 5, end: 10}))
 	assert.True(t, tree.Insert(Range{start: 20, end: 25}))
 	ranges := tree.Ranges()
@@ -301,7 +308,7 @@ func TestInvertRanges(t *testing.T) {
 
 func BenchmarkRangeTree(b *testing.B) {
 	b.Run("Insert", func(b *testing.B) {
-		tree := newRangeTreeWithCap(50)
+		tree := newRangeTreeWithCap("test", 50)
 		r := rand.New(rand.NewSource(64))
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -312,7 +319,7 @@ func BenchmarkRangeTree(b *testing.B) {
 		}
 	})
 	b.Run("Insert/NonOverlapping", func(b *testing.B) {
-		tree := newRangeTreeWithCap(50)
+		tree := newRangeTreeWithCap("test", 50)
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -320,7 +327,7 @@ func BenchmarkRangeTree(b *testing.B) {
 		}
 	})
 	b.Run("Invert", func(b *testing.B) {
-		tree := newRangeTreeWithCap(50)
+		tree := newRangeTreeWithCap("test", 50)
 		for i := 0; i < b.N; i++ {
 			tree.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
 		}
@@ -332,7 +339,7 @@ func BenchmarkRangeTree(b *testing.B) {
 		}
 	})
 	b.Run("Ranges", func(b *testing.B) {
-		tree := newRangeTreeWithCap(1000)
+		tree := newRangeTreeWithCap("test", 1000)
 		for i := 0; i < b.N; i++ {
 			tree.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
 		}

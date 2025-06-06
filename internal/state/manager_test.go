@@ -73,15 +73,47 @@ func TestFileRangeManager(t *testing.T) {
 		got, err := manager.Restore()
 		assert.Error(t, err)
 		assert.NotNil(t, got)
+		assert.Len(t, got, 0)
+		assert.EqualValues(t, 0, got.Last().EndOffset())
 	})
 	t.Run("Restore/Invalid", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "invalid.log"})
-		assert.NoError(t, os.WriteFile(manager.(*rangeManager).stateFilePath, []byte("invalid"), FileMode))
+		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "invalid.log"}
+		manager := NewFileRangeManager(cfg)
+		assert.NoError(t, os.WriteFile(cfg.StateFilePath(), []byte("invalid"), FileMode))
 		got, err := manager.Restore()
 		assert.Error(t, err)
 		assert.NotNil(t, got)
+		assert.Len(t, got, 0)
+		assert.EqualValues(t, 0, got.Last().EndOffset())
+	})
+	t.Run("Restore/Valid/BackwardsCompatible", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "valid.log"}
+		manager := NewFileRangeManager(cfg)
+		assert.NoError(t, os.WriteFile(cfg.StateFilePath(), []byte("2760\nvalid.log"), FileMode))
+		got, err := manager.Restore()
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.Equal(t, RangeList{
+			Range{start: 0, end: 2760},
+		}, got)
+	})
+	t.Run("Restore/Valid/Ranges", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "valid.log"}
+		manager := NewFileRangeManager(cfg)
+		assert.NoError(t, os.WriteFile(cfg.StateFilePath(), []byte("2760\nvalid.log\n100-1056,1640-2760"), FileMode))
+		got, err := manager.Restore()
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.Equal(t, RangeList{
+			Range{start: 100, end: 1056},
+			Range{start: 1640, end: 2760},
+		}, got)
 	})
 	t.Run("Restore/ReplacesExistingTree", func(t *testing.T) {
 		t.Parallel()
@@ -107,7 +139,7 @@ func TestFileRangeManager(t *testing.T) {
 
 		time.Sleep(2 * defaultSaveInterval)
 
-		tree := newRangeTree()
+		tree := newRangeTree("replace.log")
 		tree.Insert(Range{start: 500, end: 600})
 		assert.NoError(t, manager.save(tree))
 		time.Sleep(2 * defaultSaveInterval)
@@ -252,7 +284,7 @@ func TestFileRangeManager(t *testing.T) {
 		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "delete.log"}
 		manager := NewFileRangeManager(cfg).(*rangeManager)
 
-		tree := newRangeTree()
+		tree := newRangeTree("delete.log")
 		tree.Insert(Range{start: 100, end: 200})
 		assert.NoError(t, manager.save(tree))
 		_, err := os.Stat(cfg.StateFilePath())

@@ -70,14 +70,15 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		}
 		return RangeList{}, err
 	}
-	tree := newRangeTreeWithCap(m.maxPersistItems)
+	tree := newRangeTreeWithCap(m.name, m.maxPersistItems)
 	if err = tree.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return RangeList{}, err
 	}
+	restored := tree.Ranges()
 	m.replaceTreeCh <- tree
-	log.Printf("I! Reading from offset range %v in %s", tree.String(), m.name)
-	return tree.Ranges(), nil
+	log.Printf("I! Reading from offset range %s in %s", restored, m.name)
+	return restored, nil
 }
 
 // save the ranges in the state file.
@@ -89,7 +90,6 @@ func (m *rangeManager) save(tree *rangeTree) error {
 	if err != nil {
 		return err
 	}
-	data = append(data, []byte("\n"+m.name)...)
 	return os.WriteFile(m.stateFilePath, data, FileMode)
 }
 
@@ -99,7 +99,7 @@ func (m *rangeManager) Run(notification Notification) {
 	defer t.Stop()
 
 	var lastSeq uint64
-	current := newRangeTreeWithCap(m.maxPersistItems)
+	current := newRangeTreeWithCap(m.name, m.maxPersistItems)
 	shouldSave := false
 	for {
 		select {

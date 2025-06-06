@@ -161,6 +161,8 @@ func (r RangeList) OnlyUseMaxOffset() bool {
 
 // rangeTree is used to store and merge ranges. It is not thread-safe.
 type rangeTree struct {
+	// name is used during marshaling.
+	name string
 	// cap is the maximum number of ranges that can be in the tree.
 	cap int
 	// tree is the backing B-tree.
@@ -171,14 +173,15 @@ var _ encoding.TextMarshaler = (*rangeTree)(nil)
 var _ encoding.TextUnmarshaler = (*rangeTree)(nil)
 
 // newRangeTree creates an unbounded rangeTree.
-func newRangeTree() *rangeTree {
-	return newRangeTreeWithCap(-1)
+func newRangeTree(name string) *rangeTree {
+	return newRangeTreeWithCap(name, -1)
 }
 
 // newRangeTreeWithCap creates a bounded rangeTree based on the capacity. When capacity is exceeded, the oldest ranges
 // are merged/collapsed.
-func newRangeTreeWithCap(capacity int) *rangeTree {
+func newRangeTreeWithCap(name string, capacity int) *rangeTree {
 	return &rangeTree{
+		name: name,
 		cap:  capacity,
 		tree: btree.NewG(defaultBTreeDegree, lessRange),
 	}
@@ -303,8 +306,11 @@ func (t *rangeTree) String() string {
 	return builder.String()
 }
 
-// MarshalText serializes the tree. The format includes the maximum offset on the first line (for backwards
-// compatibility) followed by comma-separated ranges (e.g. "5\n0-5")
+// MarshalText serializes the tree. The format includes the maximum offset on the first line and name on the second
+// line (for backwards compatibility) followed comma-separated ranges.
+// <max offset>
+// <name>
+// <ranges>
 func (t *rangeTree) MarshalText() ([]byte, error) {
 	var rangeBuf bytes.Buffer
 	var maxEnd uint64
@@ -336,6 +342,10 @@ func (t *rangeTree) MarshalText() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	_, err = fmt.Fprintf(&buf, "%s\n", t.name)
+	if err != nil {
+		return nil, err
+	}
 	_, err = buf.Write(rangeBuf.Bytes())
 	if err != nil {
 		return nil, err
@@ -360,10 +370,10 @@ func (t *rangeTree) UnmarshalText(text []byte) error {
 			t.Insert(Range{start: 0, end: maxOffset})
 		}
 	}()
-	if len(lines) < 2 {
+	if len(lines) < 3 {
 		return nil
 	}
-	parts := bytes.Split(lines[1], []byte(","))
+	parts := bytes.Split(lines[2], []byte(","))
 	for _, part := range parts {
 		var r Range
 		if err = r.UnmarshalText(part); err != nil {
