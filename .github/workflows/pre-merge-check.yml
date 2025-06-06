@@ -4,11 +4,6 @@ on:
     workflows: ["PR Build"]
     types:
       - completed
-    branches:
-      - main*
-      - feature*
-      - tjstark/**
-
 jobs:
   log-workflow-id:
     name: Log Workflow ID
@@ -17,6 +12,13 @@ jobs:
       - name: Log Workflow ID
         run: |
           echo "Workflow Run ID: ${{ github.event.workflow_run.id }}"
+
+      - name: Debug Workflow Run Info
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Workflow name: ${{ github.event.workflow.name }}"
+          echo "Workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Base branch: ${{ github.event.workflow_run.head_branch }}"
 
   check-pr-test-workflow:
     name: Check PR Test Success
