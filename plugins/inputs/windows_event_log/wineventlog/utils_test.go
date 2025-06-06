@@ -30,9 +30,9 @@ func TestCreateFilterQuery(t *testing.T) {
 		},
 		{
 			name:     "levels_EventID_Test",
-			levels:   []string{"Error"},
-			eventIDs: []int{4625},
-			want:     "*[System[(Level='Error' and EventID='4625') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]",
+			levels:   []string{"Error", "Critical"},
+			eventIDs: []int{4625, 4624},
+			want:     "*[System[(Level='Error' or Level='Critical') and (EventID='4625' or EventID='4624') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]",
 		},
 		{
 			name:     "no_Input",

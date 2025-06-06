@@ -56,7 +56,7 @@ func TestApplyRule(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
-			"event_ids":         []interface{}{100, 120, 300},
+			"event_ids":         []int{100, 120, 300},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": -1,
@@ -65,7 +65,7 @@ func TestApplyRule(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
-			"event_ids":         []interface{}{4625, 3568},
+			"event_ids":         []int{4625, 3568},
 			"event_format":      "xml",
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,

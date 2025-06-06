@@ -23,7 +23,7 @@ func ToTomlConfig(val interface{}) string {
 	return buf.String()
 }
 
-// Ensures integers in arrays are preserved
+// ensure integers in arrays are preserved
 func processValue(val interface{}) interface{} {
 	switch v := val.(type) {
 	case map[string]interface{}:
