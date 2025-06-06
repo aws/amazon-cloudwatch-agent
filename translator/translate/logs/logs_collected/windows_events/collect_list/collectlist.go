@@ -130,8 +130,8 @@ func addFixedJsonConfig(result map[string]interface{}) {
 }
 
 // Validate event_id inputs
-func validateEventIds(inputEventIds []interface{}) ([]interface{}, []string) {
-	validatedIds := []interface{}{}
+func validateEventIds(inputEventIds []interface{}) ([]int, []string) {
+	validatedIds := []int{}
 	errorMessages := []string{}
 
 	const (

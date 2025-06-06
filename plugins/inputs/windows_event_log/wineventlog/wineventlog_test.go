@@ -24,7 +24,7 @@ var (
 	NAME = "Application"
 	// 2 is ERROR
 	LEVELS          = []string{"2"}
-	EVENTID         = []int{100, 101}
+	EVENTID         = []int{777}
 	GROUP_NAME      = "fake"
 	STREAM_NAME     = "fake"
 	RENDER_FMT      = FormatPlainText
@@ -145,18 +145,22 @@ func seekToEnd(t *testing.T, elog *windowsEventLog) {
 // Fail the test if an error occurs.
 func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eventId uint32) {
 	if doRegister {
-		// Expected to fail if unit test previously ran and installed the event src.
-		_ = eventlog.InstallAsEventCreate(logSrc, eventlog.Info|eventlog.Warning|eventlog.Error)
+		err := eventlog.InstallAsEventCreate(logSrc, eventlog.Info|eventlog.Warning|eventlog.Error)
+		if err != nil {
+			t.Logf("Warning: Failed to install event source %s: %v (may need admin privileges)", logSrc, err)
+			// Continue anyway as it might already be registered
+		}
 	}
 	wlog, err := eventlog.Open(logSrc)
 	assert.NoError(t, err)
 	for i := 0; i < msgCount; i++ {
-		wlog.Error(eventId, fmt.Sprintf("CWA_UnitTest event msg %v", i))
+		err = wlog.Error(eventId, fmt.Sprintf("CWA_UnitTest event msg %v", i))
+		assert.NoError(t, err)
 	}
 	err = wlog.Close()
 	assert.NoError(t, err)
 	// Must sleep after wlog.Error() otherwise elog.read() will not see results.
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 // readHelper reads all events (since last read).

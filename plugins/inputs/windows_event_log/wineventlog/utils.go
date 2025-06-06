@@ -48,22 +48,18 @@ func createFilterQuery(levels []string, eventIDs []int) string {
 	//query results
 	var query string
 	if filterLevels != "" && filterEventID != "" {
-		query = filterLevels + " and " + filterEventID
+		query = "(" + filterLevels + ") and (" + filterEventID + ")"
 	} else if filterLevels != "" && filterEventID == "" {
-		query = filterLevels
+		query = "(" + filterLevels + ")"
 	} else if filterLevels == "" && filterEventID != "" {
-		query = filterEventID
+		query = "(" + filterEventID + ")"
 	}
 
 	//Ignore events older than 2 weeks
 	cutOffPeriod := (time.Hour * 24 * 14).Nanoseconds()
 	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutOffPeriod/int64(time.Millisecond))
-	if filterLevels != "" && filterEventID != "" {
-		query = "*[System[(" + query + ") and " + ignoreOlderThanTwoWeeksFilter + "]]"
-	} else if filterLevels != "" {
-		query = "*[System[(" + filterLevels + ") and " + ignoreOlderThanTwoWeeksFilter + "]]"
-	} else if filterEventID != "" {
-		query = "*[System[(" + filterEventID + ") and " + ignoreOlderThanTwoWeeksFilter + "]]"
+	if query != "" {
+		query = "*[System[" + query + " and " + ignoreOlderThanTwoWeeksFilter + "]]"
 	} else {
 		query = "*[System[" + ignoreOlderThanTwoWeeksFilter + "]]"
 	}
