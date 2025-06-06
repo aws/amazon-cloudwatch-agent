@@ -41,13 +41,20 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins" // do not remove, necessary for telegraf to know what plugins are used
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
+	"github.com/aws/amazon-cloudwatch-agent/tool/downloader"
+	downloaderflags "github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/tool/wizard"
+	wizardflags "github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	translatorflags "github.com/aws/amazon-cloudwatch-agent/translator/flags"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 )
 
@@ -94,6 +101,11 @@ var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Col
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
+
+// sub-commands
+var fConfigTranslator = flag.Bool(translatorflags.TranslatorCommand, false, "run in config-translator mode")
+var fConfigDownloader = flag.Bool(downloaderflags.Command, false, "run in config-downloader mode")
+var fConfigWizard = flag.Bool(wizardflags.Command, false, "run in config-wizard mode")
 
 var stop chan struct{}
 
@@ -492,6 +504,10 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
+	translatorFlags := cmdwrapper.AddFlags(translatorflags.TranslatorCommand, translatorflags.TranslatorFlags)
+	downloaderFlags := cmdwrapper.AddFlags(downloaderflags.Command, downloaderflags.DownloaderFlags)
+	wizardFlags := cmdwrapper.AddFlags(wizardflags.Command, wizardflags.WizardFlags)
+
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
 		_ = fOtelConfigs.Set(getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath))
@@ -612,6 +628,24 @@ func main() {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}
+		}
+		return
+	case *fConfigTranslator:
+		err := cmdutil.RunTranslator(translatorFlags)
+		if err != nil {
+			log.Fatalf("E! Failed to initialize config translator: %v", err)
+		}
+		return
+	case *fConfigDownloader:
+		err := downloader.RunDownloaderFromFlags(downloaderFlags)
+		if err != nil {
+			log.Fatalf("E! Failed to initialize config downloader: %v", err)
+		}
+		return
+	case *fConfigWizard:
+		err := wizard.RunWizardFromFlags(wizardFlags)
+		if err != nil {
+			log.Fatalf("E! Failed to run config wizard: %v", err)
 		}
 		return
 	}
