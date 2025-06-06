@@ -34,4 +34,6 @@ const (
 	LogType               = "log_type"
 
 	LogBackpressureModeKey = "backpressure_mode"
+
+	RetentionPolicyTTLFileName = "Amazon_CloudWatch_RetentionPolicyTTL"
 )

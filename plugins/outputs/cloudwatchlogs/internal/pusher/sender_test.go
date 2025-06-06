@@ -58,6 +58,10 @@ func (m *mockTargetManager) PutRetentionPolicy(target Target) {
 	m.Called(target)
 }
 
+func (m *mockTargetManager) Stop() {
+	m.Called()
+}
+
 func TestSender(t *testing.T) {
 	logger := testutil.NewNopLogger()
 
