@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
@@ -28,6 +29,7 @@ type aggregationDatum struct {
 	cloudwatch.MetricDatum
 	aggregationInterval time.Duration
 	distribution        distribution.Distribution
+	expHistDistribution *exph.ExpHistogramDistribution
 	entity              cloudwatch.Entity
 }
 
@@ -140,7 +142,7 @@ func (durationAgg *durationAggregator) aggregating() {
 			if !ok {
 				// First entry. Initialize it.
 				durationAgg.metricMap[metricMapKey] = m
-				if m.distribution == nil {
+				if m.distribution == nil && m.expHistDistribution == nil {
 					// Assume function pointer is always valid.
 					m.distribution = distribution.NewDistribution()
 					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
@@ -155,13 +157,19 @@ func (durationAgg *durationAggregator) aggregating() {
 				// Else the first entry has a distribution, so do nothing.
 			} else {
 				// Update an existing entry.
-				if m.distribution == nil {
+				if m.expHistDistribution != nil {
+					if aggregatedMetric.expHistDistribution == nil {
+						log.Printf("E! cannot aggregate exponential histogram with non-exponential histogram metric")
+					} else {
+						aggregatedMetric.expHistDistribution.AddDistribution(m.expHistDistribution)
+					}
+				} else if m.distribution != nil {
+					aggregatedMetric.distribution.AddDistribution(m.distribution)
+				} else {
 					err := aggregatedMetric.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
 					if err != nil {
 						log.Printf("W! err %s, metric %s", err, *m.MetricName)
 					}
-				} else {
-					aggregatedMetric.distribution.AddDistribution(m.distribution)
 				}
 			}
 		case <-durationAgg.ticker.C:
