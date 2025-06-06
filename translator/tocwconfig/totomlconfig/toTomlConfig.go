@@ -11,7 +11,7 @@ import (
 )
 
 func ToTomlConfig(val interface{}) string {
-	// Process the value to ensure integers in arrays are preserved
+	// Process value to ensure integers in arrays are preserved
 	processedVal := processValue(val)
 
 	buf := bytes.Buffer{}
@@ -23,7 +23,7 @@ func ToTomlConfig(val interface{}) string {
 	return buf.String()
 }
 
-// processValue recursively processes the value to ensure integers in arrays are preserved
+// Ensures integers in arrays are preserved
 func processValue(val interface{}) interface{} {
 	switch v := val.(type) {
 	case map[string]interface{}:
