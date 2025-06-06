@@ -1,12 +1,13 @@
 name: Pre-merge Workflow Check
 on:
   workflow_run:
-    workflows: ["PR Build", "pr build"]
+    workflows: ["PR Build"]
     types:
       - completed
     branches:
       - main*
       - feature*
+      - tjstark/**
 
 jobs:
   log-workflow-id:
