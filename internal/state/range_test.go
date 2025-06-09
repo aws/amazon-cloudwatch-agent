@@ -128,170 +128,284 @@ func TestRanges(t *testing.T) {
 	})
 }
 
-func TestRangeTree_Insert(t *testing.T) {
+func TestNewRangeTracker(t *testing.T) {
+	for i := -10; i <= 10; i++ {
+		tracker := newRangeTracker("test", i)
+		if i == 1 {
+			_, ok := tracker.(*maxOffsetTracker)
+			assert.True(t, ok)
+		} else {
+			mrt, ok := tracker.(*multiRangeTracker)
+			assert.True(t, ok)
+			assert.EqualValues(t, i, mrt.cap)
+		}
+	}
+}
+
+func TestMaxOffsetTracker_Insert(t *testing.T) {
 	t.Run("NonOverlapping", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree("test")
-		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
-		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-5,20-30]", tree.String())
-		assert.False(t, tree.Insert(Range{start: 20, end: 30, seq: 1}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-5,20-30]", tree.String())
-	})
-	t.Run("Merge/Adjacent", func(t *testing.T) {
-		t.Parallel()
-		tree := newRangeTree("test")
-		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
-		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
-		assert.True(t, tree.Insert(Range{start: 5, end: 10}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-10,20-30]", tree.String())
-		assert.True(t, tree.Insert(Range{start: 15, end: 20}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-10,15-30]", tree.String())
-	})
-	t.Run("Merge/Overlap/Single", func(t *testing.T) {
-		t.Parallel()
-		tree := newRangeTree("test")
-		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
-		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
-		assert.True(t, tree.Insert(Range{start: 15, end: 25}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-5,15-30]", tree.String())
-		assert.True(t, tree.Insert(Range{start: 2, end: 8}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-8,15-30]", tree.String())
-	})
-	t.Run("Merge/Overlap/Multiple", func(t *testing.T) {
-		t.Parallel()
-		tree := newRangeTree("test")
-		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
-		assert.True(t, tree.Insert(Range{start: 20, end: 30}))
-		assert.True(t, tree.Insert(Range{start: 10, end: 15}))
-		assert.Equal(t, 3, tree.Len())
-		assert.Equal(t, "[0-5,10-15,20-30]", tree.String())
-		assert.True(t, tree.Insert(Range{start: 5, end: 25}))
-		assert.Equal(t, 1, tree.Len())
-		assert.Equal(t, "[0-30]", tree.String())
+		tracker := newMaxOffsetTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
+		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
+		assert.Equal(t, 1, tracker.Len())
+		assert.Equal(t, "[0-30]", tracker.String())
+		assert.True(t, tracker.Insert(Range{start: 5, end: 15, seq: 1}))
+		assert.Equal(t, 1, tracker.Len())
+		assert.Equal(t, "[0-15]", tracker.String())
 	})
 	t.Run("AlreadyContained", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree("test")
-		assert.True(t, tree.Insert(Range{start: 0, end: 20}))
-		assert.False(t, tree.Insert(Range{start: 10, end: 15}))
-		assert.False(t, tree.Insert(Range{start: 0, end: 20}))
-		assert.Equal(t, 1, tree.Len())
+		tracker := newMaxOffsetTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 20}))
+		assert.False(t, tracker.Insert(Range{start: 10, end: 15}))
+		assert.False(t, tracker.Insert(Range{start: 0, end: 20}))
+		assert.Equal(t, 1, tracker.Len())
 	})
 	t.Run("Invalid", func(t *testing.T) {
 		t.Parallel()
-		tree := newRangeTree("test")
+		tracker := newMaxOffsetTracker("test")
 		r := Range{start: 0, end: 0}
 		assert.False(t, r.IsValid())
-		assert.False(t, tree.Insert(r))
+		assert.False(t, tracker.Insert(r))
 		r.Set(10, 5)
-		assert.False(t, tree.Insert(r))
-	})
-	t.Run("CollapseWhenOverCapacity", func(t *testing.T) {
-		t.Parallel()
-		tree := newRangeTreeWithCap("test", 2)
-		assert.True(t, tree.Insert(Range{start: 0, end: 5}))
-		assert.True(t, tree.Insert(Range{start: 10, end: 15}))
-		assert.True(t, tree.Insert(Range{start: 20, end: 25}))
-		assert.Equal(t, 2, tree.Len())
-		assert.Equal(t, "[0-15,20-25]", tree.String())
+		assert.False(t, tracker.Insert(r))
 	})
 }
 
-func TestRangeTree_Unmarshal(t *testing.T) {
+func TestMaxOffsetTracker_Unmarshal(t *testing.T) {
+	t.Run("MarshalLoop", func(t *testing.T) {
+		want := RangeList{
+			{start: 0, end: 50},
+		}
+		tracker := newMaxOffsetTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest\n0-5,20-30,45-50")))
+		assert.Equal(t, 1, tracker.Len())
+		assert.Equal(t, want, tracker.Ranges())
+		got, err := tracker.MarshalText()
+		assert.NoError(t, err)
+		assert.Equal(t, "50\ntest\n0-50", string(got))
+		tracker.Clear()
+		assert.Equal(t, 0, tracker.Len())
+		assert.NoError(t, tracker.UnmarshalText(got))
+		assert.Equal(t, want, tracker.Ranges())
+	})
+	t.Run("Empty", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("")))
+		assert.Equal(t, 0, tracker.Len())
+	})
+	t.Run("Invalid/SingleLine", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("test")))
+		assert.Equal(t, 0, tracker.Len())
+	})
+	t.Run("Invalid/MultiLine", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("test\ntest\ntest")))
+		assert.Equal(t, 0, tracker.Len())
+	})
+	t.Run("Invalid/MissingMaxOffset", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("0-15,20-30\ntest")))
+		assert.Equal(t, 0, tracker.Len())
+	})
+	t.Run("Invalid/Range", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest-test\ntest")))
+		assert.Equal(t, RangeList{
+			{start: 0, end: 50},
+		}, tracker.Ranges())
+	})
+	t.Run("Invalid/OutOfOrder", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\n10-20,30-50\ntest")))
+		assert.Equal(t, RangeList{
+			{start: 0, end: 50},
+		}, tracker.Ranges())
+	})
+	t.Run("BackwardsCompatible/Invalid", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("-1\ntest")))
+		assert.Equal(t, 0, tracker.Len())
+	})
+	t.Run("BackwardsCompatible/Valid", func(t *testing.T) {
+		tracker := newMaxOffsetTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("20")))
+		assert.Equal(t, RangeList{
+			{start: 0, end: 20},
+		}, tracker.Ranges())
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest")))
+		assert.Equal(t, RangeList{
+			{start: 0, end: 50},
+		}, tracker.Ranges())
+	})
+}
+
+func TestMultiRangeTracker_Insert(t *testing.T) {
+	t.Run("NonOverlapping", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
+		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-5,20-30]", tracker.String())
+		assert.False(t, tracker.Insert(Range{start: 20, end: 30, seq: 1}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-5,20-30]", tracker.String())
+	})
+	t.Run("Merge/Adjacent", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
+		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
+		assert.True(t, tracker.Insert(Range{start: 5, end: 10}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-10,20-30]", tracker.String())
+		assert.True(t, tracker.Insert(Range{start: 15, end: 20}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-10,15-30]", tracker.String())
+	})
+	t.Run("Merge/Overlap/Single", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
+		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
+		assert.True(t, tracker.Insert(Range{start: 15, end: 25}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-5,15-30]", tracker.String())
+		assert.True(t, tracker.Insert(Range{start: 2, end: 8}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-8,15-30]", tracker.String())
+	})
+	t.Run("Merge/Overlap/Multiple", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
+		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
+		assert.True(t, tracker.Insert(Range{start: 10, end: 15}))
+		assert.Equal(t, 3, tracker.Len())
+		assert.Equal(t, "[0-5,10-15,20-30]", tracker.String())
+		assert.True(t, tracker.Insert(Range{start: 5, end: 25}))
+		assert.Equal(t, 1, tracker.Len())
+		assert.Equal(t, "[0-30]", tracker.String())
+	})
+	t.Run("AlreadyContained", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTracker("test")
+		assert.True(t, tracker.Insert(Range{start: 0, end: 20}))
+		assert.False(t, tracker.Insert(Range{start: 10, end: 15}))
+		assert.False(t, tracker.Insert(Range{start: 0, end: 20}))
+		assert.Equal(t, 1, tracker.Len())
+	})
+	t.Run("Invalid", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTracker("test")
+		r := Range{start: 0, end: 0}
+		assert.False(t, r.IsValid())
+		assert.False(t, tracker.Insert(r))
+		r.Set(10, 5)
+		assert.False(t, tracker.Insert(r))
+	})
+	t.Run("CollapseWhenOverCapacity", func(t *testing.T) {
+		t.Parallel()
+		tracker := newMultiRangeTrackerWithCap("test", 2)
+		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
+		assert.True(t, tracker.Insert(Range{start: 10, end: 15}))
+		assert.True(t, tracker.Insert(Range{start: 20, end: 25}))
+		assert.Equal(t, 2, tracker.Len())
+		assert.Equal(t, "[0-15,20-25]", tracker.String())
+	})
+}
+
+func TestMultiRangeTracker_Unmarshal(t *testing.T) {
 	t.Run("MarshalLoop", func(t *testing.T) {
 		want := RangeList{
 			{start: 0, end: 5},
 			{start: 20, end: 30},
 			{start: 45, end: 50},
 		}
-		tree := newRangeTree("test")
-		assert.NoError(t, tree.UnmarshalText([]byte("50\ntest\n0-5,20-30,45-50")))
-		assert.Equal(t, 3, tree.Len())
-		assert.Equal(t, want, tree.Ranges())
-		got, err := tree.MarshalText()
+		tracker := newMultiRangeTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest\n0-5,20-30,45-50")))
+		assert.Equal(t, 3, tracker.Len())
+		assert.Equal(t, want, tracker.Ranges())
+		got, err := tracker.MarshalText()
 		assert.NoError(t, err)
 		assert.Equal(t, "50\ntest\n0-5,20-30,45-50", string(got))
-		tree.Clear()
-		assert.Equal(t, 0, tree.Len())
-		assert.NoError(t, tree.UnmarshalText(got))
-		assert.Equal(t, want, tree.Ranges())
+		tracker.Clear()
+		assert.Equal(t, 0, tracker.Len())
+		assert.NoError(t, tracker.UnmarshalText(got))
+		assert.Equal(t, want, tracker.Ranges())
 	})
 	t.Run("Empty", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.NoError(t, tree.UnmarshalText([]byte("")))
-		assert.Equal(t, 0, tree.Len())
+		tracker := newMultiRangeTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("")))
+		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/SingleLine", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.Error(t, tree.UnmarshalText([]byte("test")))
-		assert.Equal(t, 0, tree.Len())
+		tracker := newMultiRangeTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("test")))
+		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/MultiLine", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.Error(t, tree.UnmarshalText([]byte("test\ntest\ntest")))
-		assert.Equal(t, 0, tree.Len())
+		tracker := newMultiRangeTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("test\ntest\ntest")))
+		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/MissingMaxOffset", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.Error(t, tree.UnmarshalText([]byte("0-15,20-30\ntest")))
-		assert.Equal(t, 0, tree.Len())
+		tracker := newMultiRangeTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("0-15,20-30\ntest")))
+		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/Range", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.NoError(t, tree.UnmarshalText([]byte("50\ntest-test\ntest")))
+		tracker := newMultiRangeTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest-test\ntest")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 50},
-		}, tree.Ranges())
+		}, tracker.Ranges())
 	})
 	t.Run("Invalid/OutOfOrder", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.NoError(t, tree.UnmarshalText([]byte("50\n10-20,30-50\ntest")))
+		tracker := newMultiRangeTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\n10-20,30-50\ntest")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 50},
-		}, tree.Ranges())
+		}, tracker.Ranges())
 	})
 	t.Run("BackwardsCompatible/Invalid", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.Error(t, tree.UnmarshalText([]byte("-1\ntest")))
-		assert.Equal(t, 0, tree.Len())
+		tracker := newMultiRangeTracker("test")
+		assert.Error(t, tracker.UnmarshalText([]byte("-1\ntest")))
+		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("BackwardsCompatible/Valid", func(t *testing.T) {
-		tree := newRangeTree("test")
-		assert.NoError(t, tree.UnmarshalText([]byte("20")))
+		tracker := newMultiRangeTracker("test")
+		assert.NoError(t, tracker.UnmarshalText([]byte("20")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 20},
-		}, tree.Ranges())
-		assert.NoError(t, tree.UnmarshalText([]byte("50\ntest")))
+		}, tracker.Ranges())
+		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 50},
-		}, tree.Ranges())
+		}, tracker.Ranges())
 	})
 }
 
-func TestRangeTree_Ranges(t *testing.T) {
-	tree := newRangeTree("test")
-	got := tree.Ranges()
+func TestMultiRangeTracker_Ranges(t *testing.T) {
+	tracker := newMultiRangeTracker("test")
+	got := tracker.Ranges()
 	assert.NotNil(t, got)
 	assert.Empty(t, got)
-	tree.Insert(Range{start: 0, end: 5})
-	got = tree.Ranges()
+	tracker.Insert(Range{start: 0, end: 5})
+	got = tracker.Ranges()
 	assert.Equal(t, RangeList{
 		Range{start: 0, end: 5},
 	}, got)
 }
 
 func TestInvertRanges(t *testing.T) {
-	tree := newRangeTree("test")
-	assert.True(t, tree.Insert(Range{start: 5, end: 10}))
-	assert.True(t, tree.Insert(Range{start: 20, end: 25}))
-	ranges := tree.Ranges()
+	tracker := newMultiRangeTracker("test")
+	assert.True(t, tracker.Insert(Range{start: 5, end: 10}))
+	assert.True(t, tracker.Insert(Range{start: 20, end: 25}))
+	ranges := tracker.Ranges()
 	got := InvertRanges(ranges)
 	want := RangeList{
 		{start: 0, end: 5},
@@ -299,39 +413,39 @@ func TestInvertRanges(t *testing.T) {
 		{start: 25, end: unboundedEnd},
 	}
 	assert.Equal(t, want, got)
-	tree.Clear()
+	tracker.Clear()
 	want = RangeList{
 		{start: 0, end: unboundedEnd},
 	}
-	assert.Equal(t, want, InvertRanges(tree.Ranges()))
+	assert.Equal(t, want, InvertRanges(tracker.Ranges()))
 }
 
-func BenchmarkRangeTree(b *testing.B) {
+func BenchmarkMultiRangeTracker(b *testing.B) {
 	b.Run("Insert", func(b *testing.B) {
-		tree := newRangeTreeWithCap("test", 50)
+		tracker := newMultiRangeTrackerWithCap("test", 50)
 		r := rand.New(rand.NewSource(64))
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			start := r.Uint64() % 1000000
 			end := start + uint64(r.Intn(100)+1)
-			tree.Insert(Range{start: start, end: end})
+			tracker.Insert(Range{start: start, end: end})
 		}
 	})
 	b.Run("Insert/NonOverlapping", func(b *testing.B) {
-		tree := newRangeTreeWithCap("test", 50)
+		tracker := newMultiRangeTrackerWithCap("test", 50)
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			tree.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
+			tracker.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
 		}
 	})
 	b.Run("Invert", func(b *testing.B) {
-		tree := newRangeTreeWithCap("test", 50)
+		tracker := newMultiRangeTrackerWithCap("test", 50)
 		for i := 0; i < b.N; i++ {
-			tree.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
+			tracker.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
 		}
-		ranges := tree.Ranges()
+		ranges := tracker.Ranges()
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -339,14 +453,14 @@ func BenchmarkRangeTree(b *testing.B) {
 		}
 	})
 	b.Run("Ranges", func(b *testing.B) {
-		tree := newRangeTreeWithCap("test", 1000)
+		tracker := newMultiRangeTrackerWithCap("test", 1000)
 		for i := 0; i < b.N; i++ {
-			tree.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
+			tracker.Insert(Range{start: uint64(i * 10), end: uint64(i*10 + 5)})
 		}
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_ = tree.Ranges()
+			_ = tracker.Ranges()
 		}
 	})
 }

@@ -37,7 +37,8 @@ func (r *Range) Set(start, end uint64) {
 	if start < r.start {
 		r.seq++
 	}
-	r.start, r.end = start, end
+	r.start = start
+	r.end = end
 }
 
 // SetInt64 is the int64 version of Set. If start or end are negative, the range is not updated.
@@ -73,7 +74,8 @@ func (r Range) EndOffsetInt64() int64 {
 func (r *Range) Shift(newEnd uint64) {
 	if newEnd < r.end {
 		r.seq++
-		r.start, r.end = 0, newEnd
+		r.start = 0
+		r.end = newEnd
 	} else {
 		r.start = r.end
 		r.end = newEnd
@@ -159,8 +161,113 @@ func (r RangeList) OnlyUseMaxOffset() bool {
 	return len(r) == 0 || (len(r) == 1 && r[0].StartOffset() == 0)
 }
 
-// rangeTree is used to store and merge ranges. It is not thread-safe.
-type rangeTree struct {
+// RangeTracker manages a collection of ranges. Handles insertion, retrieval, and serialization.
+type RangeTracker interface {
+	encoding.TextMarshaler
+	encoding.TextUnmarshaler
+	fmt.Stringer
+	// Insert a Range into the store. Returns false if the Range is already contained by another Range in the store or is
+	// invalid.
+	Insert(Range) bool
+	// Ranges returns all ranges in sorted order.
+	Ranges() RangeList
+	// Len returns the number of ranges in the store.
+	Len() int
+	// Clear all stored ranges.
+	Clear()
+}
+
+// newRangeTracker creates a RangeTracker based on the capacity. If the capacity is 1, it creates a maxOffsetTracker.
+// Otherwise, it will create a multiRangeTracker configured with the capacity.
+func newRangeTracker(name string, capacity int) RangeTracker {
+	if capacity == 1 {
+		return newMaxOffsetTracker(name)
+	}
+	return newMultiRangeTrackerWithCap(name, capacity)
+}
+
+// maxOffsetTracker only keeps track of the maximum offset. It stores a single range starting at 0 and ending at the
+// maximum observed offset.
+type maxOffsetTracker struct {
+	name string
+	r    Range
+}
+
+var _ RangeTracker = (*maxOffsetTracker)(nil)
+
+func newMaxOffsetTracker(name string) RangeTracker {
+	return &maxOffsetTracker{name: name}
+}
+
+func (t *maxOffsetTracker) Insert(r Range) bool {
+	if !r.IsValid() {
+		return false
+	}
+	if t.r.end < r.end || t.r.seq < r.seq {
+		t.r.end = r.end
+		t.r.seq = r.seq
+		return true
+	}
+	return false
+}
+
+func (t *maxOffsetTracker) Ranges() RangeList {
+	return RangeList{t.r}
+}
+
+func (t *maxOffsetTracker) Len() int {
+	if t.r.IsValid() {
+		return 1
+	}
+	return 0
+}
+
+func (t *maxOffsetTracker) Clear() {
+	t.r.start = 0
+	t.r.end = 0
+}
+
+func (t *maxOffsetTracker) String() string {
+	return fmt.Sprintf("[%s]", t.r)
+}
+
+func (t *maxOffsetTracker) MarshalText() ([]byte, error) {
+	var buf bytes.Buffer
+	_, err := fmt.Fprintf(&buf, "%d\n", t.r.end)
+	if err != nil {
+		return nil, err
+	}
+	_, err = fmt.Fprintf(&buf, "%s\n", t.name)
+	if err != nil {
+		return nil, err
+	}
+	b, err := t.r.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	_, err = buf.Write(b)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (t *maxOffsetTracker) UnmarshalText(text []byte) error {
+	t.Clear()
+	if len(text) == 0 {
+		return nil
+	}
+	lines := bytes.Split(text, []byte("\n"))
+	maxOffset, err := strconv.ParseUint(string(lines[0]), 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid max offset: %w", err)
+	}
+	t.Insert(Range{start: 0, end: maxOffset})
+	return nil
+}
+
+// multiRangeTracker is used to track multiple ranges and handle merges. It is not thread-safe.
+type multiRangeTracker struct {
 	// name is used during marshaling.
 	name string
 	// cap is the maximum number of ranges that can be in the tree.
@@ -169,18 +276,17 @@ type rangeTree struct {
 	tree *btree.BTreeG[Range]
 }
 
-var _ encoding.TextMarshaler = (*rangeTree)(nil)
-var _ encoding.TextUnmarshaler = (*rangeTree)(nil)
+var _ RangeTracker = (*multiRangeTracker)(nil)
 
-// newRangeTree creates an unbounded rangeTree.
-func newRangeTree(name string) *rangeTree {
-	return newRangeTreeWithCap(name, -1)
+// newMultiRangeTracker creates an unbounded multiRangeTracker.
+func newMultiRangeTracker(name string) RangeTracker {
+	return newMultiRangeTrackerWithCap(name, -1)
 }
 
-// newRangeTreeWithCap creates a bounded rangeTree based on the capacity. When capacity is exceeded, the oldest ranges
+// newMultiRangeTrackerWithCap creates a bounded multiRangeTracker based on the capacity. When capacity is exceeded, the oldest ranges
 // are merged/collapsed.
-func newRangeTreeWithCap(name string, capacity int) *rangeTree {
-	return &rangeTree{
+func newMultiRangeTrackerWithCap(name string, capacity int) RangeTracker {
+	return &multiRangeTracker{
 		name: name,
 		cap:  capacity,
 		tree: btree.NewG(defaultBTreeDegree, lessRange),
@@ -192,7 +298,7 @@ func newRangeTreeWithCap(name string, capacity int) *rangeTree {
 //
 // If the added Range overlaps or is adjacent with any existing Range, they are merged. If the tree capacity is hit
 // after the insert, merges the two bottom ranges.
-func (t *rangeTree) Insert(r Range) bool {
+func (t *multiRangeTracker) Insert(r Range) bool {
 	if !r.IsValid() {
 		return false
 	}
@@ -244,7 +350,7 @@ func (t *rangeTree) Insert(r Range) bool {
 }
 
 // collapseOldest takes the two oldest (i.e. smallest start) ranges and merges them.
-func (t *rangeTree) collapseOldest() {
+func (t *multiRangeTracker) collapseOldest() {
 	var first, second *Range
 	var count int
 	t.tree.Ascend(func(item Range) bool {
@@ -270,7 +376,7 @@ func (t *rangeTree) collapseOldest() {
 }
 
 // Ranges returns all ranges in sorted order.
-func (t *rangeTree) Ranges() RangeList {
+func (t *multiRangeTracker) Ranges() RangeList {
 	ranges := make(RangeList, 0, t.tree.Len())
 	t.tree.Ascend(func(item Range) bool {
 		ranges = append(ranges, item)
@@ -280,17 +386,17 @@ func (t *rangeTree) Ranges() RangeList {
 }
 
 // Len the number of ranges in the tree.
-func (t *rangeTree) Len() int {
+func (t *multiRangeTracker) Len() int {
 	return t.tree.Len()
 }
 
 // Clear removes all ranges in the tree.
-func (t *rangeTree) Clear() {
+func (t *multiRangeTracker) Clear() {
 	t.tree.Clear(false)
 }
 
 // String returns a string representation of all stored ranges (e.g. "[0-5,10-15]").
-func (t *rangeTree) String() string {
+func (t *multiRangeTracker) String() string {
 	var builder strings.Builder
 	first := true
 	builder.WriteByte('[')
@@ -311,7 +417,7 @@ func (t *rangeTree) String() string {
 // <max offset>
 // <name>
 // <ranges>
-func (t *rangeTree) MarshalText() ([]byte, error) {
+func (t *multiRangeTracker) MarshalText() ([]byte, error) {
 	var rangeBuf bytes.Buffer
 	var maxEnd uint64
 	first := true
@@ -355,7 +461,7 @@ func (t *rangeTree) MarshalText() ([]byte, error) {
 
 // UnmarshalText deserializes the text to populate the tree. For backwards compatibility, if there is a maximum offset
 // but no ranges, populates the tree with [0, maxOffset).
-func (t *rangeTree) UnmarshalText(text []byte) error {
+func (t *multiRangeTracker) UnmarshalText(text []byte) error {
 	t.Clear()
 	if len(text) == 0 {
 		return nil

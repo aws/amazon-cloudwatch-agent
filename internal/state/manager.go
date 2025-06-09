@@ -18,12 +18,12 @@ const (
 )
 
 type rangeManager struct {
-	name            string
-	stateFilePath   string
-	queue           chan Range
-	saveInterval    time.Duration
-	maxPersistItems int
-	replaceTreeCh   chan *rangeTree
+	name             string
+	stateFilePath    string
+	queue            chan Range
+	saveInterval     time.Duration
+	maxPersistItems  int
+	replaceTrackerCh chan RangeTracker
 }
 
 // FileRangeManager is a state manager that handles the Range.
@@ -39,12 +39,12 @@ func NewFileRangeManager(cfg ManagerConfig) FileRangeManager {
 		cfg.SaveInterval = defaultSaveInterval
 	}
 	return &rangeManager{
-		name:            cfg.Name,
-		stateFilePath:   cfg.StateFilePath(),
-		queue:           make(chan Range, cfg.QueueSize),
-		saveInterval:    cfg.SaveInterval,
-		maxPersistItems: cfg.MaxPersistItems,
-		replaceTreeCh:   make(chan *rangeTree, 1),
+		name:             cfg.Name,
+		stateFilePath:    cfg.StateFilePath(),
+		queue:            make(chan Range, cfg.QueueSize),
+		saveInterval:     cfg.SaveInterval,
+		maxPersistItems:  cfg.MaxPersistItems,
+		replaceTrackerCh: make(chan RangeTracker, 1),
 	}
 }
 
@@ -54,7 +54,7 @@ func (m *rangeManager) Enqueue(item Range) {
 	case m.queue <- item:
 	default:
 		old := <-m.queue
-		log.Printf("D! Offset range queue is full for %s. Dropping oldest offset range: %v", m.stateFilePath, old.String())
+		log.Printf("D! Offset range queue is full for %s. Dropping oldest offset range: %s", m.stateFilePath, old)
 		m.queue <- item
 	}
 }
@@ -70,23 +70,23 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		}
 		return RangeList{}, err
 	}
-	tree := newRangeTreeWithCap(m.name, m.maxPersistItems)
-	if err = tree.UnmarshalText(content); err != nil {
+	tracker := newRangeTracker(m.name, m.maxPersistItems)
+	if err = tracker.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return RangeList{}, err
 	}
-	restored := tree.Ranges()
-	m.replaceTreeCh <- tree
+	restored := tracker.Ranges()
+	m.replaceTrackerCh <- tracker
 	log.Printf("I! Reading from offset range %s in %s", restored, m.name)
 	return restored, nil
 }
 
 // save the ranges in the state file.
-func (m *rangeManager) save(tree *rangeTree) error {
+func (m *rangeManager) save(tracker RangeTracker) error {
 	if m.stateFilePath == "" {
 		return nil
 	}
-	data, err := tree.MarshalText()
+	data, err := tracker.MarshalText()
 	if err != nil {
 		return err
 	}
@@ -99,11 +99,11 @@ func (m *rangeManager) Run(notification Notification) {
 	defer t.Stop()
 
 	var lastSeq uint64
-	current := newRangeTreeWithCap(m.name, m.maxPersistItems)
+	current := newRangeTracker(m.name, m.maxPersistItems)
 	shouldSave := false
 	for {
 		select {
-		case replace := <-m.replaceTreeCh:
+		case replace := <-m.replaceTrackerCh:
 			current = replace
 		case item := <-m.queue:
 			// truncation detected, clear tree

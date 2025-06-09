@@ -139,7 +139,7 @@ func TestFileRangeManager(t *testing.T) {
 
 		time.Sleep(2 * defaultSaveInterval)
 
-		tree := newRangeTree("replace.log")
+		tree := newMultiRangeTracker("replace.log")
 		tree.Insert(Range{start: 500, end: 600})
 		assert.NoError(t, manager.save(tree))
 		time.Sleep(2 * defaultSaveInterval)
@@ -284,7 +284,7 @@ func TestFileRangeManager(t *testing.T) {
 		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "delete.log"}
 		manager := NewFileRangeManager(cfg).(*rangeManager)
 
-		tree := newRangeTree("delete.log")
+		tree := newMultiRangeTracker("delete.log")
 		tree.Insert(Range{start: 100, end: 200})
 		assert.NoError(t, manager.save(tree))
 		_, err := os.Stat(cfg.StateFilePath())
