@@ -7,6 +7,7 @@ import (
 	//Enable cloudwatch-agent process plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ecsdecorator"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/prometheusadapter"
 
 	// Enabled cloudwatch-agent input plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"

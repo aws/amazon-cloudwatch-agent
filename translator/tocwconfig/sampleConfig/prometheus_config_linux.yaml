@@ -95,11 +95,42 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 30s
+    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
-    telegraf_prometheus:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
+    prometheus/prometheus/cloudwatchlogs:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 5m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText0.0.4
+                scrape_timeout: 5s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  file_sd_configs:
+                    - files:
+                      - {ecsSdFileName}
+                      refresh_interval: 5m
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: cwagent-ecs-file-sd-config
+                  metrics_path: /metrics
+                  sample_limit: 10000
+                  scheme: http
+                  scrape_interval: 5m
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText0.0.4
+                  scrape_timeout: 5s
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
 service:
     extensions:
         - agenthealth/logs
@@ -110,9 +141,10 @@ service:
             exporters:
                 - awsemf/prometheus
             processors:
+                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
-                - telegraf_prometheus
+                - prometheus/prometheus/cloudwatchlogs
     telemetry:
         logs:
             encoding: console
