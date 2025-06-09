@@ -49,7 +49,7 @@ const (
 	RuntimeTagOverride                            = "DEFAULT"
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
-	NeuronCoreTag                                 = "neuroncore"
+	NeuronCoreLabel                                 = "neuroncore"
 	NeuronCorePerDevice                           = 2
 )
 
@@ -144,6 +144,14 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	}
 
 	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
+
+	// For NeuronCoreUtilization metrics, perform additional aggregation to calculate the maximum utilization 
+	// value per core across all datapoints. This ensures we capture peak utilization rather than average values,
+	// which is more useful for monitoring core performance and potential bottlenecks.
+	if originalMetric.Name() == containerinsightscommon.NeuronCoreUtilization {
+		modifiedMetricSlice = md.aggregateCoreUtilizationMetrics(modifiedMetricSlice, originalMetric)
+	}
+
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
@@ -208,11 +216,6 @@ func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attrib
 func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	newMetricSlice := pmetric.NewMetricSlice()
 	uniqueAttribute := metricModificationsMap[originalMetric.Name()].UniqueAttribute
-
-	// Call the new Aggregation Method, the method should return the aggregated value per Core
-	if originalMetric.Name() == containerinsightscommon.NeuronCoreUtilization {
-		return md.aggregateUtilizationMetrics(newMetricSlice, originalMetric)
-	}
 
 	if uniqueAttribute == "" {
 		originalMetric.CopyTo(newMetricSlice.AppendEmpty())
@@ -300,13 +303,13 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 	}
 }
 
-func (md *AwsNeuronMetricModifier) aggregateUtilizationMetrics(newMetricSlice pmetric.MetricSlice, originalMetric pmetric.Metric) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(newMetricSlice pmetric.MetricSlice, originalMetric pmetric.Metric) pmetric.MetricSlice {
 	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 	aggregatedValuesPerCore := map[NeuronCoreUtilizationDatapointAggregationKey]float64{}
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		originalDatapoint := originalMetricDatapoints.At(i)
 		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
-		coreIdTag, _ := originalDatapoint.Attributes().Get(NeuronCoreTag)
+		coreIdTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
 		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreId: coreIdTag.Str()}
 		aggregatedValuesPerCore[key] = max(aggregatedValuesPerCore[key], originalDatapoint.DoubleValue(), 0)
 	}
@@ -324,7 +327,7 @@ func (md *AwsNeuronMetricModifier) aggregateUtilizationMetrics(newMetricSlice pm
 		firstOriginalDatapoint.CopyTo(datapoint)
 		datapoint.SetDoubleValue(value)
 		datapoint.Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
-		datapoint.Attributes().PutStr(NeuronCoreTag, aggregatedMetricMetadata.coreId)
+		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreId)
 		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreId)
 		coreId, _ := strconv.Atoi(aggregatedMetricMetadata.coreId)
 		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreId/NeuronCorePerDevice))
