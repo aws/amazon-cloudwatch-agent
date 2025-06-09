@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestProcessMetricsForKueueMetrics(t *testing.T) {
+func TestProcessMetricsForPrometheusAdapter(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	pap := newPrometheusAdapterProcessor(createDefaultConfig().(*Config), logger)
 

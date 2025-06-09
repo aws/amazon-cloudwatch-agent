@@ -38,6 +38,14 @@ func WithConfigKey(configKey string) common.TranslatorOption {
 	}
 }
 
+func WithName(name string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.name = name
+		}
+	}
+}
+
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {

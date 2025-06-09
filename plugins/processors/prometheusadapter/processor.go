@@ -10,19 +10,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type prometheusAdapaterProcessor struct {
+type prometheusAdapterProcessor struct {
 	*Config
 	logger *zap.Logger
 }
 
-func newPrometheusAdapterProcessor(config *Config, logger *zap.Logger) *prometheusAdapaterProcessor {
-	d := &prometheusAdapaterProcessor{
+func newPrometheusAdapterProcessor(config *Config, logger *zap.Logger) *prometheusAdapterProcessor {
+	d := &prometheusAdapterProcessor{
 		Config: config,
 		logger: logger,
 	}
 	return d
 }
 
-func (d *prometheusAdapaterProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	return md, nil
 }
