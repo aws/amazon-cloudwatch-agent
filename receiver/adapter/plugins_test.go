@@ -124,7 +124,7 @@ func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *Adapted
 }
 
 func validateMetricName(as *assert.Assertions, plugin string, expectedResourceMetricsName []string, actualOtelSlMetrics pmetric.MetricSlice) {
-	as.Equal(len(expectedResourceMetricsName), actualOtelSlMetrics.Len(), "Number of metrics did not match!")
+	as.Equal(len(expectedResourceMetricsName), actualOtelSlMetrics.Len(), "Number of metrics did not match! expected %+v\nactual: %+v", expectedResourceMetricsName, actualOtelSlMetrics)
 
 	matchMetrics := actualOtelSlMetrics.Len()
 	for _, expectedMetric := range expectedResourceMetricsName {
