@@ -31,6 +31,8 @@ type LogFile struct {
 	//destination
 	Destination string `toml:"destination"`
 
+	MaxPersistState int `toml:"max_persist_state"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	configs           map[*FileConfig]map[string]*tailerSrc
@@ -188,9 +190,9 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			}
 
 			stateManager := state.NewFileRangeManager(state.ManagerConfig{
-				StateFileDir:    t.FileStateFolder,
-				Name:            filename,
-				MaxPersistItems: 1, // TODO: Base this on the number of threads
+				StateFileDir:      t.FileStateFolder,
+				Name:              filename,
+				MaxPersistedItems: max(1, t.MaxPersistState),
 			})
 
 			var seekFile *tail.SeekInfo

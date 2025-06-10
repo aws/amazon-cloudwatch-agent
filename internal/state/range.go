@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -197,13 +198,13 @@ type RangeTracker interface {
 	Clear()
 }
 
-// newRangeTracker creates a RangeTracker based on the capacity. If the capacity is 1, it creates a singleRangeTracker.
-// Otherwise, it will create a multiRangeTracker configured with the capacity.
+// newRangeTracker creates a RangeTracker based on the capacity. If the capacity is <= 1, it creates a
+// singleRangeTracker. Otherwise, it will create a multiRangeTracker configured with the capacity.
 func newRangeTracker(name string, capacity int) RangeTracker {
-	if capacity == 1 {
+	if capacity <= 1 {
 		return newSingleRangeTracker(name)
 	}
-	return newMultiRangeTrackerWithCap(name, capacity)
+	return newMultiRangeTracker(name, capacity)
 }
 
 // singleRangeTracker only keeps track of the maximum offset. It stores a single range starting at 0 and ending at the
@@ -306,14 +307,9 @@ type multiRangeTracker struct {
 
 var _ RangeTracker = (*multiRangeTracker)(nil)
 
-// newMultiRangeTracker creates an unbounded multiRangeTracker.
-func newMultiRangeTracker(name string) RangeTracker {
-	return newMultiRangeTrackerWithCap(name, -1)
-}
-
-// newMultiRangeTrackerWithCap creates a bounded multiRangeTracker based on the capacity. When capacity is exceeded, the oldest ranges
-// are merged/collapsed.
-func newMultiRangeTrackerWithCap(name string, capacity int) RangeTracker {
+// newMultiRangeTrackerWithCap creates a bounded multiRangeTracker based on the capacity. When capacity is exceeded,
+// the oldest ranges are merged/collapsed.
+func newMultiRangeTracker(name string, capacity int) RangeTracker {
 	return &multiRangeTracker{
 		name: name,
 		cap:  capacity,
@@ -399,6 +395,7 @@ func (t *multiRangeTracker) collapseOldest() {
 	t.tree.Delete(*first)
 	t.tree.Delete(*second)
 
+	log.Printf("D! Tracked ranges for %s exceeds max. Collapsing %s and %s", t.name, *first, *second)
 	merged := mergeRanges(*first, *second)
 	t.tree.ReplaceOrInsert(merged)
 }

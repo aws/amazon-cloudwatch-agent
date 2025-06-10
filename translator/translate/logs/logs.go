@@ -4,6 +4,10 @@
 package logs
 
 import (
+	"sort"
+
+	"golang.org/x/exp/maps"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
@@ -34,6 +38,7 @@ type Logs struct {
 	MetadataInfo          map[string]string
 	ServiceName           string
 	DeploymentEnvironment string
+	Concurrency           int
 }
 
 var (
@@ -61,7 +66,12 @@ func (l *Logs) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 		returnVal = ""
 	} else {
 		//If yes, process it
-		for _, rule := range ChildRule {
+		// sort rule here so that we can run the rules in a stable order
+		sortedRuleKey := maps.Keys(ChildRule)
+		sort.Strings(sortedRuleKey)
+
+		for _, ruleKey := range sortedRuleKey {
+			rule := ChildRule[ruleKey]
 			key, val := rule.ApplyRule(im[SectionKey])
 			//If key == "", then no instance of this class in input
 			if key != "" {
