@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
+	"github.com/prometheus/common/model"
 )
 
 type prometheusAdapterProcessor struct {
@@ -36,11 +37,27 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 		for j := 0; j < sms.Len(); j++ {
 			metrics := sms.At(j).Metrics()
 
+			// for backwards compatibility, we want to drop untyped metrics
+			// untyped metrics are converted to Gauge by the receiver and the original type is stored in the metadata
+			metrics.RemoveIf(func(m pmetric.Metric) bool {
+				if typ, ok := m.Metadata().Get(prometheus.MetricMetadataTypeKey); ok {
+					if typ.AsString() == string(model.MetricTypeUnknown) {
+						d.logger.Debug("Drop untyped metric")
+						return true
+					}
+				}
+				return false
+			})
+
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
 				d.processMetric(m, rma)
 			}
 
+		}
+
+		if serviceName, ok := rma.Get("service.name"); ok {
+			rma.PutStr("JobName", serviceName.AsString())
 		}
 
 		// Remove extraneous resource attributes
@@ -64,6 +81,8 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 }
 
 func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon.Map) {
+	val, _ := m.Metadata().Get(prometheus.MetricMetadataTypeKey)
+	d.logger.Debug("new metric", zap.String("name", m.Name()), zap.String("type", val.AsString()))
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
 		processNumberDataPointSlice(m.Gauge().DataPoints(), rma)
@@ -79,10 +98,6 @@ func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon
 		d.logger.Debug("Ignore empty metric")
 	default:
 		d.logger.Debug("Ignore unknown metric type %s", zap.String("type", m.Type().String()))
-	}
-
-	if v, ok := m.Metadata().Get(prometheus.MetricMetadataTypeKey); ok {
-		v.AsString()
 	}
 }
 
