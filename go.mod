@@ -41,7 +41,7 @@ replace (
 replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250519142056-97a2f5e08ffa
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250519142056-97a2f5e08ffa
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250610194610-3dad58d428b8
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250519142056-97a2f5e08ffa
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250519142056-97a2f5e08ffa
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250519142056-97a2f5e08ffa
