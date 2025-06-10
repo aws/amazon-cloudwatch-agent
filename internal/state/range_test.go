@@ -132,7 +132,7 @@ func TestNewRangeTracker(t *testing.T) {
 	for i := -10; i <= 10; i++ {
 		tracker := newRangeTracker("test", i)
 		if i == 1 {
-			_, ok := tracker.(*maxOffsetTracker)
+			_, ok := tracker.(*singleRangeTracker)
 			assert.True(t, ok)
 		} else {
 			mrt, ok := tracker.(*multiRangeTracker)
@@ -142,21 +142,21 @@ func TestNewRangeTracker(t *testing.T) {
 	}
 }
 
-func TestMaxOffsetTracker_Insert(t *testing.T) {
+func TestSingleRangeTracker_Insert(t *testing.T) {
 	t.Run("NonOverlapping", func(t *testing.T) {
 		t.Parallel()
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
 		assert.Equal(t, 1, tracker.Len())
-		assert.Equal(t, "[0-30]", tracker.String())
+		assert.Equal(t, "[0-30]", tracker.Ranges().String())
 		assert.True(t, tracker.Insert(Range{start: 5, end: 15, seq: 1}))
 		assert.Equal(t, 1, tracker.Len())
-		assert.Equal(t, "[0-15]", tracker.String())
+		assert.Equal(t, "[0-15]", tracker.Ranges().String())
 	})
 	t.Run("AlreadyContained", func(t *testing.T) {
 		t.Parallel()
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.True(t, tracker.Insert(Range{start: 0, end: 20}))
 		assert.False(t, tracker.Insert(Range{start: 10, end: 15}))
 		assert.False(t, tracker.Insert(Range{start: 0, end: 20}))
@@ -164,7 +164,7 @@ func TestMaxOffsetTracker_Insert(t *testing.T) {
 	})
 	t.Run("Invalid", func(t *testing.T) {
 		t.Parallel()
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		r := Range{start: 0, end: 0}
 		assert.False(t, r.IsValid())
 		assert.False(t, tracker.Insert(r))
@@ -173,64 +173,67 @@ func TestMaxOffsetTracker_Insert(t *testing.T) {
 	})
 }
 
-func TestMaxOffsetTracker_Unmarshal(t *testing.T) {
-	t.Run("MarshalLoop", func(t *testing.T) {
+func TestSingleRangeTracker_Unmarshal(t *testing.T) {
+	t.Run("Marshal/Loop", func(t *testing.T) {
 		want := RangeList{
 			{start: 0, end: 50},
 		}
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest\n0-5,20-30,45-50")))
 		assert.Equal(t, 1, tracker.Len())
 		assert.Equal(t, want, tracker.Ranges())
 		got, err := tracker.MarshalText()
 		assert.NoError(t, err)
 		assert.Equal(t, "50\ntest\n0-50", string(got))
-		tracker.Clear()
-		assert.Equal(t, 0, tracker.Len())
 		assert.NoError(t, tracker.UnmarshalText(got))
 		assert.Equal(t, want, tracker.Ranges())
+		tracker.Clear()
+		assert.Equal(t, 0, tracker.Len())
+		got, err = tracker.MarshalText()
+		assert.NoError(t, err)
+		assert.Equal(t, "0\ntest", string(got))
 	})
 	t.Run("Empty", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.NoError(t, tracker.UnmarshalText([]byte("")))
 		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/SingleLine", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.Error(t, tracker.UnmarshalText([]byte("test")))
 		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/MultiLine", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.Error(t, tracker.UnmarshalText([]byte("test\ntest\ntest")))
 		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/MissingMaxOffset", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.Error(t, tracker.UnmarshalText([]byte("0-15,20-30\ntest")))
 		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("Invalid/Range", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.NoError(t, tracker.UnmarshalText([]byte("50\ntest-test\ntest")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 50},
 		}, tracker.Ranges())
 	})
 	t.Run("Invalid/OutOfOrder", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.NoError(t, tracker.UnmarshalText([]byte("50\n10-20,30-50\ntest")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 50},
 		}, tracker.Ranges())
 	})
 	t.Run("BackwardsCompatible/Invalid", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.Error(t, tracker.UnmarshalText([]byte("-1\ntest")))
 		assert.Equal(t, 0, tracker.Len())
 	})
 	t.Run("BackwardsCompatible/Valid", func(t *testing.T) {
-		tracker := newMaxOffsetTracker("test")
+		tracker := newSingleRangeTracker("test")
 		assert.NoError(t, tracker.UnmarshalText([]byte("20")))
 		assert.Equal(t, RangeList{
 			{start: 0, end: 20},
@@ -249,10 +252,10 @@ func TestMultiRangeTracker_Insert(t *testing.T) {
 		assert.True(t, tracker.Insert(Range{start: 0, end: 5}))
 		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-5,20-30]", tracker.String())
+		assert.Equal(t, "[0-5,20-30]", tracker.Ranges().String())
 		assert.False(t, tracker.Insert(Range{start: 20, end: 30, seq: 1}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-5,20-30]", tracker.String())
+		assert.Equal(t, "[0-5,20-30]", tracker.Ranges().String())
 	})
 	t.Run("Merge/Adjacent", func(t *testing.T) {
 		t.Parallel()
@@ -261,10 +264,10 @@ func TestMultiRangeTracker_Insert(t *testing.T) {
 		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
 		assert.True(t, tracker.Insert(Range{start: 5, end: 10}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-10,20-30]", tracker.String())
+		assert.Equal(t, "[0-10,20-30]", tracker.Ranges().String())
 		assert.True(t, tracker.Insert(Range{start: 15, end: 20}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-10,15-30]", tracker.String())
+		assert.Equal(t, "[0-10,15-30]", tracker.Ranges().String())
 	})
 	t.Run("Merge/Overlap/Single", func(t *testing.T) {
 		t.Parallel()
@@ -273,10 +276,10 @@ func TestMultiRangeTracker_Insert(t *testing.T) {
 		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
 		assert.True(t, tracker.Insert(Range{start: 15, end: 25}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-5,15-30]", tracker.String())
+		assert.Equal(t, "[0-5,15-30]", tracker.Ranges().String())
 		assert.True(t, tracker.Insert(Range{start: 2, end: 8}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-8,15-30]", tracker.String())
+		assert.Equal(t, "[0-8,15-30]", tracker.Ranges().String())
 	})
 	t.Run("Merge/Overlap/Multiple", func(t *testing.T) {
 		t.Parallel()
@@ -285,10 +288,10 @@ func TestMultiRangeTracker_Insert(t *testing.T) {
 		assert.True(t, tracker.Insert(Range{start: 20, end: 30}))
 		assert.True(t, tracker.Insert(Range{start: 10, end: 15}))
 		assert.Equal(t, 3, tracker.Len())
-		assert.Equal(t, "[0-5,10-15,20-30]", tracker.String())
+		assert.Equal(t, "[0-5,10-15,20-30]", tracker.Ranges().String())
 		assert.True(t, tracker.Insert(Range{start: 5, end: 25}))
 		assert.Equal(t, 1, tracker.Len())
-		assert.Equal(t, "[0-30]", tracker.String())
+		assert.Equal(t, "[0-30]", tracker.Ranges().String())
 	})
 	t.Run("AlreadyContained", func(t *testing.T) {
 		t.Parallel()
@@ -314,12 +317,12 @@ func TestMultiRangeTracker_Insert(t *testing.T) {
 		assert.True(t, tracker.Insert(Range{start: 10, end: 15}))
 		assert.True(t, tracker.Insert(Range{start: 20, end: 25}))
 		assert.Equal(t, 2, tracker.Len())
-		assert.Equal(t, "[0-15,20-25]", tracker.String())
+		assert.Equal(t, "[0-15,20-25]", tracker.Ranges().String())
 	})
 }
 
 func TestMultiRangeTracker_Unmarshal(t *testing.T) {
-	t.Run("MarshalLoop", func(t *testing.T) {
+	t.Run("Marshal/Loop", func(t *testing.T) {
 		want := RangeList{
 			{start: 0, end: 5},
 			{start: 20, end: 30},
@@ -336,6 +339,11 @@ func TestMultiRangeTracker_Unmarshal(t *testing.T) {
 		assert.Equal(t, 0, tracker.Len())
 		assert.NoError(t, tracker.UnmarshalText(got))
 		assert.Equal(t, want, tracker.Ranges())
+		tracker.Clear()
+		assert.Equal(t, 0, tracker.Len())
+		got, err = tracker.MarshalText()
+		assert.NoError(t, err)
+		assert.Equal(t, "0\ntest", string(got))
 	})
 	t.Run("Empty", func(t *testing.T) {
 		tracker := newMultiRangeTracker("test")

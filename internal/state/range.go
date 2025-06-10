@@ -107,14 +107,19 @@ func (r Range) Contains(other Range) bool {
 
 // String returns a string representation of the range "start-end". If the end is unbounded, returns "start-".
 func (r Range) String() string {
-	if r.IsEndOffsetUnbounded() {
-		return fmt.Sprintf("%v-", r.start)
-	}
-	return fmt.Sprintf("%d-%d", r.start, r.end)
+	b, _ := r.MarshalText()
+	return string(b)
 }
 
+// MarshalText serializes the range into "start-end". If the end is unbounded, the format is "start-".
 func (r Range) MarshalText() ([]byte, error) {
-	return []byte(r.String()), nil
+	var buf bytes.Buffer
+	buf.WriteString(strconv.FormatUint(r.start, 10))
+	buf.WriteByte('-')
+	if !r.IsEndOffsetUnbounded() {
+		buf.WriteString(strconv.FormatUint(r.end, 10))
+	}
+	return buf.Bytes(), nil
 }
 
 // UnmarshalText supports unmarshalling both the "start-end" and "start-" formats.
@@ -161,11 +166,26 @@ func (r RangeList) OnlyUseMaxOffset() bool {
 	return len(r) == 0 || (len(r) == 1 && r[0].StartOffset() == 0)
 }
 
+// String returns a string representation of all stored ranges (e.g. "[0-5,10-15]").
+func (r RangeList) String() string {
+	var builder strings.Builder
+	first := true
+	builder.WriteByte('[')
+	for _, item := range r {
+		if !first {
+			builder.WriteByte(',')
+		}
+		first = false
+		builder.WriteString(item.String())
+	}
+	builder.WriteByte(']')
+	return builder.String()
+}
+
 // RangeTracker manages a collection of ranges. Handles insertion, retrieval, and serialization.
 type RangeTracker interface {
 	encoding.TextMarshaler
 	encoding.TextUnmarshaler
-	fmt.Stringer
 	// Insert a Range into the store. Returns false if the Range is already contained by another Range in the store or is
 	// invalid.
 	Insert(Range) bool
@@ -177,29 +197,31 @@ type RangeTracker interface {
 	Clear()
 }
 
-// newRangeTracker creates a RangeTracker based on the capacity. If the capacity is 1, it creates a maxOffsetTracker.
+// newRangeTracker creates a RangeTracker based on the capacity. If the capacity is 1, it creates a singleRangeTracker.
 // Otherwise, it will create a multiRangeTracker configured with the capacity.
 func newRangeTracker(name string, capacity int) RangeTracker {
 	if capacity == 1 {
-		return newMaxOffsetTracker(name)
+		return newSingleRangeTracker(name)
 	}
 	return newMultiRangeTrackerWithCap(name, capacity)
 }
 
-// maxOffsetTracker only keeps track of the maximum offset. It stores a single range starting at 0 and ending at the
+// singleRangeTracker only keeps track of the maximum offset. It stores a single range starting at 0 and ending at the
 // maximum observed offset.
-type maxOffsetTracker struct {
+type singleRangeTracker struct {
 	name string
 	r    Range
 }
 
-var _ RangeTracker = (*maxOffsetTracker)(nil)
+var _ RangeTracker = (*singleRangeTracker)(nil)
 
-func newMaxOffsetTracker(name string) RangeTracker {
-	return &maxOffsetTracker{name: name}
+func newSingleRangeTracker(name string) RangeTracker {
+	return &singleRangeTracker{name: name}
 }
 
-func (t *maxOffsetTracker) Insert(r Range) bool {
+// Insert updates the tracked maximum offset if the provided Range has a larger end or sequence number. Returns false
+// if the tracker was not updated by the insert.
+func (t *singleRangeTracker) Insert(r Range) bool {
 	if !r.IsValid() {
 		return false
 	}
@@ -211,54 +233,60 @@ func (t *maxOffsetTracker) Insert(r Range) bool {
 	return false
 }
 
-func (t *maxOffsetTracker) Ranges() RangeList {
+// Ranges returns the backing Range in a RangeList.
+func (t *singleRangeTracker) Ranges() RangeList {
 	return RangeList{t.r}
 }
 
-func (t *maxOffsetTracker) Len() int {
+// Len returns 1 if the stored Range is valid.
+func (t *singleRangeTracker) Len() int {
 	if t.r.IsValid() {
 		return 1
 	}
 	return 0
 }
 
-func (t *maxOffsetTracker) Clear() {
+// Clear resets the Range and makes it invalid. This is
+func (t *singleRangeTracker) Clear() {
 	t.r.start = 0
 	t.r.end = 0
 }
 
-func (t *maxOffsetTracker) String() string {
-	return fmt.Sprintf("[%s]", t.r)
-}
-
-func (t *maxOffsetTracker) MarshalText() ([]byte, error) {
+// MarshalText serializes the tree. The format includes the maximum offset on the first line and name on the second
+// line (for backwards compatibility) followed by the backing range.
+// <max offset>
+// <name>
+// <range>
+// If the range is invalid, only the max offset and name are serialized.
+func (t *singleRangeTracker) MarshalText() ([]byte, error) {
 	var buf bytes.Buffer
-	_, err := fmt.Fprintf(&buf, "%d\n", t.r.end)
-	if err != nil {
-		return nil, err
-	}
-	_, err = fmt.Fprintf(&buf, "%s\n", t.name)
-	if err != nil {
-		return nil, err
-	}
-	b, err := t.r.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-	_, err = buf.Write(b)
-	if err != nil {
-		return nil, err
+	buf.WriteString(strconv.FormatUint(t.r.end, 10))
+	buf.WriteByte('\n')
+	buf.WriteString(t.name)
+	if t.Len() > 0 {
+		buf.WriteByte('\n')
+		var b []byte
+		b, err := t.r.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(b)
 	}
 	return buf.Bytes(), nil
 }
 
-func (t *maxOffsetTracker) UnmarshalText(text []byte) error {
+// UnmarshalText deserializes the text to populate the tracker. Only looks at the first line for the maximum offset.
+func (t *singleRangeTracker) UnmarshalText(text []byte) error {
 	t.Clear()
 	if len(text) == 0 {
 		return nil
 	}
-	lines := bytes.Split(text, []byte("\n"))
-	maxOffset, err := strconv.ParseUint(string(lines[0]), 10, 64)
+	firstLine := text
+	index := bytes.IndexByte(text, '\n')
+	if index != -1 {
+		firstLine = text[:index]
+	}
+	maxOffset, err := strconv.ParseUint(string(firstLine), 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid max offset: %w", err)
 	}
@@ -395,25 +423,8 @@ func (t *multiRangeTracker) Clear() {
 	t.tree.Clear(false)
 }
 
-// String returns a string representation of all stored ranges (e.g. "[0-5,10-15]").
-func (t *multiRangeTracker) String() string {
-	var builder strings.Builder
-	first := true
-	builder.WriteByte('[')
-	t.tree.Ascend(func(item Range) bool {
-		if !first {
-			builder.WriteByte(',')
-		}
-		first = false
-		builder.WriteString(item.String())
-		return true
-	})
-	builder.WriteByte(']')
-	return builder.String()
-}
-
 // MarshalText serializes the tree. The format includes the maximum offset on the first line and name on the second
-// line (for backwards compatibility) followed comma-separated ranges.
+// line (for backwards compatibility) followed by comma-separated ranges.
 // <max offset>
 // <name>
 // <ranges>
@@ -444,17 +455,12 @@ func (t *multiRangeTracker) MarshalText() ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	_, err = fmt.Fprintf(&buf, "%d\n", maxEnd)
-	if err != nil {
-		return nil, err
-	}
-	_, err = fmt.Fprintf(&buf, "%s\n", t.name)
-	if err != nil {
-		return nil, err
-	}
-	_, err = buf.Write(rangeBuf.Bytes())
-	if err != nil {
-		return nil, err
+	buf.WriteString(strconv.FormatUint(maxEnd, 10))
+	buf.WriteByte('\n')
+	buf.WriteString(t.name)
+	if t.Len() > 0 {
+		buf.WriteByte('\n')
+		buf.Write(rangeBuf.Bytes())
 	}
 	return buf.Bytes(), nil
 }

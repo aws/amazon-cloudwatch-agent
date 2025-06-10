@@ -99,25 +99,25 @@ func (m *rangeManager) Run(notification Notification) {
 	defer t.Stop()
 
 	var lastSeq uint64
-	current := newRangeTracker(m.name, m.maxPersistItems)
+	currentTracker := newRangeTracker(m.name, m.maxPersistItems)
 	shouldSave := false
 	for {
 		select {
-		case replace := <-m.replaceTrackerCh:
-			current = replace
+		case replaceTracker := <-m.replaceTrackerCh:
+			currentTracker = replaceTracker
 		case item := <-m.queue:
 			// truncation detected, clear tree
 			if item.seq > lastSeq {
 				lastSeq = item.seq
-				current.Clear()
+				currentTracker.Clear()
 			}
-			changed := current.Insert(item)
+			changed := currentTracker.Insert(item)
 			shouldSave = shouldSave || changed
 		case <-t.C:
 			if !shouldSave {
 				continue
 			}
-			if err := m.save(current); err != nil {
+			if err := m.save(currentTracker); err != nil {
 				log.Printf("E! Error happened when saving state file (%s): %v", m.stateFilePath, err)
 				continue
 			}
@@ -129,7 +129,7 @@ func (m *rangeManager) Run(notification Notification) {
 			}
 			return
 		case <-notification.Done:
-			if err := m.save(current); err != nil {
+			if err := m.save(currentTracker); err != nil {
 				log.Printf("E! Error happened during final state file (%s) save, duplicate log maybe sent at next start: %v", m.stateFilePath, err)
 			}
 			return
