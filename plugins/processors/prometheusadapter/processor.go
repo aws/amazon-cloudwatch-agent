@@ -34,6 +34,7 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 		rm := rms.At(i)
 		rma := rm.Resource().Attributes()
 		sms := rm.ScopeMetrics()
+
 		for j := 0; j < sms.Len(); j++ {
 			metrics := sms.At(j).Metrics()
 
@@ -54,10 +55,6 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 				d.processMetric(m, rma)
 			}
 
-		}
-
-		if serviceName, ok := rma.Get("service.name"); ok {
-			rma.PutStr("JobName", serviceName.AsString())
 		}
 
 		// Remove extraneous resource attributes
@@ -81,8 +78,6 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 }
 
 func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon.Map) {
-	val, _ := m.Metadata().Get(prometheus.MetricMetadataTypeKey)
-	d.logger.Debug("new metric", zap.String("name", m.Name()), zap.String("type", val.AsString()))
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
 		processNumberDataPointSlice(m.Gauge().DataPoints(), rma)
