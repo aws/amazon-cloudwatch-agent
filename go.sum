@@ -224,8 +224,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/pr
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250519142056-97a2f5e08ffa/go.mod h1:cW/BaYE6Uo7ZYHbmT0wVBktHP0SfeLqGHMf0qks7rOE=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250519142056-97a2f5e08ffa h1:5Qs/CfcKJrJANC1D+bBCjJiLUOtA7WVHN0NiXLm+B6U=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250519142056-97a2f5e08ffa/go.mod h1:yyT23VxqHJZaOR1wSO4GqO4Nr8omwlNUL/ouxPmjlvM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250610201838-4cb333181b10 h1:DoPgBnio7Ar0zfQrNFstf8iNlOIClz31R0aXX+ivmIQ=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250610201838-4cb333181b10/go.mod h1:2Um1VNTaRTW5hWPCnOEQsvs/4X4gA6TjAiTfyNoCBts=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250611140627-4310442892bc h1:1ueZCIEimYnrtMNXz5SPwSoxf13Sz6tfV4BbgbPnBsE=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250611140627-4310442892bc/go.mod h1:2Um1VNTaRTW5hWPCnOEQsvs/4X4gA6TjAiTfyNoCBts=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250519142056-97a2f5e08ffa h1:+SjXzwc/mavT9dvDJTGrwUkL7+ixirnQ1e/PoUD2zQs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250519142056-97a2f5e08ffa/go.mod h1:6sD1gJ1GzpZPgb44Dh+ICdLtO6tL3CfDCxidunIjZtM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250519142056-97a2f5e08ffa h1:xH0ZLTthfszHujWSKmXvIq/aLJ27VK/rXTDhB4AZAHE=
