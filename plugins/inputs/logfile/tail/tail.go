@@ -364,10 +364,10 @@ func (tail *Tail) tailFileSync() {
 				if err == nil {
 					tail.sendLine(line, tail.curOffset)
 				} else if err == io.EOF {
-					tail.Logger.Debugf("Failed seek due to EOF on %s for gaps: %s", tail.Filename, err)
+					tail.Logger.Debugf("Failed read line due to EOF on %s for gaps: %s", tail.Filename, err)
 					break
 				} else {
-					tail.Logger.Debugf("Failed seek on %s for gaps: %s", tail.Filename, err)
+					tail.Logger.Debugf("Failed read line on %s for gaps: %s", tail.Filename, err)
 				}
 
 				select {
