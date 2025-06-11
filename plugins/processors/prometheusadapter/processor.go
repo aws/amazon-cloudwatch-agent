@@ -34,18 +34,15 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 		rm := rms.At(i)
 		rma := rm.Resource().Attributes()
 		sms := rm.ScopeMetrics()
-
 		for j := 0; j < sms.Len(); j++ {
 			metrics := sms.At(j).Metrics()
 
 			// for backwards compatibility, we want to drop untyped metrics
 			// untyped metrics are converted to Gauge by the receiver and the original type is stored in the metadata
 			metrics.RemoveIf(func(m pmetric.Metric) bool {
-				if typ, ok := m.Metadata().Get(prometheus.MetricMetadataTypeKey); ok {
-					if typ.AsString() == string(model.MetricTypeUnknown) {
-						d.logger.Debug("Drop untyped metric")
-						return true
-					}
+				if typ, ok := m.Metadata().Get(prometheus.MetricMetadataTypeKey); ok && typ.AsString() == string(model.MetricTypeUnknown) {
+					d.logger.Debug("Drop untyped metric")
+					return true
 				}
 				return false
 			})
@@ -92,7 +89,7 @@ func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon
 	case pmetric.MetricTypeEmpty:
 		d.logger.Debug("Ignore empty metric")
 	default:
-		d.logger.Debug("Ignore unknown metric type %s", zap.String("type", m.Type().String()))
+		d.logger.Debug("Ignore unknown metric type %s", zap.Int32("type", int32(m.Type())), zap.String("type_str", m.Type().String()))
 	}
 }
 
