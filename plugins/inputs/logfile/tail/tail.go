@@ -346,7 +346,7 @@ func (tail *Tail) tailFileSync() {
 	tail.openReader()
 
 	// Send the lines for the gaps found in the state file's ranges
-	if tail.RangeList != nil && len(tail.RangeList) > 0 {
+	if len(tail.RangeList) > 0 {
 		for _, seekRange := range tail.RangeList {
 			if seekRange.IsEndOffsetUnbounded() {
 				continue

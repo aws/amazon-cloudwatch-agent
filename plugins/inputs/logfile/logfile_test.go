@@ -688,7 +688,7 @@ func TestLogsFileWithRangeNoGaps(t *testing.T) {
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	// The ranges here are to mimic log lines that have already been sent
-	_, err = stateFile.WriteString("19\ntest\n0-19")
+	stateFile.WriteString("19\ntest\n0-19")
 	defer os.Remove(stateFileName)
 
 	_, err = tmpfile.WriteString(logEntryString)
@@ -739,7 +739,7 @@ func TestLogsFileWithRangeGaps(t *testing.T) {
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	// The ranges here are to mimic log lines that have already been sent
-	_, err = stateFile.WriteString("19\ntest\n0-6,14-19")
+	stateFile.WriteString("19\ntest\n0-6,14-19")
 	defer os.Remove(stateFileName)
 
 	_, err = tmpfile.WriteString(logEntryString)
@@ -797,7 +797,7 @@ func TestLogsFileWithEOFRangeGaps(t *testing.T) {
 	require.NoError(t, err)
 	// The ranges here are to mimic log lines that have already been sent
 	// along with an invalid range
-	_, err = stateFile.WriteString("200\ntest\n0-6,100-200")
+	stateFile.WriteString("200\ntest\n0-6,100-200")
 	defer os.Remove(stateFileName)
 
 	_, err = tmpfile.WriteString(logEntryString)
