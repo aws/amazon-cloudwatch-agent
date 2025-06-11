@@ -32,7 +32,7 @@ var (
 type LogEvent struct {
 	msg    string
 	t      time.Time
-	offset state.FileOffset
+	offset state.Range
 	src    *tailerSrc
 }
 
@@ -54,7 +54,7 @@ type tailerSrc struct {
 	class           string
 	fileGlobPath    string
 	destination     string
-	stateManager    state.FileOffsetManager
+	stateManager    state.FileRangeManager
 	tailer          *tail.Tail
 	autoRemoval     bool
 	timestampFn     func(string) (time.Time, string)
@@ -79,7 +79,7 @@ var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
 	group, stream, destination string,
-	stateManager state.FileOffsetManager,
+	stateManager state.FileRangeManager,
 	logClass, fileGlobPath string,
 	tailer *tail.Tail,
 	autoRemoval bool,
@@ -158,7 +158,7 @@ func (ts *tailerSrc) Retention() int {
 func (ts *tailerSrc) Class() string {
 	return ts.class
 }
-func (ts *tailerSrc) Done(offset state.FileOffset) {
+func (ts *tailerSrc) Done(offset state.Range) {
 	ts.stateManager.Enqueue(offset)
 }
 
@@ -190,7 +190,7 @@ func (ts *tailerSrc) runTail() {
 	var init string
 	var msgBuf bytes.Buffer
 	var cnt int
-	fo := state.FileOffset{}
+	fo := state.Range{}
 	ignoreUntilNextEvent := false
 
 	for {
@@ -219,14 +219,14 @@ func (ts *tailerSrc) runTail() {
 			if ts.isMLStart == nil {
 				msgBuf.Reset()
 				msgBuf.WriteString(text)
-				fo.SetInt64(line.Offset)
+				fo.ShiftInt64(line.Offset)
 				init = ""
 			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msgBuf.Len() == 0) {
 				init = text
 				ignoreUntilNextEvent = false
 			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
 				ignoreUntilNextEvent = true
-				fo.SetInt64(line.Offset)
+				fo.ShiftInt64(line.Offset)
 				continue
 			} else {
 				msgBuf.WriteString("\n")
@@ -235,14 +235,14 @@ func (ts *tailerSrc) runTail() {
 					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
 					msgBuf.WriteString(ts.truncateSuffix)
 				}
-				fo.SetInt64(line.Offset)
+				fo.ShiftInt64(line.Offset)
 				continue
 			}
 
 			ts.publishEvent(msgBuf, fo)
 			msgBuf.Reset()
 			msgBuf.WriteString(init)
-			fo.SetInt64(line.Offset)
+			fo.ShiftInt64(line.Offset)
 			cnt = 0
 		case <-t.C:
 			if msgBuf.Len() > 0 {
@@ -260,7 +260,7 @@ func (ts *tailerSrc) runTail() {
 	}
 }
 
-func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo state.FileOffset) {
+func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo state.Range) {
 	// helper to handle event publishing
 	if msgBuf.Len() == 0 {
 		return
