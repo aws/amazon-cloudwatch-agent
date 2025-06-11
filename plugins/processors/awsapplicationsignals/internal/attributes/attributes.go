@@ -28,7 +28,7 @@ const (
 	ResourceDetectionASG      = "ec2.tag.aws:autoscaling:groupName"
 
 	// deployment resource attributes
-	AttributeDeploymentEnvironment = "deployment.environment"
+	AttributeDeploymentEnvironment     = "deployment.environment"
 	AttributeDeploymentEnvironmentName = "deployment.environment.name"
 
 	// ApplicationSignals behaviour-changing attributes
