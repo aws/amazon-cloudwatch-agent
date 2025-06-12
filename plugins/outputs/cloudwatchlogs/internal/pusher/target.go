@@ -217,7 +217,7 @@ func (m *targetManager) updateTargetBatch(targets map[string]Target) {
 
 		for _, logGroups := range output.LogGroups {
 			target := targets[*logGroups.LogGroupName]
-			if target.Retention != int(*logGroups.RetentionInDays) && target.Retention > 0 {
+			if (logGroups.RetentionInDays == nil || target.Retention != int(*logGroups.RetentionInDays)) && target.Retention > 0 {
 				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
 				m.prp <- target
 			}
