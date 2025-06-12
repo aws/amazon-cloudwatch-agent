@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	retentionChannelSize = 100
-	cacheTTL                      = 5 * time.Second
-	logGroupIdentifierLimit       = 50
+	retentionChannelSize    = 100
+	cacheTTL                = 5 * time.Second
+	logGroupIdentifierLimit = 50
 	// max wait time with backoff and jittering:
 	// 0 + 2.4 + 4.8 + 9.6 + 10 ~= 26.8 sec
 	baseRetryDelay      = 1 * time.Second
