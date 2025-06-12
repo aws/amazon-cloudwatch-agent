@@ -48,6 +48,10 @@ func NewFileRangeManager(cfg ManagerConfig) FileRangeManager {
 	}
 }
 
+func (m *rangeManager) ID() string {
+	return m.name
+}
+
 // Enqueue the Range. Will drop the oldest in the queue if full.
 func (m *rangeManager) Enqueue(item Range) {
 	select {
@@ -134,5 +138,37 @@ func (m *rangeManager) Run(notification Notification) {
 			}
 			return
 		}
+	}
+}
+
+type FileRangeQueue Queue[Range]
+
+// RangeQueueBatcher is meant for merging continuous ranges before sending them to the FileRangeQueue.
+type RangeQueueBatcher struct {
+	queue FileRangeQueue
+	r     Range
+}
+
+func NewRangeQueueBatcher(queue FileRangeQueue) *RangeQueueBatcher {
+	return &RangeQueueBatcher{queue: queue}
+}
+
+// Merge stores the min start and max end between the current state and the provided range.
+func (b *RangeQueueBatcher) Merge(r Range) {
+	if !r.IsValid() {
+		return
+	}
+	if !b.r.IsValid() {
+		b.r = r
+		return
+	}
+	b.r.start = min(b.r.start, r.start)
+	b.r.end = max(b.r.end, r.end)
+}
+
+// Done enqueues the built range (if valid) on the queue.
+func (b *RangeQueueBatcher) Done() {
+	if b.queue != nil && b.r.IsValid() {
+		b.queue.Enqueue(b.r)
 	}
 }
