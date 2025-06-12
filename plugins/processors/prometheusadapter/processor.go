@@ -70,6 +70,7 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 			_, ok := extraneousAttributes[key]
 			return ok
 		})
+		rma.PutStr("receiver", "prometheus")
 	}
 	return md, nil
 }
@@ -119,7 +120,6 @@ func processExponentialHistogramDataPointSlice(dps pmetric.ExponentialHistogramD
 
 func updateDatapointAttributes(attr pcommon.Map, rma pcommon.Map) {
 	// add new attributes
-	attr.PutStr("receiver", "prometheus")
 	hostname, err := os.Hostname()
 	if err == nil {
 		attr.PutStr("host", hostname)
