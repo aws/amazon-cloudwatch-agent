@@ -211,6 +211,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.3
+	github.com/google/btree v1.0.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.124.0
 	github.com/prometheus/common v0.62.0
 	go.opentelemetry.io/collector/client v1.30.0

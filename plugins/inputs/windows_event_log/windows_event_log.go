@@ -97,7 +97,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		stateManager := state.NewFileOffsetManager(stateManagerCfg)
+		stateManager := state.NewFileRangeManager(stateManagerCfg)
 		destination := eventConfig.Destination
 		if destination == "" {
 			destination = s.Destination
@@ -141,6 +141,7 @@ func getStateManagerConfig(plugin *Plugin, ec *EventConfig) (state.ManagerConfig
 		StateFilePrefix: logscommon.WindowsEventLogPrefix,
 		Name:            ec.LogGroupName + "_" + ec.LogStreamName + "_" + ec.Name,
 		QueueSize:       stateQueueSize,
+		MaxPersistItems: 1, // TODO: Base this on thread count
 	}, nil
 }
 
