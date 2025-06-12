@@ -200,7 +200,7 @@ func (m *targetManager) processDescribeLogGroup() {
 }
 
 func (m *targetManager) updateTargetBatch(targets map[string]Target) {
-	var identifiers []*string
+	identifiers := make([]*string, 0, len(targets))
 	for logGroup := range targets {
 		identifiers = append(identifiers, aws.String(logGroup))
 	}
