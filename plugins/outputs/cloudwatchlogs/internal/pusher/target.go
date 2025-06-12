@@ -16,10 +16,9 @@ import (
 )
 
 const (
+	retentionChannelSize = 100
 	cacheTTL                      = 5 * time.Second
 	logGroupIdentifierLimit       = 50
-	describeLogGroupChannelSize   = 50
-	putRetentionPolicyChannelSize = 100
 	// max wait time with backoff and jittering:
 	// 0 + 2.4 + 4.8 + 9.6 + 10 ~= 26.8 sec
 	baseRetryDelay      = 1 * time.Second
@@ -54,8 +53,8 @@ func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) Tar
 		service:  service,
 		cache:    make(map[Target]time.Time),
 		cacheTTL: cacheTTL,
-		dlg:      make(chan Target, describeLogGroupChannelSize),
-		prp:      make(chan Target, putRetentionPolicyChannelSize),
+		dlg:      make(chan Target, retentionChannelSize),
+		prp:      make(chan Target, retentionChannelSize),
 	}
 
 	go tm.processDescribeLogGroup()
