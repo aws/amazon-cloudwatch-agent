@@ -31,7 +31,6 @@
         ]
       }
     },
-    "concurrency": 10,
     "log_stream_name": "LOG_STREAM_NAME"
   }
 }
