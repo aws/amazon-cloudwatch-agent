@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -284,6 +284,39 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService.AssertExpectations(t)
 	})
 
+	t.Run("ProcessBatchOverLimit", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// Setup mock to expect a batch of 125 (2.5x the limit) log groups
+		// DescribeLogGroups will be called twice due to reaching batch limit on the first 100, then the other 25 on the timer
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) == logGroupIdentifierLimit
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}, nil).Twice()
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) == 25
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		for i := 0; i < 125; i++ {
+			target := Target{
+				Group:     fmt.Sprintf("group-%d", i),
+				Stream:    "stream",
+				Retention: 7,
+			}
+			tm.dlg <- target
+		}
+
+		time.Sleep(7 * time.Second)
+
+		mockService.AssertExpectations(t)
+	})
+
 	t.Run("ProcessBatchOnTimer", func(t *testing.T) {
 		mockService := new(mockLogsService)
 
@@ -390,6 +423,43 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		tm.updateTargetBatch(batch)
 		// Sleep enough for retry
 		time.Sleep(2 * time.Second)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("TargetWithInvalidRetentionSkipped", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// Setup mock to only expect 25 of the log groups with valid retentions
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) == 25
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		for i := 0; i < logGroupIdentifierLimit; i++ {
+			var target Target
+			// Half the targets will have 0 retention
+			if i%2 == 0 {
+				target = Target{
+					Group:     fmt.Sprintf("group-%d", i),
+					Stream:    "stream",
+					Retention: 7,
+				}
+			} else {
+				target = Target{
+					Group:     fmt.Sprintf("group-%d", i),
+					Stream:    "stream",
+					Retention: 0,
+				}
+			}
+			tm.dlg <- target
+		}
+
+		time.Sleep(7 * time.Second)
 
 		mockService.AssertExpectations(t)
 	})
