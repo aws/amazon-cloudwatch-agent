@@ -103,7 +103,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-gonic/gin v1.10.0
-	github.com/go-kit/log v0.2.1
+	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0
 	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/gobwas/glob v0.2.3

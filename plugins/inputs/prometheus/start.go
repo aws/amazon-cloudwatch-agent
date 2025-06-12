@@ -21,7 +21,6 @@ package prometheus
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -29,8 +28,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -82,44 +79,6 @@ func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
 
-type slogAdapter struct {
-	logger *slog.Logger
-}
-
-func (a *slogAdapter) Log(keyvals ...interface{}) error {
-	// Convert key-value pairs to attributes
-	attrs := make([]any, 0, len(keyvals))
-	var msg string
-
-	for i := 0; i < len(keyvals); i += 2 {
-		k := keyvals[i]
-		var v interface{} = "missing value"
-		if i+1 < len(keyvals) {
-			v = keyvals[i+1]
-		}
-
-		// Handle special "msg" key
-		if ks, ok := k.(string); ok && ks == "msg" {
-			msg = fmt.Sprint(v)
-			continue
-		}
-
-		attrs = append(attrs, fmt.Sprint(k), v)
-	}
-
-	if msg == "" {
-		msg = "log event"
-	}
-
-	a.logger.Info(msg, attrs...)
-	return nil
-}
-
-// Helper function to create an adapter
-func newSlogAdapter(logger *slog.Logger) log.Logger {
-	return &slogAdapter{logger: logger}
-}
-
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	logLevel := &promslog.AllowedLevel{}
 	logLevel.Set("info")
@@ -143,7 +102,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 	logger := promslog.New(&cfg.promslogConfig)
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
-	kitLogger := newSlogAdapter(logger)
 
 	logger.Info("Starting Prometheus", "version", version.Info())
 	logger.Info("build_context", "context", version.BuildContext())
@@ -364,7 +322,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	if err := g.Run(); err != nil {
 		logger.Error("err", "error", err)
 	}
-	level.Info(kitLogger).Log("msg", "See you next time!")
+	logger.Info("See you next time!")
 	wg.Done()
 }
 
@@ -408,19 +366,13 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) 
 
 func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) error {
 	logger.Info("Loading configuration file", "filename", filename)
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't read configuration file %q", filename)
-	}
+	content, _ := os.ReadFile(filename)
 	text := string(content)
-	logger.Info("Prometheus configuration file", "value", text)
+	logger.Debug("Prometheus configuration file", "value", text)
 
-	var conf *config.Config
-	success := false
-
-	// Defer the metrics update
+	var err error
 	defer func() {
-		if success {
+		if err == nil {
 			configSuccess.Set(1)
 			configSuccessTime.SetToCurrentTime()
 		} else {
@@ -428,6 +380,7 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 		}
 	}()
 
+	var conf *config.Config
 	// Check for TA
 	if taManager.enabled {
 		logger.Info("Target Allocator is enabled")
@@ -452,15 +405,17 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 
 	relabelScrapeConfigs(conf, logger)
 
-	// Apply reload functions
+	failed := false
 	for _, rl := range rls {
-		if err := rl(conf); err != nil {
+		if err = rl(conf); err != nil {
 			logger.Error("Failed to apply configuration", "err", err)
-			return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
+			failed = true
 		}
+	}
+	if failed {
+		return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 	}
 
 	logger.Info("Completed loading of configuration file", "filename", filename)
-	success = true
 	return nil
 }
