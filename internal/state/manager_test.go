@@ -149,6 +149,7 @@ func TestFileRangeManager(t *testing.T) {
 		assert.Equal(t, RangeList{
 			Range{start: 500, end: 600},
 		}, restored)
+		time.Sleep(defaultSaveInterval)
 		manager.Enqueue(Range{start: 600, end: 700})
 		time.Sleep(2 * defaultSaveInterval)
 		restored, err = manager.Restore()
