@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -61,9 +63,16 @@ func TestTailerSrc(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
+
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination", statefile.Name(),
+		"destination", m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -173,10 +182,16 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
-		statefile.Name(),
+		m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -394,13 +409,20 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 	}
 	err = config.init()
 	assert.NoError(t, err)
+
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		t.Name(),
 		t.Name(),
 		"destination",
+		m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
-		statefile.Name(),
 		tailer,
 		autoRemoval,
 		multiLineFn,
