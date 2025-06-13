@@ -427,42 +427,6 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService.AssertExpectations(t)
 	})
 
-	t.Run("TargetWithInvalidRetentionSkipped", func(t *testing.T) {
-		mockService := new(mockLogsService)
-
-		// Setup mock to only expect 25 of the log groups with valid retentions
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
-			return len(input.LogGroupIdentifiers) == 25
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{},
-		}, nil).Once()
-
-		manager := NewTargetManager(logger, mockService)
-		tm := manager.(*targetManager)
-
-		for i := 0; i < logGroupIdentifierLimit; i++ {
-			var target Target
-			// Half the targets will have 0 retention
-			if i%2 == 0 {
-				target = Target{
-					Group:     fmt.Sprintf("group-%d", i),
-					Stream:    "stream",
-					Retention: 7,
-				}
-			} else {
-				target = Target{
-					Group:     fmt.Sprintf("group-%d", i),
-					Stream:    "stream",
-					Retention: 0,
-				}
-			}
-			tm.dlg <- target
-		}
-
-		time.Sleep(7 * time.Second)
-
-		mockService.AssertExpectations(t)
-	})
 }
 
 func TestCalculateBackoff(t *testing.T) {

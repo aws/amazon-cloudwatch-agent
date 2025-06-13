@@ -201,11 +201,8 @@ func (m *targetManager) processDescribeLogGroup() {
 
 func (m *targetManager) updateTargetBatch(targets map[string]Target) {
 	identifiers := make([]*string, 0, len(targets))
-	for logGroup, target := range targets {
-		// It's documented that only values >= 1 are accepted by the agent config
-		if target.Retention >= 1 {
-			identifiers = append(identifiers, aws.String(logGroup))
-		}
+	for logGroup := range targets {
+		identifiers = append(identifiers, aws.String(logGroup))
 	}
 	describeLogGroupsInput := &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupIdentifiers: identifiers,
