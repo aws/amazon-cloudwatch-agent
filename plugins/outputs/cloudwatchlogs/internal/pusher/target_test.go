@@ -371,7 +371,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 				Stream:    "stream",
 				Retention: 7,
 			}
-			tm.dlg <- target
+			tm.PutRetentionPolicy(target)
 		}
 
 		time.Sleep(100 * time.Millisecond)
@@ -406,7 +406,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 				Stream:    "stream",
 				Retention: 7,
 			}
-			tm.dlg <- target
+			tm.PutRetentionPolicy(target)
 		}
 
 		time.Sleep(7 * time.Second)
@@ -435,7 +435,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 				Stream:    "stream",
 				Retention: 7,
 			}
-			tm.dlg <- target
+			tm.PutRetentionPolicy(target)
 		}
 
 		// Wait for ticker to fire (slightly longer than 5 seconds)
