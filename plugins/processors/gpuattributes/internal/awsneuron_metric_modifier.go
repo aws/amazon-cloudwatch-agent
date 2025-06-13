@@ -72,7 +72,7 @@ type MetricDatapointAggregationKey struct {
 
 type NeuronCoreUtilizationDatapointAggregationKey struct {
 	runtimeTag string
-	coreId     string
+	coreID     string
 }
 
 var (
@@ -313,7 +313,7 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 		originalDatapoint := originalMetricDatapoints.At(i)
 		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
 		coreIdTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
-		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreId: coreIdTag.Str()}
+		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIdTag.Str()}
 		aggregatedValuesPerCore[key] = max(aggregatedValuesPerCore[key], originalDatapoint.DoubleValue(), 0)
 	}
 
@@ -330,9 +330,9 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 		firstOriginalDatapoint.CopyTo(datapoint)
 		datapoint.SetDoubleValue(value)
 		datapoint.Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
-		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreId)
-		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreId)
-		coreId, _ := strconv.Atoi(aggregatedMetricMetadata.coreId)
+		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreID)
+		coreId, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
 		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreId/NeuronCorePerDevice))
 	}
 	return newMetricSlice
