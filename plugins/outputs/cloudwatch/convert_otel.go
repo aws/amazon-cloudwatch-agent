@@ -14,6 +14,7 @@ import (
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
@@ -82,7 +83,7 @@ func ConvertOtelNumberDataPoints(
 	unit string,
 	scale float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum {
+) []*aggregationDatum { //nolint:revive
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
@@ -117,7 +118,7 @@ func ConvertOtelHistogramDataPoints(
 	unit string,
 	scale float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum {
+) []*aggregationDatum { //nolint:revive
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
@@ -144,6 +145,42 @@ func ConvertOtelHistogramDataPoints(
 	return datums
 }
 
+// ConvertOtelHistogramDataPoints converts each datapoint in the given slice to
+// Distribution.
+func ConvertOtelExponentialHistogramDataPoints(
+	dataPoints pmetric.ExponentialHistogramDataPointSlice,
+	name string,
+	unit string,
+	_ float64,
+	entity cloudwatch.Entity,
+) []*aggregationDatum { //nolint:revive
+
+	datums := make([]*aggregationDatum, 0, dataPoints.Len())
+	for i := 0; i < dataPoints.Len(); i++ {
+		dp := dataPoints.At(i)
+		attrs := dp.Attributes()
+		storageResolution := checkHighResolution(&attrs)
+		aggregationInterval := getAggregationInterval(&attrs)
+		dimensions := ConvertOtelDimensions(attrs)
+		ad := aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				Dimensions:        dimensions,
+				MetricName:        aws.String(name),
+				Unit:              aws.String(unit),
+				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
+				StorageResolution: aws.Int64(storageResolution),
+			},
+			aggregationInterval: aggregationInterval,
+			entity:              entity,
+		}
+		// Assume function pointer is valid.
+		ad.expHistDistribution = exph.NewExpHistogramDistribution()
+		ad.expHistDistribution.ConvertFromOtel(dp, unit)
+		datums = append(datums, &ad)
+	}
+	return datums
+}
+
 // ConvertOtelMetric creates a list of datums from the datapoints in the given
 // metric and returns it. Only supports the metric DataTypes that we plan to use.
 // Intentionally not caching previous values and converting cumulative to delta.
@@ -161,6 +198,8 @@ func ConvertOtelMetric(m pmetric.Metric, entity cloudwatch.Entity) []*aggregatio
 		return ConvertOtelNumberDataPoints(m.Sum().DataPoints(), name, unit, scale, entity)
 	case pmetric.MetricTypeHistogram:
 		return ConvertOtelHistogramDataPoints(m.Histogram().DataPoints(), name, unit, scale, entity)
+	case pmetric.MetricTypeExponentialHistogram:
+		return ConvertOtelExponentialHistogramDataPoints(m.ExponentialHistogram().DataPoints(), name, unit, scale, entity)
 	default:
 		log.Printf("E! cloudwatch: Unsupported type, %s", m.Type())
 	}
