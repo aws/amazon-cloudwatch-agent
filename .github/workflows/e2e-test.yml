@@ -8,7 +8,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "e2e-rosa"
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
@@ -16,6 +16,7 @@ env:
 on:
   schedule:
     - cron: '0 17 * * 1'
+
   workflow_dispatch:
     inputs:
       region:
@@ -32,7 +33,7 @@ on:
         required: false
         type: string
         description: 'Branch of the helm charts to test'
-        default: 'main'
+        default: 'rosa'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-parent
@@ -124,13 +125,34 @@ jobs:
           echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
           echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
           echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
-
+  RosaBaseTest:
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'Rosa Base Test'
+    uses: ./.github/workflows/e2e-rosa-test.yml
+    secrets: inherit
+    with:
+      terraform_dir: terraform/rosa/e2e
+      job_id: rosa-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.rosa_e2e_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region}}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: ${{vars.TERRAFORM_AWS_ASSUME_ROLE}}
+      agent_config: resources/cwagent_configs/jvm_tomcat.json
+      sample_app: resources/sample_apps/tomcat.yaml
   GenerateTestMatrix:
     needs: [BuildAgent, BuildOperator]
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
       eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
+      rosa_e2e_matrix: ${{steps.set-matrix.outputs.rosa_e2e_matrix}}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -147,10 +169,12 @@ jobs:
         run: |
           go run generator/test_case_generator.go -e2e
           echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
+          echo "::set-output name=rosa_e2e_matrix::$(echo $(cat generator/resources/rosa_e2e_cluster_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
           echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
+          echo "rosa_e2e_matrix: ${{ steps.set-matrix.outputs.rosa_e2e_matrix }}"
 
   EKSE2EJVMTomcatTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
