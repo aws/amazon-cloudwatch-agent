@@ -3,6 +3,7 @@ exporters:
         certificate_file_path: ""
         emf_only: true
         endpoint: ""
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
@@ -27,9 +28,13 @@ exporters:
             randomization_factor: 0.5
         role_arn: ${ENV_CREDENTIALS_ROLE_ARN}
         sending_queue:
+            block_on_overflow: false
+            blocking: false
             enabled: true
             num_consumers: 1
             queue_size: 1000
+            sizer: {}
+            wait_for_result: false
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -98,9 +103,6 @@ service:
                 - udplog/emf_logs
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -111,7 +113,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None
