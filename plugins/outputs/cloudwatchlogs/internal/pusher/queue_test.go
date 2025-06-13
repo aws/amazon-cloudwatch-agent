@@ -6,6 +6,8 @@ package pusher
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -674,7 +677,10 @@ func testPreparationWithLogger(
 ) (chan struct{}, *queue) {
 	t.Helper()
 	stop := make(chan struct{})
-	tm := NewTargetManager(logger, service)
+	tempDir := t.TempDir()
+	file, _ := os.Create(filepath.Join(tempDir, logscommon.RetentionPolicyTTLFileName))
+	file.Close()
+	tm := NewTargetManager(logger, service, tempDir)
 	s := newSender(logger, service, tm, retryDuration, stop)
 	q := newQueue(
 		logger,

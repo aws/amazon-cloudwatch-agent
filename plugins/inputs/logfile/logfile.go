@@ -343,7 +343,7 @@ func (t *LogFile) cleanupStateFolder() {
 			continue
 		}
 
-		if strings.Contains(file, logscommon.WindowsEventLogPrefix) {
+		if strings.Contains(file, logscommon.WindowsEventLogPrefix) || strings.Contains(file, logscommon.RetentionPolicyTTLFileName) {
 			continue
 		}
 
