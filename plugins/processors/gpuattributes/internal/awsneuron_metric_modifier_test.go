@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -418,8 +419,16 @@ func createExpectedMetric(name string, isCumulative bool, attributes []map[strin
 		datapoint.SetDoubleValue(values[i])
 		datapoint.Attributes().FromRaw(staticAttributes)
 
-		for key, val := range attributes[i] {
-			datapoint.Attributes().PutStr(key, val)
+		// Get sorted keys
+		keys := make([]string, 0, len(attributes[i]))
+		for k := range attributes[i] {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		// Add attributes in sorted order
+		for _, key := range keys {
+			datapoint.Attributes().PutStr(key, attributes[i][key])
 		}
 	}
 
