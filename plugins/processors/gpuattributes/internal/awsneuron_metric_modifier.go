@@ -312,8 +312,8 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		originalDatapoint := originalMetricDatapoints.At(i)
 		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
-		coreIdTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
-		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIdTag.Str()}
+		coreIDTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
+		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIDTag.Str()}
 		aggregatedValuesPerCore[key] = max(aggregatedValuesPerCore[key], originalDatapoint.DoubleValue(), 0)
 	}
 
