@@ -332,8 +332,8 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 		datapoint.Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
 		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreID)
 		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreID)
-		coreId, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
-		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreId/NeuronCorePerDevice))
+		coreID, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreID/NeuronCorePerDevice))
 	}
 	return newMetricSlice
 }
