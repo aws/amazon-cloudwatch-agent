@@ -48,9 +48,9 @@ type ManagerConfig struct {
 	QueueSize int
 	// SaveInterval determines how often the state is persisted.
 	SaveInterval time.Duration
-	// MaxPersistItems is the maximum number of items to persist in the saved state. If zero or negative, the
+	// MaxPersistedItems is the maximum number of items to persist in the saved state. If zero or negative, the
 	// persistence is unbounded.
-	MaxPersistItems int
+	MaxPersistedItems int
 }
 
 // StateFilePath returns the full path to the state file.

@@ -28,12 +28,12 @@ func TestFileRangeManager(t *testing.T) {
 		}{
 			"ValidConfig": {
 				cfg: ManagerConfig{
-					StateFileDir:    tmpDir,
-					StateFilePrefix: "test_prefix_",
-					Name:            "valid.log",
-					QueueSize:       10,
-					SaveInterval:    time.Millisecond,
-					MaxPersistItems: 5,
+					StateFileDir:      tmpDir,
+					StateFilePrefix:   "test_prefix_",
+					Name:              "valid.log",
+					QueueSize:         10,
+					SaveInterval:      time.Millisecond,
+					MaxPersistedItems: 5,
 				},
 				wantFilePath:        filepath.Join(tmpDir, "test_prefix_valid.log"),
 				wantQueueSize:       10,
@@ -42,12 +42,12 @@ func TestFileRangeManager(t *testing.T) {
 			},
 			"InvalidConfig": {
 				cfg: ManagerConfig{
-					StateFileDir:    "",
-					StateFilePrefix: "test_prefix_",
-					Name:            "valid.log",
-					QueueSize:       -1,
-					SaveInterval:    0,
-					MaxPersistItems: 0,
+					StateFileDir:      "",
+					StateFilePrefix:   "test_prefix_",
+					Name:              "valid.log",
+					QueueSize:         -1,
+					SaveInterval:      0,
+					MaxPersistedItems: 0,
 				},
 				wantFilePath:        "",
 				wantQueueSize:       defaultQueueSize,
@@ -62,7 +62,7 @@ func TestFileRangeManager(t *testing.T) {
 				assert.Equal(t, testCase.wantFilePath, got.stateFilePath)
 				assert.Equal(t, testCase.wantQueueSize, cap(got.queue))
 				assert.Equal(t, testCase.wantSaveInterval, got.saveInterval)
-				assert.Equal(t, testCase.wantMaxPersistItems, got.maxPersistItems)
+				assert.Equal(t, testCase.wantMaxPersistItems, got.maxPersistedItems)
 			})
 		}
 	})
@@ -104,7 +104,7 @@ func TestFileRangeManager(t *testing.T) {
 	t.Run("Restore/Valid/Ranges", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "valid.log"}
+		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "valid.log", MaxPersistedItems: 10}
 		manager := NewFileRangeManager(cfg)
 		assert.NoError(t, os.WriteFile(cfg.StateFilePath(), []byte("2760\nvalid.log\n100-1056,1640-2760"), FileMode))
 		got, err := manager.Restore()
@@ -119,8 +119,9 @@ func TestFileRangeManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		manager := NewFileRangeManager(ManagerConfig{
-			StateFileDir: tmpDir,
-			Name:         "replace.log",
+			StateFileDir:      tmpDir,
+			Name:              "replace.log",
+			MaxPersistedItems: 10,
 		}).(*rangeManager)
 
 		notification := Notification{
@@ -200,9 +201,10 @@ func TestFileRangeManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		manager := NewFileRangeManager(ManagerConfig{
-			StateFileDir: tmpDir,
-			Name:         "overflow.log",
-			QueueSize:    10,
+			StateFileDir:      tmpDir,
+			Name:              "overflow.log",
+			QueueSize:         10,
+			MaxPersistedItems: 10,
 		})
 
 		notification := Notification{
@@ -311,9 +313,10 @@ func TestFileRangeManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		manager := NewFileRangeManager(ManagerConfig{
-			StateFileDir: tmpDir,
-			Name:         "test.log",
-			SaveInterval: time.Hour,
+			StateFileDir:      tmpDir,
+			Name:              "test.log",
+			MaxPersistedItems: 10,
+			SaveInterval:      time.Hour,
 		})
 
 		notification := Notification{
