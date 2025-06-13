@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -28,6 +29,12 @@ type LogEvent interface {
 	Message() string
 	Time() time.Time
 	Done()
+}
+
+type StatefulLogEvent interface {
+	LogEvent
+	Range() state.Range
+	RangeQueue() state.FileRangeQueue
 }
 
 type LogEntityProvider interface {

@@ -18,12 +18,12 @@ const (
 )
 
 type rangeManager struct {
-	name             string
-	stateFilePath    string
-	queue            chan Range
-	saveInterval     time.Duration
-	maxPersistItems  int
-	replaceTrackerCh chan RangeTracker
+	name              string
+	stateFilePath     string
+	queue             chan Range
+	saveInterval      time.Duration
+	maxPersistedItems int
+	replaceTrackerCh  chan RangeTracker
 }
 
 // FileRangeManager is a state manager that handles the Range.
@@ -39,13 +39,17 @@ func NewFileRangeManager(cfg ManagerConfig) FileRangeManager {
 		cfg.SaveInterval = defaultSaveInterval
 	}
 	return &rangeManager{
-		name:             cfg.Name,
-		stateFilePath:    cfg.StateFilePath(),
-		queue:            make(chan Range, cfg.QueueSize),
-		saveInterval:     cfg.SaveInterval,
-		maxPersistItems:  cfg.MaxPersistItems,
-		replaceTrackerCh: make(chan RangeTracker, 1),
+		name:              cfg.Name,
+		stateFilePath:     cfg.StateFilePath(),
+		queue:             make(chan Range, cfg.QueueSize),
+		saveInterval:      cfg.SaveInterval,
+		maxPersistedItems: cfg.MaxPersistedItems,
+		replaceTrackerCh:  make(chan RangeTracker, 1),
 	}
+}
+
+func (m *rangeManager) ID() string {
+	return m.name
 }
 
 // Enqueue the Range. Will drop the oldest in the queue if full.
@@ -70,7 +74,7 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		}
 		return RangeList{}, err
 	}
-	tracker := newRangeTracker(m.name, m.maxPersistItems)
+	tracker := newRangeTracker(m.name, m.maxPersistedItems)
 	if err = tracker.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return RangeList{}, err
@@ -99,7 +103,7 @@ func (m *rangeManager) Run(notification Notification) {
 	defer t.Stop()
 
 	var lastSeq uint64
-	currentTracker := newRangeTracker(m.name, m.maxPersistItems)
+	currentTracker := newRangeTracker(m.name, m.maxPersistedItems)
 	shouldSave := false
 	for {
 		select {
@@ -134,5 +138,37 @@ func (m *rangeManager) Run(notification Notification) {
 			}
 			return
 		}
+	}
+}
+
+type FileRangeQueue Queue[Range]
+
+// RangeQueueBatcher is meant for merging continuous ranges before sending them to the FileRangeQueue.
+type RangeQueueBatcher struct {
+	queue FileRangeQueue
+	r     Range
+}
+
+func NewRangeQueueBatcher(queue FileRangeQueue) *RangeQueueBatcher {
+	return &RangeQueueBatcher{queue: queue}
+}
+
+// Merge stores the min start and max end between the current state and the provided range.
+func (b *RangeQueueBatcher) Merge(r Range) {
+	if !r.IsValid() {
+		return
+	}
+	if !b.r.IsValid() {
+		b.r = r
+		return
+	}
+	b.r.start = min(b.r.start, r.start)
+	b.r.end = max(b.r.end, r.end)
+}
+
+// Done enqueues the built range (if valid) on the queue.
+func (b *RangeQueueBatcher) Done() {
+	if b.queue != nil && b.r.IsValid() {
+		b.queue.Enqueue(b.r)
 	}
 }
