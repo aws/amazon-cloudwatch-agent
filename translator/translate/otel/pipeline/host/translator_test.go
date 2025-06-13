@@ -95,7 +95,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -151,7 +151,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -325,6 +325,47 @@ func TestTranslator(t *testing.T) {
 				processors: []string{"batch/host/amp", "deltatocumulative/host/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
+			},
+		},
+		"WithOtlpMetricsEC2AndServiceName": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{
+							"service.name": "test-service",
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostOtlpMetrics,
+			mode:         config.ModeEC2,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp/cloudwatch"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
+			},
+		},
+		"WithOtlpMetricsEC2CloudWatchLogsAndServiceName": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{
+							"service.name": "test-service",
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostOtlpMetrics,
+			destination:  common.CloudWatchLogsKey,
+			mode:         config.ModeEC2,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				exporters:  []string{"awsemf"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
 	}

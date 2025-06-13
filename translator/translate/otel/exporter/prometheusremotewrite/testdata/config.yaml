@@ -21,8 +21,6 @@ endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345/ap
 headers: {}
 target_info:
   enabled: true
-export_created_metric:
-  enabled: false
 add_metric_suffixes: true
 max_batch_size_bytes: 3000000
 max_conns_per_host: 0

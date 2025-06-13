@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/clientutil"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entitytransformer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/k8sattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -126,16 +127,18 @@ var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
 type awsEntityProcessor struct {
-	config     *Config
-	k8sscraper scraper
-	logger     *zap.Logger
+	config            *Config
+	k8sscraper        scraper
+	entityTransformer *entitytransformer.EntityTransformer
+	logger            *zap.Logger
 }
 
 func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcessor {
 	return &awsEntityProcessor{
-		config:     config,
-		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
-		logger:     logger,
+		config:            config,
+		k8sscraper:        k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
+		entityTransformer: entitytransformer.NewEntityTransformer(config.TransformEntity, logger),
+		logger:            logger,
 	}
 }
 
@@ -216,7 +219,7 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				// Perform fallback mechanism for service name if it is empty
 				// or has prefix unknown_service ( unknown_service will be set by OTEL SDK if the service name is empty on application pod)
 				// https://opentelemetry.io/docs/specs/semconv/attributes-registry/service/
-				if (entityServiceName == EMPTY || strings.HasPrefix(entityServiceName, unknownService)) && ok && podInfo != nil && podInfo.Workload != EMPTY {
+				if shouldUseFallbackServiceName(entityServiceName) && ok && podInfo != nil && podInfo.Workload != EMPTY {
 					entityServiceName = podInfo.Workload
 					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
 				}
@@ -273,10 +276,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 				//  2. CWA config
 				//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
 				//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-				if entityServiceName == EMPTY && entityServiceNameSource == EMPTY {
+				if shouldUseFallbackServiceName(entityServiceName) {
 					entityServiceName, entityServiceNameSource = getServiceNameSource()
 				} else if entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
-					entityServiceNameSource = entitystore.ServiceNameSourceUnknown
+					entityServiceNameSource = entitystore.ServiceNameSourceInstrumentation
 				}
 
 				entityPlatformType = entityattributes.AttributeEntityEC2Platform
@@ -305,6 +308,15 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
+					if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
+						// Instrumentation Service Name Source has highest priority
+						// Therefore only apply when service name source is not
+						// Instrumentation. Service instrumented with "unknown_service" name
+						// will not be an issue since we have logics to modify it with propoer
+						// service name and source
+						p.entityTransformer.ApplyTransforms(resourceAttrs)
+					}
+
 				}
 			}
 			if logGroupNames == EMPTY || (serviceName == EMPTY && environmentName == EMPTY) {
@@ -539,4 +551,8 @@ func scrapeK8sPodName(p pcommon.Map) string {
 		return podAttr.Str()
 	}
 	return EMPTY
+}
+
+func shouldUseFallbackServiceName(serviceName string) bool {
+	return serviceName == EMPTY || strings.HasPrefix(serviceName, unknownService)
 }
