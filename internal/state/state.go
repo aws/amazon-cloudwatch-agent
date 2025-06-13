@@ -14,10 +14,16 @@ const (
 	FileMode = 0644
 )
 
+// Queue handles queued state changes.
+type Queue[T any] interface {
+	ID() string
+	// Enqueue the current state in memory.
+	Enqueue(state T)
+}
+
 // Manager handles persistence of state.
 type Manager[I, O any] interface {
-	// Enqueue the current state in memory.
-	Enqueue(state I)
+	Queue[I]
 	// Restore loads the previous state.
 	Restore() (O, error)
 	// Run starts the update/save loop.

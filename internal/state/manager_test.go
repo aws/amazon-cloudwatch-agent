@@ -58,7 +58,7 @@ func TestFileRangeManager(t *testing.T) {
 		for name, testCase := range testCases {
 			t.Run(name, func(t *testing.T) {
 				got := NewFileRangeManager(testCase.cfg).(*rangeManager)
-				assert.Equal(t, testCase.cfg.Name, got.name)
+				assert.Equal(t, testCase.cfg.Name, got.ID())
 				assert.Equal(t, testCase.wantFilePath, got.stateFilePath)
 				assert.Equal(t, testCase.wantQueueSize, cap(got.queue))
 				assert.Equal(t, testCase.wantSaveInterval, got.saveInterval)
@@ -150,6 +150,7 @@ func TestFileRangeManager(t *testing.T) {
 		assert.Equal(t, RangeList{
 			Range{start: 500, end: 600},
 		}, restored)
+		time.Sleep(defaultSaveInterval)
 		manager.Enqueue(Range{start: 600, end: 700})
 		time.Sleep(2 * defaultSaveInterval)
 		restored, err = manager.Restore()
@@ -378,6 +379,69 @@ func TestFileRangeManager(t *testing.T) {
 		assert.Equal(t, RangeList{
 			Range{start: 0, end: 100},
 		}, restored)
+	})
+}
+
+type mockFileRangeQueue struct {
+	enqueued []Range
+}
+
+var _ FileRangeQueue = (*mockFileRangeQueue)(nil)
+
+func (m *mockFileRangeQueue) ID() string {
+	return "mockFileRangeQueue"
+}
+
+func (m *mockFileRangeQueue) Enqueue(r Range) {
+	m.enqueued = append(m.enqueued, r)
+}
+
+func TestRangeQueueBatcher(t *testing.T) {
+	t.Run("NilQueue", func(t *testing.T) {
+		b := NewRangeQueueBatcher(nil)
+		assert.NotPanics(t, func() {
+			b.Merge(Range{start: 10, end: 20})
+			b.Done()
+		})
+	})
+	t.Run("InvalidRange", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Done()
+		assert.Len(t, q.enqueued, 0)
+		b.Merge(Range{})
+		b.Done()
+		assert.Len(t, q.enqueued, 0)
+	})
+	t.Run("SingleRange", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Merge(Range{})
+		b.Merge(Range{start: 10, end: 20})
+		b.Merge(Range{})
+		b.Done()
+		assert.Len(t, q.enqueued, 1)
+		assert.Equal(t, Range{start: 10, end: 20}, q.enqueued[0])
+	})
+	t.Run("MultipleRanges/Continuous", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Merge(Range{start: 10, end: 20})
+		b.Merge(Range{start: 20, end: 30})
+		b.Merge(Range{start: 5, end: 10})
+		b.Done()
+		assert.Len(t, q.enqueued, 1)
+		assert.Equal(t, Range{start: 5, end: 30}, q.enqueued[0])
+	})
+	t.Run("MultipleRanges/Distinct", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Merge(Range{start: 100, end: 200})
+		b.Merge(Range{start: 20, end: 30})
+		b.Merge(Range{start: 5, end: 10})
+		b.Done()
+		assert.Len(t, q.enqueued, 1)
+		assert.Equal(t, Range{start: 5, end: 200}, q.enqueued[0])
 	})
 }
 
