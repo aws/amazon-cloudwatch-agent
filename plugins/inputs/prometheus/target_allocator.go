@@ -6,16 +6,15 @@ package prometheus
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	otelpromreceiver "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	tamanager "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
-	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promslog"
 	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
@@ -48,7 +47,7 @@ type TargetAllocatorManager struct {
 	config              *otelpromreceiver.Config
 	sm                  *scrape.Manager
 	dm                  *discovery.Manager
-	logger              log.Logger
+	logger              *slog.Logger
 }
 
 func isPodNameAvailable() bool {
@@ -80,25 +79,7 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 	return &cfg, nil
 }
 
-// Adapter from go-kit/log to zap.Logger
-func createLogger(level *promlog.AllowedLevel) (*zap.Logger, error) {
-	zapLevel, err := zapcore.ParseLevel(level.String())
-	if err != nil {
-		err = fmt.Errorf("Error parsing level: %v. Defaulting to info.", err)
-		zapLevel = zapcore.InfoLevel
-	}
-	// Create a base zap logger (you can customize it as needed)
-	zapCore := zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), // Use JSON encoder for zap
-		zapcore.AddSync(os.Stdout),                               // Output to stdout
-		zapLevel,                                                 // Set log level to Debug
-	)
-	// Create the zap logger
-	zapLogger := zap.New(zapCore)
-	return zapLogger, err
-}
-
-func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *promlog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
+func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel *promslog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled:             false,
 		manager:             nil,
@@ -113,7 +94,7 @@ func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *
 	}
 	err := tam.loadConfig(filename)
 	if err != nil {
-		level.Warn(logger).Log("msg", "Could not load config for target allocator from file", "filename", filename, "err", err)
+		logger.Warn("Could not load config for target allocator from file", "filename", filename, "err", err)
 		return &tam
 	}
 	if tam.config == nil {
@@ -125,24 +106,42 @@ func createTargetAllocatorManager(filename string, logger log.Logger, logLevel *
 	}
 	return &tam
 }
-func (tam *TargetAllocatorManager) loadManager(logLevel *promlog.AllowedLevel) {
-	logger, err := createLogger(logLevel)
+
+func (tam *TargetAllocatorManager) loadManager(logLevel *promslog.AllowedLevel) {
+	zapLogger, err := createZapLogger(logLevel)
 	if err != nil {
-		level.Error(tam.logger).Log("msg", "Error creating logger", "err", err)
+		tam.logger.Error("Error creating zap logger", "error", err)
 	}
 	receiverSettings := receiver.Settings{
 		ID: component.MustNewID(strings.ReplaceAll(tam.config.TargetAllocator.CollectorID, "-", "_")),
 		TelemetrySettings: component.TelemetrySettings{
-			Logger:         logger,
+			Logger:         zapLogger,
 			TracerProvider: nil,
 			MeterProvider:  nil,
-			MetricsLevel:   0,
 			Resource:       pcommon.Resource{},
 		},
 	}
 
 	tam.manager = tamanager.NewManager(receiverSettings, tam.config.TargetAllocator, (*promconfig.Config)(tam.config.PrometheusConfig), false)
 }
+
+func createZapLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
+	zapLevel, err := zapcore.ParseLevel(level.String())
+	if err != nil {
+		err = fmt.Errorf("error parsing level: %v. Defaulting to info", err)
+		zapLevel = zapcore.InfoLevel
+	}
+
+	zapCore := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.AddSync(os.Stdout),
+		zapLevel,
+	)
+
+	zapLogger := zap.New(zapCore)
+	return zapLogger, err
+}
+
 func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 	config, err := loadConfigFromFilename(filename)
 	if err != nil {
@@ -182,15 +181,18 @@ func (tam *TargetAllocatorManager) Shutdown() {
 func (tam *TargetAllocatorManager) AttachReloadConfigHandler(handler func(config *promconfig.Config)) {
 	tam.reloadConfigHandler = handler
 }
-func (tam *TargetAllocatorManager) reloadConfigTicker() error {
 
+func (tam *TargetAllocatorManager) reloadConfigTicker() error {
 	if tam.config.TargetAllocator == nil {
-		return level.Error(tam.logger).Log("msg", "target Allocator is not configured properly")
+		return fmt.Errorf("target Allocator is not configured properly")
 	}
 	if tam.reloadConfigHandler == nil {
-		return level.Error(tam.logger).Log("msg", "target allocator reload config handler is not configured properly")
+		return fmt.Errorf("target allocator reload config handler is not configured properly")
 	}
-	level.Info(tam.logger).Log("msg", "Starting Target Allocator Reload Config Ticker", "interval", tam.config.TargetAllocator.Interval.Seconds())
+
+	tam.logger.Info("Starting Target Allocator Reload Config Ticker",
+		"interval", tam.config.TargetAllocator.Interval.Seconds())
+
 	ticker := time.NewTicker(tam.config.TargetAllocator.Interval)
 	go func() {
 		for {
@@ -200,7 +202,7 @@ func (tam *TargetAllocatorManager) reloadConfigTicker() error {
 			case <-tam.shutdownCh:
 				ticker.Stop()
 				// Stop the ticker and exit when stop is signaled
-				level.Info(tam.logger).Log("msg", "Stopping Target Allocator Reload Config Ticker")
+				tam.logger.Info("Stopping Target Allocator Reload Config Ticker")
 				return
 			}
 		}
