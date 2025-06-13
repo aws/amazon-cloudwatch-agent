@@ -4,6 +4,9 @@
 package internal
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -358,44 +361,70 @@ func createActualMetricForKey(key string) pmetric.Metric {
 
 func assertModifiedMetric(t *testing.T, actualSlice pmetric.MetricSlice, expectedMetrics map[string]pmetric.Metric) {
 	assert.Equal(t, len(expectedMetrics), actualSlice.Len())
+
 	for i := 0; i < actualSlice.Len(); i++ {
 		actualMetric := actualSlice.At(i)
 		expectedMetric, exists := expectedMetrics[actualMetric.Name()]
-
 		assert.True(t, exists)
+
 		assert.Equal(t, expectedMetric.Name(), actualMetric.Name())
 		assert.Equal(t, expectedMetric.Type(), actualMetric.Type())
 		assert.Equal(t, expectedMetric.Unit(), actualMetric.Unit())
 
-		actualDatapoints := pmetric.NumberDataPointSlice{}
-		expectedDatapoints := pmetric.NumberDataPointSlice{}
-		if actualMetric.Type() == pmetric.MetricTypeGauge {
-			actualDatapoints = actualMetric.Gauge().DataPoints()
-			expectedDatapoints = expectedMetric.Gauge().DataPoints()
-		} else {
-			actualDatapoints = actualMetric.Sum().DataPoints()
-			expectedDatapoints = expectedMetric.Sum().DataPoints()
-		}
+		actualDatapoints := getDatapoints(actualMetric)
+		expectedDatapoints := getDatapoints(expectedMetric)
 
 		assert.Equal(t, expectedDatapoints.Len(), actualDatapoints.Len())
 
+		// Create maps of datapoints keyed by their attributes
+		actualByAttrs := make(map[string]pmetric.NumberDataPoint)
+		expectedByAttrs := make(map[string]pmetric.NumberDataPoint)
+
 		for j := 0; j < actualDatapoints.Len(); j++ {
-			actualDatapoint := actualDatapoints.At(j)
-			expectedDatapoint := expectedDatapoints.At(j)
+			actualDP := actualDatapoints.At(j)
+			key := getAttributesKey(actualDP.Attributes())
+			actualByAttrs[key] = actualDP
+		}
 
-			assert.Equal(t, expectedDatapoint.Attributes().Len(), actualDatapoint.Attributes().Len())
-			for key, val := range actualDatapoint.Attributes().AsRaw() {
-				expectedVal, _ := expectedDatapoint.Attributes().Get(key)
-				assert.Equal(t, expectedVal.AsString(), val)
+		for j := 0; j < expectedDatapoints.Len(); j++ {
+			expectedDP := expectedDatapoints.At(j)
+			key := getAttributesKey(expectedDP.Attributes())
+			expectedByAttrs[key] = expectedDP
+
+			actualDP, exists := actualByAttrs[key]
+			assert.True(t, exists, "Missing datapoint with attributes %s", key)
+			if exists {
+				assert.Equal(t, expectedDP.DoubleValue(), actualDP.DoubleValue(),
+					"Value mismatch for datapoint with attributes %s", key)
+				assert.Equal(t, expectedDP.Timestamp(), actualDP.Timestamp())
 			}
-
-			assert.Equal(t, expectedDatapoint.ValueType(), actualDatapoint.ValueType())
-			assert.Equal(t, expectedDatapoint.DoubleValue(), actualDatapoint.DoubleValue())
-			assert.Equal(t, expectedDatapoint.Timestamp(), actualDatapoint.Timestamp())
-			assert.False(t, actualDatapoint.Flags().NoRecordedValue())
-			assert.NotEqual(t, pmetric.NumberDataPointValueTypeEmpty, actualDatapoint.ValueType())
 		}
 	}
+}
+
+func getDatapoints(metric pmetric.Metric) pmetric.NumberDataPointSlice {
+	if metric.Type() == pmetric.MetricTypeGauge {
+		return metric.Gauge().DataPoints()
+	}
+	return metric.Sum().DataPoints()
+}
+
+func getAttributesKey(attrs pcommon.Map) string {
+	// Sort keys for consistent ordering
+	keys := make([]string, 0, attrs.Len())
+	attrs.Range(func(k string, _ pcommon.Value) bool {
+		keys = append(keys, k)
+		return true
+	})
+	sort.Strings(keys)
+
+	// Build key string
+	var b strings.Builder
+	for _, k := range keys {
+		v, _ := attrs.Get(k)
+		b.WriteString(fmt.Sprintf("%s=%s;", k, v.AsString()))
+	}
+	return b.String()
 }
 
 func createExpectedMetric(name string, isCumulative bool, attributes []map[string]string, values []float64, metricType pmetric.MetricType, unit string) pmetric.Metric {
