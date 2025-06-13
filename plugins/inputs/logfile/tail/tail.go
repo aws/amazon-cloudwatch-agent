@@ -55,7 +55,7 @@ type limiter interface {
 type Config struct {
 	// File-specifc
 	Location    *SeekInfo       // Seek to this location before tailing
-	RangeList   state.RangeList // Seek to these ranges before we seek to Location
+	GapsToRead  state.RangeList // Seek to these ranges before we seek to Location
 	ReOpen      bool            // Reopen recreated files (tail -F)
 	MustExist   bool            // Fail early if the file does not exist
 	Poll        bool            // Poll for file changes instead of using inotify
@@ -346,8 +346,8 @@ func (tail *Tail) tailFileSync() {
 	tail.openReader()
 
 	// Send the lines for the gaps found in the state file's ranges
-	if len(tail.RangeList) > 0 {
-		for _, seekRange := range tail.RangeList {
+	if len(tail.GapsToRead) > 0 {
+		for _, seekRange := range tail.GapsToRead {
 			if seekRange.IsEndOffsetUnbounded() {
 				continue
 			}
