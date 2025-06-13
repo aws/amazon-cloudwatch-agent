@@ -131,6 +131,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
+      eks_e2e_prometheus_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -290,3 +291,25 @@ jobs:
       eks_installation_type: "EKS_ADDON"
     secrets: inherit
 
+  EKSE2ETargetAllocatorTest:
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EKSE2ETargetAllocatorTest'
+    uses: ./.github/workflows/eks-e2e-test.yml
+    with:
+      terraform_dir: terraform/eks/e2e
+      job_id: eks-e2e-target-allocator-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_prometheus_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region || 'us-west-2' }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      agent_config: resources/cwagent_configs_prometheus/targetallocator.json
+      sample_app: resources/sample_apps/prometheus.yaml
+      eks_installation_type: "HELM"
+    secrets: inherit
