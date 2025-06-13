@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/extension/extensiontest"
 )
@@ -20,7 +21,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 func TestCreateExtension(t *testing.T) {
 	cfg := &Config{}
-	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(component.MustNewType("server")), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }
@@ -29,7 +30,7 @@ func TestCreateWithConfig(t *testing.T) {
 	cfg := &Config{ListenAddress: ":8080", TLSCertPath: "./testdata/example-server-cert.pem",
 		TLSKeyPath: "./testdata/example-server-key.pem",
 		TLSCAPath:  "./testdata/example-CA-cert.pem"}
-	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(component.MustNewType("server")), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }

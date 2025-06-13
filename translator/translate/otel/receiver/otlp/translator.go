@@ -78,14 +78,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if t.Name() == common.PipelineNameJmx {
 		cfg.GRPC = nil
-		cfg.HTTP.Endpoint = defaultJMXHttpEndpoint
+		cfg.HTTP.ServerConfig.Endpoint = defaultJMXHttpEndpoint
 		return cfg, nil
 	}
 
 	// init default configuration
 	configKey := t.configKey
 	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
-	cfg.HTTP.Endpoint = defaultHttpEndpoint
+	cfg.HTTP.ServerConfig.Endpoint = defaultHttpEndpoint
 
 	if t.Name() == common.AppSignals {
 		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.signal]
@@ -98,7 +98,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			configKey = appSignalsConfigKeys[1]
 		}
 		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
-		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
+		cfg.HTTP.ServerConfig.Endpoint = defaultAppSignalsHttpEndpoint
 	}
 
 	if conf == nil || !conf.IsSet(configKey) {
@@ -113,7 +113,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		tlsSettings.KeyFile = tls["key_file"].(string)
 	}
 	cfg.GRPC.TLSSetting = tlsSettings
-	cfg.HTTP.TLSSetting = tlsSettings
+	cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
 
 	grpcEndpoint, grpcOk := otlpMap["grpc_endpoint"]
 	httpEndpoint, httpOk := otlpMap["http_endpoint"]
@@ -121,7 +121,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.GRPC.NetAddr.Endpoint = grpcEndpoint.(string)
 	}
 	if httpOk {
-		cfg.HTTP.Endpoint = httpEndpoint.(string)
+		cfg.HTTP.ServerConfig.Endpoint = httpEndpoint.(string)
 	}
 	return cfg, nil
 }

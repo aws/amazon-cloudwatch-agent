@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 )
@@ -45,7 +46,7 @@ func TestCreateMetricsReceiver(t *testing.T) {
 
 			receiver, err := createMetricsReceiver(
 				context.Background(),
-				receivertest.NewNopSettings(),
+				receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")),
 				cfg,
 				consumertest.NewNop(),
 			)
