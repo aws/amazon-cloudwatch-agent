@@ -28,12 +28,12 @@ func TestFileRangeManager(t *testing.T) {
 		}{
 			"ValidConfig": {
 				cfg: ManagerConfig{
-					StateFileDir:    tmpDir,
-					StateFilePrefix: "test_prefix_",
-					Name:            "valid.log",
-					QueueSize:       10,
-					SaveInterval:    time.Millisecond,
-					MaxPersistItems: 5,
+					StateFileDir:      tmpDir,
+					StateFilePrefix:   "test_prefix_",
+					Name:              "valid.log",
+					QueueSize:         10,
+					SaveInterval:      time.Millisecond,
+					MaxPersistedItems: 5,
 				},
 				wantFilePath:        filepath.Join(tmpDir, "test_prefix_valid.log"),
 				wantQueueSize:       10,
@@ -42,12 +42,12 @@ func TestFileRangeManager(t *testing.T) {
 			},
 			"InvalidConfig": {
 				cfg: ManagerConfig{
-					StateFileDir:    "",
-					StateFilePrefix: "test_prefix_",
-					Name:            "valid.log",
-					QueueSize:       -1,
-					SaveInterval:    0,
-					MaxPersistItems: 0,
+					StateFileDir:      "",
+					StateFilePrefix:   "test_prefix_",
+					Name:              "valid.log",
+					QueueSize:         -1,
+					SaveInterval:      0,
+					MaxPersistedItems: 0,
 				},
 				wantFilePath:        "",
 				wantQueueSize:       defaultQueueSize,
@@ -58,11 +58,11 @@ func TestFileRangeManager(t *testing.T) {
 		for name, testCase := range testCases {
 			t.Run(name, func(t *testing.T) {
 				got := NewFileRangeManager(testCase.cfg).(*rangeManager)
-				assert.Equal(t, testCase.cfg.Name, got.name)
+				assert.Equal(t, testCase.cfg.Name, got.ID())
 				assert.Equal(t, testCase.wantFilePath, got.stateFilePath)
 				assert.Equal(t, testCase.wantQueueSize, cap(got.queue))
 				assert.Equal(t, testCase.wantSaveInterval, got.saveInterval)
-				assert.Equal(t, testCase.wantMaxPersistItems, got.maxPersistItems)
+				assert.Equal(t, testCase.wantMaxPersistItems, got.maxPersistedItems)
 			})
 		}
 	})
@@ -104,7 +104,7 @@ func TestFileRangeManager(t *testing.T) {
 	t.Run("Restore/Valid/Ranges", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "valid.log"}
+		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "valid.log", MaxPersistedItems: 10}
 		manager := NewFileRangeManager(cfg)
 		assert.NoError(t, os.WriteFile(cfg.StateFilePath(), []byte("2760\nvalid.log\n100-1056,1640-2760"), FileMode))
 		got, err := manager.Restore()
@@ -119,9 +119,10 @@ func TestFileRangeManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		manager := NewFileRangeManager(ManagerConfig{
-			StateFileDir: tmpDir,
-			Name:         "replace.log"},
-		).(*rangeManager)
+			StateFileDir:      tmpDir,
+			Name:              "replace.log",
+			MaxPersistedItems: 10,
+		}).(*rangeManager)
 
 		notification := Notification{
 			Delete: make(chan struct{}),
@@ -139,7 +140,7 @@ func TestFileRangeManager(t *testing.T) {
 
 		time.Sleep(2 * defaultSaveInterval)
 
-		tree := newMultiRangeTracker("replace.log")
+		tree := newRangeTracker("replace.log", 10)
 		tree.Insert(Range{start: 500, end: 600})
 		assert.NoError(t, manager.save(tree))
 		time.Sleep(2 * defaultSaveInterval)
@@ -149,6 +150,7 @@ func TestFileRangeManager(t *testing.T) {
 		assert.Equal(t, RangeList{
 			Range{start: 500, end: 600},
 		}, restored)
+		time.Sleep(defaultSaveInterval)
 		manager.Enqueue(Range{start: 600, end: 700})
 		time.Sleep(2 * defaultSaveInterval)
 		restored, err = manager.Restore()
@@ -199,9 +201,10 @@ func TestFileRangeManager(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		manager := NewFileRangeManager(ManagerConfig{
-			StateFileDir: tmpDir,
-			Name:         "overflow.log",
-			QueueSize:    10,
+			StateFileDir:      tmpDir,
+			Name:              "overflow.log",
+			QueueSize:         10,
+			MaxPersistedItems: 10,
 		})
 
 		notification := Notification{
@@ -284,7 +287,7 @@ func TestFileRangeManager(t *testing.T) {
 		cfg := ManagerConfig{StateFileDir: tmpDir, Name: "delete.log"}
 		manager := NewFileRangeManager(cfg).(*rangeManager)
 
-		tree := newMultiRangeTracker("delete.log")
+		tree := newRangeTracker("delete.log", 10)
 		tree.Insert(Range{start: 100, end: 200})
 		assert.NoError(t, manager.save(tree))
 		_, err := os.Stat(cfg.StateFilePath())
@@ -309,7 +312,12 @@ func TestFileRangeManager(t *testing.T) {
 	t.Run("Run/Notification/Done", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		manager := NewFileRangeManager(ManagerConfig{StateFileDir: tmpDir, Name: "test.log", SaveInterval: time.Hour})
+		manager := NewFileRangeManager(ManagerConfig{
+			StateFileDir:      tmpDir,
+			Name:              "test.log",
+			MaxPersistedItems: 10,
+			SaveInterval:      time.Hour,
+		})
 
 		notification := Notification{
 			Done: make(chan struct{}),
@@ -371,6 +379,69 @@ func TestFileRangeManager(t *testing.T) {
 		assert.Equal(t, RangeList{
 			Range{start: 0, end: 100},
 		}, restored)
+	})
+}
+
+type mockFileRangeQueue struct {
+	enqueued []Range
+}
+
+var _ FileRangeQueue = (*mockFileRangeQueue)(nil)
+
+func (m *mockFileRangeQueue) ID() string {
+	return "mockFileRangeQueue"
+}
+
+func (m *mockFileRangeQueue) Enqueue(r Range) {
+	m.enqueued = append(m.enqueued, r)
+}
+
+func TestRangeQueueBatcher(t *testing.T) {
+	t.Run("NilQueue", func(t *testing.T) {
+		b := NewRangeQueueBatcher(nil)
+		assert.NotPanics(t, func() {
+			b.Merge(Range{start: 10, end: 20})
+			b.Done()
+		})
+	})
+	t.Run("InvalidRange", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Done()
+		assert.Len(t, q.enqueued, 0)
+		b.Merge(Range{})
+		b.Done()
+		assert.Len(t, q.enqueued, 0)
+	})
+	t.Run("SingleRange", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Merge(Range{})
+		b.Merge(Range{start: 10, end: 20})
+		b.Merge(Range{})
+		b.Done()
+		assert.Len(t, q.enqueued, 1)
+		assert.Equal(t, Range{start: 10, end: 20}, q.enqueued[0])
+	})
+	t.Run("MultipleRanges/Continuous", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Merge(Range{start: 10, end: 20})
+		b.Merge(Range{start: 20, end: 30})
+		b.Merge(Range{start: 5, end: 10})
+		b.Done()
+		assert.Len(t, q.enqueued, 1)
+		assert.Equal(t, Range{start: 5, end: 30}, q.enqueued[0])
+	})
+	t.Run("MultipleRanges/Distinct", func(t *testing.T) {
+		q := &mockFileRangeQueue{}
+		b := NewRangeQueueBatcher(q)
+		b.Merge(Range{start: 100, end: 200})
+		b.Merge(Range{start: 20, end: 30})
+		b.Merge(Range{start: 5, end: 10})
+		b.Done()
+		assert.Len(t, q.enqueued, 1)
+		assert.Equal(t, Range{start: 5, end: 200}, q.enqueued[0])
 	})
 }
 
