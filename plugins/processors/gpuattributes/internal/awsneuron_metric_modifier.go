@@ -49,7 +49,7 @@ const (
 	RuntimeTagOverride                            = "DEFAULT"
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
-	NeuronCoreLabel                                 = "neuroncore"
+	NeuronCoreLabel                               = "neuroncore"
 	NeuronCorePerDevice                           = 2
 )
 
@@ -143,13 +143,15 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 		keepSpecificDatapointBasedOnAttribute(originalMetric, MemoryLocation, "neuron_device")
 	}
 
-	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
+	var modifiedMetricSlice pmetric.MetricSlice
 
-	// For NeuronCoreUtilization metrics, perform additional aggregation to calculate the maximum utilization 
+	// For NeuronCoreUtilization metrics, perform additional aggregation to calculate the maximum utilization
 	// value per core across all datapoints. This ensures we capture peak utilization rather than average values,
 	// which is more useful for monitoring core performance and potential bottlenecks.
 	if originalMetric.Name() == containerinsightscommon.NeuronCoreUtilization {
-		modifiedMetricSlice = md.aggregateCoreUtilizationMetrics(modifiedMetricSlice, originalMetric)
+		modifiedMetricSlice = md.aggregateCoreUtilizationMetrics(originalMetric)
+	} else {
+		modifiedMetricSlice = md.extractDatapointsAsMetricsAndAggregate(originalMetric)
 	}
 
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
@@ -303,7 +305,8 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 	}
 }
 
-func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(newMetricSlice pmetric.MetricSlice, originalMetric pmetric.Metric) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
+	newMetricSlice := pmetric.NewMetricSlice()
 	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 	aggregatedValuesPerCore := map[NeuronCoreUtilizationDatapointAggregationKey]float64{}
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
