@@ -4,16 +4,17 @@
 package prometheus
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 
-	kitlog "github.com/go-kit/log"
-	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_metricAppender_Add_BadMetricName(t *testing.T) {
@@ -119,53 +120,94 @@ func Test_metricAppender_Commit(t *testing.T) {
 func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 	os.Setenv("POD_NAME", "collector-1")
 	defer os.Unsetenv("POD_NAME")
+
 	configFile := filepath.Join("testdata", "target_allocator.yaml")
-	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	logLevel := promlog.AllowedLevel{}
-	logLevel.Set("DEBUG")
+
+	logLevel := &promslog.AllowedLevel{}
+	err := logLevel.Set("info")
+	require.NoError(t, err)
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+
 	var reloadHandler = func(cfg *config.Config) error {
-		logger.Log("reloaded")
+		logger.Info("reloaded")
 		return nil
 	}
-	taManager := createTargetAllocatorManager(configFile, logger, &logLevel, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloadHandler)
+
+	taManager := createTargetAllocatorManager(configFile, logger, logLevel, nil, nil)
+	err = reloadConfig(configFile, logger, taManager, reloadHandler)
+
 	assert.NoError(t, err)
 	assert.True(t, taManager.enabled)
 	assert.Equal(t, taManager.config.TargetAllocator.CollectorID, "collector-1")
 	assert.Equal(t, taManager.config.TargetAllocator.TLSSetting.CAFile, DefaultTLSCaFilePath)
-
 }
 
 func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 	os.Setenv("POD_NAME", "collector-1")
 	defer os.Unsetenv("POD_NAME")
+
 	configFile := filepath.Join("testdata", "base-k8.yaml")
-	logLevel := promlog.AllowedLevel{}
-	logLevel.Set("DEBUG")
-	logger := kitlog.NewLogfmtLogger(os.Stdout)
+
+	// Create logger configuration
+	logLevel := &promslog.AllowedLevel{}
+	err := logLevel.Set("debug")
+	require.NoError(t, err)
+
+	format := &promslog.AllowedFormat{}
+	err = format.Set("logfmt")
+	require.NoError(t, err)
+
+	logConfig := &promslog.Config{
+		Level:  logLevel,
+		Format: format,
+		Style:  promslog.SlogStyle,
+		Writer: os.Stdout,
+	}
+	logger := promslog.New(logConfig)
+
 	var reloadHandler = func(cfg *config.Config) error {
-		logger.Log("reloaded")
+		logger.Info("reloaded")
 		return nil
 	}
-	taManager := createTargetAllocatorManager(configFile, logger, &logLevel, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloadHandler)
+
+	taManager := createTargetAllocatorManager(configFile, logger, logLevel, nil, nil)
+	err = reloadConfig(configFile, logger, taManager, reloadHandler)
+
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
-
 }
+
 func Test_loadConfigFromFileEC2(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
-	logger := kitlog.NewLogfmtLogger(os.Stdout)
-	logLevel := promlog.AllowedLevel{}
-	logLevel.Set("DEBUG")
+
+	// Create logger configuration
+	logLevel := &promslog.AllowedLevel{}
+	err := logLevel.Set("debug")
+	require.NoError(t, err)
+
+	format := &promslog.AllowedFormat{}
+	err = format.Set("logfmt")
+	require.NoError(t, err)
+
+	logConfig := &promslog.Config{
+		Level:  logLevel,
+		Format: format,
+		Style:  promslog.SlogStyle,
+		Writer: os.Stdout,
+	}
+	logger := promslog.New(logConfig)
+
 	var reloadHandler = func(cfg *config.Config) error {
-		logger.Log("reloaded")
+		logger.Info("reloaded")
 		return nil
 	}
 
-	taManager := createTargetAllocatorManager(configFile, logger, &logLevel, nil, nil)
-	err := reloadConfig(configFile, logger, taManager, reloadHandler)
+	taManager := createTargetAllocatorManager(configFile, logger, logLevel, nil, nil)
+	err = reloadConfig(configFile, logger, taManager, reloadHandler)
+
 	assert.NoError(t, err)
 	assert.False(t, taManager.enabled)
-
 }
