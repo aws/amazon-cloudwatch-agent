@@ -13,9 +13,12 @@ type Concurrency struct {
 func (c *Concurrency) ApplyRule(input any) (string, any) {
 	result := map[string]interface{}{}
 	_, val := translator.DefaultCase(ConcurrencySectionKey, float64(0), input)
-	if v, ok := val.(float64); ok && v > 0 {
-		result[ConcurrencySectionKey] = int(v)
+	var concurrency int
+	if v, ok := val.(float64); ok && v > 1 {
+		concurrency = int(v)
+		result[ConcurrencySectionKey] = concurrency
 	}
+	GlobalLogConfig.Concurrency = concurrency
 	return Output_Cloudwatch_Logs, result
 }
 

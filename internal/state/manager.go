@@ -18,12 +18,12 @@ const (
 )
 
 type rangeManager struct {
-	name             string
-	stateFilePath    string
-	queue            chan Range
-	saveInterval     time.Duration
-	maxPersistItems  int
-	replaceTrackerCh chan RangeTracker
+	name              string
+	stateFilePath     string
+	queue             chan Range
+	saveInterval      time.Duration
+	maxPersistedItems int
+	replaceTrackerCh  chan RangeTracker
 }
 
 // FileRangeManager is a state manager that handles the Range.
@@ -39,12 +39,12 @@ func NewFileRangeManager(cfg ManagerConfig) FileRangeManager {
 		cfg.SaveInterval = defaultSaveInterval
 	}
 	return &rangeManager{
-		name:             cfg.Name,
-		stateFilePath:    cfg.StateFilePath(),
-		queue:            make(chan Range, cfg.QueueSize),
-		saveInterval:     cfg.SaveInterval,
-		maxPersistItems:  cfg.MaxPersistItems,
-		replaceTrackerCh: make(chan RangeTracker, 1),
+		name:              cfg.Name,
+		stateFilePath:     cfg.StateFilePath(),
+		queue:             make(chan Range, cfg.QueueSize),
+		saveInterval:      cfg.SaveInterval,
+		maxPersistedItems: cfg.MaxPersistedItems,
+		replaceTrackerCh:  make(chan RangeTracker, 1),
 	}
 }
 
@@ -70,7 +70,7 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		}
 		return RangeList{}, err
 	}
-	tracker := newRangeTracker(m.name, m.maxPersistItems)
+	tracker := newRangeTracker(m.name, m.maxPersistedItems)
 	if err = tracker.UnmarshalText(content); err != nil {
 		log.Printf("W! Invalid state file content: %v", err)
 		return RangeList{}, err
@@ -99,7 +99,7 @@ func (m *rangeManager) Run(notification Notification) {
 	defer t.Stop()
 
 	var lastSeq uint64
-	currentTracker := newRangeTracker(m.name, m.maxPersistItems)
+	currentTracker := newRangeTracker(m.name, m.maxPersistedItems)
 	shouldSave := false
 	for {
 		select {

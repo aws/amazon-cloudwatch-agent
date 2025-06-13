@@ -30,6 +30,8 @@ type LogFile struct {
 	FileStateFolder string `toml:"file_state_folder"`
 	//destination
 	Destination string `toml:"destination"`
+	//maximum number of distinct, non-overlapping offset ranges to store.
+	MaxPersistState int `toml:"max_persist_state"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -188,9 +190,9 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			}
 
 			stateManager := state.NewFileRangeManager(state.ManagerConfig{
-				StateFileDir:    t.FileStateFolder,
-				Name:            filename,
-				MaxPersistItems: 1, // TODO: Base this on the number of threads
+				StateFileDir:      t.FileStateFolder,
+				Name:              filename,
+				MaxPersistedItems: max(1, t.MaxPersistState),
 			})
 
 			var seekFile *tail.SeekInfo
