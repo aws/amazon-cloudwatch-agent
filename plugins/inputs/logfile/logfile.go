@@ -203,6 +203,10 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}
 
+			var gapsToRead state.RangeList
+			if !restored.OnlyUseMaxOffset() {
+				gapsToRead = state.InvertRanges(restored)
+			}
 			isutf16 := false
 			if fileconfig.Encoding == "utf-16" || fileconfig.Encoding == "utf-16le" || fileconfig.Encoding == "UTF-16" || fileconfig.Encoding == "UTF-16LE" {
 				isutf16 = true
@@ -213,6 +217,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 					ReOpen:      false,
 					Follow:      true,
 					Location:    seekFile,
+					GapsToRead:  gapsToRead,
 					MustExist:   true,
 					Pipe:        fileconfig.Pipe,
 					Poll:        true,

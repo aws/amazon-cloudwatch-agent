@@ -672,6 +672,181 @@ func TestLogsFileWithOffset(t *testing.T) {
 
 }
 
+func TestLogsFileWithRangeNoGaps(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
+
+	tmpfile, err := createTempFile("", "")
+	defer os.Remove(tmpfile.Name())
+	require.NoError(t, err)
+
+	stateDir, err := os.MkdirTemp("", "state")
+	require.NoError(t, err)
+	defer os.Remove(stateDir)
+
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	// The ranges here are to mimic log lines that have already been sent
+	stateFile.WriteString("19\ntest\n0-19")
+	defer os.Remove(stateFileName)
+
+	_, err = tmpfile.WriteString(logEntryString)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.FileStateFolder = stateDir
+	tt.Log = TestLogger{t}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig[0].init()
+	tt.started = true
+	tt.MaxPersistState = 2
+
+	lsrcs := tt.FindLogSrc()
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
+
+	lsrc := lsrcs[0]
+	evts := make(chan logs.LogEvent)
+	lsrc.SetOutput(func(e logs.LogEvent) {
+		evts <- e
+	})
+
+	e := <-evts
+	el := "Range"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	lsrc.Stop()
+	tt.Stop()
+
+}
+
+func TestLogsFileWithRangeGaps(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
+
+	tmpfile, err := createTempFile("", "")
+	defer os.Remove(tmpfile.Name())
+	require.NoError(t, err)
+
+	stateDir, err := os.MkdirTemp("", "state")
+	require.NoError(t, err)
+	defer os.Remove(stateDir)
+
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	// The ranges here are to mimic log lines that have already been sent
+	stateFile.WriteString("19\ntest\n0-6,14-19")
+	defer os.Remove(stateFileName)
+
+	_, err = tmpfile.WriteString(logEntryString)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.FileStateFolder = stateDir
+	tt.Log = TestLogger{t}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig[0].init()
+	tt.started = true
+	tt.MaxPersistState = 2
+
+	lsrcs := tt.FindLogSrc()
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
+
+	lsrc := lsrcs[0]
+	evts := make(chan logs.LogEvent)
+	lsrc.SetOutput(func(e logs.LogEvent) {
+		evts <- e
+	})
+
+	e := <-evts
+	el := "Content\n"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	e = <-evts
+	el = "Range"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	lsrc.Stop()
+	tt.Stop()
+
+}
+
+func TestLogsFileWithEOFRangeGaps(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
+
+	tmpfile, err := createTempFile("", "")
+	defer os.Remove(tmpfile.Name())
+	require.NoError(t, err)
+
+	stateDir, err := os.MkdirTemp("", "state")
+	require.NoError(t, err)
+	defer os.Remove(stateDir)
+
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	// The ranges here are to mimic log lines that have already been sent
+	// along with an invalid range
+	stateFile.WriteString("200\ntest\n0-6,100-200")
+	defer os.Remove(stateFileName)
+
+	_, err = tmpfile.WriteString(logEntryString)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.FileStateFolder = stateDir
+	tt.Log = TestLogger{t}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig[0].init()
+	tt.started = true
+	tt.MaxPersistState = 2
+
+	lsrcs := tt.FindLogSrc()
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
+
+	lsrc := lsrcs[0]
+	evts := make(chan logs.LogEvent)
+	lsrc.SetOutput(func(e logs.LogEvent) {
+		evts <- e
+	})
+
+	e := <-evts
+	el := "Content"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	e = <-evts
+	el = "bbbbb"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	e = <-evts
+	el = "Range"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	lsrc.Stop()
+	tt.Stop()
+
+}
+
 func TestLogsFileWithInvalidOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
@@ -699,6 +874,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	tt.MaxPersistState = 2
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
