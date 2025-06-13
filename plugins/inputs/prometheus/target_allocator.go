@@ -29,7 +29,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-var DEFAULT_TLS_CA_FILE_PATH = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
+var (
+	DefaultTLSCaFilePath   = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-cert", "tls-ca.crt")
+	DefaultTLSCertFilePath = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-ta-client-cert", "client.crt")
+	DefaultTLSKeyFilePath  = filepath.Join("/etc", "amazon-cloudwatch-observability-agent-ta-client-cert", "client.key")
+)
 
 const DEFAULT_TLS_RELOAD_INTERVAL_SECONDS = 10 * time.Second
 
@@ -122,18 +126,10 @@ func (tam *TargetAllocatorManager) loadManager(logLevel *promslog.AllowedLevel) 
 }
 
 func createZapLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
-	var zapLevel zapcore.Level
-	switch level.String() {
-	case "debug":
-		zapLevel = zapcore.DebugLevel
-	case "info":
+	zapLevel, err := zapcore.ParseLevel(level.String())
+	if err != nil {
+		err = fmt.Errorf("error parsing level: %v. Defaulting to info", err)
 		zapLevel = zapcore.InfoLevel
-	case "warn":
-		zapLevel = zapcore.WarnLevel
-	case "error":
-		zapLevel = zapcore.ErrorLevel
-	default:
-		return nil, fmt.Errorf("invalid log level: %s, defaulting to info", level.String())
 	}
 
 	zapCore := zapcore.NewCore(
@@ -143,7 +139,7 @@ func createZapLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
 	)
 
 	zapLogger := zap.New(zapCore)
-	return zapLogger, nil
+	return zapLogger, err
 }
 
 func (tam *TargetAllocatorManager) loadConfig(filename string) error {
@@ -156,7 +152,9 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 		return nil // no target allocator return
 	}
 	//has target allocator
-	tam.config.TargetAllocator.TLSSetting.CAFile = DEFAULT_TLS_CA_FILE_PATH
+	tam.config.TargetAllocator.TLSSetting.CAFile = DefaultTLSCaFilePath
+	tam.config.TargetAllocator.TLSSetting.CertFile = DefaultTLSCertFilePath
+	tam.config.TargetAllocator.TLSSetting.KeyFile = DefaultTLSKeyFilePath
 	tam.config.TargetAllocator.TLSSetting.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
 	return nil
 }
@@ -186,11 +184,9 @@ func (tam *TargetAllocatorManager) AttachReloadConfigHandler(handler func(config
 
 func (tam *TargetAllocatorManager) reloadConfigTicker() error {
 	if tam.config.TargetAllocator == nil {
-		tam.logger.Error("target Allocator is not configured properly")
 		return fmt.Errorf("target Allocator is not configured properly")
 	}
 	if tam.reloadConfigHandler == nil {
-		tam.logger.Error("target allocator reload config handler is not configured properly")
 		return fmt.Errorf("target allocator reload config handler is not configured properly")
 	}
 

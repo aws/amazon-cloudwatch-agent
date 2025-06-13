@@ -142,7 +142,7 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, taManager.enabled)
 	assert.Equal(t, taManager.config.TargetAllocator.CollectorID, "collector-1")
-	assert.Equal(t, taManager.config.TargetAllocator.TLSSetting.CAFile, DEFAULT_TLS_CA_FILE_PATH)
+	assert.Equal(t, taManager.config.TargetAllocator.TLSSetting.CAFile, DefaultTLSCaFilePath)
 }
 
 func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
