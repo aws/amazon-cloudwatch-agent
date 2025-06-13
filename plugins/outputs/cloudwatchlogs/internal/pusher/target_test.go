@@ -121,6 +121,101 @@ func TestTargetManager(t *testing.T) {
 		assertCacheLen(t, manager, 0)
 	})
 
+	t.Run("SetRetentionPolicy", func(t *testing.T) {
+		t.Parallel()
+
+		target := Target{Group: "G", Stream: "S", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String(target.Group),
+					RetentionInDays: aws.Int64(0),
+				},
+			},
+		}, nil).Once()
+		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+		// Wait for async operations to complete
+		time.Sleep(7 * time.Second)
+		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
+	})
+
+	t.Run("SetRetentionPolicy/NoChange", func(t *testing.T) {
+		t.Parallel()
+
+		target := Target{Group: "G", Stream: "S", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String(target.Group),
+					RetentionInDays: aws.Int64(7),
+				},
+			},
+		}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+		time.Sleep(7 * time.Second)
+		mockService.AssertExpectations(t)
+		mockService.AssertNotCalled(t, "PutRetentionPolicy")
+		assertCacheLen(t, manager, 1)
+	})
+
+	t.Run("SetRetentionPolicy/LogGroupNotFound", func(t *testing.T) {
+		t.Parallel()
+		target := Target{Group: "G", Stream: "S", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).
+			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(numBackoffRetries)
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+		time.Sleep(30 * time.Second)
+		mockService.AssertExpectations(t)
+		mockService.AssertNotCalled(t, "PutRetentionPolicy")
+		assertCacheLen(t, manager, 1)
+	})
+
+	t.Run("SetRetentionPolicy/Error", func(t *testing.T) {
+		t.Parallel()
+		target := Target{Group: "G", Stream: "S", Retention: 7}
+
+		mockService := new(mockLogsService)
+		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{
+					LogGroupName:    aws.String(target.Group),
+					RetentionInDays: aws.Int64(0),
+				},
+			},
+		}, nil).Once()
+		mockService.On("PutRetentionPolicy", mock.Anything).
+			Return(&cloudwatchlogs.PutRetentionPolicyOutput{},
+				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(numBackoffRetries)
+
+		manager := NewTargetManager(logger, mockService)
+		err := manager.InitTarget(target)
+		assert.NoError(t, err)
+		time.Sleep(30 * time.Second)
+		mockService.AssertExpectations(t)
+		assertCacheLen(t, manager, 1)
+	})
+
 	t.Run("SetRetentionPolicy/Negative", func(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: -1}
 
@@ -285,6 +380,8 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 	})
 
 	t.Run("ProcessBatchOverLimit", func(t *testing.T) {
+		t.Parallel()
+
 		mockService := new(mockLogsService)
 
 		// Setup mock to expect a batch of 125 (2.5x the limit) log groups
@@ -318,6 +415,8 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 	})
 
 	t.Run("ProcessBatchOnTimer", func(t *testing.T) {
+		t.Parallel()
+
 		mockService := new(mockLogsService)
 
 		// Setup mock to expect a batch of less than 50 log groups
@@ -346,6 +445,8 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 	})
 
 	t.Run("ProcessBatchInvalidGroups", func(t *testing.T) {
+		t.Parallel()
+
 		mockService := new(mockLogsService)
 
 		// Return empty  result
@@ -403,6 +504,8 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 	})
 
 	t.Run("BatchRetryOnError", func(t *testing.T) {
+		t.Parallel()
+
 		mockService := new(mockLogsService)
 
 		// Setup mock to fail once then succeed
