@@ -206,6 +206,7 @@ func (m *targetManager) updateTargetBatch(targets map[string]Target) {
 	}
 	describeLogGroupsInput := &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupIdentifiers: identifiers,
+		Limit:               aws.Int64(50),
 	}
 	for attempt := 0; attempt < numBackoffRetries; attempt++ {
 		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
