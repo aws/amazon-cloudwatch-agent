@@ -700,6 +700,7 @@ func TestLogsFileWithRangeNoGaps(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	tt.MaxPersistState = 2
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
@@ -751,6 +752,7 @@ func TestLogsFileWithRangeGaps(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	tt.MaxPersistState = 2
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
@@ -809,6 +811,7 @@ func TestLogsFileWithEOFRangeGaps(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	tt.MaxPersistState = 2
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
@@ -871,6 +874,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	tt.MaxPersistState = 2
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
