@@ -178,9 +178,9 @@ require (
 	go.opentelemetry.io/collector/config/configopaque v1.30.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.124.0
 	go.opentelemetry.io/collector/config/configtls v1.30.0
-	go.opentelemetry.io/collector/confmap v1.30.0
+	go.opentelemetry.io/collector/confmap v1.34.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
-	go.opentelemetry.io/collector/confmap/provider/envprovider v1.30.0
+	go.opentelemetry.io/collector/confmap/provider/envprovider v1.34.0
 	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.30.0
 	go.opentelemetry.io/collector/confmap/xconfmap v0.124.0
 	go.opentelemetry.io/collector/consumer v1.30.0
@@ -544,7 +544,7 @@ require (
 	go.opentelemetry.io/collector/extension/extensionauth v1.30.0 // indirect
 	go.opentelemetry.io/collector/extension/extensioncapabilities v0.124.0 // indirect
 	go.opentelemetry.io/collector/extension/xextension v0.124.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.30.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.34.0 // indirect
 	go.opentelemetry.io/collector/internal/fanoutconsumer v0.124.0 // indirect
 	go.opentelemetry.io/collector/internal/memorylimiter v0.124.0 // indirect
 	go.opentelemetry.io/collector/internal/sharedcomponent v0.124.0 // indirect
