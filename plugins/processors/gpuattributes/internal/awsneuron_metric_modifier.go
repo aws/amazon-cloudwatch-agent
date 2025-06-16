@@ -312,8 +312,8 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		originalDatapoint := originalMetricDatapoints.At(i)
 		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
-		coreIdTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
-		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIdTag.Str()}
+		coreIDTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
+		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIDTag.Str()}
 		aggregatedValuesPerCore[key] = max(aggregatedValuesPerCore[key], originalDatapoint.DoubleValue(), 0)
 	}
 
@@ -332,8 +332,8 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 		datapoint.Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
 		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreID)
 		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreID)
-		coreId, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
-		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreId/NeuronCorePerDevice))
+		coreID, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreID/NeuronCorePerDevice))
 	}
 	return newMetricSlice
 }
