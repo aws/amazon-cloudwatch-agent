@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -159,5 +160,43 @@ func TestLogEventBatch(t *testing.T) {
 		input := batch.build()
 
 		assert.Equal(t, testEntity, input.Entity, "Entity should be set from the EntityProvider")
+	})
+
+	t.Run("WithStatefulLogEvents", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		callbackCalled := false
+		callback := func() {
+			callbackCalled = true
+		}
+
+		mrq1 := &mockRangeQueue{}
+		mrq1.On("ID").Return("test")
+		mrq1.On("Enqueue", state.NewRange(20, 50)).Once()
+
+		mrq2 := &mockRangeQueue{}
+		mrq2.On("ID").Return("test2")
+		mrq2.On("Enqueue", state.NewRange(5, 20)).Once()
+
+		event1 := newStatefulLogEvent(time.Now(), "Test", callback, &logEventState{
+			r:     state.NewRange(20, 40),
+			queue: mrq1,
+		})
+		event2 := newStatefulLogEvent(time.Now(), "Test2", callback, &logEventState{
+			r:     state.NewRange(5, 20),
+			queue: mrq2,
+		})
+		event3 := newStatefulLogEvent(time.Now(), "Test3", callback, &logEventState{
+			r:     state.NewRange(40, 50),
+			queue: mrq1,
+		})
+		batch.append(event1)
+		batch.append(event2)
+		batch.append(event3)
+		batch.done()
+
+		mrq1.AssertNumberOfCalls(t, "Enqueue", 1)
+		mrq2.AssertNumberOfCalls(t, "Enqueue", 1)
+		assert.False(t, callbackCalled, "Done callback should not have been called")
 	})
 }

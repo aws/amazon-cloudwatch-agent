@@ -36,6 +36,8 @@ type LogEvent struct {
 	src    *tailerSrc
 }
 
+var _ logs.StatefulLogEvent = (*LogEvent)(nil)
+
 func (le LogEvent) Message() string {
 	return le.msg
 }
@@ -45,7 +47,14 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
-	le.src.Done(le.offset)
+}
+
+func (le LogEvent) Range() state.Range {
+	return le.offset
+}
+
+func (le LogEvent) RangeQueue() state.FileRangeQueue {
+	return le.src.stateManager
 }
 
 type tailerSrc struct {
@@ -157,9 +166,6 @@ func (ts *tailerSrc) Retention() int {
 
 func (ts *tailerSrc) Class() string {
 	return ts.class
-}
-func (ts *tailerSrc) Done(offset state.Range) {
-	ts.stateManager.Enqueue(offset)
 }
 
 func (ts *tailerSrc) Stop() {

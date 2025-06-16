@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
@@ -111,7 +112,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
 	}
-	if err = cfg.Validate(); err != nil {
+	if err = xconfmap.Validate(cfg); err != nil {
 		return nil, fmt.Errorf("invalid otel config: %w", err)
 	}
 	return cfg, nil

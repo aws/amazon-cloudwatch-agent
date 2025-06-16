@@ -302,6 +302,8 @@ type LogEvent struct {
 	src    *windowsEventLog
 }
 
+var _ logs.StatefulLogEvent = (*LogEvent)(nil)
+
 func (le LogEvent) Message() string {
 	return le.msg
 }
@@ -311,7 +313,14 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
-	le.src.Done(le.offset)
+}
+
+func (le LogEvent) Range() state.Range {
+	return le.offset
+}
+
+func (le LogEvent) RangeQueue() state.FileRangeQueue {
+	return le.src.stateManager
 }
 
 // getRecords attempts to render and format each of the given EvtHandles.

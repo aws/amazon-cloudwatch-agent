@@ -44,6 +44,7 @@ type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`
 	Events          []EventConfig   `toml:"event_config"`
 	Destination     string          `toml:"destination"`
+	MaxPersistState int             `toml:"max_persist_state"`
 	Log             telegraf.Logger `toml:"-"`
 
 	newEvents []logs.LogSrc
@@ -137,11 +138,11 @@ func getStateManagerConfig(plugin *Plugin, ec *EventConfig) (state.ManagerConfig
 		return cfg, err
 	}
 	return state.ManagerConfig{
-		StateFileDir:    plugin.FileStateFolder,
-		StateFilePrefix: logscommon.WindowsEventLogPrefix,
-		Name:            ec.LogGroupName + "_" + ec.LogStreamName + "_" + ec.Name,
-		QueueSize:       stateQueueSize,
-		MaxPersistItems: 1, // TODO: Base this on thread count
+		StateFileDir:      plugin.FileStateFolder,
+		StateFilePrefix:   logscommon.WindowsEventLogPrefix,
+		Name:              ec.LogGroupName + "_" + ec.LogStreamName + "_" + ec.Name,
+		QueueSize:         stateQueueSize,
+		MaxPersistedItems: max(1, plugin.MaxPersistState),
 	}, nil
 }
 
