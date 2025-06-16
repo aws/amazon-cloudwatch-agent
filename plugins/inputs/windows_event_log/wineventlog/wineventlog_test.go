@@ -173,7 +173,7 @@ func checkEvents(t *testing.T, records []*windowsEventLogRecord, substring strin
 
 func newTestEventLog(t *testing.T, name string, levels []string) *windowsEventLog {
 	t.Helper()
-	manager := state.NewFileOffsetManager(state.ManagerConfig{
+	manager := state.NewFileRangeManager(state.ManagerConfig{
 		StateFileDir:    t.TempDir(),
 		StateFilePrefix: logscommon.WindowsEventLogPrefix,
 		Name:            GROUP_NAME + "_" + STREAM_NAME + "_" + name,

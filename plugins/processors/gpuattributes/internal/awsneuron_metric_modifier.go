@@ -49,7 +49,7 @@ const (
 	RuntimeTagOverride                            = "DEFAULT"
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
-	NeuronCoreLabel                                 = "neuroncore"
+	NeuronCoreLabel                               = "neuroncore"
 	NeuronCorePerDevice                           = 2
 )
 
@@ -72,7 +72,7 @@ type MetricDatapointAggregationKey struct {
 
 type NeuronCoreUtilizationDatapointAggregationKey struct {
 	runtimeTag string
-	coreId     string
+	coreID     string
 }
 
 var (
@@ -143,13 +143,15 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 		keepSpecificDatapointBasedOnAttribute(originalMetric, MemoryLocation, "neuron_device")
 	}
 
-	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
+	var modifiedMetricSlice pmetric.MetricSlice
 
-	// For NeuronCoreUtilization metrics, perform additional aggregation to calculate the maximum utilization 
+	// For NeuronCoreUtilization metrics, perform additional aggregation to calculate the maximum utilization
 	// value per core across all datapoints. This ensures we capture peak utilization rather than average values,
 	// which is more useful for monitoring core performance and potential bottlenecks.
 	if originalMetric.Name() == containerinsightscommon.NeuronCoreUtilization {
-		modifiedMetricSlice = md.aggregateCoreUtilizationMetrics(modifiedMetricSlice, originalMetric)
+		modifiedMetricSlice = md.aggregateCoreUtilizationMetrics(originalMetric)
+	} else {
+		modifiedMetricSlice = md.extractDatapointsAsMetricsAndAggregate(originalMetric)
 	}
 
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
@@ -303,14 +305,15 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 	}
 }
 
-func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(newMetricSlice pmetric.MetricSlice, originalMetric pmetric.Metric) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
+	newMetricSlice := pmetric.NewMetricSlice()
 	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 	aggregatedValuesPerCore := map[NeuronCoreUtilizationDatapointAggregationKey]float64{}
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		originalDatapoint := originalMetricDatapoints.At(i)
 		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
-		coreIdTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
-		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreId: coreIdTag.Str()}
+		coreIDTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
+		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIDTag.Str()}
 		aggregatedValuesPerCore[key] = max(aggregatedValuesPerCore[key], originalDatapoint.DoubleValue(), 0)
 	}
 
@@ -327,10 +330,10 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(newMetricSlic
 		firstOriginalDatapoint.CopyTo(datapoint)
 		datapoint.SetDoubleValue(value)
 		datapoint.Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
-		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreId)
-		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreId)
-		coreId, _ := strconv.Atoi(aggregatedMetricMetadata.coreId)
-		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreId/NeuronCorePerDevice))
+		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreID)
+		coreID, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreID/NeuronCorePerDevice))
 	}
 	return newMetricSlice
 }

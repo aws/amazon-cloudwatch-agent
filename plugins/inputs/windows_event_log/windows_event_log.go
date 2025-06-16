@@ -44,6 +44,7 @@ type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`
 	Events          []EventConfig   `toml:"event_config"`
 	Destination     string          `toml:"destination"`
+	MaxPersistState int             `toml:"max_persist_state"`
 	Log             telegraf.Logger `toml:"-"`
 
 	newEvents []logs.LogSrc
@@ -97,7 +98,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		stateManager := state.NewFileOffsetManager(stateManagerCfg)
+		stateManager := state.NewFileRangeManager(stateManagerCfg)
 		destination := eventConfig.Destination
 		if destination == "" {
 			destination = s.Destination
@@ -137,10 +138,11 @@ func getStateManagerConfig(plugin *Plugin, ec *EventConfig) (state.ManagerConfig
 		return cfg, err
 	}
 	return state.ManagerConfig{
-		StateFileDir:    plugin.FileStateFolder,
-		StateFilePrefix: logscommon.WindowsEventLogPrefix,
-		Name:            ec.LogGroupName + "_" + ec.LogStreamName + "_" + ec.Name,
-		QueueSize:       stateQueueSize,
+		StateFileDir:      plugin.FileStateFolder,
+		StateFilePrefix:   logscommon.WindowsEventLogPrefix,
+		Name:              ec.LogGroupName + "_" + ec.LogStreamName + "_" + ec.Name,
+		QueueSize:         stateQueueSize,
+		MaxPersistedItems: max(1, plugin.MaxPersistState),
 	}, nil
 }
 

@@ -55,7 +55,7 @@ type windowsEventLog struct {
 	renderFormat  string
 	maxToRead     int // Maximum number returned in one read.
 	destination   string
-	stateManager  state.FileOffsetManager
+	stateManager  state.FileRangeManager
 
 	eventHandle   EvtHandle
 	eventOffset   uint64
@@ -66,7 +66,7 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileOffsetManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -87,8 +87,8 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 
 func (w *windowsEventLog) Init() error {
 	go w.stateManager.Run(state.Notification{Done: w.done})
-	offset, _ := w.stateManager.Restore()
-	w.eventOffset = offset.Get()
+	restored, _ := w.stateManager.Restore()
+	w.eventOffset = restored.Last().EndOffset()
 	return w.Open()
 }
 
@@ -136,6 +136,7 @@ func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
 
+	r := state.Range{}
 	retryCount := 0
 	var shouldResubscribe bool
 	for {
@@ -144,8 +145,8 @@ func (w *windowsEventLog) run() {
 			shouldResubscribe = true
 		case <-ticker.C:
 			if shouldResubscribe {
-				offset, _ := w.stateManager.Restore()
-				w.eventOffset = offset.Get()
+				restored, _ := w.stateManager.Restore()
+				w.eventOffset = restored.Last().EndOffset()
 				if err := w.resubscribe(); err != nil {
 					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
 					retryCount++
@@ -167,10 +168,11 @@ func (w *windowsEventLog) run() {
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
+				r.Shift(recordNumber)
 				evt := &LogEvent{
 					msg:    value,
 					t:      record.System.TimeCreated.SystemTime,
-					offset: recordNumber,
+					offset: r,
 					src:    w,
 				}
 				w.outputFn(evt)
@@ -252,8 +254,8 @@ func (w *windowsEventLog) SetEventOffset(eventOffset uint64) {
 	w.eventOffset = eventOffset
 }
 
-func (w *windowsEventLog) Done(offset uint64) {
-	w.stateManager.Enqueue(state.NewFileOffset(offset))
+func (w *windowsEventLog) Done(offset state.Range) {
+	w.stateManager.Enqueue(offset)
 }
 
 func (w *windowsEventLog) ResubscribeCh() chan struct{} {
@@ -296,9 +298,11 @@ func (w *windowsEventLog) read() []*windowsEventLogRecord {
 type LogEvent struct {
 	msg    string
 	t      time.Time
-	offset uint64
+	offset state.Range
 	src    *windowsEventLog
 }
+
+var _ logs.StatefulLogEvent = (*LogEvent)(nil)
 
 func (le LogEvent) Message() string {
 	return le.msg
@@ -309,7 +313,14 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
-	le.src.Done(le.offset)
+}
+
+func (le LogEvent) Range() state.Range {
+	return le.offset
+}
+
+func (le LogEvent) RangeQueue() state.FileRangeQueue {
+	return le.src.stateManager
 }
 
 // getRecords attempts to render and format each of the given EvtHandles.
