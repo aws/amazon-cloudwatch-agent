@@ -379,6 +379,14 @@ func assertModifiedMetric(t *testing.T, actualSlice pmetric.MetricSlice, expecte
 
 		assert.Equal(t, expectedDatapoints.Len(), actualDatapoints.Len())
 
+		expectedDatapoints.Sort(func(a, b pmetric.NumberDataPoint) bool {
+			return a.DoubleValue() < b.DoubleValue()
+		})
+
+		actualDatapoints.Sort(func(a, b pmetric.NumberDataPoint) bool {
+			return a.DoubleValue() < b.DoubleValue()
+		})
+
 		for j := 0; j < actualDatapoints.Len(); j++ {
 			actualDatapoint := actualDatapoints.At(j)
 			expectedDatapoint := expectedDatapoints.At(j)
