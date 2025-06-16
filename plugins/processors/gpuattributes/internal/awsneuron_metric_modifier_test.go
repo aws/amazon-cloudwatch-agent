@@ -31,6 +31,7 @@ const (
 	NeuronExecutionErrors                      = "neuron_execution_errors"
 	NeuronExecutionStatus                      = "neuron_execution_status"
 	NeuronCoreMemoryUsageModelSharedScratchpad = "neuroncore_memory_usage_model_shared_scratchpad"
+	NeuronCoreUtilizationRatio                 = "neuroncore_utilization"
 	NeuronDeviceRuntimeMemoryUsedBytes         = "neurondevice_runtime_memory_used_bytes"
 	NeuronExecutionLatency                     = "neuron_execution_latency"
 	NeuronDeviceHwEccEvents                    = "neurondevice_hw_ecc_events"
@@ -57,10 +58,11 @@ var metricNameToMetricLayout = map[string]MetricDefinition{
 	NonNeuronMetric:                            {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1}, SpecialAttributes: [][]string{}, Unit: Count},
 	NeuronExecutionErrors:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{ErrorType, "generic", RuntimeTag, "1"}, {ErrorType, "numerical", RuntimeTag, "1"}, {ErrorType, "transient", RuntimeTag, "1"}, {ErrorType, "model", RuntimeTag, "1"}, {ErrorType, "runtime", RuntimeTag, "1"}, {ErrorType, "hardware", RuntimeTag, "1"}}, Unit: Count},
 	NeuronExecutionStatus:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{StatusType, "completed", RuntimeTag, "1"}, {StatusType, "completed_with_err", RuntimeTag, "1"}, {StatusType, "completed_with_num_err", RuntimeTag, "1"}, {StatusType, "timed_out", RuntimeTag, "1"}, {StatusType, "incorrect_input", RuntimeTag, "1"}, {StatusType, "failed_to_queue", RuntimeTag, "1"}}, Unit: Count},
-	NeuronCoreMemoryUsageModelSharedScratchpad: {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2, 3}, SpecialAttributes: [][]string{{NeuronCore, "0", NeuronDevice, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "1", NeuronDevice, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "2", NeuronDevice, "1", MemoryLocation, "None", PodName, DummyPod}}, Unit: Bytes},
+	NeuronCoreMemoryUsageModelSharedScratchpad: {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2, 3}, SpecialAttributes: [][]string{{NeuronCore, "0", NeuronDevice, "0", NeuronCoreLabel, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "1", NeuronDevice, "0", NeuronCoreLabel, "1", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "2", NeuronDevice, "1", NeuronCoreLabel, "2", MemoryLocation, "None", PodName, DummyPod}}, Unit: Bytes},
 	NeuronDeviceRuntimeMemoryUsedBytes:         {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2}, SpecialAttributes: [][]string{{MemoryLocation, "host"}, {MemoryLocation, "neuron_device"}}, Unit: Bytes},
 	NeuronExecutionLatency:                     {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{0, 0, 0, 0, 1, 0, 0}, SpecialAttributes: [][]string{{Percentile, "p0"}, {Percentile, "p1"}, {Percentile, "p100"}, {Percentile, "p25"}, {Percentile, "p50"}, {Percentile, "p75"}, {Percentile, "p99"}}, Unit: Seconds},
 	NeuronDeviceHwEccEvents:                    {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4}, SpecialAttributes: [][]string{{NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_corrected", PodName, DummyPod, RuntimeTag, "1"}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_uncorrected", PodName, DummyPod, RuntimeTag, "1"}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_corrected", PodName, DummyPod, RuntimeTag, "1"}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_uncorrected", PodName, DummyPod, RuntimeTag, "1"}}, Unit: Count},
+	NeuronCoreUtilizationRatio:                 {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{NeuronCore, "0", NeuronDevice, "0", NeuronCoreLabel, "0", MemoryLocation, "None", PodName, DummyPod, RuntimeTag, "DEFAULT"}, {NeuronCore, "1", NeuronDevice, "0", NeuronCoreLabel, "1", MemoryLocation, "None", PodName, DummyPod, RuntimeTag, "123"}, {NeuronCore, "2", NeuronDevice, "1", NeuronCoreLabel, "2", MemoryLocation, "None", PodName, DummyPod, RuntimeTag, "123"}, {NeuronCore, "0", NeuronDevice, "0", NeuronCoreLabel, "0", MemoryLocation, "None", PodName, DummyPod, RuntimeTag, "456"}, {NeuronCore, "1", NeuronDevice, "0", NeuronCoreLabel, "1", MemoryLocation, "None", PodName, DummyPod, RuntimeTag, "456"}, {NeuronCore, "2", NeuronDevice, "1", NeuronCoreLabel, "2", MemoryLocation, "None", PodName, DummyPod, RuntimeTag, "456"}}, Unit: Percent},
 }
 
 func setupMetricModifier() *AwsNeuronMetricModifier {
@@ -130,9 +132,9 @@ func TestMetricModifierForNeuronCoreMemoryUsageMetric(t *testing.T) {
 
 	expectedMetrics := map[string]pmetric.Metric{
 		NeuronCoreMemoryUsageModelSharedScratchpad:                  metricsList.At(0),
-		"node_neuroncore_memory_usage_model_shared_scratchpad":      createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
-		"pod_neuroncore_memory_usage_model_shared_scratchpad":       createExpectedMetric("pod_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
-		"container_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("container_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"node_neuroncore_memory_usage_model_shared_scratchpad":      createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"pod_neuroncore_memory_usage_model_shared_scratchpad":       createExpectedMetric("pod_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"container_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("container_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
 	}
 
 	assertModifiedMetric(t, metricsList, expectedMetrics)
@@ -146,7 +148,7 @@ func TestMetricModifierForNeuronCoreMemoryUsageMetric_PodNameMissing(t *testing.
 
 	expectedMetrics := map[string]pmetric.Metric{
 		NeuronCoreMemoryUsageModelSharedScratchpad:             metricsList.At(0),
-		"node_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: NodeAWSNeuronCore, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: NodeAWSNeuronCore, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: NodeAWSNeuronCore, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"node_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: NodeAWSNeuronCore, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: NodeAWSNeuronCore, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: NodeAWSNeuronCore, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
 	}
 
 	assertModifiedMetric(t, metricsList, expectedMetrics)
@@ -266,9 +268,9 @@ func TestListWithMultipleMetrics(t *testing.T) {
 		"node_neuron_execution_status_incorrect_input":        createExpectedMetric("node_neuron_execution_status_incorrect_input", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: RuntimeTagOverride, StatusType: "incorrect_input"}}, []float64{5}, pmetric.MetricTypeSum, Count),
 		"node_neuron_execution_status_failed_to_queue":        createExpectedMetric("node_neuron_execution_status_failed_to_queue", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: RuntimeTagOverride, StatusType: "failed_to_queue"}}, []float64{6}, pmetric.MetricTypeSum, Count),
 
-		"node_neuroncore_memory_usage_model_shared_scratchpad":      createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
-		"pod_neuroncore_memory_usage_model_shared_scratchpad":       createExpectedMetric("pod_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
-		"container_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("container_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"node_neuroncore_memory_usage_model_shared_scratchpad":      createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"pod_neuroncore_memory_usage_model_shared_scratchpad":       createExpectedMetric("pod_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"container_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("container_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None"}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
 
 		"node_neurondevice_runtime_memory_used_bytes": createExpectedMetric("node_neurondevice_runtime_memory_used_bytes", false, []map[string]string{{Type: NodeAWSNeuron, MemoryLocation: "neuron_device"}}, []float64{2}, pmetric.MetricTypeSum, Bytes),
 
@@ -304,6 +306,22 @@ func TestMetricWithStaleDatapoint(t *testing.T) {
 	expectedMetrics := map[string]pmetric.Metric{
 		NeuronExecutionLatency:          metricsList.At(0),
 		"node_neuron_execution_latency": createExpectedMetric("node_neuron_execution_latency", false, []map[string]string{{Type: NodeAWSNeuron, Percentile: "p50"}}, []float64{1}, pmetric.MetricTypeSum, Seconds),
+	}
+
+	assertModifiedMetric(t, metricsList, expectedMetrics)
+}
+
+func TestMetricModifierForNeuronCoreUtilizationUsageMetric(t *testing.T) {
+	metricModifier := setupMetricModifier()
+	metricsList := pmetric.NewMetricSlice()
+	createActualMetricForKey(NeuronCoreUtilizationRatio).CopyTo(metricsList.AppendEmpty())
+	metricModifier.ModifyMetric(metricsList.At(0), metricsList)
+
+	expectedMetrics := map[string]pmetric.Metric{
+		NeuronCoreUtilizationRatio:         metricsList.At(0),
+		"node_neuroncore_utilization":      createExpectedMetric("node_neuroncore_utilization", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: NodeAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}}, []float64{4, 5, 6}, pmetric.MetricTypeSum, Percent),
+		"pod_neuroncore_utilization":       createExpectedMetric("pod_neuroncore_utilization", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: PodAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}}, []float64{4, 5, 6}, pmetric.MetricTypeSum, Percent),
+		"container_neuroncore_utilization": createExpectedMetric("container_neuroncore_utilization", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", NeuronCoreLabel: "0", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}, {NeuronCore: "core1", NeuronDevice: "device0", NeuronCoreLabel: "1", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}, {NeuronCore: "core2", NeuronDevice: "device1", NeuronCoreLabel: "2", Type: ContainerAWSNeuronCore, PodName: DummyPod, MemoryLocation: "None", RuntimeTag: "DEFAULT"}}, []float64{4, 5, 6}, pmetric.MetricTypeSum, Percent),
 	}
 
 	assertModifiedMetric(t, metricsList, expectedMetrics)
@@ -360,6 +378,14 @@ func assertModifiedMetric(t *testing.T, actualSlice pmetric.MetricSlice, expecte
 		}
 
 		assert.Equal(t, expectedDatapoints.Len(), actualDatapoints.Len())
+
+		expectedDatapoints.Sort(func(a, b pmetric.NumberDataPoint) bool {
+			return a.DoubleValue() < b.DoubleValue()
+		})
+
+		actualDatapoints.Sort(func(a, b pmetric.NumberDataPoint) bool {
+			return a.DoubleValue() < b.DoubleValue()
+		})
 
 		for j := 0; j < actualDatapoints.Len(); j++ {
 			actualDatapoint := actualDatapoints.At(j)
