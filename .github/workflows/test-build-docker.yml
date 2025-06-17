@@ -260,84 +260,9 @@ jobs:
           docker build --platform windows/amd64 -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localmsi/Dockerfile.Windows . -t $env:REGISTRY/$env:REPOSITORY
           docker push $env:REGISTRY/$env:REPOSITORY
 
-  BuildMSI-2019:
-    name: 'BuildMSI-2019'
-    runs-on: windows-2019
-    needs: [MakeMSIZip]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Cache msi
-        id: cached_msi
-        uses: actions/cache@v3
-        with:
-          key: "cached_msi_${{ github.sha }}"
-          path: go.mod
-
-      # Using the env variable returns "" for bucket name thus use the secret
-      - name: Copy msi
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
-
-      - name: Create msi
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run : |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe
-          .\wix314.exe /install /quiet /norestart
-          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.14\bin;"
-          $env:PATH = $env:PATH + $wixToolsetBinPath
-          Expand-Archive buildMSI.zip -Force
-          cd buildMSI/msi_dep
-          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
-
-      - name: clean ecr login credential cache
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run : |
-          echo '{"auths": {"https://index.docker.io/v1/": {}}, "HttpHeaders": { "User-Agent": "Docker-Client/19.03.12 (windows)"}}' > ~/.docker/config.json
-
-      - name: Login ECR
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
-      - name: Copy Binary For Agent Image Build
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: |
-          pwd
-          mkdir amd64
-          cp -r buildMSI/msi_dep/amazon-cloudwatch-agent.msi amd64/
-
-      - name: Get ECR Repo name
-        id: repo_name
-        env:
-          ContainerRepositoryNameAndTag: ${{ inputs.ContainerRepositoryNameAndTag }}
-        run: |
-          $splitArray = $env:ContainerRepositoryNameAndTag.Split(":")[0]
-          Write-Output "::set-output name=ContainerRepositoryName::$splitArray"
-
-      - name: Build Windows Cloudwatch Agent Image
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: |
-          Write-Output "$env:REGISTRY/$env:REPOSITORY"
-          docker build --platform windows/amd64 -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localmsi/Dockerfile.Windows --build-arg IMAGE_TAG=ltsc2019 . -t $env:REGISTRY/$env:REPOSITORY
-          docker push $env:REGISTRY/$env:REPOSITORY
-
   CreateContainerManifest:
     name: 'CreateManifest'
-    needs: ['BuildMSI-2019', 'BuildMSI-2022', 'MakeBinary']
+    needs: ['BuildMSI-2022', 'MakeBinary']
     runs-on: ubuntu-latest
     permissions:
       id-token: write
