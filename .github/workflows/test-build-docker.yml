@@ -51,6 +51,10 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      CacheImage:
+        description: "Boolean to enable image caching"
+        type: boolean
+        default: true
 
 jobs:
   MakeBinary:
