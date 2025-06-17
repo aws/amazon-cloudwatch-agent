@@ -191,8 +191,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloud
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250613205757-3ab9974bf1ed/go.mod h1:K1bIX6HiFoEYD6o2UiZ4SfGZc2E/aFr4jGxpWAjboX0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250613205757-3ab9974bf1ed h1:p5MmIhhiNND32izqP5oJtC7TABUC0dwam1eWFxk+Z3M=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250613205757-3ab9974bf1ed/go.mod h1:CFj1Fw9eREdVDfqABIc+QEuAW767hBJPumJBkFNxXXg=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250613205757-3ab9974bf1ed h1:X8wzNCsLWuq9lg7LDZcS7ISZdjoojJnCXDyksr+N93I=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250613205757-3ab9974bf1ed/go.mod h1:uxEu3AKt9Sn0Ymf6Zwnz5bxWtErQv5lC7fzrkQ+rN7M=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250617152434-7923de715114 h1:bp4ywhZCtzzZmXmbIHN8jFeRcfSAoWwo9YpDH2ca8ZA=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250617152434-7923de715114/go.mod h1:uxEu3AKt9Sn0Ymf6Zwnz5bxWtErQv5lC7fzrkQ+rN7M=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250613205757-3ab9974bf1ed h1:utC5LktUbxq+QEQCYl5T2+tMtz0EETQDLKvaZcGo+OM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250613205757-3ab9974bf1ed/go.mod h1:dPrPFF41rwaHrheryuROroCF4qQ0MBmUXMD9q2/GngY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250613205757-3ab9974bf1ed h1:n4IVQyrHbfu880HSJO3xEr4dvlk0EdD9vjp1WUxwb8c=
