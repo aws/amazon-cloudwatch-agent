@@ -26,6 +26,11 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      CacheImage:
+        description: "Boolean to enable image caching"
+        type: boolean
+        default: true
+
   workflow_call:
     inputs:
       ContainerRepositoryNameAndTag:
@@ -66,6 +71,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Cache container
+        if: inputs.CacheImage == true
         id: cached_container
         uses: actions/cache@v3
         with:
