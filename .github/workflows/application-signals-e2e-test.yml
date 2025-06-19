@@ -73,6 +73,14 @@ jobs:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
+  java-ec2-ubuntu-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-ubuntu-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
   java-metric-limiter-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-eks-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/metric-limiter-test.yml@main
