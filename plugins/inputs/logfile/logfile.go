@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
@@ -30,6 +30,8 @@ type LogFile struct {
 	FileStateFolder string `toml:"file_state_folder"`
 	//destination
 	Destination string `toml:"destination"`
+	//maximum number of distinct, non-overlapping offset ranges to store.
+	MaxPersistState int `toml:"max_persist_state"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -187,14 +189,24 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				}
 			}
 
+			stateManager := state.NewFileRangeManager(state.ManagerConfig{
+				StateFileDir:      t.FileStateFolder,
+				Name:              filename,
+				MaxPersistedItems: max(1, t.MaxPersistState),
+			})
+
 			var seekFile *tail.SeekInfo
-			offset, err := t.restoreState(filename)
+			restored, err := stateManager.Restore()
 			if err == nil { // Missing state file would be an error too
-				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset}
+				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: restored.Last().EndOffsetInt64()}
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}
 
+			var gapsToRead state.RangeList
+			if !restored.OnlyUseMaxOffset() {
+				gapsToRead = state.InvertRanges(restored)
+			}
 			isutf16 := false
 			if fileconfig.Encoding == "utf-16" || fileconfig.Encoding == "utf-16le" || fileconfig.Encoding == "UTF-16" || fileconfig.Encoding == "UTF-16LE" {
 				isutf16 = true
@@ -205,6 +217,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 					ReOpen:      false,
 					Follow:      true,
 					Location:    seekFile,
+					GapsToRead:  gapsToRead,
 					MustExist:   true,
 					Pipe:        fileconfig.Pipe,
 					Poll:        true,
@@ -243,7 +256,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			src := NewTailerSrc(
 				groupName, streamName,
 				t.Destination,
-				t.getStateFilePath(filename),
+				stateManager,
 				fileconfig.LogGroupClass,
 				fileconfig.FilePath,
 				tailer,
@@ -326,42 +339,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	return targetFileList, nil
 }
 
-// The plugin will look at the state folder, and restore the offset of the file seeked if such state exists.
-func (t *LogFile) restoreState(filename string) (int64, error) {
-	filePath := t.getStateFilePath(filename)
-
-	if _, err := os.Stat(filePath); err != nil {
-		t.Log.Debugf("The state file %s for %s does not exist: %v", filePath, filename, err)
-		return 0, err
-	}
-
-	byteArray, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Log.Warnf("Issue encountered when reading offset from file %s: %v", filename, err)
-		return 0, err
-	}
-
-	offset, err := strconv.ParseInt(strings.Split(string(byteArray), "\n")[0], 10, 64)
-	if err != nil {
-		t.Log.Warnf("Issue encountered when parsing offset value %v: %v", byteArray, err)
-		return 0, err
-	}
-
-	if offset < 0 {
-		return 0, fmt.Errorf("negative state file offset, %v, %v", filePath, offset)
-	}
-	t.Log.Infof("Reading from offset %v in %s", offset, filename)
-	return offset, nil
-}
-
-func (t *LogFile) getStateFilePath(filename string) string {
-	if t.FileStateFolder == "" {
-		return ""
-	}
-
-	return filepath.Join(t.FileStateFolder, escapeFilePath(filename))
-}
-
 func (t *LogFile) cleanupStateFolder() {
 	files, err := filepath.Glob(t.FileStateFolder + string(filepath.Separator) + "*")
 	if err != nil {
@@ -428,14 +405,6 @@ func isCompressedFile(filename string) bool {
 		return true
 	}
 	return false
-}
-
-func escapeFilePath(filePath string) string {
-	escapedFilePath := filepath.ToSlash(filePath)
-	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
-	return escapedFilePath
 }
 
 func generateLogGroupName(fileName string) string {

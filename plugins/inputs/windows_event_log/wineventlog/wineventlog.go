@@ -10,15 +10,14 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"golang.org/x/sys/windows"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -57,19 +56,18 @@ type windowsEventLog struct {
 	renderFormat  string
 	maxToRead     int // Maximum number returned in one read.
 	destination   string
-	stateFilePath string
+	stateManager  state.FileRangeManager
 
 	eventHandle   EvtHandle
 	eventOffset   uint64
 	retention     int
 	outputFn      func(logs.LogEvent)
-	offsetCh      chan uint64
 	done          chan struct{}
 	startOnce     sync.Once
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, eventID []int, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventID []int, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -80,10 +78,9 @@ func NewEventLog(name string, levels []string, eventID []int, logGroupName, logS
 		renderFormat:  renderFormat,
 		maxToRead:     maximumToRead,
 		destination:   destination,
-		stateFilePath: stateFilePath,
+		stateManager:  stateManager,
 		retention:     retention,
 
-		offsetCh:      make(chan uint64, 100),
 		done:          make(chan struct{}),
 		resubscribeCh: make(chan struct{}),
 	}
@@ -91,8 +88,9 @@ func NewEventLog(name string, levels []string, eventID []int, logGroupName, logS
 }
 
 func (w *windowsEventLog) Init() error {
-	go w.runSaveState()
-	w.eventOffset = w.loadState()
+	go w.stateManager.Run(state.Notification{Done: w.done})
+	restored, _ := w.stateManager.Restore()
+	w.eventOffset = restored.Last().EndOffset()
 	return w.Open()
 }
 
@@ -140,6 +138,7 @@ func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
 
+	r := state.Range{}
 	retryCount := 0
 	var shouldResubscribe bool
 	for {
@@ -148,7 +147,8 @@ func (w *windowsEventLog) run() {
 			shouldResubscribe = true
 		case <-ticker.C:
 			if shouldResubscribe {
-				w.eventOffset = w.loadState()
+				restored, _ := w.stateManager.Restore()
+				w.eventOffset = restored.Last().EndOffset()
 				if err := w.resubscribe(); err != nil {
 					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
 					retryCount++
@@ -170,10 +170,11 @@ func (w *windowsEventLog) run() {
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
+				r.Shift(recordNumber)
 				evt := &LogEvent{
 					msg:    value,
 					t:      record.System.TimeCreated.SystemTime,
-					offset: recordNumber,
+					offset: r,
 					src:    w,
 				}
 				w.outputFn(evt)
@@ -255,51 +256,12 @@ func (w *windowsEventLog) SetEventOffset(eventOffset uint64) {
 	w.eventOffset = eventOffset
 }
 
-func (w *windowsEventLog) Done(offset uint64) {
-	w.offsetCh <- offset
+func (w *windowsEventLog) Done(offset state.Range) {
+	w.stateManager.Enqueue(offset)
 }
 
 func (w *windowsEventLog) ResubscribeCh() chan struct{} {
 	return w.resubscribeCh
-}
-
-func (w *windowsEventLog) runSaveState() {
-	t := time.NewTicker(saveStateInterval)
-	defer w.Stop()
-
-	var offset, lastSavedOffset uint64
-	for {
-		select {
-		case o := <-w.offsetCh:
-			if o > offset {
-				offset = o
-			}
-		case <-t.C:
-			if offset == lastSavedOffset {
-				continue
-			}
-			err := w.saveState(offset)
-			if err != nil {
-				log.Printf("E! [wineventlog] Error happened when saving file state %s to file state folder %s: %v", w.logGroupName, w.stateFilePath, err)
-				continue
-			}
-			lastSavedOffset = offset
-		case <-w.done:
-			err := w.saveState(offset)
-			if err != nil {
-				log.Printf("E! [wineventlog] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", w.logGroupName, w.stateFilePath, err)
-			}
-			break
-		}
-	}
-}
-
-func (w *windowsEventLog) saveState(offset uint64) error {
-	if w.stateFilePath == "" || offset == 0 {
-		return nil
-	}
-	content := []byte(strconv.FormatUint(offset, 10) + "\n" + w.logGroupName)
-	return os.WriteFile(w.stateFilePath, content, 0644)
 }
 
 func (w *windowsEventLog) read() []*windowsEventLogRecord {
@@ -338,9 +300,11 @@ func (w *windowsEventLog) read() []*windowsEventLogRecord {
 type LogEvent struct {
 	msg    string
 	t      time.Time
-	offset uint64
+	offset state.Range
 	src    *windowsEventLog
 }
+
+var _ logs.StatefulLogEvent = (*LogEvent)(nil)
 
 func (le LogEvent) Message() string {
 	return le.msg
@@ -351,7 +315,14 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
-	le.src.Done(le.offset)
+}
+
+func (le LogEvent) Range() state.Range {
+	return le.offset
+}
+
+func (le LogEvent) RangeQueue() state.FileRangeQueue {
+	return le.src.stateManager
 }
 
 // getRecords attempts to render and format each of the given EvtHandles.
@@ -427,23 +398,4 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
 	}
 	return newRecord, nil
-}
-
-func (w *windowsEventLog) loadState() uint64 {
-	if _, err := os.Stat(w.stateFilePath); err != nil {
-		log.Printf("I! [wineventlog] The state file for %s does not exist: %v", w.stateFilePath, err)
-		return 0
-	}
-	byteArray, err := os.ReadFile(w.stateFilePath)
-	if err != nil {
-		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", w.stateFilePath, err)
-		return 0
-	}
-	offset, err := strconv.ParseUint(strings.Split(string(byteArray), "\n")[0], 10, 64)
-	if err != nil {
-		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
-		return 0
-	}
-	log.Printf("D! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
-	return offset
 }

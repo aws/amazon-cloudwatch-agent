@@ -15,6 +15,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -64,7 +65,7 @@ func TestMetricDecoration(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("other_metric", "none", 0.0, 0, 0, nil)
 
 	ctx := context.Background()
-	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(), cfg, sink)
+	proc, err := transl.factory.CreateMetrics(ctx, processortest.NewNopSettings(component.MustNewType("transform")), cfg, sink)
 	require.NotNil(t, proc)
 	require.NoError(t, err)
 	actualMetrics := pmetric.NewMetrics()

@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"log"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -15,13 +14,13 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
-	stateFileMode      = 0644
 	tailCloseThreshold = 3 * time.Second
 )
 
@@ -30,23 +29,14 @@ var (
 	defaultBufferSize   = 1
 )
 
-type fileOffset struct {
-	seq, offset int64 // Seq handles file trucation, when file is trucated, we increase the offset seq
-}
-
-func (fo *fileOffset) SetOffset(o int64) {
-	if o < fo.offset { // Increment the sequence number when a smaller offset is given (truncated)
-		fo.seq++
-	}
-	fo.offset = o
-}
-
 type LogEvent struct {
 	msg    string
 	t      time.Time
-	offset fileOffset
+	offset state.Range
 	src    *tailerSrc
 }
+
+var _ logs.StatefulLogEvent = (*LogEvent)(nil)
 
 func (le LogEvent) Message() string {
 	return le.msg
@@ -57,7 +47,14 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
-	le.src.Done(le.offset)
+}
+
+func (le LogEvent) Range() state.Range {
+	return le.offset
+}
+
+func (le LogEvent) RangeQueue() state.FileRangeQueue {
+	return le.src.stateManager
 }
 
 type tailerSrc struct {
@@ -66,7 +63,7 @@ type tailerSrc struct {
 	class           string
 	fileGlobPath    string
 	destination     string
-	stateFilePath   string
+	stateManager    state.FileRangeManager
 	tailer          *tail.Tail
 	autoRemoval     bool
 	timestampFn     func(string) (time.Time, string)
@@ -78,7 +75,6 @@ type tailerSrc struct {
 	outputFn           func(logs.LogEvent)
 	isMLStart          func(string) bool
 	filters            []*LogFilter
-	offsetCh           chan fileOffset
 	done               chan struct{}
 	startTailerOnce    sync.Once
 	cleanUpFns         []func()
@@ -91,7 +87,9 @@ type tailerSrc struct {
 var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
-	group, stream, destination, stateFilePath, logClass, fileGlobPath string,
+	group, stream, destination string,
+	stateManager state.FileRangeManager,
+	logClass, fileGlobPath string,
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
@@ -107,7 +105,7 @@ func NewTailerSrc(
 		group:              group,
 		stream:             stream,
 		destination:        destination,
-		stateFilePath:      stateFilePath,
+		stateManager:       stateManager,
 		class:              logClass,
 		fileGlobPath:       fileGlobPath,
 		tailer:             tailer,
@@ -120,15 +118,16 @@ func NewTailerSrc(
 		truncateSuffix:     truncateSuffix,
 		retentionInDays:    retentionInDays,
 		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeFDRelease,
-
-		offsetCh: make(chan fileOffset, 2000),
-		done:     make(chan struct{}),
+		done:               make(chan struct{}),
 	}
 
 	if ts.backpressureFdDrop {
 		ts.buffer = make(chan *LogEvent, defaultBufferSize)
 	}
-	go ts.runSaveState()
+	go ts.stateManager.Run(state.Notification{
+		Delete: ts.tailer.FileDeletedCh,
+		Done:   ts.done,
+	})
 	return ts
 }
 
@@ -168,15 +167,6 @@ func (ts *tailerSrc) Retention() int {
 func (ts *tailerSrc) Class() string {
 	return ts.class
 }
-func (ts *tailerSrc) Done(offset fileOffset) {
-	// ts.offsetCh will only be blocked when the runSaveState func has exited,
-	// which only happens when the original file has been removed, thus making
-	// Keeping its offset useless
-	select {
-	case ts.offsetCh <- offset:
-	default:
-	}
-}
 
 func (ts *tailerSrc) Stop() {
 	ts.stopOnce.Do(func() {
@@ -206,7 +196,7 @@ func (ts *tailerSrc) runTail() {
 	var init string
 	var msgBuf bytes.Buffer
 	var cnt int
-	fo := &fileOffset{}
+	fo := state.Range{}
 	ignoreUntilNextEvent := false
 
 	for {
@@ -235,14 +225,14 @@ func (ts *tailerSrc) runTail() {
 			if ts.isMLStart == nil {
 				msgBuf.Reset()
 				msgBuf.WriteString(text)
-				fo.SetOffset(line.Offset)
+				fo.ShiftInt64(line.Offset)
 				init = ""
 			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msgBuf.Len() == 0) {
 				init = text
 				ignoreUntilNextEvent = false
 			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
 				ignoreUntilNextEvent = true
-				fo.SetOffset(line.Offset)
+				fo.ShiftInt64(line.Offset)
 				continue
 			} else {
 				msgBuf.WriteString("\n")
@@ -251,14 +241,14 @@ func (ts *tailerSrc) runTail() {
 					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
 					msgBuf.WriteString(ts.truncateSuffix)
 				}
-				fo.SetOffset(line.Offset)
+				fo.ShiftInt64(line.Offset)
 				continue
 			}
 
 			ts.publishEvent(msgBuf, fo)
 			msgBuf.Reset()
 			msgBuf.WriteString(init)
-			fo.SetOffset(line.Offset)
+			fo.ShiftInt64(line.Offset)
 			cnt = 0
 		case <-t.C:
 			if msgBuf.Len() > 0 {
@@ -276,7 +266,7 @@ func (ts *tailerSrc) runTail() {
 	}
 }
 
-func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
+func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo state.Range) {
 	// helper to handle event publishing
 	if msgBuf.Len() == 0 {
 		return
@@ -286,7 +276,7 @@ func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo *fileOffset) {
 	e := &LogEvent{
 		msg:    modifiedMsg,
 		t:      timestamp,
-		offset: *fo,
+		offset: fo,
 		src:    ts,
 	}
 	if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
@@ -367,51 +357,4 @@ func (ts *tailerSrc) cleanUp() {
 	if ts.outputFn != nil {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
-}
-
-func (ts *tailerSrc) runSaveState() {
-	t := time.NewTicker(100 * time.Millisecond)
-	defer t.Stop()
-
-	var offset, lastSavedOffset fileOffset
-	for {
-		select {
-		case o := <-ts.offsetCh:
-			if o.seq > offset.seq || (o.seq == offset.seq && o.offset > offset.offset) {
-				offset = o
-			}
-		case <-t.C:
-			if offset == lastSavedOffset {
-				continue
-			}
-			err := ts.saveState(offset.offset)
-			if err != nil {
-				log.Printf("E! [logfile] Error happened when saving file state %s to file state folder %s: %v", ts.tailer.Filename, ts.stateFilePath, err)
-				continue
-			}
-			lastSavedOffset = offset
-		case <-ts.tailer.FileDeletedCh:
-			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
-			err := os.Remove(ts.stateFilePath)
-			if err != nil {
-				log.Printf("W! [logfile] Error happened while deleting state file %s on cleanup: %v", ts.stateFilePath, err)
-			}
-			return
-		case <-ts.done:
-			err := ts.saveState(offset.offset)
-			if err != nil {
-				log.Printf("E! [logfile] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", ts.tailer.Filename, ts.stateFilePath, err)
-			}
-			return
-		}
-	}
-}
-
-func (ts *tailerSrc) saveState(offset int64) error {
-	if ts.stateFilePath == "" || offset == 0 {
-		return nil
-	}
-
-	content := []byte(strconv.FormatInt(offset, 10) + "\n" + ts.tailer.Filename)
-	return os.WriteFile(ts.stateFilePath, content, stateFileMode)
 }

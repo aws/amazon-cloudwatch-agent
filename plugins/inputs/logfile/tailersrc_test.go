@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -61,9 +63,16 @@ func TestTailerSrc(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
+
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination", statefile.Name(),
+		"destination", m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -147,7 +156,7 @@ func TestTailerSrc(t *testing.T) {
 	assert.Eventually(t, func() bool { return tail.OpenFileCount.Load() <= beforeCount }, 3*time.Second, time.Second)
 }
 
-func TestOffsetDoneCallBack(t *testing.T) {
+func TestStatefulLogEvent(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
 
@@ -173,10 +182,16 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
-		statefile.Name(),
+		m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -200,13 +215,15 @@ func TestOffsetDoneCallBack(t *testing.T) {
 			close(done)
 			return
 		}
-		evt.Done()
+		sle, ok := evt.(logs.StatefulLogEvent)
+		assert.True(t, ok)
+		sle.RangeQueue().Enqueue(sle.Range())
 		i++
 		switch i {
 		case 10:
 			// Test before first truncate
 			time.Sleep(1 * time.Second)
-			b, err := os.ReadFile(statefile.Name())
+			b, err := os.ReadFile(stateFilePath)
 			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
 			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
 			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
@@ -214,8 +231,8 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		case 15:
 			// Test after first truncate, saved offset should decrease
 			time.Sleep(1 * time.Second)
-			log.Println(statefile.Name())
-			b, err := os.ReadFile(statefile.Name())
+			log.Println(stateFilePath)
+			b, err := os.ReadFile(stateFilePath)
 			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
 			file_parts := bytes.Split(b, []byte("\n"))
 			log.Println("file_parts: ", file_parts)
@@ -226,7 +243,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 			require.Equal(t, offset, 505, fmt.Sprintf("Wrong offset %v is written to state file, after truncate and write shorter logs expecting 505", offset))
 		case 35:
 			time.Sleep(1 * time.Second)
-			b, err := os.ReadFile(statefile.Name())
+			b, err := os.ReadFile(stateFilePath)
 			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
 			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
 			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
@@ -394,13 +411,20 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 	}
 	err = config.init()
 	assert.NoError(t, err)
+
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		t.Name(),
 		t.Name(),
 		"destination",
+		m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
-		statefile.Name(),
 		tailer,
 		autoRemoval,
 		multiLineFn,

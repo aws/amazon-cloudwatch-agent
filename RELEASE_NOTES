@@ -1,4 +1,23 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300057.0 (2025-06-16)
+========================================================================
+Features:
+* [Related Telemetry] Allow service and environment configuration for OTLP in EC2
+
+Enhancements:
+* [Prometheus] mTLS support for Target Allocator
+* [OpenTelemetry] Update fallback for OTel config flag
+* [Logs] Improved log state management
+* [ApplicationSignals] Add support for deployment.environment.name
+* [OpenTelemetry] Bump OTel dependencies to v0.124.1
+
+Bug Fixes:
+* [ApplicationSignals] Concurrency bug fix
+* [ContainerInsights] Fix grouping for container insights metrics for mixed metric types
+* [ContainerInsights] Add perCore neuron empty metric as datapoints instead of individual metric object
+* [Logs] Fix concurrent map write crash
+
+========================================================================
 Amazon CloudWatch Agent 1.300056.0 (2025-05-16)
 ========================================================================
 Features:
