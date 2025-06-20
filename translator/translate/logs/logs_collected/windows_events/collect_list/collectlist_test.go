@@ -15,7 +15,7 @@ import (
 
 func TestApplyRule(t *testing.T) {
 	c := new(CollectList)
-	var rawJsonString = `
+	var rawJSONString = `
 {
     "collect_list": [
       {
@@ -76,7 +76,7 @@ func TestApplyRule(t *testing.T) {
 
 	var actual interface{}
 
-	err := json.Unmarshal([]byte(rawJsonString), &input)
+	err := json.Unmarshal([]byte(rawJSONString), &input)
 	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.Equal(t, expected, actual)
@@ -87,7 +87,7 @@ func TestApplyRule(t *testing.T) {
 
 func TestDuplicateRetention(t *testing.T) {
 	c := new(CollectList)
-	var rawJsonString = `
+	var rawJSONString = `
 {
     "collect_list": [
       {
@@ -175,19 +175,19 @@ func TestDuplicateRetention(t *testing.T) {
 
 	var actual interface{}
 
-	error := json.Unmarshal([]byte(rawJsonString), &input)
-	if error == nil {
+	err := json.Unmarshal([]byte(rawJSONString), &input)
+	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.Equal(t, 0, len(translator.ErrorMessages))
 		assert.Equal(t, expected, actual)
 	} else {
-		assert.Fail(t, error.Error())
+		assert.Fail(t, err.Error())
 	}
 }
 
 func TestConflictingRetention(t *testing.T) {
 	c := new(CollectList)
-	var rawJsonString = `
+	var rawJSONString = `
 {
     "collect_list": [
       {
@@ -247,20 +247,20 @@ func TestConflictingRetention(t *testing.T) {
 
 	var actual interface{}
 
-	error := json.Unmarshal([]byte(rawJsonString), &input)
-	if error == nil {
+	err := json.Unmarshal([]byte(rawJSONString), &input)
+	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.GreaterOrEqual(t, 1, len(translator.ErrorMessages))
 		assert.Equal(t, "Under path : /logs/logs_collected/windows_events/collect_list/ | Error : Different retention_in_days values can't be set for the same log group: system", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 		assert.Equal(t, expected, actual)
 	} else {
-		assert.Fail(t, error.Error())
+		assert.Fail(t, err.Error())
 	}
 }
 
 func TestEventID(t *testing.T) {
 	//Inputs
-	rawJsonString := `{
+	rawJSONString := `{
         "collect_list": [{
             "event_name": "System",
             "event_ids": [100, 101, 102],
@@ -269,7 +269,7 @@ func TestEventID(t *testing.T) {
     }`
 
 	var config interface{}
-	err := json.Unmarshal([]byte(rawJsonString), &config)
+	err := json.Unmarshal([]byte(rawJSONString), &config)
 	assert.NoError(t, err)
 
 	//process new configutation
@@ -279,54 +279,54 @@ func TestEventID(t *testing.T) {
 	// Verify event_ids in final configuration
 	result := val.([]interface{})[0].(map[string]interface{})
 
-	eventIds, exists := result["event_ids"]
+	eventIDs, exists := result["event_ids"]
 	assert.True(t, exists, "event_ids should exist in final configuration")
-	assert.Equal(t, []int{100, 101, 102}, eventIds)
+	assert.Equal(t, []int{100, 101, 102}, eventIDs)
 
 }
 
-func TestValidateEventIds(t *testing.T) {
+func TestValidateEventIDs(t *testing.T) {
 	test := []struct {
 		name        string
 		input       []interface{}
-		expectedIds []int
+		expectedIDs []int
 		expectError bool
 	}{
 		{
 			name:        "Valid event IDs",
 			input:       []interface{}{float64(100), float64(200), float64(300)},
-			expectedIds: []int{100, 200, 300},
+			expectedIDs: []int{100, 200, 300},
 			expectError: false,
 		},
 		{
 			name:        "Invalid event ID - UpperBound",
 			input:       []interface{}{float64(65536)},
-			expectedIds: []int{},
+			expectedIDs: []int{},
 			expectError: true,
 		},
 		{
 			name:        "Invalid event ID - LowerBound",
 			input:       []interface{}{float64(-1)},
-			expectedIds: []int{},
+			expectedIDs: []int{},
 			expectError: true,
 		},
 		{
 			name:        "Empty input",
 			input:       []interface{}{},
-			expectedIds: []int{},
+			expectedIDs: []int{},
 			expectError: false,
 		},
 	}
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			validatedIds, errorMessages := validateEventIds(tt.input)
+			validatedIDs, errorMessages := validateEventIDs(tt.input)
 
 			if !tt.expectError && len(errorMessages) > 0 {
 				t.Errorf("Unexpected error messages: %v", errorMessages)
 			}
 			// Check if validated IDs match expected
-			assert.Equal(t, tt.expectedIds, validatedIds)
+			assert.Equal(t, tt.expectedIDs, validatedIDs)
 
 		})
 

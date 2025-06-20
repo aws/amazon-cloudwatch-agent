@@ -105,7 +105,7 @@ type (
 	eventConfig struct {
 		BatchReadSize   int      `toml:"batch_read_size"`
 		EventLevels     []string `toml:"event_levels"`
-		EventIds        []int    `toml:"event_ids"`
+		EventIDs        []int    `toml:"event_ids"`
 		EventName       string   `toml:"event_name"`
 		LogGroupName    string   `toml:"log_group_name"`
 		LogStreamName   string   `toml:"log_stream_name"`
