@@ -47,6 +47,7 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
+	le.RangeQueue().Enqueue(le.Range())
 }
 
 func (le LogEvent) Range() state.Range {
