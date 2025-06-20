@@ -156,7 +156,7 @@ func TestTailerSrc(t *testing.T) {
 	assert.Eventually(t, func() bool { return tail.OpenFileCount.Load() <= beforeCount }, 3*time.Second, time.Second)
 }
 
-func TestStatefulLogEvent(t *testing.T) {
+func TestEventDoneCallback(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
 
@@ -217,7 +217,7 @@ func TestStatefulLogEvent(t *testing.T) {
 		}
 		sle, ok := evt.(logs.StatefulLogEvent)
 		assert.True(t, ok)
-		sle.RangeQueue().Enqueue(sle.Range())
+		sle.Done()
 		i++
 		switch i {
 		case 10:
