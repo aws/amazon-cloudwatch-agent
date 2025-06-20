@@ -21,6 +21,7 @@ const (
 	EventConfigTomlKey = "event_config"
 	BatchReadSizeKey   = "batch_read_size"
 	EventLevelsKey     = "event_levels"
+	EventIDKey         = "event_ids"
 	//TODO: Performance test to confirm the proper value here - https://github.com/aws/amazon-cloudwatch-agent/issues/231
 	BatchReadSizeValue = 170
 )
@@ -34,7 +35,7 @@ func RegisterRule(fieldname string, r Rule) {
 type CollectList struct {
 }
 
-var customizedJsonConfigKeys = []string{"event_name", EventLevelsKey}
+var customizedJSONConfigKeys = []string{"event_name", EventLevelsKey, EventIDKey}
 var eventLevelMapping = map[string]string{
 	"VERBOSE":     "5",
 	"INFORMATION": "4",
@@ -77,7 +78,7 @@ func init() {
 func getTransformedConfig(input interface{}) interface{} {
 	result := map[string]interface{}{}
 	// Extract customer specified config
-	util.SetWithSameKeyIfFound(input, customizedJsonConfigKeys, result)
+	util.SetWithSameKeyIfFound(input, customizedJSONConfigKeys, result)
 	// Set Fixed config
 	addFixedJsonConfig(result)
 
@@ -118,4 +119,41 @@ func addFixedJsonConfig(result map[string]interface{}) {
 		}
 	}
 	result[EventLevelsKey] = resultEventLevels
+
+	if eventIDs, ok := result[EventIDKey]; ok {
+		validatedIDs, errorMessages := validateEventIDs(eventIDs.([]interface{}))
+		for _, err := range errorMessages {
+			translator.AddErrorMessages(GetCurPath(), err)
+		}
+		result[EventIDKey] = validatedIDs
+	}
+}
+
+// Validate event_id inputs
+func validateEventIDs(inputEventIDs []interface{}) ([]int, []string) {
+	validatedIDs := []int{}
+	errorMessages := []string{}
+
+	const (
+		minEventID = 0
+		maxEventID = 65535
+	)
+
+	for _, id := range inputEventIDs {
+		eventIDFloat, ok := id.(float64)
+		if !ok {
+			errorMessages = append(errorMessages, fmt.Sprintf("Event ID %v is not a number", id))
+			continue
+		}
+		eventIDInt := int(eventIDFloat)
+		if eventIDInt < minEventID || eventIDInt > maxEventID {
+			errorMessages = append(errorMessages, fmt.Sprintf("Event ID %v is not a valid windows event_id.", eventIDInt))
+			continue
+		}
+
+		validatedIDs = append(validatedIDs, eventIDInt)
+	}
+
+	return validatedIDs, errorMessages
+
 }

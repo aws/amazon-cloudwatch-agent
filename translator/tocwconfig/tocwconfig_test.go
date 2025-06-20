@@ -340,6 +340,19 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
+// test events_ids only
+func TestWindowsEventIDOnly(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids", "windows", expectedEnvVars, "")
+}
+
+// test both event_ids and levels
+func TestWindowsEventIdsAndLevels(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids_and_levels", "windows", expectedEnvVars, "")
+}
 func TestStatsDConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
@@ -923,11 +936,10 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
-
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
-		// assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
+		//assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
 
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}
