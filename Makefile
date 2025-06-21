@@ -75,6 +75,7 @@ amazon-cloudwatch-agent-linux: copy-version-file
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent-debugger github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-debugger
 
 
 amazon-cloudwatch-agent-darwin: copy-version-file
