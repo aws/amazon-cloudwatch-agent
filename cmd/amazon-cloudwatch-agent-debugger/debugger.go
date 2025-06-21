@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
 )
 
@@ -31,7 +32,8 @@ func printInstanceInfo(info *debugger.InstanceInfo) {
 	fmt.Printf("Account ID:        %s\n", info.AccountID)
 	fmt.Printf("Region:            %s\n", info.Region)
 	fmt.Printf("Instance Type:     %s\n", info.InstanceType)
-	fmt.Printf("Image ID:          %s\n", info.ImageID)
+	fmt.Printf("AMI:               %s\n", info.ImageID)
 	fmt.Printf("Availability Zone: %s\n", info.AvailabilityZone)
 	fmt.Printf("Architecture:      %s\n", info.Architecture)
+	fmt.Printf("OS:				   %s\n", info.OS)
 }

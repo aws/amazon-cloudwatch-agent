@@ -3,19 +3,21 @@ package debugger
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
 type InstanceInfo struct {
-	InstanceID string `json:"instanceId"`
-	AccountID string `json:"accountId"`
-	Region string `json:"region"`
-	InstanceType string `json:"InstanceType"`
-	ImageID string `json:"imageId"`
+	InstanceID       string `json:"instanceId"`
+	AccountID        string `json:"accountId"`
+	Region           string `json:"region"`
+	InstanceType     string `json:"InstanceType"`
+	ImageID          string `json:"imageId"`
 	AvailabilityZone string `json:"availabilityZone"`
-	Architecture string `json:"architecture"`
+	Architecture     string `json:"architecture"`
+	OS               string `json:"os"`
 }
 
 func GetInstanceInfo(ctx context.Context) (*InstanceInfo, error) {
@@ -28,12 +30,13 @@ func GetInstanceInfo(ctx context.Context) (*InstanceInfo, error) {
 	}
 
 	return &InstanceInfo{
-		InstanceID: doc.InstanceID,
-		AccountID: doc.AccountID,
-		Region: doc.Region,
-		InstanceType: doc.InstanceType,
-		ImageID: doc.ImageID,
+		InstanceID:       doc.InstanceID,
+		AccountID:        doc.AccountID,
+		Region:           doc.Region,
+		InstanceType:     doc.InstanceType,
+		ImageID:          doc.ImageID,
 		AvailabilityZone: doc.AvailabilityZone,
-		Architecture: doc.Architecture,
+		Architecture:     doc.Architecture,
+		OS:               runtime.GOOS,
 	}, nil
 }
