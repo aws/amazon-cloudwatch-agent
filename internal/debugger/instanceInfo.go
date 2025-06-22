@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type InstanceInfo struct {
@@ -20,6 +20,7 @@ type InstanceInfo struct {
 	OS               string `json:"os"`
 }
 
+// Collects information about the instance
 func GetInstanceInfo(ctx context.Context) (*InstanceInfo, error) {
 	sess := session.Must(session.NewSession())
 	provider := ec2metadataprovider.NewMetadataProvider(sess, 0)
