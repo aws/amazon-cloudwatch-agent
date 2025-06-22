@@ -14,6 +14,7 @@ type ConfigFile struct {
 	Required    bool
 }
 
+// Checks for existence and readability of key files.
 func CheckConfigFiles() {
 	fmt.Println("Checking Configuration Files:")
 
@@ -47,6 +48,11 @@ func CheckConfigFiles() {
 			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
 			Description: "Environment configuration file",
 			Required:    false,
+		},
+		{
+			Path:        "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+			Description: "Agent's log file",
+			Required:    true,
 		},
 	}
 
@@ -98,7 +104,8 @@ func CheckConfigFiles() {
 				}
 			}
 
-			if status == "✓ Present" {
+			// Don't read the log file
+			if status == "✓ Present" && !strings.HasSuffix(file.Path, ".log") {
 				content, err := os.ReadFile(file.Path)
 				if err != nil {
 					status = "! Present but not readable"
