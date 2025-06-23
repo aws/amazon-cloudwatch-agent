@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 type ConfigFile struct {
@@ -23,22 +25,22 @@ func CheckConfigFiles() {
 
 	configFiles := []ConfigFile{
 		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml",
+			Path:        paths.TomlConfigPath,
 			Description: "Main TOML configuration file",
 			Required:    true,
 		},
 		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d",
+			Path:        paths.ConfigDirPath,
 			Description: "JSON configuration file",
 			Required:    true,
 		},
 		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml",
+			Path:        paths.YamlConfigPath,
 			Description: "YAML configuration file",
 			Required:    true,
 		},
 		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/common-config.toml",
+			Path:        paths.CommonConfigPath,
 			Description: "Common configuration file",
 			Required:    false,
 		},
@@ -48,12 +50,12 @@ func CheckConfigFiles() {
 			Required:    false,
 		},
 		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/env-config.json",
+			Path:        paths.EnvConfigPath,
 			Description: "Environment configuration file",
 			Required:    false,
 		},
 		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+			Path:        paths.AgentLogFilePath,
 			Description: "Agent's log file",
 			Required:    true,
 		},
