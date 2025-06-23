@@ -1,14 +1,10 @@
 {
   "agent": {
-    "metrics_collection_interval": 15,
-    "run_as_user": "root",
-    "debug": true
+    "metrics_collection_interval": 15
   },
   "metrics": {
     "metrics_destinations": {
-      "cloudwatch": {
-        "namespace": "PMDOtelReceiverTest"
-      }
+      "cloudwatch": {}
     },
     "metrics_collected": {
       "prometheus": {

@@ -90,16 +90,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 		}
 
-		// TODO do we need cumulativetodeltaprocessor?
-		//translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
-
-		// TODO do we need entityprocessor?
-		// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
-		//isECS := ecsutil.GetECSUtilSingleton().IsECS()
-		//if entityProcessor != nil && currentContext.Mode() == config.ModeEC2 && !isECS && validDestination {
-		//	translators.Processors.Set(entityProcessor)
-		//}
-
 		return translators, nil
 	case common.CloudWatchLogsKey:
 		if !conf.IsSet(LogsKey) {

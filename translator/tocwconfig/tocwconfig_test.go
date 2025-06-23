@@ -50,6 +50,9 @@ const (
 
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
+d
+//go:embed sampleConfig/prometheus_cwa_config.yaml
+var prometheusPMDConfig string
 
 type testCase struct {
 	filename        string
@@ -427,6 +430,25 @@ func TestPrometheusConfig(t *testing.T) {
 	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 }
+
+func TestPrometheusPMDConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+
+	prometheusConfigFileName := "/tmp/prometheus.yaml"
+
+	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), os.ModePerm)
+	require.NoError(t, err)
+
+	defer os.Remove(prometheusConfigFileName)
+
+	expectedEnvVars := map[string]string{}
+
+	checkTranslation(t, "prometheus_pmd_config", "linux", expectedEnvVars, "")
+}
+
 func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

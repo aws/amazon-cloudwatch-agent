@@ -1,0 +1,118 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+        rollup_dimensions:
+            - - InstanceId
+              - InstanceType
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+processors:
+    batch/prometheus/cloudwatch:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - InstanceType
+            - ImageId
+            - InstanceId
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
+    rollup:
+        attribute_groups:
+            - - InstanceId
+              - InstanceType
+        cache_size: 1000
+receivers:
+    prometheus:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 5s
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 5s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  fallback_scrape_protocol: PrometheusText0.0.4
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: prometheus_test_job
+                  metrics_path: /metrics
+                  scheme: http
+                  scrape_interval: 5s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 5s
+                  static_configs:
+                    - targets:
+                        - localhost:8101
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        metrics/prometheus/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - batch/prometheus/cloudwatch
+                - rollup
+                - ec2tagger
+            receivers:
+                - prometheus
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
