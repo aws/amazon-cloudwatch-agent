@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package debugger
 
 import (
@@ -5,8 +8,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
 type InstanceInfo struct {
