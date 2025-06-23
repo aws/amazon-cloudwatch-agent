@@ -4,7 +4,6 @@
 package prometheus
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
@@ -13,17 +12,7 @@ import (
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-	var destinations []string
-	if conf.IsSet(LogsKey) {
-		destinations = append(destinations, common.CloudWatchLogsKey)
-	}
-	if conf.IsSet(prometheusremotewrite.AMPSectionKey) {
-		destinations = append(destinations, common.AMPKey)
-	}
-
-	if !conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey)) || conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey, common.CloudWatchKey)) {
-		destinations = append(destinations, common.CloudWatchKey)
-	}
+	destinations := common.GetMetricsDestinations(conf)
 
 	for _, destination := range destinations {
 		translators.Set(NewTranslator(common.WithDestination(destination)))

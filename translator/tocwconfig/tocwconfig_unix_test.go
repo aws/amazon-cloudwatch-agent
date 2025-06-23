@@ -40,15 +40,6 @@ func TestAMPConfig(t *testing.T) {
 	checkTranslation(t, "amp_config_linux", "darwin", nil, "")
 }
 
-func TestPMDConfig(t *testing.T) {
-	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeEC2)
-	testutil.SetPrometheusRemoteWriteTestingEnv(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "prometheus_pmd_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "prometheus_pmd_config", "darwin", nil, "")
-}
-
 func TestJMXConfigLinux(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

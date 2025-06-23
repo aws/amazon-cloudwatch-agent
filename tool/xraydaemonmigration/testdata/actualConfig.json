@@ -1,31 +1,20 @@
 {
-  "agent": {
-    "metrics_collection_interval": 15,
-    "run_as_user": "root",
-    "debug": true
+  "traces_collected": {
+    "xray": {
+      "bind_address": "127.0.0.1:2000",
+      "tcp_proxy": {
+        "bind_address": "127.0.0.1:2000"
+      }
+    }
   },
-  "metrics": {
-    "metrics_destinations": {
-      "cloudwatch": {
-        "namespace": "PMDOtelReceiverTest"
-      }
-    },
-    "metrics_collected": {
-      "prometheus": {
-        "prometheus_config_path": "/tmp/prometheus.yaml"
-      }
-    },
-    "append_dimensions": {
-      "ImageId": "${aws:ImageId}",
-      "InstanceId": "${aws:InstanceId}",
-      "InstanceType": "${aws:InstanceType}",
-      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
-    },
-    "aggregation_dimensions": [
-      [
-        "InstanceId",
-        "InstanceType"
-      ]
-    ]
-  }
+  "concurrency": 8,
+  "buffer_size_mb": 23,
+  "resource_arn": "resourceTesting",
+  "local_mode": true,
+  "insecure": false,
+  "credentials": {
+    "role_arn": "roleTest"
+  },
+  "region_override": "us-east-1",
+  "proxy_override": "127.0.0.1:2000"
 }

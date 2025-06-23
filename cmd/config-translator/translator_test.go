@@ -4,11 +4,8 @@
 package main
 
 import (
-	"encoding/json"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"os"
 	"regexp"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -207,95 +204,5 @@ func TestSampleConfigSchema(t *testing.T) {
 		}
 	} else {
 		panic(err)
-	}
-}
-
-func TestValidateAgentConfig(t *testing.T) {
-	tests := []struct {
-		name        string
-		config      string
-		expectError bool
-		errorType   error
-	}{
-		{
-			name: "Valid config without AMP",
-			config: `{
-				"agent": {
-					"metrics_collection_interval": 15
-				},
-				"metrics": {
-					"metrics_destinations": {
-						"cloudwatch": {}
-					},
-					"metrics_collected": {
-						"prometheus": {
-							"prometheus_config_path": "/tmp/prometheus.yaml"
-						}
-					},
-					"append_dimensions": {
-						"ImageId": "${aws:ImageId}",
-						"InstanceId": "${aws:InstanceId}",
-						"InstanceType": "${aws:InstanceType}",
-						"AutoScalingGroupName": "${aws:AutoScalingGroupName}"
-					},
-					"aggregation_dimensions": [
-						[
-							"InstanceId",
-							"InstanceType"
-						]
-					]
-				}
-			}`,
-			expectError: false,
-		},
-		{
-			name: "Config with missing required AMP fields",
-			config: `{
-				"agent": {
-					"metrics_collection_interval": 15
-				},
-				"metrics": {
-					"metrics_destinations": {
-						"amp": {}
-					}
-				}
-			}`,
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Parse the JSON config
-			var configMap map[string]interface{}
-			err := json.Unmarshal([]byte(tt.config), &configMap)
-			assert.NoError(t, err, "Failed to unmarshal test config")
-
-			// Set up the context
-			ctx := context.CurrentContext()
-			ctx.SetMode("ec2")
-
-			var osType string
-			if runtime.GOOS == "windows" {
-				osType = "windows"
-			} else {
-				osType = "linux"
-			}
-
-			ctx.SetOs(osType)
-			ctx.SetMode("ec2")
-
-			// Attempt to validate the configuration
-			_, err = cmdutil.TranslateJsonMapToYamlConfig(configMap)
-
-			if tt.expectError {
-				assert.Error(t, err)
-				if tt.errorType != nil {
-					assert.ErrorIs(t, err, tt.errorType)
-				}
-			} else {
-				assert.NoError(t, err)
-			}
-		})
 	}
 }

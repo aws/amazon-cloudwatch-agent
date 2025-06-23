@@ -50,7 +50,7 @@ const (
 
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
-d
+
 //go:embed sampleConfig/prometheus_cwa_config.yaml
 var prometheusPMDConfig string
 
@@ -438,14 +438,11 @@ func TestPrometheusPMDConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 
 	prometheusConfigFileName := "/tmp/prometheus.yaml"
-
-	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), os.ModePerm)
+	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), 0600)
 	require.NoError(t, err)
 
 	defer os.Remove(prometheusConfigFileName)
-
 	expectedEnvVars := map[string]string{}
-
 	checkTranslation(t, "prometheus_pmd_config", "linux", expectedEnvVars, "")
 }
 

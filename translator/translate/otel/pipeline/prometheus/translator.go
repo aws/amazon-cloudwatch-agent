@@ -5,8 +5,7 @@ package prometheus
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"log"
 	"time"
 
@@ -15,12 +14,14 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
@@ -62,7 +63,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	// return pipeline based on destination to keep source/destination combinations clearly separated
 	// otel_prometheus - cloudwatch
-	// telegraf_prometheus - cloudwatch logs
 	// telegraf_prometheus - cloudwatch
 	// otel_prometheus - AMP
 	// this could change in future releases to support different source/destination combinations
@@ -74,7 +74,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators := &common.ComponentTranslators{
 			Receivers:  common.NewTranslatorMap(otelprom.NewTranslator()),
 			Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey)),
-			Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
+			Exporters: common.NewTranslatorMap(
+				awscloudwatch.NewTranslator(),
+				debug.NewTranslator(),
+			),
 			Extensions: common.NewTranslatorMap(
 				agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
