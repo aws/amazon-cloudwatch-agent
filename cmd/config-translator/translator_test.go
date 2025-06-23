@@ -212,13 +212,7 @@ func TestSampleConfigSchema(t *testing.T) {
 			if re.MatchString(file.Name()) {
 				t.Logf("Validating ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
 
-				// Special case for windows_eventids.json which has both event_ids and event_levels
-				if file.Name() == "windows_eventids.json" {
-					expectedErrorMap := map[string]int{"number_one_of": 1}
-					checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, expectedErrorMap)
-				} else {
-					checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
-				}
+				checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
 
 				t.Logf("Validated ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
 			}

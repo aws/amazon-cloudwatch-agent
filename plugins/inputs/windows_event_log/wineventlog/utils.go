@@ -36,23 +36,23 @@ func createFilterQuery(levels []string, eventIDs []int) string {
 	}
 
 	//EventID filtering
-	var filterEventID string
+	var filterEventIDs string
 	for i, eventID := range eventIDs {
 		if i == 0 {
-			filterEventID = fmt.Sprintf(eventLogeventIDFilter, eventID)
+			filterEventIDs = fmt.Sprintf(eventLogeventIDFilter, eventID)
 		} else {
-			filterEventID = filterEventID + " or " + fmt.Sprintf(eventLogeventIDFilter, eventID)
+			filterEventIDs = filterEventIDs + " or " + fmt.Sprintf(eventLogeventIDFilter, eventID)
 		}
 	}
 
 	//query results
 	var query string
-	if filterLevels != "" && filterEventID != "" {
-		query = "(" + filterLevels + ") and (" + filterEventID + ")"
-	} else if filterLevels != "" && filterEventID == "" {
+	if filterLevels != "" && filterEventIDs != "" {
+		query = "(" + filterLevels + ") and (" + filterEventIDs + ")"
+	} else if filterLevels != "" && filterEventIDs == "" {
 		query = "(" + filterLevels + ")"
-	} else if filterLevels == "" && filterEventID != "" {
-		query = "(" + filterEventID + ")"
+	} else if filterLevels == "" && filterEventIDs != "" {
+		query = "(" + filterEventIDs + ")"
 	}
 
 	//Ignore events older than 2 weeks

@@ -49,7 +49,7 @@ func (e *wevtAPIError) Error() string {
 type windowsEventLog struct {
 	name          string
 	levels        []string
-	eventID       []int
+	eventIDs      []int
 	logGroupName  string
 	logStreamName string
 	logGroupClass string
@@ -67,11 +67,11 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, eventID []int, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventIDs []int, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
-		eventID:       eventID,
+		eventIDs:      eventIDs,
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
 		logGroupClass: logGroupClass,
@@ -212,7 +212,7 @@ func (w *windowsEventLog) open() error {
 	if err != nil {
 		return err
 	}
-	query, err := CreateQuery(w.name, w.levels, w.eventID)
+	query, err := CreateQuery(w.name, w.levels, w.eventIDs)
 	if err != nil {
 		return err
 	}
@@ -254,10 +254,6 @@ func (w *windowsEventLog) EventOffset() uint64 {
 
 func (w *windowsEventLog) SetEventOffset(eventOffset uint64) {
 	w.eventOffset = eventOffset
-}
-
-func (w *windowsEventLog) Done(offset state.Range) {
-	w.stateManager.Enqueue(offset)
 }
 
 func (w *windowsEventLog) ResubscribeCh() chan struct{} {
@@ -315,6 +311,7 @@ func (le LogEvent) Time() time.Time {
 }
 
 func (le LogEvent) Done() {
+	le.RangeQueue().Enqueue(le.Range())
 }
 
 func (le LogEvent) Range() state.Range {

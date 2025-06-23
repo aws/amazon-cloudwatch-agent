@@ -340,7 +340,6 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
-// test events_ids only
 func TestWindowsEventIDOnly(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

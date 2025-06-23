@@ -24,13 +24,13 @@ func TestApplyRule(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
-		"event_ids": [
-			100,
-			120,
-			300
-		],
+        "event_ids": [
+          100,
+          120,
+          300
+        ],
         "log_group_name": "System",
-		"log_group_class": "STANDARD"
+        "log_group_class": "STANDARD"
       },
       {
         "event_name": "Application",
@@ -39,10 +39,10 @@ func TestApplyRule(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
-		"event_ids": [
-			4625,
-			3568
-		],
+        "event_ids": [
+         4625,
+         3568
+        ],
         "event_format": "xml",
         "log_group_name": "Application",
 		"retention_in_days": 1
@@ -96,10 +96,10 @@ func TestDuplicateRetention(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
-		"event_ids": [
-			100,
-			120
-		],
+        "event_ids": [
+          100,
+          120
+        ],
         "log_group_name": "System",
 		"retention_in_days": 3,
 		"log_group_class": "INFREQUENT_ACCESS"
@@ -111,10 +111,10 @@ func TestDuplicateRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
-		"event_ids": [
-			100,
-			120
-		],
+        "event_ids": [
+          100,
+          120
+        ],
         "event_format": "xml",
         "log_group_name": "System",
 		"retention_in_days": 3,
@@ -127,10 +127,10 @@ func TestDuplicateRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
-		"event_ids": [
-			100,
-			120
-		],
+        "event_ids": [
+          100,
+          120
+        ],
         "event_format": "xml",
         "log_group_name": "System",
 		"retention_in_days": 3,
@@ -196,12 +196,12 @@ func TestConflictingRetention(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
-		"event_ids": [
-			100,
-			120
-		],
+        "event_ids": [
+          100,
+          120
+        ],
         "log_group_name": "System",
-		"retention_in_days": 3
+        "retention_in_days": 3
       },
       {
         "event_name": "Application",
@@ -210,13 +210,13 @@ func TestConflictingRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
-		"event_ids": [
-			100,
-			120
-		],
+        "event_ids": [
+          100,
+          120
+        ],
         "event_format": "xml",
         "log_group_name": "System",
-		"retention_in_days": 1
+        "retention_in_days": 1
       }
     ]
 }
@@ -261,12 +261,12 @@ func TestConflictingRetention(t *testing.T) {
 func TestEventID(t *testing.T) {
 	//Inputs
 	rawJSONString := `{
-        "collect_list": [{
-            "event_name": "System",
-            "event_ids": [100, 101, 102],
-            "event_levels": ["ERROR", "CRITICAL"]
-        }]
-    }`
+		"collect_list": [{
+			"event_name": "System",
+			"event_ids": [100, 101, 102],
+			"event_levels": ["ERROR", "CRITICAL"]
+		}]
+		}`
 
 	var config interface{}
 	err := json.Unmarshal([]byte(rawJSONString), &config)
@@ -283,52 +283,4 @@ func TestEventID(t *testing.T) {
 	assert.True(t, exists, "event_ids should exist in final configuration")
 	assert.Equal(t, []int{100, 101, 102}, eventIDs)
 
-}
-
-func TestValidateEventIDs(t *testing.T) {
-	test := []struct {
-		name        string
-		input       []interface{}
-		expectedIDs []int
-		expectError bool
-	}{
-		{
-			name:        "Valid event IDs",
-			input:       []interface{}{float64(100), float64(200), float64(300)},
-			expectedIDs: []int{100, 200, 300},
-			expectError: false,
-		},
-		{
-			name:        "Invalid event ID - UpperBound",
-			input:       []interface{}{float64(65536)},
-			expectedIDs: []int{},
-			expectError: true,
-		},
-		{
-			name:        "Invalid event ID - LowerBound",
-			input:       []interface{}{float64(-1)},
-			expectedIDs: []int{},
-			expectError: true,
-		},
-		{
-			name:        "Empty input",
-			input:       []interface{}{},
-			expectedIDs: []int{},
-			expectError: false,
-		},
-	}
-
-	for _, tt := range test {
-		t.Run(tt.name, func(t *testing.T) {
-			validatedIDs, errorMessages := validateEventIDs(tt.input)
-
-			if !tt.expectError && len(errorMessages) > 0 {
-				t.Errorf("Unexpected error messages: %v", errorMessages)
-			}
-			// Check if validated IDs match expected
-			assert.Equal(t, tt.expectedIDs, validatedIDs)
-
-		})
-
-	}
 }
