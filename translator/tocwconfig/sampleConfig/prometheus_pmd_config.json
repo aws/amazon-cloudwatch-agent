@@ -1,8 +1,10 @@
 {
   "agent": {
-    "metrics_collection_interval": 15
+    "metrics_collection_interval": 15,
+    "debug": true
   },
   "metrics": {
+    "namespace": "PrometheusTest123",
     "metrics_destinations": {
       "cloudwatch": {}
     },
@@ -14,6 +16,7 @@
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",
       "InstanceId": "${aws:InstanceId}",
+
       "InstanceType": "${aws:InstanceType}",
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
     },

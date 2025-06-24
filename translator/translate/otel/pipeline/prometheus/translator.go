@@ -6,6 +6,7 @@ package prometheus
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"log"
 	"time"
 
@@ -72,8 +73,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
 		translators := &common.ComponentTranslators{
-			Receivers:  common.NewTranslatorMap(otelprom.NewTranslator()),
-			Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey)),
+			Receivers: common.NewTranslatorMap(otelprom.NewTranslator()),
+			Processors: common.NewTranslatorMap(
+				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
+				cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()),
+			),
 			Exporters: common.NewTranslatorMap(
 				awscloudwatch.NewTranslator(),
 				debug.NewTranslator(),
