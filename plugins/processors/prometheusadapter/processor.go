@@ -135,5 +135,10 @@ func updateDatapointAttributes(attr pcommon.Map, typ pmetric.MetricType, rma pco
 		attr.PutStr("instance", serviceInstanceId.AsString())
 	}
 
-	attr.PutStr("prom_metric_type", strings.ToLower(typ.String()))
+	// OTel labels counters types "sum", but they need to be labeled as "counter" to maintain backwards compatibility
+	promMetricType := strings.ToLower(typ.String())
+	if typ == pmetric.MetricTypeSum {
+		promMetricType = string(model.MetricTypeCounter)
+	}
+	attr.PutStr("prom_metric_type", promMetricType)
 }
