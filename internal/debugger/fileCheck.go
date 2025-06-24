@@ -5,12 +5,25 @@ package debugger
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+)
+
+type FileStatus string
+
+const (
+	StatusPresent            FileStatus = "✓ Present"
+	StatusMissing            FileStatus = "✗ Missing"
+	StatusNoFile             FileStatus = "✗ No file found"
+	StatusMultipleFiles      FileStatus = "! Multiple files found"
+	StatusNotReadable        FileStatus = "! File present but not readable"
+	StatusInvalidJSON        FileStatus = "! Existent but invalid JSON"
+	StatusInvalidJSONFormat  FileStatus = "! Invalid JSON format"
+	StatusPresentNotReadable FileStatus = "! Present but not readable"
 )
 
 type ConfigFile struct {
@@ -19,115 +32,98 @@ type ConfigFile struct {
 	Required    bool
 }
 
-// Checks for existence and readability of key files.
+// Checks for existence and readability of key configuration files
 func CheckConfigFiles() {
-	fmt.Println("Checking Configuration Files:")
+	log.Println("Checking Configuration Files:")
 
-	configFiles := []ConfigFile{
-		{
-			Path:        paths.TomlConfigPath,
-			Description: "Main TOML configuration file",
-			Required:    true,
-		},
-		{
-			Path:        paths.ConfigDirPath,
-			Description: "JSON configuration file",
-			Required:    true,
-		},
-		{
-			Path:        paths.YamlConfigPath,
-			Description: "YAML configuration file",
-			Required:    true,
-		},
-		{
-			Path:        paths.CommonConfigPath,
-			Description: "Common configuration file",
-			Required:    false,
-		},
-		{
-			Path:        "/opt/aws/amazon-cloudwatch-agent/etc/log-config.json",
-			Description: "Log configuration file",
-			Required:    false,
-		},
-		{
-			Path:        paths.EnvConfigPath,
-			Description: "Environment configuration file",
-			Required:    false,
-		},
-		{
-			Path:        paths.AgentLogFilePath,
-			Description: "Agent's log file",
-			Required:    true,
-		},
+	configFiles := getConfigFiles()
+	for _, file := range configFiles {
+		status := checkFileStatus(file.Path)
+		displayName := getDisplayName(file.Path)
+		log.Printf("%-20s [%s] - %s", displayName, status, file.Description)
+	}
+}
+
+func checkFileStatus(path string) FileStatus {
+	if strings.HasSuffix(path, ".d") {
+		return checkDirectoryStatus(path)
+	}
+	return checkFileContentStatus(path)
+}
+
+func checkFileContentStatus(path string) FileStatus {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return StatusMissing
+		}
+		return FileStatus("? Error checking file: " + err.Error())
 	}
 
-	for _, file := range configFiles {
-		if strings.HasSuffix(file.Path, ".d") {
-			// Special handling for .d directory
-			entries, err := os.ReadDir(file.Path)
-			status := "✓ Present"
+	if strings.HasSuffix(path, ".log") {
+		return StatusPresent
+	}
 
-			if err != nil {
-				if os.IsNotExist(err) {
-					status = "✗ Missing"
-				} else {
-					status = fmt.Sprintf("? Error checking directory: %v", err)
-				}
-			} else {
-				if len(entries) == 0 {
-					status = "✗ No file found"
-				} else if len(entries) > 1 {
-					status = "! Multiple files found"
-				} else {
-					// Assume the single file is JSON and try to parse it
-					fileName := entries[0].Name()
-					content, err := os.ReadFile(filepath.Join(file.Path, fileName))
-					if err != nil {
-						status = "! File present but not readable"
-					} else {
-						var js map[string]interface{}
-						if err := json.Unmarshal(content, &js); err != nil {
-							status = "! Existent but invalid JSON"
-						}
-					}
-				}
-			}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return StatusPresentNotReadable
+	}
 
-			fmt.Printf("%-20s [%s] - %s\n",
-				"amazon-cloudwatch-agent.d",
-				status,
-				file.Description)
-		} else {
-			// Original file checking logic for non-.d paths
-			_, err := os.Stat(file.Path)
-			status := "✓ Present"
-			if err != nil {
-				if os.IsNotExist(err) {
-					status = "✗ Missing"
-				} else {
-					status = fmt.Sprintf("? Error checking file: %v", err)
-				}
-			}
-
-			// Don't read the log file
-			if status == "✓ Present" && !strings.HasSuffix(file.Path, ".log") {
-				content, err := os.ReadFile(file.Path)
-				if err != nil {
-					status = "! Present but not readable"
-				} else {
-					if strings.HasSuffix(file.Path, ".json") {
-						var js map[string]interface{}
-						if err := json.Unmarshal(content, &js); err != nil {
-							status = "! Invalid JSON format"
-						}
-					}
-				}
-			}
-
-			fmt.Printf("%-20s [%s] - %s\n",
-				filepath.Base(file.Path),
-				status,
-				file.Description)
+	if strings.HasSuffix(path, ".json") {
+		var js map[string]interface{}
+		if err := json.Unmarshal(content, &js); err != nil {
+			return StatusInvalidJSONFormat
 		}
 	}
+
+	return StatusPresent
+}
+
+func checkDirectoryStatus(path string) FileStatus {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return StatusMissing
+		}
+		return FileStatus("? Error checking directory: " + err.Error())
+	}
+
+	if len(entries) == 0 {
+		return StatusNoFile
+	}
+
+	if len(entries) > 1 {
+		return StatusMultipleFiles
+	}
+
+	fileName := entries[0].Name()
+	content, err := os.ReadFile(filepath.Join(path, fileName))
+	if err != nil {
+		return StatusNotReadable
+	}
+
+	var js map[string]interface{}
+	if err := json.Unmarshal(content, &js); err != nil {
+		return StatusInvalidJSON
+	}
+
+	return StatusPresent
+}
+
+func getConfigFiles() []ConfigFile {
+	return []ConfigFile{
+		{Path: paths.TomlConfigPath, Description: "Main TOML configuration file", Required: true},
+		{Path: paths.ConfigDirPath, Description: "JSON configuration file", Required: true},
+		{Path: paths.YamlConfigPath, Description: "YAML configuration file", Required: true},
+		{Path: paths.CommonConfigPath, Description: "Common configuration file", Required: false},
+		{Path: filepath.Join(paths.AgentDir, "/etc/log-config.json"), Description: "Log configuration file", Required: false},
+		{Path: paths.EnvConfigPath, Description: "Environment configuration file", Required: false},
+		{Path: paths.AgentLogFilePath, Description: "Agent's log file", Required: true},
+	}
+}
+
+func getDisplayName(path string) string {
+	if strings.HasSuffix(path, ".d") {
+		return "amazon-cloudwatch-agent.d"
+	}
+	return filepath.Base(path)
 }
