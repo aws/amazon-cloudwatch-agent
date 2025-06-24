@@ -6,6 +6,7 @@ package prometheusadapter
 import (
 	"context"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -70,7 +71,7 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 			_, ok := extraneousAttributes[key]
 			return ok
 		})
-		rma.PutStr("receiver", "prometheus")
+
 	}
 	return md, nil
 }
@@ -78,15 +79,15 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon.Map) {
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
-		processNumberDataPointSlice(m.Gauge().DataPoints(), rma)
+		processNumberDataPointSlice(m.Gauge().DataPoints(), m.Type(), rma)
 	case pmetric.MetricTypeSum:
-		processNumberDataPointSlice(m.Sum().DataPoints(), rma)
+		processNumberDataPointSlice(m.Sum().DataPoints(), m.Type(), rma)
 	case pmetric.MetricTypeSummary:
-		processSummaryDataPointSlice(m.Summary().DataPoints(), rma)
+		processSummaryDataPointSlice(m.Summary().DataPoints(), m.Type(), rma)
 	case pmetric.MetricTypeHistogram:
-		processHistogramDataPointSlice(m.Histogram().DataPoints(), rma)
+		processHistogramDataPointSlice(m.Histogram().DataPoints(), m.Type(), rma)
 	case pmetric.MetricTypeExponentialHistogram:
-		processExponentialHistogramDataPointSlice(m.ExponentialHistogram().DataPoints(), rma)
+		processExponentialHistogramDataPointSlice(m.ExponentialHistogram().DataPoints(), m.Type(), rma)
 	case pmetric.MetricTypeEmpty:
 		d.logger.Debug("Ignore empty metric")
 	default:
@@ -94,42 +95,45 @@ func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon
 	}
 }
 
-func processNumberDataPointSlice(dps pmetric.NumberDataPointSlice, rma pcommon.Map) {
+func processNumberDataPointSlice(dps pmetric.NumberDataPointSlice, typ pmetric.MetricType, rma pcommon.Map) {
 	for i := 0; i < dps.Len(); i++ {
-		updateDatapointAttributes(dps.At(i).Attributes(), rma)
+		updateDatapointAttributes(dps.At(i).Attributes(), typ, rma)
 	}
 }
 
-func processSummaryDataPointSlice(dps pmetric.SummaryDataPointSlice, rma pcommon.Map) {
+func processSummaryDataPointSlice(dps pmetric.SummaryDataPointSlice, typ pmetric.MetricType, rma pcommon.Map) {
 	for i := 0; i < dps.Len(); i++ {
-		updateDatapointAttributes(dps.At(i).Attributes(), rma)
+		updateDatapointAttributes(dps.At(i).Attributes(), typ, rma)
 	}
 }
 
-func processHistogramDataPointSlice(dps pmetric.HistogramDataPointSlice, rma pcommon.Map) {
+func processHistogramDataPointSlice(dps pmetric.HistogramDataPointSlice, typ pmetric.MetricType, rma pcommon.Map) {
 	for i := 0; i < dps.Len(); i++ {
-		updateDatapointAttributes(dps.At(i).Attributes(), rma)
+		updateDatapointAttributes(dps.At(i).Attributes(), typ, rma)
 	}
 }
 
-func processExponentialHistogramDataPointSlice(dps pmetric.ExponentialHistogramDataPointSlice, rma pcommon.Map) {
+func processExponentialHistogramDataPointSlice(dps pmetric.ExponentialHistogramDataPointSlice, typ pmetric.MetricType, rma pcommon.Map) {
 	for i := 0; i < dps.Len(); i++ {
-		updateDatapointAttributes(dps.At(i).Attributes(), rma)
+		updateDatapointAttributes(dps.At(i).Attributes(), typ, rma)
 	}
 }
 
-func updateDatapointAttributes(attr pcommon.Map, rma pcommon.Map) {
-	// add new attributes
+// updateDatapointAttributes modifies the data point attributes to mimic how the original telegraf-based prometheus
+// receiver formatted the data points attributes. this is purely for maintaining backwards compatibility with the legacy
+// receiver's behavior
+func updateDatapointAttributes(attr pcommon.Map, typ pmetric.MetricType, rma pcommon.Map) {
 	hostname, err := os.Hostname()
 	if err == nil {
 		attr.PutStr("host", hostname)
 	}
 
-	// relabel
 	if serviceName, ok := rma.Get("service.name"); ok {
 		attr.PutStr("job", serviceName.AsString())
 	}
 	if serviceInstanceId, ok := rma.Get("service.instance.id"); ok {
 		attr.PutStr("instance", serviceInstanceId.AsString())
 	}
+
+	attr.PutStr("prom_metric_type", strings.ToLower(typ.String()))
 }
