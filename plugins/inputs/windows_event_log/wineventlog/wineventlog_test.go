@@ -24,6 +24,7 @@ var (
 	NAME = "Application"
 	// 2 is ERROR
 	LEVELS          = []string{"2"}
+	EVENTIDS        = []int{777}
 	GROUP_NAME      = "fake"
 	STREAM_NAME     = "fake"
 	RENDER_FMT      = FormatPlainText
@@ -36,7 +37,7 @@ var (
 
 // TestNewEventLog verifies constructor's default values.
 func TestNewEventLog(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := newTestEventLog(t, NAME, LEVELS, EVENTIDS)
 	assert.Equal(t, NAME, elog.name)
 	assert.Equal(t, uint64(0), elog.eventOffset)
 	assert.Zero(t, elog.eventHandle)
@@ -46,23 +47,27 @@ func TestNewEventLog(t *testing.T) {
 // And fails with invalid inputs.
 func TestOpen(t *testing.T) {
 	// Happy path.
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := newTestEventLog(t, NAME, LEVELS, EVENTIDS)
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
 	assert.NoError(t, elog.Close())
 	// Bad event log source name does not cause Open() to fail.
 	// But eventHandle will be 0 and Close() will fail because of it.
-	elog = newTestEventLog(t, "FakeBadElogName", LEVELS)
+	elog = newTestEventLog(t, "FakeBadElogName", LEVELS, EVENTIDS)
 	assert.NoError(t, elog.Open())
 	assert.Zero(t, elog.eventHandle)
 	assert.Error(t, elog.Close())
 	// bad LEVELS does not cause Open() to fail.
-	elog = newTestEventLog(t, NAME, []string{"498"})
+	elog = newTestEventLog(t, NAME, []string{"498"}, EVENTIDS)
+	assert.NoError(t, elog.Open())
+	assert.NotZero(t, elog.eventHandle)
+	assert.NoError(t, elog.Close())
+	elog = newTestEventLog(t, NAME, LEVELS, []int{98698})
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
 	assert.NoError(t, elog.Close())
 	// bad wlog.eventOffset does not cause Open() to fail.
-	elog = newTestEventLog(t, NAME, []string{"498"})
+	elog = newTestEventLog(t, NAME, []string{"498"}, EVENTIDS)
 	elog.eventOffset = 9987
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
@@ -72,7 +77,7 @@ func TestOpen(t *testing.T) {
 // TestReadGoodSource will verify we can read events written by a registered
 // event log source.
 func TestReadGoodSource(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := newTestEventLog(t, NAME, LEVELS, EVENTIDS)
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
@@ -84,7 +89,7 @@ func TestReadGoodSource(t *testing.T) {
 // TestReadBadSource will verify that we cannot read events written by an
 // unregistered event log source.
 func TestReadBadSource(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := newTestEventLog(t, NAME, LEVELS, EVENTIDS)
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
@@ -97,7 +102,7 @@ func TestReadBadSource(t *testing.T) {
 // registered event log source, even if the batch contains events from an
 // unregistered source too.
 func TestReadWithBothSources(t *testing.T) {
-	elog := newTestEventLog(t, NAME, LEVELS)
+	elog := newTestEventLog(t, NAME, LEVELS, EVENTIDS)
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
@@ -135,12 +140,13 @@ func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eve
 	wlog, err := eventlog.Open(logSrc)
 	assert.NoError(t, err)
 	for i := 0; i < msgCount; i++ {
-		wlog.Error(eventId, fmt.Sprintf("CWA_UnitTest event msg %v", i))
+		err = wlog.Error(eventId, fmt.Sprintf("CWA_UnitTest event msg %v", i))
+		assert.NoError(t, err)
 	}
 	err = wlog.Close()
 	assert.NoError(t, err)
 	// Must sleep after wlog.Error() otherwise elog.read() will not see results.
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 }
 
 // readHelper reads all events (since last read).
@@ -171,13 +177,13 @@ func checkEvents(t *testing.T, records []*windowsEventLogRecord, substring strin
 	assert.Equal(t, count, found, "expected %v, %v, actual %v", substring, count, found)
 }
 
-func newTestEventLog(t *testing.T, name string, levels []string) *windowsEventLog {
+func newTestEventLog(t *testing.T, name string, levels []string, eventids []int) *windowsEventLog {
 	t.Helper()
 	manager := state.NewFileRangeManager(state.ManagerConfig{
 		StateFileDir:    t.TempDir(),
 		StateFilePrefix: logscommon.WindowsEventLogPrefix,
 		Name:            GROUP_NAME + "_" + STREAM_NAME + "_" + name,
 	})
-	return NewEventLog(name, levels, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+	return NewEventLog(name, levels, eventids, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 }
