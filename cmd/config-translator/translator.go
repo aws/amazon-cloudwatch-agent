@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	userutil "github.com/aws/amazon-cloudwatch-agent/internal/util/user"
@@ -82,11 +83,11 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			// Only emit error message if panic content is string(pre-checked)
-			// Not emitting the non-handled error message for now, we don't want to show non-user-friendly error message to customer
 			if val, ok := r.(string); ok {
 				log.Println(val)
+			} else if err, ok := r.(error); ok {
+				log.Printf("Configuration error: %v", err)
 			}
-			//If the Input JSON config file is invalid, output all the error path and error messages.
 			for _, errMessage := range translator.ErrorMessages {
 				log.Println(errMessage)
 			}
@@ -98,6 +99,10 @@ func main() {
 
 	mergedJsonConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ctx)
 	if err != nil {
+		if strings.Contains(err.Error(), "invalid JSON") {
+			log.Printf("Failed to parse JSON configuration: %v", err)
+			os.Exit(1)
+		}
 		log.Panicf("E! Failed to generate merged json config: %v", err)
 	}
 
