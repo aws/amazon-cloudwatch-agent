@@ -20,6 +20,14 @@ const (
 	EvtSubscribeStartAfterBookmark EvtSubscribeFlag = 3
 )
 
+// EvtQueryFlag defines the values that specify how to return the query results and whether you are query against a channel or log file.
+// https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtquery
+type EvtQueryFlag uint32
+
+const (
+	EvtQueryChannelPath EvtQueryFlag = 1
+)
+
 // EvtRenderFlag defines the values that specify what to render.
 type EvtRenderFlag uint32
 
@@ -45,6 +53,7 @@ var (
 	// For Windows versions newer than 2003
 	modwevtapi                   = syscall.NewLazyDLL("wevtapi.dll")
 	procEvtSubscribe             = modwevtapi.NewProc("EvtSubscribe")
+	procEvtQuery                 = modwevtapi.NewProc("EvtQuery")
 	procEvtCreateBookmark        = modwevtapi.NewProc("EvtCreateBookmark")
 	procEvtCreateRenderContext   = modwevtapi.NewProc("EvtCreateRenderContext")
 	procEvtRender                = modwevtapi.NewProc("EvtRender")
@@ -56,6 +65,19 @@ var (
 
 func EvtSubscribe(session EvtHandle, signalEvent uintptr, channelPath *uint16, query *uint16, bookmark EvtHandle, context uintptr, callback syscall.Handle, flags EvtSubscribeFlag) (handle EvtHandle, err error) {
 	r0, _, e1 := syscall.Syscall9(procEvtSubscribe.Addr(), 8, uintptr(session), uintptr(signalEvent), uintptr(unsafe.Pointer(channelPath)), uintptr(unsafe.Pointer(query)), uintptr(bookmark), uintptr(context), uintptr(callback), uintptr(flags), 0)
+	handle = EvtHandle(r0)
+	if handle == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func EvtQuery(session EvtHandle, path *uint16, query *uint16, flags EvtQueryFlag) (handle EvtHandle, err error) {
+	r0, _, e1 := syscall.Syscall6(procEvtQuery.Addr(), 4, uintptr(session), uintptr(unsafe.Pointer(path)), uintptr(unsafe.Pointer(query)), uintptr(flags), 0, 0)
 	handle = EvtHandle(r0)
 	if handle == 0 {
 		if e1 != 0 {

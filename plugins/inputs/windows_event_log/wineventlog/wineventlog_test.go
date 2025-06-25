@@ -8,6 +8,8 @@ package wineventlog
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +19,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 var (
@@ -108,6 +111,141 @@ func TestReadWithBothSources(t *testing.T) {
 	assert.NoError(t, elog.Close())
 }
 
+func TestReadGaps(t *testing.T) {
+	t.Run("BasicGapReading", func(t *testing.T) {
+		t.Parallel()
+
+		rl := state.RangeList{
+			state.NewRange(0, 100),
+			state.NewRange(105, 107),
+		}
+		elog, stateFileName := newTestEventLogWithState(t, NAME, LEVELS, rl)
+		mockAPI := NewMockWindowsEventAPI()
+		elog.SetEventAPI(mockAPI)
+
+		mockAPI.AddMockEvents(createMockEventRecordsRange(100, 105))
+
+		elog.Init()
+
+		var records []logs.LogEvent
+		// SetOutput calls run as well hence the omission of elog.run()
+		elog.SetOutput(func(e logs.LogEvent) {
+			records = append(records, e)
+			e.Done()
+		})
+		time.Sleep(5 * time.Second)
+		elog.Stop()
+
+		assert.Empty(t, elog.gapsToRead, "Gaps should be cleared after reading")
+		assert.Len(t, records, 5, "Should return 5 mock events")
+		assert.Len(t, mockAPI.QueryCalls, 1, "Should make one query call")
+		assert.Equal(t, NAME, mockAPI.QueryCalls[0].Path, "Should query correct path")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &gt;= 100", "Query should contain start range")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &lt; 105", "Query should contain end range")
+		assert.Greater(t, len(mockAPI.CloseCalls), 0, "Should make close calls")
+
+		for i, record := range records {
+			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", 100+i))
+		}
+
+		assertStateFileRange(t, stateFileName, state.RangeList{
+			state.NewRange(0, 107),
+		})
+	})
+	t.Run("ReadGapThenSubscribe", func(t *testing.T) {
+		t.Parallel()
+
+		rl := state.RangeList{
+			state.NewRange(0, 2),
+			state.NewRange(4, 5),
+		}
+		elog, stateFileName := newTestEventLogWithState(t, NAME, LEVELS, rl)
+		mockAPI := NewMockWindowsEventAPI()
+		elog.SetEventAPI(mockAPI)
+
+		// This is per EvtHandle hence the necessity to break up these calls
+		// 0, 1, 4 were "sent" previously (should be skipped)
+		mockAPI.AddMockEventsForQuery(createMockEventRecords(0, 1, 4))
+		// Gap records (should be read by gap reading)
+		mockAPI.AddMockEventsForQuery(createMockEventRecords(2, 3))
+
+		elog.Init()
+
+		// Simulate new subscription events arriving
+		mockAPI.SimulateSubscriptionEvents(createMockEventRecords(5, 6, 7, 8))
+
+		var records []logs.LogEvent
+		// SetOutput calls run as well hence the omission of elog.run()
+		elog.SetOutput(func(e logs.LogEvent) {
+			records = append(records, e)
+			e.Done()
+		})
+		time.Sleep(5 * time.Second)
+		elog.Stop()
+
+		assert.Empty(t, elog.gapsToRead, "Gaps should be cleared after reading")
+		assert.Len(t, records, 6, "Should return 2 mock events")
+		assert.Len(t, mockAPI.QueryCalls, 1, "Should make one query call")
+		assert.Equal(t, NAME, mockAPI.QueryCalls[0].Path, "Should query correct path")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &gt;= 2", "Query should contain start range")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &lt; 4", "Query should contain end range")
+		assert.Len(t, mockAPI.SubscribeCalls, 1, "Should make one subscribe call")
+		assert.Greater(t, len(mockAPI.CloseCalls), 0, "Should make close calls")
+
+		expectedRecords := []int{
+			2, 3, 5, 6, 7, 8,
+		}
+		for i, record := range records {
+			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", expectedRecords[i]))
+		}
+
+		// Surprisingly, the end offset will be 8 instead of 9. This is because Windows record IDs start at 1
+		assertStateFileRange(t, stateFileName, state.RangeList{
+			state.NewRange(0, 8),
+		})
+	})
+	t.Run("NoGaps", func(t *testing.T) {
+		t.Parallel()
+
+		rl := state.RangeList{
+			state.NewRange(0, 5),
+		}
+		elog, stateFileName := newTestEventLogWithState(t, NAME, LEVELS, rl)
+		mockAPI := NewMockWindowsEventAPI()
+		elog.SetEventAPI(mockAPI)
+
+		mockAPI.AddMockEvents(createMockEventRecordsRange(0, 5))
+
+		elog.Init()
+
+		mockAPI.SimulateSubscriptionEvents(createMockEventRecordsRange(5, 9))
+
+		var records []logs.LogEvent
+		// SetOutput calls run as well hence the omission of elog.run()
+		elog.SetOutput(func(e logs.LogEvent) {
+			records = append(records, e)
+			e.Done()
+		})
+		time.Sleep(5 * time.Second)
+		elog.Stop()
+
+		assert.Empty(t, elog.gapsToRead, "There should be no gaps")
+		assert.Len(t, records, 4, "Should return 4 mock events")
+		assert.Len(t, mockAPI.QueryCalls, 0, "Should make one query call")
+		assert.Len(t, mockAPI.SubscribeCalls, 1, "Should make one subscribe call")
+		assert.Greater(t, len(mockAPI.CloseCalls), 0, "Should make close calls")
+
+		for i, record := range records {
+			// Offset by 5 since we "already read" events 0-4
+			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", 5+i))
+		}
+
+		assertStateFileRange(t, stateFileName, state.RangeList{
+			state.NewRange(0, 8),
+		})
+	})
+}
+
 // seekToEnd skips past all current events in the event log.
 func seekToEnd(t *testing.T, elog *windowsEventLog) {
 	// loop until we stop getting records.
@@ -169,6 +307,68 @@ func checkEvents(t *testing.T, records []*windowsEventLogRecord, substring strin
 		}
 	}
 	assert.Equal(t, count, found, "expected %v, %v, actual %v", substring, count, found)
+}
+
+func marshalRangeList(rl state.RangeList) string {
+	var marshalledRanges []string
+	for _, r := range rl {
+		text, _ := r.MarshalText()
+		marshalledRanges = append(marshalledRanges, string(text))
+	}
+	return strings.Join(marshalledRanges, ",")
+}
+
+func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
+	content, _ := os.ReadFile(fileName)
+	assert.Contains(t, content, marshalRangeList(rl))
+}
+
+func createMockEventRecordsRange(start, end int) []*MockEventRecord {
+	var records []*MockEventRecord
+	for i := start; i < end; i++ {
+		records = append(records, &MockEventRecord{
+			EventRecordID: fmt.Sprintf("%d", i),
+			TimeCreated:   time.Now(),
+			Level:         "2",
+			Provider:      "TestProvider",
+			Message:       fmt.Sprintf("Event %d", i),
+			Channel:       "Application",
+		})
+	}
+	return records
+}
+
+func createMockEventRecords(recordIds ...int) []*MockEventRecord {
+	var records []*MockEventRecord
+	for _, id := range recordIds {
+		records = append(records, &MockEventRecord{
+			EventRecordID: fmt.Sprintf("%d", id),
+			TimeCreated:   time.Now(),
+			Level:         "2",
+			Provider:      "TestProvider",
+			Message:       fmt.Sprintf("Event %d", id),
+			Channel:       "Application",
+		})
+	}
+	return records
+}
+
+func newTestEventLogWithState(t *testing.T, name string, levels []string, rl state.RangeList) (*windowsEventLog, string) {
+	t.Helper()
+	tempDir := t.TempDir()
+	file, _ := os.CreateTemp(tempDir, "")
+	content := fmt.Sprintf("%d\n%s\n%s", rl.Last().EndOffset(), name, marshalRangeList(rl))
+	file.WriteString(content)
+	file.Close()
+
+	manager := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir:      tempDir,
+		StateFilePrefix:   "",
+		Name:              filepath.Base(file.Name()),
+		MaxPersistedItems: 10,
+	})
+	return NewEventLog(name, levels, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS), file.Name()
 }
 
 func newTestEventLog(t *testing.T, name string, levels []string) *windowsEventLog {
