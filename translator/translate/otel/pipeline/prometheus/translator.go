@@ -5,7 +5,6 @@ package prometheus
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"log"
 	"time"
@@ -78,10 +77,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
 				cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()),
 			),
-			Exporters: common.NewTranslatorMap(
-				awscloudwatch.NewTranslator(),
-				debug.NewTranslator(),
-			),
+			Exporters: common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 			Extensions: common.NewTranslatorMap(
 				agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
