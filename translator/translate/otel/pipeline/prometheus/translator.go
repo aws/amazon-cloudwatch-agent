@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
@@ -74,7 +75,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators := &common.ComponentTranslators{
 			Receivers: common.NewTranslatorMap(otelprom.NewTranslator()),
 			Processors: common.NewTranslatorMap(
-				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey)),
+				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
+				cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()),
+			),
 			Exporters: common.NewTranslatorMap(
 				awscloudwatch.NewTranslator(),
 				debug.NewTranslator(),
