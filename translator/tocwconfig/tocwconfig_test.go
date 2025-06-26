@@ -437,7 +437,7 @@ func TestPrometheusPMDConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 
-	prometheusConfigFileName := "/tmp/prometheus.yaml"
+	prometheusConfigFileName := filepath.Join("tmp", "prometheus.yaml")
 	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), 0600)
 	require.NoError(t, err)
 
