@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -68,7 +67,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	// otel_prometheus - AMP
 	// this could change in future releases to support different source/destination combinations
 	switch t.Destination() {
-	case common.CloudWatchKey:
+	case common.DefaultDestination, common.CloudWatchKey:
 		if !conf.IsSet(MetricsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
@@ -78,10 +77,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
 				cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()),
 			),
-			Exporters: common.NewTranslatorMap(
-				awscloudwatch.NewTranslator(),
-				debug.NewTranslator(),
-			),
+			Exporters: common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 			Extensions: common.NewTranslatorMap(
 				agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),

@@ -1,10 +1,9 @@
 {
   "agent": {
-    "metrics_collection_interval": 15,
-    "debug": true
+    "metrics_collection_interval": 15
   },
   "metrics": {
-    "namespace": "PrometheusTest123",
+    "namespace": "CWAgent",
     "metrics_destinations": {
       "cloudwatch": {}
     },

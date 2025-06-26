@@ -12,7 +12,11 @@ import (
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
+
 	destinations := common.GetMetricsDestinations(conf)
+	if conf.IsSet(LogsKey) {
+		destinations = append(destinations, common.CloudWatchLogsKey)
+	}
 
 	for _, destination := range destinations {
 		translators.Set(NewTranslator(common.WithDestination(destination)))

@@ -1,4 +1,13 @@
 exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
     awsemf/prometheus:
         add_entity: false
         certificate_file_path: ""
@@ -107,6 +116,14 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/statuscode:
         is_status_code_enabled: true
         is_usage_data_enabled: true
@@ -127,11 +144,23 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
+    batch/prometheus/cloudwatch:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
     batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 30s
+    cumulativetodelta/prometheus/cloudwatch:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
     deltatocumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
@@ -179,9 +208,10 @@ receivers:
         timeout: 0s
 service:
     extensions:
-        - agenthealth/logs
+        - agenthealth/metrics
         - agenthealth/statuscode
         - sigv4auth
+        - agenthealth/logs
         - entitystore
     pipelines:
         metrics/prometheus/amp:
@@ -190,6 +220,14 @@ service:
             processors:
                 - batch/prometheus/amp
                 - deltatocumulative/prometheus/amp
+            receivers:
+                - prometheus
+        metrics/prometheus/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - batch/prometheus/cloudwatch
+                - cumulativetodelta/prometheus/cloudwatch
             receivers:
                 - prometheus
         metrics/prometheus/cloudwatchlogs:
