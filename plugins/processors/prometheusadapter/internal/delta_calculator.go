@@ -38,8 +38,7 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 		}
 
 		dps := m.Sum().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			dp := dps.At(i)
+		dps.RemoveIf(func(dp pmetric.NumberDataPoint) bool {
 			identity := MetricIdentity{
 				name: m.Name(),
 				tags: dp.Attributes().AsRaw(),
@@ -52,8 +51,12 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 				curVal = float64(dp.IntValue())
 			case pmetric.NumberDataPointValueTypeDouble:
 				curVal = dp.DoubleValue()
+			case pmetric.NumberDataPointValueTypeEmpty:
+				fallthrough
 			default:
-				continue
+				// cannot handle the type so drop the data point
+				log.Printf("D! DeltaCalculator.calculate: Drop metric with value type: %v", dp.ValueType())
+				return true
 			}
 
 			if !isValueValid(dp.DoubleValue()) {
@@ -62,20 +65,27 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 				//and the previous value is not reset, we will get a wrong delta value (at 100) as 100 - 4 = 96
 				//To avoid this issue, we reset the previous value whenever an invalid value is encountered
 				dc.preDataPoints.Delete(metricKey)
-				continue
+				return true
 			}
 
 			curTime := dp.Timestamp()
 
+			dropValue := false
 			if newVal, ok := dc.calculateDatapoint(metricKey, curVal, curTime); ok {
 				switch dp.ValueType() {
 				case pmetric.NumberDataPointValueTypeInt:
 					dp.SetIntValue(int64(newVal))
 				case pmetric.NumberDataPointValueTypeDouble:
 					dp.SetDoubleValue(newVal)
+				case pmetric.NumberDataPointValueTypeEmpty:
+					fallthrough
 				default:
-					continue
+					log.Printf("D! DeltaCalculator.calculate: Drop metric with value type: %v", dp.ValueType())
+					return true
 				}
+			} else {
+				// Drop the initial value for delta calculations
+				dropValue = true
 			}
 
 			// Clean up the stale cache periodically
@@ -85,14 +95,13 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 			}
 
 			dc.preDataPoints.Set(metricKey, dataPoint{value: curVal, timestamp: curTime})
-		}
+
+			return dropValue
+		})
 
 	case pmetric.MetricTypeSummary:
-		log.Printf("W! DeltaCalculator.Calculate: processing summary metric: %s", m.Name())
 		dps := m.Summary().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			dp := dps.At(i)
-
+		dps.RemoveIf(func(dp pmetric.SummaryDataPoint) bool {
 			sumIdentity := MetricIdentity{
 				name: m.Name() + "_sum",
 				tags: dp.Attributes().AsRaw(),
@@ -106,7 +115,7 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 				//and the previous value is not reset, we will get a wrong delta value (at 100) as 100 - 4 = 96
 				//To avoid this issue, we reset the previous value whenever an invalid value is encountered
 				dc.preDataPoints.Delete(sumKey)
-				continue
+				return true
 			}
 
 			curTime := dp.Timestamp()
@@ -117,17 +126,17 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 			}
 			countKey := countIdentity.getKey()
 
+			dropValue := false
 			if newVal, ok := dc.calculateDatapoint(sumKey, curSum, curTime); ok {
-				log.Printf("W! DeltaCalculator.Calculate: updating summary metric %s sum to %f", m.Name(), newVal)
 				dp.SetSum(newVal)
 			} else {
-				log.Printf("W! DeltaCalculator.Calculate: first time seeing metric %s key %s", m.Name(), sumKey)
+				dropValue = true
 			}
 			if newVal, ok := dc.calculateDatapoint(countKey, curCount, curTime); ok {
-				log.Printf("W! DeltaCalculator.Calculate: updating summary metric %s count to %d", m.Name(), uint64(newVal))
 				dp.SetCount(uint64(newVal))
 			} else {
-				log.Printf("W! DeltaCalculator.Calculate: first time seeing metric %s key %s", m.Name(), countKey)
+				// we shouldn't ever see sum without count, but drop the entire summary if either are not present
+				dropValue = true
 			}
 
 			// Clean up the stale cache periodically
@@ -138,7 +147,10 @@ func (dc *DeltaCalculator) Calculate(m pmetric.Metric) {
 
 			dc.preDataPoints.Set(countKey, dataPoint{value: curCount, timestamp: curTime})
 			dc.preDataPoints.Set(sumKey, dataPoint{value: curSum, timestamp: curTime})
-		}
+
+			return dropValue
+		})
+
 	case pmetric.MetricTypeEmpty, pmetric.MetricTypeGauge, pmetric.MetricTypeExponentialHistogram:
 		fallthrough
 	default:
