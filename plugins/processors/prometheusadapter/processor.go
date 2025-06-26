@@ -33,10 +33,31 @@ func newPrometheusAdapterProcessor(config *Config, logger *zap.Logger) *promethe
 }
 
 func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+
+	d.preprocessFilter(md)
+
+	md.ResourceMetrics().RemoveIf(func(rm pmetric.ResourceMetrics) bool {
+		rma := rm.Resource().Attributes()
+		sms := rm.ScopeMetrics()
+		sms.RemoveIf(func(sm pmetric.ScopeMetrics) bool {
+			metrics := sm.Metrics()
+			metrics.RemoveIf(func(m pmetric.Metric) bool {
+				return d.processMetric(m, rma)
+			})
+			return metrics.Len() == 0
+		})
+		return sms.Len() == 0
+	})
+
+	d.postprocessFilter(md)
+
+	return md, nil
+}
+
+func (d *prometheusAdapterProcessor) preprocessFilter(md pmetric.Metrics) {
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
-		rma := rm.Resource().Attributes()
 		sms := rm.ScopeMetrics()
 		for j := 0; j < sms.Len(); j++ {
 			sm := sms.At(j)
@@ -71,13 +92,15 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 
 				return keep
 			})
-
-			for k := 0; k < metrics.Len(); k++ {
-				m := metrics.At(k)
-				d.processMetric(m, rma)
-			}
-
 		}
+	}
+}
+
+func (d *prometheusAdapterProcessor) postprocessFilter(md pmetric.Metrics) {
+	rms := md.ResourceMetrics()
+	for i := 0; i < rms.Len(); i++ {
+		rm := rms.At(i)
+		rma := rm.Resource().Attributes()
 
 		// Remove extraneous resource attributes
 		// This must be done after processing metrics so that the resource attributes can be moved to datapoint attributes
@@ -95,47 +118,46 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 			_, ok := extraneousAttributes[key]
 			return ok
 		})
-
 	}
-	return md, nil
 }
 
-func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon.Map) {
-	switch m.Type() {
+func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon.Map) bool {
+	typ := m.Type()
+	switch typ {
 	case pmetric.MetricTypeGauge:
-		d.processNumberDataPointSlice(m.Gauge().DataPoints(), m.Metadata(), m.Type(), rma)
+		d.processNumberDataPointSlice(m.Gauge().DataPoints(), m.Metadata(), typ, rma)
 	case pmetric.MetricTypeSum:
-		d.processNumberDataPointSlice(m.Sum().DataPoints(), m.Metadata(), m.Type(), rma)
-
-		// Calculate delta for counter metrics
+		dps := m.Sum().DataPoints()
+		d.processNumberDataPointSlice(dps, m.Metadata(), typ, rma)
 		d.deltaCalculator.Calculate(m)
+		return dps.Len() == 0
 	case pmetric.MetricTypeSummary:
-		d.processSummaryDataPointSlice(m.Summary().DataPoints(), m.Metadata(), m.Type(), rma)
-
-		// Calculate delta for sum/count of summary metrics
+		dps := m.Summary().DataPoints()
+		d.processSummaryDataPointSlice(dps, m.Metadata(), typ, rma)
 		d.deltaCalculator.Calculate(m)
+		return dps.Len() == 0
 	case pmetric.MetricTypeHistogram:
-		d.processHistogramDataPointSlice(m.Histogram().DataPoints(), m.Metadata(), m.Type(), rma)
+		d.processHistogramDataPointSlice(m.Histogram().DataPoints(), m.Metadata(), typ, rma)
 	case pmetric.MetricTypeExponentialHistogram:
-		d.processExponentialHistogramDataPointSlice(m.ExponentialHistogram().DataPoints(), m.Metadata(), m.Type(), rma)
+		d.processExponentialHistogramDataPointSlice(m.ExponentialHistogram().DataPoints(), m.Metadata(), typ, rma)
 	case pmetric.MetricTypeEmpty:
 		d.logger.Debug("Ignore empty metric")
 	default:
-		d.logger.Debug("Ignore unknown metric type %s", zap.Int32("type", int32(m.Type())), zap.String("type_str", m.Type().String()))
+		d.logger.Debug("Ignore unknown metric type %s", zap.Int32("type", int32(typ)), zap.String("type_str", typ.String()))
 	}
+
+	return false
 }
 
 func (d *prometheusAdapterProcessor) processNumberDataPointSlice(dps pmetric.NumberDataPointSlice, metadata pcommon.Map, typ pmetric.MetricType, rma pcommon.Map) {
 	for i := 0; i < dps.Len(); i++ {
-		dp := dps.At(i)
-		updateDatapointAttributes(dp.Attributes(), typ, rma)
+		updateDatapointAttributes(dps.At(i).Attributes(), typ, rma)
 	}
 }
 
 func (d *prometheusAdapterProcessor) processSummaryDataPointSlice(dps pmetric.SummaryDataPointSlice, metadata pcommon.Map, typ pmetric.MetricType, rma pcommon.Map) {
 	for i := 0; i < dps.Len(); i++ {
-		dp := dps.At(i)
-		updateDatapointAttributes(dp.Attributes(), typ, rma)
+		updateDatapointAttributes(dps.At(i).Attributes(), typ, rma)
 	}
 }
 
