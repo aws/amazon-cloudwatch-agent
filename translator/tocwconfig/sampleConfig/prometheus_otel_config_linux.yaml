@@ -3,21 +3,11 @@ exporters:
         add_metric_suffixes: true
         auth:
             authenticator: sigv4auth
-        compression: ""
-        disable_keep_alives: false
         endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        export_created_metric:
-            enabled: false
-        http2_ping_timeout: 0s
-        http2_read_idle_timeout: 0s
         idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
-        max_conns_per_host: 0
         max_idle_conns: 100
-        max_idle_conns_per_host: 0
         namespace: ""
-        proxy_url: ""
-        read_buffer_size: 0
         remote_write_queue:
             enabled: true
             num_consumers: 5
@@ -36,17 +26,6 @@ exporters:
         target_info:
             enabled: true
         timeout: 5s
-        tls:
-            ca_file: ""
-            cert_file: ""
-            include_system_ca_certs_pool: false
-            insecure: false
-            insecure_skip_verify: false
-            key_file: ""
-            max_version: ""
-            min_version: ""
-            reload_interval: 0s
-            server_name_override: ""
         write_buffer_size: 524288
 extensions:
     entitystore:
@@ -74,14 +53,16 @@ receivers:
                 scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
                     - PrometheusText0.0.4
                 scrape_timeout: 5s
             scrape_configs:
                 - enable_compression: true
                   enable_http2: true
+                  fallback_scrape_protocol: PrometheusText0.0.4
                   file_sd_configs:
                     - files:
-                      - {ecsSdFileName}
+                        - {ecsSdFileName}
                       refresh_interval: 5m
                   follow_redirects: true
                   honor_timestamps: true
@@ -93,6 +74,7 @@ receivers:
                   scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
                     - PrometheusText0.0.4
                   scrape_timeout: 5s
                   track_timestamps_staleness: false
@@ -115,9 +97,6 @@ service:
                 - prometheus
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -126,7 +105,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

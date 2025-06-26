@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -27,20 +28,31 @@ const (
 	batchTimeRangeLimit = 24 * time.Hour
 )
 
+type logEventState struct {
+	r     state.Range
+	queue state.FileRangeQueue
+}
+
 // logEvent represents a single cloudwatchlogs.InputLogEvent with some metadata for processing
 type logEvent struct {
 	timestamp    time.Time
 	message      string
 	eventBytes   int
 	doneCallback func()
+	state        *logEventState
 }
 
 func newLogEvent(timestamp time.Time, message string, doneCallback func()) *logEvent {
+	return newStatefulLogEvent(timestamp, message, doneCallback, nil)
+}
+
+func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(), state *logEventState) *logEvent {
 	return &logEvent{
 		message:      message,
 		timestamp:    timestamp,
 		eventBytes:   len(message) + perEventHeaderBytes,
 		doneCallback: doneCallback,
+		state:        state,
 	}
 }
 
@@ -65,6 +77,7 @@ type logEventBatch struct {
 	minT, maxT time.Time
 	// Callbacks to execute when batch is successfully sent.
 	doneCallbacks []func()
+	batchers      map[string]*state.RangeQueueBatcher
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -72,6 +85,7 @@ func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *log
 		Target:         target,
 		events:         make([]*cloudwatchlogs.InputLogEvent, 0),
 		entityProvider: entityProvider,
+		batchers:       make(map[string]*state.RangeQueueBatcher),
 	}
 }
 
@@ -96,7 +110,12 @@ func (b *logEventBatch) append(e *logEvent) {
 		b.needSort = true
 	}
 	b.events = append(b.events, event)
-	b.addDoneCallback(e.doneCallback)
+	// do not add done callback for stateful log events. each batcher will add its own callback
+	if e.state != nil && e.state.queue != nil {
+		b.handleLogEventState(e.state)
+	} else {
+		b.addDoneCallback(e.doneCallback)
+	}
 	b.bufferedSize += e.eventBytes
 	if b.minT.IsZero() || b.minT.After(e.timestamp) {
 		b.minT = e.timestamp
@@ -104,6 +123,17 @@ func (b *logEventBatch) append(e *logEvent) {
 	if b.maxT.IsZero() || b.maxT.Before(e.timestamp) {
 		b.maxT = e.timestamp
 	}
+}
+
+func (b *logEventBatch) handleLogEventState(s *logEventState) {
+	queueID := s.queue.ID()
+	batcher, ok := b.batchers[queueID]
+	if !ok {
+		batcher = state.NewRangeQueueBatcher(s.queue)
+		b.addDoneCallback(batcher.Done)
+		b.batchers[queueID] = batcher
+	}
+	batcher.Merge(s.r)
 }
 
 // addDoneCallback adds the callback to the end of the registered callbacks.

@@ -69,5 +69,12 @@ func (c *converter) convert(e logs.LogEvent) *logEvent {
 		c.lastUpdateTime = now
 		c.lastWarnMessage = time.Time{}
 	}
-	return newLogEvent(t, message, e.Done)
+	var state *logEventState
+	if sle, ok := e.(logs.StatefulLogEvent); ok {
+		state = &logEventState{
+			r:     sle.Range(),
+			queue: sle.RangeQueue(),
+		}
+	}
+	return newStatefulLogEvent(t, message, e.Done, state)
 }

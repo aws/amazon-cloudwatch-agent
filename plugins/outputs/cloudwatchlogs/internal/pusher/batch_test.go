@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -30,6 +31,14 @@ func newMockEntityProvider(entity *cloudwatchlogs.Entity) *mockEntityProvider {
 	ep := new(mockEntityProvider)
 	ep.On("Entity").Return(entity)
 	return ep
+}
+
+type mockDoneCallback struct {
+	mock.Mock
+}
+
+func (m *mockDoneCallback) Done() {
+	m.Called()
 }
 
 func TestLogEvent(t *testing.T) {
@@ -159,5 +168,47 @@ func TestLogEventBatch(t *testing.T) {
 		input := batch.build()
 
 		assert.Equal(t, testEntity, input.Entity, "Entity should be set from the EntityProvider")
+	})
+
+	t.Run("WithStatefulLogEvents", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		mdc1 := &mockDoneCallback{}
+		mdc1.On("Done").Panic("should not be called")
+
+		mrq1 := &mockRangeQueue{}
+		mrq1.On("ID").Return("test")
+		mrq1.On("Enqueue", state.NewRange(20, 50)).Once()
+
+		mrq2 := &mockRangeQueue{}
+		mrq2.On("ID").Return("test2")
+		mrq2.On("Enqueue", state.NewRange(5, 20)).Once()
+
+		event1 := newStatefulLogEvent(time.Now(), "Test", mdc1.Done, &logEventState{
+			r:     state.NewRange(20, 40),
+			queue: mrq1,
+		})
+		event2 := newStatefulLogEvent(time.Now(), "Test2", mdc1.Done, &logEventState{
+			r:     state.NewRange(5, 20),
+			queue: mrq2,
+		})
+		event3 := newStatefulLogEvent(time.Now(), "Test3", mdc1.Done, &logEventState{
+			r:     state.NewRange(40, 50),
+			queue: mrq1,
+		})
+
+		mdc2 := &mockDoneCallback{}
+		mdc2.On("Done").Return().Once()
+		event4 := newLogEvent(time.Now(), "Test2", mdc2.Done)
+		batch.append(event1)
+		batch.append(event2)
+		batch.append(event3)
+		batch.append(event4)
+		batch.done()
+
+		mrq1.AssertExpectations(t)
+		mrq2.AssertExpectations(t)
+		mdc1.AssertNotCalled(t, "Done")
+		mdc2.AssertExpectations(t)
 	})
 }
