@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	defaultMaxEventSize   = 1024 * 256 //256KB
-	defaultTruncateSuffix = "[Truncated...]"
+	// Use the new unified constants for 1MiB limit
+	defaultMaxEventSize   = logscommon.MaxEffectiveEventSize // 1,048,376 bytes
+	defaultTruncateSuffix = logscommon.DefaultTruncateSuffix
 )
 
 // The file config presents the structure of configuration for a file to be tailed.
@@ -155,6 +156,13 @@ func (config *FileConfig) init() error {
 
 	if config.MaxEventSize == 0 {
 		config.MaxEventSize = defaultMaxEventSize
+	}
+
+	// Ensure user doesn't set size too large (validate against 1MiB limit)
+	if config.MaxEventSize > logscommon.MaxEffectiveEventSize {
+		log.Printf("W! max_event_size %d exceeds effective limit %d, using %d", 
+			config.MaxEventSize, logscommon.MaxEffectiveEventSize, logscommon.MaxEffectiveEventSize)
+		config.MaxEventSize = logscommon.MaxEffectiveEventSize
 	}
 
 	if config.TruncateSuffix == "" {

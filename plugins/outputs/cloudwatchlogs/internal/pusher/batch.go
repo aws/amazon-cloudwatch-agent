@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
@@ -22,8 +23,8 @@ const (
 	reqSizeLimit = 1024 * 1024
 	// The maximum number of log events in a batch.
 	reqEventsLimit = 10000
-	// The bytes required for metadata for each log event.
-	perEventHeaderBytes = 200
+	// The bytes required for metadata for each log event (use unified constant).
+	perEventHeaderBytes = logscommon.CwLogsHeaderBytes
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
 )

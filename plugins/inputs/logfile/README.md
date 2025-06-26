@@ -74,8 +74,8 @@ The plugin expects messages in one of the
       pipe = false
       retention_in_days = -1
       destination = "cloudwatchlogs"
-      ## Max size of each log event, defaults to 262144 (256KB)
-      max_event_size = 262144
+      ## Max size of each log event, defaults to 1048376 (1MiB effective)
+      max_event_size = 1048376
       ## Suffix to be added to truncated logline to indicate its truncation, defaults to "[Truncated...]"
       truncate_suffix = "[Truncated...]"
 

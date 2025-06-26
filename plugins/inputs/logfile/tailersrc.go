@@ -238,8 +238,15 @@ func (ts *tailerSrc) runTail() {
 			} else {
 				msgBuf.WriteString("\n")
 				msgBuf.WriteString(text)
+				// With 1MiB limit, this truncation should be very rare
 				if msgBuf.Len() > ts.maxEventSize {
-					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
+					log.Printf("W! Event size %d exceeds limit %d, truncating", 
+						msgBuf.Len(), ts.maxEventSize)
+					truncatePoint := ts.maxEventSize - len(ts.truncateSuffix)
+					if truncatePoint < 0 {
+						truncatePoint = 0
+					}
+					msgBuf.Truncate(truncatePoint)
 					msgBuf.WriteString(ts.truncateSuffix)
 				}
 				fo.ShiftInt64(line.Offset)

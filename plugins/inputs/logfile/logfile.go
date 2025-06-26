@@ -86,8 +86,8 @@ const sampleConfig = `
       ## Whether file is a named pipe
       pipe = false
       destination = "cloudwatchlogs"
-      ## Max size of each log event, defaults to 262144 (256KB)
-      max_event_size = 262144
+      ## Max size of each log event, defaults to 261944 (256KiB effective)
+      max_event_size = 261944
       ## Suffix to be added to truncated logline to indicate its truncation, defaults to "[Truncated...]"
       truncate_suffix = "[Truncated...]"
 

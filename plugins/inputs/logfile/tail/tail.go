@@ -13,12 +13,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/state"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 )
 
 var (
@@ -535,7 +534,7 @@ func (tail *Tail) openReader() {
 	tail.lk.Lock()
 	if tail.MaxLineSize > 0 {
 		// add 2 to account for newline characters
-		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2)
+		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
 	} else {
 		tail.reader = bufio.NewReader(tail.file)
 	}
