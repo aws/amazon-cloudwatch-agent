@@ -437,8 +437,12 @@ func TestPrometheusPMDConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 
+	if err := os.MkdirAll("/tmp", os.ModePerm); err != nil && !os.IsExist(err) {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
 	prometheusConfigFileName := filepath.Join("tmp", "prometheus.yaml")
-	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), 0600)
+	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), os.ModePerm) // #nosec G306
 	require.NoError(t, err)
 
 	defer os.Remove(prometheusConfigFileName)
