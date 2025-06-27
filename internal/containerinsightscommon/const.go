@@ -107,8 +107,6 @@ const (
 	NeuronInstanceInfo                          = "instance_info"
 	NeuronHardware                              = "neuron_hardware"
 	NeuronExecutionLatency                      = "neuron_execution_latency"
-	NeuronCoreInUse                             = "neuroncore_in_use"
-	InstanceInUse                               = "instance_in_use"
 
 	// Converted metrics for NVME metrics
 	NvmeReadOpsTotal        = "diskio_ebs_total_read_ops"
