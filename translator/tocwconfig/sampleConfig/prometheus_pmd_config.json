@@ -9,13 +9,12 @@
     },
     "metrics_collected": {
       "prometheus": {
-        "prometheus_config_path": "/tmp/prometheus.yaml"
+        "prometheus_config_path": "{prometheusFileName}"
       }
     },
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",
       "InstanceId": "${aws:InstanceId}",
-
       "InstanceType": "${aws:InstanceType}",
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
     },
