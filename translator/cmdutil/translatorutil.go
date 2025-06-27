@@ -260,3 +260,27 @@ func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
 	}
 	return os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
 }
+
+// GetMergedConfig creates a merged JSON config map from the given parameters
+// This allows reusing the translator logic without setting up external context
+func GetMergedConfig(configPath, configDir, mode, osType string) (map[string]interface{}, error) {
+	// Temporarily redirect stdout to suppress output
+	origStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	ctx := context.CurrentContext()
+	ctx.SetInputJsonFilePath(configPath)
+	ctx.SetInputJsonDirPath(configDir)
+	ctx.SetMode(mode)
+	ctx.SetOs(osType)
+	ctx.SetMultiConfig("remove")
+
+	result, err := GenerateMergedJsonConfigMap(ctx)
+
+	w.Close()
+	os.Stdout = origStdout
+	r.Close()
+
+	return result, err
+}
