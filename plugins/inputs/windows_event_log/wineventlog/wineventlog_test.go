@@ -123,7 +123,7 @@ func TestReadGaps(t *testing.T) {
 		mockAPI := NewMockWindowsEventAPI()
 		elog.SetEventAPI(mockAPI)
 
-		mockAPI.AddMockEvents(createMockEventRecordsRange(100, 105))
+		mockAPI.AddMockEventsForQuery(createMockEventRecordsRange(100, 105))
 
 		elog.Init()
 
@@ -214,7 +214,7 @@ func TestReadGaps(t *testing.T) {
 		mockAPI := NewMockWindowsEventAPI()
 		elog.SetEventAPI(mockAPI)
 
-		mockAPI.AddMockEvents(createMockEventRecordsRange(0, 5))
+		mockAPI.AddMockEventsForQuery(createMockEventRecordsRange(0, 5))
 
 		elog.Init()
 

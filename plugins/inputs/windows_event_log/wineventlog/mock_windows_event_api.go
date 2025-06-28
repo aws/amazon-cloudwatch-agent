@@ -165,12 +165,6 @@ func (m *MockWindowsEventAPI) AddMockEventsForQuery(events []*MockEventRecord) {
 	m.queryEvents[handle] = events
 }
 
-// Deprecated: Use AddMockEventsForSubscription or AddMockEventsForQuery instead
-func (m *MockWindowsEventAPI) AddMockEvents(events []*MockEventRecord) {
-	// For backward compatibility, add to query events
-	m.AddMockEventsForQuery(events)
-}
-
 // Configuration methods
 func (m *MockWindowsEventAPI) SetSubscribeFailure(shouldFail bool, err error) {
 	m.shouldFailSubscribe = shouldFail
