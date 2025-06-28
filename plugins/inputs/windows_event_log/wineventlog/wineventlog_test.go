@@ -320,7 +320,7 @@ func marshalRangeList(rl state.RangeList) string {
 
 func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
 	content, _ := os.ReadFile(fileName)
-	assert.Contains(t, content, marshalRangeList(rl))
+	assert.Contains(t, string(content), marshalRangeList(rl))
 }
 
 func createMockEventRecordsRange(start, end int) []*MockEventRecord {
