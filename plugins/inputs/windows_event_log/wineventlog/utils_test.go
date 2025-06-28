@@ -8,9 +8,7 @@ package wineventlog
 
 import (
 	"encoding/hex"
-	"syscall"
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -177,20 +175,7 @@ func TestCreateQuery(t *testing.T) {
 			ptr, err := CreateQuery(tc.path, tc.levels)
 			assert.NoError(t, err)
 			assert.NotNil(t, ptr)
-
-			utf16Slice := make([]uint16, 0, 1024)
-			for i := 0; ; i++ {
-				// Get the value at memory address ptr + (i * sizeof(uint16))
-				element := *(*uint16)(unsafe.Pointer(uintptr(unsafe.Pointer(ptr)) + uintptr(i)*unsafe.Sizeof(uint16(0))))
-
-				if element == 0 {
-					break // Null terminator found
-				}
-				utf16Slice = append(utf16Slice, element)
-			}
-
-			actualXml := syscall.UTF16ToString(utf16Slice)
-			assert.Equal(t, tc.expected, actualXml)
+			assert.Equal(t, tc.expected, utf16PtrToString(ptr))
 		})
 	}
 }
@@ -259,20 +244,7 @@ func TestCreateRangeQuery(t *testing.T) {
 			ptr, err := CreateRangeQuery(tc.path, tc.levels, tc.r)
 			assert.NoError(t, err)
 			assert.NotNil(t, ptr)
-
-			utf16Slice := make([]uint16, 0, 1024)
-			for i := 0; ; i++ {
-				// Get the value at memory address ptr + (i * sizeof(uint16))
-				element := *(*uint16)(unsafe.Pointer(uintptr(unsafe.Pointer(ptr)) + uintptr(i)*unsafe.Sizeof(uint16(0))))
-
-				if element == 0 {
-					break // Null terminator found
-				}
-				utf16Slice = append(utf16Slice, element)
-			}
-
-			actualXml := syscall.UTF16ToString(utf16Slice)
-			assert.Equal(t, tc.expected, actualXml)
+			assert.Equal(t, tc.expected, utf16PtrToString(ptr))
 		})
 	}
 }

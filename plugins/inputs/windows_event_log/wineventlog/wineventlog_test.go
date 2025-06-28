@@ -184,7 +184,7 @@ func TestReadGaps(t *testing.T) {
 		elog.Stop()
 
 		assert.Empty(t, elog.gapsToRead, "Gaps should be cleared after reading")
-		assert.Len(t, records, 6, "Should return 2 mock events")
+		assert.Len(t, records, 6, "Should return 6 mock events")
 		assert.Len(t, mockAPI.QueryCalls, 1, "Should make one query call")
 		assert.Equal(t, NAME, mockAPI.QueryCalls[0].Path, "Should query correct path")
 		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &gt;= 2", "Query should contain start range")
@@ -231,7 +231,7 @@ func TestReadGaps(t *testing.T) {
 
 		assert.Empty(t, elog.gapsToRead, "There should be no gaps")
 		assert.Len(t, records, 4, "Should return 4 mock events")
-		assert.Len(t, mockAPI.QueryCalls, 0, "Should make one query call")
+		assert.Len(t, mockAPI.QueryCalls, 0, "Should not make a query call")
 		assert.Len(t, mockAPI.SubscribeCalls, 1, "Should make one subscribe call")
 		assert.Greater(t, len(mockAPI.CloseCalls), 0, "Should make close calls")
 
