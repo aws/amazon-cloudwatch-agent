@@ -1,47 +1,81 @@
 exporters:
-    awscloudwatch:
-        force_flush_interval: 1m0s
-        max_datums_per_call: 1000
-        max_values_per_datum: 150
-        middleware: agenthealth/metrics
-        namespace: CWAgent
+    awsemf/prometheus:
+        add_entity: false
+        certificate_file_path: ""
+        detailed_metrics: true
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        enhanced_container_insights: false
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
+        log_retention: 0
+        log_stream_name: '{JobName}'
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - Service
+              label_matchers:
+                - label_names:
+                    - Service
+                  regex: nginx.*
+                  separator: ;
+              metric_name_selectors:
+                - ^nginx_request_count$
+            - dimensions: []
+              label_matchers:
+                - label_names:
+                    - Namespace
+                  regex: default
+                  separator: ;
+              metric_name_selectors:
+                - .*
+            - dimensions:
+                - - name
+              label_matchers:
+                - label_names:
+                    - name
+                  regex: .*
+                  separator: ;
+              metric_name_selectors:
+                - ^.*$
+            - dimensions:
+                - - name
+              label_matchers:
+                - label_names:
+                    - name
+                  regex: .*
+                  separator: ;
+              metric_name_selectors:
+                - ^node_cpu_guest_seconds_total$
+        metric_descriptors:
+            - metric_name: nginx_request_count
+              overwrite: false
+              unit: Count
+        middleware: agenthealth/logs
+        namespace: CustomizedNamespace
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        profile: ""
+        proxy_address: ""
         region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
-    prometheusremotewrite/amp:
-        add_metric_suffixes: true
-        auth:
-            authenticator: sigv4auth
-        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        idle_conn_timeout: 1m30s
-        max_batch_size_bytes: 3000000
-        max_idle_conns: 100
-        namespace: ""
-        remote_write_queue:
-            enabled: true
-            num_consumers: 5
-            queue_size: 10000
-        resource_to_telemetry_conversion:
-            clear_after_copy: true
-            enabled: true
-        retry_on_failure:
-            enabled: true
-            initial_interval: 50ms
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        send_metadata: false
-        target_info:
-            enabled: true
-        timeout: 5s
-        write_buffer_size: 524288
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
 extensions:
-    agenthealth/metrics:
+    agenthealth/logs:
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
+                - PutLogEvents
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -86,33 +120,15 @@ extensions:
     entitystore:
         mode: ec2
         region: us-west-2
-    sigv4auth:
-        assume_role:
-            sts_region: us-west-2
-        region: us-west-2
 processors:
-    batch/prometheus/amp:
+    batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 1m0s
-    batch/prometheus/cloudwatch:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 1m0s
-    cumulativetodelta/prometheus/cloudwatch:
-        exclude:
-            match_type: ""
-        include:
-            match_type: ""
-        initial_value: 2
-        max_staleness: 0s
-    deltatocumulative/prometheus/amp:
-        max_stale: 336h0m0s
-        max_streams: 9223372036854775807
+        timeout: 5s
+    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
-    prometheus:
+    prometheus/prometheus/cloudwatchlogs:
         config:
             global:
                 evaluation_interval: 1m
@@ -150,28 +166,19 @@ receivers:
         use_start_time_metric: false
 service:
     extensions:
-        - agenthealth/metrics
+        - agenthealth/logs
         - agenthealth/statuscode
         - ecs_observer
-        - sigv4auth
         - entitystore
     pipelines:
-        metrics/prometheus/amp:
+        metrics/prometheus/cloudwatchlogs:
             exporters:
-                - prometheusremotewrite/amp
+                - awsemf/prometheus
             processors:
-                - batch/prometheus/amp
-                - deltatocumulative/prometheus/amp
+                - prometheusadapter/prometheus/cloudwatchlogs
+                - batch/prometheus/cloudwatchlogs
             receivers:
-                - prometheus
-        metrics/prometheus/cloudwatch:
-            exporters:
-                - awscloudwatch
-            processors:
-                - batch/prometheus/cloudwatch
-                - cumulativetodelta/prometheus/cloudwatch
-            receivers:
-                - prometheus
+                - prometheus/prometheus/cloudwatchlogs
     telemetry:
         logs:
             encoding: console

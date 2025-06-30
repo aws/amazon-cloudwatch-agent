@@ -4,7 +4,6 @@
 package prometheus
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +33,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus"),
+				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
 			},
 		},
 		"WithLogsWithoutDestinations": {
@@ -61,7 +60,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatch"),
+				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
 			},
 		},
 		"WithMetricsWithAMP": {
@@ -96,22 +95,6 @@ func TestTranslators(t *testing.T) {
 			},
 			want: []pipeline.ID{
 				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatch"),
-			},
-		},
-		"WithMetricsAndCloudWatchDestinationOnly": {
-			input: map[string]any{
-				"metrics": map[string]any{
-					"metrics_destinations": map[string]any{
-						"cloudwatch": map[string]any{},
-					},
-					"metrics_collected": map[string]any{
-						"prometheus": map[string]any{},
-					},
-				},
-			},
-			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatch"),
 			},
 		},
 		"WithMultiple/Destinations": {
@@ -136,7 +119,6 @@ func TestTranslators(t *testing.T) {
 			want: []pipeline.ID{
 				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
 				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatch"),
 			},
 		},
 	}
@@ -148,8 +130,6 @@ func TestTranslators(t *testing.T) {
 				require.Nil(t, got)
 			} else {
 				require.NotNil(t, got)
-				log.Println(testCase.want)
-				log.Println(got)
 				assert.Equal(t, len(testCase.want), got.Len())
 				for _, id := range testCase.want {
 					_, ok := got.Get(id)
