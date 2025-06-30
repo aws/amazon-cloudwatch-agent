@@ -37,6 +37,8 @@ const (
 	apiEvtClose     = "EvtClose"
 )
 
+var winEventAPI = NewWindowsEventAPI()
+
 type wevtAPIError struct {
 	api  string
 	name string
@@ -66,8 +68,6 @@ type windowsEventLog struct {
 	done          chan struct{}
 	startOnce     sync.Once
 	resubscribeCh chan struct{}
-
-	eventAPI WindowsEventAPI
 }
 
 func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
@@ -87,8 +87,6 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 
 		done:          make(chan struct{}),
 		resubscribeCh: make(chan struct{}),
-
-		eventAPI: NewWindowsEventAPI(),
 	}
 	return eventLog
 }
@@ -112,10 +110,6 @@ func (w *windowsEventLog) SetOutput(fn func(logs.LogEvent)) {
 	}
 	w.outputFn = fn
 	w.startOnce.Do(func() { go w.run() })
-}
-
-func (w *windowsEventLog) SetEventAPI(api WindowsEventAPI) {
-	w.eventAPI = api
 }
 
 func (w *windowsEventLog) Group() string {
@@ -229,11 +223,11 @@ func (w *windowsEventLog) Open() error {
 }
 
 func (w *windowsEventLog) open() error {
-	bookmark, err := CreateBookmark(w.eventAPI, w.name, w.eventOffset)
+	bookmark, err := CreateBookmark(winEventAPI, w.name, w.eventOffset)
 	if err != nil {
 		return err
 	}
-	defer w.eventAPI.EvtClose(bookmark)
+	defer winEventAPI.EvtClose(bookmark)
 	// Using a pull subscription to receive events. See:
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/aa385771(v=vs.85).aspx#pull
 	signalEvent, err := windows.CreateEvent(nil, 0, 0, nil)
@@ -248,7 +242,7 @@ func (w *windowsEventLog) open() error {
 	if err != nil {
 		return err
 	}
-	eventHandle, err := w.eventAPI.EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
+	eventHandle, err := winEventAPI.EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
 		return &wevtAPIError{api: apiEvtSubscribe, name: w.name, err: err}
 	}
@@ -265,7 +259,7 @@ func (w *windowsEventLog) openAtRange(r state.Range) (EvtHandle, error) {
 	if err != nil {
 		return 0, err
 	}
-	eventHandle, err := w.eventAPI.EvtQuery(0, channelPath, query, EvtQueryChannelPath)
+	eventHandle, err := winEventAPI.EvtQuery(0, channelPath, query, EvtQueryChannelPath)
 	if err != nil {
 		return 0, &wevtAPIError{api: apiEvtQuery, name: w.name, err: err}
 	}
@@ -273,7 +267,7 @@ func (w *windowsEventLog) openAtRange(r state.Range) (EvtHandle, error) {
 }
 
 func (w *windowsEventLog) Close() error {
-	return w.eventAPI.EvtClose(w.eventHandle)
+	return winEventAPI.EvtClose(w.eventHandle)
 }
 
 // resubscribe closes the event subscription based on the event handle and resets the handle to the
@@ -317,7 +311,7 @@ func (w *windowsEventLog) readGaps() []*windowsEventLogRecord {
 
 		handle, err := w.openAtRange(r)
 		defer func() {
-			w.eventAPI.EvtClose(handle)
+			winEventAPI.EvtClose(handle)
 		}()
 		if err != nil {
 			continue
@@ -342,14 +336,14 @@ func (w *windowsEventLog) readFromHandle(eventHandle EvtHandle) []*windowsEventL
 	var eventHandles []EvtHandle
 	defer func() {
 		for _, h := range eventHandles {
-			w.eventAPI.EvtClose(h)
+			winEventAPI.EvtClose(h)
 		}
 	}()
 
 	var numRead uint32
 	for {
 		eventHandles = make([]EvtHandle, maxToRead)
-		err := w.eventAPI.EvtNext(eventHandle, uint32(len(eventHandles)),
+		err := winEventAPI.EvtNext(eventHandle, uint32(len(eventHandles)),
 			&eventHandles[0], 0, 0, &numRead)
 		// Handle special case when events size is too large - retry with smaller size
 		if err == RPC_S_INVALID_BOUND {
@@ -360,7 +354,7 @@ func (w *windowsEventLog) readFromHandle(eventHandle EvtHandle) []*windowsEventL
 			log.Printf("W! [wineventlog] Out of bounds error due to large events size. Retrying with half of the read batch size (%d). Details: %v\n", maxToRead/2, err)
 			maxToRead /= 2
 			for _, h := range eventHandles {
-				w.eventAPI.EvtClose(h)
+				winEventAPI.EvtClose(h)
 			}
 			continue
 		}
@@ -423,7 +417,7 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	// Windows event message supports 31839 characters. https://msdn.microsoft.com/EN-US/library/windows/desktop/aa363679.aspx
 	bufferSize := 1 << 17
 	renderBuf := make([]byte, bufferSize)
-	outputBuf, err := RenderEventXML(w.eventAPI, evtHandle, renderBuf)
+	outputBuf, err := RenderEventXML(winEventAPI, evtHandle, renderBuf)
 	if err != nil {
 		return nil, fmt.Errorf("RenderEventXML() err %v", err)
 	}
@@ -431,13 +425,13 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	//we need the "System.TimeCreated.SystemTime"
 	xml.Unmarshal(outputBuf, newRecord)
 	publisher, _ := syscall.UTF16PtrFromString(newRecord.System.Provider.Name)
-	publisherMetadataEvtHandle, err := w.eventAPI.EvtOpenPublisherMetadata(0, publisher, nil, 0, 0)
+	publisherMetadataEvtHandle, err := winEventAPI.EvtOpenPublisherMetadata(0, publisher, nil, 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("EvtOpenPublisherMetadata() publisher %v, err %v", newRecord.System.Provider.Name, err)
 	}
 	var bufferUsed uint32
-	err = w.eventAPI.EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed)
-	w.eventAPI.EvtClose(publisherMetadataEvtHandle)
+	err = winEventAPI.EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed)
+	winEventAPI.EvtClose(publisherMetadataEvtHandle)
 	if err != nil && bufferUsed == 0 {
 		return nil, fmt.Errorf("EvtFormatMessage() publisher %v, err %v", newRecord.System.Provider.Name, err)
 	}
