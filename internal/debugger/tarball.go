@@ -21,6 +21,54 @@ type Answers struct {
 	Occurence             string
 	EnvironmentChange     string
 	EnvironmentChangeDesc string
+	AddInfo               string
+}
+
+func CreateTarball(ssm bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory: ", err)
+		return
+	}
+
+	outputPath := filepath.Join(cwd, "cwagent-debug.tar.gz")
+	fmt.Println("Creating tarball at:", outputPath)
+
+	file, err := os.Create(outputPath)
+	if err != nil {
+		fmt.Println("Error creating tarball file:", err)
+		return
+	}
+	defer file.Close()
+
+	gzipWriter := gzip.NewWriter(file)
+	defer gzipWriter.Close()
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close()
+
+	if err := addFileToTarball(tarWriter, paths.AgentLogFilePath, "logs/amazon-cloudwatch-agent.log", 50, 000); err != nil {
+		fmt.Println("Error, unable to add log file to tarball: ", err)
+	} else {
+		fmt.Println("Warning: Only the last 50,000 lines of the log file are included.")
+	}
+
+	etcPath := "/opt/aws/amazon-cloudwatch-agent/etc"
+	if err := addDirectoryToTarball(tarWriter, etcPath, "etc"); err != nil {
+		fmt.Println("Error adding etc directory to tarball:", err)
+	}
+
+	// We remove triaging if called through SSM since it does not support stdin.
+	if !ssm {
+
+		answersContent := writeTriage()
+
+		if err := addStringToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
+			fmt.Println("Error adding answers to tarball:", err)
+		}
+	}
+
+	fmt.Println("Tarball created successfully at:", outputPath)
+
 }
 
 func Triage() Answers {
@@ -42,12 +90,19 @@ func Triage() Answers {
 		answers.EnvironmentChange = strings.TrimSpace(envChange)
 
 		if strings.ToLower(answers.EnvironmentChange) == "y" {
-			fmt.Print("Please describe what changed: ")
+			fmt.Print("Please describe what changed and when: ")
 			envChangeDesc, err := reader.ReadString('\n')
 			if err == nil {
 				answers.EnvironmentChangeDesc = strings.TrimSpace(envChangeDesc)
 			}
 		}
+	}
+
+	fmt.Print("Is there any additional information you would like to add? ")
+	addInfo, err := reader.ReadString('\n')
+
+	if err == nil {
+		answers.AddInfo = strings.TrimSpace(addInfo)
 	}
 
 	return answers
@@ -81,66 +136,19 @@ func writeTriage() string {
 	if strings.ToLower(answers.EnvironmentChange) == "y" {
 		envChangeAnswer = "Yes"
 		answersContent += "A: " + envChangeAnswer + "\n\n"
-		answersContent += "Q: Please describe what has changed:\n"
+		answersContent += "Q: Please describe what has changed and when:\n"
 		answersContent += "A: " + answers.EnvironmentChangeDesc + "\n\n"
 	} else {
 		envChangeAnswer = "No"
 		answersContent += "A: " + envChangeAnswer + "\n\n"
-		answersContent += "Q: Please describe what has changed:\n"
+		answersContent += "Q: Please describe what has changed and when:\n"
 		answersContent += "A: N/A\n\n"
 	}
 
+	answersContent += "Q: Is there any additional information you would like to add?"
+	answersContent += "A: " + answers.AddInfo + "\n\n"
+
 	return answersContent
-
-}
-
-func CreateTarball(ssm bool) {
-
-	cwd, err := os.Getwd()
-
-	if err != nil {
-		fmt.Println("Error getting current directory: ", err)
-		return
-	}
-
-	outputPath := filepath.Join(cwd, "cwagent-debug.tar.gz")
-	fmt.Println("Creating tarball at:", outputPath)
-
-	file, err := os.Create(outputPath)
-
-	if err != nil {
-		fmt.Println("Error creating tarball file:", err)
-		return
-	}
-	defer file.Close()
-
-	gzipWriter := gzip.NewWriter(file)
-	defer gzipWriter.Close()
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close()
-
-	if err := addFileToTarball(tarWriter, paths.AgentLogFilePath, "logs/amazon-cloudwatch-agent.log", 500); err != nil {
-		fmt.Println("Warning: Only the last 500 lines of the log file were included: ", err)
-	} else {
-		fmt.Println("Warning: Only the last 500 lines of the log file are included.")
-	}
-
-	etcPath := "/opt/aws/amazon-cloudwatch-agent/etc"
-	if err := addDirectoryToTarball(tarWriter, etcPath, "etc"); err != nil {
-		fmt.Println("Error adding etc directory to tarball:", err)
-	}
-
-	// We remove triaging if called through SSM since it does not support stdin.
-	if !ssm {
-
-		answersContent := writeTriage()
-
-		if err := addStringToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
-			fmt.Println("Error adding answers to tarball:", err)
-		}
-	}
-
-	fmt.Println("Tarball created successfully at:", outputPath)
 
 }
 
