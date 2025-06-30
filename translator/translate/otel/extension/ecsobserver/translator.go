@@ -14,15 +14,13 @@ import (
 )
 
 const (
-	// Default metrics path used across all configurations
-	defaultMetricsPath = "/metrics"
-	// Default docker label names
+	defaultMetricsPath      = "/metrics"
 	defaultPortLabel        = "ECS_PROMETHEUS_EXPORTER_PORT"
 	defaultMetricsPathLabel = "ECS_PROMETHEUS_METRICS_PATH"
 	defaultJobNameLabel     = "job"
 )
 
-var ecsSDKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
+var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
 
 type translator struct {
 	factory component.Factory
@@ -60,7 +58,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ecsSDKey}
 	}
 
-	// Validate required fields
 	requiredFields := []string{"sd_target_cluster", "sd_cluster_region", "sd_result_file"}
 	for _, field := range requiredFields {
 		if _, ok := ecsSD[field]; !ok {
@@ -68,7 +65,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	// Create base config with mandatory fields
+	// Base config with mandatory fields
 	cfg := &Config{
 		RefreshInterval: getStringWithDefault(ecsSD, "sd_frequency", "10s"),
 		ClusterName:     getString(ecsSD, "sd_target_cluster"),
@@ -121,12 +118,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-// Helper functions
 func parseMetricsPorts(ports string) []string {
 	if ports == "" {
 		return nil
 	}
-	// Split ports string by semicolon and trim spaces
 	portList := strings.Split(ports, ";")
 	var cleanPorts []string
 	for _, port := range portList {

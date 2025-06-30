@@ -23,14 +23,124 @@ func TestTranslator_Translate(t *testing.T) {
 		wantErr  bool
 	}{
 		{
+			name: "full agent config",
+			config: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"region": "us-west-2",
+				},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"prometheus_config_path": "{prometheusFileName}",
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "1m",
+								"sd_target_cluster": "my-ecs-cluster",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "{ecsSdFileName}",
+								"docker_label": map[string]interface{}{
+									"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT",
+									"sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH",
+									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME",
+								},
+								"task_definition_list": []interface{}{
+									map[string]interface{}{
+										"sd_job_name":                    "java-prometheus",
+										"sd_metrics_path":                "/metrics",
+										"sd_metrics_ports":               "9404;9406",
+										"sd_task_definition_arn_pattern": ".*:task-definition/.*javajmx.*:[0-9]+",
+									},
+									map[string]interface{}{
+										"sd_job_name":                    "envoy-prometheus",
+										"sd_metrics_path":                "/stats/prometheus",
+										"sd_container_name_pattern":      "^envoy$",
+										"sd_metrics_ports":               "9901",
+										"sd_task_definition_arn_pattern": ".*:task-definition/.*appmesh.*:23",
+									},
+								},
+								"service_name_list_for_tasks": []interface{}{
+									map[string]interface{}{
+										"sd_job_name":             "nginx-prometheus",
+										"sd_metrics_path":         "/metrics",
+										"sd_metrics_ports":        "9113",
+										"sd_service_name_pattern": "^nginx-.*",
+									},
+									map[string]interface{}{
+										"sd_job_name":               "haproxy-prometheus",
+										"sd_metrics_path":           "/stats/metrics",
+										"sd_container_name_pattern": "^haproxy$",
+										"sd_metrics_ports":          "8404",
+										"sd_service_name_pattern":   ".*haproxy-service.*",
+									},
+								},
+							},
+						},
+					},
+					"force_flush_interval": "1m",
+					"credentials": map[string]interface{}{
+						"role_arn": "arn:aws:iam::123456789012:role/my-role",
+					},
+					"endpoint_override": "https://monitoring.us-west-2.amazonaws.com",
+				},
+			},
+			expected: &Config{
+				RefreshInterval: "1m",
+				ClusterName:     "my-ecs-cluster",
+				ClusterRegion:   "us-west-2",
+				ResultFile:      "{ecsSdFileName}",
+				DockerLabels: []*DockerLabelConfig{
+					{
+						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT",
+						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH",
+						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME",
+					},
+				},
+				TaskDefinitions: []TaskDefinitionConfig{
+					{
+						ArnPattern:   ".*:task-definition/.*javajmx.*:[0-9]+",
+						MetricsPorts: []string{"9404", "9406"},
+						MetricsPath:  "/metrics",
+						JobName:      "java-prometheus",
+					},
+					{
+						ArnPattern:           ".*:task-definition/.*appmesh.*:23",
+						ContainerNamePattern: "^envoy$",
+						MetricsPorts:         []string{"9901"},
+						MetricsPath:          "/stats/prometheus",
+						JobName:              "envoy-prometheus",
+					},
+				},
+				Services: []ServiceConfig{
+					{
+						NamePattern:  "^nginx-.*",
+						MetricsPorts: []string{"9113"},
+						MetricsPath:  "/metrics",
+						JobName:      "nginx-prometheus",
+					},
+					{
+						NamePattern:          ".*haproxy-service.*",
+						ContainerNamePattern: "^haproxy$",
+						MetricsPorts:         []string{"8404"},
+						MetricsPath:          "/stats/metrics",
+						JobName:              "haproxy-prometheus",
+					},
+				},
+			},
+		},
+		{
 			name: "basic docker label config",
 			config: map[string]interface{}{
-				"ecsServiceDiscoveryDefinition": map[string]interface{}{
-					"sd_frequency":      "1m",
-					"sd_target_cluster": "my-ecs-cluster",
-					"sd_cluster_region": "us-west-2",
-					"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
-					"docker_label":      map[string]interface{}{},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "1m",
+								"sd_target_cluster": "my-ecs-cluster",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
+								"docker_label":      map[string]interface{}{},
+							},
+						},
+					},
 				},
 			},
 			expected: &Config{
@@ -50,15 +160,21 @@ func TestTranslator_Translate(t *testing.T) {
 		{
 			name: "custom docker label config",
 			config: map[string]interface{}{
-				"ecsServiceDiscoveryDefinition": map[string]interface{}{
-					"sd_frequency":      "15s",
-					"sd_target_cluster": "my-ecs-cluster",
-					"sd_cluster_region": "us-west-2",
-					"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
-					"docker_label": map[string]interface{}{
-						"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A",
-						"sd_metrics_path_label": "MY_METRICS_PATH",
-						"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME",
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "15s",
+								"sd_target_cluster": "my-ecs-cluster",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
+								"docker_label": map[string]interface{}{
+									"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A",
+									"sd_metrics_path_label": "MY_METRICS_PATH",
+									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -79,24 +195,30 @@ func TestTranslator_Translate(t *testing.T) {
 		{
 			name: "task definition config",
 			config: map[string]interface{}{
-				"ecsServiceDiscoveryDefinition": map[string]interface{}{
-					"sd_frequency":      "5m",
-					"sd_target_cluster": "my-ecs-cluster",
-					"sd_cluster_region": "us-west-2",
-					"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
-					"task_definition_list": []interface{}{
-						map[string]interface{}{
-							"sd_job_name":                    "java-prometheus",
-							"sd_metrics_path":                "/metrics",
-							"sd_metrics_ports":               "9404;9406",
-							"sd_task_definition_arn_pattern": ".*:task-definition/.*javajmx.*:[0-9]+",
-						},
-						map[string]interface{}{
-							"sd_job_name":                    "envoy-prometheus",
-							"sd_metrics_path":                "/stats/prometheus",
-							"sd_container_name_pattern":      "^envoy$",
-							"sd_metrics_ports":               "9901",
-							"sd_task_definition_arn_pattern": ".*:task-definition/.*appmesh.*:23",
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "5m",
+								"sd_target_cluster": "my-ecs-cluster",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
+								"task_definition_list": []interface{}{
+									map[string]interface{}{
+										"sd_job_name":                    "java-prometheus",
+										"sd_metrics_path":                "/metrics",
+										"sd_metrics_ports":               "9404;9406",
+										"sd_task_definition_arn_pattern": ".*:task-definition/.*javajmx.*:[0-9]+",
+									},
+									map[string]interface{}{
+										"sd_job_name":                    "envoy-prometheus",
+										"sd_metrics_path":                "/stats/prometheus",
+										"sd_container_name_pattern":      "^envoy$",
+										"sd_metrics_ports":               "9901",
+										"sd_task_definition_arn_pattern": ".*:task-definition/.*appmesh.*:23",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -126,24 +248,30 @@ func TestTranslator_Translate(t *testing.T) {
 		{
 			name: "service name config",
 			config: map[string]interface{}{
-				"ecsServiceDiscoveryDefinition": map[string]interface{}{
-					"sd_frequency":      "5m",
-					"sd_target_cluster": "my-ecs-cluster",
-					"sd_cluster_region": "us-west-2",
-					"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
-					"service_name_list_for_tasks": []interface{}{
-						map[string]interface{}{
-							"sd_job_name":             "nginx-prometheus",
-							"sd_metrics_path":         "/metrics",
-							"sd_metrics_ports":        "9113",
-							"sd_service_name_pattern": "^nginx-.*",
-						},
-						map[string]interface{}{
-							"sd_job_name":               "haproxy-prometheus",
-							"sd_metrics_path":           "/stats/metrics",
-							"sd_container_name_pattern": "^haproxy$",
-							"sd_metrics_ports":          "8404",
-							"sd_service_name_pattern":   ".*haproxy-service.*",
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "5m",
+								"sd_target_cluster": "my-ecs-cluster",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
+								"service_name_list_for_tasks": []interface{}{
+									map[string]interface{}{
+										"sd_job_name":             "nginx-prometheus",
+										"sd_metrics_path":         "/metrics",
+										"sd_metrics_ports":        "9113",
+										"sd_service_name_pattern": "^nginx-.*",
+									},
+									map[string]interface{}{
+										"sd_job_name":               "haproxy-prometheus",
+										"sd_metrics_path":           "/stats/metrics",
+										"sd_container_name_pattern": "^haproxy$",
+										"sd_metrics_ports":          "8404",
+										"sd_service_name_pattern":   ".*haproxy-service.*",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -173,20 +301,26 @@ func TestTranslator_Translate(t *testing.T) {
 		{
 			name: "combined config",
 			config: map[string]interface{}{
-				"ecsServiceDiscoveryDefinition": map[string]interface{}{
-					"sd_frequency":      "1m30s",
-					"sd_target_cluster": "my-ecs-cluster",
-					"sd_cluster_region": "us-west-2",
-					"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
-					"docker_label": map[string]interface{}{
-						"sd_port_label":         "MY_PROMETHEUS_EXPORTER_PORT_LABEL",
-						"sd_metrics_path_label": "MY_PROMETHEUS_METRICS_PATH_LABEL",
-						"sd_job_name_label":     "MY_PROMETHEUS_METRICS_NAME_LABEL",
-					},
-					"task_definition_list": []interface{}{
-						map[string]interface{}{
-							"sd_metrics_ports":               "9150",
-							"sd_task_definition_arn_pattern": "*memcached.*",
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "1m30s",
+								"sd_target_cluster": "my-ecs-cluster",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
+								"docker_label": map[string]interface{}{
+									"sd_port_label":         "MY_PROMETHEUS_EXPORTER_PORT_LABEL",
+									"sd_metrics_path_label": "MY_PROMETHEUS_METRICS_PATH_LABEL",
+									"sd_job_name_label":     "MY_PROMETHEUS_METRICS_NAME_LABEL",
+								},
+								"task_definition_list": []interface{}{
+									map[string]interface{}{
+										"sd_metrics_ports":               "9150",
+										"sd_task_definition_arn_pattern": "*memcached.*",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -215,8 +349,14 @@ func TestTranslator_Translate(t *testing.T) {
 		{
 			name: "missing required fields",
 			config: map[string]interface{}{
-				"ecsServiceDiscoveryDefinition": map[string]interface{}{
-					"sd_frequency": "1m",
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency": "1m",
+							},
+						},
+					},
 				},
 			},
 			wantErr: true,
