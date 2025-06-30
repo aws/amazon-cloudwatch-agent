@@ -8,13 +8,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
+	"github.com/prometheus/common/model"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/prometheusadapter/internal"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
-	"github.com/prometheus/common/model"
 )
 
 type prometheusAdapterProcessor struct {

@@ -4,9 +4,9 @@
 package ecsobserver
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"

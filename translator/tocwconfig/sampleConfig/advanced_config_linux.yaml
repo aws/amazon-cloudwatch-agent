@@ -100,13 +100,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_swap
-                - telegraf_ethtool
                 - telegraf_nvidia_smi
+                - telegraf_mem
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_netstat
-                - telegraf_mem
+                - telegraf_swap
+                - telegraf_ethtool
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

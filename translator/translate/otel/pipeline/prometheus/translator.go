@@ -5,6 +5,7 @@ package prometheus
 
 import (
 	"fmt"
+
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 

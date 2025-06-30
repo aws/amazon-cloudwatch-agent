@@ -472,9 +472,23 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_write_seconds_total
+              include: aws_ebs_csi_write_ops_total
               match_type: ""
-              new_name: node_diskio_ebs_total_write_time
+              new_name: node_diskio_ebs_total_write_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_time
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -570,9 +584,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_read_seconds_total
+              include: aws_ebs_csi_write_seconds_total
               match_type: ""
-              new_name: node_diskio_ebs_total_read_time
+              new_name: node_diskio_ebs_total_write_time
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -601,20 +615,6 @@ processors:
               include: aws_ebs_csi_read_ops_total
               match_type: ""
               new_name: node_diskio_ebs_total_read_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_write_ops_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_write_ops
               operations:
                 - action: add_label
                   aggregation_type: ""

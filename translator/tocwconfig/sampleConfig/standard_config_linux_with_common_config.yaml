@@ -94,10 +94,10 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
+                - telegraf_swap
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
