@@ -51,6 +51,9 @@ const (
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
 
+//go:embed sampleConfig/prometheus_cwa_config.yaml
+var prometheusPMDConfig string
+
 type testCase struct {
 	filename        string
 	targetPlatform  string
@@ -427,6 +430,26 @@ func TestPrometheusConfig(t *testing.T) {
 	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 }
+
+func TestPrometheusPMDConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusPMDConfig), 0600)
+	require.NoError(t, err)
+
+	tokenReplacements := map[string]string{
+		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+	}
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "prometheus_pmd_config", "linux", expectedEnvVars, "", tokenReplacements)
+}
+
 
 func TestPrometheusECSObserverConfig(t *testing.T) {
 	resetContext(t)
@@ -865,7 +888,7 @@ func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFil
 	content := replaceTokens(blob, tokenReplacements...)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal([]byte(content), &input))
-	//verifyToTomlTranslation(t, input, expectedTomlFilePath, tokenReplacements...)
+	verifyToTomlTranslation(t, input, expectedTomlFilePath, tokenReplacements...)
 	verifyToYamlTranslation(t, input, expectedYamlFilePath, tokenReplacements...)
 }
 
