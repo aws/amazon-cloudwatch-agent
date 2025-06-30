@@ -1,51 +1,50 @@
 name: Generate EKS Performance Test Cluster
 
 env:
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "scale-testing"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 on:
-  schedule:
-    - cron: '0 17 * * 1'
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      cluster_name:
-        required: true
-        type: string
-      cloudwatch_agent_operator_repository:
-        required: true
-        type: string
-      cloudwatch_agent_operator_tag:
-        required: true
-        type: string
       cloudwatch_agent_repository:
         required: true
         type: string
       cloudwatch_agent_tag:
         required: true
         type: string
-      helm-charts-branch:
+      cloudwatch_agent_operator_repository:
+        required: true
+        type: string
+      cloudwatch_agent_target_allocator_repository:
         required: false
         type: string
-        description: 'Branch of the helm charts to test'
-        default: 'main'
-      operator-branch:
-        required: false
+      cloudwatch_agent_operator_tag:
+        required: true
         type: string
-        description: 'Branch of the operator to test'
-        default: 'main'
+      helm_charts_branch:
+        required: true
+        type: string
+      job_id:
+        required: true
+        type: string
       region:
-        required: false
+        required: true
         type: string
-        description: 'AWS Region to run tests in'
-        default: 'us-west-2'
+      terraform_assume_role:
+        required: true
+        type: string
+      terraform_dir:
+        required: true
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
 
 jobs:
   GetLatestOperatorCommitSHA:
@@ -67,69 +66,6 @@ jobs:
           cd operator-repo
           latest_sha=$(git rev-parse HEAD)
           echo "::set-output name=operator_sha::$latest_sha"
-
-  BuildAgent:
-    uses: ./.github/workflows/build-test-artifacts.yml
-    concurrency:
-      group: "Build-Test-Artifacts-${{github.ref_name}}"
-      cancel-in-progress: true
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      test-image-before-upload: false
-
-  BuildOperator:
-    needs: [GetLatestOperatorCommitSHA]
-    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
-    concurrency:
-      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
-      cancel-in-progress: true
-    secrets: inherit
-    with:
-      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
-      test-image-before-upload: false
-
-  OutputEnvVariables:
-    needs: [ BuildAgent, BuildOperator ]
-    name: 'OutputEnvVariables'
-    runs-on: ubuntu-latest
-    outputs:
-      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
-      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
-      - name: SetOutputs
-        id: set-outputs
-        run: |
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "::set-output name=ECR_INTEGRATION_TEST_REPO::cwagent-integration-test"
-          echo "::set-output name=ECR_OPERATOR_REPO::$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
-
-      - name: Echo test variables
-        run: |
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
-          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
 
   GenerateEKSPerformanceCluster:
     needs: [OutputEnvVariables]
@@ -186,6 +122,7 @@ jobs:
               -var="region=${{ inputs.region }}" \
               -var="var.cluster_name=${{ inputs.cluster_name }}" \
               -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
+              -var="var.nodes=${{ inputs.nodes }}" \
               -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
               -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
               -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
@@ -193,35 +130,7 @@ jobs:
               -var="cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}" \
               -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
               -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
               -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
             fi
-    
-#  CleanupEKSPerformanceCluster:
-#    needs: [ GenerateEKSPerformanceCluster ]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout Repository
-#        uses: actions/checkout@v3
-#
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-#          aws-region: ${{ inputs.region || 'us-west-2' }}
-#          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
-#      - name: Setup Terraform
-#        uses: hashicorp/setup-terraform@v3
-#        with:
-#          terraform_version: 1.12.0
-#
-#      - name: Terraform Init
-#        run: terraform init
-#
-#
-#      - name: Terraform destroy
-#        run: terraform destroy --auto-approve \
-#          -var="region=${{ inputs.region || 'us-west-2' }}" \
-#          -var="cluster_name=${{ inputs.cluster_name }}" \
-#          -var="eks_deployment_strategy=DAEMON"
 
