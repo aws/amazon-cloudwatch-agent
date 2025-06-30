@@ -5,8 +5,8 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
-	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
@@ -16,16 +16,17 @@ import (
 var mergedConfig map[string]interface{}
 
 func main() {
+	tarball := flag.Bool("tarball", false, "Create tarball")
+	tarballssm := flag.Bool("tarballssm", false, "Create tarball with SSM")
+	flag.Parse()
 
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "--tarball":
-			debugger.CreateTarball(false)
-			return
-		case "--tarballssm":
-			debugger.CreateTarball(true)
-			return
-		}
+	switch {
+	case *tarball:
+		debugger.CreateTarball(false)
+		return
+	case *tarballssm:
+		debugger.CreateTarball(true)
+		return
 	}
 
 	ctx := context.Background()
