@@ -16,9 +16,6 @@ on:
     - cron: '0 17 * * 1'
   workflow_dispatch:
     inputs:
-      agent_config:
-        required: true
-        type: string
       cluster_name:
         required: true
         type: string
@@ -197,6 +194,34 @@ jobs:
               -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
               -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
               -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
-              -var="agent_config=${{ inputs.agent_config }}" \
             fi
     
+#  CleanupEKSPerformanceCluster:
+#    needs: [ GenerateEKSPerformanceCluster ]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout Repository
+#        uses: actions/checkout@v3
+#
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+#          aws-region: ${{ inputs.region || 'us-west-2' }}
+#          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+#
+#      - name: Setup Terraform
+#        uses: hashicorp/setup-terraform@v3
+#        with:
+#          terraform_version: 1.12.0
+#
+#      - name: Terraform Init
+#        run: terraform init
+#
+#
+#      - name: Terraform destroy
+#        run: terraform destroy --auto-approve \
+#          -var="region=${{ inputs.region || 'us-west-2' }}" \
+#          -var="cluster_name=${{ inputs.cluster_name }}" \
+#          -var="eks_deployment_strategy=DAEMON"
+
