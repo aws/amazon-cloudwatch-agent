@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	ecsSDKey = "ecs_service_discovery"
 	// Default metrics path used across all configurations
 	defaultMetricsPath = "/metrics"
 	// Default docker label names
@@ -22,6 +21,8 @@ const (
 	defaultMetricsPathLabel = "ECS_PROMETHEUS_METRICS_PATH"
 	defaultJobNameLabel     = "job"
 )
+
+var ecsSDKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
 
 type translator struct {
 	factory component.Factory

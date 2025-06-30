@@ -430,21 +430,24 @@ func TestPrometheusConfig(t *testing.T) {
 
 func TestPrometheusECSObserverConfig(t *testing.T) {
 	resetContext(t)
-	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
-
 	temp := t.TempDir()
-	prometheusConfigFileName := filepath.Join(temp, "prometheus_ecsobserver_config.yaml")
+	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
 	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
-
 	expectedEnvVars := map[string]string{}
 	tokenReplacements := map[string]string{
 		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
-
+	// Load prometheus config and replace ecs sd results file name token with temp file name
+	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
+	require.NoError(t, err)
 	checkTranslation(t, "prometheus_ecsobserver_config", "linux", expectedEnvVars, "", tokenReplacements)
+
 }
 
 func TestPrometheusConfigwithTargetAllocator(t *testing.T) {

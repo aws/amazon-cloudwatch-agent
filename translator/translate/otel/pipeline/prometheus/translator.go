@@ -5,7 +5,6 @@ package prometheus
 
 import (
 	"fmt"
-
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
@@ -72,7 +72,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			),
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
-				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
+				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
+				ecsobserver.NewTranslator(),
+			),
 		}, nil
 	case common.AMPKey:
 		if !conf.IsSet(MetricsKey) {
