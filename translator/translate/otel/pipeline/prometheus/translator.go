@@ -5,24 +5,22 @@ package prometheus
 
 import (
 	"fmt"
-	"log"
-	"time"
-
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/ecsobserver"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
+	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/prometheusadapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/prometheusadapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	otelprom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/prometheus"
 )
@@ -80,6 +78,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			Extensions: common.NewTranslatorMap(
 				agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
+				ecsobserver.NewTranslator(),
 			),
 		}
 
