@@ -57,6 +57,7 @@ func TestComponents(t *testing.T) {
 		"k8sattributes",
 		"memory_limiter",
 		"metricstransform",
+		"prometheusadapter",
 		"resourcedetection",
 		"resource",
 		"rollup",

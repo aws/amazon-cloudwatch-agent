@@ -2,7 +2,7 @@
   "metrics": {
     "metrics_collected": {
       "prometheus": {
-        "prometheus_config_path": "./testdata/config_otel.yaml"
+        "prometheus_config_path": "./testdata/metrics/config_otel.yaml"
       }
     }
   }
