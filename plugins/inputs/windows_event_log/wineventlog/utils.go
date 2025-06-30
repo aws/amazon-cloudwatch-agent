@@ -28,7 +28,7 @@ const (
 	eventLogQueryTemplate    = `<QueryList><Query Id="0"><Select Path="%s">*[System[%s]]</Select></Query></QueryList>`
 	eventLogLevelFilter      = "Level='%s'"
 	eventIgnoreOldFilter     = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
-	eventRangeFilter         = "EventRecordID &gt;= %d and EventRecordID &lt; %d"
+	eventRangeFilter         = "EventRecordID &gt; %d and EventRecordID &lt; %d"
 	emptySpaceScanLength     = 100
 	UnknownBytesPerCharacter = 0
 

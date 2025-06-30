@@ -96,6 +96,9 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 func (w *windowsEventLog) Init() error {
 	go w.stateManager.Run(state.Notification{Done: w.done})
 	restored, _ := w.stateManager.Restore()
+	// Do note that the end offset is inclusive here as opposed to exclusive like done
+	// in logfile. This is because we use the EvtSubscribeStartAfterBookmark flag in
+	// EvtSubscribe.
 	w.eventOffset = restored.Last().EndOffset()
 	if !restored.OnlyUseMaxOffset() {
 		w.gapsToRead = state.InvertRanges(restored)
@@ -182,8 +185,8 @@ func (w *windowsEventLog) run() {
 			var records []*windowsEventLogRecord
 			readingFromGap := false
 			if len(w.gapsToRead) > 0 {
-				readingFromGap = true
 				records = w.readGaps()
+				readingFromGap = true
 			} else {
 				records = w.read()
 			}
@@ -194,9 +197,7 @@ func (w *windowsEventLog) run() {
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
-				// On gap records, we need to shift by 1 because Shift sets the end. If this does not happen
-				// then the final state file will still have a gap despite the event being processed.
-				// Windows record IDs also begin at 1 instead of 0.
+				// Need to shift by 1 because the range logic assumes [start, end) whereas Windows events is [start, end]
 				if readingFromGap {
 					r.Shift(recordNumber + 1)
 				} else {

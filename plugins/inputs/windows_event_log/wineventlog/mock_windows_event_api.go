@@ -531,13 +531,13 @@ func (m *MockWindowsEventAPI) EvtOpenPublisherMetadata(session EvtHandle, publis
 // Helper methods
 func (m *MockWindowsEventAPI) extractRangeFromQuery(query string) state.Range {
 	// Parse the XML query to extract EventRecordID constraints using a single regex
-	// Look for pattern like "EventRecordID &gt;= 2 and EventRecordID &lt; 4"
+	// Look for pattern like "EventRecordID &gt; 2 and EventRecordID &lt; 4"
 
 	var start, end uint64 = 0, 1000 // Default range
 
 	if query != "" {
 		// Extract both start and end in one regex
-		rangeRegex := regexp.MustCompile(`EventRecordID &gt;= (\d+) and EventRecordID &lt; (\d+)`)
+		rangeRegex := regexp.MustCompile(`EventRecordID &gt; (\d+) and EventRecordID &lt; (\d+)`)
 		if matches := rangeRegex.FindStringSubmatch(query); len(matches) > 2 {
 			if parsedStart, err := strconv.ParseUint(matches[1], 10, 64); err == nil {
 				start = parsedStart
@@ -559,7 +559,7 @@ func (m *MockWindowsEventAPI) findOrCreateHandleForRange(r state.Range) EvtHandl
 			filteredEvents := []*MockEventRecord{}
 			for _, event := range events {
 				eventID, _ := strconv.ParseUint(event.EventRecordID, 10, 64)
-				inRange := eventID >= r.StartOffset() && eventID < r.EndOffset()
+				inRange := eventID > r.StartOffset() && eventID < r.EndOffset()
 				if inRange {
 					filteredEvents = append(filteredEvents, event)
 				}
