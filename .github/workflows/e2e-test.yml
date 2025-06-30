@@ -125,168 +125,22 @@ jobs:
           echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
           echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
 
-  GenerateTestMatrix:
-    needs: [BuildAgent, BuildOperator]
-    name: 'GenerateTestMatrix'
-    runs-on: ubuntu-latest
-    outputs:
-      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
-      - name: Generate matrix
-        id: set-matrix
-        run: |
-          go run generator/test_case_generator.go -e2e
-          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
-
-      - name: Echo test plan matrix
-        run: |
-          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
-
-  EKSE2EJVMTomcatTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
+  EKSPerformance10Nodes:
+    needs: [ GetLatestOperatorCommitSHA, OutputEnvVariables ]
+    name: 'EKSPerformance10Nodes'
+    uses: ./.github/workflows/generate-eks-performance-cluster.yml
     with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jvm-tomcat-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      job_id: eks-performance-10-nodes
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
       cloudwatch_agent_tag: ${{ github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      nodes: 10
+      region: ${{ inputs.region || 'us-west-2' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EJVMTomcatTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jvm-tomcat-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+      terraform_dir: terraform/eks/performance
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "EKS_ADDON"
     secrets: inherit
-
-  EKSE2EKafkaTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EKafkaTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/containerinsights.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/containerinsights.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
