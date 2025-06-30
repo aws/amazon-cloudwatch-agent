@@ -22,7 +22,7 @@ exporters:
     awsemf:
         add_entity: true
         certificate_file_path: ""
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
@@ -177,8 +177,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostOtlpMetrics:
             exporters:
                 - awscloudwatch

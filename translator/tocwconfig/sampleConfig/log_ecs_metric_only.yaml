@@ -38,7 +38,7 @@ exporters:
     awsemf/containerinsights:
         add_entity: false
         certificate_file_path: ""
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false

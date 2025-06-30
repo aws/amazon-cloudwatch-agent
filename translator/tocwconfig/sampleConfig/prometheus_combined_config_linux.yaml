@@ -2,7 +2,7 @@ exporters:
     awsemf/prometheus:
         add_entity: false
         certificate_file_path: ""
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
@@ -114,6 +114,37 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    ecs_observer:
+        cluster_name: ecs-cluster-a
+        cluster_region: us-west-2
+        docker_labels:
+            - job_name_label: ECS_PROMETHEUS_JOB_NAME_1
+              metrics_path_label: ECS_PROMETHEUS_METRICS_PATH
+              port_label: ECS_PROMETHEUS_EXPORTER_PORT_SUBSET
+        refresh_interval: 1m
+        result_file: "{ecsSdFileName}"
+        services:
+            - container_name_pattern: nginx-prometheus-exporter
+              job_name: service_name_1
+              metrics_path: /metrics
+              metrics_ports:
+                - "9113"
+              name_pattern: .*-application-stack
+            - metrics_path: /stats/metrics
+              metrics_ports:
+                - "9114"
+              name_pattern: run-application-stack
+        task_definitions:
+            - arn_pattern: .*task_def_1:[0-9]+
+              job_name: task_def_1
+              metrics_path: /stats/metrics
+              metrics_ports:
+                - "9901"
+            - arn_pattern: task_def_2
+              container_name_pattern: ^envoy$
+              metrics_path: /metrics
+              metrics_ports:
+                - "9902"
     entitystore:
         mode: ec2
         region: us-west-2
@@ -135,6 +166,7 @@ processors:
     deltatocumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
+    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
     prometheus:
         config:
@@ -173,14 +205,48 @@ receivers:
         start_time_metric_regex: ""
         trim_metric_suffixes: false
         use_start_time_metric: false
-    telegraf_prometheus:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
+    prometheus/prometheus/cloudwatchlogs:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 5m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 5s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  fallback_scrape_protocol: PrometheusText0.0.4
+                  file_sd_configs:
+                    - files:
+                        - /var/folders/1y/14rm33bx3fsgmk1gf2nw5_b40000gr/T/TestCombinedPrometheusConfig705111124/001/ecs_sd_results.yaml
+                      refresh_interval: 5m
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: cwagent-ecs-file-sd-config
+                  metrics_path: /metrics
+                  sample_limit: 10000
+                  scheme: http
+                  scrape_interval: 5m
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 5s
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
 service:
     extensions:
         - agenthealth/logs
         - agenthealth/statuscode
+        - ecs_observer
         - sigv4auth
         - entitystore
     pipelines:
@@ -196,9 +262,10 @@ service:
             exporters:
                 - awsemf/prometheus
             processors:
+                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
-                - telegraf_prometheus
+                - prometheus/prometheus/cloudwatchlogs
     telemetry:
         logs:
             encoding: console

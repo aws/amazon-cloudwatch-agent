@@ -38,7 +38,7 @@ exporters:
     awsemf/containerinsights:
         add_entity: true
         certificate_file_path: /etc/test/ca_bundle.pem
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: true
         eks_fargate_container_insights_enabled: false
@@ -149,7 +149,7 @@ exporters:
     awsemf/kueueContainerInsights:
         add_entity: false
         certificate_file_path: /etc/test/ca_bundle.pem
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false

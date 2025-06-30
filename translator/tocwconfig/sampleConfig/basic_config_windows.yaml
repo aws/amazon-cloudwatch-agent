@@ -67,8 +67,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/4283769065
     telemetry:
         logs:
             encoding: console

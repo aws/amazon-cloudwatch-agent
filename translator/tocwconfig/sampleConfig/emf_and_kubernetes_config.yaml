@@ -40,7 +40,7 @@ exporters:
     awsemf/containerinsights:
         add_entity: true
         certificate_file_path: ""
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: true
         eks_fargate_container_insights_enabled: false
@@ -478,20 +478,6 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_write_ops_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_write_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: aws_ebs_csi_read_bytes_total
               match_type: ""
               new_name: node_diskio_ebs_total_read_bytes
@@ -509,6 +495,62 @@ processors:
               include: aws_ebs_csi_write_bytes_total
               match_type: ""
               new_name: node_diskio_ebs_total_write_bytes
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_time
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_write_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_write_ops
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -551,48 +593,6 @@ processors:
               include: aws_ebs_csi_exceeded_tp_seconds_total
               match_type: ""
               new_name: node_diskio_ebs_volume_performance_exceeded_tp
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_read_ops_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_read_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_read_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_read_time
               operations:
                 - action: add_label
                   aggregation_type: ""

@@ -40,7 +40,7 @@ exporters:
     awsemf/containerinsights:
         add_entity: true
         certificate_file_path: ""
-        detailed_metrics: false
+        detailed_metrics: true
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: true
         eks_fargate_container_insights_enabled: false
@@ -753,62 +753,6 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_volume_queue_length
-              match_type: ""
-              new_name: node_diskio_ebs_volume_queue_length
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_write_ops_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_write_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_read_bytes_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_read_bytes
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_write_bytes_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_write_bytes
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: aws_ebs_csi_write_seconds_total
               match_type: ""
               new_name: node_diskio_ebs_total_write_time
@@ -851,6 +795,76 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
+              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_volume_queue_length
+              match_type: ""
+              new_name: node_diskio_ebs_volume_queue_length
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_bytes_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_bytes
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_write_bytes_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_write_bytes
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_time
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
               include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
               match_type: ""
               new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
@@ -879,9 +893,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_read_seconds_total
+              include: aws_ebs_csi_write_ops_total
               match_type: ""
-              new_name: node_diskio_ebs_total_read_time
+              new_name: node_diskio_ebs_total_write_ops
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -890,62 +904,6 @@ processors:
                   label_value: ""
                   new_label: Type
                   new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: container_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: ContainerGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: pod_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: PodGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: node_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeGPU
               submatch_case: ""
             - action: insert
               aggregation_type: ""
@@ -1220,6 +1178,83 @@ processors:
                   new_label: Type
                   new_value: NodeGPU
               submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: container_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: pod_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: node_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_model_code
+              match_type: ""
+              new_name: neuroncore_memory_usage_model_code
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_runtime_memory
+              match_type: ""
+              new_name: neuroncore_memory_usage_runtime_memory
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: instance_info
+              match_type: ""
+              new_name: instance_info
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: hardware_ecc_events_total
+              match_type: ""
+              new_name: neurondevice_hw_ecc_events
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: execution_latency_seconds
+              match_type: ""
+              new_name: neuron_execution_latency
+              operations: []
+              submatch_case: ""
             - action: update
               aggregation_type: ""
               include: execution_status_total
@@ -1229,23 +1264,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuron_runtime_memory_used_bytes
-              match_type: ""
-              new_name: neurondevice_runtime_memory_used_bytes
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: neuroncore_memory_usage_constants
               match_type: ""
               new_name: neuroncore_memory_usage_constants
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_model_code
-              match_type: ""
-              new_name: neuroncore_memory_usage_model_code
               operations: []
               submatch_case: ""
             - action: update
@@ -1264,10 +1285,17 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: instance_info
+              include: neuroncore_utilization_ratio
               match_type: ""
-              new_name: instance_info
-              operations: []
+              new_name: neuroncore_utilization
+              operations:
+                - action: experimental_scale_value
+                  aggregation_type: ""
+                  experimental_scale: 100
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -1285,37 +1313,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuroncore_memory_usage_runtime_memory
+              include: neuron_runtime_memory_used_bytes
               match_type: ""
-              new_name: neuroncore_memory_usage_runtime_memory
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_utilization_ratio
-              match_type: ""
-              new_name: neuroncore_utilization
-              operations:
-                - action: experimental_scale_value
-                  aggregation_type: ""
-                  experimental_scale: 100
-                  label: ""
-                  label_value: ""
-                  new_label: ""
-                  new_value: ""
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: hardware_ecc_events_total
-              match_type: ""
-              new_name: neurondevice_hw_ecc_events
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: execution_latency_seconds
-              match_type: ""
-              new_name: neuron_execution_latency
+              new_name: neurondevice_runtime_memory_used_bytes
               operations: []
               submatch_case: ""
 receivers:
