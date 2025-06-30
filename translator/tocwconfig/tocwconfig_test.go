@@ -450,7 +450,6 @@ func TestPrometheusPMDConfig(t *testing.T) {
 	checkTranslation(t, "prometheus_pmd_config", "linux", expectedEnvVars, "", tokenReplacements)
 }
 
-
 func TestPrometheusECSObserverConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

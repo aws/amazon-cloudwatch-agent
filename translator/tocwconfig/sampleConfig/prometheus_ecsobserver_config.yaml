@@ -1,9 +1,18 @@
 exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
     prometheusremotewrite/amp:
         add_metric_suffixes: true
         auth:
             authenticator: sigv4auth
-        endpoint: https://aps-workspaces..amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
         idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
         max_idle_conns: 100
@@ -28,17 +37,77 @@ exporters:
         timeout: 5s
         write_buffer_size: 524288
 extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    ecs_observer:
+        cluster_name: ecs-cluster-a
+        cluster_region: us-west-2
+        docker_labels:
+            - job_name_label: ECS_PROMETHEUS_JOB_NAME_1
+              metrics_path_label: ECS_PROMETHEUS_METRICS_PATH
+              port_label: ECS_PROMETHEUS_EXPORTER_PORT_SUBSET
+        refresh_interval: 1m
+        result_file: "{ecsSdFileName}"
+        services:
+            - container_name_pattern: nginx-prometheus-exporter
+              job_name: service_name_1
+              metrics_path: /metrics
+              metrics_ports:
+                - "9113"
+              name_pattern: .*-application-stack
+            - metrics_path: /stats/metrics
+              metrics_ports:
+                - "9114"
+              name_pattern: run-application-stack
+        task_definitions:
+            - arn_pattern: .*task_def_1:[0-9]+
+              job_name: task_def_1
+              metrics_path: /stats/metrics
+              metrics_ports:
+                - "9901"
+            - arn_pattern: task_def_2
+              container_name_pattern: ^envoy$
+              metrics_path: /metrics
+              metrics_ports:
+                - "9902"
     entitystore:
         mode: ec2
-        region: ""
+        region: us-west-2
     sigv4auth:
-        assume_role: {}
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
 processors:
     batch/prometheus/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
+    batch/prometheus/cloudwatch:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    cumulativetodelta/prometheus/cloudwatch:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
     deltatocumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
@@ -81,6 +150,9 @@ receivers:
         use_start_time_metric: false
 service:
     extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - ecs_observer
         - sigv4auth
         - entitystore
     pipelines:
@@ -92,10 +164,20 @@ service:
                 - deltatocumulative/prometheus/amp
             receivers:
                 - prometheus
+        metrics/prometheus/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - batch/prometheus/cloudwatch
+                - cumulativetodelta/prometheus/cloudwatch
+            receivers:
+                - prometheus
     telemetry:
         logs:
             encoding: console
             level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2
