@@ -123,18 +123,18 @@ func TestReadGaps(t *testing.T) {
 
 	t.Run("BasicGapReading", func(t *testing.T) {
 		rl := state.RangeList{
-			state.NewRange(0, 1),
-			state.NewRange(4, 5),
+			// Inverted range: 0-5, 10-15, 20-25, 30-inf
+			state.NewRange(5, 10),
+			state.NewRange(15, 20),
+			state.NewRange(25, 30),
 		}
 		elog, stateFileName := newTestEventLogWithState(t, NAME, LEVELS, rl)
 		mockAPI := NewMockWindowsEventAPI()
 		winEventAPI = mockAPI
 
-		// This is per EvtHandle hence the necessity to break up these calls
-		// 0, 1, 4 were "sent" previously (should be skipped)
-		mockAPI.AddMockEventsForQuery(createMockEventRecords(0, 1, 4, 5))
-		// Gap records (should be read by gap reading)
-		mockAPI.AddMockEventsForQuery(createMockEventRecords(2, 3))
+		mockAPI.AddMockEventsForQuery(createMockEventRecordsRange(0, 5))
+		mockAPI.AddMockEventsForQuery(createMockEventRecordsRange(10, 15))
+		mockAPI.AddMockEventsForQuery(createMockEventRecordsRange(20, 25))
 
 		elog.Init()
 
@@ -147,24 +147,33 @@ func TestReadGaps(t *testing.T) {
 		time.Sleep(8 * time.Second)
 		elog.Stop()
 
+		expectedRecords := []int{
+			1, 2, 3, 4, 5, 11, 12, 13, 14, 15, 21, 22, 23, 24, 25,
+		}
+
 		assert.Empty(t, elog.gapsToRead, "Gaps should be cleared after reading")
-		assert.Len(t, records, 2, "Should return 2 mock events")
-		assert.Len(t, mockAPI.QueryCalls, 1, "Should make one query call")
+		assert.Len(t, records, len(expectedRecords), "Should return correct number of mock events")
+		assert.Len(t, mockAPI.QueryCalls, 3, "Should make three query calls")
 		assert.Equal(t, NAME, mockAPI.QueryCalls[0].Path, "Should query correct path")
-		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &gt; 1", "Query should contain start range")
-		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &lt; 4", "Query should contain end range")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &gt; 0", "Query should contain start range")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &lt;= 5", "Query should contain end range")
+		assert.Contains(t, mockAPI.QueryCalls[1].Query, "EventRecordID &gt; 10", "Query should contain start range")
+		assert.Contains(t, mockAPI.QueryCalls[1].Query, "EventRecordID &lt;= 15", "Query should contain end range")
+		assert.Contains(t, mockAPI.QueryCalls[2].Query, "EventRecordID &gt; 20", "Query should contain start range")
+		assert.Contains(t, mockAPI.QueryCalls[2].Query, "EventRecordID &lt;= 25", "Query should contain end range")
 		assert.Greater(t, len(mockAPI.CloseCalls), 0, "Should make close calls")
 
 		for i, record := range records {
-			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", 2+i))
+			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", expectedRecords[i]))
 		}
 
 		assertStateFileRange(t, stateFileName, state.RangeList{
-			state.NewRange(0, 5),
+			state.NewRange(0, 30),
 		})
 	})
 	t.Run("ReadGapThenSubscribe", func(t *testing.T) {
 		rl := state.RangeList{
+			// Inverted range: 2-4
 			state.NewRange(0, 2),
 			state.NewRange(4, 5),
 		}
@@ -174,7 +183,7 @@ func TestReadGaps(t *testing.T) {
 
 		// This is per EvtHandle hence the necessity to break up these calls
 		// 0, 1, 4 were "sent" previously (should be skipped)
-		mockAPI.AddMockEventsForQuery(createMockEventRecords(0, 2, 4, 5))
+		mockAPI.AddMockEventsForQuery(createMockEventRecords(0, 2, 5))
 		// Gap records (should be read by gap reading)
 		mockAPI.AddMockEventsForQuery(createMockEventRecords(3, 4))
 
@@ -192,18 +201,19 @@ func TestReadGaps(t *testing.T) {
 		time.Sleep(5 * time.Second)
 		elog.Stop()
 
+		expectedRecords := []int{
+			3, 4, 5, 6, 7, 8,
+		}
+
 		assert.Empty(t, elog.gapsToRead, "Gaps should be cleared after reading")
-		assert.Len(t, records, 5, "Should return 5 mock events")
+		assert.Len(t, records, len(expectedRecords), "Should return correct number of mock events")
 		assert.Len(t, mockAPI.QueryCalls, 1, "Should make one query call")
 		assert.Equal(t, NAME, mockAPI.QueryCalls[0].Path, "Should query correct path")
 		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &gt; 2", "Query should contain start range")
-		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &lt; 4", "Query should contain end range")
+		assert.Contains(t, mockAPI.QueryCalls[0].Query, "EventRecordID &lt;= 4", "Query should contain end range")
 		assert.Len(t, mockAPI.SubscribeCalls, 1, "Should make one subscribe call")
 		assert.Greater(t, len(mockAPI.CloseCalls), 0, "Should make close calls")
 
-		expectedRecords := []int{
-			3, 5, 6, 7, 8,
-		}
 		for i, record := range records {
 			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", expectedRecords[i]))
 		}
@@ -225,7 +235,7 @@ func TestReadGaps(t *testing.T) {
 
 		elog.Init()
 
-		mockAPI.SimulateSubscriptionEvents(createMockEventRecordsRange(5, 9))
+		mockAPI.SimulateSubscriptionEvents(createMockEventRecordsRange(6, 9))
 
 		var records []logs.LogEvent
 		// SetOutput calls run as well hence the omission of elog.run()
@@ -244,11 +254,11 @@ func TestReadGaps(t *testing.T) {
 
 		for i, record := range records {
 			// Offset by 5 since we "already read" events 0-4
-			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", 5+i))
+			assert.Contains(t, record.Message(), fmt.Sprintf("Event %d", 6+i))
 		}
 
 		assertStateFileRange(t, stateFileName, state.RangeList{
-			state.NewRange(0, 8),
+			state.NewRange(0, 9),
 		})
 	})
 }
@@ -330,9 +340,10 @@ func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
 	assert.Contains(t, string(content), marshalRangeList(rl))
 }
 
+// Start and end are both inclusive
 func createMockEventRecordsRange(start, end int) []*MockEventRecord {
 	var records []*MockEventRecord
-	for i := start; i < end; i++ {
+	for i := start; i <= end; i++ {
 		records = append(records, &MockEventRecord{
 			EventRecordID: fmt.Sprintf("%d", i),
 			TimeCreated:   time.Now(),
@@ -903,13 +914,13 @@ func (m *MockWindowsEventAPI) EvtOpenPublisherMetadata(session EvtHandle, publis
 // Helper methods
 func (m *MockWindowsEventAPI) extractRangeFromQuery(query string) state.Range {
 	// Parse the XML query to extract EventRecordID constraints using a single regex
-	// Look for pattern like "EventRecordID &gt; 2 and EventRecordID &lt; 4"
+	// Look for pattern like "EventRecordID &gt; 2 and EventRecordID &lt;= 4"
 
 	var start, end uint64 = 0, 1000 // Default range
 
 	if query != "" {
 		// Extract both start and end in one regex
-		rangeRegex := regexp.MustCompile(`EventRecordID &gt; (\d+) and EventRecordID &lt; (\d+)`)
+		rangeRegex := regexp.MustCompile(`EventRecordID &gt; (\d+) and EventRecordID &lt;= (\d+)`)
 		if matches := rangeRegex.FindStringSubmatch(query); len(matches) > 2 {
 			if parsedStart, err := strconv.ParseUint(matches[1], 10, 64); err == nil {
 				start = parsedStart
@@ -931,7 +942,7 @@ func (m *MockWindowsEventAPI) findOrCreateHandleForRange(r state.Range) EvtHandl
 			filteredEvents := []*MockEventRecord{}
 			for _, event := range events {
 				eventID, _ := strconv.ParseUint(event.EventRecordID, 10, 64)
-				inRange := eventID > r.StartOffset() && eventID < r.EndOffset()
+				inRange := eventID > r.StartOffset() && eventID <= r.EndOffset()
 				if inRange {
 					filteredEvents = append(filteredEvents, event)
 				}

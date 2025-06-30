@@ -177,10 +177,8 @@ func (w *windowsEventLog) run() {
 			}
 			// Prioritize gaps to read on this tick of the timer
 			var records []*windowsEventLogRecord
-			readingFromGap := false
 			if len(w.gapsToRead) > 0 {
 				records = w.readGaps()
-				readingFromGap = true
 			} else {
 				records = w.read()
 			}
@@ -191,12 +189,7 @@ func (w *windowsEventLog) run() {
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
-				// Need to shift by 1 because the range logic assumes [start, end) whereas Windows events is [start, end]
-				if readingFromGap {
-					r.Shift(recordNumber + 1)
-				} else {
-					r.Shift(recordNumber)
-				}
+				r.Shift(recordNumber)
 				evt := &LogEvent{
 					msg:    value,
 					t:      record.System.TimeCreated.SystemTime,
