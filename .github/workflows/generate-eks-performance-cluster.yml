@@ -71,7 +71,6 @@ jobs:
           echo "::set-output name=operator_sha::$latest_sha"
 
   GenerateEKSPerformanceCluster:
-    needs: [OutputEnvVariables]
     name: GenerateEKSPerformanceCluster
     runs-on: ubuntu-latest
     strategy:
