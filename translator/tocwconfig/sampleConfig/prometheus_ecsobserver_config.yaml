@@ -1,0 +1,35 @@
+extensions:
+  ecs_observer:
+    refresh_interval: 1m
+    cluster_name: my-ecs-cluster
+    cluster_region: us-west-2
+    result_file: "{ecsSdFileName}"
+    docker_labels:
+      - port_label: ECS_PROMETHEUS_EXPORTER_PORT
+        metrics_path_label: ECS_PROMETHEUS_METRICS_PATH
+        job_name_label: ECS_PROMETHEUS_JOB_NAME
+    task_definitions:
+      - arn_pattern: ".*:task-definition/.*javajmx.*:[0-9]+"
+        container_name_pattern: "^java-app$"
+        metrics_ports: ["9404", "9406"]
+        metrics_path: /metrics
+        job_name: java-prometheus
+    services:
+      - name_pattern: "^nginx-.*"
+        metrics_ports: ["9113"]
+        metrics_path: /metrics
+        job_name: nginx-prometheus
+
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: ecs_service_discovery
+          file_sd_configs:
+            - files: ["{ecsSdFileName}"]
+
+service:
+  extensions: [ecs_observer]
+  pipelines:
+    metrics:
+      receivers: [prometheus]
