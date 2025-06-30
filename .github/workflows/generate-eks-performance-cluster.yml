@@ -6,6 +6,9 @@ env:
 on:
   workflow_call:
     inputs:
+      job_id:
+        required: true
+        type: string
       cloudwatch_agent_repository:
         required: true
         type: string
@@ -24,7 +27,7 @@ on:
       helm_charts_branch:
         required: true
         type: string
-      job_id:
+      nodes:
         required: true
         type: string
       region:
