@@ -92,15 +92,15 @@ func RunWizard(params Params) error {
 
 func RunWizardFromFlags(flags map[string]*string) error {
 	params := Params{
-		IsNonInteractiveWindowsMigration: *flags["is-non-interactive-windows-migration"] == "true",
-		IsNonInteractiveLinuxMigration:   *flags["is-non-interactive-linux-migration"] == "true",
-		TracesOnly:                       *flags["traces-only"] == "true",
-		UseParameterStore:                *flags["use-parameter-store"] == "true",
-		IsNonInteractiveXrayMigration:    *flags["non-interactive-xray-migration"] == "true",
-		ConfigFilePath:                   *flags["config-file-path"],
-		ConfigOutputPath:                 *flags["config-output-path"],
-		ParameterStoreName:               *flags["parameter-store-name"],
-		ParameterStoreRegion:             *flags["parameter-store-region"],
+		IsNonInteractiveWindowsMigration: *flags["isNonInteractiveWindowsMigration"] == "true",
+		IsNonInteractiveLinuxMigration:   *flags["isNonInteractiveLinuxMigration"] == "true",
+		TracesOnly:                       *flags["tracesOnly"] == "true",
+		UseParameterStore:                *flags["useParameterStore"] == "true",
+		IsNonInteractiveXrayMigration:    *flags["nonInteractiveXrayMigration"] == "true",
+		ConfigFilePath:                   *flags["configFilePath"],
+		ConfigOutputPath:                 *flags["configOutputPath"],
+		ParameterStoreName:               *flags["parameterStoreName"],
+		ParameterStoreRegion:             *flags["parameterStoreRegion"],
 	}
 	return RunWizard(params)
 }

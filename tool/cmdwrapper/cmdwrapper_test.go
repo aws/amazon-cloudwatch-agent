@@ -92,7 +92,7 @@ func TestExecuteAgentCommand_HappyPath(t *testing.T) {
 		return cmd
 	}
 	// Mock findAgentBinary to always return the agent binary path without checking if it exists
-	findAgentBinary = func(path string) (string, error) {
+	findAgentBinary = func(_ string) (string, error) {
 		return paths.AgentBinaryPath, nil
 	}
 

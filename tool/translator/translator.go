@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package cmdutil
+package translator
 
 import (
 	"errors"
@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	userutil "github.com/aws/amazon-cloudwatch-agent/internal/util/user"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -97,7 +98,7 @@ func (ct *ConfigTranslator) Translate() error {
 		}
 	}()
 
-	mergedJSONConfigMap, err := GenerateMergedJsonConfigMap(ct.ctx)
+	mergedJSONConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ct.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to generate merged json config: %v", err)
 	}
@@ -109,31 +110,31 @@ func (ct *ConfigTranslator) Translate() error {
 			if err != nil {
 				return fmt.Errorf("failed to detectRunAsUser")
 			}
-			VerifyCredentials(ct.ctx, runAsUser)
+			cmdutil.VerifyCredentials(ct.ctx, runAsUser)
 		}
 	}
 
-	tomlConfigPath := GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
+	tomlConfigPath := cmdutil.GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
 	tomlConfigDir := filepath.Dir(tomlConfigPath)
 	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
-	tomlConfig, err := TranslateJsonMapToTomlConfig(mergedJSONConfigMap)
+	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(mergedJSONConfigMap)
 	if err != nil {
 		return fmt.Errorf("failed to generate TOML configuration validation content: %v", err)
 	}
-	yamlConfig, err := TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
+	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
 	if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
 		return fmt.Errorf("failed to generate YAML configuration validation content: %v", err)
 	}
-	if err = ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
+	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
 		return fmt.Errorf("failed to create the configuration TOML validation file: %v", err)
 	}
-	if err = ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
+	if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
 		return fmt.Errorf("failed to create the configuration YAML validation file: %v", err)
 	}
 	log.Println(exitSuccessMessage)
 
 	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
-	TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
+	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
 
 	return nil
 }

@@ -85,10 +85,9 @@ func ExecuteAgentCommand(command string, flags map[string]*string) error {
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			log.Panicf("E! %s process exited with non-zero status: %d, err: %v", command, exitErr.ExitCode(), exitErr)
+			log.Fatalf("E! %s process exited with non-zero status: %d", command, exitErr.ExitCode())
 		}
-		log.Panicf("E! %s failed. Error: %v", command, err)
-		return err
+		log.Fatalf("E! %s failed. Error: %v", command, err)
 	}
 
 	return nil

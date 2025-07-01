@@ -5,7 +5,6 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
 	"github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
@@ -17,8 +16,5 @@ func main() {
 	translatorFlags := cmdwrapper.AddFlags("", flags.DownloaderFlags)
 	flag.Parse()
 
-	err := cmdwrapper.ExecuteAgentCommand(flags.Command, translatorFlags)
-	if err != nil {
-		os.Exit(1)
-	}
+	_ = cmdwrapper.ExecuteAgentCommand(flags.Command, translatorFlags)
 }
