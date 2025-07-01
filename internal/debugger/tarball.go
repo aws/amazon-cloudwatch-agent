@@ -7,10 +7,12 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,6 +27,52 @@ type Answers struct {
 }
 
 func CreateTarball(ssm bool) {
+
+	if ssm {
+		// For SSM automatically enable debug logging and wait
+		enableDebugLogging()
+		showProgressBar(60)
+	} else {
+		fmt.Println("\nTo capture more detailed logs, DEBUG level logging will be temporarily enabled")
+		fmt.Println("for the CloudWatch Agent and LogDebug level logging for the AWS SDK.")
+		fmt.Println("This will help diagnose issues more effectively.")
+		fmt.Print("\nIs this okay? (y/n, default: y): ")
+
+		reader := bufio.NewReader(os.Stdin)
+		response, _ := reader.ReadString('\n')
+		response = strings.TrimSpace(strings.ToLower(response))
+
+		if response == "" || response == "y" {
+			if err := enableDebugLogging(); err != nil {
+				fmt.Printf("Warning: Unable to modify log levels: %v\n", err)
+
+				// Check for permission denied using regex
+				permissionDenied, _ := regexp.MatchString(`(?i)permission\s+denied`, err.Error())
+				if permissionDenied {
+					fmt.Println("\nThis appears to be a permission issue. Please run the debugger with sudo permissions.")
+					fmt.Print("Would you like to terminate the process so you can rerun with sudo? (y/n): ")
+
+					sudoResponse, _ := reader.ReadString('\n')
+					sudoResponse = strings.TrimSpace(strings.ToLower(sudoResponse))
+
+					if sudoResponse == "y" {
+						fmt.Println("Terminating process")
+						os.Exit(1)
+					}
+				}
+
+				fmt.Println("Continuing with current log levels...")
+			} else {
+				fmt.Println("Debug logging enabled successfully.")
+			}
+
+			fmt.Println("\nWaiting 60 seconds to collect debug logs...")
+			showProgressBar(60)
+		} else {
+			fmt.Println("Skipping debug logging enhancement.")
+		}
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error getting current directory: ", err)
@@ -46,7 +94,7 @@ func CreateTarball(ssm bool) {
 	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
 
-	if err := addFileToTarball(tarWriter, paths.AgentLogFilePath, "logs/amazon-cloudwatch-agent.log", 50, 000); err != nil {
+	if err := addFileToTarball(tarWriter, paths.AgentLogFilePath, "logs/amazon-cloudwatch-agent.log", 50000); err != nil {
 		fmt.Println("Error, unable to add log file to tarball: ", err)
 	} else {
 		fmt.Println("Warning: Only the last 50,000 lines of the log file are included.")
@@ -59,7 +107,6 @@ func CreateTarball(ssm bool) {
 
 	// We remove triaging if called through SSM since it does not support stdin.
 	if !ssm {
-
 		answersContent := writeTriage()
 
 		if err := addStringToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
@@ -68,7 +115,6 @@ func CreateTarball(ssm bool) {
 	}
 
 	fmt.Println("Tarball created successfully at:", outputPath)
-
 }
 
 func Triage() Answers {
@@ -145,7 +191,7 @@ func writeTriage() string {
 		answersContent += "A: N/A\n\n"
 	}
 
-	answersContent += "Q: Is there any additional information you would like to add?"
+	answersContent += "Q: Is there any additional information you would like to add?\n"
 	answersContent += "A: " + answers.AddInfo + "\n\n"
 
 	return answersContent
@@ -297,6 +343,52 @@ func findTailContent(file *os.File, maxLines int) (int64, []byte, error) {
 	}
 
 	return startPos, tailContent, nil
+}
+
+func enableDebugLogging() error {
+	envConfigPath := filepath.Join(filepath.Dir(paths.AgentLogFilePath), "env-config.json")
+
+	envVars := make(map[string]string)
+	if data, err := os.ReadFile(envConfigPath); err == nil {
+		json.Unmarshal(data, &envVars)
+	}
+
+	envVars["CWAGENT_LOG_LEVEL"] = "DEBUG"
+	envVars["AWS_SDK_LOG_LEVEL"] = "LogDebug"
+
+	data, err := json.MarshalIndent(envVars, "", "\t")
+	if err != nil {
+		return fmt.Errorf("failed to marshal env config: %v", err)
+	}
+
+	return os.WriteFile(envConfigPath, data, 0644)
+}
+
+func showProgressBar(seconds int) {
+	barWidth := 50
+	for i := 0; i <= seconds; i++ {
+		progress := float64(i) / float64(seconds)
+		filledWidth := int(progress * float64(barWidth))
+
+		bar := "["
+		for j := 0; j < barWidth; j++ {
+			if j < filledWidth {
+				bar += "█"
+			} else {
+				bar += "░"
+			}
+		}
+		bar += "]"
+
+		percentage := int(progress * 100)
+		remaining := seconds - i
+		fmt.Printf("\r%s %d%% (%ds remaining)", bar, percentage, remaining)
+
+		if i < seconds {
+			time.Sleep(1 * time.Second)
+		}
+	}
+	fmt.Println()
 }
 
 // Recursively add directory to tarball

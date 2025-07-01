@@ -6,9 +6,11 @@ package debugger
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -198,5 +200,35 @@ func TestAddDirectoryToTarball(t *testing.T) {
 
 	for entry := range expectedEntries {
 		assert.True(t, foundEntries[entry], "Expected entry should be found: %s", entry)
+	}
+}
+
+func TestPermissionDeniedRegex(t *testing.T) {
+	testCases := []struct {
+		name        string
+		errorMsg    string
+		expectMatch bool
+	}{
+		{"Standard permission denied", "permission denied", true},
+		{"Capitalized permission denied", "Permission denied", true},
+		{"All caps permission denied", "PERMISSION DENIED", true},
+		{"Mixed case permission denied", "Permission Denied", true},
+		{"Extra spaces", "permission   denied", true},
+		{"Tab separated", "permission\tdenied", true},
+		{"In sentence", "open file: permission denied", true},
+		{"With path", "/opt/aws/file: permission denied", true},
+		{"Different error", "file not found", false},
+		{"Access denied", "access denied", false},
+		{"Empty string", "", false},
+		{"Partial match", "permission", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := errors.New(tc.errorMsg)
+			matched, regexErr := regexp.MatchString(`(?i)permission\s+denied`, err.Error())
+			require.NoError(t, regexErr, "Regex should compile without error")
+			assert.Equal(t, tc.expectMatch, matched, "Regex match result should be as expected")
+		})
 	}
 }
