@@ -68,6 +68,7 @@ func printInstanceInfo(info *debugger.InstanceInfo) {
 	log.Printf("Availability Zone: %s\n", info.AvailabilityZone)
 	log.Printf("Architecture:      %s\n", info.Architecture)
 	log.Printf("OS:				   %s\n", info.OS)
+	log.Printf("Version:           %s\n", info.Version)
 }
 
 func parseEndpoints() {
