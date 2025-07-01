@@ -6,7 +6,7 @@ exporters:
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: https://fake_endpoint
+        endpoint: ""
         enhanced_container_insights: false
         external_id: ""
         imds_retries: 1
@@ -70,34 +70,6 @@ exporters:
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
-    prometheusremotewrite/amp:
-        add_metric_suffixes: true
-        auth:
-            authenticator: sigv4auth
-        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        idle_conn_timeout: 1m30s
-        max_batch_size_bytes: 3000000
-        max_idle_conns: 100
-        namespace: ""
-        remote_write_queue:
-            enabled: true
-            num_consumers: 5
-            queue_size: 10000
-        resource_to_telemetry_conversion:
-            clear_after_copy: true
-            enabled: true
-        retry_on_failure:
-            enabled: true
-            initial_interval: 50ms
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        send_metadata: false
-        target_info:
-            enabled: true
-        timeout: 5s
-        write_buffer_size: 524288
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -148,121 +120,31 @@ extensions:
     entitystore:
         mode: ec2
         region: us-west-2
-    sigv4auth:
-        assume_role:
-            sts_region: us-west-2
-        region: us-west-2
 processors:
-    batch/prometheus/amp:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 1m0s
     batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 30s
-    deltatocumulative/prometheus/amp:
-        max_stale: 336h0m0s
-        max_streams: 9223372036854775807
-    prometheusadapter/prometheus/cloudwatchlogs: {}
+        timeout: 5s
 receivers:
-    prometheus:
-        config:
-            global:
-                evaluation_interval: 1m
-                scrape_interval: 5m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
-                scrape_timeout: 5s
-            scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  fallback_scrape_protocol: PrometheusText0.0.4
-                  file_sd_configs:
-                    - files:
-                        - {ecsSdFileName}
-                      refresh_interval: 5m
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: cwagent-ecs-file-sd-config
-                  metrics_path: /metrics
-                  sample_limit: 10000
-                  scheme: http
-                  scrape_interval: 5m
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
-                  scrape_timeout: 5s
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
-    prometheus/prometheus/cloudwatchlogs:
-        config:
-            global:
-                evaluation_interval: 1m
-                scrape_interval: 5m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText0.0.4
-                scrape_timeout: 5s
-            scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  file_sd_configs:
-                    - files:
-                      - {ecsSdFileName}
-                      refresh_interval: 5m
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: cwagent-ecs-file-sd-config
-                  metrics_path: /metrics
-                  sample_limit: 10000
-                  scheme: http
-                  scrape_interval: 5m
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText0.0.4
-                  scrape_timeout: 5s
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
+    telegraf_prometheus:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
 service:
     extensions:
         - agenthealth/logs
         - agenthealth/statuscode
         - ecs_observer
-        - sigv4auth
         - entitystore
     pipelines:
-        metrics/prometheus/amp:
-            exporters:
-                - prometheusremotewrite/amp
-            processors:
-                - batch/prometheus/amp
-                - deltatocumulative/prometheus/amp
-            receivers:
-                - prometheus
         metrics/prometheus/cloudwatchlogs:
             exporters:
                 - awsemf/prometheus
             processors:
-                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
-                - prometheus/prometheus/cloudwatchlogs
+                - telegraf_prometheus
     telemetry:
         logs:
             encoding: console
