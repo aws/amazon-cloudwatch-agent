@@ -39,6 +39,9 @@ on:
       terraform_dir:
         required: true
         type: string
+      terraform_helm_dir:
+        required: true
+        type: string
       test_repo_name:
         required: true
         type: string
@@ -92,6 +95,13 @@ jobs:
           aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Clone and Setup Helm Charts Branch
+        run: |
+          git clone https://github.com/aws-observability/helm-charts.git helm-charts
+          cd helm-charts
+          git checkout ${{ inputs.helm_charts_branch || 'main' }}  # Use input or default to 'main'
+          cd ..
+
       - name: Login ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -121,8 +131,25 @@ jobs:
             terraform apply --auto-approve \
               -var="region=${{ inputs.region }}" \
               -var="cluster_name=${{ inputs.cluster_name }}" \
-              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
               -var="nodes=${{ inputs.nodes }}" \
+
+      - name: Helm Install
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_helm_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_helm_dir }}"
+            else
+              cd terraform/eks/helm
+            fi
+
+            terraform init
+            terraform apply --auto-approve \
+              -var="region=${{ inputs.region }}" \
+              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
               -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
               -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
               -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
