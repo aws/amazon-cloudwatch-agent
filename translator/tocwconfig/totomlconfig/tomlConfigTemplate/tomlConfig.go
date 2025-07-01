@@ -3,6 +3,10 @@
 
 package tomlConfigTemplate
 
+import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log/wineventlog"
+)
+
 type (
 	TomlConfig struct {
 		Agent      agentConfig
@@ -103,13 +107,14 @@ type (
 	}
 
 	eventConfig struct {
-		BatchReadSize   int      `toml:"batch_read_size"`
-		EventLevels     []string `toml:"event_levels"`
-		EventIDs        []int    `toml:"event_ids"`
-		EventName       string   `toml:"event_name"`
-		LogGroupName    string   `toml:"log_group_name"`
-		LogStreamName   string   `toml:"log_stream_name"`
-		RetentionInDays int      `toml:"retention_in_days"`
+		BatchReadSize   int                         `toml:"batch_read_size"`
+		EventLevels     []string                    `toml:"event_levels"`
+		EventIDs        []int                       `toml:"event_ids"`
+		EventFilters    []*wineventlog.EventFilter  `toml:"filters"`
+		EventName       string                      `toml:"event_name"`
+		LogGroupName    string                      `toml:"log_group_name"`
+		LogStreamName   string                      `toml:"log_stream_name"`
+		RetentionInDays int                         `toml:"retention_in_days"`
 	}
 
 	logFileConfig struct {

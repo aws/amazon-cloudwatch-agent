@@ -25,6 +25,7 @@ var (
 	// 2 is ERROR
 	LEVELS          = []string{"2"}
 	EVENTIDS        = []int{777}
+	FILTERS         = []*EventFilter{}
 	GROUP_NAME      = "fake"
 	STREAM_NAME     = "fake"
 	RENDER_FMT      = FormatPlainText
@@ -184,6 +185,6 @@ func newTestEventLog(t *testing.T, name string, levels []string, eventids []int)
 		StateFilePrefix: logscommon.WindowsEventLogPrefix,
 		Name:            GROUP_NAME + "_" + STREAM_NAME + "_" + name,
 	})
-	return NewEventLog(name, levels, eventids, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+	return NewEventLog(name, levels, eventids, FILTERS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
 }
