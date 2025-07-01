@@ -68,12 +68,36 @@ func CheckLogs(config map[string]interface{}) LogCheckResult {
 			continue
 		}
 
-		fileStatus := checkLogPermissions(filePath)
-		result.Files = append(result.Files, fileStatus)
+		// Handle glob patterns in file_path
+		matchedFiles, err := filepath.Glob(filePath)
+		if err != nil {
+			// If glob fails treat as literal path
+			fileStatus := checkLogPermissions(filePath)
+			result.Files = append(result.Files, fileStatus)
+			if !fileStatus.Exists || !fileStatus.Readable {
+				result.Success = false
+			}
+			continue
+		}
 
-		// If any file is not readable, mark the overall check as unsuccessful
-		if !fileStatus.Exists || !fileStatus.Readable {
+		if len(matchedFiles) == 0 {
+			// No files match the pattern
+			fileStatus := LogFileStatus{
+				Path:     filePath,
+				Exists:   false,
+				Readable: false,
+				Message:  fmt.Sprintf("No files match pattern %s", filepath.Base(filePath)),
+			}
+			result.Files = append(result.Files, fileStatus)
 			result.Success = false
+		} else {
+			for _, matchedFile := range matchedFiles {
+				fileStatus := checkLogPermissions(matchedFile)
+				result.Files = append(result.Files, fileStatus)
+				if !fileStatus.Exists || !fileStatus.Readable {
+					result.Success = false
+				}
+			}
 		}
 	}
 
