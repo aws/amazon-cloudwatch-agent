@@ -127,7 +127,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.AWSSessionSettings.LocalMode = true
 	}
-	cfg.DetailedMetrics = true
 
 	if t.isAppSignals(c) {
 		if err := setAppSignalsFields(c, cfg); err != nil {
