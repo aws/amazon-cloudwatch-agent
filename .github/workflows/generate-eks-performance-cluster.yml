@@ -131,7 +131,7 @@ jobs:
             terraform apply --auto-approve \
               -var="region=${{ inputs.region }}" \
               -var="cluster_name=${{ inputs.cluster_name }}" \
-              -var="nodes=${{ inputs.nodes }}" \
+              -var="nodes=${{ inputs.nodes }}"
 
       - name: Helm Install
         uses: nick-fields/retry@v2
