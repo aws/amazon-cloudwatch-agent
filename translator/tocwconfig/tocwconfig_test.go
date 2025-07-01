@@ -444,7 +444,7 @@ func TestPrometheusECSObserverConfig(t *testing.T) {
 	// Load prometheus config and replace ecs sd results file name token with temp file name
 	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
-	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
+	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), 0600)
 	require.NoError(t, err)
 	checkTranslation(t, "prometheus_ecsobserver_config", "linux", expectedEnvVars, "", tokenReplacements)
 
