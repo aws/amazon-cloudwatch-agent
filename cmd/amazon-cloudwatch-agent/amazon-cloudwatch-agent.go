@@ -51,9 +51,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/downloader"
 	downloaderflags "github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/tool/translator"
 	"github.com/aws/amazon-cloudwatch-agent/tool/wizard"
 	wizardflags "github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	translatorflags "github.com/aws/amazon-cloudwatch-agent/translator/flags"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 )
@@ -631,7 +631,7 @@ func main() {
 		}
 		return
 	case *fConfigTranslator:
-		err := cmdutil.RunTranslator(translatorFlags)
+		err := translator.RunTranslator(translatorFlags)
 		if err != nil {
 			log.Fatalf("E! Failed to initialize config translator: %v", err)
 		}
