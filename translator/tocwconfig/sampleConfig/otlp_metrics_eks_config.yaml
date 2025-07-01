@@ -52,9 +52,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
