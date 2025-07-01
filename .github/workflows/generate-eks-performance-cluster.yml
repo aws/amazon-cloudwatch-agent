@@ -132,6 +132,12 @@ jobs:
               -var="cluster_name=${{ inputs.cluster_name }}" \
               -var="nodes=${{ inputs.nodes }}"
 
+            # Export the outputs
+            echo "cluster_endpoint=$(terraform output -raw cluster_endpoint)" >> $GITHUB_OUTPUT
+            echo "cluster_ca_certificate=$(terraform output -raw cluster_ca_certificate)" >> $GITHUB_OUTPUT
+            echo "cluster_auth_token=$(terraform output -raw cluster_auth_token)" >> $GITHUB_OUTPUT
+            echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+
       - name: Helm Install
         uses: nick-fields/retry@v2
         with:
@@ -148,6 +154,10 @@ jobs:
             terraform init
             terraform apply --auto-approve \
               -var="region=${{ inputs.region }}" \
+              -var="cluster_endpoint=${{ steps.eks-cluster.outputs.cluster_endpoint }}" \
+              -var="cluster_ca_certificate=${{ steps.eks-cluster.outputs.cluster_ca_certificate }}" \
+              -var="cluster_auth_token=${{ steps.eks-cluster.outputs.cluster_auth_token }}" \
+              -var="cluster_name=${{ steps.eks-cluster.outputs.cluster_name }}" \
               -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
               -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
               -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
