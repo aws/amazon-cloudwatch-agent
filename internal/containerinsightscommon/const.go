@@ -6,8 +6,6 @@ package containerinsightscommon
 const (
 	GoPSUtilProcDirEnv = "HOST_PROC"
 
-	MinTimeDiff = 50 * 1000 // We assume 50 micro-seconds is the minimal gap between two collected data sample to be valid to calculate delta
-
 	ClusterNameKey          = "ClusterName"
 	NodeNameKey             = "NodeName" // Attribute names
 	InstanceIdKey           = "InstanceId"
@@ -26,26 +24,13 @@ const (
 
 	// metric collected
 	CpuTotal                   = "cpu_usage_total"
-	CpuUser                    = "cpu_usage_user"
-	CpuSystem                  = "cpu_usage_system"
 	CpuLimit                   = "cpu_limit"
 	CpuUtilization             = "cpu_utilization"
 	CpuRequest                 = "cpu_request"
 	CpuReservedCapacity        = "cpu_reserved_capacity"
 	CpuUtilizationOverPodLimit = "cpu_utilization_over_pod_limit"
 
-	MemUsage                   = "memory_usage"
-	MemCache                   = "memory_cache"
-	MemRss                     = "memory_rss"
-	MemMaxusage                = "memory_max_usage"
-	MemSwap                    = "memory_swap"
-	MemFailcnt                 = "memory_failcnt"
-	MemMappedfile              = "memory_mapped_file"
 	MemWorkingset              = "memory_working_set"
-	MemPgfault                 = "memory_pgfault"
-	MemPgmajfault              = "memory_pgmajfault"
-	MemHierarchicalPgfault     = "memory_hierarchical_pgfault"
-	MemHierarchicalPgmajfault  = "memory_hierarchical_pgmajfault"
 	MemLimit                   = "memory_limit"
 	MemRequest                 = "memory_request"
 	MemUtilization             = "memory_utilization"
@@ -54,33 +39,13 @@ const (
 
 	NetIfce       = "interface"
 	NetRxBytes    = "network_rx_bytes"
-	NetRxPackets  = "network_rx_packets"
-	NetRxDropped  = "network_rx_dropped"
-	NetRxErrors   = "network_rx_errors"
 	NetTxBytes    = "network_tx_bytes"
-	NetTxPackets  = "network_tx_packets"
-	NetTxDropped  = "network_tx_dropped"
-	NetTxErrors   = "network_tx_errors"
 	NetTotalBytes = "network_total_bytes"
 
 	DiskDev     = "device"
 	EbsVolumeId = "ebs_volume_id"
 
-	FSType        = "fstype"
-	FSUsage       = "filesystem_usage"
-	FSCapacity    = "filesystem_capacity"
-	FSAvailable   = "filesystem_available"
-	FSInodes      = "filesystem_inodes"
-	FSInodesfree  = "filesystem_inodes_free"
 	FSUtilization = "filesystem_utilization"
-
-	DiskIOServiceBytesPrefix = "diskio_io_service_bytes_"
-	DiskIOServicedPrefix     = "diskio_io_serviced_"
-	DiskIOAsync              = "Async"
-	DiskIORead               = "Read"
-	DiskIOSync               = "Sync"
-	DiskIOWrite              = "Write"
-	DiskIOTotal              = "Total"
 
 	GpuUtilization    = "gpu_utilization"
 	GpuMemUtilization = "gpu_memory_utilization"
@@ -88,9 +53,6 @@ const (
 	GpuMemTotal       = "gpu_memory_total"
 	GpuTemperature    = "gpu_temperature"
 	GpuPowerDraw      = "gpu_power_draw"
-	GpuRequest        = "gpu_request"
-	GpuLimit          = "gpu_limit"
-	GpuTotal          = "gpu_total"
 	GpuUniqueId       = "UUID"
 
 	NeuronCoreUtilization                       = "neuroncore_utilization"
@@ -121,12 +83,6 @@ const (
 	NvmeExceededEC2TPTime   = "diskio_ebs_ec2_instance_performance_exceeded_tp"
 	NvmeVolumeQueueLength   = "diskio_ebs_volume_queue_length"
 
-	KueuePendingWorkloads          = "kueue_pending_workloads"
-	KueueEvictedWorkloadsTotal     = "kueue_evicted_workloads_total"
-	KueueAdmittedActiveWorkloads   = "kueue_admitted_active_workloads"
-	KueueClusterQueueResourceUsage = "kueue_cluster_queue_resource_usage"
-	KueueClusterQueueNominalUsage  = "kueue_cluster_queue_nominal_quota"
-
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"
 	TypeClusterNamespace = "ClusterNamespace"
@@ -153,7 +109,54 @@ const (
 	TypeContainer       = "Container"
 	TypeContainerFS     = "ContainerFS"
 	TypeContainerDiskIO = "ContainerDiskIO"
-	// Special type for pause container, introduced in https://github.com/aws/amazon-cloudwatch-agent/issues/188
-	// because containerd does not set container name pause container name to POD like docker does.
-	TypeInfraContainer = "InfraContainer"
+)
+
+// ECS
+const (
+	ContainerInstanceIdKey = "ContainerInstanceId"
+	RunningTaskCount       = "number_of_running_tasks"
+)
+
+// EKS
+const (
+	KubeSecurePort = "10250"
+	BearerToken    = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	CAFile         = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+	Kubernetes       = "kubernetes"
+	K8sNamespace     = "Namespace"
+	PodIdKey         = "PodId"
+	FullPodNameKey   = "FullPodName"
+	PodNameKey       = "PodName"
+	K8sPodNameKey    = "K8sPodName"
+	ContainerNamekey = "ContainerName"
+	ContainerIdkey   = "ContainerId"
+	PodOwnersKey     = "PodOwners"
+	HostKey          = "host"
+	K8sKey           = "kubernetes"
+	K8sLabelsKey     = "labels"
+
+	RunningPodCount       = "number_of_running_pods"
+	RunningContainerCount = "number_of_running_containers"
+	ContainerCount        = "number_of_containers"
+	NodeCount             = "node_count"
+	FailedNodeCount       = "failed_node_count"
+	ContainerRestartCount = "number_of_container_restarts"
+
+	PodStatus       = "pod_status"
+	ContainerStatus = "container_status"
+
+	ContainerStatusReason          = "container_status_reason"
+	ContainerLastTerminationReason = "container_last_termination_reason"
+
+	Timestamp = "Timestamp"
+
+	//Pod Owners
+	ReplicaSet            = "ReplicaSet"
+	ReplicationController = "ReplicationController"
+	StatefulSet           = "StatefulSet"
+	DaemonSet             = "DaemonSet"
+	Deployment            = "Deployment"
+	Job                   = "Job"
+	CronJob               = "CronJob"
 )
