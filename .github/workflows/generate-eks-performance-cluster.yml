@@ -95,12 +95,11 @@ jobs:
           aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Clone and Setup Helm Charts Branch
-        run: |
-          git clone https://github.com/aws-observability/helm-charts.git helm-charts
-          cd helm-charts
-          git checkout ${{ inputs.helm_charts_branch || 'main' }}  # Use input or default to 'main'
-          cd ..
+      - uses: actions/checkout@v3
+        with:
+          repository: aws-observability/helm-charts
+          path: helm-charts
+          ref: ${{ inputs.helm_charts_branch || 'main' }}
 
       - name: Login ECR
         id: login-ecr
@@ -172,5 +171,12 @@ jobs:
               cd "${{ inputs.terraform_dir }}"
             else
               cd terraform/eks/performance
+            fi
+            terraform destroy --auto-approve
+            cd $GITHUB_WORKSPACE
+            if [ "${{ inputs.terraform_helm_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_helm_dir }}"
+            else
+              cd terraform/eks/helm
             fi
             terraform destroy --auto-approve
