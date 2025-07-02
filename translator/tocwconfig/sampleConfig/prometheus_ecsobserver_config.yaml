@@ -6,7 +6,7 @@ exporters:
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: https://fake_endpoint
+        endpoint: ""
         enhanced_container_insights: false
         external_id: ""
         imds_retries: 1
@@ -33,6 +33,24 @@ exporters:
                   separator: ;
               metric_name_selectors:
                 - .*
+            - dimensions:
+                - - name
+              label_matchers:
+                - label_names:
+                    - name
+                  regex: .*
+                  separator: ;
+              metric_name_selectors:
+                - ^.*$
+            - dimensions:
+                - - name
+              label_matchers:
+                - label_names:
+                    - name
+                  regex: .*
+                  separator: ;
+              metric_name_selectors:
+                - ^node_cpu_guest_seconds_total$
         metric_descriptors:
             - metric_name: nginx_request_count
               overwrite: false
@@ -44,7 +62,7 @@ exporters:
         output_destination: cloudwatch
         profile: ""
         proxy_address: ""
-        region: us-east-1
+        region: us-west-2
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
@@ -70,7 +88,7 @@ extensions:
                 region_type: ACJ
     ecs_observer:
         cluster_name: ecs-cluster-a
-        cluster_region: us-west-1
+        cluster_region: us-west-2
         docker_labels:
             - job_name: ""
               job_name_label: ECS_PROMETHEUS_JOB_NAME_1
@@ -108,7 +126,7 @@ extensions:
                 - 9902
     entitystore:
         mode: ec2
-        region: us-east-1
+        region: us-west-2
 processors:
     batch/prometheus/cloudwatchlogs:
         metadata_cardinality_limit: 1000
@@ -133,7 +151,7 @@ receivers:
                   fallback_scrape_protocol: PrometheusText0.0.4
                   file_sd_configs:
                     - files:
-                      - {ecsSdFileName}
+                        - {ecsSdFileName}
                       refresh_interval: 5m
                   follow_redirects: true
                   honor_timestamps: true
@@ -171,6 +189,8 @@ service:
         logs:
             encoding: console
             level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2
