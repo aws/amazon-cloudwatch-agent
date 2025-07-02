@@ -98,9 +98,11 @@ func TestExecuteAgentCommand_HappyPath(t *testing.T) {
 
 	// Test data
 	command := "fetch-config"
+	configValue := "config-value"
+	modeValue := "mode-value"
 	flags := map[string]*string{
-		"config": stringPtr("config-value"),
-		"mode":   stringPtr("mode-value"),
+		"config": &configValue,
+		"mode":   &modeValue,
 	}
 
 	// Execute the function
@@ -134,9 +136,4 @@ func TestExecuteAgentCommand_HappyPath(t *testing.T) {
 			t.Errorf("Argument %d: expected %s, got %s", i, expected, capturedArgs[i])
 		}
 	}
-}
-
-// Helper function to create string pointer
-func stringPtr(s string) *string {
-	return &s
 }
