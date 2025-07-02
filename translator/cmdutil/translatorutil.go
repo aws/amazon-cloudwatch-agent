@@ -5,6 +5,7 @@ package cmdutil
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -259,10 +260,18 @@ func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
 // GetMergedConfig creates a merged JSON config map from the given parameters
 // This allows reusing the translator logic without setting up external context
 func GetMergedConfig(configPath, configDir, mode, osType string) (map[string]interface{}, error) {
-	// Temporarily redirect stdout to suppress output
+	// Suppress log output and stdout during debugger config generation
+	origLogOutput := log.Writer()
 	origStdout := os.Stdout
 	r, w, _ := os.Pipe()
+	log.SetOutput(io.Discard)
 	os.Stdout = w
+	defer func() {
+		w.Close()
+		r.Close()
+		log.SetOutput(origLogOutput)
+		os.Stdout = origStdout
+	}()
 
 	ctx := context.CurrentContext()
 	ctx.SetInputJsonFilePath(configPath)
@@ -271,11 +280,5 @@ func GetMergedConfig(configPath, configDir, mode, osType string) (map[string]int
 	ctx.SetOs(osType)
 	ctx.SetMultiConfig("remove")
 
-	result, err := GenerateMergedJsonConfigMap(ctx)
-
-	w.Close()
-	os.Stdout = origStdout
-	r.Close()
-
-	return result, err
+	return GenerateMergedJsonConfigMap(ctx)
 }

@@ -5,7 +5,6 @@ package debugger
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -26,17 +25,17 @@ type LogFileStatus struct {
 }
 
 func CheckLogs(config map[string]interface{}) LogCheckResult {
-	log.Println("Running CheckLogs...")
+	fmt.Println("Running CheckLogs...")
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Panicked with error: %v", r)
+				fmt.Printf("Panicked with error: %v\n", r)
 			return
 		}
 	}()
 
 	collectList, err := getCollectListFromConfig(config)
 	if err != nil {
-		log.Println("Error: Unable to find valid log collection configuration")
+		fmt.Println("Error: Unable to find valid log collection configuration")
 		return LogCheckResult{
 			Success: false,
 			Message: "Unable to find valid log collection configuration: " + err.Error(),
@@ -44,7 +43,7 @@ func CheckLogs(config map[string]interface{}) LogCheckResult {
 	}
 
 	if len(collectList) == 0 {
-		log.Println("Nothing in collectList")
+		fmt.Println("Nothing in collectList")
 		return LogCheckResult{
 			Success: true,
 			Message: "No log files configured",
@@ -68,12 +67,36 @@ func CheckLogs(config map[string]interface{}) LogCheckResult {
 			continue
 		}
 
-		fileStatus := checkLogPermissions(filePath)
-		result.Files = append(result.Files, fileStatus)
+		// Handle glob patterns in file_path
+		matchedFiles, err := filepath.Glob(filePath)
+		if err != nil {
+			// If glob fails treat as literal path
+			fileStatus := checkLogPermissions(filePath)
+			result.Files = append(result.Files, fileStatus)
+			if !fileStatus.Exists || !fileStatus.Readable {
+				result.Success = false
+			}
+			continue
+		}
 
-		// If any file is not readable, mark the overall check as unsuccessful
-		if !fileStatus.Exists || !fileStatus.Readable {
+		if len(matchedFiles) == 0 {
+			// No files match the pattern
+			fileStatus := LogFileStatus{
+				Path:     filePath,
+				Exists:   false,
+				Readable: false,
+				Message:  fmt.Sprintf("No files match pattern %s", filepath.Base(filePath)),
+			}
+			result.Files = append(result.Files, fileStatus)
 			result.Success = false
+		} else {
+			for _, matchedFile := range matchedFiles {
+				fileStatus := checkLogPermissions(matchedFile)
+				result.Files = append(result.Files, fileStatus)
+				if !fileStatus.Exists || !fileStatus.Readable {
+					result.Success = false
+				}
+			}
 		}
 	}
 
@@ -90,7 +113,7 @@ func checkLogPermissions(filePath string) LogFileStatus {
 	name := filepath.Base(filePath)
 	if _, err := os.Stat(filePath); err != nil {
 		msg := fmt.Sprintf("Configured log file %s does not exist.", name)
-		log.Println(msg)
+		fmt.Println(msg)
 		result.Message = msg
 		return result
 	}
@@ -99,12 +122,12 @@ func checkLogPermissions(filePath string) LogFileStatus {
 
 	if file, err := os.Open(filePath); err != nil {
 		msg := fmt.Sprintf("Agent does not have read permission for log file %s", name)
-		log.Println(msg)
+		fmt.Println(msg)
 		result.Message = msg
 	} else {
 		file.Close()
 		msg := fmt.Sprintf("Log file %s is accessible", name)
-		log.Println(msg)
+		fmt.Println(msg)
 		result.Readable = true
 		result.Message = msg
 	}

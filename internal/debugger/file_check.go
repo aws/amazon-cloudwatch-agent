@@ -5,7 +5,7 @@ package debugger
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,13 +34,13 @@ type ConfigFile struct {
 
 // Checks for existence and readability of key configuration files
 func CheckConfigFiles() {
-	log.Println("Checking Configuration Files:")
+	fmt.Println("Checking Configuration Files:")
 
 	configFiles := getConfigFiles()
 	for _, file := range configFiles {
 		status := checkFileStatus(file.Path)
 		displayName := getDisplayName(file.Path)
-		log.Printf("%-20s [%s] - %s", displayName, status, file.Description)
+		fmt.Printf("%-20s [%s] - %s\n", displayName, status, file.Description)
 	}
 }
 
