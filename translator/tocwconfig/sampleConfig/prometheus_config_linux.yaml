@@ -90,33 +90,40 @@ extensions:
         cluster_name: ecs-cluster-a
         cluster_region: us-west-1
         docker_labels:
-            - job_name_label: ECS_PROMETHEUS_JOB_NAME_1
+            - job_name: ""
+              job_name_label: ECS_PROMETHEUS_JOB_NAME_1
+              metrics_path: ""
               metrics_path_label: ECS_PROMETHEUS_METRICS_PATH
               port_label: ECS_PROMETHEUS_EXPORTER_PORT_SUBSET
-        refresh_interval: 1m
+        job_label_name: ""
+        refresh_interval: 1m0s
         result_file: "{ecsSdFileName}"
         services:
             - container_name_pattern: nginx-prometheus-exporter
               job_name: service_name_1
               metrics_path: /metrics
               metrics_ports:
-                - "9113"
+                - 9113
               name_pattern: .*-application-stack
-            - metrics_path: /stats/metrics
+            - container_name_pattern: ""
+              job_name: ""
+              metrics_path: /stats/metrics
               metrics_ports:
-                - "9114"
+                - 9114
               name_pattern: run-application-stack
         task_definitions:
             - arn_pattern: .*task_def_1:[0-9]+
+              container_name_pattern: ""
               job_name: task_def_1
               metrics_path: /stats/metrics
               metrics_ports:
-                - "9901"
+                - 9901
             - arn_pattern: task_def_2
               container_name_pattern: ^envoy$
+              job_name: ""
               metrics_path: /metrics
               metrics_ports:
-                - "9902"
+                - 9902
     entitystore:
         mode: ec2
         region: us-east-1

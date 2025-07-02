@@ -5,6 +5,7 @@ package ecsobserver
 
 import (
 	"testing"
+	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestTranslator_Translate(t *testing.T) {
 	tests := []struct {
 		name     string
 		config   map[string]interface{}
-		expected *Config
+		expected *ecsobserver.Config
 		wantErr  bool
 	}{
 		{
@@ -82,46 +83,56 @@ func TestTranslator_Translate(t *testing.T) {
 					"endpoint_override": "https://monitoring.us-west-2.amazonaws.com",
 				},
 			},
-			expected: &Config{
-				RefreshInterval: "1m",
+			expected: &ecsobserver.Config{
+				RefreshInterval: time.Minute,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "{ecsSdFileName}",
-				DockerLabels: []*DockerLabelConfig{
+				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
 						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT",
-						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH",
 						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME",
+						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH",
 					},
 				},
-				TaskDefinitions: []TaskDefinitionConfig{
+				TaskDefinitions: []ecsobserver.TaskDefinitionConfig{
 					{
-						ArnPattern:   ".*:task-definition/.*javajmx.*:[0-9]+",
-						MetricsPorts: []string{"9404", "9406"},
-						MetricsPath:  "/metrics",
-						JobName:      "java-prometheus",
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "java-prometheus",
+							MetricsPath:  "/metrics",
+							MetricsPorts: []int{9404, 9406},
+						},
+						ArnPattern:           ".*:task-definition/.*javajmx.*:[0-9]+",
+						ContainerNamePattern: "",
 					},
 					{
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "envoy-prometheus",
+							MetricsPath:  "/stats/prometheus",
+							MetricsPorts: []int{9901},
+						},
 						ArnPattern:           ".*:task-definition/.*appmesh.*:23",
 						ContainerNamePattern: "^envoy$",
-						MetricsPorts:         []string{"9901"},
-						MetricsPath:          "/stats/prometheus",
-						JobName:              "envoy-prometheus",
 					},
 				},
-				Services: []ServiceConfig{
+				Services: []ecsobserver.ServiceConfig{
 					{
-						NamePattern:  "^nginx-.*",
-						MetricsPorts: []string{"9113"},
-						MetricsPath:  "/metrics",
-						JobName:      "nginx-prometheus",
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "nginx-prometheus",
+							MetricsPath:  "/metrics",
+							MetricsPorts: []int{9113},
+						},
+						NamePattern:          "^nginx-.*",
+						ContainerNamePattern: "",
 					},
 					{
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "haproxy-prometheus",
+							MetricsPath:  "/stats/metrics",
+							MetricsPorts: []int{8404},
+						},
 						NamePattern:          ".*haproxy-service.*",
 						ContainerNamePattern: "^haproxy$",
-						MetricsPorts:         []string{"8404"},
-						MetricsPath:          "/stats/metrics",
-						JobName:              "haproxy-prometheus",
 					},
 				},
 			},
@@ -143,16 +154,16 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-			expected: &Config{
-				RefreshInterval: "1m",
+			expected: &ecsobserver.Config{
+				RefreshInterval: time.Minute,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
-				DockerLabels: []*DockerLabelConfig{
+				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
-						PortLabel:        defaultPortLabel,
-						MetricsPathLabel: defaultMetricsPathLabel,
 						JobNameLabel:     defaultJobNameLabel,
+						MetricsPathLabel: defaultMetricsPath,
+						PortLabel:        defaultPortLabel,
 					},
 				},
 			},
@@ -178,16 +189,16 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-			expected: &Config{
-				RefreshInterval: "15s",
+			expected: &ecsobserver.Config{
+				RefreshInterval: 15 * time.Second,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
-				DockerLabels: []*DockerLabelConfig{
+				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
-						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A",
-						MetricsPathLabel: "MY_METRICS_PATH",
 						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME",
+						MetricsPathLabel: "MY_METRICS_PATH",
+						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A",
 					},
 				},
 			},
@@ -223,24 +234,29 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-			expected: &Config{
-				RefreshInterval: "5m",
+			expected: &ecsobserver.Config{
+				RefreshInterval: 5 * time.Minute,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
-				TaskDefinitions: []TaskDefinitionConfig{
+				TaskDefinitions: []ecsobserver.TaskDefinitionConfig{
 					{
-						ArnPattern:   ".*:task-definition/.*javajmx.*:[0-9]+",
-						MetricsPorts: []string{"9404", "9406"},
-						MetricsPath:  "/metrics",
-						JobName:      "java-prometheus",
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "java-prometheus",
+							MetricsPath:  "/metrics",
+							MetricsPorts: []int{9404, 9406},
+						},
+						ArnPattern:           ".*:task-definition/.*javajmx.*:[0-9]+",
+						ContainerNamePattern: "",
 					},
 					{
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "envoy-prometheus",
+							MetricsPath:  "/stats/prometheus",
+							MetricsPorts: []int{9901},
+						},
 						ArnPattern:           ".*:task-definition/.*appmesh.*:23",
 						ContainerNamePattern: "^envoy$",
-						MetricsPorts:         []string{"9901"},
-						MetricsPath:          "/stats/prometheus",
-						JobName:              "envoy-prometheus",
 					},
 				},
 			},
@@ -276,24 +292,29 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-			expected: &Config{
-				RefreshInterval: "5m",
+			expected: &ecsobserver.Config{
+				RefreshInterval: 5 * time.Minute,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
-				Services: []ServiceConfig{
+				Services: []ecsobserver.ServiceConfig{
 					{
-						NamePattern:  "^nginx-.*",
-						MetricsPorts: []string{"9113"},
-						MetricsPath:  "/metrics",
-						JobName:      "nginx-prometheus",
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "nginx-prometheus",
+							MetricsPath:  "/metrics",
+							MetricsPorts: []int{9113},
+						},
+						NamePattern:          "^nginx-.*",
+						ContainerNamePattern: "",
 					},
 					{
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							JobName:      "haproxy-prometheus",
+							MetricsPath:  "/stats/metrics",
+							MetricsPorts: []int{8404},
+						},
 						NamePattern:          ".*haproxy-service.*",
 						ContainerNamePattern: "^haproxy$",
-						MetricsPorts:         []string{"8404"},
-						MetricsPath:          "/stats/metrics",
-						JobName:              "haproxy-prometheus",
 					},
 				},
 			},
@@ -325,23 +346,26 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-			expected: &Config{
-				RefreshInterval: "1m30s",
+			expected: &ecsobserver.Config{
+				RefreshInterval: 90 * time.Second,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
-				DockerLabels: []*DockerLabelConfig{
+				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
-						PortLabel:        "MY_PROMETHEUS_EXPORTER_PORT_LABEL",
-						MetricsPathLabel: "MY_PROMETHEUS_METRICS_PATH_LABEL",
 						JobNameLabel:     "MY_PROMETHEUS_METRICS_NAME_LABEL",
+						MetricsPathLabel: "MY_PROMETHEUS_METRICS_PATH_LABEL",
+						PortLabel:        "MY_PROMETHEUS_EXPORTER_PORT_LABEL",
 					},
 				},
-				TaskDefinitions: []TaskDefinitionConfig{
+				TaskDefinitions: []ecsobserver.TaskDefinitionConfig{
 					{
-						ArnPattern:   "*memcached.*",
-						MetricsPorts: []string{"9150"},
-						MetricsPath:  defaultMetricsPath,
+						CommonExporterConfig: ecsobserver.CommonExporterConfig{
+							MetricsPath:  defaultMetricsPath,
+							MetricsPorts: []int{9150},
+						},
+						ArnPattern:           "*memcached.*",
+						ContainerNamePattern: "",
 					},
 				},
 			},
