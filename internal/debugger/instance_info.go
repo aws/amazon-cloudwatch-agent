@@ -41,7 +41,6 @@ func GetInstanceInfo(ctx context.Context) (*InstanceInfo, error) {
 	versionPath := filepath.Join(paths.AgentDir, "/bin/CWAGENT_VERSION")
 
 	version, _ := os.ReadFile(versionPath)
-	fmt.Printf("CloudWatch Agent Version: %s\n", string(version))
 
 	return &InstanceInfo{
 		InstanceID:       doc.InstanceID,
