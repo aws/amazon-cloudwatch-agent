@@ -1,5 +1,7 @@
-name: Generate EKS Performance Test Cluster
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
 
+name: EKS Performance Test Execution
 env:
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
 

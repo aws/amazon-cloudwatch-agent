@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run EKS Performance Tests
+name: Run EKS Performance Tests List
 env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
