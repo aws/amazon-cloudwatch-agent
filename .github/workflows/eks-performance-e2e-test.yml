@@ -52,26 +52,6 @@ on:
         type: string
 
 jobs:
-  GetLatestOperatorCommitSHA:
-    runs-on: ubuntu-latest
-    outputs:
-      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
-      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-    steps:
-      - name: Checkout the target repo
-        uses: actions/checkout@v3
-        with:
-          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-          ref: ${{ inputs.operator-branch || 'main' }}
-          path: operator-repo
-
-      - name: Get latest commit SHA
-        id: get_latest_sha
-        run: |
-          cd operator-repo
-          latest_sha=$(git rev-parse HEAD)
-          echo "::set-output name=operator_sha::$latest_sha"
-
   GenerateEKSPerformanceCluster:
     name: GenerateEKSPerformanceCluster
     runs-on: ubuntu-latest
