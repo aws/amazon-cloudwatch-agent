@@ -140,7 +140,6 @@ jobs:
       region: ${{ inputs.region || 'us-west-2' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       terraform_dir: terraform/eks/performance
-      terraform_helm_dir: terraform/eks/helm
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
