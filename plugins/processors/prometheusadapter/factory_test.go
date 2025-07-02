@@ -29,7 +29,7 @@ func TestCreateProcessor(t *testing.T) {
 	require.NotNil(t, factory)
 
 	cfg := factory.CreateDefaultConfig()
-	setting := processortest.NewNopSettings()
+	setting := processortest.NewNopSettings(TypeStr)
 
 	tProcessor, err := factory.CreateTraces(context.Background(), setting, cfg, consumertest.NewNop())
 	assert.Equal(t, err, pipeline.ErrSignalNotSupported)
