@@ -11,6 +11,9 @@ on:
       job_id:
         required: true
         type: string
+      cluster_name:
+        required: false
+        type: string
       cloudwatch_agent_repository:
         required: true
         type: string
