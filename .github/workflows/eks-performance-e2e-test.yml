@@ -1,0 +1,152 @@
+name: Generate EKS Performance Test Cluster
+
+env:
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+
+on:
+  workflow_call:
+    inputs:
+      job_id:
+        required: true
+        type: string
+      cloudwatch_agent_repository:
+        required: true
+        type: string
+      cloudwatch_agent_tag:
+        required: true
+        type: string
+      cloudwatch_agent_operator_repository:
+        required: true
+        type: string
+      cloudwatch_agent_target_allocator_repository:
+        required: false
+        type: string
+      cloudwatch_agent_operator_tag:
+        required: true
+        type: string
+      helm_charts_branch:
+        required: true
+        type: string
+      nodes:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      terraform_assume_role:
+        required: true
+        type: string
+      terraform_dir:
+        required: true
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+
+jobs:
+  GetLatestOperatorCommitSHA:
+    runs-on: ubuntu-latest
+    outputs:
+      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
+      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+    steps:
+      - name: Checkout the target repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+          ref: ${{ inputs.operator-branch || 'main' }}
+          path: operator-repo
+
+      - name: Get latest commit SHA
+        id: get_latest_sha
+        run: |
+          cd operator-repo
+          latest_sha=$(git rev-parse HEAD)
+          echo "::set-output name=operator_sha::$latest_sha"
+
+  GenerateEKSPerformanceCluster:
+    name: GenerateEKSPerformanceCluster
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/performance
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="region=${{ inputs.region }}" \
+              -var="cluster_name=${{ inputs.cluster_name }}" \
+              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
+              -var="nodes=${{ inputs.nodes }}" \
+              -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
+              -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
+              -var="cloudwatch_agent_operator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}" \
+              -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
+              -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
+              -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}"
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/performance
+            fi
+            terraform destroy --auto-approve
