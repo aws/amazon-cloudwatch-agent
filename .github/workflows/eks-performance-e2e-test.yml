@@ -33,7 +33,10 @@ on:
         required: true
         type: string
       nodes:
-        required: true
+        required: false
+        type: string
+      node_groups:
+        required: false
         type: string
       region:
         required: true
