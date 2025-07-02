@@ -133,7 +133,6 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 30s
-    prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
     prometheus/prometheus/cloudwatchlogs:
         config:
@@ -143,11 +142,13 @@ receivers:
                 scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
                     - PrometheusText0.0.4
                 scrape_timeout: 5s
             scrape_configs:
                 - enable_compression: true
                   enable_http2: true
+                  fallback_scrape_protocol: PrometheusText0.0.4
                   file_sd_configs:
                     - files:
                       - {ecsSdFileName}
@@ -162,6 +163,7 @@ receivers:
                   scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
                     - PrometheusText0.0.4
                   scrape_timeout: 5s
                   track_timestamps_staleness: false
@@ -180,7 +182,6 @@ service:
             exporters:
                 - awsemf/prometheus
             processors:
-                - prometheusadapter/prometheus/cloudwatchlogs
                 - batch/prometheus/cloudwatchlogs
             receivers:
                 - prometheus/prometheus/cloudwatchlogs
