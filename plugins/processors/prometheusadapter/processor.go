@@ -10,8 +10,10 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/prometheusadapter/internal"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
 	"github.com/prometheus/common/model"
@@ -38,15 +40,13 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 
 	md.ResourceMetrics().RemoveIf(func(rm pmetric.ResourceMetrics) bool {
 		rma := rm.Resource().Attributes()
-		sms := rm.ScopeMetrics()
-		sms.RemoveIf(func(sm pmetric.ScopeMetrics) bool {
-			metrics := sm.Metrics()
-			metrics.RemoveIf(func(m pmetric.Metric) bool {
+		rm.ScopeMetrics().RemoveIf(func(sm pmetric.ScopeMetrics) bool {
+			sm.Metrics().RemoveIf(func(m pmetric.Metric) bool {
 				return d.processMetric(m, rma)
 			})
-			return metrics.Len() == 0
+			return sm.Metrics().Len() == 0
 		})
-		return sms.Len() == 0
+		return rm.ScopeMetrics().Len() == 0
 	})
 
 	d.postprocessFilter(md)
@@ -55,31 +55,25 @@ func (d *prometheusAdapterProcessor) processMetrics(_ context.Context, md pmetri
 }
 
 func (d *prometheusAdapterProcessor) preprocessFilter(md pmetric.Metrics) {
-	rms := md.ResourceMetrics()
-	for i := 0; i < rms.Len(); i++ {
-		rm := rms.At(i)
-		sms := rm.ScopeMetrics()
-		for j := 0; j < sms.Len(); j++ {
-			sm := sms.At(j)
-			metrics := sm.Metrics()
 
-			const (
-				keep = false
-				drop = true
-			)
+	md.ResourceMetrics().RemoveIf(func(rm pmetric.ResourceMetrics) bool {
+		rm.ScopeMetrics().RemoveIf(func(sm pmetric.ScopeMetrics) bool {
+			sm.Metrics().RemoveIf(func(m pmetric.Metric) bool {
 
-			metrics.RemoveIf(func(m pmetric.Metric) bool {
+				const (
+					keep = false
+					drop = true
+				)
 
 				// for backwards compatibility with legacy Telegraf receiver, we want to drop some extraneous metrics
-				extraneousMetrics := map[string]struct{}{
+				extraneousMetrics := collections.Set[string]{
 					"scrape_duration_seconds":               {},
 					"scrape_samples_post_metric_relabeling": {},
 					"scrape_samples_scraped":                {},
 					"scrape_series_added":                   {},
 					"up":                                    {},
 				}
-				_, ok := extraneousMetrics[m.Name()]
-				if ok {
+				if _, ok := extraneousMetrics[m.Name()]; ok {
 					return drop
 				}
 
@@ -92,11 +86,15 @@ func (d *prometheusAdapterProcessor) preprocessFilter(md pmetric.Metrics) {
 
 				return keep
 			})
-		}
-	}
+			return sm.Metrics().Len() == 0
+		})
+		return rm.ScopeMetrics().Len() == 0
+	})
+
 }
 
 func (d *prometheusAdapterProcessor) postprocessFilter(md pmetric.Metrics) {
+
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rm := rms.At(i)
@@ -105,20 +103,21 @@ func (d *prometheusAdapterProcessor) postprocessFilter(md pmetric.Metrics) {
 		// Remove extraneous resource attributes
 		// This must be done after processing metrics so that the resource attributes can be moved to datapoint attributes
 		rma.RemoveIf(func(key string, value pcommon.Value) bool {
-			extraneousAttributes := map[string]struct{}{
-				"http.scheme":         {},
-				"net.host.port":       {},
-				"net.host.name":       {},
-				"server.port":         {},
-				"server.address":      {},
-				"service.instance.id": {},
-				"service.name":        {},
-				"url.scheme":          {},
+			extraneousAttributes := collections.Set[string]{
+				string(semconv.HTTPSchemeKey):        {},
+				string(semconv.NetHostPortKey):       {},
+				string(semconv.NetHostNameKey):       {},
+				string(semconv.ServerPortKey):        {},
+				string(semconv.ServerAddressKey):     {},
+				string(semconv.ServiceInstanceIDKey): {},
+				string(semconv.ServiceNameKey):       {},
+				string(semconv.URLSchemeKey):         {},
 			}
 			_, ok := extraneousAttributes[key]
 			return ok
 		})
 	}
+
 }
 
 func (d *prometheusAdapterProcessor) processMetric(m pmetric.Metric, rma pcommon.Map) bool {
@@ -182,10 +181,10 @@ func updateDatapointAttributes(attr pcommon.Map, typ pmetric.MetricType, rma pco
 		attr.PutStr("host", hostname)
 	}
 
-	if serviceName, ok := rma.Get("service.name"); ok {
+	if serviceName, ok := rma.Get(string(semconv.ServiceNameKey)); ok {
 		attr.PutStr("job", serviceName.AsString())
 	}
-	if serviceInstanceId, ok := rma.Get("service.instance.id"); ok {
+	if serviceInstanceId, ok := rma.Get(string(semconv.ServiceInstanceIDKey)); ok {
 		attr.PutStr("instance", serviceInstanceId.AsString())
 	}
 
