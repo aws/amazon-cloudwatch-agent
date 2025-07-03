@@ -18,6 +18,7 @@ import (
 type Flag struct {
 	DefaultValue string
 	Description  string
+	IsBool       bool
 }
 
 const delimiter = "-"
@@ -55,7 +56,21 @@ func AddFlags(prefix string, flagConfigs map[string]Flag) map[string]*string {
 		if prefix != "" {
 			flagName = prefix + delimiter + flagName
 		}
-		flags[key] = flag.String(flagName, flagConfig.DefaultValue, flagConfig.Description)
+		if flagConfig.IsBool {
+			strPtr := new(string)
+			*strPtr = flagConfig.DefaultValue
+			flag.BoolFunc(flagName, flagConfig.Description, func(value string) error {
+				if value == "" || value == "true" {
+					*strPtr = "true"
+				} else {
+					*strPtr = "false"
+				}
+				return nil
+			})
+			flags[key] = strPtr
+		} else {
+			flags[key] = flag.String(flagName, flagConfig.DefaultValue, flagConfig.Description)
+		}
 	}
 	return flags
 }
@@ -64,8 +79,14 @@ func ExecuteAgentCommand(command string, flags map[string]*string) error {
 	args := []string{fmt.Sprintf("-%s", command)}
 
 	for key, value := range flags {
-		if *value != "" {
-			args = append(args, fmt.Sprintf("-%s%s%s", command, delimiter, key), *value)
+		if *value != "" && *value != "false" {
+			if *value == "true" {
+				// For boolean flags, just add the flag name without value
+				args = append(args, fmt.Sprintf("-%s%s%s", command, delimiter, key))
+			} else {
+				// For string flags, add both flag name and value
+				args = append(args, fmt.Sprintf("-%s%s%s", command, delimiter, key), *value)
+			}
 		}
 	}
 
