@@ -20,13 +20,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -105,9 +108,16 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	switch determinePipeline(t.name) {
 	case common.PipelineNameHostOtlpMetrics:
-		// TODO: For OTLP, the entity processor is only on K8S for now. Eventually this should be added to EC2
 		if currentContext.KubernetesMode() != "" {
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
+			translators.Extensions.Set(k8smetadata.NewTranslator())
+		} else if currentContext.Mode() == config.ModeEC2 {
+			switch t.Destination() {
+			case common.DefaultDestination, common.CloudWatchKey:
+				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
+			case common.CloudWatchLogsKey:
+				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchLogsKey, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
+			}
 		}
 	case common.PipelineNameHostCustomMetrics:
 		if !currentContext.RunInContainer() {
@@ -136,6 +146,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 			translators.Processors.Set(rollupprocessor.NewTranslator())
 		}
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics
+		translators.Processors.Set(deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
 	case common.CloudWatchLogsKey:

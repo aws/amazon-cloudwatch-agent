@@ -971,6 +971,13 @@
                   "auto_removal": {
                     "type": "boolean"
                   },
+                  "backpressure_mode": {
+                    "description": "Define the strategy during backpressure condition",
+                    "type": "string",
+                    "enum": [
+                      "fd_release"
+                    ]
+                  },
                   "blacklist": {
                     "type": "string",
                     "minLength": 1,
@@ -1345,6 +1352,18 @@
         },
         "tls": {
           "$ref": "#/definitions/tlsDefinitions"
+        },
+        "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 259
         }
       },
       "additionalProperties": false

@@ -54,6 +54,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
@@ -91,9 +92,6 @@ service:
                 - telegraf_nvidia_smi
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -104,7 +102,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

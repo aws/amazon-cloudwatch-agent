@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resolver
+package k8sclient
 
 import (
 	"errors"
@@ -54,7 +54,7 @@ func getServiceAndNamespace(service *corev1.Service) string {
 	return attachNamespace(service.Name, service.Namespace)
 }
 
-func extractResourceAndNamespace(serviceOrWorkloadAndNamespace string) (string, string) {
+func ExtractResourceAndNamespace(serviceOrWorkloadAndNamespace string) (string, string) {
 	// extract service name and namespace from serviceAndNamespace
 	parts := strings.Split(serviceOrWorkloadAndNamespace, "@")
 	if len(parts) != 2 {
@@ -81,7 +81,7 @@ func extractWorkloadNameFromPodName(podName string) (string, error) {
 	return "", errors.New("failed to extract workload name from pod name: " + podName)
 }
 
-func getWorkloadAndNamespace(pod *corev1.Pod) string {
+func GetWorkloadAndNamespace(pod *corev1.Pod) string {
 	var workloadAndNamespace string
 	if pod.ObjectMeta.OwnerReferences != nil {
 		for _, ownerRef := range pod.ObjectMeta.OwnerReferences {
@@ -124,7 +124,7 @@ func getWorkloadAndNamespace(pod *corev1.Pod) string {
 //   - https://github.com/kubernetes/kubernetes/issues/116447#issuecomment-1530652258
 //
 // For that, we fall back to use service name as last defense.
-func inferWorkloadName(podName, fallbackServiceName string) string {
+func InferWorkloadName(podName, fallbackServiceName string) string {
 	// 1) Check if it's a StatefulSet pod: <stsName>-<ordinal>
 	if matches := reStatefulSet.FindStringSubmatch(podName); matches != nil {
 		return matches[1] // e.g. "mysql-0" => "mysql"
@@ -153,11 +153,11 @@ func inferWorkloadName(podName, fallbackServiceName string) string {
 	return podName
 }
 
-const IP_PORT_PATTERN = `^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$`
+const IPPortPattern = `^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$`
 
-var ipPortRegex = regexp.MustCompile(IP_PORT_PATTERN)
+var ipPortRegex = regexp.MustCompile(IPPortPattern)
 
-func extractIPPort(ipPort string) (string, string, bool) {
+func ExtractIPPort(ipPort string) (string, string, bool) {
 	match := ipPortRegex.MatchString(ipPort)
 
 	if !match {
@@ -175,7 +175,7 @@ func extractIPPort(ipPort string) (string, string, bool) {
 	return ip, port, true
 }
 
-func getHostNetworkPorts(pod *corev1.Pod) []string {
+func GetHostNetworkPorts(pod *corev1.Pod) []string {
 	var ports []string
 	if !pod.Spec.HostNetwork {
 		return ports
@@ -190,26 +190,26 @@ func getHostNetworkPorts(pod *corev1.Pod) []string {
 	return ports
 }
 
-func isIP(ipString string) bool {
+func IsIP(ipString string) bool {
 	ip := net.ParseIP(ipString)
 	return ip != nil
 }
 
 // a safe channel which can be closed multiple times
-type safeChannel struct {
+type SafeChannel struct {
 	sync.Mutex
 
-	ch     chan struct{}
-	closed bool
+	Ch     chan struct{}
+	Closed bool
 }
 
-func (sc *safeChannel) Close() {
+func (sc *SafeChannel) Close() {
 	sc.Lock()
 	defer sc.Unlock()
 
-	if !sc.closed {
-		close(sc.ch)
-		sc.closed = true
+	if !sc.Closed {
+		close(sc.Ch)
+		sc.Closed = true
 	}
 }
 
@@ -227,5 +227,50 @@ func (td *TimedDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
 	go func() {
 		time.Sleep(td.Delay)
 		m.Delete(key)
+	}()
+}
+
+type UUIDValue interface {
+	UUID() string
+}
+
+// TimedDeleterWithIDCheck deletes a key from a sync.Map after a specified delay,
+// but only if the value associated with the key has not been updated (i.e. its UUID is unchanged).
+// Please note TimedDeleterWithIDCheck only work with UUIDValue as value type
+type TimedDeleterWithIDCheck struct {
+	Delay time.Duration
+}
+
+// DeleteWithDelay schedules the deletion of key from map m after the delay.
+// It only deletes the key if the value's UUID remains the same.
+func (td *TimedDeleterWithIDCheck) DeleteWithDelay(m *sync.Map, key interface{}) {
+	// Attempt to load the value for the key.
+	deleteVal, ok := m.Load(key)
+	if !ok {
+		return
+	}
+
+	// The stored value must be of type UUIDValue.
+	initialVal, ok := deleteVal.(UUIDValue)
+	if !ok {
+		return
+	}
+
+	go func() {
+		time.Sleep(td.Delay)
+		// Check if the key still exists.
+		currentValRaw, ok := m.Load(key)
+		if !ok {
+			return
+		}
+		currentVal, ok := currentValRaw.(UUIDValue)
+		if !ok {
+			return
+		}
+
+		// Compare the UUIDs of the initial value and the current value.
+		if currentVal.UUID() == initialVal.UUID() {
+			m.Delete(key)
+		}
 	}()
 }

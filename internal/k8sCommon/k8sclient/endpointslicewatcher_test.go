@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resolver
+package k8sclient
 
 import (
 	"fmt"
@@ -18,12 +18,21 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func newEndpointSliceWatcherForTest() *endpointSliceWatcher {
-	return &endpointSliceWatcher{
-		logger:            zap.NewNop(),
-		ipToWorkload:      &sync.Map{},
-		serviceToWorkload: &sync.Map{},
-		deleter:           mockDeleter,
+// MockDeleter deletes a key immediately, useful for testing.
+type MockDeleter struct{}
+
+func (md *MockDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
+	m.Delete(key)
+}
+
+var mockDeleter = &MockDeleter{}
+
+func newEndpointSliceWatcherForTest() *EndpointSliceWatcher {
+	return &EndpointSliceWatcher{
+		logger:                        zap.NewNop(),
+		ipToPodMetadata:               &sync.Map{},
+		serviceNamespaceToPodMetadata: &sync.Map{},
+		deleter:                       mockDeleter,
 	}
 }
 
@@ -70,6 +79,14 @@ func createTestEndpointSlice(uid, namespace, svcName, podName string, addresses 
 	}
 }
 
+// comparePodMetadataContent compares the content of two podMetadata objects
+// Returns true if the content is equal, false otherwise
+func comparePodMetadataContent(pod1, pod2 PodMetadata) bool {
+	return pod1.Workload == pod2.Workload &&
+		pod1.Namespace == pod2.Namespace &&
+		pod1.Node == pod2.Node
+}
+
 // --- Tests ---
 
 // TestEndpointSliceAddition verifies that when a new EndpointSlice is added,
@@ -88,8 +105,8 @@ func TestEndpointSliceAddition(t *testing.T) {
 	// Call the add handler.
 	watcher.handleSliceAdd(slice)
 
-	// The dummy inferWorkloadName returns "workload", so full workload becomes "workload@testns"
-	expectedVal := "workload@testns"
+	// The dummy InferWorkloadName returns "workload", so full workload becomes {Workload: "workload", Namespace: "testns", Node: ""}
+	expectedVal := NewPodMetadata("workload", "testns", "")
 
 	// We expect the following keys:
 	// - For the endpoint: "1.2.3.4" and "1.2.3.4:80"
@@ -97,18 +114,18 @@ func TestEndpointSliceAddition(t *testing.T) {
 	var expectedIPKeys = []string{"1.2.3.4", "1.2.3.4:80"}
 	var expectedSvcKeys = []string{"mysvc@testns"}
 
-	// Verify ipToWorkload.
+	// Verify ipToPodMetadata.
 	for _, key := range expectedIPKeys {
-		val, ok := watcher.ipToWorkload.Load(key)
-		assert.True(t, ok, "expected ipToWorkload key %s", key)
-		assert.Equal(t, expectedVal, val, "ipToWorkload[%s] mismatch", key)
+		val, ok := watcher.ipToPodMetadata.Load(key)
+		assert.True(t, ok, "expected ipToPodMetadata key %s", key)
+		assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "ipToPodMetadata[%s] mismatch", key)
 	}
 
-	// Verify serviceToWorkload.
+	// Verify serviceNamespaceToPodMetadata.
 	for _, key := range expectedSvcKeys {
-		val, ok := watcher.serviceToWorkload.Load(key)
-		assert.True(t, ok, "expected serviceToWorkload key %s", key)
-		assert.Equal(t, expectedVal, val, "serviceToWorkload[%s] mismatch", key)
+		val, ok := watcher.serviceNamespaceToPodMetadata.Load(key)
+		assert.True(t, ok, "expected serviceNamespaceToPodMetadata key %s", key)
+		assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "serviceNamespaceToPodMetadata[%s] Workload mismatch", key)
 	}
 
 	// Verify that sliceToKeysMap recorded all keys.
@@ -134,13 +151,13 @@ func TestEndpointSliceDeletion(t *testing.T) {
 	// Now call deletion.
 	watcher.handleSliceDelete(slice)
 
-	// Verify that the keys are removed from ipToWorkload.
+	// Verify that the keys are removed from ipToPodMetadata.
 	removedKeys := []string{"1.2.3.4", "1.2.3.4:80", "mysvc@testns"}
 	for _, key := range removedKeys {
-		_, ok := watcher.ipToWorkload.Load(key)
-		_, okSvc := watcher.serviceToWorkload.Load(key)
-		assert.False(t, ok, "expected ipToWorkload key %s to be deleted", key)
-		assert.False(t, okSvc, "expected serviceToWorkload key %s to be deleted", key)
+		_, ok := watcher.ipToPodMetadata.Load(key)
+		_, okSvc := watcher.serviceNamespaceToPodMetadata.Load(key)
+		assert.False(t, ok, "expected ipToPodMetadata key %s to be deleted", key)
+		assert.False(t, okSvc, "expected serviceNamespaceToPodMetadata key %s to be deleted", key)
 	}
 
 	// Also verify that sliceToKeysMap no longer contains an entry.
@@ -167,16 +184,16 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		// Call update handler.
 		watcher.handleSliceUpdate(oldSlice, newSlice)
 
-		expectedVal := "workload@testns"
+		expectedVal := NewPodMetadata("workload", "testns", "")
 
 		// Old keys that should be removed:
 		// "1.2.3.4" and "1.2.3.4:80" and service key "mysvc@testns"
 		removedKeys := []string{"1.2.3.4", "1.2.3.4:80", "mysvc@testns"}
 		for _, key := range removedKeys {
-			_, ok := watcher.ipToWorkload.Load(key)
-			_, okSvc := watcher.serviceToWorkload.Load(key)
-			assert.False(t, ok, "expected ipToWorkload key %s to be removed", key)
-			assert.False(t, okSvc, "expected serviceToWorkload key %s to be removed", key)
+			_, ok := watcher.ipToPodMetadata.Load(key)
+			_, okSvc := watcher.serviceNamespaceToPodMetadata.Load(key)
+			assert.False(t, ok, "expected ipToPodMetadata key %s to be removed", key)
+			assert.False(t, okSvc, "expected serviceNamespaceToPodMetadata key %s to be removed", key)
 		}
 
 		// New keys that should be added:
@@ -185,14 +202,15 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		for _, key := range addedKeys {
 			var val interface{}
 			var ok bool
-			// For service key, check serviceToWorkload; for others, check ipToWorkload.
+			// For service key, check serviceNamespaceToPodMetadata; for others, check ipToPodMetadata.
 			if key == "othersvc@testns" {
-				val, ok = watcher.serviceToWorkload.Load(key)
+				val, ok = watcher.serviceNamespaceToPodMetadata.Load(key)
 			} else {
-				val, ok = watcher.ipToWorkload.Load(key)
+				val, ok = watcher.ipToPodMetadata.Load(key)
 			}
 			assert.True(t, ok, "expected key %s to be added", key)
-			assert.Equal(t, expectedVal, val, "value for key %s mismatch", key)
+			// assert.Equal(t, expectedVal, val, "value for key %s mismatch", key)
+			assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "value for key %s mismatch", key)
 		}
 
 		// Check that sliceToKeysMap now contains exactly the new keys.
@@ -264,7 +282,7 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		// Call update handler.
 		watcher.handleSliceUpdate(oldSlice, newSlice)
 
-		expectedVal := "workload@testns"
+		expectedVal := NewPodMetadata("workload", "testns", "")
 		// Expected keys now:
 		// From endpoint 1: "1.2.3.4", "1.2.3.4:80"
 		// From endpoint 2: "1.2.3.5", "1.2.3.5:80"
@@ -274,14 +292,16 @@ func TestEndpointSliceUpdate(t *testing.T) {
 
 		// Verify that all expected keys are present.
 		for _, key := range expectedKeysIP {
-			val, ok := watcher.ipToWorkload.Load(key)
-			assert.True(t, ok, "expected ipToWorkload key %s", key)
-			assert.Equal(t, expectedVal, val, "ipToWorkload[%s] mismatch", key)
+			val, ok := watcher.ipToPodMetadata.Load(key)
+			assert.True(t, ok, "expected ipToPodMetadata key %s", key)
+			// assert.Equal(t, expectedVal, val, "ipToPodMetadata[%s] mismatch", key)
+			assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "ipToPodMetadata[%s] mismatch", key)
 		}
 		for _, key := range expectedKeysSvc {
-			val, ok := watcher.serviceToWorkload.Load(key)
-			assert.True(t, ok, "expected serviceToWorkload key %s", key)
-			assert.Equal(t, expectedVal, val, "serviceToWorkload[%s] mismatch", key)
+			val, ok := watcher.serviceNamespaceToPodMetadata.Load(key)
+			assert.True(t, ok, "expected serviceNamespaceToPodMetadata key %s", key)
+			// assert.Equal(t, expectedVal, val, "serviceNamespaceToPodMetadata[%s] mismatch", key)
+			assert.True(t, comparePodMetadataContent(expectedVal, val.(PodMetadata)), "serviceNamespaceToPodMetadata[%s] mismatch", key)
 		}
 
 		// And check that sliceToKeysMap contains the union of the keys.
@@ -292,5 +312,35 @@ func TestEndpointSliceUpdate(t *testing.T) {
 		sort.Strings(gotKeys)
 		sort.Strings(allExpected)
 		assert.True(t, reflect.DeepEqual(allExpected, gotKeys), "sliceToKeysMap keys mismatch, got: %v, want: %v", gotKeys, allExpected)
+	})
+}
+
+func TestEndpointSliceWithEmptyFields(t *testing.T) {
+	t.Run("empty namespace", func(t *testing.T) {
+		watcher := newEndpointSliceWatcherForTest()
+
+		// Create a test EndpointSlice with empty namespace
+		slice := createTestEndpointSlice("uid-1", "", "mysvc", "workload-69dww", []string{"1.2.3.4"}, []int32{80})
+
+		// Call the add handler
+		watcher.handleSliceAdd(slice)
+
+		// Verify that no service entries were added since namespace is empty
+		_, ok := watcher.serviceNamespaceToPodMetadata.Load("mysvc@")
+		assert.False(t, ok, "expected no serviceNamespaceToPodMetadata entry when namespace is empty")
+	})
+
+	t.Run("empty service name", func(t *testing.T) {
+		watcher := newEndpointSliceWatcherForTest()
+
+		// Create a test EndpointSlice with empty service name
+		slice := createTestEndpointSlice("uid-2", "testns", "", "workload-69dww", []string{"1.2.3.4"}, []int32{80})
+
+		// Call the add handler
+		watcher.handleSliceAdd(slice)
+
+		// Verify that no service entries were added since service name is empty
+		_, ok := watcher.serviceNamespaceToPodMetadata.Load("@testns")
+		assert.False(t, ok, "expected no serviceNamespaceToPodMetadata entry when service name is empty")
 	})
 }

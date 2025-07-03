@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,6 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -30,6 +33,8 @@ type tailerTestResources struct {
 	consumed  *int32
 	file      *os.File
 	statefile *os.File
+	tailer    *tail.Tail
+	ts        *tailerSrc
 }
 
 func TestTailerSrc(t *testing.T) {
@@ -58,9 +63,16 @@ func TestTailerSrc(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
+
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination", statefile.Name(),
+		"destination", m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -72,6 +84,7 @@ func TestTailerSrc(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -143,7 +156,7 @@ func TestTailerSrc(t *testing.T) {
 	assert.Eventually(t, func() bool { return tail.OpenFileCount.Load() <= beforeCount }, 3*time.Second, time.Second)
 }
 
-func TestOffsetDoneCallBack(t *testing.T) {
+func TestStatefulLogEvent(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
 
@@ -169,10 +182,16 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
 
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
-		statefile.Name(),
+		m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -184,6 +203,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 		1,
+		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -195,13 +215,15 @@ func TestOffsetDoneCallBack(t *testing.T) {
 			close(done)
 			return
 		}
-		evt.Done()
+		sle, ok := evt.(logs.StatefulLogEvent)
+		assert.True(t, ok)
+		sle.RangeQueue().Enqueue(sle.Range())
 		i++
 		switch i {
 		case 10:
 			// Test before first truncate
 			time.Sleep(1 * time.Second)
-			b, err := os.ReadFile(statefile.Name())
+			b, err := os.ReadFile(stateFilePath)
 			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
 			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
 			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
@@ -209,8 +231,8 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		case 15:
 			// Test after first truncate, saved offset should decrease
 			time.Sleep(1 * time.Second)
-			log.Println(statefile.Name())
-			b, err := os.ReadFile(statefile.Name())
+			log.Println(stateFilePath)
+			b, err := os.ReadFile(stateFilePath)
 			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
 			file_parts := bytes.Split(b, []byte("\n"))
 			log.Println("file_parts: ", file_parts)
@@ -221,7 +243,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 			require.Equal(t, offset, 505, fmt.Sprintf("Wrong offset %v is written to state file, after truncate and write shorter logs expecting 505", offset))
 		case 35:
 			time.Sleep(1 * time.Second)
-			b, err := os.ReadFile(statefile.Name())
+			b, err := os.ReadFile(stateFilePath)
 			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
 			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
 			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
@@ -276,7 +298,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	resources := setupTailer(t, nil, defaultMaxEventSize)
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, "")
 	defer teardown(resources)
 
 	n := 100
@@ -299,6 +321,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		t,
 		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
 		defaultMaxEventSize,
+		false, "",
 	)
 	defer teardown(resources)
 
@@ -354,7 +377,7 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, autoRemoval bool, backpressureDrop logscommon.BackpressureMode) tailerTestResources {
 	done := make(chan struct{})
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -388,15 +411,22 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	}
 	err = config.init()
 	assert.NoError(t, err)
+
+	stateFilePath := statefile.Name()
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(stateFilePath),
+		Name:         filepath.Base(stateFilePath),
+	})
+
 	ts := NewTailerSrc(
 		t.Name(),
 		t.Name(),
 		"destination",
+		m,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
-		statefile.Name(),
 		tailer,
-		false, // AutoRemoval
+		autoRemoval,
 		multiLineFn,
 		config.Filters,
 		parseRFC3339Timestamp,
@@ -404,6 +434,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		maxEventSize,
 		defaultTruncateSuffix,
 		1,
+		backpressureDrop,
 	)
 
 	ts.SetOutput(func(evt logs.LogEvent) {
@@ -420,6 +451,8 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		consumed:  &consumed,
 		file:      file,
 		statefile: statefile,
+		tailer:    tailer,
+		ts:        ts,
 	}
 }
 
@@ -464,6 +497,86 @@ func resetState(originWaitDuration time.Duration) {
 }
 
 func teardown(resources tailerTestResources) {
+	if resources.file != nil {
+		resources.file.Close()
+	}
+	if resources.statefile != nil {
+		resources.statefile.Close()
+	}
 	os.Remove(resources.file.Name())
 	os.Remove(resources.statefile.Name())
+
+	// Wait for file operations to complete
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
+	resources := setupTailer(t, nil, defaultMaxEventSize, false, logscommon.LogBackpressureModeFDRelease)
+
+	doneCh := make(chan struct{})
+	var consumed int32
+	blockCh := make(chan struct{})
+
+	defer func() {
+		close(blockCh)
+		time.Sleep(100 * time.Millisecond)
+		resources.ts.Stop()
+		<-doneCh
+		teardown(resources)
+	}()
+
+	initialCount := tail.OpenFileCount.Load()
+	resources.ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(doneCh)
+			return
+		}
+		atomic.AddInt32(&consumed, 1)
+		t.Logf("Processed log: %s", evt.Message())
+		select {
+		case <-blockCh:
+			return
+		default:
+			<-blockCh
+		}
+	})
+
+	// Write logs to fill the buffer
+	logCount := defaultBufferSize + 5
+	for i := 0; i < logCount; i++ {
+		_, err := fmt.Fprintf(resources.file, "ERROR: Test log line %d\n", i)
+		require.NoError(t, err)
+	}
+	resources.file.Sync()
+
+	// Wait for buffer to fill and file operations to complete
+	maxRetries := 10
+	var currentCount int64
+	for i := 0; i < maxRetries; i++ {
+		time.Sleep(100 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		if currentCount <= initialCount {
+			break
+		}
+	}
+
+	t.Logf("OpenFileCount after buffer full: %d", currentCount)
+	assert.LessOrEqual(t, currentCount, initialCount, "File count should not increase when buffer is full")
+
+	// Allow processing to continue
+	for i := 0; i < 3; i++ {
+		blockCh <- struct{}{}
+		time.Sleep(50 * time.Millisecond)
+		currentCount = tail.OpenFileCount.Load()
+		t.Logf("OpenFileCount during processing %d: %d", i, currentCount)
+	}
+
+	// Verify that some logs were processed
+	processedCount := atomic.LoadInt32(&consumed)
+	t.Logf("Processed %d logs", processedCount)
+	assert.Greater(t, processedCount, int32(0), "Should have processed some logs")
+
+	// Final check of OpenFileCount
+	finalCount := tail.OpenFileCount.Load()
+	assert.LessOrEqual(t, finalCount, initialCount, "File count should not increase")
 }

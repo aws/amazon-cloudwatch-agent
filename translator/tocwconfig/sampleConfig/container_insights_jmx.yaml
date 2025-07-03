@@ -1,5 +1,6 @@
 exporters:
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -7,6 +8,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: ""
         enhanced_container_insights: false
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -109,6 +111,7 @@ exporters:
         role_arn: ""
         version: "0"
     awsemf/containerinsightsjmx:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -116,6 +119,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: ""
         enhanced_container_insights: false
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: /aws/containerinsights/{ClusterName}/jmx
@@ -193,6 +197,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -471,9 +478,11 @@ processors:
         log_statements: []
         metric_statements:
             - context: resource
+              error_mode: ""
               statements:
                 - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
             - context: metric
+              error_mode: ""
               statements:
                 - set(unit, "Bytes") where name == "jvm.memory.heap.used"
                 - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
@@ -509,6 +518,7 @@ receivers:
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
+        external_id: ""
         host_ip: ""
         host_name: ""
         imds_retries: 1
@@ -530,14 +540,12 @@ receivers:
     otlp/jmx:
         protocols:
             http:
+                cors: {}
                 endpoint: 0.0.0.0:4314
                 idle_timeout: 0s
-                include_metadata: false
                 logs_url_path: /v1/logs
-                max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                read_timeout: 0s
                 traces_url_path: /v1/traces
                 write_timeout: 0s
 service:
@@ -552,6 +560,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         metrics/containerinsightsjmx:
@@ -567,9 +576,6 @@ service:
                 - otlp/jmx
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: debug
             sampling:
@@ -578,7 +584,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

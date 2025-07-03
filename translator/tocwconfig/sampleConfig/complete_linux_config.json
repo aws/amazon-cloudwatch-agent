@@ -154,7 +154,8 @@
           "writes",
           "read_time",
           "write_time",
-          "io_time"
+          "io_time",
+          "ebs_total_read_bytes"
         ],
         "metrics_collection_interval": 60
       },
@@ -259,7 +260,8 @@
             "log_stream_name": "amazon-cloudwatch-agent.log",
             "timezone": "UTC",
             "trim_timestamp": true,
-            "retention_in_days": 5
+            "retention_in_days": 5,
+            "backpressure_mode": "fd_release"
           },
           {
             "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",

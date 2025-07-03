@@ -12,27 +12,29 @@ import (
 
 const (
 	//the following are the names of environment variables
-	HTTP_PROXY                = "HTTP_PROXY"
-	HTTPS_PROXY               = "HTTPS_PROXY"
-	NO_PROXY                  = "NO_PROXY"
-	AWS_CA_BUNDLE             = "AWS_CA_BUNDLE"
-	AWS_SDK_LOG_LEVEL         = "AWS_SDK_LOG_LEVEL"
-	CWAGENT_USER_AGENT        = "CWAGENT_USER_AGENT"
-	CWAGENT_LOG_LEVEL         = "CWAGENT_LOG_LEVEL"
-	CWAGENT_USAGE_DATA        = "CWAGENT_USAGE_DATA"
-	IMDS_NUMBER_RETRY         = "IMDS_NUMBER_RETRY"
-	RunInContainer            = "RUN_IN_CONTAINER"
-	RunAsHostProcessContainer = "RUN_AS_HOST_PROCESS_CONTAINER"
-	RunInAWS                  = "RUN_IN_AWS"
-	RunWithIRSA               = "RUN_WITH_IRSA"
-	RunWithSELinux            = "RUN_WITH_SELINUX"
-	UseDefaultConfig          = "USE_DEFAULT_CONFIG"
-	HostName                  = "HOST_NAME"
-	PodName                   = "POD_NAME"
-	HostIP                    = "HOST_IP"
-	CWConfigContent           = "CW_CONFIG_CONTENT"
-	CWOtelConfigContent       = "CW_OTEL_CONFIG_CONTENT"
-	CWAgentMergedOtelConfig   = "CWAGENT_MERGED_OTEL_CONFIG"
+	HTTP_PROXY                  = "HTTP_PROXY"         //nolint:revive
+	HTTPS_PROXY                 = "HTTPS_PROXY"        //nolint:revive
+	NO_PROXY                    = "NO_PROXY"           //nolint:revive
+	AWS_CA_BUNDLE               = "AWS_CA_BUNDLE"      //nolint:revive
+	AWS_SDK_LOG_LEVEL           = "AWS_SDK_LOG_LEVEL"  //nolint:revive
+	CWAGENT_USER_AGENT          = "CWAGENT_USER_AGENT" //nolint:revive
+	CWAGENT_LOG_LEVEL           = "CWAGENT_LOG_LEVEL"  //nolint:revive
+	CWAGENT_USAGE_DATA          = "CWAGENT_USAGE_DATA" //nolint:revive
+	IMDS_NUMBER_RETRY           = "IMDS_NUMBER_RETRY"  //nolint:revive
+	RunInContainer              = "RUN_IN_CONTAINER"
+	RunAsHostProcessContainer   = "RUN_AS_HOST_PROCESS_CONTAINER"
+	RunInAWS                    = "RUN_IN_AWS"
+	RunWithIRSA                 = "RUN_WITH_IRSA"
+	RunWithSELinux              = "RUN_WITH_SELINUX"
+	RunInROSA                   = "RUN_IN_ROSA"
+	UseDefaultConfig            = "USE_DEFAULT_CONFIG"
+	HostName                    = "HOST_NAME"
+	PodName                     = "POD_NAME"
+	HostIP                      = "HOST_IP"
+	CWConfigContent             = "CW_CONFIG_CONTENT"
+	CWOtelConfigContent         = "CW_OTEL_CONFIG_CONTENT"
+	CWAgentMergedOtelConfig     = "CWAGENT_MERGED_OTEL_CONFIG"
+	CWAgentLogsBackpressureMode = "CWAGENT_LOGS_BACKPRESSURE_MODE"
 
 	// confused deputy prevention related headers
 	AmzSourceAccount = "AMZ_SOURCE_ACCOUNT" // populates the "x-amz-source-account" header
@@ -76,4 +78,12 @@ func IsWindowsHostProcessContainer() bool {
 
 func IsSelinuxEnabled() bool {
 	return os.Getenv(RunWithSELinux) == TrueValue
+}
+
+func IsRunningInROSA() bool {
+	return os.Getenv(RunInROSA) == TrueValue
+}
+
+func GetLogsBackpressureMode() string {
+	return os.Getenv(CWAgentLogsBackpressureMode)
 }

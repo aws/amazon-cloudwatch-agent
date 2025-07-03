@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
@@ -60,6 +61,9 @@ type FileConfig struct {
 	// automatically remove the file / symlink after uploading.
 	// This auto removal does not support the case where other log rotation mechanism is already in place.
 	AutoRemoval bool `toml:"auto_removal"`
+	// strategy during backpressure in log processing where AutoRemoval take higher priority. supported values
+	// fd_release: release file descriptor when there is backpressure then reopen the file once backpressure condition is cleared
+	BackpressureMode logscommon.BackpressureMode `toml:"backpressure_mode"`
 
 	//Indicate whether to tail the log file from the beginning or not.
 	//The default value for this field should be set as true in configuration.
@@ -110,7 +114,7 @@ func (config *FileConfig) init() error {
 		if config.Enc, _ = charset.Lookup(config.Encoding); config.Enc == nil {
 			if config.Enc, _ = ianaindex.IANA.Encoding(config.Encoding); config.Enc == nil {
 				msg := fmt.Sprintf("E! the encoding %s is not supported.", config.Encoding)
-				log.Printf(msg)
+				log.Print(msg)
 				return errors.New(msg)
 			}
 		}
