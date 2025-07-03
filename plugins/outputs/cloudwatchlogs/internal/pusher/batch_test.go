@@ -33,6 +33,14 @@ func newMockEntityProvider(entity *cloudwatchlogs.Entity) *mockEntityProvider {
 	return ep
 }
 
+type mockDoneCallback struct {
+	mock.Mock
+}
+
+func (m *mockDoneCallback) Done() {
+	m.Called()
+}
+
 func TestLogEvent(t *testing.T) {
 	now := time.Now()
 	e := newLogEvent(now, "test message", nil)
@@ -165,10 +173,8 @@ func TestLogEventBatch(t *testing.T) {
 	t.Run("WithStatefulLogEvents", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 
-		callbackCalled := false
-		callback := func() {
-			callbackCalled = true
-		}
+		mdc1 := &mockDoneCallback{}
+		mdc1.On("Done").Panic("should not be called")
 
 		mrq1 := &mockRangeQueue{}
 		mrq1.On("ID").Return("test")
@@ -178,25 +184,31 @@ func TestLogEventBatch(t *testing.T) {
 		mrq2.On("ID").Return("test2")
 		mrq2.On("Enqueue", state.NewRange(5, 20)).Once()
 
-		event1 := newStatefulLogEvent(time.Now(), "Test", callback, &logEventState{
+		event1 := newStatefulLogEvent(time.Now(), "Test", mdc1.Done, &logEventState{
 			r:     state.NewRange(20, 40),
 			queue: mrq1,
 		})
-		event2 := newStatefulLogEvent(time.Now(), "Test2", callback, &logEventState{
+		event2 := newStatefulLogEvent(time.Now(), "Test2", mdc1.Done, &logEventState{
 			r:     state.NewRange(5, 20),
 			queue: mrq2,
 		})
-		event3 := newStatefulLogEvent(time.Now(), "Test3", callback, &logEventState{
+		event3 := newStatefulLogEvent(time.Now(), "Test3", mdc1.Done, &logEventState{
 			r:     state.NewRange(40, 50),
 			queue: mrq1,
 		})
+
+		mdc2 := &mockDoneCallback{}
+		mdc2.On("Done").Return().Once()
+		event4 := newLogEvent(time.Now(), "Test2", mdc2.Done)
 		batch.append(event1)
 		batch.append(event2)
 		batch.append(event3)
+		batch.append(event4)
 		batch.done()
 
-		mrq1.AssertNumberOfCalls(t, "Enqueue", 1)
-		mrq2.AssertNumberOfCalls(t, "Enqueue", 1)
-		assert.False(t, callbackCalled, "Done callback should not have been called")
+		mrq1.AssertExpectations(t)
+		mrq2.AssertExpectations(t)
+		mdc1.AssertNotCalled(t, "Done")
+		mdc2.AssertExpectations(t)
 	})
 }
