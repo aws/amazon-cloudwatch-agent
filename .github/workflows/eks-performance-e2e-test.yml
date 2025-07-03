@@ -124,7 +124,6 @@ jobs:
             (terraform destroy --auto-approve && exit 1)
 
       - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
