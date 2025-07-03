@@ -103,6 +103,7 @@ func TestLogWindowsEventConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventName.json", false, expectedErrorMap)
 	expectedErrorMap1 := map[string]int{}
 	expectedErrorMap1["required"] = 2
+	expectedErrorMap1["number_any_of"] = 1
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithMissingEventNameAndLevel.json", false, expectedErrorMap1)
 	expectedErrorMap2 := map[string]int{}
 	expectedErrorMap2["invalid_type"] = 1
@@ -110,6 +111,18 @@ func TestLogWindowsEventConfig(t *testing.T) {
 	expectedErrorMap3 := map[string]int{}
 	expectedErrorMap3["enum"] = 1
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventFormatType.json", false, expectedErrorMap3)
+
+	//New tests for event_ids feature
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventFormatType.json", false, expectedErrorMap3)
+	expectedErrorMap4 := map[string]int{}
+	expectedErrorMap4["invalid_type"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventIdsType.json", false, expectedErrorMap4)
+
+	expectedErrorMap5 := map[string]int{}
+	expectedErrorMap5["required"] = 1
+	expectedErrorMap5["number_any_of"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithMissingEventIdsAndEventLevels.json", false, expectedErrorMap5)
+
 }
 
 func TestMetricsConfig(t *testing.T) {
@@ -198,7 +211,9 @@ func TestSampleConfigSchema(t *testing.T) {
 		for _, file := range files {
 			if re.MatchString(file.Name()) {
 				t.Logf("Validating ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
+
 				checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
+
 				t.Logf("Validated ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
 			}
 		}
