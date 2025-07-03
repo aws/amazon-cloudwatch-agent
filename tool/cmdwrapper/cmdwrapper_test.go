@@ -151,7 +151,7 @@ func TestExecuteAgentCommand_BooleanFlags(t *testing.T) {
 	var capturedArgs []string
 
 	// Mock execCommand
-	execCommand = func(path string, args ...string) *exec.Cmd {
+	execCommand = func(_ string, args ...string) *exec.Cmd {
 		capturedArgs = args
 		cmd := exec.Command("echo", "1")
 		return cmd
