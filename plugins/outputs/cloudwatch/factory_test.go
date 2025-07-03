@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/pipeline"
@@ -24,7 +25,7 @@ func TestCreateExporter(t *testing.T) {
 	factory := NewFactory()
 
 	cfg := factory.CreateDefaultConfig()
-	creationSet := exportertest.NewNopSettings()
+	creationSet := exportertest.NewNopSettings(component.MustNewType("awscloudwatch"))
 	tExporter, err := factory.CreateTraces(context.Background(), creationSet, cfg)
 	assert.Equal(t, err, pipeline.ErrSignalNotSupported)
 	assert.Nil(t, tExporter)

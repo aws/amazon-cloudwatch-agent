@@ -21,7 +21,9 @@ import (
 
 const (
 	otelConfigParsingError = "has invalid keys: global"
-	defaultTlsCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
+	defaultTLSCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
+	defaultTLSCertPath     = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.crt"
+	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
 )
 
 var (
@@ -92,9 +94,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
 	} else {
 		// given prometheus config is in otel format so check if target allocator is being used
-		// then add the default cert for TargetAllocator
+		// then add the default ca, cert, and key for TargetAllocator
 		if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
-			cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTlsCaPath
+			cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTLSCaPath
+			cfg.TargetAllocator.TLSSetting.Config.CertFile = defaultTLSCertPath
+			cfg.TargetAllocator.TLSSetting.Config.KeyFile = defaultTLSKeyPath
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}

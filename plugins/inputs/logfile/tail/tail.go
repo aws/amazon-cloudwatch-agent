@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 )
 
@@ -53,11 +54,12 @@ type limiter interface {
 // Config is used to specify how a file must be tailed.
 type Config struct {
 	// File-specifc
-	Location    *SeekInfo // Seek to this location before tailing
-	ReOpen      bool      // Reopen recreated files (tail -F)
-	MustExist   bool      // Fail early if the file does not exist
-	Poll        bool      // Poll for file changes instead of using inotify
-	Pipe        bool      // Is a named pipe (mkfifo)
+	Location    *SeekInfo       // Seek to this location before tailing
+	GapsToRead  state.RangeList // Seek to these ranges before we seek to Location
+	ReOpen      bool            // Reopen recreated files (tail -F)
+	MustExist   bool            // Fail early if the file does not exist
+	Poll        bool            // Poll for file changes instead of using inotify
+	Pipe        bool            // Is a named pipe (mkfifo)
 	RateLimiter limiter
 
 	// Generic IO
@@ -87,7 +89,7 @@ type Tail struct {
 
 	lk sync.Mutex
 
-	FileDeletedCh chan bool
+	FileDeletedCh chan struct{}
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -103,7 +105,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		Filename:      filename,
 		Lines:         make(chan *Line),
 		Config:        config,
-		FileDeletedCh: make(chan bool),
+		FileDeletedCh: make(chan struct{}),
 	}
 
 	// when Logger was not specified in config, create new one
@@ -177,10 +179,14 @@ func (tail *Tail) close() {
 		tail.Logger.Errorf("Dropped %v lines for stopped tail for file %v", tail.dropCnt, tail.Filename)
 	}
 	close(tail.Lines)
-	tail.closeFile()
+	tail.CloseFile()
 }
 
-func (tail *Tail) closeFile() {
+func (tail *Tail) IsFileClosed() bool {
+	return tail.file == nil
+}
+
+func (tail *Tail) CloseFile() {
 	if tail.file != nil {
 		tail.file.Close()
 		tail.file = nil
@@ -188,12 +194,14 @@ func (tail *Tail) closeFile() {
 	}
 }
 
-func (tail *Tail) reopen() error {
-	tail.closeFile()
+func (tail *Tail) Reopen(resetOffset bool) error {
+	tail.CloseFile()
 	for {
 		var err error
 		tail.file, err = OpenFile(tail.Filename)
-		tail.curOffset = 0
+		if resetOffset {
+			tail.curOffset = 0
+		}
 		if err != nil {
 			if os.IsNotExist(err) {
 				tail.Logger.Debugf("Waiting for %s to appear...", tail.Filename)
@@ -210,6 +218,15 @@ func (tail *Tail) reopen() error {
 		break
 	}
 	OpenFileCount.Add(1)
+
+	tail.openReader()
+	if !resetOffset && tail.curOffset > 0 {
+		err := tail.seekTo(SeekInfo{Offset: tail.curOffset, Whence: io.SeekStart})
+		if err != nil {
+			return fmt.Errorf("unable to restore offset on reopen: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -317,7 +334,7 @@ func (tail *Tail) tailFileSync() {
 
 	if !tail.MustExist {
 		// deferred first open.
-		err := tail.reopen()
+		err := tail.Reopen(true)
 		if err != nil {
 			if err != tomb.ErrDying {
 				tail.Kill(err)
@@ -327,6 +344,43 @@ func (tail *Tail) tailFileSync() {
 	}
 	// openReader should be invoked before seekTo
 	tail.openReader()
+
+	// Send the lines for the gaps found in the state file's ranges
+	if len(tail.GapsToRead) > 0 {
+		for _, seekRange := range tail.GapsToRead {
+			if seekRange.IsEndOffsetUnbounded() {
+				continue
+			}
+
+			err := tail.seekTo(SeekInfo{Offset: seekRange.StartOffsetInt64(), Whence: io.SeekStart})
+			if err != nil {
+				tail.Logger.Debugf("Failed to seek %s to %d for gaps: %s", tail.Filename, seekRange.StartOffsetInt64(), err)
+				continue
+			}
+
+			for tail.curOffset < seekRange.EndOffsetInt64() {
+				line, err := tail.readLine()
+
+				if err == nil {
+					tail.sendLine(line, tail.curOffset)
+				} else if err == io.EOF {
+					tail.Logger.Debugf("Failed read line due to EOF on %s for gaps: %s", tail.Filename, err)
+					break
+				} else {
+					tail.Logger.Debugf("Failed read line on %s for gaps: %s", tail.Filename, err)
+				}
+
+				select {
+				case <-tail.Dying():
+					if tail.Err() == errStopAtEOF {
+						continue
+					}
+					return
+				default:
+				}
+			}
+		}
+	}
 
 	// Seek to requested location on first open of the file.
 	if tail.Location != nil {
@@ -453,7 +507,7 @@ func (tail *Tail) waitForChanges() error {
 		tail.changes = nil
 		if tail.ReOpen {
 			tail.Logger.Infof("Re-opening moved/deleted file %s ...", tail.Filename)
-			if err := tail.reopen(); err != nil {
+			if err := tail.Reopen(true); err != nil {
 				return err
 			}
 			tail.Logger.Debugf("Successfully reopened %s", tail.Filename)
@@ -466,7 +520,7 @@ func (tail *Tail) waitForChanges() error {
 	case <-tail.changes.Truncated:
 		// Always reopen truncated files (Follow is true)
 		tail.Logger.Infof("Re-opening truncated file %s ...", tail.Filename)
-		if err := tail.reopen(); err != nil {
+		if err := tail.Reopen(true); err != nil {
 			return err
 		}
 		tail.Logger.Debugf("Successfully reopened truncated %s", tail.Filename)

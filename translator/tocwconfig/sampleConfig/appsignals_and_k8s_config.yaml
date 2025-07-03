@@ -1,5 +1,6 @@
 exporters:
     awsemf/application_signals:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -7,6 +8,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: false
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: /aws/application-signals/data
@@ -129,6 +131,7 @@ exporters:
         role_arn: ""
         version: "1"
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -136,6 +139,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: false
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -240,6 +244,7 @@ exporters:
     awsxray/application_signals:
         certificate_file_path: ""
         endpoint: ""
+        external_id: ""
         imds_retries: 1
         index_all_attributes: false
         indexed_attributes:
@@ -293,8 +298,6 @@ extensions:
     awsproxy/application_signals:
         aws_endpoint: ""
         certificate_file_path: ""
-        dialer:
-            timeout: 0s
         endpoint: 0.0.0.0:2000
         imds_retries: 1
         local_mode: false
@@ -307,6 +310,10 @@ extensions:
         kubernetes_mode: K8sEC2
         mode: ec2
         region: us-east-1
+    k8smetadata:
+        objects:
+            - endpointslices
+            - services
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
@@ -323,6 +330,11 @@ processors:
         resolvers:
             - name: TestCluster
               platform: k8s
+    awsentity/resource/containerinsights:
+        cluster_name: TestCluster
+        entity_type: Resource
+        kubernetes_mode: K8sEC2
+        platform: ec2
     awsentity/service/application_signals:
         cluster_name: TestCluster
         entity_type: Service
@@ -1213,7 +1225,6 @@ processors:
                 host.name:
                     enabled: true
             tags: []
-        compression: ""
         consul:
             address: ""
             datacenter: ""
@@ -1230,7 +1241,6 @@ processors:
             - eks
             - env
             - ec2
-        disable_keep_alives: false
         docker:
             resource_attributes:
                 host.name:
@@ -1238,6 +1248,9 @@ processors:
                 os.type:
                     enabled: true
         ec2:
+            fail_on_missing_metadata: false
+            max_attempts: 3
+            max_backoff: 20s
             resource_attributes:
                 cloud.account.id:
                     enabled: true
@@ -1294,6 +1307,8 @@ processors:
                     enabled: true
         eks:
             resource_attributes:
+                cloud.account.id:
+                    enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
@@ -1312,7 +1327,6 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
-        endpoint: ""
         gcp:
             resource_attributes:
                 cloud.account.id:
@@ -1341,6 +1355,12 @@ processors:
                     enabled: false
                 gcp.gce.instance.name:
                     enabled: false
+                gcp.gce.instance_group_manager.name:
+                    enabled: true
+                gcp.gce.instance_group_manager.region:
+                    enabled: true
+                gcp.gce.instance_group_manager.zone:
+                    enabled: true
                 host.id:
                     enabled: true
                 host.name:
@@ -1367,8 +1387,6 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
-        http2_ping_timeout: 0s
-        http2_read_idle_timeout: 0s
         idle_conn_timeout: 1m30s
         k8snode:
             auth_type: serviceAccount
@@ -1379,6 +1397,15 @@ processors:
                 k8s.node.name:
                     enabled: true
                 k8s.node.uid:
+                    enabled: true
+        kubeadm:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            resource_attributes:
+                k8s.cluster.name:
+                    enabled: true
+                k8s.cluster.uid:
                     enabled: true
         lambda:
             resource_attributes:
@@ -1400,9 +1427,7 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
-        max_conns_per_host: 0
         max_idle_conns: 100
-        max_idle_conns_per_host: 0
         middleware: agenthealth/statuscode
         openshift:
             address: ""
@@ -1415,21 +1440,9 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: true
-            tls:
-                ca_file: ""
-                cert_file: ""
-                include_system_ca_certs_pool: false
-                insecure: false
-                insecure_skip_verify: false
-                key_file: ""
-                max_version: ""
-                min_version: ""
-                reload_interval: 0s
-                server_name_override: ""
+            tls: {}
             token: ""
         override: true
-        proxy_url: ""
-        read_buffer_size: 0
         system:
             resource_attributes:
                 host.arch:
@@ -1458,19 +1471,9 @@ processors:
                     enabled: false
                 os.type:
                     enabled: true
+                os.version:
+                    enabled: false
         timeout: 2s
-        tls:
-            ca_file: ""
-            cert_file: ""
-            include_system_ca_certs_pool: false
-            insecure: false
-            insecure_skip_verify: false
-            key_file: ""
-            max_version: ""
-            min_version: ""
-            reload_interval: 0s
-            server_name_override: ""
-        write_buffer_size: 0
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false
@@ -1483,6 +1486,7 @@ receivers:
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
+        external_id: ""
         host_ip: ""
         host_name: ""
         imds_retries: 1
@@ -1504,24 +1508,19 @@ receivers:
     otlp/application_signals:
         protocols:
             grpc:
-                dialer:
-                    timeout: 0s
                 endpoint: 0.0.0.0:4315
-                include_metadata: false
-                max_concurrent_streams: 0
-                max_recv_msg_size_mib: 0
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
-                write_buffer_size: 0
             http:
+                cors: {}
                 endpoint: 0.0.0.0:4316
                 idle_timeout: 0s
-                include_metadata: false
                 logs_url_path: /v1/logs
-                max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                read_timeout: 0s
                 traces_url_path: /v1/traces
                 write_timeout: 0s
 service:
@@ -1530,6 +1529,7 @@ service:
         - agenthealth/statuscode
         - awsproxy/application_signals
         - agenthealth/traces
+        - k8smetadata
         - entitystore
         - server
     pipelines:
@@ -1549,6 +1549,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
             receivers:
                 - awscontainerinsightreceiver
         traces/application_signals:
@@ -1561,9 +1562,6 @@ service:
                 - otlp/application_signals
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -1572,7 +1570,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

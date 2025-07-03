@@ -42,6 +42,7 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
+                - diskio_ebs_volume_queue_length
         include:
             match_type: ""
         initial_value: 2
@@ -56,7 +57,8 @@ processors:
         imds_retries: 2
         middleware: agenthealth/statuscode
         profile: AmazonCloudWatchAgent
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
         shared_credential_file: fake-path
 receivers:
     telegraf_cpu:
@@ -107,9 +109,6 @@ service:
                 - telegraf_diskio
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -120,7 +119,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

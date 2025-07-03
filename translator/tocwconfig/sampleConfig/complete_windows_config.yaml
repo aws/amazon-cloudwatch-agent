@@ -20,6 +20,7 @@ exporters:
         certificate_file_path: ""
         emf_only: true
         endpoint: https://logs-fips.us-west-2.amazonaws.com
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
@@ -44,12 +45,17 @@ exporters:
             randomization_factor: 0.5
         role_arn: log_role_arn_value_test
         sending_queue:
+            block_on_overflow: false
+            blocking: false
             enabled: true
             num_consumers: 1
             queue_size: 1000
+            sizer: {}
+            wait_for_result: false
     awsxray:
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+        external_id: ""
         imds_retries: 1
         index_all_attributes: false
         local_mode: true
@@ -129,29 +135,27 @@ processors:
             - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
     transform:
         error_mode: propagate
         flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
-                - set(unit, "PERCENT") where name == "Processor % Idle Time"
-                - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
-                - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
-                - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
+                  - set(unit, "PERCENT") where name == "Processor % Idle Time"
+                  - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
+                  - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
+                  - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
         trace_statements: []
 receivers:
     awsxray:
-        dialer:
-            timeout: 0s
         endpoint: 0.0.0.0:2001
         proxy_server:
             aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
             certificate_file_path: ""
-            dialer:
-                timeout: 0s
             endpoint: 0.0.0.0:1234
             imds_retries: 1
             local_mode: true
@@ -161,38 +165,24 @@ receivers:
             role_arn: trace_role_arn_value_test
             service_name: xray
             tls:
-                ca_file: ""
-                cert_file: ""
-                include_system_ca_certs_pool: false
                 insecure: true
-                insecure_skip_verify: false
-                key_file: ""
-                max_version: ""
-                min_version: ""
-                reload_interval: 0s
-                server_name_override: ""
         transport: udp
     otlp/traces:
         protocols:
             grpc:
-                dialer:
-                    timeout: 0s
                 endpoint: 0.0.0.0:1111
-                include_metadata: false
-                max_concurrent_streams: 0
-                max_recv_msg_size_mib: 0
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
-                write_buffer_size: 0
             http:
+                cors: {}
                 endpoint: 0.0.0.0:2222
                 idle_timeout: 0s
-                include_metadata: false
                 logs_url_path: /v1/logs
-                max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                read_timeout: 0s
                 traces_url_path: /v1/traces
                 write_timeout: 0s
     telegraf_nvidia_smi:
@@ -276,21 +266,21 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/1063858558
-                - telegraf_nvidia_smi
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/3081249416
-                - telegraf_win_perf_counters/1492679118
-                - telegraf_win_perf_counters/2402387132
-                - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/1063858558
                 - telegraf_procstat/1340600742
+                - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/1492679118
+                - telegraf_nvidia_smi
+                - telegraf_win_perf_counters/2402387132
         metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity/service/telegraf
                 - ec2tagger
                 - transform
+                - awsentity/service/telegraf
             receivers:
                 - telegraf_statsd
         traces/xray:
@@ -303,9 +293,6 @@ service:
                 - otlp/traces
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: debug
             output_paths:
@@ -316,7 +303,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

@@ -26,4 +26,11 @@ const (
 	ResourceDetectionHostId   = "host.id"
 	ResourceDetectionHostName = "host.name"
 	ResourceDetectionASG      = "ec2.tag.aws:autoscaling:groupName"
+
+	// deployment resource attributes
+	AttributeDeploymentEnvironment     = "deployment.environment"
+	AttributeDeploymentEnvironmentName = "deployment.environment.name"
+
+	// ApplicationSignals behaviour-changing attributes
+	AWSApplicationSignalsMetricResourceKeys = "aws.application_signals.metric_resource_keys"
 )

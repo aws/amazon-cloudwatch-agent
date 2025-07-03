@@ -52,7 +52,7 @@ jobs:
           ref: ${{ inputs.test_repo_branch }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
@@ -62,6 +62,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -83,5 +85,5 @@ jobs:
           -var="ssh_key_name=${{env.KEY_NAME}}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
-          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+          echo "local_stack_host_name=$LOCAL_STACK_HOST_NAME" >> "$GITHUB_OUTPUT" &&
           aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate

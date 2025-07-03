@@ -41,18 +41,20 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
-        refresh_interval_seconds: 0s
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
     transform:
         error_mode: propagate
         flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
@@ -85,14 +87,11 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_nvidia_smi
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_nvidia_smi
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -103,7 +102,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

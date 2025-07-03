@@ -1,0 +1,12 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "diskio": {
+        "measurement": [
+          "ebs_total_read_ops",
+          "ebs_total_write_ops"
+        ]
+      }
+    }
+  }
+}

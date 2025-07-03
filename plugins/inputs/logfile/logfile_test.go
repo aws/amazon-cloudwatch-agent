@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
@@ -188,43 +188,6 @@ func TestCompressedFile(t *testing.T) {
 	filepath = "/tmp/logfile.log.gz"
 	compressed = isCompressedFile(filepath)
 	assert.True(t, compressed, "This should be a compressed file.")
-}
-
-func TestRestoreState(t *testing.T) {
-	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfolder, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpfolder)
-
-	logFilePath := "/tmp/logfile.log"
-	logFileStateFileName := "_tmp_logfile.log"
-
-	offset := int64(9323)
-	err = os.WriteFile(
-		tmpfolder+string(filepath.Separator)+logFileStateFileName,
-		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
-		os.ModePerm)
-	require.NoError(t, err)
-
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileStateFolder = tmpfolder
-	roffset, err := tt.restoreState(logFilePath)
-	require.NoError(t, err)
-	assert.Equal(t, offset, roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
-
-	// Test negative offset.
-	offset = int64(-8675)
-	err = os.WriteFile(
-		tmpfolder+string(filepath.Separator)+logFileStateFileName,
-		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
-		os.ModePerm)
-	require.NoError(t, err)
-	roffset, err = tt.restoreState(logFilePath)
-	require.Error(t, err)
-	assert.Equal(t, int64(0), roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
-
-	tt.Stop()
 }
 
 func TestMultipleFilesForSameConfig(t *testing.T) {
@@ -671,7 +634,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
@@ -709,6 +672,181 @@ func TestLogsFileWithOffset(t *testing.T) {
 
 }
 
+func TestLogsFileWithRangeNoGaps(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
+
+	tmpfile, err := createTempFile("", "")
+	defer os.Remove(tmpfile.Name())
+	require.NoError(t, err)
+
+	stateDir, err := os.MkdirTemp("", "state")
+	require.NoError(t, err)
+	defer os.Remove(stateDir)
+
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	// The ranges here are to mimic log lines that have already been sent
+	stateFile.WriteString("19\ntest\n0-19")
+	defer os.Remove(stateFileName)
+
+	_, err = tmpfile.WriteString(logEntryString)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.FileStateFolder = stateDir
+	tt.Log = TestLogger{t}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig[0].init()
+	tt.started = true
+	tt.MaxPersistState = 2
+
+	lsrcs := tt.FindLogSrc()
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
+
+	lsrc := lsrcs[0]
+	evts := make(chan logs.LogEvent)
+	lsrc.SetOutput(func(e logs.LogEvent) {
+		evts <- e
+	})
+
+	e := <-evts
+	el := "Range"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	lsrc.Stop()
+	tt.Stop()
+
+}
+
+func TestLogsFileWithRangeGaps(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
+
+	tmpfile, err := createTempFile("", "")
+	defer os.Remove(tmpfile.Name())
+	require.NoError(t, err)
+
+	stateDir, err := os.MkdirTemp("", "state")
+	require.NoError(t, err)
+	defer os.Remove(stateDir)
+
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	// The ranges here are to mimic log lines that have already been sent
+	stateFile.WriteString("19\ntest\n0-6,14-19")
+	defer os.Remove(stateFileName)
+
+	_, err = tmpfile.WriteString(logEntryString)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.FileStateFolder = stateDir
+	tt.Log = TestLogger{t}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig[0].init()
+	tt.started = true
+	tt.MaxPersistState = 2
+
+	lsrcs := tt.FindLogSrc()
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
+
+	lsrc := lsrcs[0]
+	evts := make(chan logs.LogEvent)
+	lsrc.SetOutput(func(e logs.LogEvent) {
+		evts <- e
+	})
+
+	e := <-evts
+	el := "Content\n"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	e = <-evts
+	el = "Range"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	lsrc.Stop()
+	tt.Stop()
+
+}
+
+func TestLogsFileWithEOFRangeGaps(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
+
+	tmpfile, err := createTempFile("", "")
+	defer os.Remove(tmpfile.Name())
+	require.NoError(t, err)
+
+	stateDir, err := os.MkdirTemp("", "state")
+	require.NoError(t, err)
+	defer os.Remove(stateDir)
+
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	// The ranges here are to mimic log lines that have already been sent
+	// along with an invalid range
+	stateFile.WriteString("200\ntest\n0-6,100-200")
+	defer os.Remove(stateFileName)
+
+	_, err = tmpfile.WriteString(logEntryString)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.FileStateFolder = stateDir
+	tt.Log = TestLogger{t}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig[0].init()
+	tt.started = true
+	tt.MaxPersistState = 2
+
+	lsrcs := tt.FindLogSrc()
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
+
+	lsrc := lsrcs[0]
+	evts := make(chan logs.LogEvent)
+	lsrc.SetOutput(func(e logs.LogEvent) {
+		evts <- e
+	})
+
+	e := <-evts
+	el := "Content"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	e = <-evts
+	el = "bbbbb"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	e = <-evts
+	el = "Range"
+	if e.Message() != el {
+		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	}
+
+	lsrc.Stop()
+	tt.Stop()
+
+}
+
 func TestLogsFileWithInvalidOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
@@ -721,7 +859,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("100")
@@ -736,6 +874,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	tt.MaxPersistState = 2
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
@@ -777,7 +916,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
+	stateFileName := state.FilePath(stateDir, tmpfile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")

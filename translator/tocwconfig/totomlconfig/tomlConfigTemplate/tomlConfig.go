@@ -115,17 +115,21 @@ type (
 		Destination     string
 		FileStateFolder string       `toml:"file_state_folder"`
 		FileConfig      []fileConfig `toml:"file_config"`
+		MaxPersistState int          `toml:"max_persist_state"`
 	}
 
 	fileConfig struct {
-		AutoRemoval     bool   `toml:"auto_removal"`
-		FilePath        string `toml:"file_path"`
-		FromBeginning   bool   `toml:"from_beginning"`
-		LogGroupName    string `toml:"log_group_name"`
-		LogStreamName   string `toml:"log_stream_name"`
-		Pipe            bool
-		RetentionInDays int `toml:"retention_in_days"`
-		Timezone        string
+		AutoRemoval      bool   `toml:"auto_removal"`
+		BackpressureMode string `toml:"backpressure_mode"`
+		FilePath         string `toml:"file_path"`
+		FromBeginning    bool   `toml:"from_beginning"`
+		LogGroupName     string `toml:"log_group_name"`
+		LogStreamName    string `toml:"log_stream_name"`
+		Pipe             bool
+		RetentionInDays  int `toml:"retention_in_days"`
+		Timezone         string
+		//Customer specifies if the timestamp from the log message should be trimmed
+		TrimTimestamp bool `toml:"trim_timestamp"`
 		//Customer specified service.name
 		ServiceName string `toml:"service_name"`
 		//Customer specified deployment.environment
@@ -238,6 +242,7 @@ type (
 	windowsEventLogConfig struct {
 		Destination     string
 		FileStateFolder string        `toml:"file_state_folder"`
+		MaxPersistState int           `toml:"max_persist_state"`
 		EventConfig     []eventConfig `toml:"event_config"`
 		Tags            map[string]string
 	}
@@ -267,6 +272,7 @@ type (
 	}
 
 	cloudWatchLogsConfig struct {
+		Concurrency        int    `toml:"concurrency"`
 		EndpointOverride   string `toml:"endpoint_override"`
 		ForceFlushInterval string `toml:"force_flush_interval"`
 		LogStreamName      string `toml:"log_stream_name"`

@@ -62,7 +62,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineType: "metrics/containerinsights",
 				receivers:    []string{"awscontainerinsightreceiver"},
-				processors:   []string{"batch/containerinsights", "filter/containerinsights"},
+				processors:   []string{"batch/containerinsights", "filter/containerinsights", "awsentity/resource/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},

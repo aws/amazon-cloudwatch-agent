@@ -5,10 +5,10 @@ name: PR Build
 on:
   workflow_dispatch:
   pull_request:
-    branches: 
+    branches:
       - main*
       - feature*
-    types: 
+    types:
       - opened
       - synchronize
       - reopened
@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2019, windows-latest, macos-13]
+        os: [ubuntu-latest, windows-2022, windows-latest, macos-13]
         include:
           - os: ubuntu-latest
             family: linux
@@ -90,7 +90,7 @@ jobs:
             cache-path: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
-          - os: windows-2019
+          - os: windows-2022
             family: windows
             cache-path: |
               ~\AppData\Local\go-build
@@ -158,3 +158,39 @@ jobs:
       - name: Test data race
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
+
+  verify-all:
+    name: Verify All PR Build Jobs
+    needs: [ changes, lint, build, test-data-race ]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Job Status
+        run: |
+          # Convert needs context to JSON and process with jq
+          needs_json='${{ toJSON(needs) }}'
+
+          failed_jobs=()
+          successful_jobs=()
+
+          # Loop through all jobs in needs context
+          for job in $(echo "$needs_json" | jq -r 'keys[]'); do
+            result=$(echo "$needs_json" | jq -r ".[\"$job\"].result")
+
+            if [[ "$result" == "failure" ]]; then
+              failed_jobs+=("$job")
+            elif [[ "$result" == "success" ]]; then
+              successful_jobs+=("$job")
+            fi
+          done
+
+          echo "Successfully validated jobs:"
+          printf '%s\n' "${successful_jobs[@]}"
+
+          if [ ${#failed_jobs[@]} -ne 0 ]; then
+            echo -e "\nFailed jobs:"
+            printf '%s\n' "${failed_jobs[@]}"
+            exit 1
+          fi
+
+          echo -e "\nAll required jobs completed without failures!"
