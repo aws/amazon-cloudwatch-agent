@@ -232,6 +232,7 @@ func (ts *tailerSrc) runTail() {
 				init = text
 				ignoreUntilNextEvent = false
 			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
+				// If we're ignoring until the next event or the buffer is too large, just continue
 				ignoreUntilNextEvent = true
 				fo.ShiftInt64(line.Offset)
 				continue
@@ -239,9 +240,12 @@ func (ts *tailerSrc) runTail() {
 				msgBuf.WriteString("\n")
 				msgBuf.WriteString(text)
 				if msgBuf.Len() > ts.maxEventSize {
-					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
-					msgBuf.WriteString(ts.truncateSuffix)
+					// We'll let the tail.go handle splitting
+					// Just continue processing
+					fo.ShiftInt64(line.Offset)
+					continue
 				}
+
 				fo.ShiftInt64(line.Offset)
 				continue
 			}

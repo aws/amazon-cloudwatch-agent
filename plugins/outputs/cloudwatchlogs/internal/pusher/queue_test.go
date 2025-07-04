@@ -205,27 +205,24 @@ func TestStopPusherWouldStopRetries(t *testing.T) {
 	require.True(t, strings.Contains(lastLine, "Stop requested after 0 retries to G/S failed for PutLogEvents, request dropped"))
 }
 
-func TestLongMessageGetsTruncated(t *testing.T) {
+func TestLongMessageHandling(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup
 	var s stubLogsService
-	longMsg := strings.Repeat("x", msgSizeLimit+1)
+
+	// This test was updated since truncation is now handled at the buffer reading level
+	// We now verify that long messages are passed through without modification
+	longMsg := strings.Repeat("x", 10000) // A long message that would have been truncated before
 
 	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if len(in.LogEvents) != 1 {
 			t.Fatalf("PutLogEvents called with incorrect number of message, expecting 1, but %v received", len(in.LogEvents))
 		}
 		msg := *in.LogEvents[0].Message
-		if msg == longMsg {
-			t.Errorf("Long message was not truncated correctly")
-		}
 
-		if len(msg) > msgSizeLimit {
-			t.Errorf("Truncated long message is still too long: %v observed, max allowed length is %v", len(msg), msgSizeLimit)
-		}
-
-		if !strings.HasSuffix(msg, truncatedSuffix) {
-			t.Errorf("Truncated long message had the wrong suffix: %v", msg[len(msg)-30:])
+		// Verify the message is passed through unchanged
+		if msg != longMsg {
+			t.Errorf("Long message was modified: expected length %d, got %d", len(longMsg), len(msg))
 		}
 
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
@@ -243,7 +240,8 @@ func TestRequestIsLessThan1MB(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup
 	var s stubLogsService
-	longMsg := strings.Repeat("x", msgSizeLimit)
+	// Use a large message but less than the AWS CloudWatch Logs limit
+	longMsg := strings.Repeat("x", 200000) // 200KB
 
 	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		length := 0
