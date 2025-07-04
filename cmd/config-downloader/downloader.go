@@ -3,8 +3,8 @@
 package main
 
 import (
-	"flag"
 	"log"
+	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
 	"github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
@@ -13,8 +13,8 @@ import (
 func main() {
 	log.Printf("Starting config-downloader, this will map back to a call to amazon-cloudwatch-agent")
 
-	translatorFlags := cmdwrapper.AddFlags("", flags.DownloaderFlags)
-	flag.Parse()
+	fs, downloaderFlags := cmdwrapper.CreateFlagSet(flags.Command, flags.DownloaderFlags)
+	fs.Parse(os.Args[1:]) // Skip program name only
 
-	_ = cmdwrapper.ExecuteAgentCommand(flags.Command, translatorFlags)
+	_ = cmdwrapper.ExecuteSubcommand(flags.Command, downloaderFlags)
 }
