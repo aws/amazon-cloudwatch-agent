@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -22,11 +23,32 @@ const (
 	reqSizeLimit = 1024 * 1024
 	// The maximum number of log events in a batch.
 	reqEventsLimit = 10000
-	// The bytes required for metadata for each log event.
-	perEventHeaderBytes = 200
+	// The bytes required for metadata for each log event
+	perEventHeaderBytes = 26
+	// Maximum size for individual log events (1MB)
+	maxEventPayloadBytes = 1024 * 1024
+	// Safety buffer to prevent edge cases with logs at exactly the size limit
+	// Using the same size as perEventHeaderBytes for consistency
+	safetyBufferBytes = perEventHeaderBytes
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
+	// Suffix to indicate that a message has been truncated
+	truncationSuffix = constants.DefaultTruncateSuffix
 )
+
+// validateAndTruncateMessage ensures events don't exceed 1MB limit
+func validateAndTruncateMessage(message string) string {
+	// Use a slightly smaller maximum size to provide a safety buffer
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes - safetyBufferBytes
+
+	if len(message) <= maxMessageSize {
+		return message
+	}
+
+	// Truncate the message and add a suffix to indicate truncation
+	truncatedMessage := message[:maxMessageSize-len(truncationSuffix)] + truncationSuffix
+	return truncatedMessage
+}
 
 type logEventState struct {
 	r     state.Range
@@ -47,10 +69,13 @@ func newLogEvent(timestamp time.Time, message string, doneCallback func()) *logE
 }
 
 func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(), state *logEventState) *logEvent {
+	// Validate and truncate message if necessary
+	validatedMessage := validateAndTruncateMessage(message)
+
 	return &logEvent{
-		message:      message,
+		message:      validatedMessage,
 		timestamp:    timestamp,
-		eventBytes:   len(message) + perEventHeaderBytes,
+		eventBytes:   len(validatedMessage) + perEventHeaderBytes,
 		doneCallback: doneCallback,
 		state:        state,
 	}
