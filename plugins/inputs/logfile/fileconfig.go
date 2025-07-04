@@ -18,12 +18,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-)
-
-const (
-	defaultMaxEventSize   = 1024 * 256 //256KB
-	defaultTruncateSuffix = "[Truncated...]"
 )
 
 // The file config presents the structure of configuration for a file to be tailed.
@@ -154,11 +150,10 @@ func (config *FileConfig) init() error {
 	}
 
 	if config.MaxEventSize == 0 {
-		config.MaxEventSize = defaultMaxEventSize
+		config.MaxEventSize = constants.DefaultMaxEventSize - constants.PerEventHeaderBytes
 	}
-
 	if config.TruncateSuffix == "" {
-		config.TruncateSuffix = defaultTruncateSuffix
+		config.TruncateSuffix = constants.DefaultTruncateSuffix
 	}
 	if config.RetentionInDays == 0 {
 		config.RetentionInDays = -1
