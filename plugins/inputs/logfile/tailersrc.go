@@ -239,9 +239,10 @@ func (ts *tailerSrc) runTail() {
 				msgBuf.WriteString("\n")
 				msgBuf.WriteString(text)
 				if msgBuf.Len() > ts.maxEventSize {
-					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
-					msgBuf.WriteString(ts.truncateSuffix)
+					fo.ShiftInt64(line.Offset)
+					continue
 				}
+
 				fo.ShiftInt64(line.Offset)
 				continue
 			}
