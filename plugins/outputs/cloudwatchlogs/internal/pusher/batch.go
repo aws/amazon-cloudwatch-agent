@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -22,11 +23,28 @@ const (
 	reqSizeLimit = 1024 * 1024
 	// The maximum number of log events in a batch.
 	reqEventsLimit = 10000
-	// The bytes required for metadata for each log event.
+	// The bytes required for metadata for each log event
 	perEventHeaderBytes = 200
+	// Maximum size for individual log events (1MB)
+	maxEventPayloadBytes = constants.DefaultMaxEventSize
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
+	// Suffix to indicate that a message has been truncated
+	truncationSuffix = constants.DefaultTruncateSuffix
 )
+
+// validateAndTruncateMessage ensures events don't exceed limit before we send to CloudWatch
+func validateAndTruncateMessage(message string) string {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+
+	if len(message) <= maxMessageSize {
+		return message
+	}
+
+	// Truncate the message and add a suffix to indicate truncation
+	truncatedMessage := message[:maxMessageSize-len(truncationSuffix)] + truncationSuffix
+	return truncatedMessage
+}
 
 type logEventState struct {
 	r     state.Range
@@ -47,10 +65,13 @@ func newLogEvent(timestamp time.Time, message string, doneCallback func()) *logE
 }
 
 func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(), state *logEventState) *logEvent {
+	// Validate and truncate message if necessary
+	validatedMessage := validateAndTruncateMessage(message)
+
 	return &logEvent{
-		message:      message,
+		message:      validatedMessage,
 		timestamp:    timestamp,
-		eventBytes:   len(message) + perEventHeaderBytes,
+		eventBytes:   len(validatedMessage) + perEventHeaderBytes,
 		doneCallback: doneCallback,
 		state:        state,
 	}

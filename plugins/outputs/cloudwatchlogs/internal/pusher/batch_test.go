@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -79,20 +80,18 @@ func TestLogEventBatch(t *testing.T) {
 	t.Run("HasSpace", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 
-		event := newLogEvent(time.Now(), "Test message", nil)
-		maxEvents := reqSizeLimit / event.eventBytes
+		// Test with empty batch
+		assert.True(t, batch.hasSpace(reqSizeLimit))
+		assert.False(t, batch.hasSpace(reqSizeLimit+1))
 
-		// Add events until close to the limit
-		for i := 0; i < maxEvents-1; i++ {
-			batch.append(event)
-		}
+		// Add a small event
+		smallEvent := newLogEvent(time.Now(), "a", nil)
+		batch.append(smallEvent)
 
-		assert.True(t, batch.hasSpace(event.eventBytes))
-
-		// Add one more event to reach the limit
-		batch.append(event)
-
-		assert.False(t, batch.hasSpace(event.eventBytes))
+		// Test with batch containing one small event
+		remainingSpace := reqSizeLimit - smallEvent.eventBytes
+		assert.True(t, batch.hasSpace(remainingSpace))
+		assert.False(t, batch.hasSpace(remainingSpace+1))
 	})
 
 	t.Run("Build", func(t *testing.T) {
@@ -211,4 +210,66 @@ func TestLogEventBatch(t *testing.T) {
 		mdc1.AssertNotCalled(t, "Done")
 		mdc2.AssertExpectations(t)
 	})
+}
+
+func TestEventValidation_1MB(t *testing.T) {
+	// Test event at exactly the validation limit
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	largeMessage := strings.Repeat("a", maxMessageSize)
+
+	event := newStatefulLogEvent(time.Now(), largeMessage, nil, nil)
+	assert.Equal(t, largeMessage, event.message)
+	assert.Equal(t, maxMessageSize+perEventHeaderBytes, event.eventBytes)
+}
+
+func TestEventValidation_Over1MB(t *testing.T) {
+	// Test event over 1MB - should be truncated with truncation suffix
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	oversizeMessage := strings.Repeat("a", maxEventPayloadBytes+1000)
+
+	event := newStatefulLogEvent(time.Now(), oversizeMessage, nil, nil)
+	// The total length should still be maxMessageSize
+	assert.Equal(t, maxMessageSize, len(event.message))
+	assert.Equal(t, oversizeMessage[:maxMessageSize-len(truncationSuffix)]+truncationSuffix, event.message)
+}
+
+func TestEventValidation_Between256KBand1MB(t *testing.T) {
+	// Test event between 256KB and 1MB - should pass through unchanged
+	mediumMessage := strings.Repeat("a", 512*1024) // 512KB
+
+	event := newStatefulLogEvent(time.Now(), mediumMessage, nil, nil)
+	assert.Equal(t, mediumMessage, event.message)
+}
+
+func TestValidateAndTruncateMessage(t *testing.T) {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+
+	tests := []struct {
+		name           string
+		input          string
+		expectedOutput string
+	}{
+		{
+			name:           "Small message",
+			input:          "small message",
+			expectedOutput: "small message",
+		},
+		{
+			name:           "Exactly at limit",
+			input:          strings.Repeat("a", maxMessageSize),
+			expectedOutput: strings.Repeat("a", maxMessageSize),
+		},
+		{
+			name:           "Over limit",
+			input:          strings.Repeat("a", maxMessageSize+1000),
+			expectedOutput: strings.Repeat("a", maxMessageSize-len(truncationSuffix)) + truncationSuffix,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validateAndTruncateMessage(tt.input)
+			assert.Equal(t, tt.expectedOutput, result)
+		})
+	}
 }
