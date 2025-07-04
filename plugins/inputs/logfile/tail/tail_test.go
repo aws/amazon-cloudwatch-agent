@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const linesWrittenToFile int = 10
@@ -196,4 +198,101 @@ func tearDown(tmpfile *os.File) {
 	os.Remove(tmpfile.Name())
 	exitOnDeletionCheckDuration = time.Minute
 	exitOnDeletionWaitDuration = 5 * time.Minute
+}
+
+func TestUtf16LineSize(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	// Create a UTF-16 BOM
+	_, err = tmpfile.Write([]byte{0xFE, 0xFF})
+	require.NoError(t, err)
+
+	// Create a tail with a small MaxLineSize
+	maxLineSize := 100
+	tail, err := TailFile(tmpfile.Name(), Config{
+		MaxLineSize: maxLineSize,
+		Follow:      true,
+		ReOpen:      false,
+		Poll:        true,
+	})
+	require.NoError(t, err)
+	defer tail.Stop()
+
+	// Write a UTF-16 encoded line that exceeds MaxLineSize when decoded
+	// Each 'a' will be 2 bytes in UTF-16
+	utf16Line := make([]byte, 0, maxLineSize*4)
+	for i := 0; i < maxLineSize*2; i++ {
+		utf16Line = append(utf16Line, 0x00, 'a')
+	}
+	utf16Line = append(utf16Line, 0x00, '\n')
+
+	_, err = tmpfile.Write(utf16Line)
+	require.NoError(t, err)
+	err = tmpfile.Sync()
+	require.NoError(t, err)
+
+	// Read the line and verify it's truncated
+	select {
+	case line := <-tail.Lines:
+		// The line should be truncated to maxLineSize
+		assert.LessOrEqual(t, len(line.Text), maxLineSize)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for line")
+	}
+}
+
+func TestTail_DefaultBuffer(t *testing.T) {
+	// Test that default buffer works with normal-sized log lines
+	tempDir := t.TempDir()
+	filename := filepath.Join(tempDir, "test.log")
+
+	// Create a file with a normal-sized line (1KB - well within default buffer)
+	normalContent := strings.Repeat("b", 1024) // 1KB
+	err := os.WriteFile(filename, []byte(normalContent+"\n"), 0600)
+	require.NoError(t, err)
+
+	tail, err := TailFile(filename, Config{
+		Follow:    false,
+		MustExist: true,
+		// MaxLineSize not set - should use default buffer
+	})
+	require.NoError(t, err)
+	defer tail.Stop()
+
+	select {
+	case line := <-tail.Lines:
+		assert.NoError(t, line.Err)
+		assert.Equal(t, normalContent, line.Text)
+	case <-time.After(time.Second):
+		t.Fatal("Timeout waiting for line")
+	}
+}
+
+func TestTail_1MBWithExplicitMaxLineSize(t *testing.T) {
+	// Test that large lines work when MaxLineSize is explicitly set
+	tempDir := t.TempDir()
+	filename := filepath.Join(tempDir, "test.log")
+
+	// Create a file with a 512KB line
+	largeContent := strings.Repeat("b", 512*1024) // 512KB
+	err := os.WriteFile(filename, []byte(largeContent+"\n"), 0600)
+	require.NoError(t, err)
+
+	tail, err := TailFile(filename, Config{
+		Follow:      false,
+		MustExist:   true,
+		MaxLineSize: 1024 * 1024, // Explicitly set 1MB buffer
+	})
+	require.NoError(t, err)
+	defer tail.Stop()
+
+	select {
+	case line := <-tail.Lines:
+		assert.NoError(t, line.Err)
+		assert.Equal(t, largeContent, line.Text)
+	case <-time.After(time.Second):
+		t.Fatal("Timeout waiting for line")
+	}
 }
