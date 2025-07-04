@@ -4,7 +4,6 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 
@@ -15,10 +14,10 @@ import (
 func main() {
 	log.Printf("Starting config-translator, this will map back to a call to amazon-cloudwatch-agent")
 
-	translatorFlags := cmdwrapper.AddFlags("", flags.TranslatorFlags)
-	flag.Parse()
+	fs, translatorFlags := cmdwrapper.CreateFlagSet(flags.TranslatorCommand, flags.TranslatorFlags)
+	fs.Parse(os.Args[1:]) // Skip program name only
 
-	err := cmdwrapper.ExecuteAgentCommand(flags.TranslatorCommand, translatorFlags)
+	err := cmdwrapper.ExecuteSubcommand(flags.TranslatorCommand, translatorFlags)
 	if err != nil {
 		os.Exit(1)
 	}

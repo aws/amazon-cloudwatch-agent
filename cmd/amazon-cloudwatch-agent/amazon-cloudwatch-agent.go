@@ -102,11 +102,6 @@ var fRunAsConsole = flag.Bool("console", false, "run as console application (win
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
 
-// sub-commands
-var fConfigTranslator = flag.Bool(translatorflags.TranslatorCommand, false, "run in config-translator mode")
-var fConfigDownloader = flag.Bool(downloaderflags.Command, false, "run in config-downloader mode")
-var fConfigWizard = flag.Bool(wizardflags.Command, false, "run in config-wizard mode")
-
 var stop chan struct{}
 
 func reloadLoop(
@@ -504,9 +499,35 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
-	translatorFlags := cmdwrapper.AddFlags(translatorflags.TranslatorCommand, translatorflags.TranslatorFlags)
-	downloaderFlags := cmdwrapper.AddFlags(downloaderflags.Command, downloaderflags.DownloaderFlags)
-	wizardFlags := cmdwrapper.AddFlags(wizardflags.Command, wizardflags.WizardFlags)
+
+	// Check for subcommands first
+	if len(os.Args) > 1 {
+		subcommands := map[string]map[string]cmdwrapper.Flag{
+			translatorflags.TranslatorCommand: translatorflags.TranslatorFlags,
+			downloaderflags.Command:           downloaderflags.DownloaderFlags,
+			wizardflags.Command:               wizardflags.WizardFlags,
+		}
+		handlers := map[string]func(map[string]*string) error{
+			translatorflags.TranslatorCommand: translator.RunTranslator,
+			downloaderflags.Command:           downloader.RunDownloaderFromFlags,
+			wizardflags.Command:               wizard.RunWizardFromFlags,
+		}
+
+		if err := cmdwrapper.HandleSubcommand(subcommands, handlers); err == nil {
+			return
+		}
+	}
+
+	// Override flag.Usage to include subcommand help
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nAvailable subcommands:\n")
+		fmt.Fprintf(os.Stderr, "  %s\t\tTranslate configuration files\n", translatorflags.TranslatorCommand)
+		fmt.Fprintf(os.Stderr, "  %s\t\tDownload configuration from remote sources\n", downloaderflags.Command)
+		fmt.Fprintf(os.Stderr, "  %s\t\t\tInteractive configuration wizard\n", wizardflags.Command)
+		fmt.Fprintf(os.Stderr, "\nUse '%s <subcommand> --help' for more information about a subcommand.\n", os.Args[0])
+	}
 
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
@@ -630,24 +651,7 @@ func main() {
 			}
 		}
 		return
-	case *fConfigTranslator:
-		err := translator.RunTranslator(translatorFlags)
-		if err != nil {
-			log.Fatalf("E! Failed to initialize config translator: %v", err)
-		}
-		return
-	case *fConfigDownloader:
-		err := downloader.RunDownloaderFromFlags(downloaderFlags)
-		if err != nil {
-			log.Fatalf("E! Failed to initialize config downloader: %v", err)
-		}
-		return
-	case *fConfigWizard:
-		err := wizard.RunWizardFromFlags(wizardFlags)
-		if err != nil {
-			log.Fatalf("E! Failed to run config wizard: %v", err)
-		}
-		return
+
 	}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
