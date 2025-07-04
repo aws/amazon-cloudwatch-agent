@@ -21,8 +21,6 @@ type Flag struct {
 	IsBool       bool
 }
 
-const delimiter = "-"
-
 // Make execCommand a variable that can be replaced in tests
 var execCommand = exec.Command
 
@@ -49,17 +47,14 @@ var findAgentBinary = func(path string) (string, error) {
 	return "", fmt.Errorf("amazon-cloudwatch-agent binary not found. expected in one of the following paths: %s or %s", path, execDir)
 }
 
-func AddFlags(prefix string, flagConfigs map[string]Flag) map[string]*string {
+func CreateFlagSet(command string, flagConfigs map[string]Flag) (*flag.FlagSet, map[string]*string) {
+	fs := flag.NewFlagSet(command, flag.ExitOnError)
 	flags := make(map[string]*string)
 	for key, flagConfig := range flagConfigs {
-		flagName := key
-		if prefix != "" {
-			flagName = prefix + delimiter + flagName
-		}
 		if flagConfig.IsBool {
 			strPtr := new(string)
 			*strPtr = flagConfig.DefaultValue
-			flag.BoolFunc(flagName, flagConfig.Description, func(value string) error {
+			fs.BoolFunc(key, flagConfig.Description, func(value string) error {
 				if value == "" || value == "true" {
 					*strPtr = "true"
 				} else {
@@ -69,23 +64,21 @@ func AddFlags(prefix string, flagConfigs map[string]Flag) map[string]*string {
 			})
 			flags[key] = strPtr
 		} else {
-			flags[key] = flag.String(flagName, flagConfig.DefaultValue, flagConfig.Description)
+			flags[key] = fs.String(key, flagConfig.DefaultValue, flagConfig.Description)
 		}
 	}
-	return flags
+	return fs, flags
 }
 
-func ExecuteAgentCommand(command string, flags map[string]*string) error {
-	args := []string{fmt.Sprintf("-%s", command)}
+func ExecuteSubcommand(command string, flags map[string]*string) error {
+	args := []string{command}
 
 	for key, value := range flags {
 		if *value != "" && *value != "false" {
 			if *value == "true" {
-				// For boolean flags, just add the flag name without value
-				args = append(args, fmt.Sprintf("-%s%s%s", command, delimiter, key))
+				args = append(args, fmt.Sprintf("-%s", key))
 			} else {
-				// For string flags, add both flag name and value
-				args = append(args, fmt.Sprintf("-%s%s%s", command, delimiter, key), *value)
+				args = append(args, fmt.Sprintf("-%s", key), *value)
 			}
 		}
 	}
@@ -112,4 +105,27 @@ func ExecuteAgentCommand(command string, flags map[string]*string) error {
 	}
 
 	return nil
+}
+
+// HandleSubcommand processes subcommands with proper flag isolation
+func HandleSubcommand(subcommands map[string]map[string]Flag, handlers map[string]func(map[string]*string) error) error {
+	if len(os.Args) < 2 {
+		return fmt.Errorf("no subcommand provided")
+	}
+
+	subcmd := os.Args[1]
+	flagConfigs, exists := subcommands[subcmd]
+	if !exists {
+		return fmt.Errorf("unknown subcommand: %s", subcmd)
+	}
+
+	fs, flags := CreateFlagSet(subcmd, flagConfigs)
+	fs.Parse(os.Args[2:])
+
+	handler, exists := handlers[subcmd]
+	if !exists {
+		return fmt.Errorf("no handler for subcommand: %s", subcmd)
+	}
+
+	return handler(flags)
 }

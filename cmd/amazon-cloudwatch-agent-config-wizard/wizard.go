@@ -4,8 +4,8 @@
 package main
 
 import (
-	"flag"
 	"log"
+	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
 	"github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
@@ -14,8 +14,8 @@ import (
 func main() {
 	log.Printf("Starting config-wizard, this will map back to a call to amazon-cloudwatch-agent")
 
-	translatorFlags := cmdwrapper.AddFlags("", flags.WizardFlags)
-	flag.Parse()
+	fs, wizardFlags := cmdwrapper.CreateFlagSet(flags.Command, flags.WizardFlags)
+	fs.Parse(os.Args[1:]) // Skip program name only
 
-	_ = cmdwrapper.ExecuteAgentCommand(flags.Command, translatorFlags)
+	_ = cmdwrapper.ExecuteSubcommand(flags.Command, wizardFlags)
 }
