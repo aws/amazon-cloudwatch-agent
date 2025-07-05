@@ -5,7 +5,6 @@ package plugins
 
 import (
 	//Enable cloudwatch-agent process plugins
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ecsdecorator"
 
 	// Enabled cloudwatch-agent input plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"
