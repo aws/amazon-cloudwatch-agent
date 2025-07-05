@@ -57,6 +57,7 @@ jobs:
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
       CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      CWA_COMMIT_DATE: ${{ steps.get-commit-date.outputs.commit_date }}
     steps:
       - name: SetOutputs
         id: set-outputs
@@ -67,12 +68,51 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout agent repository for commit date
+        uses: actions/checkout@v3
+        with:
+          repository: aws/amazon-cloudwatch-agent
+          fetch-depth: 0
+          path: agent-repo
+
+      - name: Get commit date
+        id: get-commit-date
+        run: |
+          cd agent-repo  # Navigate to agent repo checkout
+          echo "Extracting commit date from agent repository..."
+          
+          # Get commit date as Unix timestamp, fallback to 0 for easier backfilling
+          if [[ "${{ inputs.build_id }}" =~ ^[0-9a-f]{40}$ ]]; then
+            # Full SHA - get date from git log
+            echo "Full SHA detected: ${{ inputs.build_id }}"
+            COMMIT_DATE=$(git log -1 --format=%ct ${{ inputs.build_id }} 2>/dev/null || echo "0")
+          elif [[ "${{ inputs.build_id }}" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
+            # Version format like 1.300057.1b1168 - extract SHA and get date
+            SHA_PART=$(echo "${{ inputs.build_id }}" | sed 's/.*\.//')
+            echo "Version format detected, extracted SHA: $SHA_PART"
+            COMMIT_DATE=$(git log -1 --format=%ct --grep="$SHA_PART" 2>/dev/null || echo "0")
+          else
+            # Fallback to 0 for easier backfilling of historical data
+            echo "Unknown format, using 0 for easier backfilling"
+            COMMIT_DATE="0"
+          fi
+          
+          echo "commit_date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: ${{ inputs.build_id }}"
+          
+          if [[ "$COMMIT_DATE" != "0" ]]; then
+            echo "SUCCESS: Found commit date ${COMMIT_DATE}"
+          else
+            echo "Using 0 - can be backfilled later with historical data"
+          fi
+
       - name: Echo test variables
         run: |
           echo "build_id: ${{ inputs.build_id }}"
           echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
           echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "CWA_COMMIT_DATE: ${{ steps.get-commit-date.outputs.commit_date }}"
 
       - uses: actions/checkout@v3
         with:
@@ -1005,6 +1045,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${{ inputs.build_id }}" \
+              -var="cwa_github_sha_date=${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
@@ -1069,6 +1110,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${{ inputs.build_id }}" \
+              -var="cwa_github_sha_date=${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
