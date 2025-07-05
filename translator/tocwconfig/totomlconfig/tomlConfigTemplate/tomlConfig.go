@@ -58,7 +58,6 @@ type (
 
 	processorsConfig struct {
 		Delta        []processorDelta
-		EcsDecorator []ecsDecoratorConfig
 		EmfProcessor []emfProcessorConfig
 	}
 
@@ -98,49 +97,33 @@ type (
 	ethtoolConfig struct {
 		FieldPass        []string
 		InterfaceInclude []string `toml:"interface_include"`
-		Tags             map[string]string
-	}
-
-	eventConfig struct {
-		BatchReadSize   int      `toml:"batch_read_size"`
-		EventLevels     []string `toml:"event_levels"`
-		EventName       string   `toml:"event_name"`
-		LogGroupName    string   `toml:"log_group_name"`
-		LogStreamName   string   `toml:"log_stream_name"`
-		RetentionInDays int      `toml:"retention_in_days"`
-	}
-
-	logFileConfig struct {
-		Destination     string
-		FileStateFolder string       `toml:"file_state_folder"`
-		FileConfig      []fileConfig `toml:"file_config"`
-		MaxPersistState int          `toml:"max_persist_state"`
-	}
-
-	fileConfig struct {
-		AutoRemoval      bool   `toml:"auto_removal"`
-		BackpressureMode string `toml:"backpressure_mode"`
-		FilePath         string `toml:"file_path"`
-		FromBeginning    bool   `toml:"from_beginning"`
-		LogGroupName     string `toml:"log_group_name"`
-		LogStreamName    string `toml:"log_stream_name"`
-		Pipe             bool
-		RetentionInDays  int `toml:"retention_in_days"`
-		Timezone         string
-		//Customer specifies if the timestamp from the log message should be trimmed
-		TrimTimestamp bool `toml:"trim_timestamp"`
-		//Customer specified service.name
-		ServiceName string `toml:"service_name"`
-		//Customer specified deployment.environment
-		DeploymentEnvironment string `toml:"deployment_environment"`
-		Tags                  map[string]string
-		Filters               []fileConfigFilter
+		Interval         string
 	}
 
 	k8sApiServerConfig struct {
 		Interval string
-		NodeName string `toml:"node_name"`
 		Tags     map[string]string
+	}
+
+	logFileConfig struct {
+		FileConfig       []fileConfig `toml:"file_config"`
+		ForceFlushInterv string       `toml:"force_flush_interval"`
+	}
+
+	fileConfig struct {
+		FileDirectory    string `toml:"file_directory"`
+		FileNameFilter   string `toml:"file_name_filter"`
+		FileStateFolder  string `toml:"file_state_folder"`
+		FromBeginning    bool   `toml:"from_beginning"`
+		LogGroupName     string `toml:"log_group_name"`
+		LogStreamName    string `toml:"log_stream_name"`
+		MultiLinePattern string `toml:"multi_line_pattern"`
+		Timezone         string
+		Filters          []fileConfigFilter
+		RetentionInDays  int `toml:"retention_in_days"`
+		AutoRemoval      bool
+		TagsKey          string `toml:"tags_key"`
+		Tags             map[string]string
 	}
 
 	memConfig struct {
@@ -150,9 +133,9 @@ type (
 	}
 
 	netConfig struct {
-		FieldPass  []string
-		Interfaces []string
-		Tags       map[string]string
+		FieldPass []string
+		Interval  string
+		Tags      map[string]string
 	}
 
 	netStatConfig struct {
@@ -162,91 +145,97 @@ type (
 	}
 
 	nvidiaSmi struct {
-		FieldPass  []string
-		Interval   string
-		TagExclude []string
-		Tags       map[string]string
+		Timeout  int
+		Interval string
+		Tags     map[string]string
 	}
 
 	processesConfig struct {
 		FieldPass []string
+		Interval  string
 		Tags      map[string]string
 	}
 
 	prometheusConfig struct {
-		ClusterName          string                              `toml:"cluster_name"`
-		PrometheusConfigPath string                              `toml:"prometheus_config_path"`
-		EcsServiceDiscovery  prometheusEcsServiceDiscoveryConfig `toml:"ecs_service_discovery"`
-		Tags                 map[string]string
+		ClusterName                string   `toml:"cluster_name"`
+		EndpointURLs               []string `toml:"endpoint_urls"`
+		GlobalMetricsDeclarations  []metricsDeclaration
+		GlobalDimensionsBlacklist  []string `toml:"global_dimensions_blacklist"`
+		GlobalTagsInclude          []string `toml:"global_tags_include"`
+		Interval                   string
+		MetricsDeclarations        []metricsDeclaration `toml:"metrics_declaration"`
+		OutputDestination          string               `toml:"output_destination"`
+		ServiceAddressURLLabelName string               `toml:"service_address_url_label_name"`
+		SourceLabelsBlacklist      []string             `toml:"source_labels_blacklist"`
+		TagsKey                    string               `toml:"tags_key"`
+		Tags                       map[string]string
 	}
 
-	prometheusEcsServiceDiscoveryConfig struct {
-		SdClusterRegion         string                    `toml:"sd_cluster_region"`
-		SdFrequency             string                    `toml:"sd_frequency"`
-		SdResultFile            string                    `toml:"sd_result_file"`
-		SdTargetCluster         string                    `toml:"sd_target_cluster"`
-		DockerLabel             map[string]string         `toml:"docker_label"`
-		ServiceNameListForTasks []serviceNameListForTasks `toml:"service_name_list_for_tasks"`
-		TaskDefinitionList      []taskDefinitionList      `toml:"task_definition_list"`
-	}
-
-	serviceNameListForTasks struct {
-		SdContainerNamePattern string `toml:"sd_container_name_pattern"`
-		SdJobName              string `toml:"sd_job_name"`
-		SdMetricsPath          string `toml:"sd_metrics_path"`
-		SdMetricsPorts         string `toml:"sd_metrics_ports"`
-		SdServiceNamePattern   string `toml:"sd_service_name_pattern"`
-	}
-
-	taskDefinitionList struct {
-		SdJobName                  string `toml:"sd_job_name"`
-		SdMetricsPath              string `toml:"sd_metrics_path"`
-		SdMetricsPorts             string `toml:"sd_metrics_ports"`
-		SdTaskDefinitionArnPattern string `toml:"sd_task_definition_arn_pattern"`
+	metricsDeclaration struct {
+		DimensionNameRequirement []string `toml:"dimension_name_requirement"`
+		LabelMatchers            []string `toml:"label_matchers"`
+		MetricNameSelectors      []string `toml:"metric_name_selectors"`
+		MetricRegistryName       string   `toml:"metric_registry_name"`
+		SourceLabels             []string `toml:"source_labels"`
+		TargetMetricNames        []string `toml:"target_metric_names"`
 	}
 
 	procStatConfig struct {
-		FieldPass  []string
-		PidFile    string `toml:"pid_file"`
-		PidFinder  string `toml:"pid_finder"`
-		TagExclude []string
-		Tags       map[string]string
+		FieldPass []string
+		Interval  string
+		Pattern   string
+		PidFile   string `toml:"pid_file"`
+		PidFinder string `toml:"pid_finder"`
+		PidTag    bool   `toml:"pid_tag"`
+		Tags      map[string]string
 	}
 
 	socketListenerConfig struct {
-		CollectdAuthFile      string   `toml:"collectd_auth_file"`
-		CollectdSecurityLevel string   `toml:"collectd_security_level"`
-		CollectdTypesDb       []string `toml:"collectd_typesdb"`
-		DataFormat            string   `toml:"data_format"`
-		NamePrefix            string   `toml:"name_prefix"`
-		NameOverride          string   `toml:"name_override"`
-		ServiceAddress        string   `toml:"service_address"`
-		Tags                  map[string]string
+		ServiceAddress  string `toml:"service_address"`
+		DataFormat      string `toml:"data_format"`
+		ContentEncoding string `toml:"content_encoding"`
+		KeepAlivePeriod string `toml:"keep_alive_period"`
+		MaxConnections  int    `toml:"max_connections"`
+		ReadBufferSize  int    `toml:"read_buffer_size"`
+		ReadTimeout     string `toml:"read_timeout"`
+		MetricSeparator string `toml:"metric_separator"`
+		TagsKey         string `toml:"tags_key"`
+		Tags            map[string]string
 	}
 
 	statsdConfig struct {
-		AllowedPendingMessages int `toml:"allowed_pending_messages"`
-		Interval               string
-		MetricSeparator        string `toml:"metric_separator"`
-		ParseDataDogTags       bool   `toml:"parse_data_dog_tags"`
-		ServiceAddress         string `toml:"service_address"`
+		AllowedPendingMessages int      `toml:"allowed_pending_messages"`
+		ConvertNames           bool     `toml:"convert_names"`
+		DeleteCounters         bool     `toml:"delete_counters"`
+		DeleteGauges           bool     `toml:"delete_gauges"`
+		DeleteSets             bool     `toml:"delete_sets"`
+		DeleteTimings          bool     `toml:"delete_timings"`
+		MetricSeparator        string   `toml:"metric_separator"`
+		ParseDataDogTags       bool     `toml:"parse_data_dog_tags"`
+		ServiceAddress         string   `toml:"service_address"`
+		PercentileLimit        int      `toml:"percentile_limit"`
+		Percentiles            []int    `toml:"percentiles"`
+		Templates              []string `toml:"templates"`
+		TagsKey                string   `toml:"tags_key"`
 		Tags                   map[string]string
 	}
 
 	swapConfig struct {
 		FieldPass []string
+		Interval  string
 		Tags      map[string]string
 	}
 
 	windowsEventLogConfig struct {
-		Destination     string
-		FileStateFolder string        `toml:"file_state_folder"`
-		MaxPersistState int           `toml:"max_persist_state"`
-		EventConfig     []eventConfig `toml:"event_config"`
-		Tags            map[string]string
+		EventName     string `toml:"event_name"`
+		EventLevels   []string
+		BatchReadSize int    `toml:"batch_read_size"`
+		StartAt       string `toml:"start_at"`
+		Destination   string
+		Tags          map[string]string
 	}
 
-	// Output plugins
+	// Output Plugins
 
 	cloudWatchOutputConfig struct {
 		EndpointOverride    string `toml:"endpoint_override"`
@@ -288,12 +277,6 @@ type (
 
 	// Processors
 	processorDelta struct {
-	}
-
-	ecsDecoratorConfig struct {
-		HostIp  string `toml:"host_ip"`
-		Order   int
-		TagPass map[string][]string
 	}
 
 	emfProcessorConfig struct {
