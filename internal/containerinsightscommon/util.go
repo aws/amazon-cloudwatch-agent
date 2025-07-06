@@ -7,19 +7,6 @@ import (
 	"log"
 )
 
-func IsNode(mType string) bool {
-	return mType == TypeNode || mType == TypeNodeNet || mType == TypeNodeFS || mType == TypeNodeDiskIO
-}
-func IsInstance(mType string) bool {
-	return mType == TypeInstance || mType == TypeInstanceNet || mType == TypeInstanceFS || mType == TypeInstanceDiskIO
-}
-func IsContainer(mType string) bool {
-	return mType == TypeContainer || mType == TypeContainerDiskIO || mType == TypeContainerFS
-}
-func IsPod(mType string) bool {
-	return mType == TypePod || mType == TypePodNet
-}
-
 func MetricName(mType string, name string) string {
 	prefix := ""
 	instancePrefix := "instance_"
