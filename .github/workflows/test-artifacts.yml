@@ -977,6 +977,7 @@ jobs:
         with:
           repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          fetch-depth: 0  # Fetch full git history for commit date lookup
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -993,6 +994,24 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
+      - name: Get commit date
+        id: get-commit-date
+        run: |
+          # Get commit date as Unix timestamp, fallback to 0 for easier backfilling
+          if [[ "${{ inputs.build_id }}" =~ ^[0-9a-f]{40}$ ]]; then
+            # Full SHA - get date from git log
+            COMMIT_DATE=$(git log -1 --format=%ct ${{ inputs.build_id }} 2>/dev/null || echo "0")
+          elif [[ "${{ inputs.build_id }}" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
+            # Version format like 1.300057.1b1168 - extract SHA and get date
+            SHA_PART=$(echo "${{ inputs.build_id }}" | sed 's/.*\.//')
+            COMMIT_DATE=$(git log -1 --format=%ct --grep="$SHA_PART" 2>/dev/null || echo "0")
+          else
+            # Fallback to 0 for easier backfilling of historical data
+            COMMIT_DATE="0"
+          fi
+          echo "commit_date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: ${{ inputs.build_id }}"
+
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
@@ -1005,6 +1024,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${{ inputs.build_id }}" \
+              -var="cwa_github_sha_date=${{ steps.get-commit-date.outputs.commit_date }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
@@ -1041,6 +1061,7 @@ jobs:
         with:
           repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          fetch-depth: 0  # Fetch full git history for commit date lookup
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -1057,6 +1078,24 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
+      - name: Get commit date
+        id: get-commit-date
+        run: |
+          # Get commit date as Unix timestamp, fallback to 0 for easier backfilling
+          if [[ "${{ inputs.build_id }}" =~ ^[0-9a-f]{40}$ ]]; then
+            # Full SHA - get date from git log
+            COMMIT_DATE=$(git log -1 --format=%ct ${{ inputs.build_id }} 2>/dev/null || echo "0")
+          elif [[ "${{ inputs.build_id }}" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
+            # Version format like 1.300057.1b1168 - extract SHA and get date
+            SHA_PART=$(echo "${{ inputs.build_id }}" | sed 's/.*\.//')
+            COMMIT_DATE=$(git log -1 --format=%ct --grep="$SHA_PART" 2>/dev/null || echo "0")
+          else
+            # Fallback to 0 for easier backfilling of historical data
+            COMMIT_DATE="0"
+          fi
+          echo "commit_date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: ${{ inputs.build_id }}"
+
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
@@ -1069,6 +1108,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${{ inputs.build_id }}" \
+              -var="cwa_github_sha_date=${{ steps.get-commit-date.outputs.commit_date }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
