@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	debug2 "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -71,7 +72,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			Processors: common.NewTranslatorMap(
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			),
-			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
+			Exporters: common.NewTranslatorMap(
+				awsemf.NewTranslatorWithName(common.PipelineNamePrometheus),
+				debug2.NewTranslator(),
+		
+		),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
 		}, nil

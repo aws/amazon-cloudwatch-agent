@@ -7,45 +7,45 @@ replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.2025
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250618011628-c38f9eb9d96a
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => ../opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => ../opentelemetry-collector-contrib/exporter/awsemfexporter
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => ../opentelemetry-collector-contrib/exporter/awsxrayexporter
 )
 
 replace (
-	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250618011628-c38f9eb9d96a
+	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => ../opentelemetry-collector-contrib/extension/awsmiddleware
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => ../opentelemetry-collector-contrib/extension/awsproxy
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/proxy => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/coreinternal v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfig v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kubelet => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/metadataproviders => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20250618011628-c38f9eb9d96a
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil => ../opentelemetry-collector-contrib/internal/aws/awsutil
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => ../opentelemetry-collector-contrib/internal/aws/containerinsight
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => ../opentelemetry-collector-contrib/internal/aws/cwlogs
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => ../opentelemetry-collector-contrib/internal/aws/k8s
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/proxy => ../opentelemetry-collector-contrib/internal/aws/proxy
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => ../opentelemetry-collector-contrib/internal/aws/xray
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal => ../opentelemetry-collector-contrib/internal/coreinternal
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => ../opentelemetry-collector-contrib/internal/k8sconfig
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kubelet => ../opentelemetry-collector-contrib/internal/kubelet
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/metadataproviders => ../opentelemetry-collector-contrib/internal/metadataproviders
 )
 
 replace (
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20250618011628-c38f9eb9d96a
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => ../opentelemetry-collector-contrib/pkg/resourcetotelemetry
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => ../opentelemetry-collector-contrib/pkg/stanza
 	// Replace with contrib to revert upstream change https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/20519
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250618011628-c38f9eb9d96a
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => ../opentelemetry-collector-contrib/pkg/translator/prometheus
 )
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250618011628-c38f9eb9d96a
+replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => ../opentelemetry-collector-contrib/processor/resourcedetectionprocessor
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250618011628-c38f9eb9d96a
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250618011628-c38f9eb9d96a
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => ../opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => ../opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => ../opentelemetry-collector-contrib/receiver/awsxrayreceiver
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => ../opentelemetry-collector-contrib/receiver/jmxreceiver
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../opentelemetry-collector-contrib/receiver/prometheusreceiver
 )
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
