@@ -12,9 +12,11 @@ import (
 )
 
 const (
-	// Each log event can be no larger than 256 KB. When truncating the message, this is the limit for message length.
+	// Each log event can be no larger than 256 KB. Since the input plugin now handles
+	// truncation with proper header accounting, we don't need to truncate again here.
+	// This constant is kept for reference but truncation logic is removed.
 	msgSizeLimit = 256*1024 - perEventHeaderBytes
-	// The suffix to add to truncated log lines.
+	// The suffix to add to truncated log lines (handled by input plugin now).
 	truncatedSuffix = "[Truncated...]"
 	// The duration until a timestamp is considered old.
 	warnOldTimeStamp = 24 * time.Hour
@@ -37,14 +39,41 @@ func newConverter(logger telegraf.Logger, target Target) *converter {
 	}
 }
 
-// convert handles message truncation to remain within PutLogEvents limits and sets a timestamp if not set in the
-// logs.LogEvent.
+// convert handles timestamp setting for logs.LogEvent. Message truncation is now handled
+// by the input plugin to prevent double truncation and ensure consistent size limits.
 func (c *converter) convert(e logs.LogEvent) *logEvent {
 	message := e.Message()
+	messageSize := len(message)
 
-	if len(message) > msgSizeLimit {
-		message = message[:msgSizeLimit-len(truncatedSuffix)] + truncatedSuffix
+	// Detailed logging for output plugin processing
+	c.logger.Debugf("[OUTPUT DEBUG] Processing log event:")
+	c.logger.Debugf("  - Log Group: %s", c.Group)
+	c.logger.Debugf("  - Log Stream: %s", c.Stream)
+	c.logger.Debugf("  - Message size: %d bytes", messageSize)
+	c.logger.Debugf("  - Message size limit (reference): %d bytes", msgSizeLimit)
+	c.logger.Debugf("  - Per event header bytes: %d bytes", perEventHeaderBytes)
+	
+	// Check if message appears to be truncated (contains truncation suffix)
+	if len(message) >= len(truncatedSuffix) && message[len(message)-len(truncatedSuffix):] == truncatedSuffix {
+		c.logger.Infof("[OUTPUT DEBUG] Truncated message detected:")
+		c.logger.Infof("  - Log Group: %s", c.Group)
+		c.logger.Infof("  - Message size: %d bytes", messageSize)
+		c.logger.Infof("  - Contains truncation suffix: %s", truncatedSuffix)
+		c.logger.Infof("  - Message preview (first 200 chars): %.200s", message)
+		c.logger.Infof("  - Message preview (last 200 chars): %s", message[max(0, len(message)-200):])
 	}
+	
+	// Log if message is close to size limits
+	if messageSize > msgSizeLimit*4/5 { // 80% of limit
+		c.logger.Warnf("[OUTPUT DEBUG] Large message detected (>80%% of limit):")
+		c.logger.Warnf("  - Log Group: %s", c.Group)
+		c.logger.Warnf("  - Message size: %d bytes (%.1f%% of limit)", messageSize, float64(messageSize)/float64(msgSizeLimit)*100)
+		c.logger.Warnf("  - Size limit: %d bytes", msgSizeLimit)
+	}
+
+	// Remove truncation logic here since it's now handled by the input plugin
+	// This prevents double truncation and ensures consistent size handling
+	
 	now := time.Now()
 	var t time.Time
 	if e.Time().IsZero() {

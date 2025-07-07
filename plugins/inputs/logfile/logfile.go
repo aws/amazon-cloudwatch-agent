@@ -106,23 +106,33 @@ func (t *LogFile) Gather(acc telegraf.Accumulator) error {
 }
 
 func (t *LogFile) Start(acc telegraf.Accumulator) error {
+	t.Log.Infof("[LOGFILE START] Initializing LogFile plugin")
+	t.Log.Infof("[LOGFILE START] State folder: %s", t.FileStateFolder)
+	t.Log.Infof("[LOGFILE START] Number of file configs: %d", len(t.FileConfig))
+	t.Log.Infof("[LOGFILE START] Default destination: %s", t.Destination)
+	t.Log.Infof("[LOGFILE START] Max persist state: %d", t.MaxPersistState)
+	
 	// Create the log file state folder.
 	err := os.MkdirAll(t.FileStateFolder, 0755)
 	if err != nil {
+		t.Log.Errorf("[LOGFILE START] Failed to create state file directory %s: %v", t.FileStateFolder, err)
 		return fmt.Errorf("failed to create state file directory %s: %v", t.FileStateFolder, err)
 	}
+	t.Log.Infof("[LOGFILE START] Successfully created state file directory: %s", t.FileStateFolder)
 
 	// Clean state file on init and regularly
 	go func() {
+		t.Log.Debugf("[LOGFILE CLEANUP] Starting cleanup routine")
 		t.cleanupStateFolder()
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
+				t.Log.Debugf("[LOGFILE CLEANUP] Running scheduled cleanup")
 				t.cleanupStateFolder()
 			case <-t.done:
-				t.Log.Debugf("Cleanup state folder routine received shutdown signal, stopping.")
+				t.Log.Debugf("[LOGFILE CLEANUP] Cleanup state folder routine received shutdown signal, stopping.")
 				return
 			}
 		}
@@ -130,13 +140,25 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 
 	// Initialize all the file configs
 	for i := range t.FileConfig {
+		t.Log.Infof("[LOGFILE START] Initializing file config %d:", i)
+		t.Log.Infof("[LOGFILE START]   - File path: %s", t.FileConfig[i].FilePath)
+		t.Log.Infof("[LOGFILE START]   - Log group: %s", t.FileConfig[i].LogGroupName)
+		t.Log.Infof("[LOGFILE START]   - Log stream: %s", t.FileConfig[i].LogStreamName)
+		t.Log.Infof("[LOGFILE START]   - Max event size: %d bytes", t.FileConfig[i].MaxEventSize)
+		t.Log.Infof("[LOGFILE START]   - From beginning: %t", t.FileConfig[i].FromBeginning)
+		t.Log.Infof("[LOGFILE START]   - Multi logs: %t", t.FileConfig[i].PublishMultiLogs)
+		t.Log.Infof("[LOGFILE START]   - Auto removal: %t", t.FileConfig[i].AutoRemoval)
+		t.Log.Infof("[LOGFILE START]   - Encoding: %s", t.FileConfig[i].Encoding)
+		
 		if err := t.FileConfig[i].init(); err != nil {
+			t.Log.Errorf("[LOGFILE START] Invalid file config init for config %d: %v, error: %v", i, t.FileConfig[i], err)
 			return fmt.Errorf("invalid file config init %v with err %v", t.FileConfig[i], err)
 		}
+		t.Log.Infof("[LOGFILE START] Successfully initialized file config %d", i)
 	}
 
 	t.started = true
-	t.Log.Infof("turned on logs plugin")
+	t.Log.Infof("[LOGFILE START] Successfully turned on logs plugin with %d file configurations", len(t.FileConfig))
 	return nil
 }
 
@@ -149,10 +171,11 @@ func (t *LogFile) Stop() {
 // Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	if !t.started {
-		t.Log.Warn("not started with file state folder %s", t.FileStateFolder)
+		t.Log.Warnf("[LOGFILE FIND] Plugin not started with file state folder %s", t.FileStateFolder)
 		return nil
 	}
 
+	t.Log.Debugf("[LOGFILE FIND] Starting log source discovery")
 	var srcs []logs.LogSrc
 
 	t.cleanUpStoppedTailerSrc()
@@ -162,31 +185,50 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
+		t.Log.Debugf("[LOGFILE FIND] Processing file config %d: %s", i, fileconfig.FilePath)
 
 		//Add file -> {serviceName,  deploymentEnvironment} mapping to entity store
 		if es != nil {
 			es.AddServiceAttrEntryForLogFile(entitystore.LogFileGlob(fileconfig.FilePath), fileconfig.ServiceName, fileconfig.Environment)
+			t.Log.Debugf("[LOGFILE FIND] Added service attributes to entity store for %s", fileconfig.FilePath)
 		}
 
 		targetFiles, err := t.getTargetFiles(fileconfig)
 		if err != nil {
-			t.Log.Errorf("Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)
+			t.Log.Errorf("[LOGFILE FIND] Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)
+			continue
 		}
-		for _, filename := range targetFiles {
+		
+		t.Log.Infof("[LOGFILE FIND] Found %d target files for pattern %s", len(targetFiles), fileconfig.FilePath)
+		for idx, filename := range targetFiles {
+			t.Log.Debugf("[LOGFILE FIND] Processing target file %d/%d: %s", idx+1, len(targetFiles), filename)
+			
 			dests, ok := t.configs[fileconfig]
 			if !ok {
 				dests = make(map[string]*tailerSrc)
 				t.configs[fileconfig] = dests
+				t.Log.Debugf("[LOGFILE FIND] Created new destination map for file config")
 			}
 
 			if _, ok := dests[filename]; ok {
+				t.Log.Debugf("[LOGFILE FIND] File %s already being monitored, skipping", filename)
 				continue
 			} else if fileconfig.AutoRemoval {
 				// This logic means auto_removal does not work with publish_multi_logs
-				for _, dst := range dests {
+				t.Log.Infof("[LOGFILE FIND] Auto removal enabled, stopping existing tailers for %s", filename)
+				for existingFile, dst := range dests {
+					t.Log.Debugf("[LOGFILE FIND] Stopping tailer for existing file: %s", existingFile)
 					// Stop all other tailers in favor of the newly found file
 					dst.tailer.StopAtEOF()
 				}
+			}
+
+			// Check file size and properties
+			if fileInfo, err := os.Stat(filename); err == nil {
+				t.Log.Infof("[LOGFILE FIND] File stats for %s:", filename)
+				t.Log.Infof("[LOGFILE FIND]   - Size: %d bytes (%.2f KB)", fileInfo.Size(), float64(fileInfo.Size())/1024)
+				t.Log.Infof("[LOGFILE FIND]   - Modified: %s", fileInfo.ModTime().Format(time.RFC3339))
+				t.Log.Infof("[LOGFILE FIND]   - Mode: %s", fileInfo.Mode())
 			}
 
 			stateManager := state.NewFileRangeManager(state.ManagerConfig{
@@ -194,24 +236,33 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				Name:              filename,
 				MaxPersistedItems: max(1, t.MaxPersistState),
 			})
+			t.Log.Debugf("[LOGFILE FIND] Created state manager for %s", filename)
 
 			var seekFile *tail.SeekInfo
 			restored, err := stateManager.Restore()
 			if err == nil { // Missing state file would be an error too
 				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: restored.Last().EndOffsetInt64()}
+				t.Log.Infof("[LOGFILE FIND] Restored state for %s, seeking to offset %d", filename, restored.Last().EndOffsetInt64())
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
+				t.Log.Infof("[LOGFILE FIND] No state found for %s, seeking to end of file", filename)
+			} else {
+				t.Log.Infof("[LOGFILE FIND] Starting from beginning for %s (pipe: %t, from_beginning: %t)", filename, fileconfig.Pipe, fileconfig.FromBeginning)
 			}
 
 			var gapsToRead state.RangeList
 			if !restored.OnlyUseMaxOffset() {
 				gapsToRead = state.InvertRanges(restored)
+				t.Log.Debugf("[LOGFILE FIND] Found %d gaps to read for %s", len(gapsToRead), filename)
 			}
+			
 			isutf16 := false
 			if fileconfig.Encoding == "utf-16" || fileconfig.Encoding == "utf-16le" || fileconfig.Encoding == "UTF-16" || fileconfig.Encoding == "UTF-16LE" {
 				isutf16 = true
+				t.Log.Debugf("[LOGFILE FIND] UTF-16 encoding detected for %s", filename)
 			}
 
+			t.Log.Infof("[LOGFILE FIND] Creating tailer for %s with max line size %d bytes", filename, fileconfig.MaxEventSize)
 			tailer, err := tail.TailFile(filename,
 				tail.Config{
 					ReOpen:      false,
@@ -226,13 +277,15 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				})
 
 			if err != nil {
-				t.Log.Errorf("Failed to tail file %v with error: %v", filename, err)
+				t.Log.Errorf("[LOGFILE FIND] Failed to tail file %v with error: %v", filename, err)
 				continue
 			}
+			t.Log.Infof("[LOGFILE FIND] Successfully created tailer for %s", filename)
 
 			var mlCheck func(string) bool
 			if fileconfig.MultiLineStartPattern != "" {
 				mlCheck = fileconfig.isMultilineStart
+				t.Log.Debugf("[LOGFILE FIND] Multiline pattern configured for %s: %s", filename, fileconfig.MultiLineStartPattern)
 			}
 
 			groupName := fileconfig.LogGroupName
@@ -246,12 +299,23 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				} else {
 					streamName = generateLogStreamName(filename, fileconfig.LogStreamName)
 				}
+				t.Log.Infof("[LOGFILE FIND] Multi-log mode - generated names for %s:", filename)
+				t.Log.Infof("[LOGFILE FIND]   - Log Group: %s", groupName)
+				t.Log.Infof("[LOGFILE FIND]   - Log Stream: %s", streamName)
 			}
 
 			destination := fileconfig.Destination
 			if destination == "" {
 				destination = t.Destination
 			}
+
+			t.Log.Infof("[LOGFILE FIND] Creating tailer source for %s:", filename)
+			t.Log.Infof("[LOGFILE FIND]   - Log Group: %s", groupName)
+			t.Log.Infof("[LOGFILE FIND]   - Log Stream: %s", streamName)
+			t.Log.Infof("[LOGFILE FIND]   - Destination: %s", destination)
+			t.Log.Infof("[LOGFILE FIND]   - Max Event Size: %d bytes", fileconfig.MaxEventSize)
+			t.Log.Infof("[LOGFILE FIND]   - Truncate Suffix: %s", fileconfig.TruncateSuffix)
+			t.Log.Infof("[LOGFILE FIND]   - Retention: %d days", fileconfig.RetentionInDays)
 
 			src := NewTailerSrc(
 				groupName, streamName,
@@ -282,58 +346,107 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			}(src))
 
 			srcs = append(srcs, src)
-
 			dests[filename] = src
+			
+			t.Log.Infof("[LOGFILE FIND] Successfully created and registered tailer source for %s", filename)
 		}
 	}
 
+	t.Log.Infof("[LOGFILE FIND] Discovery complete, found %d log sources", len(srcs))
 	return srcs
 }
 
 func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	filePath := fileconfig.FilePath
 	blacklistP := fileconfig.BlacklistRegexP
+	
+	t.Log.Infof("[LOGFILE TARGET] Starting target file discovery for pattern: %s", filePath)
+	t.Log.Debugf("[LOGFILE TARGET] File config details:")
+	t.Log.Debugf("[LOGFILE TARGET]   - Multi-log mode: %t", fileconfig.PublishMultiLogs)
+	t.Log.Debugf("[LOGFILE TARGET]   - State folder: %s", t.FileStateFolder)
+	
+	if blacklistP != nil {
+		t.Log.Debugf("[LOGFILE TARGET] Blacklist pattern configured: %s", blacklistP.String())
+	} else {
+		t.Log.Debugf("[LOGFILE TARGET] No blacklist pattern configured")
+	}
+	
+	t.Log.Debugf("[LOGFILE TARGET] Compiling glob pattern: %s", filePath)
 	g, err := globpath.Compile(filePath)
 	if err != nil {
+		t.Log.Errorf("[LOGFILE TARGET] Failed to compile glob pattern %s: %s", filePath, err)
 		return nil, fmt.Errorf("file_path glob %s failed to compile, %s", filePath, err)
 	}
+	t.Log.Debugf("[LOGFILE TARGET] Successfully compiled glob pattern")
 
 	var targetFileList []string
 	var targetFileName string
 	var targetModTime time.Time
+	matchCount := 0
+	
 	for matchedFileName, matchedFileInfo := range g.Match() {
+		matchCount++
+		t.Log.Debugf("[LOGFILE TARGET] Evaluating matched file %d: %s", matchCount, matchedFileName)
+		
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
+			t.Log.Debugf("[LOGFILE TARGET] Skipping file in state folder: %s", matchedFileName)
 			continue
 		}
 
 		if isCompressedFile(matchedFileName) {
+			t.Log.Debugf("[LOGFILE TARGET] Skipping compressed file: %s", matchedFileName)
 			continue
 		}
 
 		// If it's a dir or a symbolic link pointing to a dir, ignore it
 		if isDir, err := isDirectory(matchedFileName); err != nil {
+			t.Log.Errorf("[LOGFILE TARGET] Error checking if %s is directory: %v", matchedFileName, err)
 			return nil, fmt.Errorf("error tailing file %v with error: %v", matchedFileName, err)
 		} else if isDir {
+			t.Log.Debugf("[LOGFILE TARGET] Skipping directory: %s", matchedFileName)
 			continue
 		}
 
 		fileBaseName := filepath.Base(matchedFileName)
 		if blacklistP != nil && blacklistP.MatchString(fileBaseName) {
+			t.Log.Debugf("[LOGFILE TARGET] Skipping blacklisted file: %s (matches pattern)", matchedFileName)
 			continue
 		}
+		
+		// Log file details
+		t.Log.Debugf("[LOGFILE TARGET] File details for %s:", matchedFileName)
+		t.Log.Debugf("[LOGFILE TARGET]   - Size: %d bytes", matchedFileInfo.Size())
+		t.Log.Debugf("[LOGFILE TARGET]   - Modified: %s", matchedFileInfo.ModTime().Format(time.RFC3339))
+		t.Log.Debugf("[LOGFILE TARGET]   - Mode: %s", matchedFileInfo.Mode())
+		
 		if !fileconfig.PublishMultiLogs {
 			if targetFileName == "" || matchedFileInfo.ModTime().After(targetModTime) {
+				if targetFileName != "" {
+					t.Log.Debugf("[LOGFILE TARGET] Replacing previous target %s (older: %s) with %s (newer: %s)", 
+						targetFileName, targetModTime.Format(time.RFC3339), 
+						matchedFileName, matchedFileInfo.ModTime().Format(time.RFC3339))
+				}
 				targetFileName = matchedFileName
 				targetModTime = matchedFileInfo.ModTime()
 			}
 		} else {
 			targetFileList = append(targetFileList, matchedFileName)
-			t.Log.Debugf("Multi-log mode - added file: %s", matchedFileName)
+			t.Log.Debugf("[LOGFILE TARGET] Multi-log mode - added file: %s", matchedFileName)
 		}
 	}
+	
 	//If targetFileName != "", it means customer doesn't enable publish_multi_logs feature, targetFileList should be empty in this case.
 	if targetFileName != "" {
 		targetFileList = append(targetFileList, targetFileName)
+		t.Log.Infof("[LOGFILE TARGET] Single file mode - selected most recent file: %s (modified: %s)", 
+			targetFileName, targetModTime.Format(time.RFC3339))
+	}
+
+	t.Log.Infof("[LOGFILE TARGET] Pattern %s matched %d files, selected %d files for monitoring", 
+		filePath, matchCount, len(targetFileList))
+	
+	for i, file := range targetFileList {
+		t.Log.Infof("[LOGFILE TARGET] Selected file %d: %s", i+1, file)
 	}
 
 	return targetFileList, nil

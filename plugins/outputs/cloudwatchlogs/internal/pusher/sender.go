@@ -57,8 +57,39 @@ func newSender(
 // RetryDuration or an unretryable error.
 func (s *sender) Send(batch *logEventBatch) {
 	if len(batch.events) == 0 {
+		s.logger.Debugf("[SEND DEBUG] Empty batch, nothing to send")
 		return
 	}
+	
+	// Detailed logging before sending
+	s.logger.Infof("[SEND DEBUG] Preparing to send batch to CloudWatch Logs:")
+	s.logger.Infof("  - Log Group: %s", batch.Group)
+	s.logger.Infof("  - Log Stream: %s", batch.Stream)
+	s.logger.Infof("  - Number of events: %d", len(batch.events))
+	s.logger.Infof("  - Total batch size: %d bytes (%.2f KB)", batch.bufferedSize, float64(batch.bufferedSize)/1024)
+	s.logger.Infof("  - Batch size limit: %d bytes (%.2f KB)", reqSizeLimit, float64(reqSizeLimit)/1024)
+	s.logger.Infof("  - Events limit: %d", reqEventsLimit)
+	
+	// Check for truncated messages in the batch
+	truncatedCount := 0
+	for i, event := range batch.events {
+		if event.Message != nil && len(*event.Message) >= 15 {
+			if (*event.Message)[len(*event.Message)-15:] == "[Truncated...]" {
+				truncatedCount++
+				if truncatedCount <= 3 { // Log details for first 3 truncated messages
+					s.logger.Warnf("[SEND DEBUG] Truncated message #%d in batch:", truncatedCount)
+					s.logger.Warnf("  - Event index: %d", i)
+					s.logger.Warnf("  - Message size: %d bytes", len(*event.Message))
+					s.logger.Warnf("  - Message preview (last 100 chars): %s", (*event.Message)[max(0, len(*event.Message)-100):])
+				}
+			}
+		}
+	}
+	
+	if truncatedCount > 0 {
+		s.logger.Warnf("[SEND DEBUG] Total truncated messages in batch: %d/%d", truncatedCount, len(batch.events))
+	}
+	
 	input := batch.build()
 	startTime := time.Now()
 
@@ -67,16 +98,25 @@ func (s *sender) Send(batch *logEventBatch) {
 	for {
 		output, err := s.service.PutLogEvents(input)
 		if err == nil {
+			// Success - detailed logging
+			s.logger.Infof("[SEND DEBUG] Successfully sent batch to CloudWatch Logs:")
+			s.logger.Infof("  - Log Group: %s", batch.Group)
+			s.logger.Infof("  - Log Stream: %s", batch.Stream)
+			s.logger.Infof("  - Events sent: %d", len(batch.events))
+			s.logger.Infof("  - Total size: %d bytes (%.2f KB)", batch.bufferedSize, float64(batch.bufferedSize)/1024)
+			s.logger.Infof("  - Duration: %v", time.Since(startTime))
+			
 			if output.RejectedLogEventsInfo != nil {
 				info := output.RejectedLogEventsInfo
+				s.logger.Warnf("[SEND DEBUG] Some events were rejected by CloudWatch Logs:")
 				if info.TooOldLogEventEndIndex != nil {
-					s.logger.Warnf("%d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, batch.Group, batch.Stream)
+					s.logger.Warnf("  - %d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, batch.Group, batch.Stream)
 				}
 				if info.TooNewLogEventStartIndex != nil {
-					s.logger.Warnf("%d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, batch.Group, batch.Stream)
+					s.logger.Warnf("  - %d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, batch.Group, batch.Stream)
 				}
 				if info.ExpiredLogEventEndIndex != nil {
-					s.logger.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, batch.Group, batch.Stream)
+					s.logger.Warnf("  - %d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, batch.Group, batch.Stream)
 				}
 			}
 			batch.done()

@@ -306,8 +306,12 @@ func (tail *Tail) readlineUtf16() (string, error) {
 			}
 			cur = append(cur, nextByte)
 		}
-		// 262144 => 256KB
-		if resSize+len(cur) >= 262144 {
+		// Use configurable MaxLineSize instead of hardcoded 256KB
+		maxSize := 262144 // Default 256KB
+		if tail.MaxLineSize > 0 {
+			maxSize = tail.MaxLineSize
+		}
+		if resSize+len(cur) >= maxSize {
 			break
 		}
 		buf := make([]byte, len(cur))

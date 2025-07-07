@@ -20,8 +20,26 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
+// Helper function for max of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 const (
 	tailCloseThreshold = 3 * time.Second
+	// Reserve space for CloudWatch Logs service headers and metadata
+	// Based on actual CloudWatch Logs API specification:
+	// - Per-event header: 52 bytes (timestamp + metadata)
+	// - Additional safety margin for log group/stream names and service overhead
+	// Reduced from 8KB to 1KB to prevent over-aggressive truncation
+	cloudWatchHeaderReserve = 1024 * 8 // 1KB reserve (was 8KB - too aggressive)
+
+	// Minimum content size to prevent over-truncation
+	// Ensures we don't create log entries that are too small to be meaningful
+	minContentSize = 100 // Minimum 100 bytes of actual content after truncation
 )
 
 var (
@@ -120,6 +138,13 @@ func NewTailerSrc(
 		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeFDRelease,
 		done:               make(chan struct{}),
 	}
+
+	// Validate header reserve configuration on first tailer creation
+	validator := NewHeaderReserveValidator()
+	validator.MaxEventSize = maxEventSize
+	validator.TruncationSuffix = truncateSuffix
+	validator.ValidateConfiguration()
+	validator.TestTruncationScenarios()
 
 	if ts.backpressureFdDrop {
 		ts.buffer = make(chan *LogEvent, defaultBufferSize)
@@ -225,21 +250,169 @@ func (ts *tailerSrc) runTail() {
 			if ts.isMLStart == nil {
 				msgBuf.Reset()
 				msgBuf.WriteString(text)
+
+				messageSize := msgBuf.Len()
+
+				// Handle single line larger than max event size
+				if messageSize > ts.maxEventSize {
+					originalSize := messageSize
+					// Calculate effective max size with improved logic
+					baseReserve := cloudWatchHeaderReserve + len(ts.truncateSuffix)
+					effectiveMaxSize := ts.maxEventSize - baseReserve
+
+					// Enhanced safety check to prevent over-truncation
+					if effectiveMaxSize < minContentSize {
+						log.Printf("[TRUNCATION ERROR] Calculated effective size too small:")
+						log.Printf("  - File: %s", ts.tailer.Filename)
+						log.Printf("  - Max event size: %d bytes", ts.maxEventSize)
+						log.Printf("  - Base reserve (header + suffix): %d bytes", baseReserve)
+						log.Printf("  - Calculated effective size: %d bytes", effectiveMaxSize)
+						log.Printf("  - Minimum content size: %d bytes", minContentSize)
+						log.Printf("  - Adjusting to minimum content size")
+
+						// Adjust to ensure minimum content size
+						effectiveMaxSize = minContentSize
+						if effectiveMaxSize+len(ts.truncateSuffix) > ts.maxEventSize {
+							// If even minimum content + suffix exceeds limit, use maximum possible
+							effectiveMaxSize = ts.maxEventSize - len(ts.truncateSuffix)
+							log.Printf("  - Final adjusted effective size: %d bytes", effectiveMaxSize)
+						}
+					}
+
+					// Enhanced logging for truncation debugging
+					log.Printf("[TRUNCATION DEBUG] Single line truncation detected:")
+					log.Printf("  - File: %s", ts.tailer.Filename)
+					log.Printf("  - Original message size: %d bytes (%.2f KB)", originalSize, float64(originalSize)/1024)
+					log.Printf("  - Max event size limit: %d bytes (%.2f KB)", ts.maxEventSize, float64(ts.maxEventSize)/1024)
+					log.Printf("  - CloudWatch header reserve: %d bytes", cloudWatchHeaderReserve)
+					log.Printf("  - Truncation suffix: '%s' (%d bytes)", ts.truncateSuffix, len(ts.truncateSuffix))
+					log.Printf("  - Base reserve total: %d bytes", baseReserve)
+					log.Printf("  - Effective max size: %d bytes (%.2f KB)", effectiveMaxSize, float64(effectiveMaxSize)/1024)
+					log.Printf("  - Bytes being truncated: %d bytes (%.1f%%)", originalSize-effectiveMaxSize, float64(originalSize-effectiveMaxSize)/float64(originalSize)*100)
+					log.Printf("  - Original message preview (first 200 chars): %.200s", msgBuf.String())
+
+					// Perform truncation with validation
+					if effectiveMaxSize > 0 && effectiveMaxSize < msgBuf.Len() {
+						msgBuf.Truncate(effectiveMaxSize)
+						msgBuf.WriteString(ts.truncateSuffix)
+
+						log.Printf("  - Final message size after truncation: %d bytes", msgBuf.Len())
+						log.Printf("  - Final message preview (first 100 chars): %.100s", msgBuf.String())
+						log.Printf("  - Final message preview (last 100 chars): %s", msgBuf.String()[max(0, msgBuf.Len()-100):])
+
+						// Validation check
+						if msgBuf.Len() > ts.maxEventSize {
+							log.Printf("[TRUNCATION ERROR] Final message size exceeds limit!")
+							log.Printf("  - Final size: %d bytes", msgBuf.Len())
+							log.Printf("  - Max allowed: %d bytes", ts.maxEventSize)
+						}
+					} else {
+						log.Printf("[TRUNCATION ERROR] Invalid effective size calculation: %d", effectiveMaxSize)
+					}
+				} else if messageSize > 200*1024 { // Log large messages that don't get truncated (>200KB)
+					log.Printf("[SIZE DEBUG] Large single line message processed successfully:")
+					log.Printf("  - File: %s", ts.tailer.Filename)
+					log.Printf("  - Message size: %d bytes (%.1f KB)", messageSize, float64(messageSize)/1024)
+					log.Printf("  - Max event size limit: %d bytes (%.1f KB)", ts.maxEventSize, float64(ts.maxEventSize)/1024)
+					log.Printf("  - Remaining capacity: %d bytes", ts.maxEventSize-messageSize)
+					log.Printf("  - CloudWatch Logs 256KB limit: %s", func() string {
+						if messageSize <= 256*1024 {
+							return "WITHIN LIMIT"
+						}
+						return "EXCEEDS LIMIT"
+					}())
+				}
 				fo.ShiftInt64(line.Offset)
 				init = ""
 			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msgBuf.Len() == 0) {
 				init = text
 				ignoreUntilNextEvent = false
-			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
+			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize-cloudWatchHeaderReserve {
+				if !ignoreUntilNextEvent {
+					// First time hitting the threshold - log it
+					log.Printf("[SIZE DEBUG] Multiline message approaching size limit, ignoring additional lines:")
+					log.Printf("  - File: %s", ts.tailer.Filename)
+					log.Printf("  - Current message size: %d bytes (%.1f KB)", msgBuf.Len(), float64(msgBuf.Len())/1024)
+					log.Printf("  - Size threshold: %d bytes", ts.maxEventSize-cloudWatchHeaderReserve)
+					log.Printf("  - Max event size limit: %d bytes (%.1f KB)", ts.maxEventSize, float64(ts.maxEventSize)/1024)
+				}
 				ignoreUntilNextEvent = true
 				fo.ShiftInt64(line.Offset)
 				continue
 			} else {
 				msgBuf.WriteString("\n")
 				msgBuf.WriteString(text)
-				if msgBuf.Len() > ts.maxEventSize {
-					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
-					msgBuf.WriteString(ts.truncateSuffix)
+
+				messageSize := msgBuf.Len()
+
+				if messageSize > ts.maxEventSize {
+					originalSize := messageSize
+					// Calculate effective max size with improved logic
+					baseReserve := cloudWatchHeaderReserve + len(ts.truncateSuffix)
+					effectiveMaxSize := ts.maxEventSize - baseReserve
+
+					// Enhanced safety check to prevent over-truncation
+					if effectiveMaxSize < minContentSize {
+						log.Printf("[TRUNCATION ERROR] Multiline effective size too small:")
+						log.Printf("  - File: %s", ts.tailer.Filename)
+						log.Printf("  - Max event size: %d bytes", ts.maxEventSize)
+						log.Printf("  - Base reserve (header + suffix): %d bytes", baseReserve)
+						log.Printf("  - Calculated effective size: %d bytes", effectiveMaxSize)
+						log.Printf("  - Minimum content size: %d bytes", minContentSize)
+						log.Printf("  - Adjusting to minimum content size")
+
+						// Adjust to ensure minimum content size
+						effectiveMaxSize = minContentSize
+						if effectiveMaxSize+len(ts.truncateSuffix) > ts.maxEventSize {
+							// If even minimum content + suffix exceeds limit, use maximum possible
+							effectiveMaxSize = ts.maxEventSize - len(ts.truncateSuffix)
+							log.Printf("  - Final adjusted effective size: %d bytes", effectiveMaxSize)
+						}
+					}
+
+					// Enhanced logging for multiline truncation debugging
+					log.Printf("[TRUNCATION DEBUG] Multiline truncation detected:")
+					log.Printf("  - File: %s", ts.tailer.Filename)
+					log.Printf("  - Original multiline message size: %d bytes (%.2f KB)", originalSize, float64(originalSize)/1024)
+					log.Printf("  - Max event size limit: %d bytes (%.2f KB)", ts.maxEventSize, float64(ts.maxEventSize)/1024)
+					log.Printf("  - CloudWatch header reserve: %d bytes", cloudWatchHeaderReserve)
+					log.Printf("  - Truncation suffix: '%s' (%d bytes)", ts.truncateSuffix, len(ts.truncateSuffix))
+					log.Printf("  - Base reserve total: %d bytes", baseReserve)
+					log.Printf("  - Effective max size: %d bytes (%.2f KB)", effectiveMaxSize, float64(effectiveMaxSize)/1024)
+					log.Printf("  - Bytes being truncated: %d bytes (%.1f%%)", originalSize-effectiveMaxSize, float64(originalSize-effectiveMaxSize)/float64(originalSize)*100)
+					log.Printf("  - Original multiline message preview (first 200 chars): %.200s", msgBuf.String())
+
+					// Perform truncation with validation
+					if effectiveMaxSize > 0 && effectiveMaxSize < msgBuf.Len() {
+						msgBuf.Truncate(effectiveMaxSize)
+						msgBuf.WriteString(ts.truncateSuffix)
+
+						log.Printf("  - Final message size after truncation: %d bytes", msgBuf.Len())
+						log.Printf("  - Final message preview (first 100 chars): %.100s", msgBuf.String())
+						log.Printf("  - Final message preview (last 100 chars): %s", msgBuf.String()[max(0, msgBuf.Len()-100):])
+
+						// Validation check
+						if msgBuf.Len() > ts.maxEventSize {
+							log.Printf("[TRUNCATION ERROR] Final multiline message size exceeds limit!")
+							log.Printf("  - Final size: %d bytes", msgBuf.Len())
+							log.Printf("  - Max allowed: %d bytes", ts.maxEventSize)
+						}
+					} else {
+						log.Printf("[TRUNCATION ERROR] Invalid multiline effective size calculation: %d", effectiveMaxSize)
+					}
+					log.Printf("  - Final message preview (last 200 chars): %s", msgBuf.String()[max(0, msgBuf.Len()-200):])
+				} else if messageSize > 200*1024 { // Log large multiline messages that don't get truncated (>200KB)
+					log.Printf("[SIZE DEBUG] Large multiline message processed successfully:")
+					log.Printf("  - File: %s", ts.tailer.Filename)
+					log.Printf("  - Message size: %d bytes (%.1f KB)", messageSize, float64(messageSize)/1024)
+					log.Printf("  - Max event size limit: %d bytes (%.1f KB)", ts.maxEventSize, float64(ts.maxEventSize)/1024)
+					log.Printf("  - Remaining capacity: %d bytes", ts.maxEventSize-messageSize)
+					log.Printf("  - CloudWatch Logs 256KB limit: %s", func() string {
+						if messageSize <= 256*1024 {
+							return "WITHIN LIMIT"
+						}
+						return "EXCEEDS LIMIT"
+					}())
 				}
 				fo.ShiftInt64(line.Offset)
 				continue

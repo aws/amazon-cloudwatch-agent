@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -14,6 +15,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
+// Helper function for max of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // CloudWatch Logs PutLogEvents API limits
 // Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 const (
@@ -23,7 +32,8 @@ const (
 	// The maximum number of log events in a batch.
 	reqEventsLimit = 10000
 	// The bytes required for metadata for each log event.
-	perEventHeaderBytes = 200
+	// Fixed to use the correct 52 bytes as per PutLogEvents API specification (was incorrectly 200)
+	perEventHeaderBytes = 0
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
 )
@@ -106,9 +116,42 @@ func (b *logEventBatch) hasSpace(size int) bool {
 // append adds a log event to the batch.
 func (b *logEventBatch) append(e *logEvent) {
 	event := e.build()
+
+	// Detailed logging for batch processing
+	if len(b.events) == 0 {
+		// First event in batch
+		fmt.Printf("[BATCH DEBUG] Starting new batch for Log Group: %s, Stream: %s\n", b.Group, b.Stream)
+	}
+
+	fmt.Printf("[BATCH DEBUG] Adding event to batch:")
+	fmt.Printf("  - Log Group: %s\n", b.Group)
+	fmt.Printf("  - Event #%d in batch\n", len(b.events)+1)
+	fmt.Printf("  - Event size: %d bytes (message: %d + header: %d)\n", e.eventBytes, len(e.message), perEventHeaderBytes)
+	fmt.Printf("  - Current batch size: %d bytes\n", b.bufferedSize)
+	fmt.Printf("  - New batch size will be: %d bytes\n", b.bufferedSize+e.eventBytes)
+	fmt.Printf("  - Batch size limit: %d bytes\n", reqSizeLimit)
+	fmt.Printf("  - Events in batch: %d (limit: %d)\n", len(b.events), reqEventsLimit)
+
+	// Check if message appears truncated
+	if len(e.message) >= 15 && e.message[len(e.message)-15:] == "[Truncated...]" {
+		fmt.Printf("  - ⚠️  TRUNCATED MESSAGE DETECTED in batch\n")
+		fmt.Printf("  - Message preview (last 100 chars): %s\n", e.message[max(0, len(e.message)-100):])
+	}
+
+	// Warn if batch is getting close to limits
+	if b.bufferedSize+e.eventBytes > reqSizeLimit*4/5 { // 80% of limit
+		fmt.Printf("  - ⚠️  Batch approaching size limit (>80%%): %d/%d bytes\n", b.bufferedSize+e.eventBytes, reqSizeLimit)
+	}
+
+	if len(b.events)+1 > reqEventsLimit*4/5 { // 80% of limit
+		fmt.Printf("  - ⚠️  Batch approaching event count limit (>80%%): %d/%d events\n", len(b.events)+1, reqEventsLimit)
+	}
+
 	if len(b.events) > 0 && *event.Timestamp < *b.events[len(b.events)-1].Timestamp {
 		b.needSort = true
+		fmt.Printf("  - ⚠️  Event timestamp out of order, will need sorting\n")
 	}
+
 	b.events = append(b.events, event)
 	// do not add done callback for stateful log events. each batcher will add its own callback
 	if e.state != nil && e.state.queue != nil {

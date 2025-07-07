@@ -187,10 +187,22 @@ func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlog
 }
 
 func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
+	c.Log.Debugf("[METRIC DEBUG] Processing metric as structured log:")
+	c.Log.Debugf("  - Metric name: %s", m.Name())
+	c.Log.Debugf("  - Metric tags: %v", m.Tags())
+	c.Log.Debugf("  - Metric fields: %v", m.Fields())
+	
 	t, err := c.getTargetFromMetric(m)
 	if err != nil {
 		c.Log.Errorf("Failed to find target: %v", err)
+		return
 	}
+	
+	c.Log.Debugf("[METRIC DEBUG] Target determined:")
+	c.Log.Debugf("  - Log Group: %s", t.Group)
+	c.Log.Debugf("  - Log Stream: %s", t.Stream)
+	c.Log.Debugf("  - Log Class: %s", t.Class)
+	
 	cwd := c.getDest(t, nil)
 	if cwd == nil {
 		c.Log.Warnf("unable to find log destination, group: %v, stream: %v", t.Group, t.Stream)
@@ -201,7 +213,24 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 
 	e := c.getLogEventFromMetric(m)
 	if e == nil {
+		c.Log.Warnf("[METRIC DEBUG] Failed to create log event from metric")
 		return
+	}
+	
+	// Log details about the event being added
+	if e != nil {
+		message := e.Message()
+		messageSize := len(message)
+		c.Log.Debugf("[METRIC DEBUG] Adding structured log event:")
+		c.Log.Debugf("  - Message size: %d bytes", messageSize)
+		c.Log.Debugf("  - Message preview (first 200 chars): %.200s", message)
+		
+		// Check if message is large
+		if messageSize > 200*1024 { // 200KB threshold
+			c.Log.Warnf("[METRIC DEBUG] Large structured log message detected:")
+			c.Log.Warnf("  - Size: %d bytes (%.1f KB)", messageSize, float64(messageSize)/1024)
+			c.Log.Warnf("  - CloudWatch Logs limit: 256KB per event")
+		}
 	}
 
 	cwd.AddEvent(e)

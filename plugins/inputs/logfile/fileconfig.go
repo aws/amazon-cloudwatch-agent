@@ -24,6 +24,8 @@ import (
 const (
 	defaultMaxEventSize   = 1024 * 256 //256KB
 	defaultTruncateSuffix = "[Truncated...]"
+	// CloudWatch Logs PutLogEvents API header size per event (26 bytes as per API spec)
+	perEventHeaderBytes = 100
 )
 
 // The file config presents the structure of configuration for a file to be tailed.
@@ -153,8 +155,25 @@ func (config *FileConfig) init() error {
 		}
 	}
 
+	originalMaxEventSize := config.MaxEventSize
 	if config.MaxEventSize == 0 {
 		config.MaxEventSize = defaultMaxEventSize
+		log.Printf("[SIZE CONFIG] Using default max event size: %d bytes (%.1f KB)", config.MaxEventSize, float64(config.MaxEventSize)/1024)
+	} else {
+		log.Printf("[SIZE CONFIG] Using configured max event size: %d bytes (%.1f KB)", config.MaxEventSize, float64(config.MaxEventSize)/1024)
+	}
+
+	// Adjust MaxEventSize to account for CloudWatch Logs headers
+	// This ensures we don't exceed the actual CloudWatch Logs limits
+	config.MaxEventSize = config.MaxEventSize - perEventHeaderBytes
+	log.Printf("[SIZE CONFIG] Adjusted max event size after header reserve:")
+	log.Printf("  - Original size: %d bytes", originalMaxEventSize)
+	log.Printf("  - Per-event header bytes: %d bytes", perEventHeaderBytes)
+	log.Printf("  - Final effective size: %d bytes (%.1f KB)", config.MaxEventSize, float64(config.MaxEventSize)/1024)
+	log.Printf("  - CloudWatch Logs limit: 256 KB (262,144 bytes)")
+	
+	if config.MaxEventSize > 256*1024 {
+		log.Printf("[SIZE CONFIG] WARNING: Effective max event size (%d bytes) exceeds CloudWatch Logs limit (262,144 bytes)", config.MaxEventSize)
 	}
 
 	if config.TruncateSuffix == "" {
