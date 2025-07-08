@@ -19,6 +19,25 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+var extraneousMetrics = collections.NewSet(
+	"scrape_duration_seconds",
+	"scrape_samples_post_metric_relabeling",
+	"scrape_samples_scraped",
+	"scrape_series_added",
+	"up",
+)
+
+var extraneousAttributes = collections.NewSet(
+	string(semconv.HTTPSchemeKey),
+	string(semconv.NetHostPortKey),
+	string(semconv.NetHostNameKey),
+	string(semconv.ServerPortKey),
+	string(semconv.ServerAddressKey),
+	string(semconv.ServiceInstanceIDKey),
+	string(semconv.ServiceNameKey),
+	string(semconv.URLSchemeKey),
+)
+
 type prometheusAdapterProcessor struct {
 	*Config
 	logger          *zap.Logger
@@ -66,14 +85,7 @@ func (d *prometheusAdapterProcessor) preprocessFilter(md pmetric.Metrics) {
 				)
 
 				// for backwards compatibility with legacy Telegraf receiver, we want to drop some extraneous metrics
-				extraneousMetrics := collections.Set[string]{
-					"scrape_duration_seconds":               {},
-					"scrape_samples_post_metric_relabeling": {},
-					"scrape_samples_scraped":                {},
-					"scrape_series_added":                   {},
-					"up":                                    {},
-				}
-				if _, ok := extraneousMetrics[m.Name()]; ok {
+				if extraneousMetrics.Contains(m.Name()) {
 					return drop
 				}
 
@@ -97,24 +109,10 @@ func (d *prometheusAdapterProcessor) postprocessFilter(md pmetric.Metrics) {
 
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
-		rm := rms.At(i)
-		rma := rm.Resource().Attributes()
-
 		// Remove extraneous resource attributes
 		// This must be done after processing metrics so that the resource attributes can be moved to datapoint attributes
-		rma.RemoveIf(func(key string, value pcommon.Value) bool {
-			extraneousAttributes := collections.Set[string]{
-				string(semconv.HTTPSchemeKey):        {},
-				string(semconv.NetHostPortKey):       {},
-				string(semconv.NetHostNameKey):       {},
-				string(semconv.ServerPortKey):        {},
-				string(semconv.ServerAddressKey):     {},
-				string(semconv.ServiceInstanceIDKey): {},
-				string(semconv.ServiceNameKey):       {},
-				string(semconv.URLSchemeKey):         {},
-			}
-			_, ok := extraneousAttributes[key]
-			return ok
+		rms.At(i).Resource().Attributes().RemoveIf(func(key string, value pcommon.Value) bool {
+			return extraneousAttributes.Contains(key)
 		})
 	}
 
