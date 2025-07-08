@@ -969,3 +969,19 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 		t.Fail()
 	}
 }
+
+func TestOpampConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	// This will use the existing translation framework
+	checkTranslation(t, "opamp_config_http", "linux", nil, "")
+}
+
+func TestOpampConfigWSS(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	// This will use the existing translation framework
+	checkTranslation(t, "opamp_config_wss", "linux", nil, "")
+}

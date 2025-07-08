@@ -94,6 +94,7 @@ func TestComponents(t *testing.T) {
 		"k8smetadata",
 		"file_storage",
 		"health_check",
+		"opamp",
 		"pprof",
 		"server",
 		"sigv4auth",

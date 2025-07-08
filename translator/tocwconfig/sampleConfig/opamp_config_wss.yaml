@@ -27,55 +27,34 @@ extensions:
     entitystore:
         mode: ec2
         region: us-west-2
+    opamp:
+        agent_description:
+            non_identifying_attributes:
+                agent.name: CWAgent
+                description: OpAMP Extension Enabled in Cloudwatch Agent
+                foo: bar
+        capabilities:
+            reports_available_components: true
+            reports_effective_config: true
+            reports_health: true
+        instance_uid: 123e4567-e89b-12d3-a456-426614174000
+        ppid: 12345
+        ppid_poll_interval: 5s
+        server:
+            ws:
+                endpoint: wss://127.0.0.1:4320/v1/opamp
+                tls:
+                    insecure_skip_verify: true
 processors:
     awsentity/resource:
         entity_type: Resource
         platform: ec2
-        scrape_datapoint_attribute: true
-    cumulativetodelta/hostDeltaMetrics:
-        exclude:
-            match_type: strict
-            metrics:
-                - iops_in_progress
-                - diskio_iops_in_progress
-                - diskio_ebs_volume_queue_length
-        include:
-            match_type: ""
-        initial_value: 2
-        max_staleness: 0s
-    ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
-        ec2_metadata_tags:
-            - ImageId
-            - InstanceId
-            - InstanceType
-        imds_retries: 1
-        middleware: agenthealth/statuscode
-        refresh_tags_interval: 0s
-        refresh_volumes_interval: 0s
 receivers:
-    telegraf_cpu:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
     telegraf_disk:
         collection_interval: 1m0s
         initial_delay: 1s
         timeout: 0s
-    telegraf_diskio:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
     telegraf_mem:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_netstat:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_swap:
         collection_interval: 1m0s
         initial_delay: 1s
         timeout: 0s
@@ -84,28 +63,16 @@ service:
         - agenthealth/metrics
         - agenthealth/statuscode
         - entitystore
+        - opamp
     pipelines:
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
-                - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
-                - telegraf_netstat
-                - telegraf_swap
-        metrics/hostDeltaMetrics:
-            exporters:
-                - awscloudwatch
-            processors:
-                - cumulativetodelta/hostDeltaMetrics
-                - ec2tagger
-                - awsentity/resource
-            receivers:
-                - telegraf_diskio
     telemetry:
         logs:
             encoding: console
