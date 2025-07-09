@@ -1066,6 +1066,12 @@
                     "minItems": 1,
                     "uniqueItems": true
                   },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
+                  },
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
@@ -1095,6 +1101,9 @@
                   },
                   {
                     "required": ["event_ids"]
+                  },
+                  {
+                    "required": ["filters"]
                   }
                 ],
                 "additionalProperties": false
