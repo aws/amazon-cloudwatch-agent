@@ -212,7 +212,9 @@ func TestMetricsEmfTranslator(t *testing.T) {
 					ClientConfig: confighttp.ClientConfig{
 						TLSSetting: configtls.ClientConfig{
 							Config: configtls.Config{
-								CAFile:         defaultTlsCaPath,
+								CAFile:         defaultTLSCaPath,
+								CertFile:       defaultTLSCertPath,
+								KeyFile:        defaultTLSKeyPath,
 								ReloadInterval: 10 * time.Second,
 							},
 						},
