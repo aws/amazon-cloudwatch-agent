@@ -50,6 +50,7 @@ type windowsEventLog struct {
 	name          string
 	levels        []string
 	eventIDs      []int
+	filters       []*EventFilter
 	logGroupName  string
 	logStreamName string
 	logGroupClass string
@@ -67,11 +68,12 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, eventIDs []int, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventFilter, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
 		eventIDs:      eventIDs,
+		filters:       filters,
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
 		logGroupClass: logGroupClass,
@@ -84,6 +86,7 @@ func NewEventLog(name string, levels []string, eventIDs []int, logGroupName, log
 		done:          make(chan struct{}),
 		resubscribeCh: make(chan struct{}),
 	}
+
 	return eventLog
 }
 
@@ -94,6 +97,13 @@ func (w *windowsEventLog) Init() error {
 		}
 	}
 
+
+	for _, filter := range w.filters {
+		if err := filter.init(); err != nil {
+			return err
+		}
+	}
+	
 	go w.stateManager.Run(state.Notification{Done: w.done})
 	restored, _ := w.stateManager.Restore()
 	w.eventOffset = restored.Last().EndOffset()
@@ -175,6 +185,19 @@ func (w *windowsEventLog) run() {
 					log.Printf("E! [wineventlog] Error happened when collecting windows events: %v", err)
 					continue
 				}
+				
+				shouldPublish := true
+				for _, filter := range w.filters {
+					if !filter.ShouldPublish(value) {
+						shouldPublish = false
+						break
+					}
+				}
+				
+				if !shouldPublish {
+					continue
+				}
+				
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
 				r.Shift(recordNumber)
 				evt := &LogEvent{
