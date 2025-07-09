@@ -1,7 +1,7 @@
 log_stream_name: "{JobName}"
 resource_to_telemetry_conversion:
   enabled: true
-detailed_metrics: false
+detailed_metrics: true
 dimension_rollup_option: NoDimensionRollup
 version: "0"
 retain_initial_value_of_delta_metric: false
