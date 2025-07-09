@@ -4,7 +4,6 @@
 package prometheus
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -148,8 +147,6 @@ func TestTranslators(t *testing.T) {
 				require.Nil(t, got)
 			} else {
 				require.NotNil(t, got)
-				log.Println(testCase.want)
-				log.Println(got)
 				assert.Equal(t, len(testCase.want), got.Len())
 				for _, id := range testCase.want {
 					_, ok := got.Get(id)
