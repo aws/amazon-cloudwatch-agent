@@ -31,6 +31,7 @@ const (
 	TracesCollectedKey                 = "traces_collected"
 	MetricsDestinationsKey             = "metrics_destinations"
 	ECSKey                             = "ecs"
+	ECSServiceDiscovery                = "ecs_service_discovery"
 	KubernetesKey                      = "kubernetes"
 	CloudWatchKey                      = "cloudwatch"
 	CloudWatchLogsKey                  = "cloudwatchlogs"
