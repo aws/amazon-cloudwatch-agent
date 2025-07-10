@@ -135,4 +135,12 @@ jobs:
             else
               cd terraform/eks/performance
             fi
+            
+            # Get the cluster name from terraform output
+            CLUSTER_NAME=$(terraform output -raw cluster_name)
+            
+            # Update kubeconfig for this cluster
+            aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${{ inputs.region }}
+            
+            # Now run destroy
             terraform destroy --auto-approve
