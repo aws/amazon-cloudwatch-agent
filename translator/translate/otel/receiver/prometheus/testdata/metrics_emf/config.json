@@ -1,0 +1,9 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "./testdata/metrics_emf/config_otel.yaml"
+      }
+    }
+  }
+}

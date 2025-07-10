@@ -26,20 +26,31 @@ const (
 	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
 )
 
-var (
-	configPathKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey, common.PrometheusConfigPathKey)
-)
-
 type translator struct {
-	name    string
-	factory receiver.Factory
+	name      string
+	configKey string // config key to prometheus, e.g. logs.metrics_collected.prometheus
+	factory   receiver.Factory
 }
 
-type Option func(any)
+func WithConfigKey(configKey string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.configKey = configKey
+		}
+	}
+}
+
+func WithName(name string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.name = name
+		}
+	}
+}
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.ComponentTranslator {
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: prometheusreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)
@@ -53,6 +64,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
+	configPathKey := common.ConfigKey(t.configKey, common.PrometheusConfigPathKey)
 
 	if !conf.IsSet(configPathKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configPathKey}
