@@ -148,6 +148,7 @@ func Factories() (otelcol.Factories, error) {
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
+		opampextension.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
