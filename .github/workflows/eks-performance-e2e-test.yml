@@ -92,6 +92,11 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
+      - name: Clear existing kubeconfig
+        run: |
+          rm -f ~/.kube/config
+          mkdir -p ~/.kube
+
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
