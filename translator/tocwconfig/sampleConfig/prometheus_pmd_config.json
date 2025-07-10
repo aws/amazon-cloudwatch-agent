@@ -1,0 +1,28 @@
+{
+  "agent": {
+    "metrics_collection_interval": 15
+  },
+  "metrics": {
+    "namespace": "CWAgent",
+    "metrics_destinations": {
+      "cloudwatch": {}
+    },
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "{prometheusFileName}"
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      [
+        "InstanceId",
+        "InstanceType"
+      ]
+    ]
+  }
+}
