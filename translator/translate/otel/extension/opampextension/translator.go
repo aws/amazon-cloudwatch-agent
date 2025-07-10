@@ -6,22 +6,28 @@ package opampextension
 import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/extension"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-const TypeStr = "opamp"
 
-type translator struct{}
+type translator struct {
+	name string
+	factory extension.Factory
+}
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator() common.ComponentTranslator {
-	return &translator{}
+	return &translator{
+		factory: opampextension.NewFactory(),
+	}
 }
 
 func (t *translator) ID() component.ID {
-	return component.MustNewID(TypeStr)
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {

@@ -132,6 +132,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.124.1

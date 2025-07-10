@@ -67,6 +67,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -146,6 +147,7 @@ func Factories() (otelcol.Factories, error) {
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
+		opampextension.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
