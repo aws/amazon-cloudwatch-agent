@@ -125,6 +125,8 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+            
+            cat ~/.kube/config
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
