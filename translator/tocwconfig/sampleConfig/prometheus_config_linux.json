@@ -7,7 +7,7 @@
       "prometheus": {
         "cluster_name": "TestCluster",
         "log_group_name": "/aws/ecs/containerinsights/TestCluster/prometheus",
-        "prometheus_config_path": "{prometheusFileName}",
+        "prometheus_config_path": "/tmp/prometheus.yaml",
         "ecs_service_discovery": {
           "docker_label": {
             "sd_job_name_label": "ECS_PROMETHEUS_JOB_NAME_1",

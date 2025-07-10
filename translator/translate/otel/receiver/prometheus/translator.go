@@ -5,15 +5,14 @@ package prometheus
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/discovery"
+	"github.com/prometheus/prometheus/discovery/file"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
-	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -76,44 +75,23 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, fmt.Errorf("unable to process prometheus config with given config: %w", err)
 	}
 	configPath = processedConfigPath.(string)
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
+
+	// Create default scrape config with file_sd_config
+	fileSD := &file.SDConfig{
+		Files:           []string{configPath},
 	}
-	var stringMap map[string]interface{}
-	err = yaml.Unmarshal(content, &stringMap)
-	if err != nil {
-		return nil, err
-	}
-	componentParser := confmap.NewFromStringMap(stringMap)
-	if componentParser == nil {
-		return nil, fmt.Errorf("unable to parse config from filename %s", configPath)
-	}
-	err = componentParser.Unmarshal(&cfg)
-	if err != nil {
-		// passed in prometheus config is in plain prometheus format and not otel wrapper
-		if !strings.Contains(err.Error(), otelConfigParsingError) {
-			return nil, fmt.Errorf("unable to unmarshall config to otel prometheus config from filename %s", configPath)
+
+	scrapeConfig := &config.ScrapeConfig{
+			ServiceDiscoveryConfigs: discovery.Configs{fileSD},
 		}
 
-		var promCfg prometheusreceiver.PromConfig
-		err = componentParser.Unmarshal(&promCfg)
-		if err != nil {
-			return nil, fmt.Errorf("unable to unmarshall config to prometheus config from filename %s", configPath)
-		}
-		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
-		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
-		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
-	} else {
-		// given prometheus config is in otel format so check if target allocator is being used
-		// then add the default ca, cert, and key for TargetAllocator
-		if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
-			cfg.TargetAllocator.TLSSetting.Config.CAFile = defaultTLSCaPath
-			cfg.TargetAllocator.TLSSetting.Config.CertFile = defaultTLSCertPath
-			cfg.TargetAllocator.TLSSetting.Config.KeyFile = defaultTLSKeyPath
-			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
-		}
+	// Initialize PrometheusConfig if nil
+	if cfg.PrometheusConfig == nil {
+		cfg.PrometheusConfig = &prometheusreceiver.PromConfig{}
 	}
+
+	// Set the scrape config
+	cfg.PrometheusConfig.ScrapeConfigs = []*config.ScrapeConfig{scrapeConfig}
 
 	return cfg, nil
 }

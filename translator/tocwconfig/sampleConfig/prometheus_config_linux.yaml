@@ -101,34 +101,30 @@ receivers:
         config:
             global:
                 evaluation_interval: 1m
-                scrape_interval: 5m
+                scrape_interval: 1m
                 scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
                     - PrometheusText1.0.0
                     - PrometheusText0.0.4
-                scrape_timeout: 5s
+                scrape_timeout: 10s
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
+                - enable_compression: false
+                  enable_http2: false
                   fallback_scrape_protocol: PrometheusText0.0.4
                   file_sd_configs:
                     - files:
-                      - {ecsSdFileName}
-                      refresh_interval: 5m
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: cwagent-ecs-file-sd-config
-                  metrics_path: /metrics
-                  sample_limit: 10000
-                  scheme: http
-                  scrape_interval: 5m
+                        - /tmp/prometheus.yaml
+                  follow_redirects: false
+                  honor_timestamps: false
+                  job_name: ""
+                  scrape_interval: 1m
                   scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
                     - PrometheusText1.0.0
                     - PrometheusText0.0.4
-                  scrape_timeout: 5s
+                  scrape_timeout: 10s
                   track_timestamps_staleness: false
         report_extra_scrape_metrics: false
         start_time_metric_regex: ""
