@@ -16,7 +16,6 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
@@ -206,7 +205,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErrContains: common.ConfigKey(prometheus.MetricsKey, common.PrometheusConfigPathKey),
+			wantErrContains: common.ConfigKey(common.PrometheusConfigPathKey),
 		},
 	}
 	for name, testCase := range testCases {

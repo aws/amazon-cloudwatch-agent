@@ -8,10 +8,11 @@ import (
 	"math"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 	"github.com/prometheus/prometheus/model/value"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 )
 
 const (

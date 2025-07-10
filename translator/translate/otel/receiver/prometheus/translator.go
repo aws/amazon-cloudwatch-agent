@@ -64,10 +64,15 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
-	configPathKey := common.ConfigKey(t.configKey, common.PrometheusConfigPathKey)
-
-	if !conf.IsSet(configPathKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configPathKey}
+	var configPathKey string
+	configPathKeyLogs := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.PrometheusConfigPathKey)
+	configPathKeyMetrics := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey, common.PrometheusConfigPathKey)
+	if conf.IsSet(configPathKeyMetrics) {
+		configPathKey = configPathKeyMetrics
+	} else if conf.IsSet(configPathKeyLogs) {
+		configPathKey = configPathKeyLogs
+	} else {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.PrometheusConfigPathKey}
 	}
 
 	configPath, _ := common.GetString(conf, configPathKey)
