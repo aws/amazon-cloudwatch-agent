@@ -924,7 +924,7 @@ func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath st
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
 
-	//assert.NoError(t, os.WriteFile(desiredTomlPath, []byte(tomlStr), 0644)) // useful for regenerating TOML
+	// assert.NoError(t, os.WriteFile(desiredTomlPath, []byte(tomlStr), 0644)) // useful for regenerating TOML
 
 	// This less function sort the content of string slice in alphabetical order so the
 	// cmp.Equal method will compare the two struct with slices in them, regardless the elements within the slices
@@ -956,8 +956,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
-
-		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
