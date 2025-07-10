@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
@@ -28,6 +29,7 @@ import (
 var (
 	MetricsKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	LogsKey    = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+	EcsSDKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
 )
 
 type translator struct {
@@ -96,7 +98,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		if !conf.IsSet(LogsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under logs section with destination (%s)", t.name, t.Destination())
 		}
-		return &common.ComponentTranslators{
+		translators := &common.ComponentTranslators{
 			Receivers: common.NewTranslatorMap(otelprom.NewTranslator(otelprom.WithName(t.name), otelprom.WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)))),
 			Processors: common.NewTranslatorMap(
 				prometheusadapter.NewTranslatorWithName(t.name),                        // converts otelprom receiver outputs to look like telegraf prometheus outputs
@@ -105,7 +107,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(common.PipelineNamePrometheus)),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}),
 				agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true)),
-		}, nil
+		}
+		if conf.IsSet(EcsSDKey) {
+			translators.Extensions.Set(ecsobserver.NewTranslator())
+		}
+		return translators, nil
 	case common.AMPKey:
 		if !conf.IsSet(MetricsKey) {
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
