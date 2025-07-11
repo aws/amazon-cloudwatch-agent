@@ -49,6 +49,7 @@ func (e *wevtAPIError) Error() string {
 type windowsEventLog struct {
 	name          string
 	levels        []string
+	eventIDs      []int
 	logGroupName  string
 	logStreamName string
 	logGroupClass string
@@ -66,10 +67,11 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventIDs []int, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
+		eventIDs:      eventIDs,
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
 		logGroupClass: logGroupClass,
@@ -86,6 +88,12 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 }
 
 func (w *windowsEventLog) Init() error {
+	for _, eventID := range w.eventIDs {
+		if eventID < 0 || eventID > 65535 {
+			return fmt.Errorf("invalid event ID: %d, event IDs must be between 0 and 65535", eventID)
+		}
+	}
+
 	go w.stateManager.Run(state.Notification{Done: w.done})
 	restored, _ := w.stateManager.Restore()
 	w.eventOffset = restored.Last().EndOffset()
@@ -210,7 +218,7 @@ func (w *windowsEventLog) open() error {
 	if err != nil {
 		return err
 	}
-	query, err := CreateQuery(w.name, w.levels)
+	query, err := CreateQuery(w.name, w.levels, w.eventIDs)
 	if err != nil {
 		return err
 	}
