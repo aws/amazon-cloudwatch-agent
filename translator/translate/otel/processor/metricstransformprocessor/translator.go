@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
@@ -24,48 +24,48 @@ var metricTransformJmxConfig string
 var appSignalsRuntimeConfig string
 
 var metricDuplicateTypes = []string{
-	containerinsightscommon.TypeGpuContainer,
-	containerinsightscommon.TypeGpuPod,
-	containerinsightscommon.TypeGpuNode,
+	constants.TypeGpuContainer,
+	constants.TypeGpuPod,
+	constants.TypeGpuNode,
 }
 
 var renameMapForDcgm = map[string]string{
-	"DCGM_FI_DEV_GPU_UTIL":        containerinsightscommon.GpuUtilization,
-	"DCGM_FI_DEV_FB_USED_PERCENT": containerinsightscommon.GpuMemUtilization,
-	"DCGM_FI_DEV_FB_USED":         containerinsightscommon.GpuMemUsed,
-	"DCGM_FI_DEV_FB_TOTAL":        containerinsightscommon.GpuMemTotal,
-	"DCGM_FI_DEV_GPU_TEMP":        containerinsightscommon.GpuTemperature,
-	"DCGM_FI_DEV_POWER_USAGE":     containerinsightscommon.GpuPowerDraw,
+	"DCGM_FI_DEV_GPU_UTIL":        constants.GpuUtilization,
+	"DCGM_FI_DEV_FB_USED_PERCENT": constants.GpuMemUtilization,
+	"DCGM_FI_DEV_FB_USED":         constants.GpuMemUsed,
+	"DCGM_FI_DEV_FB_TOTAL":        constants.GpuMemTotal,
+	"DCGM_FI_DEV_GPU_TEMP":        constants.GpuTemperature,
+	"DCGM_FI_DEV_POWER_USAGE":     constants.GpuPowerDraw,
 }
 
 var renameMapForNeuronMonitor = map[string]string{
-	"execution_errors_total":                          containerinsightscommon.NeuronExecutionErrors,
-	"execution_status_total":                          containerinsightscommon.NeuronExecutionStatus,
-	"neuron_runtime_memory_used_bytes":                containerinsightscommon.NeuronRuntimeMemoryUsage,
-	"neuroncore_memory_usage_constants":               containerinsightscommon.NeuronCoreMemoryUtilizationConstants,
-	"neuroncore_memory_usage_model_code":              containerinsightscommon.NeuronCoreMemoryUtilizationModelCode,
-	"neuroncore_memory_usage_model_shared_scratchpad": containerinsightscommon.NeuronCoreMemoryUtilizationSharedScratchpad,
-	"neuroncore_memory_usage_runtime_memory":          containerinsightscommon.NeuronCoreMemoryUtilizationRuntimeMemory,
-	"neuroncore_memory_usage_tensors":                 containerinsightscommon.NeuronCoreMemoryUtilizationTensors,
-	"neuroncore_utilization_ratio":                    containerinsightscommon.NeuronCoreUtilization,
-	"instance_info":                                   containerinsightscommon.NeuronInstanceInfo,
-	"neuron_hardware":                                 containerinsightscommon.NeuronHardware,
-	"hardware_ecc_events_total":                       containerinsightscommon.NeuronDeviceHardwareEccEvents,
-	"execution_latency_seconds":                       containerinsightscommon.NeuronExecutionLatency,
+	"execution_errors_total":                          constants.NeuronExecutionErrors,
+	"execution_status_total":                          constants.NeuronExecutionStatus,
+	"neuron_runtime_memory_used_bytes":                constants.NeuronRuntimeMemoryUsage,
+	"neuroncore_memory_usage_constants":               constants.NeuronCoreMemoryUtilizationConstants,
+	"neuroncore_memory_usage_model_code":              constants.NeuronCoreMemoryUtilizationModelCode,
+	"neuroncore_memory_usage_model_shared_scratchpad": constants.NeuronCoreMemoryUtilizationSharedScratchpad,
+	"neuroncore_memory_usage_runtime_memory":          constants.NeuronCoreMemoryUtilizationRuntimeMemory,
+	"neuroncore_memory_usage_tensors":                 constants.NeuronCoreMemoryUtilizationTensors,
+	"neuroncore_utilization_ratio":                    constants.NeuronCoreUtilization,
+	"instance_info":                                   constants.NeuronInstanceInfo,
+	"neuron_hardware":                                 constants.NeuronHardware,
+	"hardware_ecc_events_total":                       constants.NeuronDeviceHardwareEccEvents,
+	"execution_latency_seconds":                       constants.NeuronExecutionLatency,
 }
 
 var renameMapForNvme = map[string]string{
-	"aws_ebs_csi_read_ops_total":                  containerinsightscommon.NvmeReadOpsTotal,
-	"aws_ebs_csi_write_ops_total":                 containerinsightscommon.NvmeWriteOpsTotal,
-	"aws_ebs_csi_read_bytes_total":                containerinsightscommon.NvmeReadBytesTotal,
-	"aws_ebs_csi_write_bytes_total":               containerinsightscommon.NvmeWriteBytesTotal,
-	"aws_ebs_csi_read_seconds_total":              containerinsightscommon.NvmeReadTime,
-	"aws_ebs_csi_write_seconds_total":             containerinsightscommon.NvmeWriteTime,
-	"aws_ebs_csi_exceeded_iops_seconds_total":     containerinsightscommon.NvmeExceededIOPSTime,
-	"aws_ebs_csi_exceeded_tp_seconds_total":       containerinsightscommon.NvmeExceededTPTime,
-	"aws_ebs_csi_ec2_exceeded_iops_seconds_total": containerinsightscommon.NvmeExceededEC2IOPSTime,
-	"aws_ebs_csi_ec2_exceeded_tp_seconds_total":   containerinsightscommon.NvmeExceededEC2TPTime,
-	"aws_ebs_csi_volume_queue_length":             containerinsightscommon.NvmeVolumeQueueLength,
+	"aws_ebs_csi_read_ops_total":                  constants.NvmeReadOpsTotal,
+	"aws_ebs_csi_write_ops_total":                 constants.NvmeWriteOpsTotal,
+	"aws_ebs_csi_read_bytes_total":                constants.NvmeReadBytesTotal,
+	"aws_ebs_csi_write_bytes_total":               constants.NvmeWriteBytesTotal,
+	"aws_ebs_csi_read_seconds_total":              constants.NvmeReadTime,
+	"aws_ebs_csi_write_seconds_total":             constants.NvmeWriteTime,
+	"aws_ebs_csi_exceeded_iops_seconds_total":     constants.NvmeExceededIOPSTime,
+	"aws_ebs_csi_exceeded_tp_seconds_total":       constants.NvmeExceededTPTime,
+	"aws_ebs_csi_ec2_exceeded_iops_seconds_total": constants.NvmeExceededEC2IOPSTime,
+	"aws_ebs_csi_ec2_exceeded_tp_seconds_total":   constants.NvmeExceededEC2TPTime,
+	"aws_ebs_csi_volume_queue_length":             constants.NvmeVolumeQueueLength,
 }
 
 type translator struct {
@@ -108,11 +108,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				transformRules = append(transformRules, map[string]interface{}{
 					"include":  oldNvmeMetric,
 					"action":   "update",
-					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeNode, newNvmeMetric),
+					"new_name": metricName(constants.TypeNode, newNvmeMetric),
 					"operations": []map[string]interface{}{{
 						"action":    "add_label",
-						"new_label": containerinsightscommon.MetricType,
-						"new_value": containerinsightscommon.TypeNodeEBS,
+						"new_label": constants.MetricType,
+						"new_value": constants.TypeNodeEBS,
 					}},
 				})
 			}
@@ -137,12 +137,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			for old, new := range renameMapForDcgm {
 				var operations []map[string]interface{}
 				// convert decimals to percent
-				if new == containerinsightscommon.GpuMemUtilization {
+				if new == constants.GpuMemUtilization {
 					operations = append(operations, map[string]interface{}{
 						"action":             "experimental_scale_value",
 						"experimental_scale": 100,
 					})
-				} else if new == containerinsightscommon.GpuMemTotal || new == containerinsightscommon.GpuMemUsed {
+				} else if new == constants.GpuMemTotal || new == constants.GpuMemUsed {
 					operations = append(operations, map[string]interface{}{
 						"action":             "experimental_scale_value",
 						"experimental_scale": 1024 * 1024,
@@ -152,11 +152,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					transformRules = append(transformRules, map[string]interface{}{
 						"include":  old,
 						"action":   "insert",
-						"new_name": containerinsightscommon.MetricName(t, new),
+						"new_name": metricName(t, new),
 						"operations": append([]map[string]interface{}{
 							{
 								"action":    "add_label",
-								"new_label": containerinsightscommon.MetricType,
+								"new_label": constants.MetricType,
 								"new_value": t,
 							},
 						}, operations...),
@@ -166,7 +166,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 			for oldName, newName := range renameMapForNeuronMonitor {
 				var operations []map[string]interface{}
-				if newName == containerinsightscommon.NeuronCoreUtilization {
+				if newName == constants.NeuronCoreUtilization {
 					operations = append(operations, map[string]interface{}{
 						"action":             "experimental_scale_value",
 						"experimental_scale": 100,
@@ -227,4 +227,25 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func metricName(mType string, name string) string {
+	prefix := ""
+	nodePrefix := "node_"
+	podPrefix := "pod_"
+	containerPrefix := "container_"
+	cluster := "cluster_"
+
+	switch mType {
+	case constants.TypeContainer, constants.TypeGpuContainer:
+		prefix = containerPrefix
+	case constants.TypePod, constants.TypeGpuPod:
+		prefix = podPrefix
+	case constants.TypeNode, constants.TypeGpuNode:
+		prefix = nodePrefix
+	case constants.TypeCluster, constants.TypeGpuCluster:
+		prefix = cluster
+	default:
+	}
+	return prefix + name
 }
