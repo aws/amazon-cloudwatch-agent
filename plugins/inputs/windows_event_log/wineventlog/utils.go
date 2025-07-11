@@ -16,6 +16,7 @@ const (
 	eventIgnoreOldFilter     = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
 	emptySpaceScanLength     = 100
 	UnknownBytesPerCharacter = 0
+	cutOffPeriod             = time.Hour * 24 * 14
 
 	CRITICAL    = "CRITICAL"
 	ERROR       = "ERROR"
@@ -56,8 +57,7 @@ func createFilterQuery(levels []string, eventIDs []int) string {
 	}
 
 	//Ignore events older than 2 weeks
-	cutOffPeriod := (time.Hour * 24 * 14).Nanoseconds()
-	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutOffPeriod/int64(time.Millisecond))
+	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutOffPeriod.Milliseconds())
 	if query != "" {
 		query = "*[System[" + query + " and " + ignoreOlderThanTwoWeeksFilter + "]]"
 	} else {
