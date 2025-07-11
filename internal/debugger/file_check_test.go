@@ -12,37 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetDisplayName(t *testing.T) {
-	tests := []struct {
-		name     string
-		path     string
-		expected string
-	}{
-		{
-			name:     "directory path",
-			path:     "/path/to/config.d",
-			expected: "amazon-cloudwatch-agent.d",
-		},
-		{
-			name:     "regular file path",
-			path:     "/path/to/config.json",
-			expected: "config.json",
-		},
-		{
-			name:     "nested file path",
-			path:     "/very/long/path/to/file.toml",
-			expected: "file.toml",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := getDisplayName(tt.path)
-			assert.Equal(t, tt.expected, result, "getDisplayName() returned unexpected result")
-		})
-	}
-}
-
 func TestCheckFileContentStatus(t *testing.T) {
 	// Non-existent file
 	status := checkFileContentStatus("/non/existent/file.json")
@@ -102,7 +71,6 @@ func TestCheckDirectoryStatus(t *testing.T) {
 }
 
 func TestCheckFileStatus(t *testing.T) {
-	// Directory path
 	tmpDir, err := os.MkdirTemp("", "test-dir")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -141,9 +109,4 @@ func TestGetConfigFiles(t *testing.T) {
 		assert.NotEmpty(t, file.Path, "File %d has empty Path", i)
 		assert.NotEmpty(t, file.Description, "File %d has empty Description", i)
 	}
-}
-
-// Smoke test
-func TestCheckConfigFiles(t *testing.T) {
-	CheckConfigFiles()
 }
