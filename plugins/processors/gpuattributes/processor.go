@@ -42,8 +42,8 @@ const (
 //
 // - Node
 //   - ClusterName
-//   - ClusterName, InstanceIdKey, NodeName
-//   - ClusterName, InstanceIdKey, NodeName, GpuDevice
+//   - ClusterName, InstanceIDKey, NodeName
+//   - ClusterName, InstanceIDKey, NodeName, GpuDevice
 type gpuAttributesProcessor struct {
 	*Config
 	logger                          *zap.Logger

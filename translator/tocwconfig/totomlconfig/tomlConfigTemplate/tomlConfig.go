@@ -36,7 +36,7 @@ type (
 		Disk            []diskConfig
 		DiskIo          []diskioConfig
 		Ethtool         []ethtoolConfig
-		K8sapiserver    []k8sApiServerConfig
+		K8sapiserver    []k8sAPIServerConfig
 		Logfile         []logFileConfig
 		Mem             []memConfig
 		Net             []netConfig
@@ -100,7 +100,7 @@ type (
 		Interval         string
 	}
 
-	k8sApiServerConfig struct {
+	k8sAPIServerConfig struct {
 		Interval string
 		Tags     map[string]string
 	}
