@@ -93,6 +93,9 @@ replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api
 // forces version bump to support log group classes
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.48.6
 
+//fixes unrecognized import path "collectd.org"
+replace collectd.org => github.com/collectd/go-collectd v0.4.0
+
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
@@ -129,10 +132,10 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.124.1
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.124.1
@@ -365,7 +368,7 @@ require (
 	github.com/gopcua/opcua v0.8.0 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/gosnmp/gosnmp v1.34.0 // indirect
 	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 // indirect
@@ -437,6 +440,9 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/oklog/ulid/v2 v2.1.0 // indirect
+	github.com/open-telemetry/opamp-go v0.19.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampcustommessages v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs v0.124.1 // indirect
@@ -459,6 +465,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/sampling v0.124.1 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/status v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/azure v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/jaeger v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.124.1 // indirect
@@ -505,8 +512,8 @@ require (
 	github.com/tidwall/tinylru v1.1.0 // indirect
 	github.com/tidwall/wal v1.1.8 // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect
-	github.com/tklauser/go-sysconf v0.3.12 // indirect
-	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/tklauser/go-sysconf v0.3.14 // indirect
+	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/ua-parser/uap-go v0.0.0-20240611065828-3a4781585db6 // indirect
