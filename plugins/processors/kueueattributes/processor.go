@@ -7,11 +7,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 const (
@@ -19,13 +18,13 @@ const (
 )
 
 var kueueLabelFilter = map[string]interface{}{
-	containerinsightscommon.ClusterNameKey:          nil,
-	containerinsightscommon.ClusterQueueNameKey:     nil,
-	containerinsightscommon.ClusterQueueStatusKey:   nil,
-	containerinsightscommon.ClusterQueueReasonKey:   nil,
-	containerinsightscommon.ClusterQueueResourceKey: nil,
-	containerinsightscommon.Flavor:                  nil,
-	containerinsightscommon.NodeNameKey:             nil,
+	constants.ClusterNameKey:          nil,
+	constants.ClusterQueueNameKey:     nil,
+	constants.ClusterQueueStatusKey:   nil,
+	constants.ClusterQueueReasonKey:   nil,
+	constants.ClusterQueueResourceKey: nil,
+	constants.Flavor:                  nil,
+	constants.NodeNameKey:             nil,
 }
 
 type kueueAttributesProcessor struct {
@@ -73,7 +72,7 @@ func (d *kueueAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 	case pmetric.MetricTypeSum:
 		dps = m.Sum().DataPoints()
 	default:
-		d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
+		d.logger.Debug("Ignore unknown metric type", zap.String(constants.MetricType, m.Type().String()))
 	}
 
 	for i := 0; i < dps.Len(); i++ {
