@@ -88,6 +88,12 @@ func NewEventLog(name string, levels []string, eventID []int, logGroupName, logS
 }
 
 func (w *windowsEventLog) Init() error {
+	for _, eventID := range w.eventIDs {
+		if eventID < 0 || eventID > 65535 {
+			return fmt.Errorf("invalid event ID: %d, event IDs must be between 0 and 65535", eventID)
+		}
+	}
+
 	go w.stateManager.Run(state.Notification{Done: w.done})
 	restored, _ := w.stateManager.Restore()
 	w.eventOffset = restored.Last().EndOffset()
