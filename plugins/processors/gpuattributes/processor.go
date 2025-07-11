@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal/metricFilters"
 )

@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 )
 
 const (
