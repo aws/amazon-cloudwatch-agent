@@ -136,7 +136,7 @@ jobs:
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      nodes: 10
+      nodes: 2
       node_groups: 1
       region: ${{ inputs.region || 'us-west-2' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
