@@ -43,7 +43,7 @@ func RunDownloaderFromFlags(flags map[string]*string) error {
 func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("Fail to fetch the config!")
+			err = fmt.Errorf("Fail to fetch the config")
 		}
 	}()
 
