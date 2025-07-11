@@ -502,18 +502,22 @@ func main() {
 
 	// Check for subcommands first
 	if len(os.Args) > 1 {
-		subcommands := map[string]map[string]cmdwrapper.Flag{
-			translatorflags.TranslatorCommand: translatorflags.TranslatorFlags,
-			downloaderflags.Command:           downloaderflags.DownloaderFlags,
-			wizardflags.Command:               wizardflags.WizardFlags,
-		}
-		handlers := map[string]func(map[string]*string) error{
-			translatorflags.TranslatorCommand: translator.RunTranslator,
-			downloaderflags.Command:           downloader.RunDownloaderFromFlags,
-			wizardflags.Command:               wizard.RunWizardFromFlags,
-		}
+		subcommand := os.Args[1]
+		if subcommand == translatorflags.TranslatorCommand || subcommand == downloaderflags.Command || subcommand == wizardflags.Command {
+			subcommands := map[string]map[string]cmdwrapper.Flag{
+				translatorflags.TranslatorCommand: translatorflags.TranslatorFlags,
+				downloaderflags.Command:           downloaderflags.DownloaderFlags,
+				wizardflags.Command:               wizardflags.WizardFlags,
+			}
+			handlers := map[string]func(map[string]*string) error{
+				translatorflags.TranslatorCommand: translator.RunTranslator,
+				downloaderflags.Command:           downloader.RunDownloaderFromFlags,
+				wizardflags.Command:               wizard.RunWizardFromFlags,
+			}
 
-		if err := cmdwrapper.HandleSubcommand(subcommands, handlers); err == nil {
+			if err := cmdwrapper.HandleSubcommand(subcommands, handlers); err != nil {
+				log.Fatalf("E! %s", err.Error())
+			}
 			return
 		}
 	}

@@ -40,11 +40,10 @@ func RunDownloaderFromFlags(flags map[string]*string) error {
 	)
 }
 
-func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string) error {
+func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Fail to fetch the config!")
-			os.Exit(1)
+			err = fmt.Errorf("Fail to fetch the config!")
 		}
 	}()
 
@@ -85,7 +84,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
 	}
 
-	err := cleanupOutputDir(outputDir)
+	err = cleanupOutputDir(outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to clean up output directory: %v", err)
 	}
