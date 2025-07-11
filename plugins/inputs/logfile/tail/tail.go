@@ -244,12 +244,26 @@ func (tail *Tail) readLine() (string, error) {
 
 	line, err := tail.readSlice('\n')
 	if err == bufio.ErrBufferFull {
+		// Truncate to MaxLineSize if the line is too long
+		maxSize := tail.MaxLineSize
+		if maxSize <= 0 {
+			// Default to 1MB (1024 * 1024 bytes)
+			maxSize = 1024 * 1024
+		}
+
+		if len(line) > maxSize {
+			line = line[:maxSize]
+		}
+
 		// Handle the case where "\r\n" straddles the buffer.
 		if len(line) > 0 && line[len(line)-1] == '\r' {
 			tail.unreadByte()
 			line = line[:len(line)-1]
 		}
-		return string(line), nil
+		// Make a copy of the line to avoid buffer corruption issues
+		result := make([]byte, len(line))
+		copy(result, line)
+		return string(result), nil
 	}
 
 	if len(line) > 0 && line[len(line)-1] == '\n' {
@@ -306,8 +320,12 @@ func (tail *Tail) readlineUtf16() (string, error) {
 			}
 			cur = append(cur, nextByte)
 		}
-		// 262144 => 256KB
-		if resSize+len(cur) >= 262144 {
+		// Use MaxLineSize if configured, otherwise default to 1MB
+		maxSize := 1024 * 1024 // 1MB default
+		if tail.MaxLineSize > 0 {
+			maxSize = tail.MaxLineSize
+		}
+		if resSize+len(cur) >= maxSize {
 			break
 		}
 		buf := make([]byte, len(cur))
@@ -533,12 +551,13 @@ func (tail *Tail) waitForChanges() error {
 
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
-	if tail.MaxLineSize > 0 {
-		// add 2 to account for newline characters
-		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2)
-	} else {
-		tail.reader = bufio.NewReader(tail.file)
+	maxSize := tail.MaxLineSize
+	if maxSize <= 0 {
+		// Default to 1MB (1024 * 1024 bytes)
+		maxSize = 1024 * 1024
 	}
+	// Use exactly maxSize for the buffer to avoid the trailing 2 characters issue
+	tail.reader = bufio.NewReaderSize(tail.file, maxSize)
 	tail.lk.Unlock()
 }
 
@@ -563,7 +582,7 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 	now := time.Now()
 	lines := []string{line}
 
-	// Split longer lines
+	// Split longer lines using partitionString
 	if tail.MaxLineSize > 0 && len(line) > tail.MaxLineSize {
 		lines = partitionString(line, tail.MaxLineSize)
 	}

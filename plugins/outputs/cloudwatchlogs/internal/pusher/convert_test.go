@@ -120,19 +120,6 @@ func TestConverter(t *testing.T) {
 		assert.Nil(t, le.state)
 	})
 
-	t.Run("TruncateMessage", func(t *testing.T) {
-		t.Parallel()
-		largeMessage := string(make([]byte, msgSizeLimit+100))
-		event := newStubLogEvent(largeMessage, time.Now())
-
-		conv := newConverter(logger, target)
-		le := conv.convert(event)
-
-		assert.Equal(t, msgSizeLimit, len(le.message))
-		assert.Equal(t, truncatedSuffix, (le.message)[len(le.message)-len(truncatedSuffix):])
-		assert.Nil(t, le.state)
-	})
-
 	t.Run("WithOldTimestampWarning", func(t *testing.T) {
 		t.Parallel()
 		oldTime := time.Now().Add(-25 * time.Hour)

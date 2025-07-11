@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	defaultMaxEventSize   = 1024 * 256 //256KB
+	defaultMaxEventSize   = 1024 * 1024 //1MB
 	defaultTruncateSuffix = "[Truncated...]"
 )
 
