@@ -85,7 +85,7 @@ func NewConfigTranslator(inputOs, inputJSONFile, inputJSONDir, inputTOMLFile, in
 	return &ct, nil
 }
 
-func (ct *ConfigTranslator) Translate() error {
+func (ct *ConfigTranslator) Translate() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if val, ok := r.(string); ok {
@@ -94,7 +94,7 @@ func (ct *ConfigTranslator) Translate() error {
 			for _, errMessage := range translator.ErrorMessages {
 				log.Println(errMessage)
 			}
-			log.Printf(exitErrorMessage, version)
+			err = fmt.Errorf(exitErrorMessage, version)
 		}
 	}()
 
