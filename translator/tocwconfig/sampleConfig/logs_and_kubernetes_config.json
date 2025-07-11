@@ -3,6 +3,7 @@
     "region": "us-east-1"
   },
   "logs": {
+    "concurrency": 1,
     "metrics_collected": {
       "emf": {
       },
