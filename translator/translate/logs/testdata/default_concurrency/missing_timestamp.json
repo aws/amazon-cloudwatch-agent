@@ -1,0 +1,36 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log"
+          },
+          {
+            "file_path": "/tmp/test1.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC",
+            "timestamp_format": "%H:%M:%S %y %b %d"
+          },
+          {
+            "file_path": "/tmp/test2.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log"
+          },
+          {
+            "file_path": "/tmp/test3.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timestamp_format": "%H:%M:%S %y %b %d"
+          }
+        ]
+      }
+    }
+  }
+}
