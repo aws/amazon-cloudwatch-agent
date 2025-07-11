@@ -28,7 +28,6 @@ type InstanceInfo struct {
 	Version          string `json:"version"`
 }
 
-// Collects information about the instance
 func GetInstanceInfo(ctx context.Context) (*InstanceInfo, error) {
 	sess := session.Must(session.NewSession())
 	provider := ec2metadataprovider.NewMetadataProvider(sess, 0)
@@ -38,7 +37,7 @@ func GetInstanceInfo(ctx context.Context) (*InstanceInfo, error) {
 		return nil, fmt.Errorf("Failed to get instance identity document: %w", err)
 	}
 
-	versionPath := filepath.Join(paths.AgentDir, "/bin/CWAGENT_VERSION")
+	versionPath := filepath.Join(paths.AgentDir, "bin/CWAGENT_VERSION")
 
 	version, _ := os.ReadFile(versionPath)
 
