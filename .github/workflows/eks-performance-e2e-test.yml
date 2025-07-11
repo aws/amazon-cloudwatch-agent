@@ -126,8 +126,20 @@ jobs:
               -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
               -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
               -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}"; then
+              # Remove Kubernetes resources from state before destroy to avoid connection issues
+              terraform state rm kubernetes_pod.petclinic_instrumentation || true
+              terraform state rm kubernetes_pod.petclinic_custom_env || true
+              terraform state rm kubernetes_service.petclinic_service || true
+              terraform state rm kubernetes_pod.traffic_generator_instrumentation || true
+              terraform state rm helm_release.aws_observability || true
               terraform destroy -auto-approve
             else
+              # Remove Kubernetes resources from state before destroy on failure
+              terraform state rm kubernetes_pod.petclinic_instrumentation || true
+              terraform state rm kubernetes_pod.petclinic_custom_env || true
+              terraform state rm kubernetes_service.petclinic_service || true
+              terraform state rm kubernetes_pod.traffic_generator_instrumentation || true
+              terraform state rm helm_release.aws_observability || true
               terraform destroy -auto-approve && exit 1
             fi
             
