@@ -22,7 +22,7 @@ const (
 
 var ContainerGpuLabelFilter = map[string]map[string]interface{}{
 	constants.ClusterNameKey:   nil,
-	constants.InstanceIdKey:    nil,
+	constants.InstanceIDKey:    nil,
 	constants.GpuDeviceKey:     nil,
 	constants.MetricType:       nil,
 	constants.NodeNameKey:      nil,
@@ -30,7 +30,7 @@ var ContainerGpuLabelFilter = map[string]map[string]interface{}{
 	constants.FullPodNameKey:   nil,
 	constants.PodNameKey:       nil,
 	constants.TypeService:      nil,
-	constants.GpuUniqueId:      nil,
+	constants.GpuUniqueID:      nil,
 	constants.ContainerNamekey: nil,
 	constants.InstanceTypeKey:  nil,
 	constants.VersionKey:       nil,
@@ -49,7 +49,7 @@ var ContainerGpuLabelFilter = map[string]map[string]interface{}{
 }
 var PodGpuLabelFilter = map[string]map[string]interface{}{
 	constants.ClusterNameKey:  nil,
-	constants.InstanceIdKey:   nil,
+	constants.InstanceIDKey:   nil,
 	constants.GpuDeviceKey:    nil,
 	constants.MetricType:      nil,
 	constants.NodeNameKey:     nil,
@@ -57,7 +57,7 @@ var PodGpuLabelFilter = map[string]map[string]interface{}{
 	constants.FullPodNameKey:  nil,
 	constants.PodNameKey:      nil,
 	constants.TypeService:     nil,
-	constants.GpuUniqueId:     nil,
+	constants.GpuUniqueID:     nil,
 	constants.InstanceTypeKey: nil,
 	constants.VersionKey:      nil,
 	constants.SourcesKey:      nil,
@@ -73,7 +73,7 @@ var PodGpuLabelFilter = map[string]map[string]interface{}{
 }
 var NodeGpuLabelFilter = map[string]map[string]interface{}{
 	constants.ClusterNameKey:  nil,
-	constants.InstanceIdKey:   nil,
+	constants.InstanceIDKey:   nil,
 	constants.GpuDeviceKey:    nil,
 	constants.MetricType:      nil,
 	constants.NodeNameKey:     nil,
@@ -89,7 +89,7 @@ var NodeGpuLabelFilter = map[string]map[string]interface{}{
 var PodNeuronLabelFilter = map[string]map[string]interface{}{
 	constants.ClusterNameKey:  nil,
 	constants.FullPodNameKey:  nil,
-	constants.InstanceIdKey:   nil,
+	constants.InstanceIDKey:   nil,
 	constants.InstanceTypeKey: nil,
 	constants.K8sPodNameKey:   nil,
 	constants.K8sNamespace:    nil,
@@ -114,7 +114,7 @@ var ContainerNeuronLabelFilter = map[string]map[string]interface{}{
 	constants.ClusterNameKey:   nil,
 	constants.ContainerNamekey: nil,
 	constants.FullPodNameKey:   nil,
-	constants.InstanceIdKey:    nil,
+	constants.InstanceIDKey:    nil,
 	constants.InstanceTypeKey:  nil,
 	constants.K8sPodNameKey:    nil,
 	constants.K8sNamespace:     nil,
@@ -138,7 +138,7 @@ var ContainerNeuronLabelFilter = map[string]map[string]interface{}{
 
 var NodeNeuronLabelFilter = map[string]map[string]interface{}{
 	constants.ClusterNameKey:  nil,
-	constants.InstanceIdKey:   nil,
+	constants.InstanceIDKey:   nil,
 	constants.InstanceTypeKey: nil,
 	constants.K8sNamespace:    nil,
 	internal.NeuronDevice:     nil,

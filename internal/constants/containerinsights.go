@@ -6,7 +6,7 @@ package constants
 const (
 	ClusterNameKey          = "ClusterName"
 	NodeNameKey             = "NodeName" // Attribute names
-	InstanceIdKey           = "InstanceId"
+	InstanceIDKey           = "InstanceId"
 	InstanceTypeKey         = "InstanceType"
 	AutoScalingGroupNameKey = "AutoScalingGroupName"
 	VersionKey              = "Version"
@@ -26,7 +26,7 @@ const (
 	GpuMemTotal       = "gpu_memory_total"
 	GpuTemperature    = "gpu_temperature"
 	GpuPowerDraw      = "gpu_power_draw"
-	GpuUniqueId       = "UUID"
+	GpuUniqueID       = "UUID"
 
 	NeuronCoreUtilization                       = "neuroncore_utilization"
 	NeuronCoreMemoryUtilizationTotal            = "neuroncore_memory_usage_total"
@@ -72,7 +72,7 @@ const (
 
 	Kubernetes       = "kubernetes"
 	K8sNamespace     = "Namespace"
-	PodIdKey         = "PodId"
+	PodIDKey         = "PodId"
 	FullPodNameKey   = "FullPodName"
 	PodNameKey       = "PodName"
 	K8sPodNameKey    = "K8sPodName"
