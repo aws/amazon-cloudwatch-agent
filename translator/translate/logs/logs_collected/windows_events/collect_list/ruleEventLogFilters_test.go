@@ -125,7 +125,7 @@ func TestApplyEventLogFiltersRuleEdgeCaseRegex(t *testing.T) {
 
 	filters := retVal.([]interface{})
 	assert.Len(t, filters, 3)
-	
+
 	// Verify that empty expression is filtered out
 	expectedExpressions := []string{"^EventID:1001$", "\\\\Server\\\\Path", ".*"}
 	for i, filter := range filters {

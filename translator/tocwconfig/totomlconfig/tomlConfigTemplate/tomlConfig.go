@@ -107,14 +107,14 @@ type (
 	}
 
 	eventConfig struct {
-		BatchReadSize   int                         `toml:"batch_read_size"`
-		EventLevels     []string                    `toml:"event_levels"`
-		EventIDs        []int                       `toml:"event_ids"`
-		EventFilters    []*wineventlog.EventFilter  `toml:"filters"`
-		EventName       string                      `toml:"event_name"`
-		LogGroupName    string                      `toml:"log_group_name"`
-		LogStreamName   string                      `toml:"log_stream_name"`
-		RetentionInDays int                         `toml:"retention_in_days"`
+		BatchReadSize   int                        `toml:"batch_read_size"`
+		EventLevels     []string                   `toml:"event_levels"`
+		EventIDs        []int                      `toml:"event_ids"`
+		EventFilters    []*wineventlog.EventFilter `toml:"filters"`
+		EventName       string                     `toml:"event_name"`
+		LogGroupName    string                     `toml:"log_group_name"`
+		LogStreamName   string                     `toml:"log_stream_name"`
+		RetentionInDays int                        `toml:"retention_in_days"`
 	}
 
 	logFileConfig struct {

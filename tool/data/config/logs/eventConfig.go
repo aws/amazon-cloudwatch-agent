@@ -5,21 +5,40 @@ package logs
 
 import "github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 
+type EventFilter struct {
+	Type       string `json:"type"`
+	Expression string `json:"expression"`
+}
 type EventConfig struct {
-	EventName     string   `event_name`
-	EventLevels   []string `event_levels`
-	EventFormat   string   `event_format`
-	LogGroup      string   `log_group_name`
-	LogStream     string   `log_stream_name`
-	LogGroupClass string   `log_group_class`
-	Retention     int      `retention_in_days`
+	EventName     string         `event_name`
+	EventLevels   []string       `event_levels`
+	EventIDs      []int          `event_ids`
+	Filters       []*EventFilter `filters`
+	EventFormat   string         `event_format`
+	LogGroup      string         `log_group_name`
+	LogStream     string         `log_stream_name`
+	LogGroupClass string         `log_group_class`
+	Retention     int            `retention_in_days`
 }
 
 func (config *EventConfig) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
 	resultMap := make(map[string]interface{})
 	resultMap["event_name"] = config.EventName
-	if config.EventLevels != nil && len(config.EventLevels) > 0 {
+	if len(config.EventLevels) > 0 {
 		resultMap["event_levels"] = config.EventLevels
+	}
+	if len(config.EventIDs) > 0 {
+		resultMap["event_ids"] = config.EventIDs
+	}
+	if len(config.Filters) > 0 {
+		filters := make([]map[string]interface{}, len(config.Filters))
+		for i, filter := range config.Filters {
+			filters[i] = map[string]interface{}{
+				"type":       filter.Type,
+				"expression": filter.Expression,
+			}
+		}
+		resultMap["filters"] = filters
 	}
 	if config.EventFormat != "" {
 		resultMap["event_format"] = config.EventFormat
