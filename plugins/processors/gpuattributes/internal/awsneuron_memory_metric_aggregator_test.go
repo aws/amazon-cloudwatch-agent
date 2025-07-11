@@ -6,10 +6,11 @@ package internal
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 )
 
 const (

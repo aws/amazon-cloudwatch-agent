@@ -8,8 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/influxdata/telegraf"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 )
 
 // Use metricMaterial instead of mbMetric to avoid unnecessary tags&fields copy
