@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal/metricFilters"
 )
@@ -142,7 +142,7 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 	case pmetric.MetricTypeSum:
 		dps = m.Sum().DataPoints()
 	default:
-		d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
+		d.logger.Debug("Ignore unknown metric type", zap.String(constants.MetricType, m.Type().String()))
 	}
 
 	for i := 0; i < dps.Len(); i++ {
@@ -210,7 +210,7 @@ func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.
 		case pmetric.MetricTypeSum:
 			dps = m.Sum().DataPoints()
 		default:
-			d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
+			d.logger.Debug("Ignore unknown metric type", zap.String(constants.MetricType, m.Type().String()))
 		}
 
 		dps.RemoveIf(func(dp pmetric.NumberDataPoint) bool {

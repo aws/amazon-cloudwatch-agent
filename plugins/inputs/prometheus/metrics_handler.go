@@ -8,9 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/influxdata/telegraf"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 // Use metricMaterial instead of mbMetric to avoid unnecessary tags&fields copy
@@ -69,8 +68,8 @@ func (mh *metricsHandler) setEmfMetadata(mms []*metricMaterial) {
 		if mh.clusterName != "" {
 			// Customer can specified the cluster name in the scraping job's relabel_config
 			// CWAgent won't overwrite in this case to support cross-cluster monitoring
-			if _, ok := mm.tags[containerinsightscommon.ClusterNameKey]; !ok {
-				mm.tags[containerinsightscommon.ClusterNameKey] = mh.clusterName
+			if _, ok := mm.tags[constants.ClusterNameKey]; !ok {
+				mm.tags[constants.ClusterNameKey] = mh.clusterName
 			}
 		}
 
