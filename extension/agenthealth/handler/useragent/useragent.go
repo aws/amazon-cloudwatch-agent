@@ -33,6 +33,7 @@ const (
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
+	flagLogConcurrency            = "log_concurrency"
 	separator                     = " "
 
 	typeInputs     = "inputs"
@@ -48,6 +49,7 @@ var (
 type UserAgent interface {
 	SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config)
 	SetContainerInsightsFlag()
+	SetLogConcurrencyFlag()
 	Header(isUsageDataEnabled bool) string
 	Listen(listener func())
 }
@@ -136,10 +138,18 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 }
 
 func (ua *userAgent) SetContainerInsightsFlag() {
+	ua.setFlag(flagContainerInsights)
+}
+
+func (ua *userAgent) SetLogConcurrencyFlag() {
+	ua.setFlag(flagLogConcurrency)
+}
+
+func (ua *userAgent) setFlag(flag string) {
 	ua.dataLock.Lock()
 	defer ua.dataLock.Unlock()
-	if !ua.outputs.Contains(flagContainerInsights) {
-		ua.outputs.Add(flagContainerInsights)
+	if !ua.outputs.Contains(flag) {
+		ua.outputs.Add(flag)
 		ua.outputsStr.Store(componentsStr(typeOutputs, ua.outputs))
 		ua.notify()
 	}
