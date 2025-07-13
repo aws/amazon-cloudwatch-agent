@@ -78,8 +78,9 @@ type Tail struct {
 	Lines    chan *Line
 	Config
 
-	file   *os.File
-	reader *bufio.Reader
+	file    *os.File
+	reader  *bufio.Reader
+	remainder []byte // Stores remainder of oversized lines for future processing
 
 	watcher watch.FileWatcher
 	changes *watch.FileChanges
@@ -181,6 +182,8 @@ func (tail *Tail) close() {
 	}
 	close(tail.Lines)
 	tail.CloseFile()
+	// Clear any remaining data when closing
+	tail.remainder = nil
 }
 
 func (tail *Tail) IsFileClosed() bool {
@@ -232,10 +235,8 @@ func (tail *Tail) Reopen(resetOffset bool) error {
 }
 
 // readLine() tries to return a single line, not including the end-of-line bytes.
-// If the line is too long for the buffer then partial line will be returned.
-// The rest of the line will be returned from future calls. If error is encountered
-// before finding the end-of-line bytes(often io.EOF), it returns the data read
-// before the error and the error itself.
+// If the line is too long for the buffer, it will return the first part of the line
+// and store the remainder for future calls. This ensures no data is lost for large lines.
 func (tail *Tail) readLine() (string, error) {
 	if tail.Config.IsUTF16 {
 		return tail.readlineUtf16()
@@ -243,27 +244,53 @@ func (tail *Tail) readLine() (string, error) {
 	tail.lk.Lock()
 	defer tail.lk.Unlock()
 
-	line, err := tail.readSlice('\n')
-	if err == bufio.ErrBufferFull {
-		// Truncate to MaxLineSize if the line is too long
+	// If we have a remainder from a previous oversized line, return that first
+	if tail.remainder != nil && len(tail.remainder) > 0 {
 		maxSize := tail.MaxLineSize
 		if maxSize <= 0 {
-			// Default to the constant defined in constants package
 			maxSize = constants.DefaultMaxEventSize
 		}
 
-		if len(line) > maxSize {
-			line = line[:maxSize]
+		// If the remainder fits in one chunk, return it all
+		if len(tail.remainder) <= maxSize {
+			result := string(tail.remainder)
+			tail.remainder = nil
+			return result, nil
 		}
 
-		// Handle the case where "\r\n" straddles the buffer.
+		// Otherwise, return a chunk and keep the rest for next time
+		result := string(tail.remainder[:maxSize])
+		tail.remainder = tail.remainder[maxSize:]
+		return result, nil
+	}
+
+	// Normal line reading
+	line, err := tail.readSlice('\n')
+	if err == bufio.ErrBufferFull {
+		// Line is too long for the buffer
+		maxSize := tail.MaxLineSize
+		if maxSize <= 0 {
+			maxSize = constants.DefaultMaxEventSize
+		}
+
+		// Handle the case where "\r\n" straddles the buffer
 		if len(line) > 0 && line[len(line)-1] == '\r' {
 			tail.unreadByte()
 			line = line[:len(line)-1]
 		}
+
 		// Make a copy of the line to avoid buffer corruption issues
 		result := make([]byte, len(line))
 		copy(result, line)
+
+		// If the line is longer than maxSize, we need to split it
+		if len(result) > maxSize {
+			// Store the remainder for future calls
+			tail.remainder = result[maxSize:]
+			// Return only the first part
+			return string(result[:maxSize]), nil
+		}
+
 		return string(result), nil
 	}
 
@@ -280,6 +307,26 @@ func (tail *Tail) readLine() (string, error) {
 func (tail *Tail) readlineUtf16() (string, error) {
 	tail.lk.Lock()
 	defer tail.lk.Unlock()
+
+	// If we have a remainder from a previous oversized line, return that first
+	if tail.remainder != nil && len(tail.remainder) > 0 {
+		maxSize := tail.MaxLineSize
+		if maxSize <= 0 {
+			maxSize = constants.DefaultMaxEventSize
+		}
+
+		// If the remainder fits in one chunk, return it all
+		if len(tail.remainder) <= maxSize {
+			result := string(tail.remainder)
+			tail.remainder = nil
+			return result, nil
+		}
+
+		// Otherwise, return a chunk and keep the rest for next time
+		result := string(tail.remainder[:maxSize])
+		tail.remainder = tail.remainder[maxSize:]
+		return result, nil
+	}
 
 	var cur []byte
 	var err error
@@ -322,7 +369,7 @@ func (tail *Tail) readlineUtf16() (string, error) {
 			cur = append(cur, nextByte)
 		}
 		// Use MaxLineSize if configured, otherwise default to 1MB
-		maxSize := constants.DefaultMaxEventSize // Use the constant defined in constants package
+		maxSize := constants.DefaultMaxEventSize
 		if tail.MaxLineSize > 0 {
 			maxSize = tail.MaxLineSize
 		}
@@ -342,6 +389,19 @@ func (tail *Tail) readlineUtf16() (string, error) {
 	n := 0
 	for i := range res {
 		n += copy(finalRes[n:], res[i])
+	}
+
+	// Check if the result exceeds the maximum size
+	maxSize := tail.MaxLineSize
+	if maxSize <= 0 {
+		maxSize = constants.DefaultMaxEventSize
+	}
+
+	if len(finalRes) > maxSize {
+		// Store the remainder for future calls
+		tail.remainder = finalRes[maxSize:]
+		// Return only the first part
+		return string(finalRes[:maxSize]), nil
 	}
 
 	return string(finalRes), err
@@ -559,6 +619,8 @@ func (tail *Tail) openReader() {
 	}
 	// Use exactly maxSize for the buffer to avoid the trailing 2 characters issue
 	tail.reader = bufio.NewReaderSize(tail.file, maxSize)
+	// Reset remainder when opening a new reader
+	tail.remainder = nil
 	tail.lk.Unlock()
 }
 
