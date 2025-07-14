@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 )
 
 func TestPayload_Value(t *testing.T) {
@@ -125,6 +127,124 @@ func TestInsertPlaceholderValues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, insertPlaceholderValues(tc.message, evtDataValues))
+		})
+	}
+}
+
+func TestCreateQuery(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		levels   []string
+		expected string
+	}{
+		{
+			name:     "Single level filter",
+			path:     "Application",
+			levels:   []string{"2"},
+			expected: `<QueryList><Query Id="0"><Select Path="Application">*[System[(Level='2') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Multiple level filters",
+			path:     "System",
+			levels:   []string{"2", "3", "4"},
+			expected: `<QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='3' or Level='4') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "No level filters",
+			path:     "Security",
+			levels:   []string{},
+			expected: `<QueryList><Query Id="0"><Select Path="Security">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Empty level filters",
+			path:     "Application",
+			levels:   nil,
+			expected: `<QueryList><Query Id="0"><Select Path="Application">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Path with special characters",
+			path:     "Microsoft-Windows-Security-Auditing",
+			levels:   []string{"2"},
+			expected: `<QueryList><Query Id="0"><Select Path="Microsoft-Windows-Security-Auditing">*[System[(Level='2') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ptr, err := CreateQuery(tc.path, tc.levels)
+			assert.NoError(t, err)
+			assert.NotNil(t, ptr)
+			assert.Equal(t, tc.expected, utf16PtrToString(ptr))
+		})
+	}
+}
+
+func TestCreateRangeQuery(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		levels   []string
+		r        state.Range
+		expected string
+	}{
+		{
+			name:     "Single level with range",
+			path:     "Application",
+			levels:   []string{"2"},
+			r:        state.NewRange(100, 200),
+			expected: `<QueryList><Query Id="0"><Select Path="Application">*[System[(Level='2') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 100 and EventRecordID &lt;= 200]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Multiple levels with range",
+			path:     "System",
+			levels:   []string{"2", "3"},
+			r:        state.NewRange(1000, 2000),
+			expected: `<QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='3') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 1000 and EventRecordID &lt;= 2000]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "No levels with range",
+			path:     "Security",
+			levels:   []string{},
+			r:        state.NewRange(50, 150),
+			expected: `<QueryList><Query Id="0"><Select Path="Security">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 50 and EventRecordID &lt;= 150]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Empty levels with range",
+			path:     "Application",
+			levels:   nil,
+			r:        state.NewRange(0, 100),
+			expected: `<QueryList><Query Id="0"><Select Path="Application">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 0 and EventRecordID &lt;= 100]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Large range values",
+			path:     "System",
+			levels:   []string{"2", "3", "4"},
+			r:        state.NewRange(999999, 1000000),
+			expected: `<QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='3' or Level='4') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 999999 and EventRecordID &lt;= 1000000]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Zero start range",
+			path:     "Test",
+			levels:   []string{"2"},
+			r:        state.NewRange(0, 1),
+			expected: `<QueryList><Query Id="0"><Select Path="Test">*[System[(Level='2') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 0 and EventRecordID &lt;= 1]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Path with special characters and range",
+			path:     "Microsoft-Windows-Kernel-General",
+			levels:   []string{"2"},
+			r:        state.NewRange(12345, 67890),
+			expected: `<QueryList><Query Id="0"><Select Path="Microsoft-Windows-Kernel-General">*[System[(Level='2') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 12345 and EventRecordID &lt;= 67890]]</Select></Query></QueryList>`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ptr, err := CreateRangeQuery(tc.path, tc.levels, tc.r)
+			assert.NoError(t, err)
+			assert.NotNil(t, ptr)
+			assert.Equal(t, tc.expected, utf16PtrToString(ptr))
 		})
 	}
 }
