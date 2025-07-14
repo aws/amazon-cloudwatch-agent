@@ -149,7 +149,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			env: map[string]string{
-				"CWAGENT_ROLE": "CI_LEADER",
+				"CWAGENT_ROLE": "LEADER",
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
@@ -173,7 +173,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			env: map[string]string{
-				"CWAGENT_ROLE": "CI_NODE",
+				"CWAGENT_ROLE": "NODE",
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,

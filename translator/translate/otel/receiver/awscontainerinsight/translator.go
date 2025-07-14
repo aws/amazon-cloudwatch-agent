@@ -169,9 +169,9 @@ func (t *translator) getConfiguredContainerService(conf *confmap.Conf) *collecti
 
 func getCollectionRole() awscontainerinsightreceiver.CollectionRole {
 	switch strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)) {
-	case envconfig.CI_LEADER:
+	case envconfig.LEADER:
 		return awscontainerinsightreceiver.LEADER
-	case envconfig.CI_NODE:
+	case envconfig.NODE:
 		return awscontainerinsightreceiver.NODE
 	default:
 		return awscontainerinsightreceiver.ALL

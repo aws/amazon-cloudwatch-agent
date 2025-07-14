@@ -43,9 +43,9 @@ const (
 )
 
 const (
-	TrueValue = "True"      // TrueValue is the expected string set on an environment variable to indicate true.
-	CI_LEADER = "CI_LEADER" //nolint:revive
-	CI_NODE   = "CI_NODE"   //nolint:revive
+	TrueValue = "True"   // TrueValue is the expected string set on an environment variable to indicate true.
+	LEADER    = "LEADER" //nolint:revive
+	NODE      = "NODE"   //nolint:revive
 )
 
 var (
