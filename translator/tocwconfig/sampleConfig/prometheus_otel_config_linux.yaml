@@ -44,7 +44,6 @@ processors:
     deltatocumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
-    prometheusadapter/prometheus/amp: {}
 receivers:
     prometheus:
         config:
@@ -92,7 +91,6 @@ service:
             exporters:
                 - prometheusremotewrite/amp
             processors:
-                - prometheusadapter/prometheus/amp
                 - batch/prometheus/amp
                 - deltatocumulative/prometheus/amp
             receivers:

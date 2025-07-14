@@ -120,7 +120,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators := &common.ComponentTranslators{
 			Receivers: common.NewTranslatorMap(otelprom.NewTranslator(otelprom.WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey)))),
 			Processors: common.NewTranslatorMap(
-				prometheusadapter.NewTranslatorWithName(t.name),
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
 				// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics
 				deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)),
