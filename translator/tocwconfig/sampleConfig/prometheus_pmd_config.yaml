@@ -61,7 +61,7 @@ processors:
               - InstanceType
         cache_size: 1000
 receivers:
-    prometheus:
+    prometheus/prometheus/cloudwatch:
         config:
             global:
                 evaluation_interval: 1m
@@ -112,7 +112,7 @@ service:
                 - rollup
                 - ec2tagger
             receivers:
-                - prometheus
+                - prometheus/prometheus/cloudwatch
     telemetry:
         logs:
             encoding: console
