@@ -5,6 +5,7 @@ package debugger
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,16 +24,16 @@ type AgentLogConfig struct {
 	Message         string `json:"-"`
 }
 
-func CheckLogs(config map[string]interface{}, ssm bool) ([]AgentLogConfig, error) {
+func CheckLogs(w io.Writer, config map[string]interface{}, ssm bool) ([]AgentLogConfig, error) {
 
 	collectList, err := getCollectListFromConfig(config)
 	if err != nil {
-		fmt.Println("Error: Unable to find valid log collection configuration")
+		fmt.Fprintln(w, "Error: Unable to find valid log collection configuration")
 		return []AgentLogConfig{}, err
 	}
 
 	if len(collectList) == 0 {
-		fmt.Println("No log files are configured")
+		fmt.Fprintln(w, "No log files are configured")
 		return []AgentLogConfig{}, nil
 	}
 
@@ -79,29 +80,29 @@ func CheckLogs(config map[string]interface{}, ssm bool) ([]AgentLogConfig, error
 		}
 	}
 
-	fmt.Println("\n=== Log Configuration Summary ===")
+	fmt.Fprintln(w, "\n=== Log Configuration Summary ===")
 
 	if ssm {
-		fmt.Printf("Total Configurations: %d\n", totalConfigs)
-		fmt.Printf("Accessible:           %d\n", accessibleConfigs)
-		fmt.Printf("With Issues:          %d\n", issueConfigs)
+		fmt.Fprintf(w, "Total Configurations: %d\n", totalConfigs)
+		fmt.Fprintf(w, "Accessible:           %d\n", accessibleConfigs)
+		fmt.Fprintf(w, "With Issues:          %d\n", issueConfigs)
 	} else {
 		labelWidth := 20
 		valueWidth := 10
 
-		fmt.Printf("┌%s┬%s┐\n",
+		fmt.Fprintf(w, "┌%s┬%s┐\n",
 			repeatChar('─', labelWidth+2),
 			repeatChar('─', valueWidth+2))
 
-		fmt.Printf("│ %-*s │ %-*d │\n", labelWidth, "Total Configurations", valueWidth, totalConfigs)
-		fmt.Printf("│ %-*s │ %-*d │\n", labelWidth, "Accessible", valueWidth, accessibleConfigs)
-		fmt.Printf("│ %-*s │ %-*d │\n", labelWidth, "With Issues", valueWidth, issueConfigs)
+		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Total Configurations", valueWidth, totalConfigs)
+		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Accessible", valueWidth, accessibleConfigs)
+		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "With Issues", valueWidth, issueConfigs)
 
-		fmt.Printf("└%s┴%s┘\n",
+		fmt.Fprintf(w, "└%s┴%s┘\n",
 			repeatChar('─', labelWidth+2),
 			repeatChar('─', valueWidth+2))
 	}
-	fmt.Println()
+	fmt.Fprintln(w)
 
 	return logConfigs, nil
 }

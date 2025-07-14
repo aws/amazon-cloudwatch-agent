@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
@@ -46,7 +47,9 @@ func main() {
 	}
 	printInstanceInfo(info, *ssm)
 
-	if !debugger.CheckConfigFiles(*ssm) {
+	// We provide a stream because MCP uses a buffer. This is so when MCP calls tools it will not print to stdout.
+	// There are better ways of doing this but not without significant refactoring overhead.
+	if !debugger.CheckConfigFiles(os.Stdout, *ssm) {
 		fmt.Println("⚠️  ERROR: Required configuration files are missing - cannot conduct log checks.")
 		return
 	} else {
@@ -57,8 +60,11 @@ func main() {
 		} else {
 			mergedConfig = config
 		}
-		parseEndpoints(*ssm)
-		_, err = debugger.CheckLogs(mergedConfig, *ssm)
+		_, err = debugger.CheckEndpoints(os.Stdout, mergedConfig, *ssm)
+		if err != nil {
+			fmt.Printf("Failed to check endpoints: %v\n", err)
+		}
+		_, err = debugger.CheckLogs(os.Stdout, mergedConfig, *ssm)
 		if err != nil {
 			fmt.Printf("Failed to check logs: %v\n", err)
 			return
@@ -141,52 +147,4 @@ func repeatChar(char rune, count int) string {
 	return string(result)
 }
 
-func parseEndpoints(ssm bool) {
-	if mergedConfig == nil {
-		fmt.Println("No configuration available")
-		return
-	}
 
-	fmt.Println("\n=== Endpoint Configuration ===")
-
-	var metricsEndpoint, logsEndpoint string
-	if metrics, ok := mergedConfig["metrics"].(map[string]interface{}); ok {
-		if endpoint, ok := metrics["endpoint_override"].(string); ok {
-			metricsEndpoint = endpoint
-		} else {
-			metricsEndpoint = "Default CloudWatch endpoint (no override)"
-		}
-	} else {
-		metricsEndpoint = "No metrics configuration found"
-	}
-
-	if logs, ok := mergedConfig["logs"].(map[string]interface{}); ok {
-		if endpoint, ok := logs["endpoint_override"].(string); ok {
-			logsEndpoint = endpoint
-		} else {
-			logsEndpoint = "Default CloudWatch Logs endpoint (no override)"
-		}
-	} else {
-		logsEndpoint = "No logs configuration found"
-	}
-
-	if ssm {
-		fmt.Printf("Metrics: %s\n", metricsEndpoint)
-		fmt.Printf("Logs:    %s\n", logsEndpoint)
-	} else {
-		labelWidth := 15
-		maxValueWidth := max(len(metricsEndpoint), len(logsEndpoint))
-		maxValueWidth = max(maxValueWidth, 30)
-
-		fmt.Printf("┌%s┬%s┐\n",
-			repeatChar('─', labelWidth+2),
-			repeatChar('─', maxValueWidth+2))
-
-		printTableRow("Metrics", metricsEndpoint, labelWidth, maxValueWidth)
-		printTableRow("Logs", logsEndpoint, labelWidth, maxValueWidth)
-
-		fmt.Printf("└%s┴%s┘\n",
-			repeatChar('─', labelWidth+2),
-			repeatChar('─', maxValueWidth+2))
-	}
-}

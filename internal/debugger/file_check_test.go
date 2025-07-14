@@ -4,6 +4,7 @@
 package debugger
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -109,4 +110,26 @@ func TestGetConfigFiles(t *testing.T) {
 		assert.NotEmpty(t, file.Path, "File %d has empty Path", i)
 		assert.NotEmpty(t, file.Description, "File %d has empty Description", i)
 	}
+}
+
+func TestCheckConfigFilesOutput(t *testing.T) {
+	// Test SSM format (compact)
+	var buf bytes.Buffer
+	CheckConfigFiles(&buf, true)
+	output := buf.String()
+
+	assert.Contains(t, output, "=== Configuration Files ===", "Output should contain header")
+	assert.Contains(t, output, "amazon-cloudwatch-agent.json:", "Output should contain TOML config file")
+	assert.Contains(t, output, "amazon-cloudwatch-agent.d:", "Output should contain JSON config directory")
+
+	// Test table format
+	buf.Reset()
+	CheckConfigFiles(&buf, false)
+	output = buf.String()
+
+	assert.Contains(t, output, "=== Configuration Files ===", "Output should contain header")
+	assert.Contains(t, output, "┌", "Table format should contain table borders")
+	assert.Contains(t, output, "File", "Table format should contain File column header")
+	assert.Contains(t, output, "Status", "Table format should contain Status column header")
+	assert.Contains(t, output, "Description", "Table format should contain Description column header")
 }

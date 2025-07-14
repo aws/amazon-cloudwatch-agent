@@ -6,6 +6,7 @@ package debugger
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,22 +33,22 @@ type ConfigFile struct {
 	MissingMsg  string
 }
 
-func CheckConfigFiles(ssm bool) bool {
-	fmt.Println("\n=== Configuration Files ===")
+func CheckConfigFiles(w io.Writer, ssm bool) bool {
+	fmt.Fprintln(w, "\n=== Configuration Files ===")
 
 	configFiles := getConfigFiles()
 
 	if ssm {
-		printConfigFilesSSM(configFiles)
+		printConfigFilesSSM(w, configFiles)
 	} else {
-		printConfigFilesTable(configFiles)
+		printConfigFilesTable(w, configFiles)
 	}
 
 	jsonConfigStatus := checkFileStatus(paths.ConfigDirPath)
 	return jsonConfigStatus == StatusPresent
 }
 
-func printConfigFilesSSM(configFiles []ConfigFile) {
+func printConfigFilesSSM(w io.Writer, configFiles []ConfigFile) {
 	// Calculate max display name width for alignment
 	maxNameWidth := 0
 	for _, file := range configFiles {
@@ -58,12 +59,12 @@ func printConfigFilesSSM(configFiles []ConfigFile) {
 	for _, file := range configFiles {
 		status := checkFileStatus(file.Path)
 		displayName := getDisplayName(file.Path)
-		fmt.Printf("%-*s %s - %s\n", maxNameWidth, displayName+":", status, file.Description)
+		fmt.Fprintf(w, "%-*s %s - %s\n", maxNameWidth, displayName+":", status, file.Description)
 		handleFileStatus(file, status)
 	}
 }
 
-func printConfigFilesTable(configFiles []ConfigFile) {
+func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 	fileNameWidth := 25
 	statusWidth := 20
 	for _, file := range configFiles {
@@ -73,14 +74,14 @@ func printConfigFilesTable(configFiles []ConfigFile) {
 		statusWidth = max(statusWidth, len(string(status)))
 	}
 
-	fmt.Printf("┌%s┬%s┬%s┐\n",
+	fmt.Fprintf(w, "┌%s┬%s┬%s┐\n",
 		repeatChar('─', fileNameWidth+2),
 		repeatChar('─', statusWidth+2),
 		repeatChar('─', 50))
 
-	fmt.Printf("│ %-*s │ %-*s │ %-48s │\n", fileNameWidth, "File", statusWidth, "Status", "Description")
+	fmt.Fprintf(w, "│ %-*s │ %-*s │ %-48s │\n", fileNameWidth, "File", statusWidth, "Status", "Description")
 
-	fmt.Printf("├%s┼%s┼%s┤\n",
+	fmt.Fprintf(w, "├%s┼%s┼%s┤\n",
 		repeatChar('─', fileNameWidth+2),
 		repeatChar('─', statusWidth+2),
 		repeatChar('─', 50))
@@ -93,11 +94,11 @@ func printConfigFilesTable(configFiles []ConfigFile) {
 			description = description[:45] + "..."
 		}
 
-		fmt.Printf("│ %-*s │ %-*s │ %-48s │\n", fileNameWidth, displayName, statusWidth, status, description)
+		fmt.Fprintf(w, "│ %-*s │ %-*s │ %-48s │\n", fileNameWidth, displayName, statusWidth, status, description)
 		handleFileStatus(file, status)
 	}
 
-	fmt.Printf("└%s┴%s┴%s┘\n",
+	fmt.Fprintf(w, "└%s┴%s┴%s┘\n",
 		repeatChar('─', fileNameWidth+2),
 		repeatChar('─', statusWidth+2),
 		repeatChar('─', 50))

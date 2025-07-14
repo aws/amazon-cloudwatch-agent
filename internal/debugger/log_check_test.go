@@ -4,6 +4,7 @@
 package debugger
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -199,7 +200,8 @@ func TestCheckLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := CheckLogs(tt.config, false)
+			var buf bytes.Buffer
+			result, err := CheckLogs(&buf, tt.config, false)
 
 			if tt.expectedSuccess {
 				assert.NoError(t, err, "CheckLogs() should not return an error")
@@ -220,7 +222,6 @@ func TestExpandGlob(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Create test files
 	testFiles := []string{"test1.log", "test2.log", "app.txt"}
 	for _, file := range testFiles {
 		if err := os.WriteFile(filepath.Join(tempDir, file), []byte("test"), 0644); err != nil {
@@ -270,13 +271,11 @@ func TestExpandRecursiveGlob(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Create nested directory structure
 	subDir := filepath.Join(tempDir, "subdir")
 	if err := os.MkdirAll(subDir, 0755); err != nil {
 		t.Fatalf("Failed to create subdir: %v", err)
 	}
 
-	// Create test files
 	testFiles := map[string]string{
 		"root.log":    tempDir,
 		"app.txt":     tempDir,
