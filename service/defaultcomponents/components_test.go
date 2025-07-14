@@ -98,6 +98,7 @@ func TestComponents(t *testing.T) {
 		"server",
 		"sigv4auth",
 		"zpages",
+		"opamp",
 	}
 	gotExtensions := collections.MapSlice(maps.Keys(factories.Extensions), component.Type.String)
 	assert.Equal(t, len(wantExtensions), len(gotExtensions))
