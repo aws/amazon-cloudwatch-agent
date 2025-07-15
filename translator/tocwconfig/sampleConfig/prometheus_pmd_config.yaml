@@ -47,20 +47,21 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceId
             - InstanceType
             - ImageId
-            - InstanceId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
+    prometheusadapter/prometheus/cloudwatch: {}
     rollup:
         attribute_groups:
             - - InstanceId
               - InstanceType
         cache_size: 1000
 receivers:
-    prometheus:
+    prometheus/prometheus/cloudwatch:
         config:
             global:
                 evaluation_interval: 1m
@@ -105,12 +106,13 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - prometheusadapter/prometheus/cloudwatch
                 - batch/prometheus/cloudwatch
                 - cumulativetodelta/prometheus/cloudwatch
                 - rollup
                 - ec2tagger
             receivers:
-                - prometheus
+                - prometheus/prometheus/cloudwatch
     telemetry:
         logs:
             encoding: console

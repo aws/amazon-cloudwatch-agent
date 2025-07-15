@@ -64,15 +64,10 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
-	var configPathKey string
-	configPathKeyLogs := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.PrometheusConfigPathKey)
-	configPathKeyMetrics := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey, common.PrometheusConfigPathKey)
-	if conf.IsSet(configPathKeyMetrics) {
-		configPathKey = configPathKeyMetrics
-	} else if conf.IsSet(configPathKeyLogs) {
-		configPathKey = configPathKeyLogs
-	} else {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.PrometheusConfigPathKey}
+	configPathKey := common.ConfigKey(t.configKey, common.PrometheusConfigPathKey)
+
+	if !conf.IsSet(configPathKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configPathKey}
 	}
 
 	configPath, _ := common.GetString(conf, configPathKey)
@@ -86,11 +81,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
 	}
 
-	// Apply escaping to the content before unmarshalling
-	escapedContent := escapeRegexReplacements(content)
+	escapedContent, err := escapePrometheusConfig(content)
+	if err != nil {
+		return nil, fmt.Errorf("unable to escape prometheus config: %w", err)
+	}
+	content = escapedContent
 
 	var stringMap map[string]interface{}
-	err = yaml.Unmarshal(escapedContent, &stringMap)
+	err = yaml.Unmarshal(content, &stringMap)
 	if err != nil {
 		return nil, err
 	}
@@ -127,6 +125,38 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func escapeRegexReplacements(content []byte) []byte {
-	return []byte(strings.ReplaceAll(string(content), "$", "$$$$"))
+func escapePrometheusConfig(content []byte) ([]byte, error) {
+	var config map[any]any
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return nil, err
+	}
+	escapeStrings(config)
+	return yaml.Marshal(config)
+}
+
+func escapeStrings(node any) {
+	switch n := node.(type) {
+	case map[any]any:
+		for k, v := range n {
+			if key, ok := k.(string); ok && key == "replacement" {
+				if str, ok := v.(string); ok {
+					n[k] = strings.ReplaceAll(str, "$", "$$$$")
+				}
+			}
+			escapeStrings(v)
+		}
+	case map[string]interface{}:
+		for k, v := range n {
+			if k == "replacement" {
+				if str, ok := v.(string); ok {
+					n[k] = strings.ReplaceAll(str, "$", "$$$$")
+				}
+			}
+			escapeStrings(v)
+		}
+	case []any:
+		for _, v := range n {
+			escapeStrings(v)
+		}
+	}
 }
