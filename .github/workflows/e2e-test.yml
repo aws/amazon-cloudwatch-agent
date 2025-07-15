@@ -53,10 +53,6 @@ jobs:
           aws-region: ${{ inputs.region || 'us-west-2' }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Echo TERRAFORM_AWS_ASSUME_ROLE
-        run: |
-          echo "TERRAFORM_AWS_ASSUME_ROLE: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}"
-
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -64,7 +60,6 @@ jobs:
 
       - name: Update kubeconfig for EKS cluster
         run: |
-          aws sts get-caller-identity  # Verify AWS credentials are working
           aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
           kubectl get nodes -o wide
 
@@ -115,14 +110,12 @@ jobs:
               --region us-west-2 \
               --scaling-config desiredSize=${{ env.DESIRED_CAPACITY }}
           
-            echo "Waiting 1 minute before scaling next node group..."
-            sleep 60
           done
 
       - name: Validate total node count
         run: |
-          echo "Waiting 5 minutes for scaling operations to complete..."
-          sleep 300
+          echo "Waiting 20 minutes for scaling operations to complete..."
+          sleep 1200
           
           echo "Validating total number of nodes in the cluster..."
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)

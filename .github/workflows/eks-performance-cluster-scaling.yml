@@ -61,7 +61,6 @@ jobs:
       - name: Update kubeconfig for EKS cluster
         run: |
           aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-          kubectl get nodes -o wide
 
       - name: Scale up node groups (Sunday)
         if: github.event.schedule == '0 9 * * 0'
@@ -110,14 +109,12 @@ jobs:
               --region us-west-2 \
               --scaling-config desiredSize=${{ env.DESIRED_CAPACITY }}
           
-            echo "Waiting 1 minute before scaling next node group..."
-            sleep 60
           done
 
       - name: Validate total node count
         run: |
-          echo "Waiting 5 minutes for scaling operations to complete..."
-          sleep 300
+          echo "Waiting 20 minutes for scaling operations to complete..."
+          sleep 1200
           
           echo "Validating total number of nodes in the cluster..."
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
