@@ -8,11 +8,6 @@ on:
     - cron: '0 21 * * 1'  # Scale down: Runs every Monday at 9:00 PM
   workflow_dispatch:
     inputs:
-      terraform_assume_role:
-        description: 'AWS IAM Role ARN to assume'
-        required: true
-        type: string
-        default: 'arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole'
       region:
         description: 'AWS Region'
         required: true
@@ -22,7 +17,7 @@ on:
         description: 'EKS Cluster Name'
         required: true
         type: string
-        default: 'my-eks-cluster'
+        default: 'eks-performance'
       desired_capacity:
         description: 'Desired capacity for each node group'
         required: true
@@ -31,8 +26,9 @@ on:
 
 env:
   AWS_REGION: ${{ inputs.region || 'us-west-2' }}
-  CLUSTER_NAME: ${{ inputs.cluster_name || 'my-eks-cluster' }}
+  CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
   DESIRED_CAPACITY: ${{ inputs.desired_capacity || 500 }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
 
 jobs:
@@ -48,7 +44,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ inputs.terraform_assume_role }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
           aws-region: ${{ inputs.region || 'us-west-2' }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
