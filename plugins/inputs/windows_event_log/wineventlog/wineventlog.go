@@ -97,13 +97,12 @@ func (w *windowsEventLog) Init() error {
 		}
 	}
 
-
 	for _, filter := range w.filters {
 		if err := filter.init(); err != nil {
 			return err
 		}
 	}
-	
+
 	go w.stateManager.Run(state.Notification{Done: w.done})
 	restored, _ := w.stateManager.Restore()
 	w.eventOffset = restored.Last().EndOffset()
@@ -185,7 +184,7 @@ func (w *windowsEventLog) run() {
 					log.Printf("E! [wineventlog] Error happened when collecting windows events: %v", err)
 					continue
 				}
-				
+
 				shouldPublish := true
 				for _, filter := range w.filters {
 					if !filter.ShouldPublish(value) {
@@ -193,11 +192,11 @@ func (w *windowsEventLog) run() {
 						break
 					}
 				}
-				
+
 				if !shouldPublish {
 					continue
 				}
-				
+
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
 				r.Shift(recordNumber)
 				evt := &LogEvent{

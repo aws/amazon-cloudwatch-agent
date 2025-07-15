@@ -99,6 +99,11 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
+			description := errorDetail.Description()
+			context := errorDetail.Context().String()
+			if strings.Contains(context, "windows_events/collect_list") && description == "event_levels is required" {
+				description = "At least one of event_levels, event_ids, or filters is required"
+			}
 			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 		}
 		log.Panic("E! Invalid Json input schema.")

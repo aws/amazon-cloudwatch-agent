@@ -41,9 +41,9 @@ func (config *Logs) AddLogFile(filePath, logGroupName string, logStream, timesta
 	config.LogsCollect.AddLogFile(filePath, logGroupName, logStream, timestampFormat, timezone, multiLineStartPattern, encoding, retention, logGroupClass)
 }
 
-func (config *Logs) AddWindowsEvent(eventName, logGroupName, logStream, eventFormat string, eventLevels []string, retention int, logGroupClass string) {
+func (config *Logs) AddWindowsEvent(eventName, logGroupName, logStream, eventFormat string, eventLevels []string, eventIDs []int, filters []*logs.EventFilter, retention int, logGroupClass string) {
 	if config.LogsCollect == nil {
 		config.LogsCollect = &logs.Collection{}
 	}
-	config.LogsCollect.AddWindowsEvent(eventName, logGroupName, logStream, eventFormat, eventLevels, retention, logGroupClass)
+	config.LogsCollect.AddWindowsEvent(eventName, logGroupName, logStream, eventFormat, eventLevels, eventIDs, filters, retention, logGroupClass)
 }
