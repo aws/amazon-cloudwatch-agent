@@ -187,10 +187,10 @@ github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b h1:mimo19zliBX/vS
 github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b/go.mod h1:fvzegU4vN3H1qMT+8wDmzjAcDONcgo2/SZ/TyfdUOFs=
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrcuRrZlSnx7R9SCf5I=
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250618011628-c38f9eb9d96a h1:13yvLZLMfXB1MDvNK0uRjh1Q+AkYk8b8mxmq+lcEdoI=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:K1bIX6HiFoEYD6o2UiZ4SfGZc2E/aFr4jGxpWAjboX0=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250618011628-c38f9eb9d96a h1:wl72tQBttXN6VLCTi7XwL0aHpotSlTUfk5jinXyk1D8=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:CFj1Fw9eREdVDfqABIc+QEuAW767hBJPumJBkFNxXXg=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250715013640-f86e2e64115e h1:aBWjtf12ydV4vJiD+Cki0uCB3j8WaJxOsMX8lKBKYpY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20250715013640-f86e2e64115e/go.mod h1:K1bIX6HiFoEYD6o2UiZ4SfGZc2E/aFr4jGxpWAjboX0=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250715013640-f86e2e64115e h1:+bpp1hHx26iOHlI/n6SvLEVJVqofkUi9x3TS6QDpRr8=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20250715013640-f86e2e64115e/go.mod h1:CFj1Fw9eREdVDfqABIc+QEuAW767hBJPumJBkFNxXXg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250618011628-c38f9eb9d96a h1:p63ca23R/67TQ3c/fPDe6ytpjru0Q8T8MjaNOLcZDlo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:uxEu3AKt9Sn0Ymf6Zwnz5bxWtErQv5lC7fzrkQ+rN7M=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250618011628-c38f9eb9d96a h1:lglXAtFIqgvGPoL3pqy3wk/CYFzCiDo51PjFMm2E0k0=
@@ -201,8 +201,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsu
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:AbdplNaM4g1LnEbDczU5tDqnF1xhzlgBvpB1xwEUlhg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250618011628-c38f9eb9d96a h1:n+pU29fEmbrogtsICgV0DBGli7yvE+gp3UfzK7d1xd4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:9bL/kFVrHh9yDtTUQwxkVl7gRA0PfTmt87CBzC/ihBM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250618011628-c38f9eb9d96a h1:GZf9D2v9y/pXk38BNztwKfw5kdie3hMDloan0IycMME=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:XK8ww4E/9UaVR0wz3mS1HRr+qFEfA/FBZoSRZjVnJRs=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250715013640-f86e2e64115e h1:+WvUkjoaOttTkHIo4KIlnNlsRr8ljakhPPToCjKGJHY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250715013640-f86e2e64115e/go.mod h1:XK8ww4E/9UaVR0wz3mS1HRr+qFEfA/FBZoSRZjVnJRs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250618011628-c38f9eb9d96a h1:bQEBnfdsQyGc/jrqkB1c3operCU7KJfKzghgDdr8E10=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250618011628-c38f9eb9d96a/go.mod h1:xfyU9SHUkrBm12LyvF/Er2tuu05e38EiGHcm7MESH5Q=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250618011628-c38f9eb9d96a h1:h0GvRkUbwVJjD75NdFD804VOpgxEuvhRjjIV4+rBO88=
