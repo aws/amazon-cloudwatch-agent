@@ -72,8 +72,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			return nil, fmt.Errorf("pipeline (%s) is missing prometheus configuration under metrics section with destination (%s)", t.name, t.Destination())
 		}
 		translators := &common.ComponentTranslators{
-			Receivers: common.NewTranslatorMap(otelprom.NewTranslator()),
+			Receivers: common.NewTranslatorMap(otelprom.NewTranslator(otelprom.WithName(t.name), otelprom.WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.PrometheusKey)))),
 			Processors: common.NewTranslatorMap(
+				prometheusadapter.NewTranslatorWithName(t.name),
 				batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey),
 				cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()),
 			),
