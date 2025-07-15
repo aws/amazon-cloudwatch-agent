@@ -22,20 +22,16 @@ func AddConfigWarning(msg string) {
 
 func PrintAggregatedErrors() {
 	fmt.Println("=== Errors & Warnings Summary ===")
-	if len(DebuggerErrorCollector.ConfigErrors) > 0 || len(DebuggerErrorCollector.ConfigWarnings) > 0 {
+	printMessages(DebuggerErrorCollector.ConfigErrors, "Errors", "❌")
+	printMessages(DebuggerErrorCollector.ConfigWarnings, "Warnings", "⚠️")
+}
 
-		if len(DebuggerErrorCollector.ConfigErrors) > 0 {
-			fmt.Printf("Errors (%d):\n", len(DebuggerErrorCollector.ConfigErrors))
-			for _, err := range DebuggerErrorCollector.ConfigErrors {
-				fmt.Printf("  ❌ %s\n", err)
-			}
-		}
-
-		if len(DebuggerErrorCollector.ConfigWarnings) > 0 {
-			fmt.Printf("Warnings (%d):\n", len(DebuggerErrorCollector.ConfigWarnings))
-			for _, warn := range DebuggerErrorCollector.ConfigWarnings {
-				fmt.Printf("  ⚠️  %s\n", warn)
-			}
-		}
+func printMessages(messages []string, title, icon string) {
+	if len(messages) == 0 {
+		return
+	}
+	fmt.Printf("%s (%d):\n", title, len(messages))
+	for _, msg := range messages {
+		fmt.Printf("  %s %s\n", icon, msg)
 	}
 }

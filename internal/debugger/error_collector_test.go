@@ -103,5 +103,3 @@ func TestErrorCollectorIntegration(t *testing.T) {
 	assert.Contains(t, output, "minor warning")
 	assert.Contains(t, output, "another error")
 }
-
-
