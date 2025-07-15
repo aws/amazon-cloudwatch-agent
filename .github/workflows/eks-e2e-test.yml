@@ -1,140 +1,160 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
-name: EKS Cluster Scaling
 
-on:
-  schedule:
-    - cron: '0 9 * * 0'  # Scale up: Runs every Sunday at 9:00 AM
-    - cron: '0 21 * * 1'  # Scale down: Runs every Monday at 9:00 PM
-  workflow_dispatch:
-    inputs:
-      terraform_assume_role:
-        description: 'AWS IAM Role ARN to assume'
-        required: true
-        type: string
-        default: 'arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole'
-      region:
-        description: 'AWS Region'
-        required: true
-        type: string
-        default: 'us-west-2'
-      cluster_name:
-        description: 'EKS Cluster Name'
-        required: true
-        type: string
-        default: 'my-eks-cluster'
-      desired_capacity:
-        description: 'Desired capacity for each node group'
-        required: true
-        type: number
-        default: 500
+name: Reusable EKS E2E Test
 
 env:
-  AWS_REGION: ${{ inputs.region || 'us-west-2' }}
-  CLUSTER_NAME: ${{ inputs.cluster_name || 'my-eks-cluster' }}
-  DESIRED_CAPACITY: ${{ inputs.desired_capacity || 500 }}
-  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+
+on:
+  workflow_call:
+    inputs:
+      terraform_dir:
+        required: true
+        type: string
+      job_id:
+        required: true
+        type: string
+      test_props:
+        required: true
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      cloudwatch_agent_repository:
+        required: true
+        type: string
+      cloudwatch_agent_tag:
+        required: true
+        type: string
+      cloudwatch_agent_operator_repository:
+        required: true
+        type: string
+      cloudwatch_agent_target_allocator_repository:
+        required: false
+        type: string
+      cloudwatch_agent_operator_tag:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      helm_charts_branch:
+        required: true
+        type: string
+      terraform_assume_role:
+        required: true
+        type: string
+      agent_config:
+        required: true
+        type: string
+      prometheus_config:
+        required: false
+        type: string
+        default: ""
+      otel_config:
+        required: false
+        type: string
+        default: ""
+      sample_app:
+        required: true
+        type: string
+      eks_installation_type:
+        required: true
+        type: string
 
 jobs:
-  scale-eks-cluster:
+  EKSE2ETest:
+    name: 'EKSE2ETest'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(inputs.test_props) }}
     permissions:
       id-token: write
       contents: read
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
-          aws-region: ${{ inputs.region || 'us-west-2' }}
+          aws-region: ${{ inputs.region }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          version: 'latest'
+          terraform_version: 1.12.0
 
-      - name: Update kubeconfig for EKS cluster
-        run: |
-          aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+      - name: Verify Terraform version
+        run: terraform --version
 
-      - name: Scale up node groups (Sunday)
-        if: github.event.schedule == '0 9 * * 0'
-        run: |
-          echo "Starting scale UP operation with desired capacity: 500"
-          
-          for i in {1..10}; do
-            echo "Scaling node group: eks-performance-node-${i} to 500"
-            aws eks update-nodegroup-config \
-              --cluster-name eks-performance \
-              --nodegroup-name eks-performance-node-${i} \
-              --region us-west-2 \
-              --scaling-config desiredSize=500
-          
-            echo "Waiting 1 minute before scaling next node group..."
-            sleep 60
-          done
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/e2e
+            fi
 
-      - name: Scale down node groups (Monday)
-        if: github.event.schedule == '0 21 * * 1'
-        run: |
-          echo "Starting scale DOWN operation with desired capacity: 0"
-          
-          for i in {1..10}; do
-            echo "Scaling node group: eks-performance-node-${i} to 0"
-            aws eks update-nodegroup-config \
-              --cluster-name eks-performance \
-              --nodegroup-name eks-performance-node-${i} \
-              --region us-west-2 \
-              --scaling-config desiredSize=0
-          
-            echo "Waiting 1 minute before scaling next node group..."
-            sleep 60
-          done
+            terraform init
+            if terraform apply --auto-approve \
+              -var="region=${{ inputs.region }}" \
+              -var="k8s_version=${{ matrix.arrays.k8sVersion }}" \
+              -var="nodes=${{ matrix.arrays.nodes }}" \
+              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
+              -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
+              -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
+              -var="cloudwatch_agent_operator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}" \
+              -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
+              -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
+              -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
+              -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="agent_config=${{ inputs.agent_config }}" \
+              -var="prometheus_config=${{ inputs.prometheus_config }}" \
+              -var="otel_config=${{ inputs.otel_config }}" \
+              -var="sample_app=${{ inputs.sample_app }}" \
+              -var="eks_installation_type=${{ inputs.eks_installation_type }}"; then
+              terraform destroy --auto-approve
+            else
+              terraform destroy --auto-approve && exit 1
+            fi
 
-      - name: Scale node groups (Manual)
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Starting manual scaling operation with desired capacity: ${{ env.DESIRED_CAPACITY }}"
-          
-          for i in {1..10}; do
-            echo "Scaling node group: eks-performance-node-${i} to ${{ env.DESIRED_CAPACITY }}"
-            aws eks update-nodegroup-config \
-              --cluster-name eks-performance \
-              --nodegroup-name eks-performance-node-${i} \
-              --region us-west-2 \
-              --scaling-config desiredSize=${{ env.DESIRED_CAPACITY }}
-          
-            echo "Waiting 1 minute before scaling next node group..."
-            sleep 60
-          done
-
-      - name: Validate total node count
-        run: |
-          echo "Waiting 5 minutes for scaling operations to complete..."
-          sleep 300
-          
-          echo "Validating total number of nodes in the cluster..."
-          ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
-          
-          # Determine expected count based on trigger type
-          if [ "${{ github.event.schedule }}" = "0 9 * * 0" ]; then
-            EXPECTED_NODE_COUNT=$((10 * 500))
-          elif [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
-            EXPECTED_NODE_COUNT=$((10 * 0))
-          else
-            EXPECTED_NODE_COUNT=$((10 * ${{ env.DESIRED_CAPACITY }}))
-          fi
-          
-          echo "Expected total nodes: ${EXPECTED_NODE_COUNT}"
-          echo "Actual total nodes: ${ACTUAL_NODE_COUNT}"
-          
-          if [ "$ACTUAL_NODE_COUNT" -eq "$EXPECTED_NODE_COUNT" ]; then
-            echo "Validation successful! Node count matches expected value."
-          else
-            echo "Validation failed. Expected ${EXPECTED_NODE_COUNT} nodes but found ${ACTUAL_NODE_COUNT} nodes."
-            exit 1
-          fi
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ inputs.terraform_dir }}" != "" ]; then
+              cd "${{ inputs.terraform_dir }}"
+            else
+              cd terraform/eks/e2e
+            fi
+            terraform destroy --auto-approve

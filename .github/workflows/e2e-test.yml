@@ -1,292 +1,140 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
-
-name: Run E2E Tests
-env:
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
+name: EKS Cluster Scaling
 
 on:
   schedule:
-    - cron: '0 17 * * 1'
+    - cron: '0 9 * * 0'  # Scale up: Runs every Sunday at 9:00 AM
+    - cron: '0 21 * * 1'  # Scale down: Runs every Monday at 9:00 PM
   workflow_dispatch:
     inputs:
+      terraform_assume_role:
+        description: 'AWS IAM Role ARN to assume'
+        required: true
+        type: string
+        default: 'arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole'
       region:
-        required: false
+        description: 'AWS Region'
+        required: true
         type: string
-        description: 'AWS Region to run tests in'
         default: 'us-west-2'
-      operator-branch:
-        required: false
+      cluster_name:
+        description: 'EKS Cluster Name'
+        required: true
         type: string
-        description: 'Branch of the operator to test'
-        default: 'main'
-      helm-charts-branch:
-        required: false
-        type: string
-        description: 'Branch of the helm charts to test'
-        default: 'main'
+        default: 'my-eks-cluster'
+      desired_capacity:
+        description: 'Desired capacity for each node group'
+        required: true
+        type: number
+        default: 500
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-parent
-  cancel-in-progress: true
+env:
+  AWS_REGION: ${{ inputs.region || 'us-west-2' }}
+  CLUSTER_NAME: ${{ inputs.cluster_name || 'my-eks-cluster' }}
+  DESIRED_CAPACITY: ${{ inputs.desired_capacity || 500 }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
 
 jobs:
-  GetLatestOperatorCommitSHA:
+  scale-eks-cluster:
     runs-on: ubuntu-latest
-    outputs:
-      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
-      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-    steps:
-      - name: Checkout the target repo
-        uses: actions/checkout@v3
-        with:
-          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-          ref: ${{ inputs.operator-branch || 'main' }}
-          path: operator-repo
-
-      - name: Get latest commit SHA
-        id: get_latest_sha
-        run: |
-          cd operator-repo
-          latest_sha=$(git rev-parse HEAD)
-          echo "::set-output name=operator_sha::$latest_sha"
-
-  BuildAgent:
-    uses: ./.github/workflows/build-test-artifacts.yml
-    concurrency:
-      group: "Build-Test-Artifacts-${{github.ref_name}}"
-      cancel-in-progress: true
-    secrets: inherit
     permissions:
       id-token: write
       contents: read
-    with:
-      test-image-before-upload: false
-
-  BuildOperator:
-    needs: [GetLatestOperatorCommitSHA]
-    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
-    concurrency:
-      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
-      cancel-in-progress: true
-    secrets: inherit
-    with:
-      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
-      test-image-before-upload: false
-
-  OutputEnvVariables:
-    needs: [ BuildAgent, BuildOperator ]
-    name: 'OutputEnvVariables'
-    runs-on: ubuntu-latest
-    outputs:
-      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
-      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
-      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{ inputs.region || 'us-west-2' }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
         with:
-          go-version: ~1.22.2
+          version: 'latest'
 
-      - name: SetOutputs
-        id: set-outputs
+      - name: Update kubeconfig for EKS cluster
         run: |
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "::set-output name=ECR_INTEGRATION_TEST_REPO::cwagent-integration-test"
-          echo "::set-output name=ECR_OPERATOR_REPO::$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
-          echo "::set-output name=ECR_TARGET_ALLOCATOR_REPO::$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
+          aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
-      - name: Echo test variables
+      - name: Scale up node groups (Sunday)
+        if: github.event.schedule == '0 9 * * 0'
         run: |
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
-          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
-          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
+          echo "Starting scale UP operation with desired capacity: 500"
+          
+          for i in {1..10}; do
+            echo "Scaling node group: eks-performance-node-${i} to 500"
+            aws eks update-nodegroup-config \
+              --cluster-name eks-performance \
+              --nodegroup-name eks-performance-node-${i} \
+              --region us-west-2 \
+              --scaling-config desiredSize=500
+          
+            echo "Waiting 1 minute before scaling next node group..."
+            sleep 60
+          done
 
-  GenerateTestMatrix:
-    needs: [BuildAgent, BuildOperator]
-    name: 'GenerateTestMatrix'
-    runs-on: ubuntu-latest
-    outputs:
-      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
-      - name: Generate matrix
-        id: set-matrix
+      - name: Scale down node groups (Monday)
+        if: github.event.schedule == '0 21 * * 1'
         run: |
-          go run generator/test_case_generator.go -e2e
-          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
+          echo "Starting scale DOWN operation with desired capacity: 0"
+          
+          for i in {1..10}; do
+            echo "Scaling node group: eks-performance-node-${i} to 0"
+            aws eks update-nodegroup-config \
+              --cluster-name eks-performance \
+              --nodegroup-name eks-performance-node-${i} \
+              --region us-west-2 \
+              --scaling-config desiredSize=0
+          
+            echo "Waiting 1 minute before scaling next node group..."
+            sleep 60
+          done
 
-      - name: Echo test plan matrix
+      - name: Scale node groups (Manual)
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
+          echo "Starting manual scaling operation with desired capacity: ${{ env.DESIRED_CAPACITY }}"
+          
+          for i in {1..10}; do
+            echo "Scaling node group: eks-performance-node-${i} to ${{ env.DESIRED_CAPACITY }}"
+            aws eks update-nodegroup-config \
+              --cluster-name eks-performance \
+              --nodegroup-name eks-performance-node-${i} \
+              --region us-west-2 \
+              --scaling-config desiredSize=${{ env.DESIRED_CAPACITY }}
+          
+            echo "Waiting 1 minute before scaling next node group..."
+            sleep 60
+          done
 
-  EKSE2EJVMTomcatTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jvm-tomcat-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EJVMTomcatTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jvm-tomcat-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
-  EKSE2EKafkaTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EKafkaTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/containerinsights.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/containerinsights.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
+      - name: Validate total node count
+        run: |
+          echo "Waiting 5 minutes for scaling operations to complete..."
+          sleep 300
+          
+          echo "Validating total number of nodes in the cluster..."
+          ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          
+          # Determine expected count based on trigger type
+          if [ "${{ github.event.schedule }}" = "0 9 * * 0" ]; then
+            EXPECTED_NODE_COUNT=$((10 * 500))
+          elif [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
+            EXPECTED_NODE_COUNT=$((10 * 0))
+          else
+            EXPECTED_NODE_COUNT=$((10 * ${{ env.DESIRED_CAPACITY }}))
+          fi
+          
+          echo "Expected total nodes: ${EXPECTED_NODE_COUNT}"
+          echo "Actual total nodes: ${ACTUAL_NODE_COUNT}"
+          
+          if [ "$ACTUAL_NODE_COUNT" -eq "$EXPECTED_NODE_COUNT" ]; then
+            echo "Validation successful! Node count matches expected value."
+          else
+            echo "Validation failed. Expected ${EXPECTED_NODE_COUNT} nodes but found ${ACTUAL_NODE_COUNT} nodes."
+            exit 1
+          fi
