@@ -60,6 +60,7 @@ jobs:
 
       - name: Update kubeconfig for EKS cluster
         run: |
+          aws sts get-caller-identity  # Verify AWS credentials are working
           aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
           kubectl get nodes -o wide
 
