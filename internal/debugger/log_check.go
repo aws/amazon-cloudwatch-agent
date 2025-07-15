@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 )
 
 type AgentLogConfig struct {
@@ -24,7 +26,7 @@ type AgentLogConfig struct {
 	Message         string `json:"-"`
 }
 
-func CheckLogs(w io.Writer, config map[string]interface{}, ssm bool) ([]AgentLogConfig, error) {
+func CheckLogs(w io.Writer, config map[string]interface{}, compact bool) ([]AgentLogConfig, error) {
 
 	collectList, err := getCollectListFromConfig(config)
 	if err != nil {
@@ -82,7 +84,7 @@ func CheckLogs(w io.Writer, config map[string]interface{}, ssm bool) ([]AgentLog
 
 	fmt.Fprintln(w, "\n=== Log Configuration Summary ===")
 
-	if ssm {
+	if compact {
 		fmt.Fprintf(w, "Total Configurations: %d\n", totalConfigs)
 		fmt.Fprintf(w, "Accessible:           %d\n", accessibleConfigs)
 		fmt.Fprintf(w, "With Issues:          %d\n", issueConfigs)
@@ -91,16 +93,16 @@ func CheckLogs(w io.Writer, config map[string]interface{}, ssm bool) ([]AgentLog
 		valueWidth := 10
 
 		fmt.Fprintf(w, "┌%s┬%s┐\n",
-			repeatChar('─', labelWidth+2),
-			repeatChar('─', valueWidth+2))
+			utils.RepeatChar('─', labelWidth+2),
+			utils.RepeatChar('─', valueWidth+2))
 
 		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Total Configurations", valueWidth, totalConfigs)
 		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Accessible", valueWidth, accessibleConfigs)
 		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "With Issues", valueWidth, issueConfigs)
 
 		fmt.Fprintf(w, "└%s┴%s┘\n",
-			repeatChar('─', labelWidth+2),
-			repeatChar('─', valueWidth+2))
+			utils.RepeatChar('─', labelWidth+2),
+			utils.RepeatChar('─', valueWidth+2))
 	}
 	fmt.Fprintln(w)
 

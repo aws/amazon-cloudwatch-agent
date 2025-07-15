@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/mcp"
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 )
@@ -18,17 +20,21 @@ import (
 var mergedConfig map[string]interface{}
 
 func main() {
-	ssm := flag.Bool("ssm", false, "Run debugger with limited formatting for SSM")
-	tarball := flag.Bool("tarball", false, "Create tarball")
-	tarballssm := flag.Bool("tarballssm", false, "Create tarball with SSM")
+	compact := flag.Bool("compact", false, "Run debugger with compact formatting")
+	createtarball := flag.Bool("tarball", false, "Create tarball")
+	createtarballssm := flag.Bool("tarballssm", false, "Create tarball with SSM")
+	startmcpserver := flag.Bool("mcp", false, "Start MCP server for IDE integration")
 	flag.Parse()
 
 	switch {
-	case *tarball:
+	case *createtarball:
 		debugger.CreateTarball(false)
 		return
-	case *tarballssm:
+	case *createtarballssm:
 		debugger.CreateTarball(true)
+		return
+	case *startmcpserver:
+		mcp.StartMCPServer()
 		return
 	}
 
@@ -45,11 +51,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("Failed to get instance info: %v\n", err)
 	}
-	printInstanceInfo(info, *ssm)
+	printInstanceInfo(info, *compact)
 
 	// We provide a stream because MCP uses a buffer. This is so when MCP calls tools it will not print to stdout.
 	// There are better ways of doing this but not without significant refactoring overhead.
-	if !debugger.CheckConfigFiles(os.Stdout, *ssm) {
+	if !debugger.CheckConfigFiles(os.Stdout, *compact) {
 		fmt.Println("⚠️  ERROR: Required configuration files are missing - cannot conduct log checks.")
 		return
 	} else {
@@ -60,11 +66,11 @@ func main() {
 		} else {
 			mergedConfig = config
 		}
-		_, err = debugger.CheckEndpoints(os.Stdout, mergedConfig, *ssm)
+		_, err = debugger.CheckEndpoints(os.Stdout, mergedConfig, *compact)
 		if err != nil {
 			fmt.Printf("Failed to check endpoints: %v\n", err)
 		}
-		_, err = debugger.CheckLogs(os.Stdout, mergedConfig, *ssm)
+		_, err = debugger.CheckLogs(os.Stdout, mergedConfig, *compact)
 		if err != nil {
 			fmt.Printf("Failed to check logs: %v\n", err)
 			return
@@ -78,7 +84,7 @@ func printHeader() {
 	fmt.Println("=== AWS EC2 Instance Information ===")
 }
 
-func printInstanceInfo(info *debugger.InstanceInfo, ssm bool) {
+func printInstanceInfo(info *debugger.InstanceInfo, compact bool) {
 	fmt.Println()
 
 	values := []string{
@@ -101,7 +107,7 @@ func printInstanceInfo(info *debugger.InstanceInfo, ssm bool) {
 		maxValueWidth = max(maxValueWidth, len(v))
 	}
 
-	if ssm {
+	if compact {
 		fmt.Printf("Instance ID:       %s\n", info.InstanceID)
 		fmt.Printf("Account ID:        %s\n", info.AccountID)
 		fmt.Printf("Region:            %s\n", info.Region)
@@ -113,8 +119,8 @@ func printInstanceInfo(info *debugger.InstanceInfo, ssm bool) {
 		fmt.Printf("Version:           %s\n", info.Version)
 	} else {
 		fmt.Printf("┌%s┬%s┐\n",
-			repeatChar('─', labelWidth+2),
-			repeatChar('─', maxValueWidth+2))
+			utils.RepeatChar('─', labelWidth+2),
+			utils.RepeatChar('─', maxValueWidth+2))
 
 		printTableRow("Instance ID", info.InstanceID, labelWidth, maxValueWidth)
 		printTableRow("Account ID", info.AccountID, labelWidth, maxValueWidth)
@@ -127,8 +133,8 @@ func printInstanceInfo(info *debugger.InstanceInfo, ssm bool) {
 		printTableRow("Version", info.Version, labelWidth, maxValueWidth)
 
 		fmt.Printf("└%s┴%s┘\n",
-			repeatChar('─', labelWidth+2),
-			repeatChar('─', maxValueWidth+2))
+			utils.RepeatChar('─', labelWidth+2),
+			utils.RepeatChar('─', maxValueWidth+2))
 	}
 
 }
@@ -137,14 +143,3 @@ func printTableRow(label, value string, labelWidth, valueWidth int) {
 	value = strings.TrimSpace(value)
 	fmt.Printf("│ %-*s │ %-*s │\n", labelWidth, label, valueWidth, value)
 }
-
-// Using runes to support "─"
-func repeatChar(char rune, count int) string {
-	result := make([]rune, count)
-	for i := range result {
-		result[i] = char
-	}
-	return string(result)
-}
-
-

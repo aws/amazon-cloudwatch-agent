@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
@@ -33,12 +34,12 @@ type ConfigFile struct {
 	MissingMsg  string
 }
 
-func CheckConfigFiles(w io.Writer, ssm bool) bool {
+func CheckConfigFiles(w io.Writer, compact bool) bool {
 	fmt.Fprintln(w, "\n=== Configuration Files ===")
 
 	configFiles := getConfigFiles()
 
-	if ssm {
+	if compact {
 		printConfigFilesSSM(w, configFiles)
 	} else {
 		printConfigFilesTable(w, configFiles)
@@ -75,16 +76,16 @@ func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 	}
 
 	fmt.Fprintf(w, "┌%s┬%s┬%s┐\n",
-		repeatChar('─', fileNameWidth+2),
-		repeatChar('─', statusWidth+2),
-		repeatChar('─', 50))
+		utils.RepeatChar('─', fileNameWidth+2),
+		utils.RepeatChar('─', statusWidth+2),
+		utils.RepeatChar('─', 50))
 
 	fmt.Fprintf(w, "│ %-*s │ %-*s │ %-48s │\n", fileNameWidth, "File", statusWidth, "Status", "Description")
 
 	fmt.Fprintf(w, "├%s┼%s┼%s┤\n",
-		repeatChar('─', fileNameWidth+2),
-		repeatChar('─', statusWidth+2),
-		repeatChar('─', 50))
+		utils.RepeatChar('─', fileNameWidth+2),
+		utils.RepeatChar('─', statusWidth+2),
+		utils.RepeatChar('─', 50))
 
 	for _, file := range configFiles {
 		status := checkFileStatus(file.Path)
@@ -99,9 +100,9 @@ func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 	}
 
 	fmt.Fprintf(w, "└%s┴%s┴%s┘\n",
-		repeatChar('─', fileNameWidth+2),
-		repeatChar('─', statusWidth+2),
-		repeatChar('─', 50))
+		utils.RepeatChar('─', fileNameWidth+2),
+		utils.RepeatChar('─', statusWidth+2),
+		utils.RepeatChar('─', 50))
 }
 
 func handleFileStatus(file ConfigFile, status FileStatus) {
@@ -231,13 +232,4 @@ func getDisplayName(path string) string {
 		return "amazon-cloudwatch-agent.d"
 	}
 	return filepath.Base(path)
-}
-
-// Using runes to support "─"
-func repeatChar(char rune, count int) string {
-	result := make([]rune, count)
-	for i := range result {
-		result[i] = char
-	}
-	return string(result)
 }
