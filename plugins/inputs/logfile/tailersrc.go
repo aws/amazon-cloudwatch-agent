@@ -352,6 +352,27 @@ func (ts *tailerSrc) cleanUp() {
 			log.Printf("I! [logfile] Successfully removed file %v with auto_removal feature", ts.tailer.Filename)
 		}
 	}
+
+	// Ensure all buffers are flushed
+	if ts.buffer != nil {
+		// Process any remaining items in the buffer
+		for len(ts.buffer) > 0 {
+			select {
+			case e := <-ts.buffer:
+				if e != nil && ts.outputFn != nil {
+					ts.outputFn(e)
+				}
+			default:
+				break
+			}
+		}
+	}
+
+	// Ensure file is closed
+	if ts.tailer != nil && !ts.tailer.IsFileClosed() {
+		ts.tailer.CloseFile()
+	}
+
 	for _, clf := range ts.cleanUpFns {
 		clf()
 	}
