@@ -4,6 +4,7 @@
 package debugger
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,37 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetDisplayName(t *testing.T) {
-	tests := []struct {
-		name     string
-		path     string
-		expected string
-	}{
-		{
-			name:     "directory path",
-			path:     "/path/to/config.d",
-			expected: "amazon-cloudwatch-agent.d",
-		},
-		{
-			name:     "regular file path",
-			path:     "/path/to/config.json",
-			expected: "config.json",
-		},
-		{
-			name:     "nested file path",
-			path:     "/very/long/path/to/file.toml",
-			expected: "file.toml",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := getDisplayName(tt.path)
-			assert.Equal(t, tt.expected, result, "getDisplayName() returned unexpected result")
-		})
-	}
-}
 
 func TestCheckFileContentStatus(t *testing.T) {
 	// Non-existent file
@@ -102,7 +72,6 @@ func TestCheckDirectoryStatus(t *testing.T) {
 }
 
 func TestCheckFileStatus(t *testing.T) {
-	// Directory path
 	tmpDir, err := os.MkdirTemp("", "test-dir")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
@@ -143,7 +112,24 @@ func TestGetConfigFiles(t *testing.T) {
 	}
 }
 
-// Smoke test
-func TestCheckConfigFiles(t *testing.T) {
-	CheckConfigFiles()
+func TestCheckConfigFilesOutput(t *testing.T) {
+	// Test SSM format (compact)
+	var buf bytes.Buffer
+	CheckConfigFiles(&buf, true)
+	output := buf.String()
+
+	assert.Contains(t, output, "=== Configuration Files ===", "Output should contain header")
+	assert.Contains(t, output, "amazon-cloudwatch-agent.json:", "Output should contain TOML config file")
+	assert.Contains(t, output, "amazon-cloudwatch-agent.d:", "Output should contain JSON config directory")
+
+	// Test table format
+	buf.Reset()
+	CheckConfigFiles(&buf, false)
+	output = buf.String()
+
+	assert.Contains(t, output, "=== Configuration Files ===", "Output should contain header")
+	assert.Contains(t, output, "┌", "Table format should contain table borders")
+	assert.Contains(t, output, "File", "Table format should contain File column header")
+	assert.Contains(t, output, "Status", "Table format should contain Status column header")
+	assert.Contains(t, output, "Description", "Table format should contain Description column header")
 }

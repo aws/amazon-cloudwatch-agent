@@ -5,9 +5,14 @@ package main
 
 import (
 	"context"
-	"log"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/mcp"
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 )
@@ -15,67 +20,126 @@ import (
 var mergedConfig map[string]interface{}
 
 func main() {
+	compact := flag.Bool("compact", false, "Run debugger with compact formatting")
+	createtarball := flag.Bool("tarball", false, "Create tarball")
+	createtarballssm := flag.Bool("tarballssm", false, "Create tarball with SSM")
+	startmcpserver := flag.Bool("mcp", false, "Start MCP server for IDE integration")
+	flag.Parse()
+
+	switch {
+	case *createtarball:
+		debugger.CreateTarball(false)
+		return
+	case *createtarballssm:
+		debugger.CreateTarball(true)
+		return
+	case *startmcpserver:
+		mcp.StartMCPServer()
+		return
+	}
+
+	defer func() {
+		debugger.PrintAggregatedErrors()
+		fmt.Println()
+		fmt.Printf("If you are still unable to resolve your problem, refer to the CloudWatch Agent Troubleshooting docs: %s\n", "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html")
+	}()
 
 	ctx := context.Background()
 
 	printHeader()
 	info, err := debugger.GetInstanceInfo(ctx)
 	if err != nil {
-		log.Fatalf("Failed to get instance info: %v", err)
+		fmt.Printf("Failed to get instance info: %v\n", err)
 	}
-	printInstanceInfo(info)
+	printInstanceInfo(info, *compact)
 
-	debugger.CheckConfigFiles()
-
-	//Load merged config, this is the same logic that the translator uses
-	config, err := cmdutil.GetMergedConfig(paths.JsonConfigPath, paths.ConfigDirPath, "ec2", info.OS)
-	if err != nil {
-		log.Printf("Failed to load config: %v", err)
+	// We provide a stream because MCP uses a buffer. This is so when MCP calls tools it will not print to stdout.
+	// There are better ways of doing this but not without significant refactoring overhead.
+	if !debugger.CheckConfigFiles(os.Stdout, *compact) {
+		fmt.Println("⚠️  ERROR: Required configuration files are missing - cannot conduct log checks.")
+		return
 	} else {
-		mergedConfig = config
-		log.Println("\n=== Configuration Loaded ===")
-		parseEndpoints()
+		config, err := cmdutil.GetMergedConfig(paths.JsonConfigPath, paths.ConfigDirPath, "ec2", info.OS)
+		if err != nil {
+			fmt.Printf("Failed to load config: %v\n", err)
+			return
+		} else {
+			mergedConfig = config
+		}
+		_, err = debugger.CheckEndpoints(os.Stdout, mergedConfig, *compact)
+		if err != nil {
+			fmt.Printf("Failed to check endpoints: %v\n", err)
+		}
+		_, err = debugger.CheckLogs(os.Stdout, mergedConfig, *compact)
+		if err != nil {
+			fmt.Printf("Failed to check logs: %v\n", err)
+			return
+		}
+
 	}
 
-	debugger.CheckLogs(mergedConfig)
 }
 
 func printHeader() {
-	log.Println("=== AWS EC2 Instance Information ===")
-	log.Println()
+	fmt.Println("=== AWS EC2 Instance Information ===")
 }
 
-func printInstanceInfo(info *debugger.InstanceInfo) {
-	log.Println("")
-	log.Printf("Instance ID:       %s\n", info.InstanceID)
-	log.Printf("Account ID:        %s\n", info.AccountID)
-	log.Printf("Region:            %s\n", info.Region)
-	log.Printf("Instance Type:     %s\n", info.InstanceType)
-	log.Printf("AMI:               %s\n", info.ImageID)
-	log.Printf("Availability Zone: %s\n", info.AvailabilityZone)
-	log.Printf("Architecture:      %s\n", info.Architecture)
-	log.Printf("OS:				   %s\n", info.OS)
+func printInstanceInfo(info *debugger.InstanceInfo, compact bool) {
+	fmt.Println()
+
+	values := []string{
+		info.InstanceID,
+		info.AccountID,
+		info.Region,
+		info.InstanceType,
+		info.ImageID,
+		info.AvailabilityZone,
+		info.Architecture,
+		info.OS,
+		info.Version,
+	}
+
+	labelWidth := 18
+
+	// Ensure minimum width for readability
+	maxValueWidth := 15
+	for _, v := range values {
+		maxValueWidth = max(maxValueWidth, len(v))
+	}
+
+	if compact {
+		fmt.Printf("Instance ID:       %s\n", info.InstanceID)
+		fmt.Printf("Account ID:        %s\n", info.AccountID)
+		fmt.Printf("Region:            %s\n", info.Region)
+		fmt.Printf("Instance Type:     %s\n", info.InstanceType)
+		fmt.Printf("AMI:               %s\n", info.ImageID)
+		fmt.Printf("Availability Zone: %s\n", info.AvailabilityZone)
+		fmt.Printf("Architecture:      %s\n", info.Architecture)
+		fmt.Printf("OS:                %s\n", info.OS)
+		fmt.Printf("Version:           %s\n", info.Version)
+	} else {
+		fmt.Printf("┌%s┬%s┐\n",
+			utils.RepeatChar('─', labelWidth+2),
+			utils.RepeatChar('─', maxValueWidth+2))
+
+		printTableRow("Instance ID", info.InstanceID, labelWidth, maxValueWidth)
+		printTableRow("Account ID", info.AccountID, labelWidth, maxValueWidth)
+		printTableRow("Region", info.Region, labelWidth, maxValueWidth)
+		printTableRow("Instance Type", info.InstanceType, labelWidth, maxValueWidth)
+		printTableRow("AMI", info.ImageID, labelWidth, maxValueWidth)
+		printTableRow("Availability Zone", info.AvailabilityZone, labelWidth, maxValueWidth)
+		printTableRow("Architecture", info.Architecture, labelWidth, maxValueWidth)
+		printTableRow("OS", info.OS, labelWidth, maxValueWidth)
+		printTableRow("Version", info.Version, labelWidth, maxValueWidth)
+
+		fmt.Printf("└%s┴%s┘\n",
+			utils.RepeatChar('─', labelWidth+2),
+			utils.RepeatChar('─', maxValueWidth+2))
+	}
+
 }
 
-func parseEndpoints() {
-	if mergedConfig == nil {
-		log.Println("No configuration available")
-		return
-	}
-
-	if metrics, ok := mergedConfig["metrics"].(map[string]interface{}); ok {
-		if endpoint, ok := metrics["endpoint_override"].(string); ok {
-			log.Printf("Metrics Endpoint: %s\n", endpoint)
-		} else {
-			log.Println("Metrics Endpoint: Default CloudWatch endpoint (no override)")
-		}
-	}
-
-	if logs, ok := mergedConfig["logs"].(map[string]interface{}); ok {
-		if endpoint, ok := logs["endpoint_override"].(string); ok {
-			log.Printf("Logs Endpoint: %s\n", endpoint)
-		} else {
-			log.Println("Logs Endpoint: Default CloudWatch Logs endpoint (no override)")
-		}
-	}
+func printTableRow(label, value string, labelWidth, valueWidth int) {
+	value = strings.TrimSpace(value)
+	fmt.Printf("│ %-*s │ %-*s │\n", labelWidth, label, valueWidth, value)
 }
