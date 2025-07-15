@@ -53,6 +53,10 @@ jobs:
           aws-region: ${{ inputs.region || 'us-west-2' }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Echo TERRAFORM_AWS_ASSUME_ROLE
+        run: |
+          echo "TERRAFORM_AWS_ASSUME_ROLE: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}"
+
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         with:
