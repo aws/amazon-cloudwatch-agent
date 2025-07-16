@@ -18,16 +18,21 @@ on:
         required: true
         type: string
         default: 'eks-performance'
-      desired_capacity:
+      desired_capacity_per_nodegroup:
         description: 'Desired capacity for each node group'
         required: true
         type: number
         default: 500
+      node_group_count:
+        description: 'Count of node groups'
+        type: number
+        default: 10
 
 env:
   AWS_REGION: ${{ inputs.region || 'us-west-2' }}
   CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
-  DESIRED_CAPACITY: ${{ inputs.desired_capacity || 500 }}
+  NODE_GROUP_COUNT: ${{ inputs.node_group_count || 10 }}
+  DESIRED_CAPACITY_PER_NODEGROUP: ${{ inputs.desired_capacity_per_nodegroup || 500 }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
@@ -61,14 +66,13 @@ jobs:
       - name: Update kubeconfig for EKS cluster
         run: |
           aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-          kubectl get nodes -o wide
 
       - name: Scale up node groups (Sunday)
         if: github.event.schedule == '0 9 * * 0'
         run: |
           echo "Starting scale UP operation with desired capacity: 500"
           
-          for i in {1..10}; do
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: eks-performance-node-${i} to 500"
             aws eks update-nodegroup-config \
               --cluster-name eks-performance \
@@ -85,7 +89,7 @@ jobs:
         run: |
           echo "Starting scale DOWN operation with desired capacity: 0"
           
-          for i in {1..10}; do
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: eks-performance-node-${i} to 0"
             aws eks update-nodegroup-config \
               --cluster-name eks-performance \
@@ -100,15 +104,15 @@ jobs:
       - name: Scale node groups (Manual)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          echo "Starting manual scaling operation with desired capacity: ${{ env.DESIRED_CAPACITY }}"
+          echo "Starting manual scaling operation with desired capacity: ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}"
           
-          for i in {1..10}; do
-            echo "Scaling node group: eks-performance-node-${i} to ${{ env.DESIRED_CAPACITY }}"
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
+            echo "Scaling node group: eks-performance-node-${i} to ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}"
             aws eks update-nodegroup-config \
               --cluster-name eks-performance \
               --nodegroup-name eks-performance-node-${i} \
               --region us-west-2 \
-              --scaling-config desiredSize=${{ env.DESIRED_CAPACITY }}
+              --scaling-config desiredSize=${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}
           
           done
 
@@ -121,12 +125,10 @@ jobs:
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
           
           # Determine expected count based on trigger type
-          if [ "${{ github.event.schedule }}" = "0 9 * * 0" ]; then
-            EXPECTED_NODE_COUNT=$((10 * 500))
-          elif [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
-            EXPECTED_NODE_COUNT=$((10 * 0))
+          if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
+            EXPECTED_NODE_COUNT=$((${{ env.NODE_GROUP_COUNT }} * 0))
           else
-            EXPECTED_NODE_COUNT=$((10 * ${{ env.DESIRED_CAPACITY }}))
+            EXPECTED_NODE_COUNT=$((${{ env.NODE_GROUP_COUNT }} * ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}))
           fi
           
           echo "Expected total nodes: ${EXPECTED_NODE_COUNT}"
