@@ -23,10 +23,15 @@ on:
         required: true
         type: number
         default: 500
+      node_group_count:
+        description: 'Count of node groups'
+        type: number
+        default: 10
 
 env:
   AWS_REGION: ${{ inputs.region || 'us-west-2' }}
   CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
+  NODE_GROUP_COUNT: ${{ inputs.node_group_count || 10 }}
   DESIRED_CAPACITY_PER_NODEGROUP: ${{ inputs.desired_capacity_per_nodegroup || 500 }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
@@ -68,7 +73,7 @@ jobs:
         run: |
           echo "Starting scale UP operation with desired capacity: 500"
           
-          for i in {1..10}; do
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: eks-performance-node-${i} to 500"
             aws eks update-nodegroup-config \
               --cluster-name eks-performance \
@@ -85,7 +90,7 @@ jobs:
         run: |
           echo "Starting scale DOWN operation with desired capacity: 0"
           
-          for i in {1..10}; do
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: eks-performance-node-${i} to 0"
             aws eks update-nodegroup-config \
               --cluster-name eks-performance \
@@ -102,7 +107,7 @@ jobs:
         run: |
           echo "Starting manual scaling operation with desired capacity: ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}"
           
-          for i in {1..10}; do
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: eks-performance-node-${i} to ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}"
             aws eks update-nodegroup-config \
               --cluster-name eks-performance \
@@ -122,9 +127,9 @@ jobs:
           
           # Determine expected count based on trigger type
           if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
-            EXPECTED_NODE_COUNT=$((10 * 0))
+            EXPECTED_NODE_COUNT=$((${{ env.NODE_GROUP_COUNT }} * 0))
           else
-            EXPECTED_NODE_COUNT=$((10 * ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}))
+            EXPECTED_NODE_COUNT=$((${{ env.NODE_GROUP_COUNT }} * ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}))
           fi
           
           echo "Expected total nodes: ${EXPECTED_NODE_COUNT}"
