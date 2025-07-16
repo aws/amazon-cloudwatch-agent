@@ -65,20 +65,20 @@ jobs:
 
       - name: Update kubeconfig for EKS cluster
         run: |
-          aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
       - name: Scale up node groups (Sunday)
         if: github.event.schedule == '0 9 * * 0'
         run: |
-          echo "Starting scale UP operation with desired capacity: 500"
+          echo "Starting scale UP operation with desired capacity: $DESIRED_CAPACITY_PER_NODEGROUP"
           
           for i in $(seq 1 $NODE_GROUP_COUNT); do
-            echo "Scaling node group: eks-performance-node-${i} to 500"
+            echo "Scaling node group: $CLUSTER_NAME-node-${i} to $DESIRED_CAPACITY_PER_NODEGROUP"
             aws eks update-nodegroup-config \
-              --cluster-name eks-performance \
-              --nodegroup-name eks-performance-node-${i} \
-              --region us-west-2 \
-              --scaling-config desiredSize=500
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name $CLUSTER_NAME-node-${i} \
+              --region $AWS_REGION \
+              --scaling-config desiredSize=$DESIRED_CAPACITY_PER_NODEGROUP
           
             echo "Waiting 1 minute before scaling next node group..."
             sleep 60
@@ -90,11 +90,11 @@ jobs:
           echo "Starting scale DOWN operation with desired capacity: 0"
           
           for i in $(seq 1 $NODE_GROUP_COUNT); do
-            echo "Scaling node group: eks-performance-node-${i} to 0"
+            echo "Scaling node group: $CLUSTER_NAME-node-${i} to 0"
             aws eks update-nodegroup-config \
-              --cluster-name eks-performance \
-              --nodegroup-name eks-performance-node-${i} \
-              --region us-west-2 \
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name $CLUSTER_NAME-node-${i} \
+              --region $AWS_REGION \
               --scaling-config desiredSize=0
           
             echo "Waiting 1 minute before scaling next node group..."
@@ -104,15 +104,15 @@ jobs:
       - name: Scale node groups (Manual)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          echo "Starting manual scaling operation with desired capacity: ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}"
+          echo "Starting manual scaling operation with desired capacity: $DESIRED_CAPACITY_PER_NODEGROUP"
           
           for i in $(seq 1 $NODE_GROUP_COUNT); do
-            echo "Scaling node group: eks-performance-node-${i} to ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}"
+            echo "Scaling node group: $CLUSTER_NAME-node-${i} to $DESIRED_CAPACITY_PER_NODEGROUP"
             aws eks update-nodegroup-config \
-              --cluster-name eks-performance \
-              --nodegroup-name eks-performance-node-${i} \
-              --region us-west-2 \
-              --scaling-config desiredSize=${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name $CLUSTER_NAME-node-${i} \
+              --region $AWS_REGION \
+              --scaling-config desiredSize=$DESIRED_CAPACITY_PER_NODEGROUP
           
           done
 
@@ -126,17 +126,17 @@ jobs:
           
           # Determine expected count based on trigger type
           if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
-            EXPECTED_NODE_COUNT=$((${{ env.NODE_GROUP_COUNT }} * 0))
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * 0))
           else
-            EXPECTED_NODE_COUNT=$((${{ env.NODE_GROUP_COUNT }} * ${{ env.DESIRED_CAPACITY_PER_NODEGROUP }}))
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP))
           fi
           
-          echo "Expected total nodes: ${EXPECTED_NODE_COUNT}"
-          echo "Actual total nodes: ${ACTUAL_NODE_COUNT}"
+          echo "Expected total nodes: $EXPECTED_NODE_COUNT"
+          echo "Actual total nodes: $ACTUAL_NODE_COUNT"
           
           if [ "$ACTUAL_NODE_COUNT" -eq "$EXPECTED_NODE_COUNT" ]; then
             echo "Validation successful! Node count matches expected value."
           else
-            echo "Validation failed. Expected ${EXPECTED_NODE_COUNT} nodes but found ${ACTUAL_NODE_COUNT} nodes."
+            echo "Validation failed. Expected $EXPECTED_NODE_COUNT nodes but found $ACTUAL_NODE_COUNT nodes."
             exit 1
           fi
