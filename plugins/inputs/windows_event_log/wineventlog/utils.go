@@ -15,7 +15,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
@@ -237,18 +236,4 @@ func insertPlaceholderValues(rawMessage string, evtDataValues []Datum) string {
 		sb.WriteString(rawMessage[prevIndex:])
 	}
 	return sb.String()
-}
-
-func utf16PtrToString(ptr *uint16) string {
-	utf16Slice := make([]uint16, 0, 1024)
-	for i := 0; ; i++ {
-		// Get the value at memory address ptr + (i * sizeof(uint16))
-		element := *(*uint16)(unsafe.Pointer(uintptr(unsafe.Pointer(ptr)) + uintptr(i)*unsafe.Sizeof(uint16(0))))
-
-		if element == 0 {
-			break // Null terminator found
-		}
-		utf16Slice = append(utf16Slice, element)
-	}
-	return syscall.UTF16ToString(utf16Slice)
 }
