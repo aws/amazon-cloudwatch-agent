@@ -19,6 +19,7 @@ const (
 	AWS_SDK_LOG_LEVEL           = "AWS_SDK_LOG_LEVEL"  //nolint:revive
 	CWAGENT_USER_AGENT          = "CWAGENT_USER_AGENT" //nolint:revive
 	CWAGENT_LOG_LEVEL           = "CWAGENT_LOG_LEVEL"  //nolint:revive
+	CWAGENT_ROLE                = "CWAGENT_ROLE"       //nolint:revive
 	CWAGENT_USAGE_DATA          = "CWAGENT_USAGE_DATA" //nolint:revive
 	IMDS_NUMBER_RETRY           = "IMDS_NUMBER_RETRY"  //nolint:revive
 	RunInContainer              = "RUN_IN_CONTAINER"
@@ -42,8 +43,9 @@ const (
 )
 
 const (
-	// TrueValue is the expected string set on an environment variable to indicate true.
-	TrueValue = "True"
+	TrueValue = "True"   // TrueValue is the expected string set on an environment variable to indicate true.
+	LEADER    = "LEADER" //nolint:revive
+	NODE      = "NODE"   //nolint:revive
 )
 
 var (

@@ -515,6 +515,7 @@ receivers:
         certificate_file_path: ""
         cluster_name: TestCluster
         collection_interval: 1m0s
+        collection_role: ALL
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
