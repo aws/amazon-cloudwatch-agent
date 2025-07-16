@@ -302,14 +302,10 @@ func (w *windowsEventLog) readGaps() []*windowsEventLogRecord {
 			continue
 		}
 
-		handle, err := w.openAtRange(r)
-		defer func() {
-			winEventAPI.EvtClose(handle)
-		}()
+		readRecords, err := w.readGap(r)
 		if err != nil {
 			continue
 		}
-		readRecords := w.readFromHandle(handle)
 		records = append(records, readRecords...)
 	}
 
@@ -317,6 +313,18 @@ func (w *windowsEventLog) readGaps() []*windowsEventLogRecord {
 	w.gapsToRead = nil
 
 	return records
+}
+
+func (w *windowsEventLog) readGap(r state.Range) ([]*windowsEventLogRecord, error) {
+	handle, err := w.openAtRange(r)
+	defer func() {
+		winEventAPI.EvtClose(handle)
+	}()
+	if err != nil {
+		return nil, err
+	}
+	readRecords := w.readFromHandle(handle)
+	return readRecords, nil
 }
 
 func (w *windowsEventLog) read() []*windowsEventLogRecord {

@@ -182,15 +182,15 @@ func TestReadGaps(t *testing.T) {
 		winEventAPI = mockAPI
 
 		// This is per EvtHandle hence the necessity to break up these calls
-		// 0, 1, 4 were "sent" previously (should be skipped)
-		mockAPI.AddMockEventsForQuery(createMockEventRecords(0, 2, 5))
+		// 1, 2, 5 were "sent" previously (should be skipped)
+		mockAPI.AddMockEventsForQuery(createMockEventRecords(1, 2, 5))
 		// Gap records (should be read by gap reading)
 		mockAPI.AddMockEventsForQuery(createMockEventRecords(3, 4))
 
 		elog.Init()
 
 		// Simulate new subscription events arriving
-		mockAPI.SimulateSubscriptionEvents(createMockEventRecords(5, 6, 7, 8))
+		mockAPI.SimulateSubscriptionEvents(createMockEventRecords(6, 7, 8))
 
 		var records []logs.LogEvent
 		// SetOutput calls run as well hence the omission of elog.run()
@@ -202,7 +202,7 @@ func TestReadGaps(t *testing.T) {
 		elog.Stop()
 
 		expectedRecords := []int{
-			3, 4, 5, 6, 7, 8,
+			3, 4, 6, 7, 8,
 		}
 
 		assert.Empty(t, elog.gapsToRead, "Gaps should be cleared after reading")
