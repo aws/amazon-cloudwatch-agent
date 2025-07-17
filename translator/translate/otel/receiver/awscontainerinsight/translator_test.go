@@ -21,6 +21,7 @@ func TestTranslator(t *testing.T) {
 	require.EqualValues(t, "awscontainerinsightreceiver", acit.ID().String())
 	testCases := map[string]struct {
 		input     map[string]interface{}
+		env       map[string]string
 		isSystemd bool
 		want      *awscontainerinsightreceiver.Config
 		wantErr   error
@@ -131,6 +132,54 @@ func TestTranslator(t *testing.T) {
 				ContainerOrchestrator:        eks,
 				CollectionInterval:           60 * time.Second,
 				TagService:                   false,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				KubeConfigPath:               "",
+			},
+		},
+		"WithKubernetes/WithCollectionRoleLeader": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "TestCluster",
+						},
+					},
+				},
+			},
+			env: map[string]string{
+				"CWAGENT_ROLE": "LEADER",
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				CollectionRole:               awscontainerinsightreceiver.LEADER,
+				TagService:                   true,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				KubeConfigPath:               "",
+			},
+		},
+		"WithKubernetes/WithCollectionRoleNode": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name": "TestCluster",
+						},
+					},
+				},
+			},
+			env: map[string]string{
+				"CWAGENT_ROLE": "NODE",
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				CollectionRole:               awscontainerinsightreceiver.NODE,
+				TagService:                   true,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
@@ -292,6 +341,11 @@ func TestTranslator(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := acit.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
+			if testCase.env != nil {
+				for k, v := range testCase.env {
+					t.Setenv(k, v)
+				}
+			}
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*awscontainerinsightreceiver.Config)
