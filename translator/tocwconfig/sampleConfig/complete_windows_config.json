@@ -150,6 +150,7 @@
     "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
   },
   "logs": {
+    "concurrency": 1,
     "metrics_collected": {
       "emf": {
         "service_address": "udp://127.0.0.1:25888"
