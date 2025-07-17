@@ -3,6 +3,7 @@
     "region": "${ENV_REGION}"
   },
   "logs": {
+    "concurrency": 1,
     "credentials": {
       "role_arn": "${ENV_CREDENTIALS_ROLE_ARN}"
     },
