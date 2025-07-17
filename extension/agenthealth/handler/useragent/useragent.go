@@ -6,6 +6,7 @@ package useragent
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -34,6 +35,9 @@ const (
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
 	separator                     = " "
+	flagWindowsEventIDs           = "windows_event_ids"
+	flagWindowsEventFilters       = "windows_event_filters"
+	flagWindowsEventLevels        = "windows_event_levels"
 
 	typeInputs     = "inputs"
 	typeProcessors = "processors"
@@ -74,6 +78,35 @@ var _ UserAgent = (*userAgent)(nil)
 func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config) {
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
+
+		if input.Config.Name == "windows_event_log" {
+			pluginValue := reflect.ValueOf(input.Input)
+			if pluginValue.Kind() == reflect.Ptr {
+				pluginValue = pluginValue.Elem()
+			}
+
+			eventsField := pluginValue.FieldByName("Events")
+			if eventsField.IsValid() && eventsField.Kind() == reflect.Slice {
+				for i := 0; i < eventsField.Len(); i++ {
+					eventConfig := eventsField.Index(i)
+
+					// Add event_ids status
+					if eventIDsField := eventConfig.FieldByName("EventIDs"); eventIDsField.IsValid() && eventIDsField.Len() > 0 {
+						ua.inputs.Add(flagWindowsEventIDs)
+					}
+
+					// Add filters status
+					if filtersField := eventConfig.FieldByName("Filters"); filtersField.IsValid() && filtersField.Len() > 0 {
+						ua.inputs.Add(flagWindowsEventFilters)
+					}
+
+					// Add event levesls status
+					if levelsField := eventConfig.FieldByName("Levels"); levelsField.IsValid() && levelsField.Len() > 0 {
+						ua.inputs.Add(flagWindowsEventLevels)
+					}
+				}
+			}
+		}
 	}
 	for _, output := range telegrafCfg.Outputs {
 		ua.outputs.Add(output.Config.Name)
