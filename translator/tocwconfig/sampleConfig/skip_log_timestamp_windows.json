@@ -3,6 +3,7 @@
     "logfile": "c:\\tmp\\am.log"
   },
   "logs": {
+    "concurrency": 1,
     "logs_collected": {
       "files": {
         "collect_list": [

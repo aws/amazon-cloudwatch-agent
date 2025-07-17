@@ -1,0 +1,142 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+name: EKS Cluster Scaling
+
+on:
+  schedule:
+    - cron: '0 9 * * 0'  # Scale up: Runs every Sunday at 9:00 AM
+    - cron: '0 21 * * 1'  # Scale down: Runs every Monday at 9:00 PM
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'AWS Region'
+        required: true
+        type: string
+        default: 'us-west-2'
+      cluster_name:
+        description: 'EKS Cluster Name'
+        required: true
+        type: string
+        default: 'eks-performance'
+      desired_capacity_per_nodegroup:
+        description: 'Desired capacity for each node group'
+        required: true
+        type: number
+        default: 500
+      node_group_count:
+        description: 'Count of node groups'
+        type: number
+        default: 10
+
+env:
+  AWS_REGION: ${{ inputs.region || 'us-west-2' }}
+  CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
+  NODE_GROUP_COUNT: ${{ inputs.node_group_count || 10 }}
+  DESIRED_CAPACITY_PER_NODEGROUP: ${{ inputs.desired_capacity_per_nodegroup || 500 }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+
+jobs:
+  scale-eks-cluster:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ inputs.region || 'us-west-2' }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig for EKS cluster
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Scale up node groups (Sunday)
+        if: github.event.schedule == '0 9 * * 0'
+        run: |
+          echo "Starting scale UP operation with desired capacity: $DESIRED_CAPACITY_PER_NODEGROUP"
+          
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
+            echo "Scaling node group: $CLUSTER_NAME-node-${i} to $DESIRED_CAPACITY_PER_NODEGROUP"
+            aws eks update-nodegroup-config \
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name $CLUSTER_NAME-node-${i} \
+              --region $AWS_REGION \
+              --scaling-config desiredSize=$DESIRED_CAPACITY_PER_NODEGROUP
+          
+            echo "Waiting 1 minute before scaling next node group..."
+            sleep 60
+          done
+
+      - name: Scale down node groups (Monday)
+        if: github.event.schedule == '0 21 * * 1'
+        run: |
+          echo "Starting scale DOWN operation with desired capacity: 0"
+          
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
+            echo "Scaling node group: $CLUSTER_NAME-node-${i} to 0"
+            aws eks update-nodegroup-config \
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name $CLUSTER_NAME-node-${i} \
+              --region $AWS_REGION \
+              --scaling-config desiredSize=0
+          
+            echo "Waiting 1 minute before scaling next node group..."
+            sleep 60
+          done
+
+      - name: Scale node groups (Manual)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Starting manual scaling operation with desired capacity: $DESIRED_CAPACITY_PER_NODEGROUP"
+          
+          for i in $(seq 1 $NODE_GROUP_COUNT); do
+            echo "Scaling node group: $CLUSTER_NAME-node-${i} to $DESIRED_CAPACITY_PER_NODEGROUP"
+            aws eks update-nodegroup-config \
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name $CLUSTER_NAME-node-${i} \
+              --region $AWS_REGION \
+              --scaling-config desiredSize=$DESIRED_CAPACITY_PER_NODEGROUP
+          
+          done
+
+      - name: Validate total node count
+        run: |
+          echo "Waiting 20 minutes for scaling operations to complete..."
+          sleep 1200
+          
+          echo "Validating total number of nodes in the cluster..."
+          ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          
+          # Determine expected count based on trigger type
+          if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * 0))
+          else
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP))
+          fi
+          
+          echo "Expected total nodes: $EXPECTED_NODE_COUNT"
+          echo "Actual total nodes: $ACTUAL_NODE_COUNT"
+          
+          if [ "$ACTUAL_NODE_COUNT" -eq "$EXPECTED_NODE_COUNT" ]; then
+            echo "Validation successful! Node count matches expected value."
+          else
+            echo "Validation failed. Expected $EXPECTED_NODE_COUNT nodes but found $ACTUAL_NODE_COUNT nodes."
+            exit 1
+          fi
