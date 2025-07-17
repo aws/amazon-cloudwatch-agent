@@ -30,7 +30,7 @@ const (
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
 	// Suffix to indicate that a message has been truncated
-	truncationSuffix = constants.DefaultTruncateSuffix
+	defaultTruncationSuffix = "[Truncated...]"
 )
 
 // validateAndTruncateMessage ensures events don't exceed limit before we send to CloudWatch
@@ -42,7 +42,7 @@ func validateAndTruncateMessage(message string) string {
 	}
 
 	// Truncate the message and add a suffix to indicate truncation
-	truncatedMessage := message[:maxMessageSize-len(truncationSuffix)] + truncationSuffix
+	truncatedMessage := message[:maxMessageSize-len(defaultTruncationSuffix)] + defaultTruncationSuffix
 	return truncatedMessage
 }
 

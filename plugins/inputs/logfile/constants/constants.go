@@ -9,7 +9,4 @@ const (
 
 	// PerEventHeaderBytes is the bytes required for metadata for each log event
 	PerEventHeaderBytes = 200
-
-	// DefaultTruncateSuffix is the suffix added to truncated log messages
-	DefaultTruncateSuffix = "[Truncated...]"
 )
