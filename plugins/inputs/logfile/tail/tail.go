@@ -18,6 +18,7 @@ import (
 	"gopkg.in/tomb.v1"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 )
 
@@ -306,8 +307,12 @@ func (tail *Tail) readlineUtf16() (string, error) {
 			}
 			cur = append(cur, nextByte)
 		}
-		// 262144 => 256KB
-		if resSize+len(cur) >= 262144 {
+		// Use MaxLineSize if configured, otherwise use DefaultMaxEventSize
+		maxSize := constants.DefaultMaxEventSize // Use the constant defined in constants package
+		if tail.MaxLineSize > 0 {
+			maxSize = tail.MaxLineSize
+		}
+		if resSize+len(cur) >= maxSize {
 			break
 		}
 		buf := make([]byte, len(cur))
@@ -534,8 +539,7 @@ func (tail *Tail) waitForChanges() error {
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
 	if tail.MaxLineSize > 0 {
-		// add 2 to account for newline characters
-		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2)
+		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
 	} else {
 		tail.reader = bufio.NewReader(tail.file)
 	}
