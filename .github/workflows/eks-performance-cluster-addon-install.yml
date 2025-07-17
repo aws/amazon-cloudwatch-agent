@@ -1,0 +1,262 @@
+name: "Install/Remove Helm Charts After Scaling"
+on:
+  workflow_run:
+    workflows: ["EKS Cluster Scaling"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      # Required Core Settings
+      cluster_name:
+        description: 'EKS Cluster Name'
+        required: true
+        type: string
+        default: 'eks-performance'
+      region:
+        description: 'AWS Region'
+        required: true
+        type: string
+        default: 'us-west-2'
+      terraform_assume_role:
+        description: 'AWS IAM Role to assume'
+        required: true
+        type: string
+
+      # Required Repository Settings
+      cloudwatch_agent_repository:
+        description: 'CloudWatch Agent Repository'
+        required: true
+        type: string
+      cloudwatch_agent_tag:
+        description: 'CloudWatch Agent Tag'
+        required: true
+        type: string
+      cloudwatch_agent_operator_repository:
+        description: 'CloudWatch Agent Operator Repository'
+        required: true
+        type: string
+      cloudwatch_agent_operator_tag:
+        description: 'CloudWatch Agent Operator Tag'
+        required: true
+        type: string
+      test_repo_name:
+        description: 'Test Repository Name'
+        required: true
+        type: string
+      test_repo_url:
+        description: 'Test Repository URL'
+        required: true
+        type: string
+      test_repo_branch:
+        description: 'Test Repository Branch'
+        required: true
+        type: string
+
+      # Optional Settings
+      helm-charts-branch:
+        description: 'Branch of the helm charts to test'
+        required: false
+        type: string
+        default: 'main'
+      operator-branch:
+        description: 'Branch of the operator to test'
+        required: false
+        type: string
+        default: 'main'
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ${{ inputs.region || 'us-west-2' }}
+  CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  NODE_GROUP_COUNT: ${{ inputs.node_group_count || 10 }}
+  DESIRED_CAPACITY_PER_NODEGROUP: ${{ inputs.desired_capacity_per_nodegroup || 500 }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ inputs.terraform_assume_role || env.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
+
+jobs:
+  GetLatestOperatorCommitSHA:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
+      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+    steps:
+      - name: Checkout the target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+          ref: ${{ inputs.operator-branch || 'main' }}
+          path: operator-repo
+
+      - name: Get latest commit SHA
+        id: get_latest_sha
+        run: |
+          cd operator-repo
+          latest_sha=$(git rev-parse HEAD)
+          echo "operator_sha=$latest_sha" >> "$GITHUB_OUTPUT"
+
+  BuildAgent:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    uses: ./.github/workflows/build-test-artifacts.yml
+    concurrency:
+      group: "Build-Test-Artifacts-${{github.ref_name}}"
+      cancel-in-progress: true
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      test-image-before-upload: false
+
+  BuildOperator:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    needs: [ GetLatestOperatorCommitSHA ]
+    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
+    concurrency:
+      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
+      cancel-in-progress: true
+    secrets: inherit
+    with:
+      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
+      test-image-before-upload: false
+
+  OutputEnvVariables:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    needs: [ BuildAgent, BuildOperator ]
+    name: 'OutputEnvVariables'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
+      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
+      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: SetOutputs
+        id: set-outputs
+        run: |
+          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}" >> "$GITHUB_OUTPUT"
+          echo "ECR_INTEGRATION_TEST_REPO=cwagent-integration-test" >> "$GITHUB_OUTPUT"
+          echo "ECR_OPERATOR_REPO=$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')" >> "$GITHUB_OUTPUT"
+
+      - name: Echo test variables
+        run: |
+          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
+          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
+
+  install-helm:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    needs: [ OutputEnvVariables ]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Clone Helm Charts Repository
+        run: |
+          rm -rf ./helm-charts
+          git clone -b ${{ inputs.helm-charts-branch || 'main' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
+
+      - name: Check node count and manage Helm chart
+        run: |
+          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          
+          if [ "$NODE_COUNT" -eq 0 ]; then
+            echo "Node count is 0, removing Helm chart"
+            helm uninstall amazon-cloudwatch-observability -n amazon-cloudwatch || echo "Chart not found or already removed"
+          else
+            echo "Node count is $NODE_COUNT, installing/updating Helm chart"
+            helm upgrade --install amazon-cloudwatch-observability \
+              ./helm-charts/charts/amazon-cloudwatch-observability \
+              --namespace amazon-cloudwatch \
+              --create-namespace \
+              --set clusterName=${{ env.CLUSTER_NAME }} \
+              --set region=${{ env.AWS_REGION }} \
+              --set agent.image.repository=${{ inputs.cloudwatch_agent_repository }} \
+              --set agent.image.tag=${{ inputs.cloudwatch_agent_tag }} \
+              --set manager.image.repository=${{ inputs.cloudwatch_agent_operator_repository }} \
+              --set manager.image.tag=${{ inputs.cloudwatch_agent_operator_tag }}
+          fi
+
+  cleanup-on-failure:
+    if: ${{ failure() || cancelled() }}
+    runs-on: ubuntu-latest
+    needs: [ install-helm ]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Uninstall Helm chart
+        run: |
+          echo "Test was cancelled or failed. Cleaning up resources..."
+          helm uninstall amazon-cloudwatch-observability -n amazon-cloudwatch || echo "Chart not found or already removed"
+          echo "Cleanup completed"
