@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+  scrape_timeout: 5s
+scrape_configs:
+  - job_name: 'prometheus_test_job'
+    static_configs:
+      - targets: ['localhost:8101']
+    metric_relabel_configs:
+      - source_labels: ['__name__']
+        target_label: 'my_name'
+        action: replace
+        regex: '(.*)'
+        replacement: $1
