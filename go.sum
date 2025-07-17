@@ -223,8 +223,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20250717174233-f514045fc484/go.mod h1:0uuvLgWcE6V7K7PyR7ohUtPPqaZB9RdTI8cJtkZAKKs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250717174233-f514045fc484 h1:hMRcQkGxmZn5ZcVa9+OLIpGw45WkqjyzgM8zXuhxNOk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250717174233-f514045fc484/go.mod h1:7prJseoHF7mXXAPdU+q1zoZdVOclFZsgNhoBriqBIp0=
-github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250714154603-03b6f56bd5fb h1:ayrpH16LTMa2z95xBuaqXkR1V31nET2gxl0g9pYRQY8=
-github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250714154603-03b6f56bd5fb/go.mod h1:fiFXubcxjqvUev4z0NXub109L2pk9hjGc5agEU03G0U=
+github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250717194605-2ebc0b84cf7c h1:eCFLpZzlETarrsfQhjzzt6WJMel3PZqMwkhK2Hltr9Q=
+github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250717194605-2ebc0b84cf7c/go.mod h1:fiFXubcxjqvUev4z0NXub109L2pk9hjGc5agEU03G0U=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250717174233-f514045fc484 h1:cFRXqozAwclrrSJD/1fwrrebwNNVL8sAPvewZSmYl0k=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250717174233-f514045fc484/go.mod h1:K8inysgi51ecddal8W6MPqrYcjh65wm1PsVDV+zgCEA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250717174233-f514045fc484 h1:KkQR49FSmepOqBfze1zNBmAi06DUUSQzOS+lzQkSPTY=
