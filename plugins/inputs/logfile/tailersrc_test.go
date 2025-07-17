@@ -83,7 +83,6 @@ func TestTailerSrc(t *testing.T) {
 		parseRFC3339Timestamp,
 		nil, // encoding
 		constants.DefaultMaxEventSize,
-		constants.DefaultTruncateSuffix,
 		1,
 		"",
 	)
@@ -194,7 +193,6 @@ func TestEventDoneCallback(t *testing.T) {
 		parseRFC3339Timestamp,
 		nil, // encoding
 		constants.DefaultMaxEventSize,
-		constants.DefaultTruncateSuffix,
 		1,
 		"",
 	)
@@ -425,7 +423,6 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 		parseRFC3339Timestamp,
 		nil, // encoding
 		maxEventSize,
-		constants.DefaultTruncateSuffix,
 		1,
 		backpressureDrop,
 	)

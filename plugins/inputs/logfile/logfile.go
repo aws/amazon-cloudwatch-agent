@@ -266,7 +266,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.timestampFromLogLine,
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
-				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
 				fileconfig.BackpressureMode,
 			)

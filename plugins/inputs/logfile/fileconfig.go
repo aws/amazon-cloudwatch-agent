@@ -152,9 +152,6 @@ func (config *FileConfig) init() error {
 	if config.MaxEventSize == 0 {
 		config.MaxEventSize = constants.DefaultMaxEventSize - constants.PerEventHeaderBytes
 	}
-	if config.TruncateSuffix == "" {
-		config.TruncateSuffix = constants.DefaultTruncateSuffix
-	}
 	if config.RetentionInDays == 0 {
 		config.RetentionInDays = -1
 	}

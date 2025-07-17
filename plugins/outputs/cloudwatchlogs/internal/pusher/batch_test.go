@@ -230,7 +230,7 @@ func TestEventValidation_Over1MB(t *testing.T) {
 	event := newStatefulLogEvent(time.Now(), oversizeMessage, nil, nil)
 	// The total length should still be maxMessageSize
 	assert.Equal(t, maxMessageSize, len(event.message))
-	assert.Equal(t, oversizeMessage[:maxMessageSize-len(truncationSuffix)]+truncationSuffix, event.message)
+	assert.Equal(t, oversizeMessage[:maxMessageSize-len(defaultTruncationSuffix)]+defaultTruncationSuffix, event.message)
 }
 
 func TestEventValidation_Between256KBand1MB(t *testing.T) {
@@ -262,7 +262,7 @@ func TestValidateAndTruncateMessage(t *testing.T) {
 		{
 			name:           "Over limit",
 			input:          strings.Repeat("a", maxMessageSize+1000),
-			expectedOutput: strings.Repeat("a", maxMessageSize-len(truncationSuffix)) + truncationSuffix,
+			expectedOutput: strings.Repeat("a", maxMessageSize-len(defaultTruncationSuffix)) + defaultTruncationSuffix,
 		},
 	}
 
