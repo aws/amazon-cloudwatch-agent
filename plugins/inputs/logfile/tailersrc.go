@@ -70,7 +70,6 @@ type tailerSrc struct {
 	timestampFn     func(string) (time.Time, string)
 	enc             encoding.Encoding
 	maxEventSize    int
-	truncateSuffix  string
 	retentionInDays int
 
 	outputFn           func(logs.LogEvent)
@@ -98,7 +97,6 @@ func NewTailerSrc(
 	timestampFn func(string) (time.Time, string),
 	enc encoding.Encoding,
 	maxEventSize int,
-	truncateSuffix string,
 	retentionInDays int,
 	backpressureMode logscommon.BackpressureMode,
 ) *tailerSrc {
@@ -116,7 +114,6 @@ func NewTailerSrc(
 		timestampFn:        timestampFn,
 		enc:                enc,
 		maxEventSize:       maxEventSize,
-		truncateSuffix:     truncateSuffix,
 		retentionInDays:    retentionInDays,
 		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeFDRelease,
 		done:               make(chan struct{}),
