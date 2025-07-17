@@ -408,6 +408,8 @@ func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.Co
 			Version:     version.Number(),
 		},
 		LoggingOptions: loggingOptions,
+		// Enable Prometheus native histograms feature gate
+		FeatureGates: []string{"receiver.prometheusreceiver.EnableNativeHistograms"},
 	}
 }
 
