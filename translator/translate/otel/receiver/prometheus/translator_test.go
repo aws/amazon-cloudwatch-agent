@@ -5,8 +5,11 @@ package prometheus
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
@@ -287,4 +290,38 @@ func TestMetricsEmfTranslator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEscapeStrings(t *testing.T) {
+	inputYAML := `
+scrape_configs:
+  - job_name: test
+    metric_relabel_configs:
+      - action: replace
+        replacement: $1  
+        regex: (.*)
+`
+
+	var config map[any]any
+	require.NoError(t, yaml.Unmarshal([]byte(inputYAML), &config))
+
+	escapeStrings(config)
+
+	outputBytes, err := yaml.Marshal(config)
+	require.NoError(t, err)
+	output := string(outputBytes)
+
+	assert.Contains(t, output, "replacement: $$$$1")
+}
+
+func normalizeYAML(s string) string {
+	lines := strings.Split(s, "\n")
+	var buf strings.Builder
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			buf.WriteString(trimmed + "\n")
+		}
+	}
+	return buf.String()
 }
