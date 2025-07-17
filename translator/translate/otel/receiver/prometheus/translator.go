@@ -80,6 +80,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
 	}
+
+	escapedContent, err := escapePrometheusConfig(content)
+	if err != nil {
+		return nil, fmt.Errorf("unable to escape prometheus config: %w", err)
+	}
+	content = escapedContent
+
 	var stringMap map[string]interface{}
 	err = yaml.Unmarshal(content, &stringMap)
 	if err != nil {
@@ -116,4 +123,40 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func escapePrometheusConfig(content []byte) ([]byte, error) {
+	var config map[any]any
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return nil, err
+	}
+	escapeStrings(config)
+	return yaml.Marshal(config)
+}
+
+func escapeStrings(node any) {
+	switch n := node.(type) {
+	case map[any]any:
+		for k, v := range n {
+			if key, ok := k.(string); ok && key == "replacement" {
+				if str, ok := v.(string); ok {
+					n[k] = strings.ReplaceAll(str, "$", "$$$$")
+				}
+			}
+			escapeStrings(v)
+		}
+	case map[string]interface{}:
+		for k, v := range n {
+			if k == "replacement" {
+				if str, ok := v.(string); ok {
+					n[k] = strings.ReplaceAll(str, "$", "$$$$")
+				}
+			}
+			escapeStrings(v)
+		}
+	case []any:
+		for _, v := range n {
+			escapeStrings(v)
+		}
+	}
 }
