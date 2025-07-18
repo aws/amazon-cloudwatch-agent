@@ -2,11 +2,11 @@
 Amazon CloudWatch Agent 1.300058.0 (2025-07-17)
 ========================================================================
 Enhancements:
-[ContainerInsights] Added ability to set CollectionRole via environment variable
-[ContainerInsights] Increased data cache TTL and cleanup interval to support metric collection intervals greater than 300s
-[Logs] Set default concurrency for multi-threaded log processing
-[Logs] Improved log state file handling for Windows event logs
-[Logs] Increased maximum log event size to 1MB and improved handling of large log lines
+* [ContainerInsights] Added ability to set CollectionRole via environment variable
+* [ContainerInsights] Increased data cache TTL and cleanup interval to support metric collection intervals greater than 300s
+* [Logs] Set default concurrency for multi-threaded log processing
+* [Logs] Improved log state file handling for Windows event logs
+* [Logs] Increased maximum log event size to 1MB and improved handling of large log lines
 
 ========================================================================
 Amazon CloudWatch Agent 1.300057.0 (2025-06-16)

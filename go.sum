@@ -203,6 +203,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlo
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20250717174233-f514045fc484/go.mod h1:XK8ww4E/9UaVR0wz3mS1HRr+qFEfA/FBZoSRZjVnJRs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250717174233-f514045fc484 h1:36mpJBt/c/mZYE7R2+z2anERw0vmc7tf22SJ9FkRJf8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20250717174233-f514045fc484/go.mod h1:xfyU9SHUkrBm12LyvF/Er2tuu05e38EiGHcm7MESH5Q=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/metrics v0.0.0-20250717174233-f514045fc484 h1:f2HIJ5BXMHZyxW1HEO8XJYJvrcfYemL3/YGNgNH+zzA=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/metrics v0.0.0-20250717174233-f514045fc484/go.mod h1:+LUB5b3GWrryX5hhlf+7BjSFD+16Q8gIYfiTzeWMSiM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250717174233-f514045fc484 h1:vT1HWTJO20L1Rq/kUD2h7u9PUHzHxDpyCatD8aLbh4Q=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20250717174233-f514045fc484/go.mod h1:eklUjguJnJHw1JzuOSk6fUdcBsQwzHP6kss8f3exHgw=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20250717174233-f514045fc484 h1:Cz7fayukEfW+34WvS+3Jh3w3kYKDSQxTv/z4BRCypME=
@@ -1228,8 +1230,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/file
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage v0.124.1/go.mod h1:BTHYA2guZgstbEQiIjx72OCVWzzI5WBFzuakZxcwjeY=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/ecsutil v0.124.1 h1:IXiiog4CkQWu/wSfiyYHpKGVgOa9BPlt9lD5YeYJTJg=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/ecsutil v0.124.1/go.mod h1:Hj+DbabX9lrGYwcdp6eXFCe/s7neivgPOr4PrWWUUow=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/metrics v0.124.1 h1:Oy9Ov9bPm7vRIPjI1si9Ycz+Bxl18J+ijUi/CXrL7Ts=
-github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/metrics v0.124.1/go.mod h1:+LUB5b3GWrryX5hhlf+7BjSFD+16Q8gIYfiTzeWMSiM=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.124.1 h1:cFu3VtuWdwvD1ftvTXH3v4Rm+be3BBhCz1OwiKoUQN0=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.124.1/go.mod h1:LtzoVivtOUNmNS+4xQjvuh7m6gbLJdmsyL/C+3/wtV4=
 github.com/open-telemetry/opentelemetry-collector-contrib/internal/exp/metrics v0.124.0 h1:gJ2gWuy+1kybCTQMLAxKTbcsIKKr3R8UDZhIagAey0k=
