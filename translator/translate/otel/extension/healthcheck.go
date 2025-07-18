@@ -24,7 +24,7 @@ func (t *healthCheckTranslator) ID() component.ID {
 	return component.NewIDWithName(component.MustNewType("health_check"), t.name)
 }
 
-func (t *healthCheckTranslator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *healthCheckTranslator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := &struct {
 		Endpoint string `mapstructure:"endpoint"`
 		Path     string `mapstructure:"path"`
