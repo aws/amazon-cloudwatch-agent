@@ -2,22 +2,15 @@
 # SPDX-License-Identifier: MIT
 name: "Install/Remove Helm Charts After Scaling"
 on:
-  workflow_call:
-    inputs:
-      # Required Core Settings
-      cluster_name:
-        description: 'EKS Cluster Name'
-        required: true
-        type: string
-      region:
-        description: 'AWS Region'
-        required: true
-        type: string
-      terraform_assume_role:
-        description: 'AWS IAM Role to assume'
-        required: true
-        type: string
+  # Use workflow_run to trigger this workflow after the scaling workflow completes
+  workflow_run:
+    workflows: ["EKS Cluster Scaling"]
+    types:
+      - completed
+#    branches:
+#      - main  # Adjust this if your default branch is different
 
+  # Keep the manual trigger option
   workflow_dispatch:
     inputs:
       # Required Core Settings
@@ -58,16 +51,15 @@ on:
         type: string
         default: 'main'
 
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   # Cluster environment variables
-  AWS_REGION: ${{ inputs.region }}
-  CLUSTER_NAME: ${{ inputs.cluster_name }}
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ inputs.terraform_assume_role || env.TERRAFORM_AWS_ASSUME_ROLE }}
+  AWS_REGION: ${{ inputs.region || 'us-west-2' }}
+  CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ inputs.terraform_assume_role || vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
 
   # ECR repository environment variables
@@ -78,8 +70,26 @@ env:
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 jobs:
+  # Check if this workflow should run
+  check-trigger:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
+    steps:
+      - name: Check trigger type
+        id: check-trigger
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "Triggered by workflow_run from a scheduled event"
+          else
+            echo "Triggered manually via workflow_dispatch"
+          fi
+    outputs:
+      should_continue: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
+
   # Get latest operator commit from github repo
   GetLatestOperatorCommitSHA:
+    needs: check-trigger
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     runs-on: ubuntu-latest
     outputs:
       operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
@@ -101,6 +111,8 @@ jobs:
 
   # Build and upload agent image to ECR repo
   BuildAgent:
+    needs: check-trigger
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     uses: ./.github/workflows/build-test-artifacts.yml
     concurrency:
       group: "Build-Test-Artifacts-${{github.ref_name}}"
@@ -114,7 +126,8 @@ jobs:
 
   # Build and upload operator image to ECR repo
   BuildOperator:
-    needs: [ GetLatestOperatorCommitSHA ]
+    needs: [ check-trigger, GetLatestOperatorCommitSHA ]
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
     concurrency:
       group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
@@ -127,7 +140,8 @@ jobs:
       test-image-before-upload: false
 
   install-helm:
-    needs: [ BuildAgent, BuildOperator ]
+    needs: [ check-trigger, BuildAgent, BuildOperator ]
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
