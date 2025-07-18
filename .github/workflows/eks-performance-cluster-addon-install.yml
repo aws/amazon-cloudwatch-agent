@@ -137,6 +137,66 @@ jobs:
 #      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
 #      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
 #      test-image-before-upload: false
+  install-helm:
+    needs: [ check-trigger ]
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Clone Helm Charts Repository
+        run: |
+          rm -rf ./helm-charts
+          git clone -b ${{ inputs.helm-charts-branch || 'main' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
+
+      - name: Check node count and manage Helm chart
+        run: |
+          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+
+          if [ "$NODE_COUNT" -eq 0 ]; then
+            echo "Node count is 0, removing Helm chart"
+            helm uninstall amazon-cloudwatch-observability -n amazon-cloudwatch || echo "Chart not found or already removed"
+          else
+            echo "Node count is $NODE_COUNT, installing/updating Helm chart"
+            helm upgrade --install amazon-cloudwatch-observability \
+              ./helm-charts/charts/amazon-cloudwatch-observability \
+              --namespace amazon-cloudwatch \
+              --create-namespace \
+              --set clusterName="eks-performance" \
+              --set region="us-west-2" \
+              --set agent.image.repository="cloudwatch-agent" \
+              --set agent.image.tag="latest" \
+              --set agent.image.repositoryDomainMap.public="public.ecr.aws/cloudwatch-agent" \
+              --set manager.image.repository="cloudwatch-agent-operator" \
+              --set manager.image.tag="latest" \
+              --set manager.image.repositoryDomainMap.public="public.ecr.aws/cloudwatch-agent"
+          fi
 
   install-helm:
     needs: [ check-trigger ]

@@ -137,7 +137,18 @@ jobs:
       target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
       repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
       test-image-before-upload: false
-
+        helm template amazon-cloudwatch-observability \
+        ./helm-charts/charts/amazon-cloudwatch-observability \
+        --namespace amazon-cloudwatch \
+        --create-namespace \
+        --set clusterName="eks-performance" \
+        --set region="us-west-2" \
+        --set agent.image.repository="cloudwatch-agent" \
+        --set agent.image.tag="latest" \
+        --set agent.image.repositoryDomainMap.public="public.ecr.aws/cloudwatch-agent" \
+        --set manager.image.repository="cloudwatch-agent-operator" \
+        --set manager.image.tag="latest" \
+        --set manager.image.repositoryDomainMap.public="public.ecr.aws/cloudwatch-agent"
   install-helm:
     needs: [ check-trigger, BuildAgent, BuildOperator ]
     if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
