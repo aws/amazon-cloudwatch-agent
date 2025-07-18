@@ -5,7 +5,6 @@ package awscontainerinsightskueue
 
 import (
 	"errors"
-	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver"
 	"go.opentelemetry.io/collector/component"
@@ -16,7 +15,7 @@ import (
 )
 
 const (
-	defaultMetricsCollectionInterval = time.Minute
+	defaultMetricsCollectionInterval = -1 // default to -1 to use default value defined in receiver
 )
 
 type translator struct {
@@ -42,7 +41,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-// Translate creates an aws container insights receiver config if either
+// Translate creates an aws container insights kueue receiver config if either
 // of the sections defined in the services exist.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscontainerinsightskueuereceiver.Config)

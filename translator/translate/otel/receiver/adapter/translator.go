@@ -24,11 +24,11 @@ type translator struct {
 	// See otel.ConfigKey.
 	cfgKey string
 
-	// preferMetricCollectionInterval is an option to using the preferaable metric collection interval before
+	// preferMetricCollectionInterval is an option to using the preferable metric collection interval before
 	// using the interval key chain and defaultMetricCollectionInterval
 	preferMetricCollectionInterval time.Duration
 
-	// defaultMetricCollectionInterval is the fallback interval if it
+	// defaultMetricCollectionInterval is the fallback interval if
 	// it is not present in the interval keychain.
 	defaultMetricCollectionInterval time.Duration
 }
