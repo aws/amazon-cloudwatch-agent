@@ -4,6 +4,8 @@
 package extension
 
 import (
+	"sync"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -12,6 +14,7 @@ import (
 
 type healthCheckTranslator struct {
 	name string
+	mux  sync.RWMutex
 }
 
 var _ common.Translator[component.Config, component.ID] = (*healthCheckTranslator)(nil)
@@ -21,6 +24,8 @@ func NewHealthCheckTranslator() common.Translator[component.Config, component.ID
 }
 
 func (t *healthCheckTranslator) ID() component.ID {
+	t.mux.RLock()
+	defer t.mux.RUnlock()
 	return component.NewIDWithName(component.MustNewType("health_check"), t.name)
 }
 
