@@ -195,7 +195,7 @@ jobs:
               --set agent.image.repository="cloudwatch-agent" \
               --set agent.image.tag="latest" \
               --set agent.image.repositoryDomainMap.public="public.ecr.aws/cloudwatch-agent" \
-              --set manager.image.repository="cloudwatch-agent-operator" \                
+              --set manager.image.repository="cloudwatch-agent-operator" \
               --set manager.image.tag="latest" \
               --set manager.image.repositoryDomainMap.public="public.ecr.aws/cloudwatch-agent"
 #            helm upgrade --install amazon-cloudwatch-observability \
