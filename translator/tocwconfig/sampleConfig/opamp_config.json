@@ -1,0 +1,24 @@
+{
+  "extensions": {
+    "opamp": {
+      "server": {
+        "http": {
+          "endpoint": "http://127.0.0.1:4320/v1/opamp",
+          "polling_interval": "5s"
+        }
+      },
+      "agent_description": {
+        "non_identifying_attributes": {
+          "description": "A description here...",
+          "foo": "bar",
+          "agent.name": "Sample Collector"
+        }
+      },
+      "capabilities": {
+        "reports_effective_config": true,
+        "reports_health": true,
+        "reports_available_components": true
+      }
+    }
+  }
+}
