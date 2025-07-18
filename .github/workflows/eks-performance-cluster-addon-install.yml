@@ -139,7 +139,7 @@ jobs:
       test-image-before-upload: false
 
   install-helm:
-    needs: [ check-trigger, BuildAgent, BuildOperator ]
+    needs: [ check-trigger, BuildAgent, BuildOperator, GetLatestOperatorCommitSHA ]
     if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     runs-on: ubuntu-latest
     permissions:
