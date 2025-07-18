@@ -4,6 +4,10 @@ go 1.24.4
 
 replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d
 
+replace collectd.org v0.4.0 => github.com/collectd/go-collectd v0.4.0
+
+replace code.cloudfoundry.org/clock => github.com/cloudfoundry/clock v1.0.0
+
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
 replace (
@@ -39,7 +43,10 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250717174233-f514045fc484
 )
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250717174233-f514045fc484
+replace (
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250717194605-2ebc0b84cf7c
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250717174233-f514045fc484
+)
 
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250717174233-f514045fc484
