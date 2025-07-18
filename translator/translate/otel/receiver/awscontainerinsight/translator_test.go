@@ -43,7 +43,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator: ecs,
-				CollectionInterval:    time.Minute,
+				CollectionInterval:    defaultMetricsCollectionInterval,
 				LeaderLockName:        "otel-container-insight-clusterleader",
 				TagService:            true,
 			},
@@ -130,7 +130,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				TagService:                   false,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
@@ -153,7 +153,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				CollectionRole:               awscontainerinsightreceiver.LEADER,
 				TagService:                   true,
 				LeaderLockName:               defaultLeaderLockName,
@@ -177,7 +177,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				CollectionRole:               awscontainerinsightreceiver.NODE,
 				TagService:                   true,
 				LeaderLockName:               defaultLeaderLockName,
@@ -199,7 +199,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				PrefFullPodName:              true,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
@@ -224,7 +224,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
@@ -248,7 +248,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				PrefFullPodName:              true,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
@@ -273,7 +273,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				PrefFullPodName:              true,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
@@ -322,7 +322,7 @@ func TestTranslator(t *testing.T) {
 			isSystemd: true,
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
+				CollectionInterval:           defaultMetricsCollectionInterval,
 				PrefFullPodName:              false,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,

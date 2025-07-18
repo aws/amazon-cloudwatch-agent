@@ -399,6 +399,16 @@ func GetOrDefaultNumber(conf *confmap.Conf, key string, defaultVal float64) floa
 	return value
 }
 
+// GetOrDefaultCollectionInterval gets the collection interval from the configuration.
+// If the interval is not specified or is <= 0, it returns the component's default interval.
+func GetOrDefaultCollectionInterval(conf *confmap.Conf, key string, componentDefault time.Duration) time.Duration {
+	interval, ok := GetDuration(conf, key)
+	if !ok || interval <= 0 {
+		return componentDefault
+	}
+	return interval
+}
+
 // GetDuration gets the value for the key and calls ParseDuration on it.
 // If the key is missing, it is unable to parse the duration, or the
 // duration is set to 0, then the returned bool will be false.
