@@ -27,7 +27,7 @@ func TestApplyRule(t *testing.T) {
             ],
             "event_ids": [
                456,
-	           300
+               300
             ],
             "log_group_name": "System",
             "log_stream_name": "System"

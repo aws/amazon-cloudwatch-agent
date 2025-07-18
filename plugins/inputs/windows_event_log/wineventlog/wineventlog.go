@@ -94,9 +94,14 @@ func NewEventLog(name string, levels []string, eventIDs []int, logGroupName, log
 }
 
 func (w *windowsEventLog) Init() error {
+	const (
+		minEventID = 0
+		maxEventID = 65535
+	)
+
 	for _, eventID := range w.eventIDs {
-		if eventID < 0 || eventID > 65535 {
-			return fmt.Errorf("invalid event ID: %d, event IDs must be between 0 and 65535", eventID)
+		if eventID < minEventID || eventID > maxEventID {
+			return fmt.Errorf("invalid event ID: %d, event IDs must be between %d and %d", eventID, minEventID, maxEventID)
 		}
 	}
 
