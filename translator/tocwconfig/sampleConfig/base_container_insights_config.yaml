@@ -165,6 +165,9 @@ extensions:
     entitystore:
         mode: ec2
         region: us-east-1
+    health_check/health_check:
+        endpoint: 0.0.0.0:13133
+        path: /
 processors:
     awsentity/resource/containerinsights:
         entity_type: Resource
@@ -256,6 +259,7 @@ service:
         - agenthealth/logs
         - agenthealth/statuscode
         - entitystore
+        - health_check/health_check
     pipelines:
         logs/emf_logs:
             exporters:
