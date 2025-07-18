@@ -20,6 +20,31 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
+func TestHealthCheckExtension(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	input := map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"cpu": map[string]interface{}{},
+			},
+		},
+	}
+
+	cfg, err := Translate(input, "linux")
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	// Verify that the health check extension is registered
+	extensionFound := false
+	for _, ext := range cfg.Service.Extensions {
+		if ext.Type().String() == "health_check" {
+			extensionFound = true
+			break
+		}
+	}
+	assert.True(t, extensionFound, "Health check extension should be registered")
+}
+
 func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)
