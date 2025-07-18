@@ -34,7 +34,7 @@ func RegisterRule(fieldname string, r Rule) {
 type CollectList struct {
 }
 
-var customizedJsonConfigKeys = []string{"event_name", EventLevelsKey}
+var customizedJSONConfigKeys = []string{"event_name", EventLevelsKey}
 var eventLevelMapping = map[string]string{
 	"VERBOSE":     "5",
 	"INFORMATION": "4",
@@ -77,7 +77,7 @@ func init() {
 func getTransformedConfig(input interface{}) interface{} {
 	result := map[string]interface{}{}
 	// Extract customer specified config
-	util.SetWithSameKeyIfFound(input, customizedJsonConfigKeys, result)
+	util.SetWithSameKeyIfFound(input, customizedJSONConfigKeys, result)
 	// Set Fixed config
 	addFixedJsonConfig(result)
 
@@ -95,27 +95,25 @@ func addFixedJsonConfig(result map[string]interface{}) {
 	result[BatchReadSizeKey] = BatchReadSizeValue
 
 	var inputEventLevels []interface{}
-	if eventLevels, ok := result[EventLevelsKey]; !ok {
-		return
-	} else {
+	if eventLevels, ok := result[EventLevelsKey]; ok {
 		inputEventLevels = eventLevels.([]interface{})
-	}
-	resultEventLevels := []interface{}{}
-	for _, eventLevel := range inputEventLevels {
-		switch eventLevel.(string) {
-		case "CRITICAL":
-			resultEventLevels = append(resultEventLevels, "1")
-		case "ERROR":
-			resultEventLevels = append(resultEventLevels, "2")
-		case "WARNING":
-			resultEventLevels = append(resultEventLevels, "3")
-		case "INFORMATION":
-			resultEventLevels = append(resultEventLevels, "4", "0")
-		case "VERBOSE":
-			resultEventLevels = append(resultEventLevels, "5")
-		default:
-			translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("Cannot find the mapping for Windows event level %v.", eventLevel))
+		resultEventLevels := []interface{}{}
+		for _, eventLevel := range inputEventLevels {
+			switch eventLevel.(string) {
+			case "CRITICAL":
+				resultEventLevels = append(resultEventLevels, "1")
+			case "ERROR":
+				resultEventLevels = append(resultEventLevels, "2")
+			case "WARNING":
+				resultEventLevels = append(resultEventLevels, "3")
+			case "INFORMATION":
+				resultEventLevels = append(resultEventLevels, "4", "0")
+			case "VERBOSE":
+				resultEventLevels = append(resultEventLevels, "5")
+			default:
+				translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("Cannot find the mapping for Windows event level %v.", eventLevel))
+			}
 		}
+		result[EventLevelsKey] = resultEventLevels
 	}
-	result[EventLevelsKey] = resultEventLevels
 }

@@ -132,11 +132,11 @@ func TestInsertPlaceholderValues(t *testing.T) {
 		})
 	}
 }
-
 func TestCreateQuery(t *testing.T) {
 	tests := []struct {
 		name     string
 		path     string
+		eventIDs []int
 		levels   []string
 		expected string
 	}{
@@ -147,16 +147,41 @@ func TestCreateQuery(t *testing.T) {
 			expected: `<QueryList><Query Id="0"><Select Path="Application">*[System[(Level='2') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
 		},
 		{
+			name:     "Single eventIDs filter",
+			path:     "Application",
+			eventIDs: []int{1002},
+			expected: `<QueryList><Query Id="0"><Select Path="Application">*[System[(EventID='1002') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
 			name:     "Multiple level filters",
 			path:     "System",
 			levels:   []string{"2", "3", "4"},
 			expected: `<QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='3' or Level='4') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
 		},
 		{
+			name:     "Multiple eventIDs filters",
+			path:     "System",
+			eventIDs: []int{100, 200, 300},
+			expected: `<QueryList><Query Id="0"><Select Path="System">*[System[(EventID='100' or EventID='200' or EventID='300') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
 			name:     "No level filters",
 			path:     "Security",
 			levels:   []string{},
 			expected: `<QueryList><Query Id="0"><Select Path="Security">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "No eventIDs filters",
+			path:     "Security",
+			eventIDs: []int{},
+			expected: `<QueryList><Query Id="0"><Select Path="Security">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Both level and eventIDs filters",
+			path:     "Security",
+			levels:   []string{"2"},
+			eventIDs: []int{100},
+			expected: `<QueryList><Query Id="0"><Select Path="Security">*[System[(Level='2') and (EventID='100') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>`,
 		},
 		{
 			name:     "Empty level filters",
@@ -174,7 +199,7 @@ func TestCreateQuery(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ptr, err := CreateQuery(tc.path, tc.levels)
+			ptr, err := CreateQuery(tc.path, tc.levels, tc.eventIDs)
 			assert.NoError(t, err)
 			assert.NotNil(t, ptr)
 			assert.Equal(t, tc.expected, utf16PtrToString(ptr))
@@ -187,6 +212,7 @@ func TestCreateRangeQuery(t *testing.T) {
 		name     string
 		path     string
 		levels   []string
+		eventIDs []int
 		r        state.Range
 		expected string
 	}{
@@ -210,6 +236,13 @@ func TestCreateRangeQuery(t *testing.T) {
 			levels:   []string{},
 			r:        state.NewRange(50, 150),
 			expected: `<QueryList><Query Id="0"><Select Path="Security">*[System[TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 50 and EventRecordID &lt;= 150]]</Select></Query></QueryList>`,
+		},
+		{
+			name:     "Multiple eventIDs with range",
+			path:     "System",
+			eventIDs: []int{45, 99},
+			r:        state.NewRange(1000, 2000),
+			expected: `<QueryList><Query Id="0"><Select Path="System">*[System[(EventID='45' or EventID='99') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000] and EventRecordID &gt; 1000 and EventRecordID &lt;= 2000]]</Select></Query></QueryList>`,
 		},
 		{
 			name:     "Empty levels with range",
@@ -243,7 +276,7 @@ func TestCreateRangeQuery(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ptr, err := CreateRangeQuery(tc.path, tc.levels, tc.r)
+			ptr, err := CreateRangeQuery(tc.path, tc.levels, tc.eventIDs, tc.r)
 			assert.NoError(t, err)
 			assert.NotNil(t, ptr)
 			assert.Equal(t, tc.expected, utf16PtrToString(ptr))

@@ -25,6 +25,10 @@ func TestApplyRule(t *testing.T) {
               "INFORMATION",
               "SUCCESS"
             ],
+            "event_ids": [
+               456,
+               300
+            ],
             "log_group_name": "System",
             "log_stream_name": "System"
           }
