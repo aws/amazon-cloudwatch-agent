@@ -24,10 +24,6 @@ on:
         required: true
         type: string
         default: 'us-west-2'
-      terraform_assume_role:
-        description: 'AWS IAM Role to assume'
-        required: true
-        type: string
 
       # Optional Settings
       cloudwatch_agent_repository:
@@ -50,6 +46,9 @@ on:
         description: 'Branch of the operator to test'
         type: string
         default: 'main'
+      terraform_assume_role:
+        description: 'AWS IAM Role to assume'
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
