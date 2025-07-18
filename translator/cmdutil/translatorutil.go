@@ -99,7 +99,13 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
-			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
+			if errorDetail.Type() == "number_any_of" || errorDetail.Type() == "any_of" {
+				errDescription := "E! At least one of event_levels, event_ids, or filters is required"
+				translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errDescription)
+				log.Panic("E! Invalid Json input schema.")
+			} else {
+				translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
+			}
 		}
 		log.Panic("E! Invalid Json input schema.")
 	}

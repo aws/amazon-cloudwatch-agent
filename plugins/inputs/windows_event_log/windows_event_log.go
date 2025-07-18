@@ -29,16 +29,17 @@ const (
 var startOnlyOnce sync.Once
 
 type EventConfig struct {
-	Name          string   `toml:"event_name"`
-	Levels        []string `toml:"event_levels"`
-	EventIDs      []int    `toml:"event_ids"`
-	RenderFormat  string   `toml:"event_format"`
-	BatchReadSize int      `toml:"batch_read_size"`
-	LogGroupName  string   `toml:"log_group_name"`
-	LogStreamName string   `toml:"log_stream_name"`
-	LogGroupClass string   `toml:"log_group_class"`
-	Destination   string   `toml:"destination"`
-	Retention     int      `toml:"retention_in_days"`
+	Name          string                     `toml:"event_name"`
+	Levels        []string                   `toml:"event_levels"`
+	EventIDs      []int                      `toml:"event_ids"`
+	Filters       []*wineventlog.EventFilter `toml:"filters"`
+	RenderFormat  string                     `toml:"event_format"`
+	BatchReadSize int                        `toml:"batch_read_size"`
+	LogGroupName  string                     `toml:"log_group_name"`
+	LogStreamName string                     `toml:"log_stream_name"`
+	LogGroupClass string                     `toml:"log_group_class"`
+	Destination   string                     `toml:"destination"`
+	Retention     int                        `toml:"retention_in_days"`
 }
 type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`
@@ -108,6 +109,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 			eventConfig.Name,
 			eventConfig.Levels,
 			eventConfig.EventIDs,
+			eventConfig.Filters,
 			eventConfig.LogGroupName,
 			eventConfig.LogStreamName,
 			eventConfig.RenderFormat,
