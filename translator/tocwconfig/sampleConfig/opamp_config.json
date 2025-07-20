@@ -1,17 +1,39 @@
 {
+  "agent": {
+    "metrics_collection_interval": 60,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+    "region": "us-east-2",
+    "debug": false
+  },
+  "metrics": {
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "mem": {
+        "measurement": [
+          "used_percent"
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  },
   "extensions": {
     "opamp": {
       "server": {
         "http": {
           "endpoint": "http://127.0.0.1:4320/v1/opamp",
-          "polling_interval": "5s"
+          "polling_interval": "10s"
         }
       },
       "agent_description": {
         "non_identifying_attributes": {
-          "description": "A description here...",
+          "description": "OpAMP Extension Enabled in Cloudwatch Agent",
           "foo": "bar",
-          "agent.name": "Sample Collector"
+          "agent.name": "Cloudwatch Agent"
         }
       },
       "capabilities": {
@@ -19,6 +41,19 @@
         "reports_health": true,
         "reports_available_components": true
       }
+    }
+  },
+  "processors": {
+    "ec2tagger": {
+      "ec2_instance_tag_keys": [
+        "AutoScalingGroupName"
+      ],
+      "ec2_metadata_tags": [
+        "ImageId",
+        "InstanceId",
+        "InstanceType"
+      ],
+      "imds_retries": 1
     }
   }
 }

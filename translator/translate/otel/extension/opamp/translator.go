@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-
 type translator struct {
 	name string
 	factory extension.Factory
@@ -22,7 +21,6 @@ var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator() common.ComponentTranslator {
 	return &translator{
-		name: "opamp",
 		factory: opampextension.NewFactory(),
 	}
 }
@@ -34,42 +32,61 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*opampextension.Config)
 	
+	// Initialize the server with a default HTTP configuration
+	defaultServerConfig := map[string]interface{}{
+		"server": map[string]interface{}{
+			"http": map[string]interface{}{
+				"endpoint": "localhost:4320",
+			},
+		},
+	}
+	
+	// Create a confmap from the default config and unmarshal it
+	defaultConfMap := confmap.NewFromStringMap(defaultServerConfig)
+	
+	// Unmarshal the default config into the config
+	if err := defaultConfMap.Unmarshal(cfg); err != nil {
+		return nil, err
+	}
+	
+	// If no OpAMP configuration is provided, return the default config
 	if !conf.IsSet(common.ConfigKey(common.AgentKey, "opamp")) {
 		return cfg, nil
 	}
 	
+	// Get the user-provided OpAMP configuration
 	opampConf, err := conf.Sub(common.ConfigKey(common.AgentKey, "opamp"))
 	if err != nil {
 		return cfg, err
 	}
 	
-	// Configure server
+	// Configure server if provided in user config
 	if opampConf.IsSet("server") {
 		serverConf, err := opampConf.Sub("server")
 		if err != nil {
 			return cfg, err
 		}
 		
-		cfg.Server = &opampextension.OpAMPServer{}
-		
-		if serverConf.IsSet("ws") {
-			wsConf, err := serverConf.Sub("ws")
-			if err != nil {
+		// If user explicitly configures server, reset our default
+		if serverConf.IsSet("ws") || serverConf.IsSet("http") {
+			// Reset the server config (we'll replace it with user config)
+			cfg.Server = &opampextension.OpAMPServer{}
+			
+			// Create a map for the server config
+			serverMap := make(map[string]interface{})
+			for _, key := range serverConf.AllKeys() {
+				serverMap[key] = serverConf.Get(key)
+			}
+			
+			// Unmarshal the user's server config
+			serverConfMap := confmap.NewFromStringMap(serverMap)
+			if err := serverConfMap.Unmarshal(cfg.Server); err != nil {
 				return cfg, err
 			}
-			// Use confmap to unmarshal WS config directly
-			wsConf.Unmarshal(&cfg.Server.WS)
-		} else if serverConf.IsSet("http") {
-			// Use confmap to unmarshal HTTP config directly
-			httpConf, err := serverConf.Sub("http")
-			if err != nil {
-				return cfg, err
-			}
-			httpConf.Unmarshal(&cfg.Server.HTTP)
 		}
 	}
 
-	// Set instance UID
+	// Set instance UID if provided
 	if instanceUID, ok := opampConf.Get("instance_uid").(string); ok {
 		cfg.InstanceUID = instanceUID
 	}
@@ -88,7 +105,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	// Configure agent description
+	// Configure agent description if provided
 	if opampConf.IsSet("agent_description") {
 		agentDescConf, err := opampConf.Sub("agent_description")
 		if err != nil {
@@ -110,7 +127,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			}
 
 			// Iterate through all keys and add them to the map
-            for _, key := range attrConf.AllKeys() {
+			for _, key := range attrConf.AllKeys() {
 				if val, ok := attrConf.Get(key).(string); ok {
 					cfg.AgentDescription.NonIdentifyingAttributes[key] = val
 				}
@@ -118,28 +135,28 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	// Configure capabilities
+	// Configure capabilities if provided
 	if opampConf.IsSet("capabilities") {
-    	capabilitiesConf, err := opampConf.Sub("capabilities")
-    	if err != nil {
-        	return cfg, err
-    	}
+		capabilitiesConf, err := opampConf.Sub("capabilities")
+		if err != nil {
+			return cfg, err
+		}
+		
 
-   		// Initialize Capabilities (fix the incorrect initialization)
-   		cfg.Capabilities = opampextension.Capabilities{} 
+		cfg.Capabilities = opampextension.Capabilities{} 
 
-    	// Map each capability
-    	if reportsEffectiveConfig, ok := capabilitiesConf.Get("reports_effective_config").(bool); ok {
-        	cfg.Capabilities.ReportsEffectiveConfig = reportsEffectiveConfig
-    	}
-    	if reportsHealth, ok := capabilitiesConf.Get("reports_health").(bool); ok {
-        	cfg.Capabilities.ReportsHealth = reportsHealth
-    	}
-    	if reportsAvailableComponents, ok := capabilitiesConf.Get("reports_available_components").(bool); ok {
-        	cfg.Capabilities.ReportsAvailableComponents = reportsAvailableComponents
-    	}
+		// Map each capability
+		if reportsEffectiveConfig, ok := capabilitiesConf.Get("reports_effective_config").(bool); ok {
+			cfg.Capabilities.ReportsEffectiveConfig = reportsEffectiveConfig
+		}
+		if reportsHealth, ok := capabilitiesConf.Get("reports_health").(bool); ok {
+			cfg.Capabilities.ReportsHealth = reportsHealth
+		}
+		if reportsAvailableComponents, ok := capabilitiesConf.Get("reports_available_components").(bool); ok {
+			cfg.Capabilities.ReportsAvailableComponents = reportsAvailableComponents
+		}
 	}
-
 	
+
 	return cfg, nil
 }
