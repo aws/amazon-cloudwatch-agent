@@ -21,6 +21,7 @@ var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator() common.ComponentTranslator {
 	return &translator{
+		name: "", // Using empty name to avoid duplication in component ID path
 		factory: opampextension.NewFactory(),
 	}
 }
@@ -83,11 +84,20 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			if err := serverConfMap.Unmarshal(cfg.Server); err != nil {
 				return cfg, err
 			}
+			
+			// Ensure only one of HTTP or WebSocket is configured
+			// If both are present, prioritize HTTP and set WebSocket to nil
+			if cfg.Server.HTTP != nil && cfg.Server.WS != nil {
+				cfg.Server.WS = nil
+			}
 		}
 	}
 
 	// Set instance UID if provided
 	if instanceUID, ok := opampConf.Get("instance_uid").(string); ok {
+		// Validate that the instance_uid is a valid UUID
+		// Note: The OpAMP extension will perform its own validation,
+		// but we could add additional validation here if needed
 		cfg.InstanceUID = instanceUID
 	}
 
@@ -111,8 +121,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if err != nil {
 			return cfg, err
 		}
-
-		cfg.AgentDescription = opampextension.AgentDescription{}
 
 		// Handle non-identifying attributes
 		if agentDescConf.IsSet("non_identifying_attributes") {
@@ -142,9 +150,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			return cfg, err
 		}
 		
-
-		cfg.Capabilities = opampextension.Capabilities{} 
-
 		// Map each capability
 		if reportsEffectiveConfig, ok := capabilitiesConf.Get("reports_effective_config").(bool); ok {
 			cfg.Capabilities.ReportsEffectiveConfig = reportsEffectiveConfig
@@ -156,7 +161,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.Capabilities.ReportsAvailableComponents = reportsAvailableComponents
 		}
 	}
-	
 
 	return cfg, nil
 }

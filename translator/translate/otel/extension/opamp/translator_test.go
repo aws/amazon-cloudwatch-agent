@@ -16,7 +16,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	translator := NewTranslator()
-	assert.Equal(t, component.NewIDWithName(component.MustNewType("opamp"), "opamp"), translator.ID())
+	assert.Equal(t, component.NewIDWithName(component.MustNewType("opamp"), ""), translator.ID())
 }
 
 func TestTranslate(t *testing.T) {
@@ -78,7 +78,7 @@ func TestTranslate(t *testing.T) {
     translator := NewTranslator()
     conf := confmap.NewFromStringMap(map[string]any{
         "agent": map[string]any{
-            "opamp": map[string]any{ // Removed the extra comma here
+            "opamp": map[string]any{ 
                 "server": map[string]any{
                     "ws": map[string]any{
                         "endpoint": "ws://localhost:4320/v1/opamp",

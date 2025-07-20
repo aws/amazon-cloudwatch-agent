@@ -5,7 +5,7 @@ exporters:
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
-        region: us-east-2
+        region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
 extensions:
@@ -26,19 +26,23 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
-        region: us-east-2
+        region: us-west-2
     opamp:
-        agent_description: {}
+        agent_description:
+            non_identifying_attributes:
+                agent.name: Cloudwatch Agent
+                description: OpAMP Extension Enabled in Cloudwatch Agent
+                foo: bar
         capabilities:
-            reports_available_components: false
+            reports_available_components: true
             reports_effective_config: true
             reports_health: true
-        instance_uid: ""
-        ppid: 0
+        instance_uid: 123e4567-e89b-12d3-a456-426614174000
+        ppid: 12345
         ppid_poll_interval: 5s
         server:
             http:
-                polling_interval: 0s
+                polling_interval: 10s
 processors:
     awsentity/resource:
         entity_type: Resource
