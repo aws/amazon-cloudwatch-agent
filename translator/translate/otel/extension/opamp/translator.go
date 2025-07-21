@@ -4,6 +4,8 @@
 package opampextension
 
 import (
+	"time"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
@@ -112,6 +114,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.PPID = int32(v)
 		case float64:
 			cfg.PPID = int32(v)
+		}
+	}
+
+	// Set PPID poll interval if provided
+	if ppidPollInterval, ok := opampConf.Get("ppid_poll_interval").(string); ok {
+		duration, err := time.ParseDuration(ppidPollInterval)
+		if err == nil {
+			cfg.PPIDPollInterval = duration
 		}
 	}
 

@@ -89,6 +89,7 @@ func TestTranslate(t *testing.T) {
                     },
                 },
 				"ppid":         1234,
+				"ppid_poll_interval": "5s",
                 "agent_description": map[string]any{
                     "non_identifying_attributes": map[string]any{
                         "description": "A description here...",
@@ -141,5 +142,9 @@ func TestTranslate(t *testing.T) {
     	assert.True(t, opampCfg.Capabilities.ReportsEffectiveConfig)
     	assert.True(t, opampCfg.Capabilities.ReportsHealth)
     	assert.True(t, opampCfg.Capabilities.ReportsAvailableComponents)
+		
+		// Verify PPID and PPIDPollInterval
+		assert.Equal(t, int32(1234), opampCfg.PPID)
+		assert.Equal(t, 5*time.Second, opampCfg.PPIDPollInterval)
 	})
 }
