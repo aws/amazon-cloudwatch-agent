@@ -1058,6 +1058,16 @@
                       "uniqueItems": true
                     }
                   },
+                  "event_ids":{
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 65535
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
@@ -1079,8 +1089,15 @@
                   }
                 },
                 "required": [
-                  "event_name",
-                  "event_levels"
+                  "event_name"
+                ],
+                "anyOf": [
+                  {
+                    "required": ["event_levels"]
+                  },
+                  {
+                    "required": ["event_ids"]
+                  }
                 ],
                 "additionalProperties": false
               },
