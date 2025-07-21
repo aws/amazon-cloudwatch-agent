@@ -52,6 +52,7 @@ func (e *wevtAPIError) Error() string {
 type windowsEventLog struct {
 	name          string
 	levels        []string
+	eventIDs      []int
 	logGroupName  string
 	logStreamName string
 	logGroupClass string
@@ -70,10 +71,11 @@ type windowsEventLog struct {
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventIDs []int, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
+		eventIDs:      eventIDs,
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
 		logGroupClass: logGroupClass,
@@ -92,6 +94,17 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 }
 
 func (w *windowsEventLog) Init() error {
+	const (
+		minEventID = 0
+		maxEventID = 65535
+	)
+
+	for _, eventID := range w.eventIDs {
+		if eventID < minEventID || eventID > maxEventID {
+			return fmt.Errorf("invalid event ID: %d, event IDs must be between %d and %d", eventID, minEventID, maxEventID)
+		}
+	}
+
 	go w.stateManager.Run(state.Notification{Done: w.done})
 	restored, _ := w.stateManager.Restore()
 	// Do note that the end offset is inclusive here as opposed to exclusive like done
@@ -231,7 +244,7 @@ func (w *windowsEventLog) open() error {
 	if err != nil {
 		return err
 	}
-	query, err := CreateQuery(w.name, w.levels)
+	query, err := CreateQuery(w.name, w.levels, w.eventIDs)
 	if err != nil {
 		return err
 	}
@@ -248,7 +261,7 @@ func (w *windowsEventLog) openAtRange(r state.Range) (EvtHandle, error) {
 	if err != nil {
 		return 0, err
 	}
-	query, err := CreateRangeQuery(w.name, w.levels, r)
+	query, err := CreateRangeQuery(w.name, w.levels, w.eventIDs, r)
 	if err != nil {
 		return 0, err
 	}

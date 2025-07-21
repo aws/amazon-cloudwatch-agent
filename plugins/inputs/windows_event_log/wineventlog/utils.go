@@ -26,10 +26,12 @@ const (
 	bookmarkTemplate         = `<BookmarkList><Bookmark Channel="%s" RecordId="%d" IsCurrent="True"/></BookmarkList>`
 	eventLogQueryTemplate    = `<QueryList><Query Id="0"><Select Path="%s">*[System[%s]]</Select></Query></QueryList>`
 	eventLogLevelFilter      = "Level='%s'"
+	eventLogeventIDFilter    = "EventID='%d'"
 	eventIgnoreOldFilter     = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
 	eventRangeFilter         = "EventRecordID &gt; %d and EventRecordID &lt;= %d"
 	emptySpaceScanLength     = 100
 	UnknownBytesPerCharacter = 0
+	cutOffPeriod             = time.Hour * 24 * 14
 
 	CRITICAL    = "CRITICAL"
 	ERROR       = "ERROR"
@@ -66,16 +68,16 @@ func CreateBookmark(w WindowsEventAPI, channel string, recordID uint64) (h EvtHa
 	return h, nil
 }
 
-func CreateQuery(path string, levels []string) (*uint16, error) {
-	return createWindowsEventFilter(path, levels)
+func CreateQuery(path string, levels []string, eventIDs []int) (*uint16, error) {
+	return createWindowsEventFilter(path, levels, eventIDs)
 }
 
-func CreateRangeQuery(path string, levels []string, r state.Range) (*uint16, error) {
+func CreateRangeQuery(path string, levels []string, eventIDs []int, r state.Range) (*uint16, error) {
 	rangeFilter := fmt.Sprintf(eventRangeFilter, r.StartOffset(), r.EndOffset())
-	return createWindowsEventFilter(path, levels, rangeFilter)
+	return createWindowsEventFilter(path, levels, eventIDs, rangeFilter)
 }
 
-func createWindowsEventFilter(path string, levels []string, additionalFilters ...string) (*uint16, error) {
+func createWindowsEventFilter(path string, levels []string, eventIDs []int, additionalFilters ...string) (*uint16, error) {
 	// Add log levels
 	var levelsFilter string
 	formattedLevels := make([]string, len(levels))
@@ -86,6 +88,16 @@ func createWindowsEventFilter(path string, levels []string, additionalFilters ..
 		levelsFilter = fmt.Sprintf("(%s)", strings.Join(formattedLevels, " or "))
 	}
 
+	// Add eventIDs
+	var eventIDFilter string
+	formattedeventIDs := make([]string, len(eventIDs))
+	for i, eventIDs := range eventIDs {
+		formattedeventIDs[i] = fmt.Sprintf(eventLogeventIDFilter, eventIDs)
+	}
+	if len(formattedeventIDs) > 0 {
+		eventIDFilter = fmt.Sprintf("(%s)", strings.Join(formattedeventIDs, " or "))
+	}
+
 	// Ignore events older than 2 weeks
 	cutOffPeriod := (time.Hour * 24 * 14).Nanoseconds()
 	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutOffPeriod/int64(time.Millisecond))
@@ -93,6 +105,9 @@ func createWindowsEventFilter(path string, levels []string, additionalFilters ..
 	var filters []string
 	if levelsFilter != "" {
 		filters = append(filters, levelsFilter)
+	}
+	if eventIDFilter != "" {
+		filters = append(filters, eventIDFilter)
 	}
 	filters = append(filters, ignoreOlderThanTwoWeeksFilter)
 	// Add any additional filters (e.g. record IDs)

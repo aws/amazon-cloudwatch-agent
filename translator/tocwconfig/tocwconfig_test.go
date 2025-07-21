@@ -346,6 +346,18 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
+func TestWindowsEventIDOnly(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids", "windows", expectedEnvVars, "")
+}
+
+// test both event_ids and levels
+func TestWindowsEventIdsAndLevels(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids_and_levels", "windows", expectedEnvVars, "")
+}
 func TestStatsDConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
