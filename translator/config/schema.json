@@ -1074,6 +1074,7 @@
                        "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
                     }
                   },
+
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
