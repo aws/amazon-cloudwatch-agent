@@ -40,7 +40,6 @@ type EventConfig struct {
 	LogGroupClass string                     `toml:"log_group_class"`
 	Destination   string                     `toml:"destination"`
 	Retention     int                        `toml:"retention_in_days"`
-  
 }
 type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`

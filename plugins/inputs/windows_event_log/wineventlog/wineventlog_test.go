@@ -394,7 +394,7 @@ func newTestEventLogWithState(t *testing.T, name string, levels []string, rl sta
 		Name:              filepath.Base(file.Name()),
 		MaxPersistedItems: 10,
 	})
-	return NewEventLog(name, levels, EVENTIDS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
+	return NewEventLog(name, levels, EVENTIDS, FILTERS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS), file.Name()
 }
 

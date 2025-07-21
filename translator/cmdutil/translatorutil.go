@@ -103,9 +103,8 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 				errDescription := "E! At least one of event_levels, event_ids, or filters is required"
 				translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errDescription)
 				log.Panic("E! Invalid Json input schema.")
-			} else {
-				translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 			}
+			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 		}
 		log.Panic("E! Invalid Json input schema.")
 	}

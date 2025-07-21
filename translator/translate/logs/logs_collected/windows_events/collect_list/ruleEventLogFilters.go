@@ -21,7 +21,7 @@ const (
 type WindowsEventFilter struct {
 }
 
-func (wef *WindowsEventFilter) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (wef *WindowsEventFilter) ApplyRule(input interface{}) (string, interface{}) {
 	im := input.(map[string]interface{})
 	val, ok := im[FiltersSectionKey]
 	if !ok {

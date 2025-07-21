@@ -97,20 +97,20 @@ func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventF
 }
 
 func (w *windowsEventLog) Init() error {
-      
+
 	const (
 		minEventID = 0
 		maxEventID = 65535
 	)
-
 	for _, eventID := range w.eventIDs {
 		if eventID < minEventID || eventID > maxEventID {
 			return fmt.Errorf("invalid event ID: %d, event IDs must be between %d and %d", eventID, minEventID, maxEventID)
 		}
-    
-  for _, filter := range w.filters {
+	}
+	for _, filter := range w.filters {
 		if err := filter.init(); err != nil {
 			return err
+		}
 	}
 
 	go w.stateManager.Run(state.Notification{Done: w.done})
