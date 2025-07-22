@@ -7,8 +7,8 @@ on:
     workflows: ["EKS Cluster Scaling"]
     types:
       - completed
-  #    branches:
-  #      - main  # Adjust this if your default branch is different
+    branches:
+      - main
 
   # Keep the manual trigger option
   workflow_dispatch:
