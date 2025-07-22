@@ -5,7 +5,6 @@ package prometheus
 
 import (
 	_ "embed"
-	"fmt"
 	"sync"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"

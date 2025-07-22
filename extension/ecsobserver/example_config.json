@@ -1,0 +1,37 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "ecs_service_discovery": {
+          "sd_target_cluster": "my-ecs-cluster",
+          "sd_cluster_region": "us-west-2",
+          "sd_result_file": "/opt/aws/amazon-cloudwatch-agent/etc/ecs_sd_targets.yaml",
+          "sd_frequency": "60s",
+          "docker_label": {
+            "sd_port_label": "ECS_PROMETHEUS_EXPORTER_PORT",
+            "sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH",
+            "sd_job_name_label": "ECS_PROMETHEUS_JOB_NAME"
+          },
+          "task_definition_list": [
+            {
+              "sd_job_name": "task-definition-metrics",
+              "sd_metrics_path": "/metrics",
+              "sd_metrics_ports": "9090",
+              "sd_task_definition_arn_pattern": ".*:task-definition/nginx:[0-9]+",
+              "sd_container_name_pattern": "nginx.*"
+            }
+          ],
+          "service_name_list_for_tasks": [
+            {
+              "sd_job_name": "service-metrics",
+              "sd_metrics_path": "/metrics",
+              "sd_metrics_ports": "9090;9100",
+              "sd_service_name_pattern": ".*nginx.*",
+              "sd_container_name_pattern": "nginx.*"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
