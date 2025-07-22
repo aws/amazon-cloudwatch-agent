@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -23,9 +22,8 @@ import (
 var sampleConfig string
 
 type Prometheus struct {
-	PrometheusConfigPath string              `toml:"prometheus_config_path"`
-	ClusterName          string              `toml:"cluster_name"`
-	ECSObserverConfig    *ecsobserver.Config `toml:"ecs_observer_config"`
+	PrometheusConfigPath string `toml:"prometheus_config_path"`
+	ClusterName          string `toml:"cluster_name"`
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
@@ -55,18 +53,6 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 		filter:      NewMetricsFilter(),
 		clusterName: p.ClusterName,
 		mtHandler:   mth,
-	}
-
-	// Validate ECSObserverConfig if provided
-	if p.ECSObserverConfig != nil {
-		// Ensure the ECSObserverConfig has required fields
-		if p.ECSObserverConfig.ClusterName == "" || p.ECSObserverConfig.ClusterRegion == "" || p.ECSObserverConfig.ResultFile == "" {
-			return fmt.Errorf("ECSObserverConfig is missing required fields: ClusterName, ClusterRegion, or ResultFile")
-		}
-		
-		// Here we would initialize and start the ecsobserver
-		// This would be implemented in the OpenTelemetry pipeline
-		// rather than directly in this Telegraf-based code
 	}
 
 	// Start scraping prometheus metrics from prometheus endpoints
