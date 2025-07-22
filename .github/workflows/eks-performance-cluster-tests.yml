@@ -7,8 +7,8 @@ on:
     workflows: ["Install/Remove Helm Charts After Scaling"]
     types:
       - completed
-  #    branches:
-  #      - main  # Adjust this if your default branch is different
+    branches:
+      - main  # Adjust this if your default branch is different
 
   # Keep the manual trigger option
   workflow_dispatch:
@@ -55,10 +55,6 @@ env:
   CWA_GITHUB_TEST_REPO_URL: ${{ inputs.test_repo_url || 'https://github.com/aws/amazon-cloudwatch-agent-test.git'}}
   CWA_GITHUB_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch || 'main' }}
 
-  # Sample Application
-  SAMPLE_APP_GITHUB_REPO_NAME: "aws-observability/application-signals-demo"
-  SAMPLE_APP_GITHUB_REPO_BRANCH: "main"
-
 jobs:
   # Check if this workflow should run
   check-trigger:
@@ -88,13 +84,6 @@ jobs:
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
-          path: agent-test
-
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SAMPLE_APP_GITHUB_REPO_NAME }}
-          ref: ${{ env.SAMPLE_APP_GITHUB_REPO_BRANCH }}
-          path: sample-app
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -122,5 +111,10 @@ jobs:
           max_attempts: 3
           timeout_minutes: 5
           command: |
-            cd sample-app/scripts/eks/appsignals
-            ./deploy-sample-app.sh $CLUSTER_NAME $AWS_REGION
+            cd test/performance/eks/resources
+            kubectl apply -f petclinic-sample-app
+
+      - name: Run Performance Test
+        run: |
+          
+
