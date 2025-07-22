@@ -5,9 +5,12 @@ package prometheus
 
 import (
 	_ "embed"
+	"fmt"
 	"sync"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"go.uber.org/zap"
@@ -24,6 +27,7 @@ type Prometheus struct {
 	PrometheusConfigPath string                                      `toml:"prometheus_config_path"`
 	ClusterName          string                                      `toml:"cluster_name"`
 	ECSSDConfig          *ecsservicediscovery.ServiceDiscoveryConfig `toml:"ecs_service_discovery"`
+	OtelECSObserverConfig *ecsobserver.Config                        `toml:"otel_ecs_observer"`
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
@@ -68,6 +72,16 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 	}
 	if needEcssd {
 		ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
+	}
+
+	// Validate OtelECSObserverConfig is not null when using OpenTelemetry pipeline
+	if p.OtelECSObserverConfig == nil && p.ECSSDConfig == nil {
+		// Neither config is provided, which is fine
+	} else if p.OtelECSObserverConfig != nil {
+		// Ensure the OtelECSObserverConfig has required fields
+		if p.OtelECSObserverConfig.ClusterName == "" || p.OtelECSObserverConfig.ClusterRegion == "" || p.OtelECSObserverConfig.ResultFile == "" {
+			return fmt.Errorf("OtelECSObserverConfig is missing required fields: ClusterName, ClusterRegion, or ResultFile")
+		}
 	}
 
 	// Launch ECS Service Discovery as a goroutine
