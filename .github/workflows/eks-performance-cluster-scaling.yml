@@ -30,13 +30,10 @@ on:
         description: 'AWS IAM Role to assume'
         type: string
       test_repo_name:
-        required: true
         type: string
       test_repo_url:
-        required: true
         type: string
       test_repo_branch:
-        required: true
         type: string
 
 concurrency:
