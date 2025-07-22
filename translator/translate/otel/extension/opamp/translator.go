@@ -10,12 +10,12 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/opampextension"
 )
 
 type translator struct {
-	name string
+	name    string
 	factory extension.Factory
 }
 
@@ -23,7 +23,7 @@ var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator() common.ComponentTranslator {
 	return &translator{
-		name: "", // Using empty name to avoid duplication in component ID path
+		name:    "", // Using empty name to avoid duplication in component ID path
 		factory: opampextension.NewFactory(),
 	}
 }
@@ -34,7 +34,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*opampextension.Config)
-	
+
 	// Initialize the server with a default HTTP configuration
 	defaultServerConfig := map[string]interface{}{
 		"server": map[string]interface{}{
@@ -43,55 +43,50 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			},
 		},
 	}
-	
+
 	// Create a confmap from the default config and unmarshal it
 	defaultConfMap := confmap.NewFromStringMap(defaultServerConfig)
-	
+
 	// Unmarshal the default config into the config
 	if err := defaultConfMap.Unmarshal(cfg); err != nil {
 		return nil, err
 	}
-	
+
 	// If no OpAMP configuration is provided, return the default config
 	if !conf.IsSet(common.ConfigKey(common.AgentKey, "opamp")) {
 		return cfg, nil
 	}
-	
+
 	// Get the user-provided OpAMP configuration
 	opampConf, err := conf.Sub(common.ConfigKey(common.AgentKey, "opamp"))
 	if err != nil {
 		return cfg, err
 	}
-	
+
 	// Configure server if provided in user config
 	if opampConf.IsSet("server") {
 		serverConf, err := opampConf.Sub("server")
 		if err != nil {
 			return cfg, err
 		}
-		
+
 		// If user explicitly configures server, reset our default
 		if serverConf.IsSet("ws") || serverConf.IsSet("http") {
 			// Reset the server config (we'll replace it with user config)
 			cfg.Server = &opampextension.OpAMPServer{}
-			
+
 			// Create a map for the server config
 			serverMap := make(map[string]interface{})
 			for _, key := range serverConf.AllKeys() {
 				serverMap[key] = serverConf.Get(key)
 			}
-			
+
 			// Unmarshal the user's server config
 			serverConfMap := confmap.NewFromStringMap(serverMap)
 			if err := serverConfMap.Unmarshal(cfg.Server); err != nil {
 				return cfg, err
 			}
-			
-			// Ensure only one of HTTP or WebSocket is configured
-			// If both are present, prioritize HTTP and set WebSocket to nil
-			if cfg.Server.HTTP != nil && cfg.Server.WS != nil {
-				cfg.Server.WS = nil
-			}
+
 		}
 	}
 
@@ -159,7 +154,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if err != nil {
 			return cfg, err
 		}
-		
+
 		// Map each capability
 		if reportsEffectiveConfig, ok := capabilitiesConf.Get("reports_effective_config").(bool); ok {
 			cfg.Capabilities.ReportsEffectiveConfig = reportsEffectiveConfig
