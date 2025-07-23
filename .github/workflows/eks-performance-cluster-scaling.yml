@@ -4,11 +4,11 @@ name: "EKS Performance Cluster Tests"
 on:
   # Use workflow_run to trigger this workflow after the scaling workflow completes
   workflow_run:
-    workflows: ["Install/Remove Helm Charts After Scaling"]
+    workflows: [ "Install/Remove Helm Charts After Scaling" ]
     types:
       - completed
-  #    branches:
-  #      - main  # Adjust this if your default branch is different
+    branches:
+      - main  # Adjust this if your default branch is different
 
   # Keep the manual trigger option
   workflow_dispatch:
@@ -24,17 +24,25 @@ on:
         required: true
         type: string
         default: 'us-west-2'
+      metric_map:
+        description: 'Map containing metrics to validate'
+        required: true
+        type: string
 
       # Optional Settings
       terraform_assume_role:
         description: 'AWS IAM Role to assume'
         type: string
       test_repo_name:
-        type: string
-      test_repo_url:
+        description: 'Agent test repo'
         type: string
       test_repo_branch:
+        description: 'Agent test repo branch'
         type: string
+      test_dir:
+        description: 'Agent test directory'
+        type: string
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,12 +57,8 @@ env:
 
   # Agent test repo environment variables
   CWA_GITHUB_TEST_REPO_NAME: ${{ inputs.test_repo_name || 'aws/amazon-cloudwatch-agent-test' }}
-  CWA_GITHUB_TEST_REPO_URL: ${{ inputs.test_repo_url || 'https://github.com/aws/amazon-cloudwatch-agent-test.git'}}
   CWA_GITHUB_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch || 'main' }}
-
-  # Sample Application
-  SAMPLE_APP_GITHUB_REPO_NAME: "aws-observability/application-signals-demo"
-  SAMPLE_APP_GITHUB_REPO_BRANCH: "main"
+  CWA_TEST_DIRECTORY: ${{ inputs.test_dir || 'test/performance/eks' }}
 
 jobs:
   # Check if this workflow should run
@@ -74,6 +78,7 @@ jobs:
       should_continue: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
 
   EKSPerformanceBaseTest:
+    name: EKSPerformanceBaseTest
     needs: [ check-trigger ]
     if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     runs-on: ubuntu-latest
@@ -81,17 +86,15 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.24.4
+
       - uses: actions/checkout@v4
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
-          path: agent-test
-
-      - uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SAMPLE_APP_GITHUB_REPO_NAME }}
-          ref: ${{ env.SAMPLE_APP_GITHUB_REPO_BRANCH }}
-          path: sample-app
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -119,5 +122,26 @@ jobs:
           max_attempts: 3
           timeout_minutes: 5
           command: |
-            cd sample-app/scripts/eks/appsignals
-            ./deploy-sample-app.sh $CLUSTER_NAME $AWS_REGION
+            cd test/performance/eks/resources
+            kubectl apply -f petclinic-sample-app
+            echo "Waiting 10 minutes for the application to initialize..."
+            sleep 300
+
+      - name: Run Performance Test
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 30
+          command: |
+            go test -timeout 30m -v $CWA_TEST_DIRECTORY \
+              -computeType=EKS \
+              -eksClusterName=$CLUSTER_NAME \
+              -performanceMetricMapName=${{ inputs.metric_map || 'base-performance-metrics-map.json' }} \
+              -performanceTestName=EKSPerformanceBaseTest
+
+      - name: Cleanup Sample Application
+        if: always()
+        run: |
+          cd test/performance/eks/resources
+          kubectl delete -f petclinic-sample-app
+          echo "Sample application resources have been deleted"
