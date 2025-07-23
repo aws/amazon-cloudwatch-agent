@@ -426,7 +426,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 	if metric.distribution != nil {
 		datums = c.buildMetricDatumDist(metric, dimensionsList)
 	} else if metric.expHistDistribution != nil {
-		datums = c.buildMetricDataumExph(metric, dimensionsList)
+		datums = c.buildMetricDatumExph(metric, dimensionsList)
 	} else {
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
@@ -507,7 +507,7 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 	return datums
 }
 
-func (c *CloudWatch) buildMetricDataumExph(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
+func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
 	datums := []*cloudwatch.MetricDatum{}
 
 	if metric.expHistDistribution.Size() == 0 {
