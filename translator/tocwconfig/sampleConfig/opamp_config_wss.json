@@ -5,7 +5,10 @@
     "opamp": {
       "server": {
         "ws": {
-          "endpoint": "wss://127.0.0.1:4320/v1/opamp"
+          "endpoint": "wss://127.0.0.1:4320/v1/opamp",
+          "tls": {
+            "insecure_skip_verify": true
+          }
         }
       },
       "agent_description": {

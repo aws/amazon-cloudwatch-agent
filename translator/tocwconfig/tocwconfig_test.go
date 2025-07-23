@@ -889,7 +889,7 @@ func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath st
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
 
-	assert.NoError(t, os.WriteFile(desiredTomlPath, []byte(tomlStr), 0644)) // useful for regenerating TOML
+	//assert.NoError(t, os.WriteFile(desiredTomlPath, []byte(tomlStr), 0644)) // useful for regenerating TOML
 
 	// This less function sort the content of string slice in alphabetical order so the
 	// cmp.Equal method will compare the two struct with slices in them, regardless the elements within the slices
@@ -922,7 +922,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
-		assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
@@ -960,9 +960,17 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 }
 
 func TestOpampConfig(t *testing.T) {
-    resetContext(t)
-    context.CurrentContext().SetMode(config.ModeEC2)
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 
-    // This will use the existing translation framework
-    checkTranslation(t, "opamp_config", "linux", nil, "")
+	// This will use the existing translation framework
+	checkTranslation(t, "opamp_config", "linux", nil, "")
+}
+
+func TestOpampConfigWSS(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	// This will use the existing translation framework
+	checkTranslation(t, "opamp_config_wss", "linux", nil, "")
 }
