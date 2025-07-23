@@ -58,7 +58,7 @@ env:
   # Agent test repo environment variables
   CWA_GITHUB_TEST_REPO_NAME: ${{ inputs.test_repo_name || 'aws/amazon-cloudwatch-agent-test' }}
   CWA_GITHUB_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch || 'main' }}
-  CWA_TEST_DIRECTORY: ${{ inputs.test_dir || 'test/performance/eks' }}
+  CWA_TEST_DIRECTORY: ${{ inputs.test_dir || './test/performance/eks' }}
 
 jobs:
   # Check if this workflow should run
