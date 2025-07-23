@@ -31,6 +31,7 @@ var startOnlyOnce sync.Once
 type EventConfig struct {
 	Name          string   `toml:"event_name"`
 	Levels        []string `toml:"event_levels"`
+	EventIDs      []int    `toml:"event_ids"`
 	RenderFormat  string   `toml:"event_format"`
 	BatchReadSize int      `toml:"batch_read_size"`
 	LogGroupName  string   `toml:"log_group_name"`
@@ -39,7 +40,6 @@ type EventConfig struct {
 	Destination   string   `toml:"destination"`
 	Retention     int      `toml:"retention_in_days"`
 }
-
 type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`
 	Events          []EventConfig   `toml:"event_config"`
@@ -61,6 +61,7 @@ func (s *Plugin) SampleConfig() string {
 	[[inputs.windows_event_log.event_config]]
 	event_name = "System"
 	event_levels = ["2", "3"]
+	event_ids = [1001, 1002]
 	batch_read_size = 1
 	log_group_name = "System"
 	log_stream_name = "STREAM_NAME"
@@ -106,6 +107,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 		eventLog := wineventlog.NewEventLog(
 			eventConfig.Name,
 			eventConfig.Levels,
+			eventConfig.EventIDs,
 			eventConfig.LogGroupName,
 			eventConfig.LogStreamName,
 			eventConfig.RenderFormat,
