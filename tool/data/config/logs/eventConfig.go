@@ -10,15 +10,15 @@ type EventFilter struct {
 	Expression string `json:"expression"`
 }
 type EventConfig struct {
-	EventName     string         `event_name`
-	EventLevels   []string       `event_levels`
-	EventIDs      []int          `event_ids`
-	Filters       []*EventFilter `filters`
-	EventFormat   string         `event_format`
-	LogGroup      string         `log_group_name`
-	LogStream     string         `log_stream_name`
-	LogGroupClass string         `log_group_class`
-	Retention     int            `retention_in_days`
+	EventName     string         `json:"event_name"`
+	EventLevels   []string       `json:"event_levels"`
+	EventIDs      []int          `json:"event_ids"`
+	Filters       []*EventFilter `json:"filters"`
+	EventFormat   string         `json:"event_format"`
+	LogGroup      string         `json:"log_group_name"`
+	LogStream     string         `json:"log_stream_name"`
+	LogGroupClass string         `json:"log_group_class"`
+	Retention     int            `json:"retention_in_days"`
 }
 
 func (config *EventConfig) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
