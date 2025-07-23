@@ -5,15 +5,12 @@ package exph
 
 import (
 	"cmp"
-	"fmt"
 	"log"
 	"maps"
 	"math"
 	"slices"
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
-
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 type ExpHistogramDistribution struct {
@@ -108,43 +105,6 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	}
 
 	return values, counts
-}
-
-// weight is 1/samplingRate
-func (d *ExpHistogramDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
-	if weight <= 0 {
-		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
-	}
-	if !distribution.IsSupportedValue(value, 0, distribution.MaxValue) {
-		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
-	}
-
-	d.sampleCount += weight
-	d.sum += value * weight
-	d.min = min(d.min, value)
-	d.max = max(d.max, value)
-
-	if math.Abs(value) > d.zeroThreshold {
-		d.zeroCount += uint64(weight)
-	} else if value > d.zeroThreshold {
-		bucketIndex := MapToIndex(value, int(d.scale))
-		d.positiveBuckets[bucketIndex] += uint64(weight)
-	} else {
-		bucketNumber := MapToIndex(value, int(d.scale))
-		d.negativeBuckets[bucketNumber] += uint64(weight)
-	}
-
-	if d.unit == "" {
-		d.unit = unit
-	} else if d.unit != unit && unit != "" {
-		log.Printf("D! Multiple units are detected: %s, %s", d.unit, unit)
-	}
-	return nil
-}
-
-// weight is 1/samplingRate
-func (d *ExpHistogramDistribution) AddEntry(value float64, weight float64) error {
-	return d.AddEntryWithUnit(value, weight, "")
 }
 
 func (d *ExpHistogramDistribution) AddDistribution(other *ExpHistogramDistribution) {
