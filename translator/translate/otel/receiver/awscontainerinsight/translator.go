@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -32,7 +31,7 @@ const (
 	ecs = "ecs"
 	eks = "eks"
 
-	defaultMetricsCollectionInterval = time.Minute
+	defaultMetricsCollectionInterval = -1                      // default to -1 to use default value defined in receiver
 	defaultLeaderLockName            = "cwagent-clusterleader" // To maintain backwards compatability with https://github.com/aws/amazon-cloudwatch-agent/blob/2dd89abaab4590cffbbc31ef89319b62809b09d1/plugins/inputs/k8sapiserver/k8sapiserver.go#L30
 )
 
