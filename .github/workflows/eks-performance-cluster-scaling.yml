@@ -26,7 +26,6 @@ on:
         default: 'us-west-2'
       metric_map:
         description: 'Map containing metrics to validate'
-        required: true
         type: string
 
       # Optional Settings
