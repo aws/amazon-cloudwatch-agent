@@ -38,7 +38,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	// Initialize the server with a default HTTP configuration
 	defaultServerConfig := map[string]interface{}{
 		"server": map[string]interface{}{
-			"http": map[string]interface{}{
+			"ws": map[string]interface{}{
 				"endpoint": "localhost:4320",
 			},
 		},

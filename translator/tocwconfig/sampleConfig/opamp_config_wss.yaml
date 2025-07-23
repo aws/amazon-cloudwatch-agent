@@ -43,6 +43,8 @@ extensions:
         server:
             ws:
                 endpoint: wss://127.0.0.1:4320/v1/opamp
+                tls:
+                    insecure_skip_verify: true
 processors:
     awsentity/resource:
         entity_type: Resource
@@ -69,8 +71,8 @@ service:
             processors:
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             encoding: console
