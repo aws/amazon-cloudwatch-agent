@@ -995,7 +995,7 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(_ *testing.T) {
-			dps := ConvertOtelExponentialHistogramDataPoints(tc.histogramDPS, "foo", "none", 1, entity)
+			dps := convertOtelExponentialHistogramDataPoints(tc.histogramDPS, "foo", "none", 1, entity)
 
 			assert.Equal(t, 1, len(dps))
 			for i, expectedDP := range tc.expected {

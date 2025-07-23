@@ -75,15 +75,15 @@ func getAggregationInterval(attributes *pcommon.Map) time.Duration {
 	return interval
 }
 
-// ConvertOtelNumberDataPoints converts each datapoint in the given slice to
+// convertOtelNumberDataPoints converts each datapoint in the given slice to
 // 1 or more MetricDatums and returns them.
-func ConvertOtelNumberDataPoints(
+func convertOtelNumberDataPoints(
 	dataPoints pmetric.NumberDataPointSlice,
 	name string,
 	unit string,
 	scale float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum { //nolint:revive
+) []*aggregationDatum {
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
@@ -110,15 +110,15 @@ func ConvertOtelNumberDataPoints(
 	return datums
 }
 
-// ConvertOtelHistogramDataPoints converts each datapoint in the given slice to
+// convertOtelHistogramDataPoints converts each datapoint in the given slice to
 // Distribution.
-func ConvertOtelHistogramDataPoints(
+func convertOtelHistogramDataPoints(
 	dataPoints pmetric.HistogramDataPointSlice,
 	name string,
 	unit string,
 	scale float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum { //nolint:revive
+) []*aggregationDatum {
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
@@ -147,13 +147,13 @@ func ConvertOtelHistogramDataPoints(
 
 // ConvertOtelHistogramDataPoints converts each datapoint in the given slice to
 // Distribution.
-func ConvertOtelExponentialHistogramDataPoints(
+func convertOtelExponentialHistogramDataPoints(
 	dataPoints pmetric.ExponentialHistogramDataPointSlice,
 	name string,
 	unit string,
 	_ float64,
 	entity cloudwatch.Entity,
-) []*aggregationDatum { //nolint:revive
+) []*aggregationDatum {
 
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
@@ -193,13 +193,13 @@ func ConvertOtelMetric(m pmetric.Metric, entity cloudwatch.Entity) []*aggregatio
 	}
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
-		return ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), name, unit, scale, entity)
+		return convertOtelNumberDataPoints(m.Gauge().DataPoints(), name, unit, scale, entity)
 	case pmetric.MetricTypeSum:
-		return ConvertOtelNumberDataPoints(m.Sum().DataPoints(), name, unit, scale, entity)
+		return convertOtelNumberDataPoints(m.Sum().DataPoints(), name, unit, scale, entity)
 	case pmetric.MetricTypeHistogram:
-		return ConvertOtelHistogramDataPoints(m.Histogram().DataPoints(), name, unit, scale, entity)
+		return convertOtelHistogramDataPoints(m.Histogram().DataPoints(), name, unit, scale, entity)
 	case pmetric.MetricTypeExponentialHistogram:
-		return ConvertOtelExponentialHistogramDataPoints(m.ExponentialHistogram().DataPoints(), name, unit, scale, entity)
+		return convertOtelExponentialHistogramDataPoints(m.ExponentialHistogram().DataPoints(), name, unit, scale, entity)
 	default:
 		log.Printf("E! cloudwatch: Unsupported type, %s", m.Type())
 	}
