@@ -102,7 +102,7 @@ func TestGetCollectListFromConfig(t *testing.T) {
 	}
 }
 
-func TestCheckLogs(t *testing.T) {
+func TestCheckConfiguredLogs(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "logcheck_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -201,16 +201,16 @@ func TestCheckLogs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			result, err := CheckLogs(&buf, tt.config, false)
+			result, err := CheckConfiguredLogs(&buf, tt.config, false)
 
 			if tt.expectedSuccess {
-				assert.NoError(t, err, "CheckLogs() should not return an error")
+				assert.NoError(t, err, "CheckConfiguredLogs() should not return an error")
 			} else {
 				if tt.expectedFiles == 0 {
-					assert.Error(t, err, "CheckLogs() should return an error")
+					assert.Error(t, err, "CheckConfiguredLogs() should return an error")
 				}
 			}
-			assert.Len(t, result, tt.expectedFiles, "CheckLogs() returned unexpected number of files")
+			assert.Len(t, result, tt.expectedFiles, "CheckConfiguredLogs() returned unexpected number of files")
 		})
 	}
 }

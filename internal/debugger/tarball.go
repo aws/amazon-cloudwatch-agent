@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
@@ -26,12 +27,27 @@ type Answers struct {
 	AddInfo               string
 }
 
+const (
+	// Specifies the amount of time to wait for debug level logging to appear.
+	// 90 seconds is chosen to stay consistent with the current Mechanic implementation.
+	logWaitTime = 90
+
+	// Specifies how many lines are taken from the logs.
+	// A ticket has a maximum file capacity of 5MB.
+	// 50,000 lines compressed equates to ~2MB of data, allowing for a large buffer for other files.
+	logLinesTaken = 50000
+
+	// Specifies the size of logs we process at a time.
+	// Chunking by 4KB can improve I/O efficiency because Linux's disk block size is 4096 bytes.
+	chunkSize = 4096
+)
+
 func CreateTarball(ssm bool) {
 
 	if ssm {
 		// For SSM automatically enable debug logging and wait
 		enableDebugLogging()
-		showProgressBar(60)
+		showProgressBar(logWaitTime)
 	} else {
 		fmt.Println("\nTo capture more detailed logs, DEBUG level logging will be temporarily enabled")
 		fmt.Println("for the CloudWatch Agent and LogDebug level logging for the AWS SDK.")
@@ -66,8 +82,8 @@ func CreateTarball(ssm bool) {
 				fmt.Println("Debug logging enabled successfully.")
 			}
 
-			fmt.Println("\nWaiting 60 seconds to collect debug logs...")
-			showProgressBar(60)
+			fmt.Println("\nWaiting 90 seconds to collect debug logs...")
+			showProgressBar(logWaitTime)
 		} else {
 			fmt.Println("Skipping debug logging enhancement.")
 		}
@@ -105,11 +121,11 @@ func CreateTarball(ssm bool) {
 		fmt.Println("Error adding etc directory to tarball:", err)
 	}
 
-	// We remove triaging if called through SSM since it does not support stdin.
+	// We remove triaging if called through SSM since it does not support stream inputs.
 	if !ssm {
-		answersContent := writeTriage()
+		answersContent := Triage()
 
-		if err := addStringToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
+		if err := addTriageToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
 			fmt.Println("Error adding answers to tarball:", err)
 		}
 	}
@@ -117,88 +133,15 @@ func CreateTarball(ssm bool) {
 	fmt.Println("Tarball created successfully at:", outputPath)
 }
 
-func Triage() Answers {
-	answers := Answers{}
-	reader := bufio.NewReader(os.Stdin)
+func Triage() string {
 
-	fmt.Println("Please answer these questions to better assist with your issue:")
-
-	fmt.Println("Is this issue once off, intermittent, or consistently happening right now? (o/i/c): ")
-	occurence, err := reader.ReadString('\n')
-	if err == nil {
-		answers.Occurence = strings.TrimSpace(occurence)
-	}
-
-	fmt.Print("Has anything changed in the environment recently? (y/n): ")
-	envChange, err := reader.ReadString('\n')
-
-	if err == nil {
-		answers.EnvironmentChange = strings.TrimSpace(envChange)
-
-		if strings.ToLower(answers.EnvironmentChange) == "y" {
-			fmt.Print("Please describe what changed and when: ")
-			envChangeDesc, err := reader.ReadString('\n')
-			if err == nil {
-				answers.EnvironmentChangeDesc = strings.TrimSpace(envChangeDesc)
-			}
-		}
-	}
-
-	fmt.Print("Is there any additional information you would like to add? ")
-	addInfo, err := reader.ReadString('\n')
-
-	if err == nil {
-		answers.AddInfo = strings.TrimSpace(addInfo)
-	}
-
-	return answers
-}
-
-func writeTriage() string {
-
-	answers := Triage()
-
-	// Create answers content
-	answersContent := "CloudWatch Agent Debugging Information\n"
-	answersContent += "===================================\n\n"
-	answersContent += "Q: Is this issue once off, intermittent, or consistently happening right now?\n"
-
-	// Formatting answers
-	occurrenceAnswer := ""
-	switch strings.ToLower(answers.Occurence) {
-	case "o":
-		occurrenceAnswer = "Once off"
-	case "i":
-		occurrenceAnswer = "Intermittent"
-	case "c":
-		occurrenceAnswer = "Consistently happening"
-	default:
-		occurrenceAnswer = answers.Occurence
-	}
-	answersContent += "A: " + occurrenceAnswer + "\n\n"
-
-	answersContent += "Q: Has anything changed in the environment recently?\n"
-	envChangeAnswer := ""
-	if strings.ToLower(answers.EnvironmentChange) == "y" {
-		envChangeAnswer = "Yes"
-		answersContent += "A: " + envChangeAnswer + "\n\n"
-		answersContent += "Q: Please describe what has changed and when:\n"
-		answersContent += "A: " + answers.EnvironmentChangeDesc + "\n\n"
-	} else {
-		envChangeAnswer = "No"
-		answersContent += "A: " + envChangeAnswer + "\n\n"
-		answersContent += "Q: Please describe what has changed and when:\n"
-		answersContent += "A: N/A\n\n"
-	}
-
-	answersContent += "Q: Is there any additional information you would like to add?\n"
-	answersContent += "A: " + answers.AddInfo + "\n\n"
-
-	return answersContent
+	answers := utils.RunTriage()
+	formattedAnswers := utils.FormatReport(answers)
+	return formattedAnswers
 
 }
 
-func addStringToTarball(tarWriter *tar.Writer, content, tarPath string) error {
+func addTriageToTarball(tarWriter *tar.Writer, content, tarPath string) error {
 	header := &tar.Header{
 		Name:    tarPath,
 		Size:    int64(len(content)),
@@ -279,7 +222,6 @@ func addFileToTarball(tarWriter *tar.Writer, filePath, tarPath string, maxLength
 	return nil
 }
 
-// finds the last N lines of a file
 func findTailContent(file *os.File, maxLines int) (int64, []byte, error) {
 	stat, err := file.Stat()
 	if err != nil {
@@ -293,7 +235,7 @@ func findTailContent(file *os.File, maxLines int) (int64, []byte, error) {
 
 	pos := fileSize
 	lineCount := 0
-	chunkSize := int64(4096) // 4KB chunks
+	chunkSize := int64(chunkSize)
 
 	var startPos int64 = 0
 	buf := make([]byte, chunkSize)
@@ -429,11 +371,12 @@ func addDirectoryToTarball(tarWriter *tar.Writer, dirPath, tarPath string) error
 			if err != nil {
 				return fmt.Errorf("failed to open file %s: %v", path, err)
 			}
-			defer file.Close()
 
 			if _, err := io.Copy(tarWriter, file); err != nil {
 				return fmt.Errorf("failed to copy file content for %s: %v", path, err)
 			}
+
+			file.Close()
 		}
 
 		return nil

@@ -10,28 +10,35 @@ type ErrorCollector struct {
 	ConfigWarnings []string
 }
 
-var DebuggerErrorCollector = &ErrorCollector{}
+var errorCollector *ErrorCollector
 
-func AddConfigError(msg string) {
-	DebuggerErrorCollector.ConfigErrors = append(DebuggerErrorCollector.ConfigErrors, msg)
+func GetErrorCollector() *ErrorCollector {
+	if errorCollector == nil {
+		errorCollector = &ErrorCollector{}
+	}
+	return errorCollector
 }
 
-func AddConfigWarning(msg string) {
-	DebuggerErrorCollector.ConfigWarnings = append(DebuggerErrorCollector.ConfigWarnings, msg)
+func (ec *ErrorCollector) AddError(msg string) {
+	ec.ConfigErrors = append(ec.ConfigErrors, msg)
 }
 
-func PrintAggregatedErrors() {
-	fmt.Println("=== Errors & Warnings Summary ===")
-	printMessages(DebuggerErrorCollector.ConfigErrors, "Errors", "❌")
-	printMessages(DebuggerErrorCollector.ConfigWarnings, "Warnings", "⚠️")
+func (ec *ErrorCollector) AddWarning(msg string) {
+	ec.ConfigWarnings = append(ec.ConfigWarnings, msg)
 }
 
-func printMessages(messages []string, title, icon string) {
+func (ec *ErrorCollector) PrintErrors() {
+	fmt.Println("=== Config Errors & Warnings Summary ===")
+	ec.printErrorMessages(ec.ConfigErrors, "Errors")
+	ec.printErrorMessages(ec.ConfigWarnings, "Warnings")
+}
+
+func (ec *ErrorCollector) printErrorMessages(messages []string, title string) {
 	if len(messages) == 0 {
 		return
 	}
 	fmt.Printf("%s (%d):\n", title, len(messages))
 	for _, msg := range messages {
-		fmt.Printf("  %s %s\n", icon, msg)
+		fmt.Printf("  %s\n", msg)
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPrintAggregatedErrors(t *testing.T) {
+func TestPrintErrors(t *testing.T) {
 	tests := []struct {
 		name     string
 		errors   []string
@@ -23,41 +23,43 @@ func TestPrintAggregatedErrors(t *testing.T) {
 			name:     "No errors or warnings",
 			errors:   []string{},
 			warnings: []string{},
-			contains: []string{"=== Errors & Warnings Summary ==="},
+			contains: []string{"=== Config Errors & Warnings Summary ==="},
 		},
 		{
 			name:     "Only errors",
 			errors:   []string{"error 1", "error 2"},
 			warnings: []string{},
-			contains: []string{"Errors (2):", "❌ error 1", "❌ error 2"},
+			contains: []string{"Errors (2):", "error 1", "error 2"},
 		},
 		{
 			name:     "Only warnings",
 			errors:   []string{},
 			warnings: []string{"warning 1"},
-			contains: []string{"Warnings (1):", "⚠️  warning 1"},
+			contains: []string{"Warnings (1):", "warning 1"},
 		},
 		{
 			name:     "Both errors and warnings",
 			errors:   []string{"error 1"},
 			warnings: []string{"warning 1"},
-			contains: []string{"Errors (1):", "❌ error 1", "Warnings (1):", "⚠️  warning 1"},
+			contains: []string{"Errors (1):", "error 1", "Warnings (1):", "warning 1"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset and populate collector
-			DebuggerErrorCollector = &ErrorCollector{}
-			DebuggerErrorCollector.ConfigErrors = tt.errors
-			DebuggerErrorCollector.ConfigWarnings = tt.warnings
+			// Create a new collector for each test to avoid test interference
+			oldCollector := errorCollector
 
-			// Capture stdout
+			errorCollector = &ErrorCollector{
+				ConfigErrors:   tt.errors,
+				ConfigWarnings: tt.warnings,
+			}
+
 			old := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			PrintAggregatedErrors()
+			GetErrorCollector().PrintErrors()
 
 			w.Close()
 			os.Stdout = old
@@ -69,26 +71,30 @@ func TestPrintAggregatedErrors(t *testing.T) {
 			for _, expected := range tt.contains {
 				assert.Contains(t, output, expected)
 			}
+
+			errorCollector = oldCollector
 		})
 	}
 }
 
 func TestErrorCollectorIntegration(t *testing.T) {
-	// Reset collector
-	DebuggerErrorCollector = &ErrorCollector{}
 
-	AddConfigError("critical error")
-	AddConfigWarning("minor warning")
-	AddConfigError("another error")
+	oldCollector := errorCollector
+	errorCollector = &ErrorCollector{}
 
-	assert.Len(t, DebuggerErrorCollector.ConfigErrors, 2)
-	assert.Len(t, DebuggerErrorCollector.ConfigWarnings, 1)
+	collector := GetErrorCollector()
+	collector.AddError("critical error")
+	collector.AddWarning("minor warning")
+	collector.AddError("another error")
+
+	assert.Len(t, collector.ConfigErrors, 2)
+	assert.Len(t, collector.ConfigWarnings, 1)
 
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	PrintAggregatedErrors()
+	collector.PrintErrors()
 
 	w.Close()
 	os.Stdout = old
@@ -102,4 +108,6 @@ func TestErrorCollectorIntegration(t *testing.T) {
 	assert.Contains(t, output, "critical error")
 	assert.Contains(t, output, "minor warning")
 	assert.Contains(t, output, "another error")
+
+	errorCollector = oldCollector
 }

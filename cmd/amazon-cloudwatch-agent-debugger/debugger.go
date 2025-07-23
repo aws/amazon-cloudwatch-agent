@@ -19,29 +19,31 @@ import (
 
 var mergedConfig map[string]interface{}
 
+const docsUrl = "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html"
+
 func main() {
 	compact := flag.Bool("compact", false, "Run debugger with compact formatting")
-	createtarball := flag.Bool("tarball", false, "Create tarball")
-	createtarballssm := flag.Bool("tarballssm", false, "Create tarball with SSM")
-	startmcpserver := flag.Bool("mcp", false, "Start MCP server for IDE integration")
+	createTarball := flag.Bool("tarball", false, "Create tarball")
+	createTarballSsm := flag.Bool("tarballssm", false, "Create tarball with SSM")
+	startMcpServer := flag.Bool("mcp", false, "Start MCP server for IDE integration")
 	flag.Parse()
 
 	switch {
-	case *createtarball:
+	case *createTarball:
 		debugger.CreateTarball(false)
 		return
-	case *createtarballssm:
+	case *createTarballSsm:
 		debugger.CreateTarball(true)
 		return
-	case *startmcpserver:
+	case *startMcpServer:
 		mcp.StartMCPServer()
 		return
 	}
 
 	defer func() {
-		debugger.PrintAggregatedErrors()
+		debugger.GetErrorCollector().PrintErrors()
 		fmt.Println()
-		fmt.Printf("If you are still unable to resolve your problem, refer to the CloudWatch Agent Troubleshooting docs: %s\n", "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html")
+		fmt.Printf("If you are still unable to resolve your problem, refer to the CloudWatch Agent Troubleshooting docs: %s\n", docsUrl)
 	}()
 
 	ctx := context.Background()
@@ -55,29 +57,26 @@ func main() {
 
 	// We provide a stream because MCP uses a buffer. This is so when MCP calls tools it will not print to stdout.
 	// There are better ways of doing this but not without significant refactoring overhead.
-	if !debugger.CheckConfigFiles(os.Stdout, *compact) {
-		fmt.Println("⚠️  ERROR: Required configuration files are missing - cannot conduct log checks.")
+	if !debugger.IsConfigFilesPresentAndReadable(os.Stdout, *compact) {
+		fmt.Println("ERROR: There was an error collecting the config file - cannot conduct log checks.")
 		return
-	} else {
-		config, err := cmdutil.GetMergedConfig(paths.JsonConfigPath, paths.ConfigDirPath, "ec2", info.OS)
-		if err != nil {
-			fmt.Printf("Failed to load config: %v\n", err)
-			return
-		} else {
-			mergedConfig = config
-		}
-		_, err = debugger.CheckEndpoints(os.Stdout, mergedConfig, *compact)
-		if err != nil {
-			fmt.Printf("Failed to check endpoints: %v\n", err)
-		}
-		_, err = debugger.CheckLogs(os.Stdout, mergedConfig, *compact)
-		if err != nil {
-			fmt.Printf("Failed to check logs: %v\n", err)
-			return
-		}
-
 	}
 
+	configMap, err := cmdutil.GetMergedConfig(paths.JsonConfigPath, paths.ConfigDirPath, "ec2", info.OS)
+	if err != nil {
+		fmt.Printf("Failed to load config: %v\n", err)
+		return
+	}
+
+	mergedConfig = configMap
+
+	debugger.CheckLogsAndMetricsEndpoints(os.Stdout, mergedConfig, *compact)
+
+	_, err = debugger.CheckConfiguredLogs(os.Stdout, mergedConfig, *compact)
+	if err != nil {
+		fmt.Printf("Failed to check logs: %v\n", err)
+		return
+	}
 }
 
 func printHeader() {
@@ -99,12 +98,12 @@ func printInstanceInfo(info *debugger.InstanceInfo, compact bool) {
 		info.Version,
 	}
 
-	labelWidth := 18
+	tableLabelColumnWidth := 18
 
-	// Ensure minimum width for readability
-	maxValueWidth := 15
+	// Minimum width for readability
+	tableValueColumnWidth := 15
 	for _, v := range values {
-		maxValueWidth = max(maxValueWidth, len(v))
+		tableValueColumnWidth = max(tableValueColumnWidth, len(v))
 	}
 
 	if compact {
@@ -119,22 +118,22 @@ func printInstanceInfo(info *debugger.InstanceInfo, compact bool) {
 		fmt.Printf("Version:           %s\n", info.Version)
 	} else {
 		fmt.Printf("┌%s┬%s┐\n",
-			utils.RepeatChar('─', labelWidth+2),
-			utils.RepeatChar('─', maxValueWidth+2))
+			utils.RepeatChar('─', tableLabelColumnWidth+2),
+			utils.RepeatChar('─', tableValueColumnWidth+2))
 
-		printTableRow("Instance ID", info.InstanceID, labelWidth, maxValueWidth)
-		printTableRow("Account ID", info.AccountID, labelWidth, maxValueWidth)
-		printTableRow("Region", info.Region, labelWidth, maxValueWidth)
-		printTableRow("Instance Type", info.InstanceType, labelWidth, maxValueWidth)
-		printTableRow("AMI", info.ImageID, labelWidth, maxValueWidth)
-		printTableRow("Availability Zone", info.AvailabilityZone, labelWidth, maxValueWidth)
-		printTableRow("Architecture", info.Architecture, labelWidth, maxValueWidth)
-		printTableRow("OS", info.OS, labelWidth, maxValueWidth)
-		printTableRow("Version", info.Version, labelWidth, maxValueWidth)
+		printTableRow("Instance ID", info.InstanceID, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("Account ID", info.AccountID, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("Region", info.Region, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("Instance Type", info.InstanceType, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("AMI", info.ImageID, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("Availability Zone", info.AvailabilityZone, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("Architecture", info.Architecture, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("OS", info.OS, tableLabelColumnWidth, tableValueColumnWidth)
+		printTableRow("Version", info.Version, tableLabelColumnWidth, tableValueColumnWidth)
 
 		fmt.Printf("└%s┴%s┘\n",
-			utils.RepeatChar('─', labelWidth+2),
-			utils.RepeatChar('─', maxValueWidth+2))
+			utils.RepeatChar('─', tableLabelColumnWidth+2),
+			utils.RepeatChar('─', tableValueColumnWidth+2))
 	}
 
 }

@@ -26,7 +26,7 @@ type AgentLogConfig struct {
 	Message         string `json:"-"`
 }
 
-func CheckLogs(w io.Writer, config map[string]interface{}, compact bool) ([]AgentLogConfig, error) {
+func CheckConfiguredLogs(w io.Writer, config map[string]interface{}, compact bool) ([]AgentLogConfig, error) {
 
 	collectList, err := getCollectListFromConfig(config)
 	if err != nil {
@@ -69,25 +69,25 @@ func CheckLogs(w io.Writer, config map[string]interface{}, compact bool) ([]Agen
 		}
 	}
 
-	totalConfigs := len(logConfigs)
-	accessibleConfigs := 0
-	issueConfigs := 0
+	totalConfiguredLogs := len(logConfigs)
+	totalAccessibleConfigs := 0
+	totalConfigsWithIssues := 0
 
 	for _, config := range logConfigs {
 		if !config.Exists || !config.Readable {
-			issueConfigs++
-			AddConfigError(config.Message)
+			totalConfigsWithIssues++
+			GetErrorCollector().AddError(config.Message)
 		} else {
-			accessibleConfigs++
+			totalAccessibleConfigs++
 		}
 	}
 
 	fmt.Fprintln(w, "\n=== Log Configuration Summary ===")
 
 	if compact {
-		fmt.Fprintf(w, "Total Configurations: %d\n", totalConfigs)
-		fmt.Fprintf(w, "Accessible:           %d\n", accessibleConfigs)
-		fmt.Fprintf(w, "With Issues:          %d\n", issueConfigs)
+		fmt.Fprintf(w, "Total Configurations: %d\n", totalConfiguredLogs)
+		fmt.Fprintf(w, "Accessible:           %d\n", totalAccessibleConfigs)
+		fmt.Fprintf(w, "With Issues:          %d\n", totalConfigsWithIssues)
 	} else {
 		labelWidth := 20
 		valueWidth := 10
@@ -96,9 +96,9 @@ func CheckLogs(w io.Writer, config map[string]interface{}, compact bool) ([]Agen
 			utils.RepeatChar('─', labelWidth+2),
 			utils.RepeatChar('─', valueWidth+2))
 
-		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Total Configurations", valueWidth, totalConfigs)
-		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Accessible", valueWidth, accessibleConfigs)
-		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "With Issues", valueWidth, issueConfigs)
+		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Total Configurations", valueWidth, totalConfiguredLogs)
+		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "Accessible", valueWidth, totalAccessibleConfigs)
+		fmt.Fprintf(w, "│ %-*s │ %-*d │\n", labelWidth, "With Issues", valueWidth, totalConfigsWithIssues)
 
 		fmt.Fprintf(w, "└%s┴%s┘\n",
 			utils.RepeatChar('─', labelWidth+2),

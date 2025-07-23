@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckEndpoints(t *testing.T) {
+func TestCheckLogsAndMetricsEndpoints(t *testing.T) {
 	tests := []struct {
 		name                    string
 		config                  map[string]interface{}
@@ -81,10 +81,9 @@ func TestCheckEndpoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			result, err := CheckEndpoints(&buf, tt.config, tt.ssm)
+			result := CheckLogsAndMetricsEndpoints(&buf, tt.config, tt.ssm)
 
-			assert.NoError(t, err, "CheckEndpoints should not return an error")
-			assert.NotNil(t, result, "CheckEndpoints should return a result")
+			assert.NotNil(t, result, "CheckLogsAndMetricsEndpoints should return a result")
 
 			assert.Equal(t, tt.expectedMetricsEndpoint, result.MetricsEndpoint, "Metrics endpoint should match expected")
 			assert.Equal(t, tt.expectedLogsEndpoint, result.LogsEndpoint, "Logs endpoint should match expected")
@@ -97,7 +96,7 @@ func TestCheckEndpoints(t *testing.T) {
 	}
 }
 
-func TestCheckEndpointsSSMFormat(t *testing.T) {
+func TestCheckLogsAndMetricsEndpointsCompactFormat(t *testing.T) {
 	config := map[string]interface{}{
 		"metrics": map[string]interface{}{
 			"endpoint_override": "https://custom-metrics.amazonaws.com",
@@ -108,9 +107,8 @@ func TestCheckEndpointsSSMFormat(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	result, err := CheckEndpoints(&buf, config, true)
+	result := CheckLogsAndMetricsEndpoints(&buf, config, true)
 
-	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
 	output := buf.String()
@@ -124,7 +122,7 @@ func TestCheckEndpointsSSMFormat(t *testing.T) {
 	assert.NotContains(t, output, "└")
 }
 
-func TestCheckEndpointsTableFormat(t *testing.T) {
+func TestCheckLogsAndMetricsEndpointsTableFormat(t *testing.T) {
 	config := map[string]interface{}{
 		"metrics": map[string]interface{}{
 			"endpoint_override": "https://custom-metrics.amazonaws.com",
@@ -135,9 +133,8 @@ func TestCheckEndpointsTableFormat(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	result, err := CheckEndpoints(&buf, config, false)
+	result := CheckLogsAndMetricsEndpoints(&buf, config, false)
 
-	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
 	output := buf.String()

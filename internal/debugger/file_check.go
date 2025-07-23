@@ -34,13 +34,13 @@ type ConfigFile struct {
 	MissingMsg  string
 }
 
-func CheckConfigFiles(w io.Writer, compact bool) bool {
+func IsConfigFilesPresentAndReadable(w io.Writer, compact bool) bool {
 	fmt.Fprintln(w, "\n=== Configuration Files ===")
 
 	configFiles := getConfigFiles()
 
 	if compact {
-		printConfigFilesSSM(w, configFiles)
+		printConfigFilesCompact(w, configFiles)
 	} else {
 		printConfigFilesTable(w, configFiles)
 	}
@@ -49,7 +49,7 @@ func CheckConfigFiles(w io.Writer, compact bool) bool {
 	return jsonConfigStatus == StatusPresent
 }
 
-func printConfigFilesSSM(w io.Writer, configFiles []ConfigFile) {
+func printConfigFilesCompact(w io.Writer, configFiles []ConfigFile) {
 	// Calculate max display name width for alignment
 	maxNameWidth := 0
 	for _, file := range configFiles {
@@ -106,11 +106,21 @@ func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 }
 
 func handleFileStatus(file ConfigFile, status FileStatus) {
-	if status == StatusMissing || status == StatusPresentNotReadable || status == StatusNoFile {
+	if status != StatusPresent {
+		message := fmt.Sprintf("%s: %s - %s", getDisplayName(file.Path), file.MissingMsg, file.Purpose)
+
+		// For specific error types, add more context
+		switch status {
+		case StatusMultipleFiles:
+			message = fmt.Sprintf("%s: Multiple configuration files found in directory - %s", getDisplayName(file.Path), file.Purpose)
+		case StatusInvalidJSONFormat:
+			message = fmt.Sprintf("%s: Invalid JSON format - %s", getDisplayName(file.Path), file.Purpose)
+		}
+
 		if file.Required {
-			AddConfigError(fmt.Sprintf("%s: %s - %s", getDisplayName(file.Path), file.MissingMsg, file.Purpose))
+			GetErrorCollector().AddError(message)
 		} else {
-			AddConfigWarning(fmt.Sprintf("%s: %s - %s", getDisplayName(file.Path), file.MissingMsg, file.Purpose))
+			GetErrorCollector().AddWarning(message)
 		}
 	}
 }
@@ -194,7 +204,7 @@ func getConfigFiles() []ConfigFile {
 			Description: "JSON configuration directory",
 			Required:    true,
 			Purpose:     "Contains JSON format configuration files for agent operation",
-			MissingMsg:  "Primary configuration method - agent needs this to function",
+			MissingMsg:  "Primary configuration method, agent needs this to function",
 		},
 		{
 			Path:        paths.YamlConfigPath,

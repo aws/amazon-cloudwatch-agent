@@ -18,14 +18,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddStringToTarball(t *testing.T) {
+func TestAddTriageToTarball(t *testing.T) {
 	var buf bytes.Buffer
 	tarWriter := tar.NewWriter(&buf)
 
 	testContent := "test content"
 	testPath := "test/path.txt"
 
-	err := addStringToTarball(tarWriter, testContent, testPath)
+	err := addTriageToTarball(tarWriter, testContent, testPath)
 	require.NoError(t, err, "Should not error when adding string to tarball")
 
 	require.NoError(t, tarWriter.Close(), "Should close the tar writer without error")

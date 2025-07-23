@@ -15,13 +15,13 @@ type EndpointInfo struct {
 	LogsEndpoint    string `json:"logs_endpoint"`
 }
 
-func CheckEndpoints(w io.Writer, config map[string]interface{}, compact bool) (*EndpointInfo, error) {
+func CheckLogsAndMetricsEndpoints(w io.Writer, config map[string]interface{}, compact bool) *EndpointInfo {
 	if config == nil {
 		fmt.Fprintln(w, "No configuration available")
 		return &EndpointInfo{
 			MetricsEndpoint: "No configuration available",
 			LogsEndpoint:    "No configuration available",
-		}, nil
+		}
 	}
 
 	fmt.Fprintln(w, "\n=== Endpoint Configuration ===")
@@ -38,7 +38,7 @@ func CheckEndpoints(w io.Writer, config map[string]interface{}, compact bool) (*
 	return &EndpointInfo{
 		MetricsEndpoint: metricsEndpoint,
 		LogsEndpoint:    logsEndpoint,
-	}, nil
+	}
 }
 
 func getEndpoint(config map[string]interface{}, section, defaultMsg, notFoundMsg string) string {
@@ -46,7 +46,8 @@ func getEndpoint(config map[string]interface{}, section, defaultMsg, notFoundMsg
 	if !ok {
 		return notFoundMsg
 	}
-	if endpoint, ok := sectionConfig["endpoint_override"].(string); ok {
+	endpoint, ok := sectionConfig["endpoint_override"].(string)
+	if ok {
 		return endpoint
 	}
 	return defaultMsg

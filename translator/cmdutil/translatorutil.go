@@ -259,6 +259,7 @@ func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
 
 // GetMergedConfig creates a merged JSON config map from the given parameters
 // This allows reusing the translator logic without setting up external context
+// This is ONLY run when the DEBUGGER runs
 func GetMergedConfig(configPath, configDir, mode, osType string) (map[string]interface{}, error) {
 	// Suppress log output and stdout during debugger config generation
 	origLogOutput := log.Writer()
