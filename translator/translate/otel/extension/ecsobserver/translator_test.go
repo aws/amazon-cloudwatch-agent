@@ -371,6 +371,23 @@ func TestTranslator_Translate(t *testing.T) {
 			},
 		},
 		{
+			name: "missing sd_target_cluster uses ECS util",
+			config: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"ecs_service_discovery": map[string]interface{}{
+								"sd_frequency":      "1m",
+								"sd_cluster_region": "us-west-2",
+								"sd_result_file":    "/tmp/test.yaml",
+							},
+						},
+					},
+				},
+			},
+			wantErr: true, // ECS util returns empty in test environment
+		},
+		{
 			name: "missing required fields",
 			config: map[string]interface{}{
 				"logs": map[string]interface{}{
