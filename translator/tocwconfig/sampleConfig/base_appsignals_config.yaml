@@ -210,6 +210,9 @@ extensions:
         profile: AmazonCloudWatchAgent
         region: us-east-1
         shared_credential_file: fake-path
+    health_check/health_check:
+        endpoint: 0.0.0.0:13133
+        path: /
 processors:
     awsapplicationsignals:
         resolvers:
@@ -1359,6 +1362,7 @@ service:
         - agenthealth/statuscode
         - agenthealth/logs
         - entitystore
+        - health_check/health_check
     pipelines:
         metrics/application_signals:
             exporters:
