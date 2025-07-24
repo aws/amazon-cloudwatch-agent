@@ -1,6 +1,6 @@
 {
-
   "logs": {
+    "concurrency": 1,
     "logs_collected": {
       "files": {
         "collect_list": [

@@ -6,6 +6,7 @@ package awscontainerinsight
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -81,6 +83,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
+	cfg.CollectionRole = getCollectionRole()
 	cfg.ContainerOrchestrator = configuredService.Value
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
@@ -162,4 +165,15 @@ func (t *translator) getConfiguredContainerService(conf *confmap.Conf) *collecti
 		}
 	}
 	return configuredService
+}
+
+func getCollectionRole() awscontainerinsightreceiver.CollectionRole {
+	switch strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)) {
+	case envconfig.LEADER:
+		return awscontainerinsightreceiver.LEADER
+	case envconfig.NODE:
+		return awscontainerinsightreceiver.NODE
+	default:
+		return awscontainerinsightreceiver.ALL
+	}
 }
