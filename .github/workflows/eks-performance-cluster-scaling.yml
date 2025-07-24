@@ -34,7 +34,7 @@ env:
   NODE_GROUP_COUNT: ${{ inputs.node_group_count || 10 }}
   DESIRED_CAPACITY_PER_NODEGROUP: ${{ inputs.desired_capacity_per_nodegroup || 500 }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400  # 4 hour duration
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
@@ -118,8 +118,8 @@ jobs:
 
       - name: Validate total node count
         run: |
-          echo "Waiting 20 minutes for scaling operations to complete..."
-          sleep 1200
+          echo "Waiting 1 hour for scaling operations to complete and stabalize..."
+          sleep 3600
           
           echo "Validating total number of nodes in the cluster..."
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
