@@ -5,6 +5,7 @@ package ecsobserver
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"strconv"
 	"strings"
 	"time"
@@ -62,11 +63,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ecsSDKey}
 	}
 
-	requiredFields := []string{"sd_target_cluster", "sd_cluster_region", "sd_result_file"}
-	for _, field := range requiredFields {
-		if _, ok := ecsSD[field]; !ok {
-			return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: field}
-		}
+	clusterName := getString(ecsSD, "sd_target_cluster")
+	if clusterName == "" {
+		clusterName = ecsutil.GetECSUtilSingleton().Cluster
+	}
+	if clusterName == "" {
+		return nil, fmt.Errorf("ECS Target Cluster Name is not defined: %s", clusterName)
 	}
 
 	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "10s"))
@@ -76,7 +78,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := &ecsobserver.Config{
 		RefreshInterval: refreshDuration,
-		ClusterName:     getString(ecsSD, "sd_target_cluster"),
+		ClusterName:     clusterName,
 		ClusterRegion:   getString(ecsSD, "sd_cluster_region"),
 		ResultFile:      getString(ecsSD, "sd_result_file"),
 	}
