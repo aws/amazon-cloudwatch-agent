@@ -977,7 +977,7 @@ func TestOpampConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 
 	// This will use the existing translation framework
-	checkTranslation(t, "opamp_config", "linux", nil, "")
+	checkTranslation(t, "opamp_config_http", "linux", nil, "")
 }
 
 func TestOpampConfigWSS(t *testing.T) {
