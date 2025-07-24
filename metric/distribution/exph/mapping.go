@@ -7,28 +7,6 @@ package exph
 
 import "math"
 
-// MapToIndexScale0 computes a bucket index at scale 0.
-func MapToIndexScale0(value float64) int {
-	// Note: Frexp() rounds submnormal values to the smallest normal
-	// value and returns an exponent corresponding to fractions in the
-	// range [0.5, 1), whereas an exponent for the range [1, 2), so
-	// subtract 1 from the exponent immediately.
-	frac, exp := math.Frexp(value)
-	exp--
-
-	if frac == 0.5 && value > 0 {
-		// Special case for positive powers of two: they fall into the bucket
-		// numbered one less.
-		exp--
-	}
-	return exp
-}
-
-// MapToIndexNegativeScale computes a bucket index for scales <= 0.
-func MapToIndexNegativeScale(value float64, scale int) int {
-	return MapToIndexScale0(value) >> -scale
-}
-
 // MapToIndex for any scale
 //
 // Values near a boundary could be mapped into the incorrect bucket due to float point calculation inaccuracy.

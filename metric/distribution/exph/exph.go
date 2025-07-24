@@ -93,7 +93,7 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 		counts = append(counts, float64(d.zeroCount))
 	}
 
-	// iterate through negative buckets in ascending order
+	// iterate through negative buckets in ascending order so that the values array is entirely descending
 	negOffsetIndicies := slices.Sorted(maps.Keys(d.negativeBuckets))
 	for _, offsetIndex := range negOffsetIndicies {
 		counter := d.negativeBuckets[offsetIndex]
@@ -107,13 +107,9 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	return values, counts
 }
 
-func (d *ExpHistogramDistribution) AddDistribution(other *ExpHistogramDistribution) {
-	d.AddDistributionWithWeight(other, 1)
-}
-
-func (d *ExpHistogramDistribution) AddDistributionWithWeight(from *ExpHistogramDistribution, weight float64) {
-	if from.SampleCount()*weight <= 0 {
-		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", from.SampleCount(), weight)
+func (d *ExpHistogramDistribution) AddDistribution(from *ExpHistogramDistribution) {
+	if from.SampleCount() <= 0 {
+		log.Printf("D! SampleCount should be larger than 0: %v", from.SampleCount())
 		return
 	}
 
@@ -131,8 +127,8 @@ func (d *ExpHistogramDistribution) AddDistributionWithWeight(from *ExpHistogramD
 
 	d.max = max(d.max, from.Maximum())
 	d.min = min(d.min, from.Minimum())
-	d.sampleCount += from.SampleCount() * weight
-	d.sum += from.Sum() * weight
+	d.sampleCount += from.SampleCount()
+	d.sum += from.Sum()
 
 	for i := range from.positiveBuckets {
 		d.positiveBuckets[i] += from.positiveBuckets[i]

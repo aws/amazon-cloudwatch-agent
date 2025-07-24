@@ -6,8 +6,6 @@ replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.2025
 
 replace collectd.org v0.4.0 => github.com/collectd/go-collectd v0.4.0
 
-replace code.cloudfoundry.org/clock => github.com/cloudfoundry/clock v1.0.0
-
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
 replace (
