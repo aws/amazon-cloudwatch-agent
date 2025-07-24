@@ -144,7 +144,6 @@ func Factories() (otelcol.Factories, error) {
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),
 		healthcheckextension.NewFactory(),
-		opampextension.NewFactory(),
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
