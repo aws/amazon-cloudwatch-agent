@@ -72,7 +72,7 @@ func main() {
 
 	debugger.CheckLogsAndMetricsEndpoints(os.Stdout, mergedConfig, *compact)
 
-	_, err = debugger.CheckConfiguredLogs(os.Stdout, mergedConfig, *compact)
+	_, err = debugger.CheckConfiguredLogsExistsAndReadable(os.Stdout, mergedConfig, *compact)
 	if err != nil {
 		fmt.Printf("Failed to check logs: %v\n", err)
 		return

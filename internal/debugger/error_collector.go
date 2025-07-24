@@ -34,11 +34,13 @@ func (ec *ErrorCollector) PrintErrors() {
 }
 
 func (ec *ErrorCollector) printErrorMessages(messages []string, title string) {
+
 	if len(messages) == 0 {
-		return
-	}
-	fmt.Printf("%s (%d):\n", title, len(messages))
-	for _, msg := range messages {
-		fmt.Printf("  %s\n", msg)
+		fmt.Printf("No %s\n", title)
+	} else {
+		fmt.Printf("%s (%d):\n", title, len(messages))
+		for _, msg := range messages {
+			fmt.Printf("  %s\n", msg)
+		}
 	}
 }

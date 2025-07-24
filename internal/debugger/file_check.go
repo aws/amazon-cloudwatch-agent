@@ -57,11 +57,12 @@ func printConfigFilesCompact(w io.Writer, configFiles []ConfigFile) {
 		maxNameWidth = max(maxNameWidth, len(displayName)+1) // +1 for colon
 	}
 
+	errorCollector := GetErrorCollector()
 	for _, file := range configFiles {
 		status := checkFileStatus(file.Path)
 		displayName := getDisplayName(file.Path)
 		fmt.Fprintf(w, "%-*s %s - %s\n", maxNameWidth, displayName+":", status, file.Description)
-		handleFileStatus(file, status)
+		handleFileStatus(file, status, errorCollector)
 	}
 }
 
@@ -87,6 +88,7 @@ func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 		utils.RepeatChar('─', statusWidth+2),
 		utils.RepeatChar('─', 50))
 
+	errorCollector := GetErrorCollector()
 	for _, file := range configFiles {
 		status := checkFileStatus(file.Path)
 		displayName := getDisplayName(file.Path)
@@ -96,7 +98,7 @@ func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 		}
 
 		fmt.Fprintf(w, "│ %-*s │ %-*s │ %-48s │\n", fileNameWidth, displayName, statusWidth, status, description)
-		handleFileStatus(file, status)
+		handleFileStatus(file, status, errorCollector)
 	}
 
 	fmt.Fprintf(w, "└%s┴%s┴%s┘\n",
@@ -105,7 +107,7 @@ func printConfigFilesTable(w io.Writer, configFiles []ConfigFile) {
 		utils.RepeatChar('─', 50))
 }
 
-func handleFileStatus(file ConfigFile, status FileStatus) {
+func handleFileStatus(file ConfigFile, status FileStatus, errorCollector *ErrorCollector) {
 	if status != StatusPresent {
 		message := fmt.Sprintf("%s: %s - %s", getDisplayName(file.Path), file.MissingMsg, file.Purpose)
 
@@ -118,9 +120,9 @@ func handleFileStatus(file ConfigFile, status FileStatus) {
 		}
 
 		if file.Required {
-			GetErrorCollector().AddError(message)
+			errorCollector.AddError(message)
 		} else {
-			GetErrorCollector().AddWarning(message)
+			errorCollector.AddWarning(message)
 		}
 	}
 }

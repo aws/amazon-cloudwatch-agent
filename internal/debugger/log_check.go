@@ -26,7 +26,7 @@ type AgentLogConfig struct {
 	Message         string `json:"-"`
 }
 
-func CheckConfiguredLogs(w io.Writer, config map[string]interface{}, compact bool) ([]AgentLogConfig, error) {
+func CheckConfiguredLogsExistsAndReadable(w io.Writer, config map[string]interface{}, compact bool) ([]AgentLogConfig, error) {
 
 	collectList, err := getCollectListFromConfig(config)
 	if err != nil {

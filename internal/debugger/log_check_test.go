@@ -201,7 +201,7 @@ func TestCheckConfiguredLogs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			result, err := CheckConfiguredLogs(&buf, tt.config, false)
+			result, err := CheckConfiguredLogsExistsAndReadable(&buf, tt.config, false)
 
 			if tt.expectedSuccess {
 				assert.NoError(t, err, "CheckConfiguredLogs() should not return an error")

@@ -39,7 +39,7 @@ const (
 
 	// Specifies the size of logs we process at a time.
 	// Chunking by 4KB can improve I/O efficiency because Linux's disk block size is 4096 bytes.
-	chunkSize = 4096
+	logChunkSize = 4096
 )
 
 func CreateTarball(ssm bool) {
@@ -82,7 +82,7 @@ func CreateTarball(ssm bool) {
 				fmt.Println("Debug logging enabled successfully.")
 			}
 
-			fmt.Println("\nWaiting 90 seconds to collect debug logs...")
+			fmt.Printf("\nWaiting %d seconds to collect debug logs...", logWaitTime)
 			showProgressBar(logWaitTime)
 		} else {
 			fmt.Println("Skipping debug logging enhancement.")
@@ -123,7 +123,7 @@ func CreateTarball(ssm bool) {
 
 	// We remove triaging if called through SSM since it does not support stream inputs.
 	if !ssm {
-		answersContent := Triage()
+		answersContent := utils.TriageCustomerIssue()
 
 		if err := addTriageToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
 			fmt.Println("Error adding answers to tarball:", err)
@@ -133,18 +133,10 @@ func CreateTarball(ssm bool) {
 	fmt.Println("Tarball created successfully at:", outputPath)
 }
 
-func Triage() string {
-
-	answers := utils.RunTriage()
-	formattedAnswers := utils.FormatReport(answers)
-	return formattedAnswers
-
-}
-
-func addTriageToTarball(tarWriter *tar.Writer, content, tarPath string) error {
+func addTriageToTarball(tarWriter *tar.Writer, triageContent, tarPath string) error {
 	header := &tar.Header{
 		Name:    tarPath,
-		Size:    int64(len(content)),
+		Size:    int64(len(triageContent)),
 		Mode:    0644,
 		ModTime: time.Now(),
 	}
@@ -153,7 +145,7 @@ func addTriageToTarball(tarWriter *tar.Writer, content, tarPath string) error {
 		return fmt.Errorf("failed to write tar header for %s: %v", tarPath, err)
 	}
 
-	if _, err := io.WriteString(tarWriter, content); err != nil {
+	if _, err := io.WriteString(tarWriter, triageContent); err != nil {
 		return fmt.Errorf("failed to write content to %s: %v", tarPath, err)
 	}
 
@@ -235,7 +227,7 @@ func findTailContent(file *os.File, maxLines int) (int64, []byte, error) {
 
 	pos := fileSize
 	lineCount := 0
-	chunkSize := int64(chunkSize)
+	chunkSize := int64(logChunkSize)
 
 	var startPos int64 = 0
 	buf := make([]byte, chunkSize)
