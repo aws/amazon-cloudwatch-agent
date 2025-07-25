@@ -11,9 +11,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/extension"
 	"go.uber.org/zap"
 )
 
@@ -24,17 +22,24 @@ func TestECSObserver(t *testing.T) {
 		ClusterName:     "test-cluster",
 		ClusterRegion:   "us-west-2",
 		ResultFile:      "/tmp/ecs_observer_result.yaml",
+		// Add at least one matcher to satisfy the validation
+		Services: []ecsobserver.ServiceConfig{
+			{
+				NamePattern: "test-service",
+				CommonExporterConfig: ecsobserver.CommonExporterConfig{
+					JobName:      "test-job",
+					MetricsPath:  "/metrics",
+					MetricsPorts: []int{9090},
+				},
+			},
+		},
 	}
 
 	// Create a test logger
 	logger := zap.NewNop()
 
-	// Create extension settings
-	settings := extension.CreateSettings{
-		TelemetrySettings: componenttest.NewNopTelemetrySettings(),
-		BuildInfo:         component.NewDefaultBuildInfo(),
-		Logger:            logger,
-	}
+	// Create telemetry settings
+	settings := componenttest.NewNopTelemetrySettings()
 
 	// Create the ECS observer extension
 	observer, err := NewECSObserver(config, logger, settings)
