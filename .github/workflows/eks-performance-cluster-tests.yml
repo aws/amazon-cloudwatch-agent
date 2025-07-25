@@ -1,0 +1,181 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+name: "EKS Performance Cluster Tests"
+on:
+  # Use workflow_run to trigger this workflow after the scaling workflow completes
+  workflow_run:
+    workflows: [ "EKS Performance Test Run" ]
+    types:
+      - completed
+    branches:
+      - main  # Adjust this if your default branch is different
+
+  # Keep the manual trigger option
+  workflow_dispatch:
+    inputs:
+      # Required Core Settings
+      cluster_name:
+        description: 'EKS Cluster Name'
+        required: true
+        type: string
+        default: 'eks-performance'
+      region:
+        description: 'AWS Region'
+        required: true
+        type: string
+        default: 'us-west-2'
+      metric_map:
+        description: 'Map containing metrics to validate'
+        type: string
+
+      # Optional Settings
+      terraform_assume_role:
+        description: 'AWS IAM Role to assume'
+        type: string
+      test_repo_name:
+        description: 'Agent test repo'
+        type: string
+      test_repo_branch:
+        description: 'Agent test repo branch'
+        type: string
+      test_dir:
+        description: 'Agent test directory'
+        type: string
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Cluster environment variables
+  AWS_REGION: ${{ inputs.region || 'us-west-2' }}
+  CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ inputs.terraform_assume_role || vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400  # 4 hour duration
+
+  # Agent test repo environment variables
+  CWA_GITHUB_TEST_REPO_NAME: ${{ inputs.test_repo_name || 'aws/amazon-cloudwatch-agent-test' }}
+  CWA_GITHUB_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch || 'performance-test-testrun' }}
+  CWA_TEST_DIRECTORY: ${{ inputs.test_dir || './test/performance/eks' }}
+
+jobs:
+  # Check if this workflow should run, doesn't need to run test if no nodes exist
+  check-trigger:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check trigger type
+        id: check-trigger
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "Triggered by workflow_run from a scheduled event"
+          else
+            echo "Triggered manually via workflow_dispatch"
+          fi
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Override should_continue based on node count
+        id: final-check
+        run: |
+          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          echo "Node count: $NODE_COUNT"
+
+          if [ "$NODE_COUNT" -eq 0 ]; then
+            echo "No nodes available, setting should_continue to false"
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nodes available, setting should_continue as true"
+            echo "should_continue=true" >> "$GITHUB_OUTPUT"
+          fi
+
+    outputs:
+      should_continue: ${{ steps.final-check.outputs.should_continue }}
+
+  EKSPerformanceBaseTest:
+    name: EKSPerformanceBaseTest
+    needs: [ check-trigger ]
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.24.4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Install Sample Application
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 2
+          timeout_minutes: 20
+          command: |
+            cd test/performance/eks/resources
+            kubectl apply -f petclinic-sample-app
+            echo "Waiting 15 minutes for the application to initialize..."
+            sleep 900
+
+      - name: Run Performance Test
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 2
+          timeout_minutes: 20
+          command: |
+            go test -timeout 30m -v $CWA_TEST_DIRECTORY \
+              -computeType=EKS \
+              -eksClusterName=$CLUSTER_NAME \
+              -performanceMetricMapName=${{ inputs.metric_map || 'base-performance-metrics-map.json' }} \
+              -performanceTestName=EKSPerformanceBaseTest
+
+      - name: Cleanup Sample Application
+        if: always()
+        run: |
+          cd test/performance/eks/resources
+          kubectl delete -f petclinic-sample-app
+          echo "Sample application resources have been deleted"
+
