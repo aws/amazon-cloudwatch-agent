@@ -162,7 +162,7 @@ func TestTranslator_Translate(t *testing.T) {
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
 						JobNameLabel:     defaultJobNameLabel,
-						MetricsPathLabel: defaultMetricsPath,
+						MetricsPathLabel: defaultMetricsPathLabel,
 						PortLabel:        defaultPortLabel,
 					},
 				},
