@@ -69,8 +69,8 @@ service:
             processors:
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             encoding: console

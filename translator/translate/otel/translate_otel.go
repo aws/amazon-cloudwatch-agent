@@ -23,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/opamp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
@@ -35,7 +36,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/opamp"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
@@ -91,8 +91,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if !ecsutil.GetECSUtilSingleton().IsECS() {
 		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
 	}
-
-	pipelines.Translators.Extensions.Set(opampextension.NewTranslator())
+	//Adds OpAMP to the yaml if it is configured in the json
+	if conf.IsSet(common.ConfigKey(common.AgentKey, "opamp")) {
+		pipelines.Translators.Extensions.Set(opampextension.NewTranslator())
+	}
 
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())

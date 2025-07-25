@@ -153,7 +153,7 @@ receivers:
                   fallback_scrape_protocol: PrometheusText0.0.4
                   file_sd_configs:
                     - files:
-                        - {ecsSdFileName}
+                        - /var/folders/by/sc7q2b3178zdg90qj6dm5rbh0000gq/T/TestCombinedPrometheusConfig3633658379/001/ecs_sd_results.yaml
                       refresh_interval: 5m
                   follow_redirects: true
                   honor_timestamps: true
