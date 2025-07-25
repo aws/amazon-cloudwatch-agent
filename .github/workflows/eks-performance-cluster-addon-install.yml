@@ -68,7 +68,7 @@ env:
   # Github repository environment variables
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_BRANCH: "performance-test-testrun"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 jobs:
   # Check if this workflow should run
