@@ -261,11 +261,6 @@ jobs:
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
-      - name: Clean up node labels
-        run: |
-          echo "Removing CloudWatch Agent labels from nodes..."
-          kubectl label nodes -l 'node.kubernetes.io/instance-type=t3.medium' cwagent-target- || echo "Labels not found or already removed"
-
       - name: Uninstall Helm chart
         run: |
           echo "Test was cancelled or failed. Cleaning up resources..."
