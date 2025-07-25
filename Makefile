@@ -211,7 +211,6 @@ PKG_WITH_DATA_RACE += internal/tls
 PKG_WITH_DATA_RACE += plugins/inputs/logfile
 PKG_WITH_DATA_RACE += plugins/inputs/logfile/tail
 PKG_WITH_DATA_RACE += plugins/outputs/cloudwatch$$
-PKG_WITH_DATA_RACE += plugins/processors/awsapplicationsignals
 PKG_WITH_DATA_RACE += plugins/processors/ec2tagger
 PKG_WITH_DATA_RACE_PATTERN := $(shell echo '$(PKG_WITH_DATA_RACE)' | tr ' ' '|')
 test-data-race:

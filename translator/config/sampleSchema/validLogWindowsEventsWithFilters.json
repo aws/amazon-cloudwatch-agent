@@ -11,7 +11,13 @@
             ],
             "log_group_name": "System",
             "log_stream_name": "System",
-            "event_format": "xml"
+            "event_format": "xml",
+            "filters": [
+              {
+                "type": "exclude",
+                "expression": "Foo: ([1-5]\\d\\d)"
+              }
+            ]
           },
           {
             "event_name": "Security",
@@ -21,21 +27,29 @@
             ],
             "log_group_name": "Security",
             "log_stream_name": "Security",
-            "event_format": "text"
+            "event_format": "text",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "(TRACE|DEBUG)"
+              }
+            ]
           },
           {
             "event_name": "Application",
-            "event_levels": [
-              "INFORMATION",
-              "ERROR"
-            ],
-            "event_ids": [
-              1001,
-              2225
-            ],
             "log_group_name": "Application",
             "log_stream_name": "Application",
-            "event_format": "text"
+            "event_format": "text",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "Database*connection"
+              },
+              {
+                "type": "exclude",
+                "expression": "Application*exce"
+              }
+            ]
           }
         ]
       }
