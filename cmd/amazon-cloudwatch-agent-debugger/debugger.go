@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
-	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/mcp"
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
@@ -19,13 +18,16 @@ import (
 
 var mergedConfig map[string]interface{}
 
-const docsUrl = "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html"
+const (
+	cwagentDocsUrl           = "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html"
+	notPushingLogsDocsUrl    = "https://repost.aws/knowledge-center/cloudwatch-push-logs-with-unified-agent"
+	notPushingMetricsDocsUrl = "https://repost.aws/knowledge-center/cloudwatch-unified-agent-metrics-issues"
+)
 
 func main() {
 	compact := flag.Bool("compact", false, "Run debugger with compact formatting")
 	createTarball := flag.Bool("tarball", false, "Create tarball")
 	createTarballSsm := flag.Bool("tarballssm", false, "Create tarball with SSM")
-	startMcpServer := flag.Bool("mcp", false, "Start MCP server for IDE integration")
 	flag.Parse()
 
 	switch {
@@ -35,15 +37,17 @@ func main() {
 	case *createTarballSsm:
 		debugger.CreateTarball(true)
 		return
-	case *startMcpServer:
-		mcp.StartMCPServer()
-		return
 	}
 
 	defer func() {
 		debugger.GetErrorCollector().PrintErrors()
 		fmt.Println()
-		fmt.Printf("If you are still unable to resolve your problem, refer to the CloudWatch Agent Troubleshooting docs: %s\n", docsUrl)
+		debugger.GetErrorSuggestions(paths.AgentLogFilePath)
+		fmt.Println()
+		fmt.Println("If you are still unable to resolve your problem, refer to these docs:")
+		fmt.Printf("General CWAgent troubleshooting docs: %s\n", cwagentDocsUrl)
+		fmt.Printf("Logs not being pushed: %s\n", notPushingLogsDocsUrl)
+		fmt.Printf("Metrics not being pushed: %s\n", notPushingMetricsDocsUrl)
 	}()
 
 	ctx := context.Background()
@@ -55,10 +59,8 @@ func main() {
 	}
 	printInstanceInfo(info, *compact)
 
-	// We provide a stream because MCP uses a buffer. This is so when MCP calls tools it will not print to stdout.
-	// There are better ways of doing this but not without significant refactoring overhead.
 	if !debugger.IsConfigFilesPresentAndReadable(os.Stdout, *compact) {
-		fmt.Println("ERROR: There was an error collecting the config file - cannot conduct log checks.")
+		fmt.Println("ERROR: There was an error collecting the config file - cannot conduct log and VPC endpoint checks.")
 		return
 	}
 
