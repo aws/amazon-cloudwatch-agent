@@ -21,6 +21,7 @@ package prometheus
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -57,6 +58,68 @@ var (
 		Help: "Timestamp of the last successful configuration reload.",
 	})
 )
+
+// CloudWatchLogHandler implements slog.Handler to bridge Prometheus logs to CloudWatch agent logging
+type CloudWatchLogHandler struct {
+	originalHandler slog.Handler
+}
+
+func (h *CloudWatchLogHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.originalHandler.Enabled(ctx, level)
+}
+
+func (h *CloudWatchLogHandler) Handle(ctx context.Context, record slog.Record) error {
+	// Extract message and attributes
+	msg := record.Message
+	var attrs []string
+	record.Attrs(func(a slog.Attr) bool {
+		attrs = append(attrs, a.String())
+		return true
+	})
+	
+	// Bridge to CloudWatch agent logging based on level
+	switch record.Level {
+	case slog.LevelDebug:
+		if len(attrs) > 0 {
+			log.Printf("D! Prometheus: %s [%v]\n", msg, attrs)
+		} else {
+			log.Printf("D! Prometheus: %s\n", msg)
+		}
+	case slog.LevelInfo:
+		if len(attrs) > 0 {
+			log.Printf("I! Prometheus: %s [%v]\n", msg, attrs)
+		} else {
+			log.Printf("I! Prometheus: %s\n", msg)
+		}
+	case slog.LevelWarn:
+		if len(attrs) > 0 {
+			log.Printf("W! Prometheus: %s [%v]\n", msg, attrs)
+		} else {
+			log.Printf("W! Prometheus: %s\n", msg)
+		}
+	case slog.LevelError:
+		if len(attrs) > 0 {
+			log.Printf("E! Prometheus: %s [%v]\n", msg, attrs)
+		} else {
+			log.Printf("E! Prometheus: %s\n", msg)
+		}
+	}
+	
+	// Also call original handler
+	return h.originalHandler.Handle(ctx, record)
+}
+
+func (h *CloudWatchLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &CloudWatchLogHandler{
+		originalHandler: h.originalHandler.WithAttrs(attrs),
+	}
+}
+
+func (h *CloudWatchLogHandler) WithGroup(name string) slog.Handler {
+	return &CloudWatchLogHandler{
+		originalHandler: h.originalHandler.WithGroup(name),
+	}
+}
 
 var (
 	// Save name before re-label since customers can relabel the prometheus metric name
@@ -100,8 +163,18 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 	cfg.configFile = configFilePath
 
-	logger := promslog.New(&cfg.promslogConfig)
+	baseLogger := promslog.New(&cfg.promslogConfig)
+	// Create a custom handler that bridges to CloudWatch agent logging
+	bridgeHandler := &CloudWatchLogHandler{originalHandler: baseLogger.Handler()}
+	logger := slog.New(bridgeHandler)
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
+
+	// Bridge Prometheus logging to CloudWatch agent logging
+	log.Printf("I! Starting Prometheus %s\n", version.Info())
+	log.Printf("I! Prometheus build_context: %s\n", version.BuildContext())
+	log.Printf("I! Prometheus host_details: %s\n", promRuntime.Uname())
+	log.Printf("I! Prometheus fd_limits: %s\n", promRuntime.FdLimits())
+	log.Printf("I! Prometheus vm_limits: %s\n", promRuntime.VMLimits())
 
 	logger.Info("Starting Prometheus", "version", version.Info())
 	logger.Info("build_context", "context", version.BuildContext())
@@ -366,9 +439,11 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) 
 
 func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocatorManager, rls ...func(*config.Config) error) error {
 	logger.Info("Loading configuration file", "filename", filename)
+	log.Printf("I! Prometheus loading configuration file: %s\n", filename)
 	content, _ := os.ReadFile(filename)
 	text := string(content)
 	logger.Debug("Prometheus configuration file", "value", text)
+	log.Printf("D! Prometheus configuration file content: %s\n", text)
 
 	var err error
 	defer func() {
@@ -409,6 +484,7 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	for _, rl := range rls {
 		if err = rl(conf); err != nil {
 			logger.Error("Failed to apply configuration", "err", err)
+			log.Printf("E! Prometheus failed to apply configuration: %v\n", err)
 			failed = true
 		}
 	}
@@ -417,5 +493,6 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 	}
 
 	logger.Info("Completed loading of configuration file", "filename", filename)
+	log.Printf("I! Prometheus completed loading configuration file: %s\n", filename)
 	return nil
 }

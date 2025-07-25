@@ -43,6 +43,25 @@ func (mh *metricsHandler) start(shutDownChan chan interface{}, wg *sync.WaitGrou
 }
 
 func (mh *metricsHandler) handle(pmb PrometheusMetricBatch) {
+	// Track sample counts per job to detect potential sample limit hits
+	jobSampleCounts := make(map[string]int)
+	for _, pm := range pmb {
+		if pm.jobBeforeRelabel != "" {
+			jobSampleCounts[pm.jobBeforeRelabel]++
+		}
+	}
+	
+	// Log sample counts and detect potential sample limit hits
+	for job, count := range jobSampleCounts {
+		log.Printf("D! Job '%s' received %d samples in this batch\n", job, count)
+		// Common sample limits are 1000, 5000, 10000, 50000
+		if count == 1000 || count == 5000 || count == 10000 || count == 50000 {
+			log.Printf("W! Job '%s' received exactly %d samples - possible sample_limit reached! Check your Prometheus config.\n", job, count)
+		} else if count > 10000 {
+			log.Printf("W! Job '%s' received %d samples - this is unusually high, check for potential issues\n", job, count)
+		}
+	}
+
 	// Add metric type info
 	pmb = mh.mtHandler.Handle(pmb)
 
