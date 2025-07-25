@@ -24,10 +24,10 @@ type ECSObserver struct {
 func NewECSObserver(config *ecsobserver.Config, logger *zap.Logger, settings component.TelemetrySettings) (*ECSObserver, error) {
 	// Create the OpenTelemetry ECS observer extension
 	factory := ecsobserver.NewFactory()
-	
+
 	// Create component ID with the correct type that the upstream factory expects
 	componentID := component.NewIDWithName(component.MustNewType("ecs_observer"), "")
-	
+
 	ext, err := factory.Create(
 		context.Background(),
 		extension.Settings{
