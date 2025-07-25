@@ -60,10 +60,13 @@ env:
   CWA_TEST_DIRECTORY: ${{ inputs.test_dir || './test/performance/eks' }}
 
 jobs:
-  # Check if this workflow should run
+  # Check if this workflow should run, doesn't need to run test if no nodes exist
   check-trigger:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Check trigger type
         id: check-trigger
@@ -73,8 +76,39 @@ jobs:
           else
             echo "Triggered manually via workflow_dispatch"
           fi
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Override should_continue based on node count
+        id: final-check
+        run: |
+          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          echo "Node count: $NODE_COUNT"
+
+          if [ "$NODE_COUNT" -eq 0 ]; then
+            echo "No nodes available, setting should_continue to false"
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nodes available, setting should_continue as true"
+            echo "should_continue=true" >> "$GITHUB_OUTPUT"
+          fi
+
     outputs:
-      should_continue: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
+      should_continue: ${{ steps.final-check.outputs.should_continue }}
 
   EKSPerformanceBaseTest:
     name: EKSPerformanceBaseTest

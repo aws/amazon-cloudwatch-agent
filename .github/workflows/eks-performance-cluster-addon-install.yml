@@ -87,62 +87,61 @@ jobs:
     outputs:
       should_continue: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
 
-#  # Get latest operator commit from github repo
-#  GetLatestOperatorCommitSHA:
-#    needs: check-trigger
-#    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
-#    runs-on: ubuntu-latest
-#    outputs:
-#      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
-#      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-#    steps:
-#      - name: Checkout the target repo
-#        uses: actions/checkout@v4
-#        with:
-#          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-#          ref: ${{ inputs.operator-branch || 'main' }}
-#          path: operator-repo
-#
-#      - name: Get latest commit SHA
-#        id: get_latest_sha
-#        run: |
-#          cd operator-repo
-#          latest_sha=$(git rev-parse HEAD)
-#          echo "operator_sha=$latest_sha" >> "$GITHUB_OUTPUT"
-#
-#  # Build and upload agent image to ECR repo
-#  BuildAgent:
-#    needs: check-trigger
-#    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
-#    uses: ./.github/workflows/build-test-artifacts.yml
-#    concurrency:
-#      group: "Build-Test-Artifacts-${{github.ref_name}}"
-#      cancel-in-progress: true
-#    secrets: inherit
-#    permissions:
-#      id-token: write
-#      contents: read
-#    with:
-#      test-image-before-upload: false
-#
-#  # Build and upload operator image to ECR repo
-#  BuildOperator:
-#    needs: [ check-trigger, GetLatestOperatorCommitSHA ]
-#    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
-#    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
-#    concurrency:
-#      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
-#      cancel-in-progress: true
-#    secrets: inherit
-#    with:
-#      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-#      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-#      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
-#      test-image-before-upload: false
+  # Get latest operator commit from github repo
+  GetLatestOperatorCommitSHA:
+    needs: check-trigger
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
+      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+    steps:
+      - name: Checkout the target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
+          ref: ${{ inputs.operator-branch || 'main' }}
+          path: operator-repo
+
+      - name: Get latest commit SHA
+        id: get_latest_sha
+        run: |
+          cd operator-repo
+          latest_sha=$(git rev-parse HEAD)
+          echo "operator_sha=$latest_sha" >> "$GITHUB_OUTPUT"
+
+  # Build and upload agent image to ECR repo
+  BuildAgent:
+    needs: check-trigger
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
+    uses: ./.github/workflows/build-test-artifacts.yml
+    concurrency:
+      group: "Build-Test-Artifacts-${{github.ref_name}}"
+      cancel-in-progress: true
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      test-image-before-upload: false
+
+  # Build and upload operator image to ECR repo
+  BuildOperator:
+    needs: [ check-trigger, GetLatestOperatorCommitSHA ]
+    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
+    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
+    concurrency:
+      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
+      cancel-in-progress: true
+    secrets: inherit
+    with:
+      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
+      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
+      test-image-before-upload: false
 
   install-helm:
-#    needs: [ check-trigger, BuildAgent, BuildOperator, GetLatestOperatorCommitSHA ]
-    needs: [ check-trigger ]
+    needs: [ check-trigger, BuildAgent, BuildOperator, GetLatestOperatorCommitSHA ]
     if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -221,14 +220,14 @@ jobs:
               ./helm-charts/charts/amazon-cloudwatch-observability \
               --namespace amazon-cloudwatch \
               --create-namespace \
-              --set clusterName="eks-performance" \
-              --set region="us-west-2" \
-              --set agent.image.repository="cwagent-integration-test" \
-              --set agent.image.tag="0ed03d7052efec77c8d1a2b40109de9c20e47b7f" \
-              --set agent.image.repositoryDomainMap.public="506463145083.dkr.ecr.us-west-2.amazonaws.com" \
-              --set manager.image.repository="cwagent-operator-pre-release" \
-              --set manager.image.tag="1fd8d00ed22eaefb781b2f707f76d7d12a1755ba" \
-              --set manager.image.repositoryDomainMap.public="506463145083.dkr.ecr.us-west-2.amazonaws.com" \
+              --set clusterName=${{ inputs.cluster_name ||env.CLUSTER_NAME }} \
+              --set region=${{ inputs.region || env.AWS_REGION }} \
+              --set agent.image.repository=${{ inputs.cloudwatch_agent_repository || env.AGENT_ECR_TEST_REPO }} \
+              --set agent.image.tag=${{ inputs.cloudwatch_agent_tag || github.sha }} \
+              --set agent.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
+              --set manager.image.repository=${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }} \
+              --set manager.image.tag=${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }} \
+              --set manager.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
               --values ./test-repo/test/performance/eks/resources/leader_election_overrides/base-overrides.yml
           fi
 
