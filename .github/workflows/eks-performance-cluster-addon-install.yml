@@ -1,14 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
-name: "Install/Remove Helm Charts After Scaling"
+name: "EKS Performance Cluster Tests"
 on:
   # Use workflow_run to trigger this workflow after the scaling workflow completes
   workflow_run:
-    workflows: ["EKS Cluster Scaling"]
+    workflows: [ "Install/Remove Helm Charts After Scaling" ]
     types:
       - completed
     branches:
-      - main
+      - main  # Adjust this if your default branch is different
 
   # Keep the manual trigger option
   workflow_dispatch:
@@ -24,31 +24,24 @@ on:
         required: true
         type: string
         default: 'us-west-2'
+      metric_map:
+        description: 'Map containing metrics to validate'
+        type: string
 
       # Optional Settings
-      cloudwatch_agent_repository:
-        description: 'CloudWatch Agent Repository'
-        type: string
-      cloudwatch_agent_tag:
-        description: 'CloudWatch Agent Tag'
-        type: string
-      cloudwatch_agent_operator_repository:
-        description: 'CloudWatch Agent Operator Repository'
-        type: string
-      cloudwatch_agent_operator_tag:
-        description: 'CloudWatch Agent Operator Tag'
-        type: string
-      helm-charts-branch:
-        description: 'Branch of the helm charts to test'
-        type: string
-        default: 'main'
-      operator-branch:
-        description: 'Branch of the operator to test'
-        type: string
-        default: 'main'
       terraform_assume_role:
         description: 'AWS IAM Role to assume'
         type: string
+      test_repo_name:
+        description: 'Agent test repo'
+        type: string
+      test_repo_branch:
+        description: 'Agent test repo branch'
+        type: string
+      test_dir:
+        description: 'Agent test directory'
+        type: string
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -59,22 +52,21 @@ env:
   AWS_REGION: ${{ inputs.region || 'us-west-2' }}
   CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ inputs.terraform_assume_role || vars.TERRAFORM_AWS_ASSUME_ROLE }}
-  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400  # 4 hour duration
 
-  # ECR repository environment variables
-  AGENT_ECR_TEST_REPO: "cwagent-integration-test"
-  OPERATOR_ECR_TEST_REPO: "cwagent-operator-pre-release"
-
-  # Github repository environment variables
-  OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_BRANCH: "performance-test-testrun"
+  # Agent test repo environment variables
+  CWA_GITHUB_TEST_REPO_NAME: ${{ inputs.test_repo_name || 'aws/amazon-cloudwatch-agent-test' }}
+  CWA_GITHUB_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch || 'performance-test-testrun' }}
+  CWA_TEST_DIRECTORY: ${{ inputs.test_dir || './test/performance/eks' }}
 
 jobs:
-  # Check if this workflow should run
+  # Check if this workflow should run, doesn't need to run test if no nodes exist
   check-trigger:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Check trigger type
         id: check-trigger
@@ -84,70 +76,59 @@ jobs:
           else
             echo "Triggered manually via workflow_dispatch"
           fi
-    outputs:
-      should_continue: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule') }}
 
-  # Get latest operator commit from github repo
-  GetLatestOperatorCommitSHA:
-    needs: check-trigger
-    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
-    runs-on: ubuntu-latest
-    outputs:
-      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
-      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-    steps:
-      - name: Checkout the target repo
-        uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-          ref: ${{ inputs.operator-branch || 'main' }}
-          path: operator-repo
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: ${{ env.AWS_REGION}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Get latest commit SHA
-        id: get_latest_sha
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
         run: |
-          cd operator-repo
-          latest_sha=$(git rev-parse HEAD)
-          echo "operator_sha=$latest_sha" >> "$GITHUB_OUTPUT"
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
-  # Build and upload agent image to ECR repo
-  BuildAgent:
-    needs: check-trigger
-    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
-    uses: ./.github/workflows/build-test-artifacts.yml
-    concurrency:
-      group: "Build-Test-Artifacts-${{github.ref_name}}"
-      cancel-in-progress: true
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      test-image-before-upload: false
+      - name: Override should_continue based on node count
+        id: final-check
+        run: |
+          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          echo "Node count: $NODE_COUNT"
 
-  # Build and upload operator image to ECR repo
-  BuildOperator:
-    needs: [ check-trigger, GetLatestOperatorCommitSHA ]
-    if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
-    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
-    concurrency:
-      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
-      cancel-in-progress: true
-    secrets: inherit
-    with:
-      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
-      test-image-before-upload: false
+          if [ "$NODE_COUNT" -eq 0 ]; then
+            echo "No nodes available, setting should_continue to false"
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nodes available, setting should_continue as true"
+            echo "should_continue=true" >> "$GITHUB_OUTPUT"
+          fi
 
-  install-helm:
-    needs: [ check-trigger, BuildAgent, BuildOperator, GetLatestOperatorCommitSHA ]
+    outputs:
+      should_continue: ${{ steps.final-check.outputs.should_continue }}
+
+  EKSPerformanceBaseTest:
+    name: EKSPerformanceBaseTest
+    needs: [ check-trigger ]
     if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.24.4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -164,104 +145,37 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Install Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'latest'
-
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
-      - name: Clone Helm Charts Repository
-        run: |
-          rm -rf ./helm-charts
-          git clone -b ${{ inputs.helm-charts-branch || 'main' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
-
-      - name: Clone Test Repo
-        uses: actions/checkout@v4
+      - name: Install Sample Application
+        uses: nick-fields/retry@v2
         with:
-          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
-          path: ./test-repo
+          max_attempts: 3
+          timeout_minutes: 5
+          command: |
+            cd test/performance/eks/resources
+            kubectl apply -f petclinic-sample-app
+            echo "Waiting 15 minutes for the application to initialize..."
+            sleep 900
 
-      - name: Label nodes for CloudWatch Agent targeting
-        run: |
-          kubectl label nodes -l 'node.kubernetes.io/instance-type=t3.medium' cwagent-target="true"
-
-      - name: Replace hostname in override files
-        run: |
-          HOSTNAME=$(kubectl get nodes -l eks.amazonaws.com/nodegroup=$CLUSTER_NAME-leader-node -o jsonpath='{.items[0].metadata.name}')
-          for file in ./test-repo/test/performance/eks/resources/leader_election_overrides/*; do
-            sed -i "s/<hostname>/$HOSTNAME/g" "$file"
-          done
-
-      - name: Check node count and manage Helm chart
-        run: |
-          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
-
-          if [ "$NODE_COUNT" -eq 0 ]; then
-            echo "Node count is 0, removing Helm chart"
-            helm uninstall amazon-cloudwatch-observability -n amazon-cloudwatch || echo "Chart not found or already removed"
-          else
-            echo "Node count is $NODE_COUNT, installing/updating Helm chart"
-          
-            # Echo all variables being passed to helm
-            echo "CLUSTER_NAME: ${{ inputs.cluster_name ||env.CLUSTER_NAME }}"
-            echo "REGION: ${{ inputs.region || env.AWS_REGION }}"
-            echo "AGENT_REPOSITORY: ${{ inputs.cloudwatch_agent_repository || env.AGENT_ECR_TEST_REPO }}"
-            echo "AGENT_TAG: ${{ inputs.cloudwatch_agent_tag || github.sha }}"
-            echo "AGENT_REPOSITORY_DOMAIN: ${{ steps.login-ecr.outputs.registry }}"
-            echo "MANAGER_REPOSITORY: ${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }}"
-            echo "MANAGER_TAG: ${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}"
-            echo "MANAGER_REPOSITORY_DOMAIN: ${{ steps.login-ecr.outputs.registry }}"
-          
-            helm upgrade --install --wait amazon-cloudwatch-observability \
-              ./helm-charts/charts/amazon-cloudwatch-observability \
-              --namespace amazon-cloudwatch \
-              --create-namespace \
-              --set clusterName=${{ inputs.cluster_name ||env.CLUSTER_NAME }} \
-              --set region=${{ inputs.region || env.AWS_REGION }} \
-              --set agent.image.repository=${{ inputs.cloudwatch_agent_repository || env.AGENT_ECR_TEST_REPO }} \
-              --set agent.image.tag=${{ inputs.cloudwatch_agent_tag || github.sha }} \
-              --set agent.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
-              --set manager.image.repository=${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }} \
-              --set manager.image.tag=${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }} \
-              --set manager.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
-              --values ./test-repo/test/performance/eks/resources/leader_election_overrides/base-overrides.yml
-          fi
-
-  cleanup-on-failure:
-    if: ${{ failure() || cancelled() }}
-    runs-on: ubuntu-latest
-    needs: [ install-helm ]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Run Performance Test
+        uses: nick-fields/retry@v2
         with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
-          aws-region: ${{ env.AWS_REGION}}
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+          max_attempts: 1
+          timeout_minutes: 30
+          command: |
+            go test -timeout 30m -v $CWA_TEST_DIRECTORY \
+              -computeType=EKS \
+              -eksClusterName=$CLUSTER_NAME \
+              -performanceMetricMapName=${{ inputs.metric_map || 'base-performance-metrics-map.json' }} \
+              -performanceTestName=EKSPerformanceBaseTest
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Install Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'latest'
-
-      - name: Update kubeconfig
+      - name: Cleanup Sample Application
+        if: always()
         run: |
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+          cd test/performance/eks/resources
+          kubectl delete -f petclinic-sample-app
+          echo "Sample application resources have been deleted"
 
-      - name: Uninstall Helm chart
-        run: |
-          echo "Test was cancelled or failed. Cleaning up resources..."
-          helm uninstall amazon-cloudwatch-observability -n amazon-cloudwatch || echo "Chart not found or already removed"
-          echo "Cleanup completed"
