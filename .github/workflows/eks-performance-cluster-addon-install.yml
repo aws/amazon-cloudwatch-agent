@@ -186,6 +186,17 @@ jobs:
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
           path: ./test-repo
 
+      - name: Label nodes for CloudWatch Agent targeting
+        run: |
+          kubectl label nodes -l 'node.kubernetes.io/instance-type=t3.medium' cwagent-target="true"
+
+      - name: Replace hostname in override files
+        run: |
+          HOSTNAME=$(kubectl get nodes -l eks.amazonaws.com/nodegroup=$CLUSTER_NAME-leader-node -o jsonpath='{.items[0].metadata.name}')
+          for file in ./test-repo/test/performance/eks/resources/leader_election_overrides/*; do
+            sed -i "s/<hostname>/$HOSTNAME/g" "$file"
+          done
+
       - name: Check node count and manage Helm chart
         run: |
           NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
@@ -205,9 +216,8 @@ jobs:
             echo "MANAGER_REPOSITORY: ${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }}"
             echo "MANAGER_TAG: ${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}"
             echo "MANAGER_REPOSITORY_DOMAIN: ${{ steps.login-ecr.outputs.registry }}"
-            ls
           
-            helm upgrade --install amazon-cloudwatch-observability \
+            helm upgrade --install --wait amazon-cloudwatch-observability \
               ./helm-charts/charts/amazon-cloudwatch-observability \
               --namespace amazon-cloudwatch \
               --create-namespace \
@@ -250,6 +260,11 @@ jobs:
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Clean up node labels
+        run: |
+          echo "Removing CloudWatch Agent labels from nodes..."
+          kubectl label nodes -l 'node.kubernetes.io/instance-type=t3.medium' cwagent-target- || echo "Labels not found or already removed"
 
       - name: Uninstall Helm chart
         run: |
