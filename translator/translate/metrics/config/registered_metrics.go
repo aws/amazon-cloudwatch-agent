@@ -13,7 +13,7 @@ var Registered_Metrics_Linux = map[string][]string{
 		"ebs_total_read_bytes", "ebs_total_write_bytes", "ebs_total_read_time", "ebs_total_write_time", "ebs_volume_performance_exceeded_iops",
 		"ebs_volume_performance_exceeded_tp", "ebs_ec2_instance_performance_exceeded_iops", "ebs_ec2_instance_performance_exceeded_tp", "ebs_volume_queue_length"},
 	"swap":      {"free", "used", "used_percent"},
-	"mem":       {"active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total", "used", "used_percent"},
+	"mem":       {"active", "available", "available_percent", "buffered", "cached", "free", "inactive", "shared", "total", "used", "used_percent"},
 	"net":       {"bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"},
 	"netstat":   {"tcp_close", "tcp_close_wait", "tcp_closing", "tcp_established", "tcp_fin_wait1", "tcp_fin_wait2", "tcp_last_ack", "tcp_listen", "tcp_none", "tcp_syn_sent", "tcp_syn_recv", "tcp_time_wait", "udp_socket"},
 	"processes": {"blocked", "dead", "idle", "paging", "running", "sleeping", "stopped", "total", "total_threads", "wait", "zombies"},
