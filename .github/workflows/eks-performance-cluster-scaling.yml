@@ -119,7 +119,7 @@ jobs:
       - name: Validate total node count
         run: |
           echo "Waiting 1 hour for scaling operations to complete and stabalize..."
-          sleep 3600
+          sleep 1200
           
           echo "Validating total number of nodes in the cluster..."
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
