@@ -15,9 +15,12 @@ const (
 	AWSRemoteTarget                       = "aws.remote.target"
 	AWSRemoteResourceIdentifier           = "aws.remote.resource.identifier"
 	AWSRemoteResourceType                 = "aws.remote.resource.type"
+	AWSRemoteResourceCfnPrimaryIdentifier = "aws.remote.resource.cfn.primary.identifier"
+	AWSRemoteResourceAccountID            = "aws.remote.resource.account.id"
+	AWSRemoteResourceAccountAccessKey     = "aws.remote.resource.account.access_key"
+	AWSRemoteResourceRegion               = "aws.remote.resource.region"
 	AWSHostedInEnvironment                = "aws.hostedin.environment"
 	AWSRemoteDbUser                       = "aws.remote.db.user"
-	AWSRemoteResourceCfnPrimaryIdentifier = "aws.remote.resource.cfn.primary.identifier"
 
 	AWSECSClusterName = "aws.ecs.cluster.name"
 	AWSECSTaskID      = "aws.ecs.task.id"
