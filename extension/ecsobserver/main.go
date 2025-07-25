@@ -7,5 +7,7 @@ import (
 	_ "github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 )
 
-// This file ensures that the ecsobserver package is properly initialized.
-// The blank import above ensures that the ecsobserver extension is registered.
+/*
+This file ensures that the ecsobserver package is properly initialized
+The blank import above ensures that the ecsobserver extension is registered
+*/

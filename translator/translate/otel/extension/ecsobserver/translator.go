@@ -63,12 +63,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ecsSDKey}
 	}
 
-	clusterName := getString(ecsSD, "sd_target_cluster")
-	if clusterName == "" {
-		clusterName = ecsutil.GetECSUtilSingleton().Cluster
-	}
+	// ECS SD Top Level Fields
+	resultFile := getStringWithDefault(ecsSD, "sd_result_file", "/tmp/cwagent_ecs_auto_sd.yaml")
+
+	clusterName := getStringWithDefault(ecsSD, "sd_target_cluster", ecsutil.GetECSUtilSingleton().Cluster)
 	if clusterName == "" {
 		return nil, fmt.Errorf("ECS Target Cluster Name is not defined: %s", clusterName)
+	}
+
+	clusterRegion := getStringWithDefault(ecsSD, "sd_cluster_region", ecsutil.GetECSUtilSingleton().Region)
+	if clusterRegion == "" {
+		return nil, fmt.Errorf("ECS Target Cluster Region is not defined: %s", clusterRegion)
 	}
 
 	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "10s"))
@@ -79,8 +84,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := &ecsobserver.Config{
 		RefreshInterval: refreshDuration,
 		ClusterName:     clusterName,
-		ClusterRegion:   getString(ecsSD, "sd_cluster_region"),
-		ResultFile:      getString(ecsSD, "sd_result_file"),
+		ClusterRegion:   clusterRegion,
+		ResultFile:      resultFile,
 	}
 	// Docker label based service discovery
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
