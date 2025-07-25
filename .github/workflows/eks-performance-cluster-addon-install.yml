@@ -255,5 +255,4 @@ jobs:
         run: |
           echo "Test was cancelled or failed. Cleaning up resources..."
           helm uninstall amazon-cloudwatch-observability -n amazon-cloudwatch || echo "Chart not found or already removed"
-          kubectl delete crd amazoncloudwatchagents.cloudwatch.aws.amazon.com
           echo "Cleanup completed"
