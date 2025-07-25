@@ -4,7 +4,7 @@ name: "EKS Performance Cluster Tests"
 on:
   # Use workflow_run to trigger this workflow after the scaling workflow completes
   workflow_run:
-    workflows: [ "Install/Remove Helm Charts After Scaling" ]
+    workflows: [ "EKS Performance Test Run" ]
     types:
       - completed
     branches:
