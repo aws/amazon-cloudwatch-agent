@@ -158,7 +158,7 @@ jobs:
             cd test/performance/eks/resources
             kubectl apply -f petclinic-sample-app
             echo "Waiting 15 minutes for the application to initialize..."
-            sleep 900
+            sleep 60
 
       - name: Run Performance Test
         uses: nick-fields/retry@v2
