@@ -48,8 +48,6 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 code.cloudfoundry.org/clock v1.0.0 h1:kFXWQM4bxYvdBw2X8BbBeXwQNgfoWv1vqAk2ZZyBN2o=
 code.cloudfoundry.org/clock v1.0.0/go.mod h1:QD9Lzhd/ux6eNQVUDVRJX/RKTigpewimNYBi7ivZKY8=
-collectd.org v0.4.0 h1:nWNldfMqg7EVWAevG8oyOVsS9r/UHRG3LZRf6MdQho0=
-collectd.org v0.4.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
 dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
 dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
@@ -227,6 +225,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20250717174233-f514045fc484/go.mod h1:0uuvLgWcE6V7K7PyR7ohUtPPqaZB9RdTI8cJtkZAKKs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250717174233-f514045fc484 h1:hMRcQkGxmZn5ZcVa9+OLIpGw45WkqjyzgM8zXuhxNOk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250717174233-f514045fc484/go.mod h1:7prJseoHF7mXXAPdU+q1zoZdVOclFZsgNhoBriqBIp0=
+github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250717194605-2ebc0b84cf7c h1:eCFLpZzlETarrsfQhjzzt6WJMel3PZqMwkhK2Hltr9Q=
+github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20250717194605-2ebc0b84cf7c/go.mod h1:fiFXubcxjqvUev4z0NXub109L2pk9hjGc5agEU03G0U=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250717174233-f514045fc484 h1:cFRXqozAwclrrSJD/1fwrrebwNNVL8sAPvewZSmYl0k=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20250717174233-f514045fc484/go.mod h1:K8inysgi51ecddal8W6MPqrYcjh65wm1PsVDV+zgCEA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20250717174233-f514045fc484 h1:KkQR49FSmepOqBfze1zNBmAi06DUUSQzOS+lzQkSPTY=
@@ -409,6 +409,8 @@ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnht
 github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 h1:Om6kYQYDUk5wWbT0t0q6pvyM49i9XZAv9dDrkDA7gjk=
 github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
+github.com/collectd/go-collectd v0.4.0 h1:0u1GXChSSlMw+riTADhcWwTjugckVWxjQHJi7Zj2Xe4=
+github.com/collectd/go-collectd v0.4.0/go.mod h1:xQe/Em/Q9IrN5ifWOvK5ZP2vMIB4KlsIA550yYzhkpY=
 github.com/containerd/cgroups/v3 v3.0.3 h1:S5ByHZ/h9PMe5IOQoN7E+nMc2UcLEM/V48DGDJ9kip0=
 github.com/containerd/cgroups/v3 v3.0.3/go.mod h1:8HBe7V3aWGLFPd/k03swSIsGjZhHI2WzJmticMgVuz0=
 github.com/containerd/containerd/api v1.8.0 h1:hVTNJKR8fMc/2Tiw60ZRijntNMd1U+JVMyTRdsD2bS0=
@@ -1266,8 +1268,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/xk8stest v0.124.1 
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/xk8stest v0.124.1/go.mod h1:nWjjzGy7WQ/QntwK6dfCez419c+YATh6Heb9uKjjqp0=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.124.1 h1:nE0KSsMpcrGjZKPSxyODDOC4GrgB4py05iROSu1DttI=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.124.1/go.mod h1:ArRYQKGKS5qwsDbHawdlZBp6gnbfDnS95xg+GCmvzu8=
-github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.124.1 h1:hNXho7StCk1/25/lvXaKzh4orvIMiv7faYT09pjs3F4=
-github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.124.1/go.mod h1:fiFXubcxjqvUev4z0NXub109L2pk9hjGc5agEU03G0U=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.124.0 h1:UdRBEFVFYfmGfJlgShpZ397HEsU0beYfnID4X/7q2GM=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.124.0/go.mod h1:Om6rcy5yznIEMBhALY8C7tF2XTwnVp2Q0CYDmHWgnV8=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatorateprocessor v0.124.1 h1:/KYW+xicqDcNYJpv5H3BbPXw3oIBGaY8MMcdEg+ybW4=
