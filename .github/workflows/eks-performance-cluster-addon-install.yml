@@ -184,6 +184,7 @@ jobs:
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          path: ./test-repo
 
       - name: Check node count and manage Helm chart
         run: |
@@ -218,7 +219,7 @@ jobs:
               --set manager.image.repository="cwagent-operator-pre-release" \
               --set manager.image.tag="1fd8d00ed22eaefb781b2f707f76d7d12a1755ba" \
               --set manager.image.repositoryDomainMap.public="506463145083.dkr.ecr.us-west-2.amazonaws.com" \
-              --values .test/performance/eks/resources/leader_election_overrides/base-overrides.yml
+              --values ./test-repo/test/performance/eks/resources/leader_election_overrides/base-overrides.yml
           fi
 
   cleanup-on-failure:
