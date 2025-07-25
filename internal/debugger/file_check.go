@@ -113,8 +113,6 @@ func handleFileStatus(file ConfigFile, status FileStatus, errorCollector *ErrorC
 
 		// For specific error types, add more context
 		switch status {
-		case StatusMultipleFiles:
-			message = fmt.Sprintf("%s: Multiple configuration files found in directory - %s", getDisplayName(file.Path), file.Purpose)
 		case StatusInvalidJSONFormat:
 			message = fmt.Sprintf("%s: Invalid JSON format - %s", getDisplayName(file.Path), file.Purpose)
 		}
@@ -170,43 +168,36 @@ func checkDirectoryStatus(path string) FileStatus {
 		return FileStatus("Error checking directory: " + err.Error())
 	}
 
-	if len(entries) == 0 {
+	validJsonFiles := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && !strings.HasSuffix(entry.Name(), ".yaml") {
+			filePath := filepath.Join(path, entry.Name())
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				continue
+			}
+			var js map[string]interface{}
+			if err := json.Unmarshal(content, &js); err == nil {
+				validJsonFiles++
+			}
+		}
+	}
+
+	if validJsonFiles == 0 {
 		return StatusNoFile
-	}
-
-	if len(entries) > 1 {
-		return StatusMultipleFiles
-	}
-
-	fileName := entries[0].Name()
-	content, err := os.ReadFile(filepath.Join(path, fileName))
-	if err != nil {
-		return StatusPresentNotReadable
-	}
-
-	var js map[string]interface{}
-	if err := json.Unmarshal(content, &js); err != nil {
-		return StatusInvalidJSONFormat
 	}
 
 	return StatusPresent
 }
 
 func getConfigFiles() []ConfigFile {
-	return []ConfigFile{
+	baseFiles := []ConfigFile{
 		{
 			Path:        paths.TomlConfigPath,
 			Description: "Main TOML configuration file",
 			Required:    true,
 			Purpose:     "Defines metrics, logs, and traces collection settings",
 			MissingMsg:  "Agent cannot start without this configuration file",
-		},
-		{
-			Path:        paths.ConfigDirPath,
-			Description: "JSON configuration directory",
-			Required:    true,
-			Purpose:     "Contains JSON format configuration files for agent operation",
-			MissingMsg:  "Primary configuration method, agent needs this to function",
 		},
 		{
 			Path:        paths.YamlConfigPath,
@@ -236,7 +227,31 @@ func getConfigFiles() []ConfigFile {
 			Purpose:     "Contains agent runtime logs for troubleshooting",
 			MissingMsg:  "Log file should exist after agent starts - check if agent is running",
 		},
+		{
+			Path:        paths.ConfigDirPath,
+			Description: "JSON configuration directory",
+			Required:    true,
+			Purpose:     "Contains JSON format configuration files for agent operation",
+			MissingMsg:  "Primary configuration method, agent needs this to function",
+		},
 	}
+
+	// Add individual files from .d directory
+	if entries, err := os.ReadDir(paths.ConfigDirPath); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() && !strings.HasSuffix(entry.Name(), ".yaml") {
+				baseFiles = append(baseFiles, ConfigFile{
+					Path:        filepath.Join(paths.ConfigDirPath, entry.Name()),
+					Description: "Configuration file in .d directory",
+					Required:    false,
+					Purpose:     "Individual configuration file processed by agent",
+					MissingMsg:  "Configuration file in directory",
+				})
+			}
+		}
+	}
+
+	return baseFiles
 }
 
 func getDisplayName(path string) string {
