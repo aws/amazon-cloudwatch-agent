@@ -126,9 +126,9 @@ jobs:
           
           # Determine expected count based on trigger type
           if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
-            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * 0))
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * 0 + 1))
           else
-            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP))
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP + 1))
           fi
           
           echo "Expected total nodes: $EXPECTED_NODE_COUNT"
