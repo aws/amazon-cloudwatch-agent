@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsConfigFilesPresentAndReadable(t *testing.T) {
+func TestCheckFileContentStatus(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	status := checkFileContentStatus("/non/existent/file.json")
@@ -30,6 +30,20 @@ func TestIsConfigFilesPresentAndReadable(t *testing.T) {
 
 	status = checkFileContentStatus(invalidJSONPath)
 	assert.Equal(t, StatusInvalidJSONFormat, status, "checkFileContentStatus() for invalid JSON file returned unexpected status")
+
+	// Test non-JSON file
+	textFilePath := filepath.Join(tmpDir, "file.txt")
+	require.NoError(t, os.WriteFile(textFilePath, []byte("text content"), 0644))
+
+	status = checkFileContentStatus(textFilePath)
+	assert.Equal(t, StatusPresent, status, "checkFileContentStatus() for text file returned unexpected status")
+
+	// Test log file
+	logFilePath := filepath.Join(tmpDir, "test.log")
+	require.NoError(t, os.WriteFile(logFilePath, []byte("log content"), 0644))
+
+	status = checkFileContentStatus(logFilePath)
+	assert.Equal(t, StatusPresent, status, "checkFileContentStatus() for log file returned unexpected status")
 }
 
 func TestCheckDirectoryStatus(t *testing.T) {
@@ -41,11 +55,18 @@ func TestCheckDirectoryStatus(t *testing.T) {
 	status = checkDirectoryStatus(tmpDir)
 	assert.Equal(t, StatusNoFile, status, "checkDirectoryStatus() for empty directory returned unexpected status")
 
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "file1.json"), []byte{}, 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "file2.json"), []byte{}, 0644))
+	// Test directory with valid JSON files
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "file1.json"), []byte("{}"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "file2.json"), []byte("{\"key\": \"value\"}"), 0644))
 
 	status = checkDirectoryStatus(tmpDir)
-	assert.Equal(t, StatusMultipleFiles, status, "checkDirectoryStatus() for directory with multiple files returned unexpected status")
+	assert.Equal(t, StatusPresent, status, "checkDirectoryStatus() for directory with valid JSON files returned unexpected status")
+
+	// Test directory with invalid JSON files
+	tmpDir2 := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir2, "invalid.json"), []byte("{invalid json}"), 0644))
+	status = checkDirectoryStatus(tmpDir2)
+	assert.Equal(t, StatusNoFile, status, "checkDirectoryStatus() for directory with invalid JSON files returned unexpected status")
 }
 
 func TestCheckFileStatus(t *testing.T) {
@@ -84,6 +105,7 @@ func TestPrintConfigFilesCompact(t *testing.T) {
 	assert.Contains(t, output, "amazon-cloudwatch-agent.toml:", "Output should contain TOML config file")
 	assert.Contains(t, output, "amazon-cloudwatch-agent.d:", "Output should contain JSON config directory")
 	assert.Contains(t, output, "amazon-cloudwatch-agent.log:", "Output should contain log file")
+	assert.Contains(t, output, "amazon-cloudwatch-agent.yaml:", "Output should contain YAML config file")
 
 	assert.NotContains(t, output, "┌", "Compact format should not contain table borders")
 	assert.NotContains(t, output, "│", "Compact format should not contain table borders")
@@ -105,4 +127,5 @@ func TestPrintConfigFilesTable(t *testing.T) {
 	assert.Contains(t, output, "amazon-cloudwatch-agent.toml", "Output should contain TOML config file")
 	assert.Contains(t, output, "amazon-cloudwatch-agent.d", "Output should contain JSON config directory")
 	assert.Contains(t, output, "amazon-cloudwatch-agent.log", "Output should contain log file")
+	assert.Contains(t, output, "amazon-cloudwatch-agent.yaml", "Output should contain YAML config file")
 }
