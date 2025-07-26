@@ -21,7 +21,6 @@ const (
 	StatusPresent            FileStatus = "✓ Present"
 	StatusMissing            FileStatus = "✗ Missing"
 	StatusNoFile             FileStatus = "✗ No file found"
-	StatusMultipleFiles      FileStatus = "! Multiple files found"
 	StatusInvalidJSONFormat  FileStatus = "! Invalid JSON format"
 	StatusPresentNotReadable FileStatus = "! Present but not readable"
 )
@@ -197,7 +196,7 @@ func getConfigFiles() []ConfigFile {
 			Description: "Main TOML configuration file",
 			Required:    true,
 			Purpose:     "Defines metrics, logs, and traces collection settings",
-			MissingMsg:  "Agent cannot start without this configuration file",
+			MissingMsg:  "Agent cannot start without this configuration file. This could point to a translator issue.",
 		},
 		{
 			Path:        paths.YamlConfigPath,
