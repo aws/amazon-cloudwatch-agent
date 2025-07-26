@@ -22,8 +22,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
+	healthcheckextension "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/healthcheck"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
@@ -95,7 +95,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}
 
-	pipelines.Translators.Extensions.Set(extension.NewHealthCheckTranslator())
+	pipelines.Translators.Extensions.Set(healthcheckextension.NewHealthCheckTranslator())
 
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
