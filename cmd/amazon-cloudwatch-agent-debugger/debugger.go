@@ -42,6 +42,7 @@ func main() {
 	defer func() {
 		debugger.GetErrorCollector().PrintErrors()
 		fmt.Println()
+		debugger.GetErrorSuggestions(paths.AgentLogFilePath)
 		fmt.Println("If you are still unable to resolve your problem, refer to these docs:")
 		fmt.Printf("General CWAgent troubleshooting docs: %s\n", cwagentDocsUrl)
 		fmt.Printf("Logs not being pushed: %s\n", notPushingLogsDocsUrl)

@@ -145,12 +145,10 @@ func matchPatterns(errorEntries []string, patterns []DiagnosticSuggestion) []Dia
 	var suggestions []DiagnosticSuggestion
 
 	for _, entry := range errorEntries {
-		// fmt.Printf("Checking error entry: %s\n", truncateForDisplay(entry))
 		for _, pattern := range patterns {
 			if !pattern.Pattern.MatchString(entry) {
 				continue
 			}
-			// fmt.Printf("  Matched pattern: %s\n", pattern.Possibility)
 			suggestions = append(suggestions, pattern)
 		}
 	}
