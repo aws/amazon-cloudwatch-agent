@@ -199,6 +199,7 @@ func (ts *tailerSrc) runTail() {
 
 	for {
 		select {
+		// Warning: Make sure to release line once done!
 		case line, ok := <-ts.tailer.Lines:
 			if !ok {
 				ts.publishEvent(msgBuf, fo)
@@ -207,6 +208,7 @@ func (ts *tailerSrc) runTail() {
 
 			if line.Err != nil {
 				log.Printf("E! [logfile] Error tailing line in file %s, Error: %s\n", ts.tailer.Filename, line.Err)
+				ts.tailer.ReleaseLine(line)
 				continue
 			}
 
@@ -216,6 +218,7 @@ func (ts *tailerSrc) runTail() {
 				text, err = ts.enc.NewDecoder().String(text)
 				if err != nil {
 					log.Printf("E! [logfile] Cannot decode the log file content for %s: %v\n", ts.tailer.Filename, err)
+					ts.tailer.ReleaseLine(line)
 					continue
 				}
 			}
@@ -231,14 +234,17 @@ func (ts *tailerSrc) runTail() {
 			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
 				ignoreUntilNextEvent = true
 				fo.ShiftInt64(line.Offset)
+				ts.tailer.ReleaseLine(line)
 				continue
 			} else {
 				msgBuf.WriteString("\n")
 				msgBuf.WriteString(text)
 				fo.ShiftInt64(line.Offset)
+				ts.tailer.ReleaseLine(line)
 				continue
 			}
 
+			ts.tailer.ReleaseLine(line)
 			ts.publishEvent(msgBuf, fo)
 			msgBuf.Reset()
 			msgBuf.WriteString(init)
