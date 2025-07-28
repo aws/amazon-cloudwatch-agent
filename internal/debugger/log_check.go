@@ -30,7 +30,6 @@ func CheckConfiguredLogsExistsAndReadable(w io.Writer, config map[string]interfa
 
 	collectList, err := getCollectListFromConfig(config)
 	if err != nil {
-		fmt.Fprintln(w, "Error: Unable to find valid log collection configuration")
 		return []AgentLogConfig{}, err
 	}
 
@@ -220,7 +219,7 @@ func expandRecursiveGlob(pattern string) []string {
 func getCollectListFromConfig(config map[string]interface{}) ([]interface{}, error) {
 	logs, ok := config["logs"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("logs configuration not found. Unable to parse log configuration")
+		return nil, fmt.Errorf("No logs configuration found.")
 	}
 
 	logsCollected, ok := logs["logs_collected"].(map[string]interface{})
