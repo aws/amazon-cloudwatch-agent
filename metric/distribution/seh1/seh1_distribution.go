@@ -36,26 +36,26 @@ func NewSEH1Distribution() distribution.Distribution {
 	}
 }
 
-func (sd *SEH1Distribution) Maximum() float64 {
-	return sd.maximum
+func (seh1Distribution *SEH1Distribution) Maximum() float64 {
+	return seh1Distribution.maximum
 }
 
-func (sd *SEH1Distribution) Minimum() float64 {
-	return sd.minimum
+func (seh1Distribution *SEH1Distribution) Minimum() float64 {
+	return seh1Distribution.minimum
 }
 
-func (sd *SEH1Distribution) SampleCount() float64 {
-	return sd.sampleCount
+func (seh1Distribution *SEH1Distribution) SampleCount() float64 {
+	return seh1Distribution.sampleCount
 }
 
-func (sd *SEH1Distribution) Sum() float64 {
-	return sd.sum
+func (seh1Distribution *SEH1Distribution) Sum() float64 {
+	return seh1Distribution.sum
 }
 
-func (sd *SEH1Distribution) ValuesAndCounts() (values []float64, counts []float64) {
+func (seh1Distribution *SEH1Distribution) ValuesAndCounts() (values []float64, counts []float64) {
 	values = []float64{}
 	counts = []float64{}
-	for bucketNumber, counter := range sd.buckets {
+	for bucketNumber, counter := range seh1Distribution.buckets {
 		var value float64
 		if bucketNumber == bucketForZero {
 			value = 0
@@ -69,16 +69,16 @@ func (sd *SEH1Distribution) ValuesAndCounts() (values []float64, counts []float6
 	return
 }
 
-func (sd *SEH1Distribution) Unit() string {
-	return sd.unit
+func (seh1Distribution *SEH1Distribution) Unit() string {
+	return seh1Distribution.unit
 }
 
-func (sd *SEH1Distribution) Size() int {
-	return len(sd.buckets)
+func (seh1Distribution *SEH1Distribution) Size() int {
+	return len(seh1Distribution.buckets)
 }
 
 // weight is 1/samplingRate
-func (sd *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
 	if weight <= 0 {
 		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
 	}
@@ -86,71 +86,71 @@ func (sd *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit
 		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
 	}
 	//sample count
-	sd.sampleCount += weight
+	seh1Distribution.sampleCount += weight
 	//sum
-	sd.sum += value * weight
+	seh1Distribution.sum += value * weight
 	//min
-	if value < sd.minimum {
-		sd.minimum = value
+	if value < seh1Distribution.minimum {
+		seh1Distribution.minimum = value
 	}
 	//max
-	if value > sd.maximum {
-		sd.maximum = value
+	if value > seh1Distribution.maximum {
+		seh1Distribution.maximum = value
 	}
 
 	//seh
 	bucketNumber := bucketNumber(value)
-	sd.buckets[bucketNumber] += weight
+	seh1Distribution.buckets[bucketNumber] += weight
 
 	//unit
-	if sd.unit == "" {
-		sd.unit = unit
-	} else if sd.unit != unit && unit != "" {
-		log.Printf("D! Multiple units are detected: %s, %s", sd.unit, unit)
+	if seh1Distribution.unit == "" {
+		seh1Distribution.unit = unit
+	} else if seh1Distribution.unit != unit && unit != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, unit)
 	}
 	return nil
 }
 
 // weight is 1/samplingRate
-func (sd *SEH1Distribution) AddEntry(value float64, weight float64) error {
-	return sd.AddEntryWithUnit(value, weight, "")
+func (seh1Distribution *SEH1Distribution) AddEntry(value float64, weight float64) error {
+	return seh1Distribution.AddEntryWithUnit(value, weight, "")
 }
 
-func (sd *SEH1Distribution) AddDistribution(distribution distribution.Distribution) {
-	sd.AddDistributionWithWeight(distribution, 1)
+func (seh1Distribution *SEH1Distribution) AddDistribution(distribution distribution.Distribution) {
+	seh1Distribution.AddDistributionWithWeight(distribution, 1)
 }
 
-func (sd *SEH1Distribution) AddDistributionWithWeight(distribution distribution.Distribution, weight float64) {
+func (seh1Distribution *SEH1Distribution) AddDistributionWithWeight(distribution distribution.Distribution, weight float64) {
 	if distribution.SampleCount()*weight > 0 {
 
 		//seh
 		if fromSEH1Distribution, ok := distribution.(*SEH1Distribution); ok {
 			for bucketNumber, bucketCounts := range fromSEH1Distribution.buckets {
-				sd.buckets[bucketNumber] += bucketCounts * weight
+				seh1Distribution.buckets[bucketNumber] += bucketCounts * weight
 			}
 		} else {
-			log.Printf("E! The from distribution type is not compatible with the to distribution type: from distribution type %T, to distribution type %T", sd, distribution)
+			log.Printf("E! The from distribution type is not compatible with the to distribution type: from distribution type %T, to distribution type %T", seh1Distribution, distribution)
 			return
 		}
 
 		//sample count
-		sd.sampleCount += distribution.SampleCount() * weight
+		seh1Distribution.sampleCount += distribution.SampleCount() * weight
 		//sum
-		sd.sum += distribution.Sum() * weight
+		seh1Distribution.sum += distribution.Sum() * weight
 		//min
-		if distribution.Minimum() < sd.minimum {
-			sd.minimum = distribution.Minimum()
+		if distribution.Minimum() < seh1Distribution.minimum {
+			seh1Distribution.minimum = distribution.Minimum()
 		}
 		//max
-		if distribution.Maximum() > sd.maximum {
-			sd.maximum = distribution.Maximum()
+		if distribution.Maximum() > seh1Distribution.maximum {
+			seh1Distribution.maximum = distribution.Maximum()
 		}
 
 		//unit
-		if sd.unit == "" {
-			sd.unit = distribution.Unit()
-		} else if sd.unit != distribution.Unit() && distribution.Unit() != "" {
-			log.Printf("D! Multiple units are detected: %s, %s", sd.unit, distribution.Unit())
+		if seh1Distribution.unit == "" {
+			seh1Distribution.unit = distribution.Unit()
+		} else if seh1Distribution.unit != distribution.Unit() && distribution.Unit() != "" {
+			log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, distribution.Unit())
 		}
 	} else {
 		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", distribution.SampleCount(), weight)
@@ -186,17 +186,17 @@ func (sd *SEH1Distribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit 
 	}
 }
 
-func (sd *SEH1Distribution) Resize(_ int) []distribution.Distribution {
+func (seh1Distribution *SEH1Distribution) Resize(_ int) []distribution.Distribution {
 	// it has already considered the list max size.
-	return []distribution.Distribution{sd}
+	return []distribution.Distribution{seh1Distribution}
 }
 
-func (sd *SEH1Distribution) CanAdd(value float64, sizeLimit int) bool {
-	if sd.Size() < sizeLimit {
+func (seh1Distribution *SEH1Distribution) CanAdd(value float64, sizeLimit int) bool {
+	if seh1Distribution.Size() < sizeLimit {
 		return true
 	}
 	bucketNumber := bucketNumber(value)
-	if _, ok := sd.buckets[bucketNumber]; ok {
+	if _, ok := seh1Distribution.buckets[bucketNumber]; ok {
 		return true
 	}
 	return false

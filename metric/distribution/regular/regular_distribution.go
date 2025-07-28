@@ -35,42 +35,42 @@ func NewRegularDistribution() distribution.Distribution {
 	}
 }
 
-func (rd *RegularDistribution) Maximum() float64 {
-	return rd.maximum
+func (regularDist *RegularDistribution) Maximum() float64 {
+	return regularDist.maximum
 }
 
-func (rd *RegularDistribution) Minimum() float64 {
-	return rd.minimum
+func (regularDist *RegularDistribution) Minimum() float64 {
+	return regularDist.minimum
 }
 
-func (rd *RegularDistribution) SampleCount() float64 {
-	return rd.sampleCount
+func (regularDist *RegularDistribution) SampleCount() float64 {
+	return regularDist.sampleCount
 }
 
-func (rd *RegularDistribution) Sum() float64 {
-	return rd.sum
+func (regularDist *RegularDistribution) Sum() float64 {
+	return regularDist.sum
 }
 
-func (rd *RegularDistribution) ValuesAndCounts() (values []float64, counts []float64) {
+func (regularDist *RegularDistribution) ValuesAndCounts() (values []float64, counts []float64) {
 	values = []float64{}
 	counts = []float64{}
-	for value, counter := range rd.buckets {
+	for value, counter := range regularDist.buckets {
 		values = append(values, value)
 		counts = append(counts, counter)
 	}
 	return
 }
 
-func (rd *RegularDistribution) Unit() string {
-	return rd.unit
+func (regularDist *RegularDistribution) Unit() string {
+	return regularDist.unit
 }
 
-func (rd *RegularDistribution) Size() int {
-	return len(rd.buckets)
+func (regularDist *RegularDistribution) Size() int {
+	return len(regularDist.buckets)
 }
 
 // weight is 1/samplingRate
-func (rd *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
 	if weight <= 0 {
 		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
 	}
@@ -78,70 +78,70 @@ func (rd *RegularDistribution) AddEntryWithUnit(value float64, weight float64, u
 		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
 	}
 	//sample count
-	rd.sampleCount += weight
+	regularDist.sampleCount += weight
 	//sum
-	rd.sum += value * weight
+	regularDist.sum += value * weight
 	//min
-	if value < rd.minimum {
-		rd.minimum = value
+	if value < regularDist.minimum {
+		regularDist.minimum = value
 	}
 	//max
-	if value > rd.maximum {
-		rd.maximum = value
+	if value > regularDist.maximum {
+		regularDist.maximum = value
 	}
 
 	//values and counts
-	rd.buckets[value] += weight
+	regularDist.buckets[value] += weight
 
 	//unit
-	if rd.unit == "" {
-		rd.unit = unit
-	} else if rd.unit != unit && unit != "" {
-		log.Printf("D! Multiple units are detected: %s, %s", rd.unit, unit)
+	if regularDist.unit == "" {
+		regularDist.unit = unit
+	} else if regularDist.unit != unit && unit != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", regularDist.unit, unit)
 	}
 	return nil
 }
 
 // weight is 1/samplingRate
-func (rd *RegularDistribution) AddEntry(value float64, weight float64) error {
-	return rd.AddEntryWithUnit(value, weight, "")
+func (regularDist *RegularDistribution) AddEntry(value float64, weight float64) error {
+	return regularDist.AddEntryWithUnit(value, weight, "")
 }
 
-func (rd *RegularDistribution) AddDistribution(distribution distribution.Distribution) {
-	rd.AddDistributionWithWeight(distribution, 1)
+func (regularDist *RegularDistribution) AddDistribution(distribution distribution.Distribution) {
+	regularDist.AddDistributionWithWeight(distribution, 1)
 }
 
-func (rd *RegularDistribution) AddDistributionWithWeight(distribution distribution.Distribution, weight float64) {
+func (regularDist *RegularDistribution) AddDistributionWithWeight(distribution distribution.Distribution, weight float64) {
 	if distribution.SampleCount()*weight > 0 {
 
 		//values and counts
 		if fromDistribution, ok := distribution.(*RegularDistribution); ok {
 			for bucketNumber, bucketCounts := range fromDistribution.buckets {
-				rd.buckets[bucketNumber] += bucketCounts * weight
+				regularDist.buckets[bucketNumber] += bucketCounts * weight
 			}
 		} else {
-			log.Printf("E! The from distribution type is not compatible with the to distribution type: from distribution type %T, to distribution type %T", rd, distribution)
+			log.Printf("E! The from distribution type is not compatible with the to distribution type: from distribution type %T, to distribution type %T", regularDist, distribution)
 			return
 		}
 
 		//sample count
-		rd.sampleCount += distribution.SampleCount() * weight
+		regularDist.sampleCount += distribution.SampleCount() * weight
 		//sum
-		rd.sum += distribution.Sum() * weight
+		regularDist.sum += distribution.Sum() * weight
 		//min
-		if distribution.Minimum() < rd.minimum {
-			rd.minimum = distribution.Minimum()
+		if distribution.Minimum() < regularDist.minimum {
+			regularDist.minimum = distribution.Minimum()
 		}
 		//max
-		if distribution.Maximum() > rd.maximum {
-			rd.maximum = distribution.Maximum()
+		if distribution.Maximum() > regularDist.maximum {
+			regularDist.maximum = distribution.Maximum()
 		}
 
 		//unit
-		if rd.unit == "" {
-			rd.unit = distribution.Unit()
-		} else if rd.unit != distribution.Unit() && distribution.Unit() != "" {
-			log.Printf("D! Multiple units are dected: %s, %s", rd.unit, distribution.Unit())
+		if regularDist.unit == "" {
+			regularDist.unit = distribution.Unit()
+		} else if regularDist.unit != distribution.Unit() && distribution.Unit() != "" {
+			log.Printf("D! Multiple units are dected: %s, %s", regularDist.unit, distribution.Unit())
 		}
 	} else {
 		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", distribution.SampleCount(), weight)
@@ -175,9 +175,9 @@ func (rd *RegularDistribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, un
 	}
 }
 
-func (rd *RegularDistribution) Resize(listMaxSize int) []distribution.Distribution {
+func (regularDist *RegularDistribution) Resize(listMaxSize int) []distribution.Distribution {
 	distList := []distribution.Distribution{}
-	values, _ := rd.ValuesAndCounts()
+	values, _ := regularDist.ValuesAndCounts()
 	sort.Float64s(values)
 	newSEH1Dist := seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
 	for i := 0; i < len(values); i++ {
@@ -185,7 +185,7 @@ func (rd *RegularDistribution) Resize(listMaxSize int) []distribution.Distributi
 			distList = append(distList, newSEH1Dist)
 			newSEH1Dist = seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
 		}
-		newSEH1Dist.AddEntry(values[i], rd.GetCount(values[i]))
+		newSEH1Dist.AddEntry(values[i], regularDist.GetCount(values[i]))
 	}
 	if newSEH1Dist.Size() > 0 {
 		distList = append(distList, newSEH1Dist)
@@ -193,6 +193,6 @@ func (rd *RegularDistribution) Resize(listMaxSize int) []distribution.Distributi
 	return distList
 }
 
-func (rd *RegularDistribution) GetCount(value float64) float64 {
-	return rd.buckets[value]
+func (regularDist *RegularDistribution) GetCount(value float64) float64 {
+	return regularDist.buckets[value]
 }

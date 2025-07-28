@@ -160,11 +160,14 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 	d.sampleCount = float64(dp.Count())
 	d.sum = dp.Sum()
 
+	// Each range of the ExponentialHistogram data point uses a dense representation of the buckets, where a range of buckets
+	// is expressed as a single `offset` value, a signed integer, and an array of count values, where array element i
+	// represents the bucket count for bucket index offset+i.
 	positiveOffset := positiveBuckets.Offset()
 	posBucketCounts := positiveBuckets.BucketCounts().AsRaw()
-	for posBucketIndex := range posBucketCounts {
-		offsetIndex := posBucketIndex + int(positiveOffset)
-		d.positiveBuckets[offsetIndex] = posBucketCounts[posBucketIndex]
+	for i := range posBucketCounts {
+		offsetIndex := i + int(positiveOffset)
+		d.positiveBuckets[offsetIndex] = posBucketCounts[i]
 	}
 
 	d.zeroThreshold = dp.ZeroThreshold()
@@ -172,9 +175,9 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 
 	negativeOffset := negativeBuckets.Offset()
 	negBucketCounts := negativeBuckets.BucketCounts().AsRaw()
-	for negBucketIndex := range negBucketCounts {
-		offsetIndex := negBucketIndex + int(negativeOffset)
-		d.negativeBuckets[offsetIndex] = negBucketCounts[negBucketIndex]
+	for i := range negBucketCounts {
+		offsetIndex := i + int(negativeOffset)
+		d.negativeBuckets[offsetIndex] = negBucketCounts[i]
 	}
 }
 
