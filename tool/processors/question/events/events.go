@@ -5,9 +5,12 @@ package events
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/logs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/tracesconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
@@ -29,6 +32,9 @@ const (
 
 	EventFormatXML       = "xml"
 	EventFormatPlainText = "text"
+
+	FilterTypeInclude = "include"
+	FilterTypeExclude = "exclude"
 )
 
 var Processor processors.Processor = &processor{}
@@ -67,6 +73,49 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 			}
 		}
 
+		var eventIDs []int
+		if util.Yes("Do you want to filter by specific Event IDs?") {
+			eventIDsInput := util.Ask("Enter Event IDs (comma-separated, e.g., 1001,1002,1003):")
+			if eventIDsInput != "" {
+				eventIDStrings := strings.Split(eventIDsInput, ",")
+				for _, idStr := range eventIDStrings {
+					idStr = strings.TrimSpace(idStr)
+					if id, err := strconv.Atoi(idStr); err == nil && id >= 0 && id <= 65535 {
+						eventIDs = append(eventIDs, id)
+					} else {
+						fmt.Printf("Warning: Invalid Event ID '%s' ignored\n", idStr)
+					}
+				}
+			}
+		}
+		var filters []*logs.EventFilter
+		if util.Yes("Do you want to add regex filters to include/exclude specific events?") {
+			for {
+				filterType := util.Choice("Filter type:", 1, []string{"Include (events matching regex)", "Exclude (events matching regex)"})
+				var filterTypeStr string
+				if filterType == "Include (events matching regex)" {
+					filterTypeStr = FilterTypeInclude
+				} else {
+					filterTypeStr = FilterTypeExclude
+				}
+				regexPattern := util.Ask("Enter regex pattern:")
+				if regexPattern != "" {
+					if _, err := regexp.Compile(regexPattern); err != nil {
+						fmt.Printf("Error: Invalid regex pattern '%s': %v\n", regexPattern, err)
+						continue
+					}
+					filter := &logs.EventFilter{
+						Type:       filterTypeStr,
+						Expression: regexPattern,
+					}
+					filters = append(filters, filter)
+				}
+				if !util.Yes("Do you want to add another regex filter?") {
+					break
+				}
+			}
+		}
+
 		logGroupName := util.AskWithDefault("Log group name:", eventName)
 
 		logStreamNameHint := "{instance_id}"
@@ -102,7 +151,7 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 		if err == nil {
 			retention = i
 		}
-		logsConf.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, retention, logGroupClass)
+		logsConf.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, eventIDs, filters, retention, logGroupClass)
 
 		yes = util.Yes(fmt.Sprintf("Do you want to specify any additional %s to monitor?", WindowsEventLog))
 		if !yes {
