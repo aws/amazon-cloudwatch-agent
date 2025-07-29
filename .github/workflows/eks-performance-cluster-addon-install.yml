@@ -178,6 +178,7 @@ jobs:
         run: |
           rm -rf ./helm-charts
           git clone -b ${{ inputs.helm-charts-branch || 'sky333999/leader-election' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
+          git branch
 
       - name: Clone Test Repo
         uses: actions/checkout@v4
