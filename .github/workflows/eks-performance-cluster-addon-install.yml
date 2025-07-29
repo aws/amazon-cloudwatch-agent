@@ -185,10 +185,6 @@ jobs:
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
           path: ./test-repo
 
-      - name: Label nodes for CloudWatch Agent targeting
-        run: |
-          kubectl label nodes -l 'node.kubernetes.io/instance-type=t3.medium' cwagent-target="true"
-
       - name: Replace hostname in override files
         run: |
           HOSTNAME=$(kubectl get nodes -l eks.amazonaws.com/nodegroup=$CLUSTER_NAME-leader-node -o jsonpath='{.items[0].metadata.name}')
