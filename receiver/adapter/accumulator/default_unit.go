@@ -75,6 +75,7 @@ var defaultUnits = map[string]map[string]string{
 		"buffered":          "Bytes",
 		"active":            "Bytes",
 		"inactive":          "Bytes",
+		"shared":            "Bytes",
 		"available_percent": "Percent",
 		"used_percent":      "Percent",
 	},
