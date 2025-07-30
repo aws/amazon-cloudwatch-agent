@@ -25,7 +25,8 @@ import (
 var expirationTimeOneWeek = time.Now().UTC().Add(-clean.KeepDurationOneWeek)
 
 const clusterPrefix = "cwagent-integ-test-cluster-"
-const taskdefPrefix = "cwagent-integ-test-"
+
+var taskdefPrefixes = []string{"cwagent-integ-test-", "extra-apps-family-", "cwagent-task-family-"}
 
 func main() {
 	ctx := context.Background()
@@ -214,27 +215,29 @@ func deleteInactiveTaskDefinitions(ctx context.Context, client *ecs.Client) {
 func getECSTaskDefsToDelete(ctx context.Context, client *ecs.Client) []string {
 	taskDefsToDelete := make([]string, 0)
 
-	// List inactive task definitions with integration test prefix
-	listTaskDefsInput := ecs.ListTaskDefinitionsInput{
-		FamilyPrefix: aws.String(taskdefPrefix),
-		Status:       types.TaskDefinitionStatusInactive,
-	}
-
-	for {
-		listTaskDefsOutput, err := client.ListTaskDefinitions(ctx, &listTaskDefsInput)
-		if err != nil {
-			log.Printf("Error listing task definitions: %v", err)
-			break
-		}
-		if len(listTaskDefsOutput.TaskDefinitionArns) == 0 {
-			break
+	for _, prefix := range taskdefPrefixes {
+		// List inactive task definitions with integration test prefix
+		listTaskDefsInput := ecs.ListTaskDefinitionsInput{
+			FamilyPrefix: aws.String(prefix),
+			Status:       types.TaskDefinitionStatusInactive,
 		}
 
-		taskDefsToDelete = append(taskDefsToDelete, listTaskDefsOutput.TaskDefinitionArns...)
-		if listTaskDefsOutput.NextToken == nil {
-			break
+		for {
+			listTaskDefsOutput, err := client.ListTaskDefinitions(ctx, &listTaskDefsInput)
+			if err != nil {
+				log.Printf("Error listing task definitions: %v", err)
+				break
+			}
+			if len(listTaskDefsOutput.TaskDefinitionArns) == 0 {
+				break
+			}
+
+			taskDefsToDelete = append(taskDefsToDelete, listTaskDefsOutput.TaskDefinitionArns...)
+			if listTaskDefsOutput.NextToken == nil {
+				break
+			}
+			listTaskDefsInput.NextToken = listTaskDefsOutput.NextToken
 		}
-		listTaskDefsInput.NextToken = listTaskDefsOutput.NextToken
 	}
 	return taskDefsToDelete
 }
