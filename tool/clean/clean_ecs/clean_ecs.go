@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
@@ -23,7 +24,8 @@ import (
 
 var expirationTimeOneWeek = time.Now().UTC().Add(-clean.KeepDurationOneWeek)
 
-const cwaIntegTestClusterPrefix = "cwagent-integ-test-cluster-"
+const clusterPrefix = "cwagent-integ-test-cluster-"
+const taskdefPrefix = "cwagent-integ-test-"
 
 func main() {
 	ctx := context.Background()
@@ -34,6 +36,7 @@ func main() {
 
 	ecsClient := ecs.NewFromConfig(defaultConfig)
 	terminateClusters(ctx, ecsClient)
+	deleteInactiveTaskDefinitions(ctx, ecsClient)
 }
 
 func terminateClusters(ctx context.Context, client *ecs.Client) {
@@ -65,7 +68,7 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 		*/
 
 		for _, cluster := range describeClustersOutput.Clusters {
-			if !strings.HasPrefix(*cluster.ClusterName, cwaIntegTestClusterPrefix) {
+			if !strings.HasPrefix(*cluster.ClusterName, clusterPrefix) {
 				continue
 			}
 			if cluster.RunningTasksCount == 0 && cluster.PendingTasksCount == 0 {
@@ -84,6 +87,10 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 			break
 		}
 		ecsListClusterInput.NextToken = listClusterOutput.NextToken
+	}
+
+	if len(clusterIds) == 0 {
+		log.Print("No clusters to delete.")
 	}
 
 	// Deletion Logic
@@ -167,4 +174,67 @@ func isClusterTasksExpired(ctx context.Context, client *ecs.Client, clusterArn *
 		}
 	}
 	return true
+}
+
+func deleteInactiveTaskDefinitions(ctx context.Context, client *ecs.Client) {
+	log.Print("Begin cleanup of inactive task definitions")
+
+	taskDefsToDelete := getECSTaskDefsToDelete(ctx, client)
+
+	if len(taskDefsToDelete) == 0 {
+		log.Printf("No inactive task definitions to delete")
+		return
+	}
+
+	log.Printf("Found %d inactive task definitions to delete", len(taskDefsToDelete))
+
+	// Batch delete task definitions (API supports up to 10 at a time)
+	const batchSize = 10
+	totalDeleted := 0
+
+	for i := 0; i < len(taskDefsToDelete); i += batchSize {
+		end := min(i+batchSize, len(taskDefsToDelete))
+		output, err := client.DeleteTaskDefinitions(ctx, &ecs.DeleteTaskDefinitionsInput{
+			TaskDefinitions: taskDefsToDelete[i:end],
+		})
+		if err != nil {
+			log.Printf("Error batch deleting task definitions: %v", err)
+			continue
+		}
+
+		totalDeleted += len(output.TaskDefinitions)
+		for _, failure := range output.Failures {
+			log.Printf("Failed to delete task definition %s: %s", *failure.Arn, *failure.Reason)
+		}
+	}
+
+	log.Printf("Successfully deleted %d task definitions", totalDeleted)
+}
+
+func getECSTaskDefsToDelete(ctx context.Context, client *ecs.Client) []string {
+	taskDefsToDelete := make([]string, 0)
+
+	// List inactive task definitions with integration test prefix
+	listTaskDefsInput := ecs.ListTaskDefinitionsInput{
+		FamilyPrefix: aws.String(taskdefPrefix),
+		Status:       types.TaskDefinitionStatusInactive,
+	}
+
+	for {
+		listTaskDefsOutput, err := client.ListTaskDefinitions(ctx, &listTaskDefsInput)
+		if err != nil {
+			log.Printf("Error listing task definitions: %v", err)
+			break
+		}
+		if len(listTaskDefsOutput.TaskDefinitionArns) == 0 {
+			break
+		}
+
+		taskDefsToDelete = append(taskDefsToDelete, listTaskDefsOutput.TaskDefinitionArns...)
+		if listTaskDefsOutput.NextToken == nil {
+			break
+		}
+		listTaskDefsInput.NextToken = listTaskDefsOutput.NextToken
+	}
+	return taskDefsToDelete
 }
