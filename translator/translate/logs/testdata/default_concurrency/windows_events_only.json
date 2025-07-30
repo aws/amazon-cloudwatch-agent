@@ -1,0 +1,29 @@
+{
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": [
+              "INFORMATION",
+              "ERROR"
+            ],
+            "log_group_name": "System",
+            "log_stream_name": "System"
+          },
+          {
+            "event_name": "Application",
+            "event_levels": [
+              "INFORMATION",
+              "ERROR"
+            ],
+            "log_group_name": "Application",
+            "log_stream_name": "Application"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "log_stream_name"
+  }
+}

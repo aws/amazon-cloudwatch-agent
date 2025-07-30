@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/constants"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
 	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 )
@@ -21,12 +22,11 @@ import (
 type Rule translator.Rule
 
 const (
-	SectionKey              = "collect_list"
 	logConfigOutputFileName = "log-config.json"
 )
 
 func GetCurPath() string {
-	curPath := parent.GetCurPath() + SectionKey + "/"
+	curPath := parent.GetCurPath() + constants.SectionKeyCollectList + "/"
 	return curPath
 }
 
@@ -48,8 +48,8 @@ type FileConfig struct {
 func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
 	res := []interface{}{}
-	if translator.IsValid(input, SectionKey, GetCurPath()) {
-		configArr := m[SectionKey].([]interface{})
+	if translator.IsValid(input, constants.SectionKeyCollectList, GetCurPath()) {
+		configArr := m[constants.SectionKeyCollectList].([]interface{})
 		for i := 0; i < len(configArr); i++ {
 			Index += 1
 			result := map[string]interface{}{}
@@ -122,11 +122,11 @@ func outputLogConfig(logConfigs []interface{}) {
 var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
 
 func (f *FileConfig) Merge(source map[string]interface{}, result map[string]interface{}) {
-	mergeJsonUtil.MergeList(source, result, SectionKey)
+	mergeJsonUtil.MergeList(source, result, constants.SectionKeyCollectList)
 }
 
 func init() {
 	f := new(FileConfig)
-	parent.RegisterRule(SectionKey, f)
-	parent.MergeRuleMap[SectionKey] = f
+	parent.RegisterRule(constants.SectionKeyCollectList, f)
+	parent.MergeRuleMap[constants.SectionKeyCollectList] = f
 }

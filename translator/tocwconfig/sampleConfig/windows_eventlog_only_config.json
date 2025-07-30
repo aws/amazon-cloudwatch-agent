@@ -1,5 +1,6 @@
 {
   "logs": {
+    "concurrency": 1,
     "logs_collected": {
       "windows_events": {
         "collect_list": [
