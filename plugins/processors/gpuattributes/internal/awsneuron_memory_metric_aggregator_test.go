@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 )
 
 const (
@@ -28,7 +28,7 @@ func TestMemoryMetricAggregator_AggregateMemoryMetric(t *testing.T) {
 	aggregator := NewMemoryMemoryAggregator()
 
 	// Create a sample original metric with gauge data points
-	tensorsMemoryUsage := createSampleMetric(containerinsightscommon.NeuronCoreMemoryUtilizationTensors)
+	tensorsMemoryUsage := createSampleMetric(constants.NeuronCoreMemoryUtilizationTensors)
 	nonNeuronMetric := createSampleMetric(dummy)
 
 	// Call the method being tested
@@ -65,8 +65,8 @@ func TestMemoryMetricAggregator_FlushAggregatedMemoryMetric(t *testing.T) {
 
 	// Add some data to the aggregator
 	// Create a sample original metric with gauge data points
-	tensorsMemoryUsage := createSampleMetric(containerinsightscommon.NeuronCoreMemoryUtilizationTensors)
-	constantsMemoryUsage := createSampleMetric(containerinsightscommon.NeuronCoreMemoryUtilizationConstants)
+	tensorsMemoryUsage := createSampleMetric(constants.NeuronCoreMemoryUtilizationTensors)
+	constantsMemoryUsage := createSampleMetric(constants.NeuronCoreMemoryUtilizationConstants)
 	nonNeuronMetric := createSampleMetric(dummy)
 
 	// Call the method being tested
@@ -79,7 +79,7 @@ func TestMemoryMetricAggregator_FlushAggregatedMemoryMetric(t *testing.T) {
 	aggregatedMetricDatapoints := aggregatedMetric.Sum().DataPoints()
 	// Assert the result
 	assert.NotNil(t, aggregatedMetric)
-	assert.Equal(t, containerinsightscommon.NeuronCoreMemoryUtilizationTotal, aggregatedMetric.Name())
+	assert.Equal(t, constants.NeuronCoreMemoryUtilizationTotal, aggregatedMetric.Name())
 	assert.Equal(t, 2, aggregatedMetricDatapoints.Len())
 
 	for i := 0; i < aggregatedMetricDatapoints.Len(); i++ {

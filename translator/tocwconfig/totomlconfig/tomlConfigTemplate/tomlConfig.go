@@ -40,7 +40,7 @@ type (
 		Disk            []diskConfig
 		DiskIo          []diskioConfig
 		Ethtool         []ethtoolConfig
-		K8sapiserver    []k8sApiServerConfig
+		K8sapiserver    []k8sAPIServerConfig
 		Logfile         []logFileConfig
 		Mem             []memConfig
 		Net             []netConfig
@@ -62,9 +62,7 @@ type (
 
 	processorsConfig struct {
 		Delta        []processorDelta
-		EcsDecorator []ecsDecoratorConfig
 		EmfProcessor []emfProcessorConfig
-		K8sDecorator []k8sDecoratorConfig
 	}
 
 	// Input Plugins
@@ -144,7 +142,7 @@ type (
 		Filters               []fileConfigFilter
 	}
 
-	k8sApiServerConfig struct {
+	k8sAPIServerConfig struct {
 		Interval string
 		NodeName string `toml:"node_name"`
 		Tags     map[string]string
@@ -297,12 +295,6 @@ type (
 	processorDelta struct {
 	}
 
-	ecsDecoratorConfig struct {
-		HostIp  string `toml:"host_ip"`
-		Order   int
-		TagPass map[string][]string
-	}
-
 	emfProcessorConfig struct {
 		MetricDeclarationDedup bool   `toml:"metric_declaration_dedup"`
 		MetricNamespace        string `toml:"metric_namespace"`
@@ -318,16 +310,5 @@ type (
 		LabelSeparator string   `toml:"label_separator"`
 		MetricSelector []string `toml:"metric_selectors"`
 		SourceLabels   []string `toml:"source_labels"`
-	}
-
-	k8sDecoratorConfig struct {
-		ClusterName             string `toml:"cluster_name"`
-		DisableMetricExtraction bool   `toml:"disable_metric_extraction"`
-		HostIp                  string `toml:"host_ip"`
-		NodeName                string `toml:"host_name_from_env"`
-		Order                   int
-		PreferFullPodName       bool `toml:"prefer_full_pod_name"`
-		TagService              bool `toml:"tag_service"`
-		TagPass                 map[string][]string
 	}
 )

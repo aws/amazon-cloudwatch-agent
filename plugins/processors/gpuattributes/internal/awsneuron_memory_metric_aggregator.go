@@ -7,15 +7,15 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 )
 
 var memoryMetricsNames = map[string]struct{}{
-	containerinsightscommon.NeuronCoreMemoryUtilizationConstants:        {},
-	containerinsightscommon.NeuronCoreMemoryUtilizationModelCode:        {},
-	containerinsightscommon.NeuronCoreMemoryUtilizationSharedScratchpad: {},
-	containerinsightscommon.NeuronCoreMemoryUtilizationRuntimeMemory:    {},
-	containerinsightscommon.NeuronCoreMemoryUtilizationTensors:          {},
+	constants.NeuronCoreMemoryUtilizationConstants:        {},
+	constants.NeuronCoreMemoryUtilizationModelCode:        {},
+	constants.NeuronCoreMemoryUtilizationSharedScratchpad: {},
+	constants.NeuronCoreMemoryUtilizationRuntimeMemory:    {},
+	constants.NeuronCoreMemoryUtilizationTensors:          {},
 }
 
 type NeuronCoreInfo struct {
@@ -67,7 +67,7 @@ func (d *AwsNeuronMemoryMetricsAggregator) AggregateMemoryMetric(originalMetric 
 
 func (d *AwsNeuronMemoryMetricsAggregator) FlushAggregatedMemoryMetric() pmetric.Metric {
 	aggregatedMemoryMetric := pmetric.NewMetric()
-	aggregatedMemoryMetric.SetName(containerinsightscommon.NeuronCoreMemoryUtilizationTotal)
+	aggregatedMemoryMetric.SetName(constants.NeuronCoreMemoryUtilizationTotal)
 	datapoints := aggregatedMemoryMetric.SetEmptySum().DataPoints()
 
 	for neuronCoreInfo, totalMemoryUsed := range d.memoryMetricValuesAggregator {
