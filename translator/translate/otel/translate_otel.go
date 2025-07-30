@@ -93,9 +93,8 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	}
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
+		pipelines.Translators.Extensions.Set(healthcheckextension.NewHealthCheckTranslator())
 	}
-
-	pipelines.Translators.Extensions.Set(healthcheckextension.NewHealthCheckTranslator())
 
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
