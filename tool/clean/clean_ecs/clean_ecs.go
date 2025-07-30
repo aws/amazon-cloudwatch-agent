@@ -19,38 +19,33 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
-// Clean ecs clusters if they have been open longer than 7 day
+// Clean ECS clusters if they have been running longer than 7 days
+
+var expirationTimeOneWeek = time.Now().UTC().Add(clean.KeepDurationOneWeek)
+
 func main() {
-	err := cleanCluster()
+	ctx := context.Background()
+	defaultConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatalf("errors cleaning %v", err)
+		log.Fatalf("Error loading AWS config for ECS cleanup: %v", err)
 	}
-}
 
-func cleanCluster() error {
-	log.Print("Begin to clean ECS Clusters")
-
-	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
-	if err != nil {
-		return err
-	}
 	ecsClient := ecs.NewFromConfig(defaultConfig)
-
-	terminateClusters(cxt, ecsClient)
-	return err
+	terminateClusters(ctx, ecsClient)
 }
 
 func terminateClusters(ctx context.Context, client *ecs.Client) {
 	// you can only filter ecs by name or arn
 	// not regex of tag name like ec2
 	// describe cluster input max is 100
+
+	log.Print("Begin to clean ECS Clusters")
+
 	ecsListClusterInput := ecs.ListClustersInput{
 		MaxResults: aws.Int32(100),
 	}
 	for {
 		clusterIds := make([]*string, 0)
-		expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationOneWeek)
 		listClusterOutput, err := client.ListClusters(ctx, &ecsListClusterInput)
 		if err != nil || listClusterOutput.ClusterArns == nil || len(listClusterOutput.ClusterArns) == 0 {
 			break
@@ -60,8 +55,18 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 		if err != nil || describeClustersOutput.Clusters == nil || len(describeClustersOutput.Clusters) == 0 {
 			break
 		}
+
+		/* Cluster should meet all criteria to be deleted:
+		1. Prefix should match: 'cwagent-integ-test-cluster-'
+		2. No running services on cluster
+		3. No running or pending tasks OR Task started more than 1 week ago
+		*/
+
 		for _, cluster := range describeClustersOutput.Clusters {
 			if !strings.HasPrefix(*cluster.ClusterName, "cwagent-integ-test-cluster-") {
+				continue
+			}
+			if cluster.ActiveServicesCount > 0 {
 				continue
 			}
 			if cluster.RunningTasksCount == 0 && cluster.PendingTasksCount == 0 {
@@ -75,7 +80,7 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 			}
 			addCluster := true
 			for _, task := range describeTasks.Tasks {
-				if expirationDateCluster.After(*task.StartedAt) {
+				if expirationTimeOneWeek.After(*task.StartedAt) {
 					log.Printf("Task %s launch-date %s", *task.TaskArn, *task.StartedAt)
 				} else {
 					addCluster = false
@@ -86,17 +91,14 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 				clusterIds = append(clusterIds, cluster.ClusterArn)
 			}
 		}
-		if len(clusterIds) == 0 {
-			log.Printf("No clusters to terminate")
-			return
-		}
 
+		// Deletion Logic
 		for _, clusterId := range clusterIds {
-			log.Printf("cluster to temrinate %s", *clusterId)
+			log.Printf("Cluster to terminate: %s", *clusterId)
 			listContainerInstanceInput := ecs.ListContainerInstancesInput{Cluster: clusterId}
 			listContainerInstances, err := client.ListContainerInstances(ctx, &listContainerInstanceInput)
 			if err != nil {
-				log.Printf("Error %v getting container instances cluster %s", err, *clusterId)
+				log.Printf("Error getting container instances cluster %s: %v", *clusterId, err)
 				continue
 			}
 			for _, instance := range listContainerInstances.ContainerInstanceArns {
@@ -107,31 +109,32 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 				}
 				_, err = client.DeregisterContainerInstance(ctx, &deregisterContainerInstanceInput)
 				if err != nil {
-					log.Printf("Error %v deregister container instances cluster %s container %v", err, *clusterId, instance)
+					log.Printf("Error deregister container instances cluster %s container %v: %v", err, *clusterId, instance, err)
 					continue
 				}
 			}
 			serviceInput := ecs.ListServicesInput{Cluster: clusterId}
 			services, err := client.ListServices(ctx, &serviceInput)
 			if err != nil {
-				log.Printf("Error %v getting services cluster %s", err, *clusterId)
+				log.Printf("Error getting services cluster %s: %v", *clusterId, err)
 				continue
 			}
 			for _, service := range services.ServiceArns {
 				deleteServiceInput := ecs.DeleteServiceInput{Cluster: clusterId, Service: aws.String(service)}
 				_, err := client.DeleteService(ctx, &deleteServiceInput)
 				if err != nil {
-					log.Printf("Error %v deleteing service %s cluster %s", err, serviceInput, *clusterId)
+					log.Printf("Error deleting service %s in cluster %s: %v", serviceInput, *clusterId, err)
 					continue
 				}
 			}
 			terminateClusterInput := ecs.DeleteClusterInput{Cluster: clusterId}
 			_, err = client.DeleteCluster(ctx, &terminateClusterInput)
 			if err != nil {
-				log.Printf("Error %v terminating cluster %s", err, *clusterId)
+				log.Printf("Error terminating cluster %s: %v", *clusterId, err)
 			}
 		}
-		if ecsListClusterInput.NextToken == nil {
+		// Pagination to break loop
+		if listClusterOutput.NextToken == nil {
 			break
 		}
 		ecsListClusterInput.NextToken = listClusterOutput.NextToken
