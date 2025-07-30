@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -30,7 +31,7 @@ var taskdefPrefixes = []string{"cwagent-integ-test-", "extra-apps-family-", "cwa
 
 func main() {
 	ctx := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(ctx)
+	defaultConfig, err := config.LoadDefaultConfig(ctx, config.WithRegion(os.Args[1]))
 	if err != nil {
 		log.Fatalf("Error loading AWS config for ECS cleanup: %v", err)
 	}
