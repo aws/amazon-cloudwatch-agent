@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -22,6 +23,8 @@ import (
 
 func TestHealthCheckExtension(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
+
+	// Test case 1: Non-Kubernetes environment should NOT have health check extension
 	input := map[string]interface{}{
 		"metrics": map[string]interface{}{
 			"metrics_collected": map[string]interface{}{
@@ -34,7 +37,7 @@ func TestHealthCheckExtension(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
-	// Verify that the health check extension is registered
+	// Verify that the health check extension is NOT registered for non-Kubernetes
 	extensionFound := false
 	for _, ext := range cfg.Service.Extensions {
 		if ext.Type().String() == "health_check" {
@@ -42,7 +45,37 @@ func TestHealthCheckExtension(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, extensionFound, "Health check extension should be registered")
+	assert.False(t, extensionFound, "Health check extension should NOT be registered for non-Kubernetes environments")
+
+	// Test case 2: Kubernetes environment should have health check extension
+	inputK8s := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"kubernetes": map[string]interface{}{
+					"cluster_name": "TestCluster",
+				},
+			},
+		},
+	}
+
+	// Set Kubernetes mode in context for this test
+	ctx := context.CurrentContext()
+	ctx.SetKubernetesMode("EKS")
+	defer ctx.SetKubernetesMode("") // Reset after test
+
+	cfgK8s, err := Translate(inputK8s, "linux")
+	require.NoError(t, err)
+	require.NotNil(t, cfgK8s)
+
+	// Verify that the health check extension IS registered for Kubernetes
+	extensionFoundK8s := false
+	for _, ext := range cfgK8s.Service.Extensions {
+		if ext.Type().String() == "health_check" {
+			extensionFoundK8s = true
+			break
+		}
+	}
+	assert.True(t, extensionFoundK8s, "Health check extension should be registered for Kubernetes environments")
 }
 
 func TestTranslator(t *testing.T) {
