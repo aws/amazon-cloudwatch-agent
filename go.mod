@@ -52,7 +52,7 @@ replace (
 )
 
 // Replace ecsobserver with custom fork - use the entire repo
-replace github.com/open-telemetry/opentelemetry-collector-contrib => github.com/agarakan/opentelemetry-collector-contrib v0.0.0-20250731073735-7203003ca1e2
+replace github.com/open-telemetry/opentelemetry-collector-contrib => github.com/agarakan/opentelemetry-collector-contrib v0.0.0-20250731122300-e7ff4ac619f5
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
 replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d // indirect
