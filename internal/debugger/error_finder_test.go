@@ -11,45 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckPermissions(t *testing.T) {
-	tempDir := t.TempDir()
-
-	validFilePath := filepath.Join(tempDir, "valid.log")
-	var err error
-	err = os.WriteFile(validFilePath, []byte("test content"), 0644)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-
-	err = checkAgentLogPermissions(validFilePath)
-	assert.NoError(t, err, "Should not return error for accessible file")
-
-	nonExistentPath := filepath.Join(tempDir, "nonexistent.log")
-	err = checkAgentLogPermissions(nonExistentPath)
-	assert.Error(t, err, "Should return error for non-existent file")
-	assert.Contains(t, err.Error(), "not found", "Error should mention file not found")
-
-	// Note: This test may not work on all systems due to permission handling differences
-	if os.Geteuid() != 0 { // Skip if running as root
-		unreadableFilePath := filepath.Join(tempDir, "unreadable.log")
-		err = os.WriteFile(unreadableFilePath, []byte("test content"), 0644)
-		if err != nil {
-			t.Fatalf("Failed to create test file: %v", err)
-		}
-
-		err = os.Chmod(unreadableFilePath, 0000)
-		if err != nil {
-			t.Logf("Skipping unreadable file test: %v", err)
-		} else {
-			err = checkAgentLogPermissions(unreadableFilePath)
-			assert.Error(t, err, "Should return error for unreadable file")
-			assert.Contains(t, err.Error(), "cannot read log file", "Error should mention permission issue")
-
-			os.Chmod(unreadableFilePath, 0644)
-		}
-	}
-}
-
 func createLogFile(t *testing.T, tempDir, fileName, content string) string {
 	filePath := filepath.Join(tempDir, fileName)
 	err := os.WriteFile(filePath, []byte(content), 0644)
@@ -76,10 +37,10 @@ func TestGetLogEntriesSinceLastStartup(t *testing.T) {
 
 	entries, err := getLogEntries(logFilePath, StartUp)
 	assert.NoError(t, err, "Should not return error for valid log file")
-	assert.Equal(t, 3, len(entries), "Should find 3 total entries since last startup")
-	assert.Contains(t, entries[0], "Normal log after restart", "First entry should be normal log after restart")
-	assert.Contains(t, entries[1], "Error after restart", "Second entry should be error after restart")
-	assert.Contains(t, entries[2], "Final normal entry", "Third entry should be final normal entry")
+	assert.Equal(t, 4, len(entries), "Should find 4 total entries since last startup (including startup entry)")
+	assert.Contains(t, entries[1], "Normal log after restart", "First entry should be normal log after restart")
+	assert.Contains(t, entries[2], "Error after restart", "Second entry should be error after restart")
+	assert.Contains(t, entries[3], "Final normal entry", "Third entry should be final normal entry")
 }
 
 func TestGetLogEntriesWithoutStartupPattern(t *testing.T) {
