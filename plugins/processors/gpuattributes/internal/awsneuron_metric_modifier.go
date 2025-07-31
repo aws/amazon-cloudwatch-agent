@@ -50,7 +50,7 @@ const (
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
 	NeuronCoreLabel                               = "neuroncore"
-	NeuronCorePerDevice                           = 2
+	NeuronCoresPerDeviceAttributeKey              = "neuroncore_per_device_count"
 )
 
 type AwsNeuronMetricModifier struct {
@@ -324,6 +324,8 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 	aggregatedMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name(), originalMetric.Unit())
 	aggregateDatapoints := aggregatedMetric.SetEmptySum().DataPoints()
 	firstOriginalDatapoint := originalMetricDatapoints.At(0)
+	neuronCoresPerDevice, _ := firstOriginalDatapoint.Attributes().Get(NeuronCoresPerDeviceAttributeKey)
+	neuronCoresPerDeviceInt, _ := strconv.Atoi(neuronCoresPerDevice.Str())
 	// Creating body for the aggregated metric and add it to the new newMetricSlice for each Core
 	for aggregatedMetricMetadata, value := range aggregatedValuesPerCore {
 		datapoint := aggregateDatapoints.AppendEmpty()
@@ -333,7 +335,7 @@ func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetri
 		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreID)
 		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreID)
 		coreID, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
-		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreID/NeuronCorePerDevice))
+		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreID/neuronCoresPerDeviceInt))
 	}
 	return newMetricSlice
 }
