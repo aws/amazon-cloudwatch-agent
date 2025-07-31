@@ -21,7 +21,7 @@ const (
 	defaultMetricsPath      = "/metrics"
 	defaultPortLabel        = "ECS_PROMETHEUS_EXPORTER_PORT"
 	defaultMetricsPathLabel = "ECS_PROMETHEUS_METRICS_PATH"
-	defaultJobNameLabel     = ""
+	defaultJobNameLabel     = "job"
 )
 
 var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
@@ -76,7 +76,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, fmt.Errorf("ECS Target Cluster Region is not defined: %s", clusterRegion)
 	}
 
-	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "10s"))
+	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "1m"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh interval: %w", err)
 	}
@@ -92,7 +92,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		dockerConfig := ecsobserver.DockerLabelConfig{
 			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
-			JobNameLabel:     getString(dockerLabel, "sd_job_name_label"),
+			JobNameLabel:     getStringWithDefault(dockerLabel, "sd_job_name_label", defaultJobNameLabel),
 		}
 		cfg.DockerLabels = []ecsobserver.DockerLabelConfig{dockerConfig} // Initialize as slice with single element
 	}
