@@ -90,7 +90,7 @@ func TestComponents(t *testing.T) {
 	wantExtensions := []string{
 		"agenthealth",
 		"awsproxy",
-		"ecsobserver",
+		"ecs_observer",
 		"entitystore",
 		"k8smetadata",
 		"file_storage",
