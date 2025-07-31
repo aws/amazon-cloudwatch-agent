@@ -159,7 +159,7 @@ jobs:
         working-directory: tool/clean
         run: go run ./clean_host/clean_host.go cn-north-1
 
-  clean-ecs-clusters:
+  clean-ecs-resources:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -174,9 +174,9 @@ jobs:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      - name: Clean old ecs cluster
+      - name: Clean old ecs resources
         working-directory: tool/clean
-        run: go run ./clean_ecs/clean_ecs.go --tags=clean
+        run: go run --tags=clean ./clean_ecs/clean_ecs.go us-west-2
 
   clean-eks-clusters:
     runs-on: ubuntu-latest
