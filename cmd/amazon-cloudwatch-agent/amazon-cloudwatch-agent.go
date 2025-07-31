@@ -94,6 +94,8 @@ var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Col
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
+var fFeatureGates = flag.String("feature-gates", "",
+	"comma-delimited list of feature gates to enable/disable (e.g., gate1,-gate2,+gate3)")
 
 var stop chan struct{}
 
@@ -391,8 +393,42 @@ func runAgent(ctx context.Context,
 	for _, uri := range otelConfigs {
 		e = append(e, "--config="+uri)
 	}
+	// Build feature gates argument
+	featureGates := buildFeatureGates(*fFeatureGates)
+	if featureGates != "" {
+		e = append(e, featureGates)
+	}
 	cmd.SetArgs(e)
 	return cmd.Execute()
+}
+
+// buildFeatureGates constructs the feature gates argument
+func buildFeatureGates(featureGates string) string {
+	var gates []string
+
+	defaultGates := []string{
+		"receiver.prometheusreceiver.EnableNativeHistograms",
+	}
+
+	// Add default gates
+	gates = append(gates, defaultGates...)
+
+	// Add user-specified gates if provided
+	if featureGates != "" {
+		featureGatesList := strings.Split(featureGates, ",")
+		for _, gate := range featureGatesList {
+			gate = strings.TrimSpace(gate)
+			if gate != "" {
+				gates = append(gates, gate)
+			}
+		}
+	}
+
+	if len(gates) == 0 {
+		return ""
+	}
+
+	return "--feature-gates=" + strings.Join(gates, ",")
 }
 
 func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.ConfigProviderSettings, loggingOptions []zap.Option) otelcol.CollectorSettings {

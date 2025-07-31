@@ -320,6 +320,7 @@ service:
     extensions:
         - agenthealth/metrics
         - agenthealth/statuscode
+        - ecs_observer
         - sigv4auth
         - agenthealth/logs
         - ecs_observer
