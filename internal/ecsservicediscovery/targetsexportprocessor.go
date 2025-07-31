@@ -5,6 +5,7 @@ package ecsservicediscovery
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 
@@ -58,6 +59,8 @@ func (p *TargetsExportProcessor) Process(cluster string, taskList []*DecoratedTa
 		return nil, newServiceDiscoveryError("Fail to marshal Prometheus Targets!", &err)
 	}
 	p.stats.AddStatsCount(ExporterDiscoveredTargetCount, len(targetsArr))
+
+	log.Printf("Unicorn - ResultFile YAML: {%v}", string(m))
 
 	err = os.WriteFile(p.tmpResultFilePath, m, 0644)
 	if err != nil {
