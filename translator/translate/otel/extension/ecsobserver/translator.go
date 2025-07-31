@@ -92,7 +92,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		dockerConfig := ecsobserver.DockerLabelConfig{
 			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
-			JobNameLabel:     getStringWithDefault(dockerLabel, "sd_job_name_label", defaultJobNameLabel),
+			JobNameLabel:     getString(dockerLabel, "sd_job_name_label"),
 		}
 		cfg.DockerLabels = []ecsobserver.DockerLabelConfig{dockerConfig} // Initialize as slice with single element
 	}
