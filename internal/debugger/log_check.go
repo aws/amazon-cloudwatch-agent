@@ -21,9 +21,9 @@ type AgentLogConfig struct {
 	LogGroupClass   string `json:"log_group_class"`
 	Timezone        string `json:"timezone,omitempty"`
 	TimestampFormat string `json:"timestamp_format,omitempty"`
-	Exists          bool   `json:"-"`
-	Readable        bool   `json:"-"`
-	Message         string `json:"-"`
+	Exists          bool   `json:"exists"`
+	Readable        bool   `json:"readable"`
+	Message         string `json:"message"`
 }
 
 func CheckConfiguredLogsExistsAndReadable(w io.Writer, config map[string]interface{}, compact bool) ([]AgentLogConfig, error) {
