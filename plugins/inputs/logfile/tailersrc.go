@@ -244,11 +244,11 @@ func (ts *tailerSrc) runTail() {
 				continue
 			}
 
-			ts.tailer.ReleaseLine(line)
 			ts.publishEvent(msgBuf, fo)
 			msgBuf.Reset()
 			msgBuf.WriteString(init)
 			fo.ShiftInt64(line.Offset)
+			ts.tailer.ReleaseLine(line)
 			cnt = 0
 		case <-t.C:
 			if msgBuf.Len() > 0 {
