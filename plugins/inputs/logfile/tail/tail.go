@@ -37,11 +37,6 @@ type Line struct {
 	Offset int64 // offset of current reader
 }
 
-// NewLine returns a Line with present time.
-func NewLine(text string, offset int64) *Line {
-	return &Line{text, time.Now(), nil, offset}
-}
-
 // SeekInfo represents arguments to `os.Seek`
 type SeekInfo struct {
 	Offset int64
@@ -91,6 +86,8 @@ type Tail struct {
 	lk sync.Mutex
 
 	FileDeletedCh chan struct{}
+
+	linePool sync.Pool
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -107,6 +104,9 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		Lines:         make(chan *Line),
 		Config:        config,
 		FileDeletedCh: make(chan struct{}),
+		linePool: sync.Pool{
+			New: func() any { return &Line{} },
+		},
 	}
 
 	// when Logger was not specified in config, create new one
@@ -418,7 +418,13 @@ func (tail *Tail) tailFileSync() {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
 				msg := "Too much log activity; waiting a second before resuming tailing"
-				tail.Lines <- &Line{msg, time.Now(), errors.New(msg), tail.curOffset}
+				// Warning: Make sure to release line once done!
+				lineObject := tail.linePool.Get().(*Line)
+				lineObject.Text = msg
+				lineObject.Time = time.Now()
+				lineObject.Err = errors.New(msg)
+				lineObject.Offset = tail.curOffset
+				tail.Lines <- lineObject
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
@@ -574,12 +580,18 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 
 	for i, line := range lines {
 		// This select is to avoid blockage on the tail.Lines chan
+		// Warning: Make sure to release line once done!
+		lineObject := tail.linePool.Get().(*Line)
+		lineObject.Text = line
+		lineObject.Time = now
+		lineObject.Err = nil
+		lineObject.Offset = offset
 		select {
-		case tail.Lines <- &Line{line, now, nil, offset}:
+		case tail.Lines <- lineObject:
 		case <-tail.Dying():
 			if tail.Err() == errStopAtEOF {
 				// Try sending, even if it blocks.
-				tail.Lines <- &Line{line, now, nil, offset}
+				tail.Lines <- lineObject
 			} else {
 				tail.dropCnt += len(lines) - i
 				return true
@@ -625,6 +637,11 @@ func (tail *Tail) unreadByte() (err error) {
 	err = tail.reader.UnreadByte()
 	tail.curOffset -= 1
 	return
+}
+
+func (tail *Tail) ReleaseLine(line *Line) {
+	*line = Line{}
+	tail.linePool.Put(line)
 }
 
 // A wrapper of tomb Err()

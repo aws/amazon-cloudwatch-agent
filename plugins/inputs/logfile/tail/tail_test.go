@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -105,7 +106,8 @@ func TestStopAtEOF(t *testing.T) {
 
 	// Read to EOF
 	for i := 0; i < linesWrittenToFile-3; i++ {
-		<-tail.Lines
+		line := <-tail.Lines
+		tail.ReleaseLine(line)
 	}
 
 	// Verify tail.Wait() has completed.
@@ -163,11 +165,13 @@ func readThreelines(t *testing.T, tail *Tail) {
 		line := <-tail.Lines
 		if line.Err != nil {
 			t.Errorf("error tailing test file: %v", line.Err)
+			tail.ReleaseLine(line) // Release even on error
 			continue
 		}
 		if !strings.HasSuffix(line.Text, "some log line") {
 			t.Errorf("wrong line from tail found: '%v'", line.Text)
 		}
+		tail.ReleaseLine(line) // Release line back to pool
 	}
 	// If file was readable, then expect it to exist.
 	assert.Equal(t, int64(1), OpenFileCount.Load())
@@ -238,6 +242,7 @@ func TestUtf16LineSize(t *testing.T) {
 	case line := <-tail.Lines:
 		// The line should be truncated to maxLineSize
 		assert.LessOrEqual(t, len(line.Text), maxLineSize)
+		tail.ReleaseLine(line)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for line")
 	}
@@ -265,6 +270,7 @@ func TestTail_DefaultBuffer(t *testing.T) {
 	case line := <-tail.Lines:
 		assert.NoError(t, line.Err)
 		assert.Equal(t, normalContent, line.Text)
+		tail.ReleaseLine(line)
 	case <-time.After(time.Second):
 		t.Fatal("Timeout waiting for line")
 	}
@@ -292,7 +298,106 @@ func TestTail_1MBWithExplicitMaxLineSize(t *testing.T) {
 	case line := <-tail.Lines:
 		assert.NoError(t, line.Err)
 		assert.Equal(t, largeContent, line.Text)
+		tail.ReleaseLine(line)
 	case <-time.After(time.Second):
 		t.Fatal("Timeout waiting for line")
 	}
+}
+
+// TestLinePooling verifies that Line objects are properly pooled and reused
+func TestLinePooling(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "pool_test")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	content := "line1\nline2\nline3\n"
+	err = os.WriteFile(tmpfile.Name(), []byte(content), 0600)
+	require.NoError(t, err)
+
+	tail, err := TailFile(tmpfile.Name(), Config{
+		Follow:    false,
+		MustExist: true,
+	})
+	require.NoError(t, err)
+	defer tail.Stop()
+
+	var lines []*Line
+	for i := 0; i < 3; i++ {
+		select {
+		case line := <-tail.Lines:
+			lines = append(lines, line)
+		case <-time.After(time.Second):
+			t.Fatal("Timeout waiting for line")
+		}
+	}
+
+	assert.Equal(t, "line1", lines[0].Text)
+	assert.Equal(t, "line2", lines[1].Text)
+	assert.Equal(t, "line3", lines[2].Text)
+
+	// Release all lines back to pool
+	for _, line := range lines {
+		tail.ReleaseLine(line)
+	}
+
+	// Line object should be zeroed out because we released it
+	pooledLine := tail.linePool.Get().(*Line)
+	assert.Empty(t, pooledLine.Text, "Pooled line should remain zeroed")
+	assert.Empty(t, pooledLine.Time, "Pooled line should remain zeroed")
+	assert.Empty(t, pooledLine.Err, "Pooled line should remain zeroed")
+	assert.Empty(t, pooledLine.Offset, "Pooled line should remain zeroed")
+	tail.ReleaseLine(pooledLine)
+}
+
+// TestConcurrentLinePoolAccess tests that the line pool is thread-safe
+func TestConcurrentLinePoolAccess(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "concurrent_test")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	// Create content with multiple lines
+	numLines := 100
+	content := strings.Repeat("concurrent test line\n", numLines)
+	err = os.WriteFile(tmpfile.Name(), []byte(content), 0600)
+	require.NoError(t, err)
+
+	tail, err := TailFile(tmpfile.Name(), Config{
+		Follow:    false,
+		MustExist: true,
+	})
+	require.NoError(t, err)
+	defer tail.Stop()
+
+	// Process lines concurrently
+	var wg sync.WaitGroup
+	linesChan := make(chan *Line, numLines)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < numLines; i++ {
+			select {
+			case line := <-tail.Lines:
+				linesChan <- line
+			case <-time.After(5 * time.Second):
+				t.Errorf("Timeout waiting for line %d", i)
+				return
+			}
+		}
+		close(linesChan)
+	}()
+
+	numWorkers := 5
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for line := range linesChan {
+				assert.Equal(t, "concurrent test line", line.Text)
+				tail.ReleaseLine(line) // Release back to pool
+			}
+		}()
+	}
+
+	wg.Wait()
 }
