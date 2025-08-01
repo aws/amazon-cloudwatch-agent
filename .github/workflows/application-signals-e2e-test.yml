@@ -215,6 +215,19 @@ jobs:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
+  # This validation is to ensure that all test workflows relevant to this repo are actually
+  # being used in this repo, which is referring to all the other jobs in this file.
+  #
+  # If this starts failing, then it most likely means that new e2e test workflow was
+  # added to `aws-observability/aws-application-signals-test-framework`, but was not
+  # added to this file. It could also mean that a test in this file has been removed.
+  #
+  # If a particular test file is intended to not be tested in this repo and should not
+  # be failing this particular validation, then choose one of the following options:
+  # - Add the test file to the exclusions input (CSV format) to the workflow
+  #   (see: https://github.com/aws-observability/aws-application-signals-test-framework/blob/main/.github/workflows/validate-e2e-tests-are-accounted-for.yml#L1)
+  # - Update the `validate-e2e-tests-are-accounted-for` job to change which "workflow files are expected to be used by this repo"
+  #   (see: https://github.com/aws-observability/aws-application-signals-test-framework/blob/main/.github/workflows/validate-e2e-tests-are-accounted-for.yml)
   validate-all-tests-are-accounted-for:
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/validate-e2e-tests-are-accounted-for.yml@main
     with:
