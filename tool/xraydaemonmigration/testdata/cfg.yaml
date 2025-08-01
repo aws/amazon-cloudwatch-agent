@@ -1,31 +1,112 @@
-# Maximum buffer size in MB (minimum 3). Choose 0 to use 1% of host memory.
-TotalBufferSizeMB: 23
-# Maximum number of concurrent calls to AWS X-Ray to upload segment documents.
-Concurrency: 8
-# Send segments to AWS X-Ray service in a specific region
-Region: "us-east-1"
-# Change the X-Ray service endpoint to which the daemon sends segment documents.
-Endpoint: ""
-Socket:
-  # Change the address and port on which the daemon listens for UDP packets containing segment documents.
-  UDPAddress: "127.0.0.1:2000"
-  # Change the address and port on which the daemon listens for HTTP requests to proxy to AWS X-Ray.
-  TCPAddress: "127.0.0.1:2000"
-Logging:
-  LogRotation: true
-  # Change the log level, from most verbose to least: dev, debug, info, warn, error, prod (default).
-  LogLevel: "prod"
-  # Output logs to the specified file path.
-  LogPath: ""
-# Turn on local mode to skip EC2 instance metadata check.
-LocalMode: true
-# Amazon Resource Name (ARN) of the AWS resource running the daemon.
-ResourceARN: "resourceTesting"
-# Assume an IAM role to upload segments to a different account.
-RoleARN: "roleTest"
-# Disable TLS certificate verification.
-NoVerifySSL: false
-# Upload segments to AWS X-Ray through a proxy.
-ProxyAddress: "127.0.0.1:2000"
-# Daemon configuration file format version.
-Version: 2
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: EC2InstanceStoreMetrics2
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: EC2M
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: EC2M
+    entitystore:
+        mode: ec2
+        region: us-west-2
+processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
+    cumulativetodelta/hostDeltaMetrics:
+        exclude:
+            match_type: strict
+            metrics:
+                - iops_in_progress
+                - diskio_iops_in_progress
+                - diskio_ebs_volume_queue_length
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+receivers:
+    awsebsnvmereceiver:
+        collection_interval: 1m0s
+        devices:
+            - '*'
+        initial_delay: 1s
+        metrics:
+            diskio_ebs_ec2_instance_performance_exceeded_iops:
+                enabled: true
+            diskio_ebs_ec2_instance_performance_exceeded_tp:
+                enabled: true
+            diskio_ebs_total_read_bytes:
+                enabled: true
+            diskio_ebs_total_read_ops:
+                enabled: true
+            diskio_ebs_total_read_time:
+                enabled: true
+            diskio_ebs_total_write_bytes:
+                enabled: true
+            diskio_ebs_total_write_ops:
+                enabled: true
+            diskio_ebs_total_write_time:
+                enabled: true
+            diskio_ebs_volume_performance_exceeded_iops:
+                enabled: true
+            diskio_ebs_volume_performance_exceeded_tp:
+                enabled: true
+            diskio_ebs_volume_queue_length:
+                enabled: true
+        resource_attributes:
+            VolumeId:
+                enabled: true
+            SerialId:
+                enabled: true
+        timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        metrics/hostDeltaMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostDeltaMetrics
+                - awsentity/resource
+            receivers:
+                - awsebsnvmereceiver
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            address: ""
+            level: None
+        traces:
+            level: None

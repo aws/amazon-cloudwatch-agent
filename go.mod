@@ -527,6 +527,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/collector v0.124.0 // indirect
+	go.opentelemetry.io/collector/cmd/mdatagen v0.124.0 // indirect
 	go.opentelemetry.io/collector/component/componentstatus v0.124.0 // indirect
 	go.opentelemetry.io/collector/config/configcompression v1.30.0 // indirect
 	go.opentelemetry.io/collector/config/configgrpc v0.124.0 // indirect
