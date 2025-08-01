@@ -22,11 +22,11 @@ func NewResourceBuilder(rac ResourceAttributesConfig) *ResourceBuilder {
 }
 
 // SetVolumeID sets provided value as "VolumeId" attribute.
-func (rb *ResourceBuilder) SetVolumeID(val string) {
-	if rb.config.VolumeID.Enabled {
-		rb.res.Attributes().PutStr("VolumeId", val)
-	}
-}
+// func (rb *ResourceBuilder) SetVolumeID(val string) {
+// 	if rb.config.VolumeID.Enabled {
+// 		rb.res.Attributes().PutStr("VolumeId", val)
+// 	}
+// }
 
 // Emit returns the built resource and resets the internal builder state.
 func (rb *ResourceBuilder) Emit() pcommon.Resource {

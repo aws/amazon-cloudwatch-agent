@@ -84,7 +84,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 			foundWorkingDevice = true
 
 			rb := s.mb.NewResourceBuilder()
-			rb.SetVolumeID(ebsDevices.volumeID)
+			// rb.SetVolumeID(ebsDevices.volumeID)
 
 			s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
 			s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)

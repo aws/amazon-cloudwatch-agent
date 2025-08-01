@@ -104,7 +104,7 @@ func TestMetricsBuilder(t *testing.T) {
 			mb.RecordDiskioEbsVolumeQueueLengthDataPoint(ts, 1)
 
 			rb := mb.NewResourceBuilder()
-			rb.SetVolumeID("VolumeId-val")
+			// rb.SetVolumeID("VolumeId-val")
 			res := rb.Emit()
 			metrics := mb.Emit(WithResource(res))
 
