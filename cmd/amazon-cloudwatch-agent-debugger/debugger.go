@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
+	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/mcp"
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger/utils"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
@@ -28,6 +29,7 @@ func main() {
 	compact := flag.Bool("compact", false, "Run debugger with compact formatting")
 	createTarball := flag.Bool("tarball", false, "Create tarball")
 	createTarballSsm := flag.Bool("tarballssm", false, "Create tarball with SSM")
+	startMcpServer := flag.Bool("mcp", false, "Start local MCP server")
 	flag.Parse()
 
 	switch {
@@ -36,6 +38,9 @@ func main() {
 		return
 	case *createTarballSsm:
 		debugger.CreateTarball(true)
+		return
+	case *startMcpServer:
+		mcp.StartMCPServer()
 		return
 	}
 
