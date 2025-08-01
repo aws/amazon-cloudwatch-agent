@@ -311,9 +311,8 @@ func TestLinePooling(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	content := "line1\nline2\nline3\n"
-	_, err = tmpfile.WriteString(content)
+	err = os.WriteFile(tmpfile.Name(), []byte(content), 0600)
 	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
 
 	tail, err := TailFile(tmpfile.Name(), Config{
 		Follow:    false,
@@ -356,12 +355,11 @@ func TestConcurrentLinePoolAccess(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
+	// Create content with multiple lines
 	numLines := 100
-	for i := 0; i < numLines; i++ {
-		_, err = tmpfile.WriteString("concurrent test line\n")
-		require.NoError(t, err)
-	}
-	require.NoError(t, tmpfile.Close())
+	content := strings.Repeat("concurrent test line\n", numLines)
+	err = os.WriteFile(tmpfile.Name(), []byte(content), 0600)
+	require.NoError(t, err)
 
 	tail, err := TailFile(tmpfile.Name(), Config{
 		Follow:    false,
