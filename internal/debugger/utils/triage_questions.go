@@ -47,7 +47,7 @@ func (q *Question) AskQuestion(reader *bufio.Reader) string {
 func initializeTriageQuestions() (map[string]Question, []string) {
 	questions := map[string]Question{
 		"occurrence": {
-			Text: "Is this issue once off, intermittent, or consistently happening right now?",
+			Text: "Is this issue once off (o), intermittent (i), or consistently happening right now (c)?",
 			AnswerOptions: map[string]string{
 				"o": "Once off",
 				"i": "Intermittent",
@@ -64,7 +64,7 @@ func initializeTriageQuestions() (map[string]Question, []string) {
 		"env_desc": {
 			Text: "Please describe what changed and when:",
 			Condition: func(answers map[string]string) bool {
-				return strings.ToLower(answers["env_change"]) == "y"
+				return answers["env_change"] == "Yes"
 			},
 		},
 		"additional_info": {
