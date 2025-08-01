@@ -12,7 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
@@ -261,7 +260,7 @@ func (tail *Tail) readLine() (string, error) {
 		}
 		line = line[:len(line)-drop]
 	}
-	return unsafe.String(unsafe.SliceData(line), len(line)), err
+	return string(line), err
 }
 
 func (tail *Tail) readlineUtf16() (string, error) {
