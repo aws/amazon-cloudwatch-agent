@@ -341,10 +341,13 @@ func TestLinePooling(t *testing.T) {
 		tail.ReleaseLine(line)
 	}
 
-	// Verify pool reuse by checking if we get an object with one of the lines
+	// Line object should be zeroed out because we released it
 	pooledLine := tail.linePool.Get().(*Line)
-	assert.Contains(t, []string{"line1", "line2", "line3"}, pooledLine.Text)
-	tail.linePool.Put(pooledLine)
+	assert.Empty(t, pooledLine.Text, "Pooled line should remain zeroed")
+	assert.Empty(t, pooledLine.Time, "Pooled line should remain zeroed")
+	assert.Empty(t, pooledLine.Err, "Pooled line should remain zeroed")
+	assert.Empty(t, pooledLine.Offset, "Pooled line should remain zeroed")
+	tail.ReleaseLine(pooledLine)
 }
 
 // TestConcurrentLinePoolAccess tests that the line pool is thread-safe

@@ -641,6 +641,7 @@ func (tail *Tail) unreadByte() (err error) {
 }
 
 func (tail *Tail) ReleaseLine(line *Line) {
+	*line = Line{}
 	tail.linePool.Put(line)
 }
 
