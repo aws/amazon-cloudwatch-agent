@@ -412,7 +412,7 @@ func TestUnsafeStringConversion(t *testing.T) {
 
 	// Write test content with different line types
 	testContent := "simple line\nline with spaces   \nline\r\nline\nunicode: 你好世界\nspecial chars: !@#$%^&*()\n"
-	err = os.WriteFile(tmpfile.Name(), []byte(testContent), 0644)
+	err = os.WriteFile(tmpfile.Name(), []byte(testContent), 0600)
 	require.NoError(t, err)
 
 	tail, err := TailFile(tmpfile.Name(), Config{
