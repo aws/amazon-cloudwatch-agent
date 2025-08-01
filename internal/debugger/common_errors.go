@@ -8,9 +8,9 @@ import (
 )
 
 type DiagnosticSuggestion struct {
-	Pattern     *regexp.Regexp
-	Issue       string
-	Possibility string
+	Pattern *regexp.Regexp
+	Problem string
+	Fix     string
 }
 
 // Metric related errors
@@ -94,7 +94,7 @@ var networkErrors = []DiagnosticSuggestion{
 	{
 		regexp.MustCompile(`lookup .*\.amazonaws\.com.*: no such host`),
 		"Problem: CWAgent failed to resolve an AWS service hostname. This often happens when a custom endpoint override is misconfigured or if DNS resolution is blocked or unavailable on the instance.",
-		"Fix: If using a custom endpoint_override, verify that the hostname is correct and resolvable. Otherwise, check your instance's DNS configuration, VPC settings, and ensure outbound DNS (UPD port 53) is not blocked.",
+		"Fix: If using a custom endpoint_override, verify that the hostname is correct and resolvable. Otherwise, check your instance's DNS configuration, VPC settings, and ensure outbound DNS (UDP port 53) is not blocked.",
 	},
 	{
 		regexp.MustCompile(`dial tcp 10\..*:443: connect: connection refused`),

@@ -35,32 +35,12 @@ func TestGetLogEntriesSinceLastStartup(t *testing.T) {
 
 	logFilePath := createLogFile(t, tempDir, "test.log", logContentWithStartup)
 
-	entries, err := getLogEntries(logFilePath, StartUp)
+	entries, err := getLogEntries(logFilePath)
 	assert.NoError(t, err, "Should not return error for valid log file")
 	assert.Equal(t, 4, len(entries), "Should find 4 total entries since last startup (including startup entry)")
 	assert.Contains(t, entries[1], "Normal log after restart", "First entry should be normal log after restart")
 	assert.Contains(t, entries[2], "Error after restart", "Second entry should be error after restart")
 	assert.Contains(t, entries[3], "Final normal entry", "Third entry should be final normal entry")
-}
-
-func TestGetLogEntriesWithoutStartupPattern(t *testing.T) {
-	tempDir := t.TempDir()
-
-	logContentWithStartup := `2025-01-01T00:00:00Z I! Starting AmazonCloudWatchAgent version 1.0.0 with log file
-							  2025-01-01T00:01:00Z I! Normal log entry
-							  2025-01-01T00:02:00Z E! Error log entry 1
-							  2025-01-01T00:03:00Z I! Another normal entry
-							  2025-01-01T00:04:00Z E! Error log entry 2
-							  2025-01-01T00:05:00Z I! Starting AmazonCloudWatchAgent version 1.0.0 with log file
-							  2025-01-01T00:06:00Z I! Normal log after restart
-							  2025-01-01T00:07:00Z E! Error after restart
-							  2025-01-01T00:08:00Z I! Final normal entry`
-
-	logFilePath := createLogFile(t, tempDir, "test.log", logContentWithStartup)
-
-	entries, err := getLogEntries(logFilePath, "")
-	assert.NoError(t, err, "Should not return error for valid log file")
-	assert.Equal(t, 9, len(entries), "Should find all 9 entries when no startup pattern specified")
 }
 
 func TestGetLogEntriesWithoutStartupInLog(t *testing.T) {
@@ -75,7 +55,7 @@ func TestGetLogEntriesWithoutStartupInLog(t *testing.T) {
 
 	noStartupFilePath := createLogFile(t, tempDir, "no-startup.log", logContentWithoutStartup)
 
-	entries, err := getLogEntries(noStartupFilePath, StartUp)
+	entries, err := getLogEntries(noStartupFilePath)
 	assert.NoError(t, err, "Should not return error for valid log file")
 	assert.Equal(t, 6, len(entries), "Should find all 6 entries when no startup pattern is found")
 }
@@ -85,13 +65,13 @@ func TestGetLogEntriesEmptyFile(t *testing.T) {
 
 	emptyFilePath := createLogFile(t, tempDir, "empty.log", "")
 
-	entries, err := getLogEntries(emptyFilePath, StartUp)
+	entries, err := getLogEntries(emptyFilePath)
 	assert.NoError(t, err, "Should not return error for empty file")
 	assert.Equal(t, 0, len(entries), "Should find 0 entries in empty file")
 }
 
 func TestGetLogEntriesInvalidPath(t *testing.T) {
-	entries, err := getLogEntries("/nonexistent/path", StartUp)
+	entries, err := getLogEntries("/nonexistent/path")
 	assert.Error(t, err, "Should return error for nonexistent file")
 	assert.Nil(t, entries, "Should return nil entries on error")
 }
@@ -106,7 +86,7 @@ func TestGetLogEntriesMultilineError(t *testing.T) {
 
 	multilineFilePath := createLogFile(t, tempDir, "multiline.log", logContentWithMultilineError)
 
-	entries, err := getLogEntries(multilineFilePath, StartUp)
+	entries, err := getLogEntries(multilineFilePath)
 	assert.NoError(t, err, "Should not return error for valid log file with multiline entries")
 	assert.Equal(t, 3, len(entries), "Should find all 3 entries")
 
@@ -189,20 +169,20 @@ func TestDeduplicateSuggestions(t *testing.T) {
 		{
 			name: "No duplicates",
 			suggestions: []DiagnosticSuggestion{
-				{Possibility: "Error 1"},
-				{Possibility: "Error 2"},
-				{Possibility: "Error 3"},
+				{Fix: "Error 1"},
+				{Fix: "Error 2"},
+				{Fix: "Error 3"},
 			},
 			expected: 3,
 		},
 		{
 			name: "With duplicates",
 			suggestions: []DiagnosticSuggestion{
-				{Possibility: "Error 1"},
-				{Possibility: "Error 1"},
-				{Possibility: "Error 2"},
-				{Possibility: "Error 2"},
-				{Possibility: "Error 3"},
+				{Fix: "Error 1"},
+				{Fix: "Error 1"},
+				{Fix: "Error 2"},
+				{Fix: "Error 2"},
+				{Fix: "Error 3"},
 			},
 			expected: 3,
 		},
@@ -214,9 +194,9 @@ func TestDeduplicateSuggestions(t *testing.T) {
 		{
 			name: "All duplicates",
 			suggestions: []DiagnosticSuggestion{
-				{Possibility: "Error 1"},
-				{Possibility: "Error 1"},
-				{Possibility: "Error 1"},
+				{Fix: "Error 1"},
+				{Fix: "Error 1"},
+				{Fix: "Error 1"},
 			},
 			expected: 1,
 		},
@@ -230,8 +210,8 @@ func TestDeduplicateSuggestions(t *testing.T) {
 			// Verify no duplicates in result
 			seen := make(map[string]bool)
 			for _, suggestion := range result {
-				assert.False(t, seen[suggestion.Possibility], "Should not have duplicates after deduplication")
-				seen[suggestion.Possibility] = true
+				assert.False(t, seen[suggestion.Fix], "Should not have duplicates after deduplication")
+				seen[suggestion.Fix] = true
 			}
 		})
 	}

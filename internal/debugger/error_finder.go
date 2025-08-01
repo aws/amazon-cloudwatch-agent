@@ -12,10 +12,9 @@ import (
 )
 
 const (
-	TimeFormat = "2006-01-02T15:04:05Z"
-	DateRegex  = `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z E!`
+	DateRegex = `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z E!`
 	// Finder looks for errors from each agent restart
-	StartUp = `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\s+I!\s+Starting AmazonCloudWatchAgent.*with log file`
+	StartUpPattern = `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\s+I!\s+Starting AmazonCloudWatchAgent.*with log file`
 )
 
 func GetErrorSuggestions(logFilePath string) []DiagnosticSuggestion {
@@ -25,7 +24,7 @@ func GetErrorSuggestions(logFilePath string) []DiagnosticSuggestion {
 		return nil
 	}
 
-	logEntries, err := getLogEntries(logFilePath, StartUp)
+	logEntries, err := getLogEntries(logFilePath)
 	if err != nil {
 		fmt.Printf("Error reading log file for suggestions: %v\n", err)
 		return nil
@@ -43,24 +42,21 @@ func GetErrorSuggestions(logFilePath string) []DiagnosticSuggestion {
 }
 
 func checkAgentLogPermissions(logFilePath string) error {
-	_, err := os.Stat(logFilePath)
+	file, err := os.Open(logFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("CloudWatch Agent log file not found at %s. Ensure the CloudWatch Agent is running", logFilePath)
 		}
+		if os.IsPermission(err) {
+			return fmt.Errorf("Cannot read log file %s: permission denied. Try running as cwagent user or with sudo", logFilePath)
+		}
 		return fmt.Errorf("Cannot access log file %s: %v. Try running as cwagent user or with sudo", logFilePath, err)
 	}
-
-	file, err := os.Open(logFilePath)
-	if err != nil {
-		return fmt.Errorf("Cannot read log file %s: %v. Try running as cwagent user or with sudo", logFilePath, err)
-	}
 	file.Close()
-
 	return nil
 }
 
-func getLogEntries(logFilePath string, startupPattern string) ([]string, error) {
+func getLogEntries(logFilePath string) ([]string, error) {
 	logFile, err := os.Open(logFilePath)
 	if err != nil {
 		return nil, err
@@ -84,8 +80,8 @@ func getLogEntries(logFilePath string, startupPattern string) ([]string, error) 
 	// Find the most recent startup entry by scanning backwards
 	// If a startup entry is not found, use the whole log file for the next section
 	startIndex := 0
-	if startupPattern != "" {
-		startupRegex := regexp.MustCompile(startupPattern)
+	if StartUpPattern != "" {
+		startupRegex := regexp.MustCompile(StartUpPattern)
 
 		for i := len(logLineIndices) - 1; i >= 0; i-- {
 			start := logLineIndices[i][0]
@@ -161,8 +157,8 @@ func deduplicateSuggestions(suggestions []DiagnosticSuggestion) []DiagnosticSugg
 	var uniqueErrors []DiagnosticSuggestion
 
 	for _, suggestion := range suggestions {
-		if !seen[suggestion.Possibility] {
-			seen[suggestion.Possibility] = true
+		if !seen[suggestion.Fix] {
+			seen[suggestion.Fix] = true
 			uniqueErrors = append(uniqueErrors, suggestion)
 		}
 	}
@@ -183,8 +179,8 @@ func printLogErrorsSummary(suggestions []DiagnosticSuggestion, numErrorEntries i
 
 	fmt.Printf("Issues from logs (%d):\n", len(suggestions))
 	for _, suggestion := range suggestions {
-		fmt.Printf(". %s\n", suggestion.Issue)
-		fmt.Printf("  %s\n", suggestion.Possibility)
+		fmt.Printf(". %s\n", suggestion.Problem)
+		fmt.Printf("  %s\n", suggestion.Fix)
 	}
 
 	fmt.Println("\nPlease restart agent for log error changes to take effect.")
