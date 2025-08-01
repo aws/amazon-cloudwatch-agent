@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package mcpresources
 
 import (
@@ -5,8 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 func NewLogResource() mcp.Resource {

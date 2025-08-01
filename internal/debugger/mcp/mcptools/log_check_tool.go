@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package mcptools
 
 import (
@@ -7,10 +10,11 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/mark3labs/mcp-go/mcp"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/debugger"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 func NewLogCheckTool() mcp.Tool {
