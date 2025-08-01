@@ -9,6 +9,7 @@ type DeviceInfoProvider interface {
 	GetDeviceModel(*DeviceFileAttributes) (string, error)
 	IsEbsDevice(*DeviceFileAttributes) (bool, error)
 	IsInstanceStoreDevice(*DeviceFileAttributes) (bool, error)
+	DetectDeviceType(*DeviceFileAttributes) (string, error)
 	DevicePath(string) (string, error)
 }
 

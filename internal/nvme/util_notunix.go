@@ -27,6 +27,10 @@ func (u *Util) IsInstanceStoreDevice(device *DeviceFileAttributes) (bool, error)
 	return false, errors.New("nvme device operations are only supported on Linux")
 }
 
+func (u *Util) DetectDeviceType(device *DeviceFileAttributes) (string, error) {
+	return "", errors.New("nvme device operations are only supported on Linux")
+}
+
 func (u *Util) DevicePath(device string) (string, error) {
 	return "", errors.New("nvme device operations are only supported on Linux")
 }

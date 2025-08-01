@@ -13,3 +13,8 @@ var ErrUnsupportedPlatform = errors.New("Instance Store metrics are only support
 func GetInstanceStoreMetrics(devicePath string) (InstanceStoreMetrics, error) {
 	return InstanceStoreMetrics{}, ErrUnsupportedPlatform
 }
+
+// GetEBSMetrics returns an error on non-Linux platforms.
+func GetEBSMetrics(devicePath string) (EBSMetrics, error) {
+	return EBSMetrics{}, ErrUnsupportedPlatform
+}

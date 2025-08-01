@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSafeUint64ToInt64(t *testing.T) {
@@ -55,7 +55,7 @@ func TestSafeUint64ToInt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := safeUint64ToInt64(tt.input)
+			result, err := SafeUint64ToInt64(tt.input)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "too large for int64")
@@ -67,54 +67,6 @@ func TestSafeUint64ToInt64(t *testing.T) {
 	}
 }
 
-// createTestLogPageData creates a test log page with the specified magic number and default test values.
-func createTestLogPageData(magic uint32) []byte {
-	return createTestLogPageDataWithValues(magic, map[string]uint64{
-		"ReadOps":               1000,
-		"WriteOps":              2000,
-		"ReadBytes":             1024000,
-		"WriteBytes":            2048000,
-		"TotalReadTime":         5000000,
-		"TotalWriteTime":        10000000,
-		"EC2IOPSExceeded":       50,
-		"EC2ThroughputExceeded": 100,
-		"QueueLength":           5,
-	})
-}
-
-// createTestLogPageDataWithValues creates a test log page with the specified magic number and custom values.
-func createTestLogPageDataWithValues(magic uint32, values map[string]uint64) []byte {
-	buf := new(bytes.Buffer)
-
-	// Write the structure in little-endian format matching the InstanceStoreMetrics struct
-	binary.Write(buf, binary.LittleEndian, magic)                           // Magic (4 bytes)
-	binary.Write(buf, binary.LittleEndian, uint32(0))                       // Reserved (4 bytes)
-	binary.Write(buf, binary.LittleEndian, values["ReadOps"])               // ReadOps (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["WriteOps"])              // WriteOps (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["ReadBytes"])             // ReadBytes (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["WriteBytes"])            // WriteBytes (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["TotalReadTime"])         // TotalReadTime (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["TotalWriteTime"])        // TotalWriteTime (8 bytes)
-	binary.Write(buf, binary.LittleEndian, uint64(0))                       // EBSIOPSExceeded (8 bytes) - not applicable
-	binary.Write(buf, binary.LittleEndian, uint64(0))                       // EBSThroughputExceeded (8 bytes) - not applicable
-	binary.Write(buf, binary.LittleEndian, values["EC2IOPSExceeded"])       // EC2IOPSExceeded (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["EC2ThroughputExceeded"]) // EC2ThroughputExceeded (8 bytes)
-	binary.Write(buf, binary.LittleEndian, values["QueueLength"])           // QueueLength (8 bytes)
-
-	// Ensure we have at least 96 bytes by padding with zeros if necessary
-	data := buf.Bytes()
-	if len(data) < 96 {
-		padding := make([]byte, 96-len(data))
-		data = append(data, padding...)
-	}
-
-	// Add some additional data to simulate histogram data (which should be ignored)
-	histogramData := make([]byte, 100)
-	data = append(data, histogramData...)
-
-	return data
-}
-
 func TestInstanceStoreMetricsStructSize(t *testing.T) {
 	// Verify that the struct matches the expected binary layout
 	// The struct should be exactly 96 bytes (excluding histogram data)
@@ -124,10 +76,6 @@ func TestInstanceStoreMetricsStructSize(t *testing.T) {
 	// TotalReadTime (8) + TotalWriteTime (8) + EBSIOPSExceeded (8) + EBSThroughputExceeded (8) +
 	// EC2IOPSExceeded (8) + EC2ThroughputExceeded (8) + QueueLength (8) = 96 bytes
 	expectedSize := 4 + 4 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8
-
-	// Create test data and verify it has the expected size
-	testData := createTestLogPageData(InstanceStoreMagicNumber)
-	require.GreaterOrEqual(t, len(testData), expectedSize, "Test data should be at least %d bytes", expectedSize)
 
 	// Verify that we have exactly 96 bytes of meaningful data (excluding histogram padding)
 	assert.Equal(t, expectedSize, 96, "Expected size calculation should equal 96 bytes")
@@ -199,7 +147,7 @@ func TestSafeUint64ToInt64_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := safeUint64ToInt64(tt.input)
+			result, err := SafeUint64ToInt64(tt.input)
 
 			if tt.expectError {
 				assert.Error(t, err, tt.description)
@@ -211,4 +159,332 @@ func TestSafeUint64ToInt64_EdgeCases(t *testing.T) {
 			}
 		})
 	}
+}
+func TestParseEBSLogPage(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		want    EBSMetrics
+		wantErr string
+	}{
+		{
+			name: "valid EBS log page",
+			input: func() []byte {
+				metrics := EBSMetrics{
+					EBSMagic:              EBSMagicNumber,
+					ReadOps:               100,
+					WriteOps:              200,
+					ReadBytes:             1024,
+					WriteBytes:            2048,
+					TotalReadTime:         5000,
+					TotalWriteTime:        10000,
+					EBSIOPSExceeded:       5,
+					EBSThroughputExceeded: 10,
+					EC2IOPSExceeded:       15,
+					EC2ThroughputExceeded: 20,
+					QueueLength:           3,
+				}
+
+				var buf bytes.Buffer
+				binary.Write(&buf, binary.LittleEndian, &metrics)
+				return buf.Bytes()
+			}(),
+			want: EBSMetrics{
+				EBSMagic:              EBSMagicNumber,
+				ReadOps:               100,
+				WriteOps:              200,
+				ReadBytes:             1024,
+				WriteBytes:            2048,
+				TotalReadTime:         5000,
+				TotalWriteTime:        10000,
+				EBSIOPSExceeded:       5,
+				EBSThroughputExceeded: 10,
+				EC2IOPSExceeded:       15,
+				EC2ThroughputExceeded: 20,
+				QueueLength:           3,
+			},
+		},
+		{
+			name: "invalid EBS magic number",
+			input: func() []byte {
+				metrics := EBSMetrics{
+					EBSMagic: 0x12345678, // Invalid magic number
+					ReadOps:  100,
+				}
+
+				var buf bytes.Buffer
+				binary.Write(&buf, binary.LittleEndian, &metrics)
+				return buf.Bytes()
+			}(),
+			want:    EBSMetrics{},
+			wantErr: ErrInvalidEBSMagic.Error(),
+		},
+		{
+			name:    "insufficient data for EBS parsing",
+			input:   make([]byte, 10), // Too small
+			want:    EBSMetrics{},
+			wantErr: ErrInsufficientData.Error(),
+		},
+		{
+			name:    "empty data",
+			input:   []byte{},
+			want:    EBSMetrics{},
+			wantErr: ErrInsufficientData.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseEBSLogPage(tt.input)
+
+			if tt.wantErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+
+			// Compare key fields (excluding reserved areas and histograms for simplicity)
+			assert.Equal(t, tt.want.EBSMagic, got.EBSMagic)
+			assert.Equal(t, tt.want.ReadOps, got.ReadOps)
+			assert.Equal(t, tt.want.WriteOps, got.WriteOps)
+			assert.Equal(t, tt.want.ReadBytes, got.ReadBytes)
+			assert.Equal(t, tt.want.WriteBytes, got.WriteBytes)
+			assert.Equal(t, tt.want.TotalReadTime, got.TotalReadTime)
+			assert.Equal(t, tt.want.TotalWriteTime, got.TotalWriteTime)
+			assert.Equal(t, tt.want.EBSIOPSExceeded, got.EBSIOPSExceeded)
+			assert.Equal(t, tt.want.EBSThroughputExceeded, got.EBSThroughputExceeded)
+			assert.Equal(t, tt.want.EC2IOPSExceeded, got.EC2IOPSExceeded)
+			assert.Equal(t, tt.want.EC2ThroughputExceeded, got.EC2ThroughputExceeded)
+			assert.Equal(t, tt.want.QueueLength, got.QueueLength)
+		})
+	}
+}
+
+func TestParseInstanceStoreLogPageWithHistograms(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		want    InstanceStoreMetrics
+		wantErr string
+	}{
+		{
+			name: "valid Instance Store log page with histogram fields",
+			input: func() []byte {
+				metrics := InstanceStoreMetrics{
+					Magic:                 InstanceStoreMagicNumber,
+					Reserved:              0,
+					ReadOps:               150,
+					WriteOps:              250,
+					ReadBytes:             1536,
+					WriteBytes:            2560,
+					TotalReadTime:         7500,
+					TotalWriteTime:        12500,
+					EBSIOPSExceeded:       0, // Skip for Instance Store
+					EBSThroughputExceeded: 0, // Skip for Instance Store
+					EC2IOPSExceeded:       25,
+					EC2ThroughputExceeded: 30,
+					QueueLength:           5,
+					NumHistograms:         2,
+					NumBins:               64,
+					IOSizeRange:           4096,
+				}
+
+				var buf bytes.Buffer
+				binary.Write(&buf, binary.LittleEndian, &metrics)
+				return buf.Bytes()
+			}(),
+			want: InstanceStoreMetrics{
+				Magic:                 InstanceStoreMagicNumber,
+				Reserved:              0,
+				ReadOps:               150,
+				WriteOps:              250,
+				ReadBytes:             1536,
+				WriteBytes:            2560,
+				TotalReadTime:         7500,
+				TotalWriteTime:        12500,
+				EBSIOPSExceeded:       0,
+				EBSThroughputExceeded: 0,
+				EC2IOPSExceeded:       25,
+				EC2ThroughputExceeded: 30,
+				QueueLength:           5,
+				NumHistograms:         2,
+				NumBins:               64,
+				IOSizeRange:           4096,
+			},
+		},
+		{
+			name: "invalid Instance Store magic number",
+			input: func() []byte {
+				metrics := InstanceStoreMetrics{
+					Magic:   0x12345678, // Invalid magic number
+					ReadOps: 150,
+				}
+
+				var buf bytes.Buffer
+				binary.Write(&buf, binary.LittleEndian, &metrics)
+				return buf.Bytes()
+			}(),
+			want:    InstanceStoreMetrics{},
+			wantErr: ErrInvalidInstanceStoreMagic.Error(),
+		},
+		{
+			name:    "insufficient data for Instance Store parsing",
+			input:   make([]byte, 10), // Too small
+			want:    InstanceStoreMetrics{},
+			wantErr: ErrInsufficientData.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseInstanceStoreLogPage(tt.input)
+
+			if tt.wantErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+
+			// Compare key fields
+			assert.Equal(t, tt.want.Magic, got.Magic)
+			assert.Equal(t, tt.want.Reserved, got.Reserved)
+			assert.Equal(t, tt.want.ReadOps, got.ReadOps)
+			assert.Equal(t, tt.want.WriteOps, got.WriteOps)
+			assert.Equal(t, tt.want.ReadBytes, got.ReadBytes)
+			assert.Equal(t, tt.want.WriteBytes, got.WriteBytes)
+			assert.Equal(t, tt.want.TotalReadTime, got.TotalReadTime)
+			assert.Equal(t, tt.want.TotalWriteTime, got.TotalWriteTime)
+			assert.Equal(t, tt.want.EC2IOPSExceeded, got.EC2IOPSExceeded)
+			assert.Equal(t, tt.want.EC2ThroughputExceeded, got.EC2ThroughputExceeded)
+			assert.Equal(t, tt.want.QueueLength, got.QueueLength)
+			assert.Equal(t, tt.want.NumHistograms, got.NumHistograms)
+			assert.Equal(t, tt.want.NumBins, got.NumBins)
+			assert.Equal(t, tt.want.IOSizeRange, got.IOSizeRange)
+		})
+	}
+}
+
+func TestMagicNumberValidation(t *testing.T) {
+	t.Run("EBS magic number constant", func(t *testing.T) {
+		assert.Equal(t, 0x3C23B510, EBSMagicNumber)
+	})
+
+	t.Run("Instance Store magic number constant", func(t *testing.T) {
+		assert.Equal(t, 0xEC2C0D7E, InstanceStoreMagicNumber)
+	})
+}
+
+func TestBinaryLittleEndianParsing(t *testing.T) {
+	t.Run("EBS metrics binary layout", func(t *testing.T) {
+		// Create test data with known values in little-endian format
+		testData := make([]byte, int(unsafe.Sizeof(EBSMetrics{})))
+
+		// Write magic number (0x3C23B510) in little-endian format
+		binary.LittleEndian.PutUint64(testData[0:8], EBSMagicNumber)
+		// Write ReadOps (1000) in little-endian format
+		binary.LittleEndian.PutUint64(testData[8:16], 1000)
+		// Write WriteOps (2000) in little-endian format
+		binary.LittleEndian.PutUint64(testData[16:24], 2000)
+
+		metrics, err := ParseEBSLogPage(testData)
+		assert.NoError(t, err)
+
+		assert.Equal(t, uint64(EBSMagicNumber), metrics.EBSMagic)
+		assert.Equal(t, uint64(1000), metrics.ReadOps)
+		assert.Equal(t, uint64(2000), metrics.WriteOps)
+	})
+
+	t.Run("Instance Store metrics binary layout", func(t *testing.T) {
+		// Create test data with known values in little-endian format
+		testData := make([]byte, int(unsafe.Sizeof(InstanceStoreMetrics{})))
+
+		// Write magic number (0xEC2C0D7E) in little-endian format
+		binary.LittleEndian.PutUint32(testData[0:4], InstanceStoreMagicNumber)
+		// Write Reserved (0) in little-endian format
+		binary.LittleEndian.PutUint32(testData[4:8], 0)
+		// Write ReadOps (1500) in little-endian format
+		binary.LittleEndian.PutUint64(testData[8:16], 1500)
+		// Write WriteOps (2500) in little-endian format
+		binary.LittleEndian.PutUint64(testData[16:24], 2500)
+
+		metrics, err := ParseInstanceStoreLogPage(testData)
+		assert.NoError(t, err)
+
+		assert.Equal(t, uint32(InstanceStoreMagicNumber), metrics.Magic)
+		assert.Equal(t, uint64(1500), metrics.ReadOps)
+		assert.Equal(t, uint64(2500), metrics.WriteOps)
+	})
+}
+
+func TestHistogramStructures(t *testing.T) {
+	t.Run("Histogram structure", func(t *testing.T) {
+		h := Histogram{
+			BinCount: 64,
+			Bins: [64]HistogramBin{
+				{Lower: 0, Upper: 100, Count: 10},
+				{Lower: 100, Upper: 200, Count: 20},
+			},
+		}
+
+		assert.Equal(t, uint64(64), h.BinCount)
+		assert.Equal(t, uint64(0), h.Bins[0].Lower)
+		assert.Equal(t, uint64(100), h.Bins[0].Upper)
+		assert.Equal(t, uint64(10), h.Bins[0].Count)
+		assert.Equal(t, uint64(100), h.Bins[1].Lower)
+		assert.Equal(t, uint64(200), h.Bins[1].Upper)
+		assert.Equal(t, uint64(20), h.Bins[1].Count)
+	})
+
+	t.Run("HistogramBin structure", func(t *testing.T) {
+		bin := HistogramBin{
+			Lower: 100,
+			Upper: 200,
+			Count: 50,
+		}
+
+		assert.Equal(t, uint64(100), bin.Lower)
+		assert.Equal(t, uint64(200), bin.Upper)
+		assert.Equal(t, uint64(50), bin.Count)
+	})
+}
+
+func TestStructureSizes(t *testing.T) {
+	t.Run("EBSMetrics structure size", func(t *testing.T) {
+		size := unsafe.Sizeof(EBSMetrics{})
+		// EBSMetrics should be large enough to contain all fields including histograms
+		// Minimum expected size: 12 uint64s (96 bytes) + 416 bytes reserved + 2 histograms
+		minExpectedSize := uintptr(96 + 416 + 2*(8+64*24))
+
+		assert.GreaterOrEqual(t, size, minExpectedSize, "EBSMetrics size should be at least %d bytes", minExpectedSize)
+	})
+
+	t.Run("InstanceStoreMetrics structure size", func(t *testing.T) {
+		size := unsafe.Sizeof(InstanceStoreMetrics{})
+		// InstanceStoreMetrics should be large enough to contain all fields
+		// Minimum expected size: 2 uint32s + 13 uint64s + 64 uint64s bounds + 416 bytes reserved + 2 histograms
+		minExpectedSize := uintptr(8 + 104 + 512 + 416 + 2*(8+64*24))
+
+		assert.GreaterOrEqual(t, size, minExpectedSize, "InstanceStoreMetrics size should be at least %d bytes", minExpectedSize)
+	})
+}
+
+func TestUpdatedInstanceStoreMetricsStructSize(t *testing.T) {
+	// Update the test to account for the new histogram fields
+	// Magic (4) + Reserved (4) + ReadOps (8) + WriteOps (8) + ReadBytes (8) + WriteBytes (8) +
+	// TotalReadTime (8) + TotalWriteTime (8) + EBSIOPSExceeded (8) + EBSThroughputExceeded (8) +
+	// EC2IOPSExceeded (8) + EC2ThroughputExceeded (8) + QueueLength (8) + NumHistograms (8) +
+	// NumBins (8) + IOSizeRange (8) + Bounds [64]uint64 (512) + 2 Histograms + ReservedArea (416)
+
+	// The struct now includes histogram fields, so it's much larger than 96 bytes
+	actualSize := int(unsafe.Sizeof(InstanceStoreMetrics{}))
+
+	// Verify it's at least large enough for the basic fields plus histogram data
+	minExpectedSize := 4 + 4 + 8*13 + 64*8 + 416 + 2*(8+64*24) // Basic calculation
+
+	assert.GreaterOrEqual(t, actualSize, minExpectedSize,
+		"InstanceStoreMetrics should be at least %d bytes to accommodate histogram fields", minExpectedSize)
 }

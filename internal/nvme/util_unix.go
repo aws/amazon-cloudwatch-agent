@@ -101,6 +101,74 @@ func (u *Util) IsInstanceStoreDevice(device *DeviceFileAttributes) (bool, error)
 	return true, nil
 }
 
+func (u *Util) DetectDeviceType(device *DeviceFileAttributes) (string, error) {
+	// First check if it's an EBS device
+	isEbs, err := u.IsEbsDevice(device)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if device %s is EBS: %w", device.DeviceName(), err)
+	}
+	if isEbs {
+		return "ebs", nil
+	}
+
+	// Then check if it's an Instance Store device
+	isInstanceStore, err := u.IsInstanceStoreDevice(device)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if device %s is Instance Store: %w", device.DeviceName(), err)
+	}
+	if isInstanceStore {
+		return "instance_store", nil
+	}
+
+	// If neither EBS nor Instance Store, return unknown
+	model, err := u.GetDeviceModel(device)
+	if err != nil {
+		return "", fmt.Errorf("failed to get device model for %s: %w", device.DeviceName(), err)
+	}
+	return "", fmt.Errorf("unknown device type for %s with model '%s'", device.DeviceName(), model)
+}
+
 func (u *Util) DevicePath(device string) (string, error) {
-	return filepath.Join(devDirectoryPath, device), nil
+	// Sanitize input
+	device = strings.TrimSpace(device)
+	if device == "" {
+		return "", fmt.Errorf("device name cannot be empty")
+	}
+
+	// Validate device name doesn't contain path traversal attempts
+	if strings.Contains(device, "..") || strings.Contains(device, "/") {
+		return "", fmt.Errorf("device name cannot contain path separators or traversal sequences")
+	}
+
+	// Validate device name contains only valid characters
+	for _, char := range device {
+		if !isValidDeviceNameChar(char) {
+			return "", fmt.Errorf("device name contains invalid character: %c", char)
+		}
+	}
+
+	// Validate device name length
+	if len(device) > 32 {
+		return "", fmt.Errorf("device name exceeds maximum length of 32 characters")
+	}
+
+	// Construct and validate the full path
+	fullPath := filepath.Join(devDirectoryPath, device)
+
+	// Ensure the path is still within /dev after joining
+	cleanPath := filepath.Clean(fullPath)
+	if !strings.HasPrefix(cleanPath, devDirectoryPath+"/") && cleanPath != devDirectoryPath {
+		return "", fmt.Errorf("device path escapes /dev directory")
+	}
+
+	return cleanPath, nil
+}
+
+// isValidDeviceNameChar checks if a character is valid in a device name
+func isValidDeviceNameChar(char rune) bool {
+	// Allow alphanumeric characters and common device name characters
+	return (char >= '0' && char <= '9') ||
+		(char >= 'a' && char <= 'z') ||
+		(char >= 'A' && char <= 'Z') ||
+		char == '_' || char == '-'
 }
