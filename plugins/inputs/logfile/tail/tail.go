@@ -73,8 +73,9 @@ type Tail struct {
 	Lines    chan *Line
 	Config
 
-	file   *os.File
-	reader *bufio.Reader
+	file           *os.File
+	reader         *bufio.Reader
+	useLargeBuffer bool
 
 	watcher watch.FileWatcher
 	changes *watch.FileChanges
@@ -544,12 +545,50 @@ func (tail *Tail) waitForChanges() error {
 
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
-	if tail.MaxLineSize > 0 {
+	if tail.useLargeBuffer {
 		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
 	} else {
-		tail.reader = bufio.NewReader(tail.file)
+		tail.reader = bufio.NewReaderSize(tail.file, constants.DefaultReaderBufferSize)
 	}
 	tail.lk.Unlock()
+}
+
+func (tail *Tail) readSlice(delim byte) ([]byte, error) {
+	// First try: normal ReadSlice
+	word, err := tail.reader.ReadSlice(delim)
+	if err != bufio.ErrBufferFull {
+		tail.curOffset += int64(len(word))
+		return word, err // fast path: no allocation
+	}
+
+	// Check if buffer already upgraded
+	if tail.reader.Size() == tail.MaxLineSize {
+		tail.curOffset += int64(len(word))
+		return word, bufio.ErrBufferFull
+	}
+
+	// Buffer was too small → allocate ONCE
+	buf := append([]byte(nil), word...)
+
+	// Copy any unread buffered data
+	unread := tail.reader.Buffered()
+	if unread > 0 {
+		peek, _ := tail.reader.Peek(unread)
+		buf = append(buf, peek...)
+		tail.reader.Discard(unread)
+	}
+
+	// Switch to a bigger buffer
+	tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
+	// In the event that the tail is re-opened, we don't want to have to do this
+	// re-sizing of the buffer again. The reader should just re-open with the larger buffer
+	tail.useLargeBuffer = true
+
+	word, err = tail.reader.ReadSlice(delim)
+	buf = append(buf, word...)
+	tail.curOffset += int64(len(buf))
+
+	return buf, err
 }
 
 func (tail *Tail) seekEnd() error {
@@ -616,13 +655,6 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 // automatically remove inotify watches after the process exits.
 func (tail *Tail) Cleanup() {
 	watch.Cleanup(tail.Filename)
-}
-
-// A wrapper of bufio ReadSlice
-func (tail *Tail) readSlice(delim byte) (line []byte, err error) {
-	line, err = tail.reader.ReadSlice(delim)
-	tail.curOffset += int64(len(line))
-	return
 }
 
 // A wrapper of bufio ReadByte
