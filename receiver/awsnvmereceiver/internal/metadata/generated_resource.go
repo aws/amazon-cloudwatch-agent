@@ -21,6 +21,13 @@ func NewResourceBuilder(rac ResourceAttributesConfig) *ResourceBuilder {
 	}
 }
 
+// SetSerialID sets provided value as "SerialId" attribute.
+func (rb *ResourceBuilder) SetSerialID(val string) {
+	if rb.config.SerialID.Enabled {
+		rb.res.Attributes().PutStr("SerialId", val)
+	}
+}
+
 // SetVolumeID sets provided value as "VolumeId" attribute.
 func (rb *ResourceBuilder) SetVolumeID(val string) {
 	if rb.config.VolumeID.Enabled {

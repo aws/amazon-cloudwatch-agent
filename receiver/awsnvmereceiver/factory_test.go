@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsebsnvmereceiver
+package awsnvmereceiver
 
 import (
 	"context"
@@ -46,7 +46,7 @@ func TestCreateMetricsReceiver(t *testing.T) {
 
 			receiver, err := createMetricsReceiver(
 				context.Background(),
-				receivertest.NewNopSettings(component.MustNewType("awsebsnvmereceiver")),
+				receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")),
 				cfg,
 				consumertest.NewNop(),
 			)

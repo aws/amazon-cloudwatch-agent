@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsebsnvme
+package awsnvme
 
 import (
 	"path/filepath"
@@ -12,13 +12,13 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
-	assert.EqualValues(t, "awsebsnvmereceiver", tt.ID().String())
+	assert.EqualValues(t, "awsnvmereceiver", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
@@ -80,7 +80,7 @@ func TestTranslator(t *testing.T) {
 			want:  testutil.GetConf(t, filepath.Join("testdata", "mixed_metrics.yaml")),
 		},
 	}
-	factory := awsebsnvmereceiver.NewFactory()
+	factory := awsnvmereceiver.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
@@ -88,9 +88,9 @@ func TestTranslator(t *testing.T) {
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
-				gotCfg, ok := got.(*awsebsnvmereceiver.Config)
+				gotCfg, ok := got.(*awsnvmereceiver.Config)
 				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig().(*awsebsnvmereceiver.Config)
+				wantCfg := factory.CreateDefaultConfig().(*awsnvmereceiver.Config)
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 
 				// Some fields are unexported (e.g. enabledSetByUser), so a direct
@@ -102,7 +102,7 @@ func TestTranslator(t *testing.T) {
 }
 
 // compareConfigsIgnoringEnabledSetByUser compares two configs but ignores the enabledSetByUser field
-func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsebsnvmereceiver.Config) {
+func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsnvmereceiver.Config) {
 	// Compare collection interval
 	assert.Equal(t, want.CollectionInterval, got.CollectionInterval)
 
@@ -141,10 +141,10 @@ func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsebsnvmer
 func TestNewTranslator(t *testing.T) {
 	// Test with default options
 	translator := NewTranslator()
-	assert.Equal(t, "awsebsnvmereceiver", translator.ID().String())
+	assert.Equal(t, "awsnvmereceiver", translator.ID().String())
 
 	// Test with custom name
 	customName := "custom_name"
 	translator = NewTranslator(common.WithName(customName))
-	assert.Equal(t, "awsebsnvmereceiver/"+customName, translator.ID().String())
+	assert.Equal(t, "awsnvmereceiver/"+customName, translator.ID().String())
 }

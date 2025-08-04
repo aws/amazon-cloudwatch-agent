@@ -9,6 +9,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 )
 
@@ -25,19 +27,29 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			name: "all_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					DiskioEbsEc2InstancePerformanceExceededIops: MetricConfig{Enabled: true},
-					DiskioEbsEc2InstancePerformanceExceededTp:   MetricConfig{Enabled: true},
-					DiskioEbsTotalReadBytes:                     MetricConfig{Enabled: true},
-					DiskioEbsTotalReadOps:                       MetricConfig{Enabled: true},
-					DiskioEbsTotalReadTime:                      MetricConfig{Enabled: true},
-					DiskioEbsTotalWriteBytes:                    MetricConfig{Enabled: true},
-					DiskioEbsTotalWriteOps:                      MetricConfig{Enabled: true},
-					DiskioEbsTotalWriteTime:                     MetricConfig{Enabled: true},
-					DiskioEbsVolumePerformanceExceededIops:      MetricConfig{Enabled: true},
-					DiskioEbsVolumePerformanceExceededTp:        MetricConfig{Enabled: true},
-					DiskioEbsVolumeQueueLength:                  MetricConfig{Enabled: true},
+					DiskioEbsEc2InstancePerformanceExceededIops:      MetricConfig{Enabled: true},
+					DiskioEbsEc2InstancePerformanceExceededTp:        MetricConfig{Enabled: true},
+					DiskioEbsTotalReadBytes:                          MetricConfig{Enabled: true},
+					DiskioEbsTotalReadOps:                            MetricConfig{Enabled: true},
+					DiskioEbsTotalReadTime:                           MetricConfig{Enabled: true},
+					DiskioEbsTotalWriteBytes:                         MetricConfig{Enabled: true},
+					DiskioEbsTotalWriteOps:                           MetricConfig{Enabled: true},
+					DiskioEbsTotalWriteTime:                          MetricConfig{Enabled: true},
+					DiskioEbsVolumePerformanceExceededIops:           MetricConfig{Enabled: true},
+					DiskioEbsVolumePerformanceExceededTp:             MetricConfig{Enabled: true},
+					DiskioEbsVolumeQueueLength:                       MetricConfig{Enabled: true},
+					DiskioInstanceStoreTotalReadBytes:                MetricConfig{Enabled: true},
+					DiskioInstanceStoreTotalReadOps:                  MetricConfig{Enabled: true},
+					DiskioInstanceStoreTotalReadTime:                 MetricConfig{Enabled: true},
+					DiskioInstanceStoreTotalWriteBytes:               MetricConfig{Enabled: true},
+					DiskioInstanceStoreTotalWriteOps:                 MetricConfig{Enabled: true},
+					DiskioInstanceStoreTotalWriteTime:                MetricConfig{Enabled: true},
+					DiskioInstanceStoreVolumePerformanceExceededIops: MetricConfig{Enabled: true},
+					DiskioInstanceStoreVolumePerformanceExceededTp:   MetricConfig{Enabled: true},
+					DiskioInstanceStoreVolumeQueueLength:             MetricConfig{Enabled: true},
 				},
 				ResourceAttributes: ResourceAttributesConfig{
+					SerialID: ResourceAttributeConfig{Enabled: true},
 					VolumeID: ResourceAttributeConfig{Enabled: true},
 				},
 			},
@@ -46,19 +58,29 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			name: "none_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					DiskioEbsEc2InstancePerformanceExceededIops: MetricConfig{Enabled: false},
-					DiskioEbsEc2InstancePerformanceExceededTp:   MetricConfig{Enabled: false},
-					DiskioEbsTotalReadBytes:                     MetricConfig{Enabled: false},
-					DiskioEbsTotalReadOps:                       MetricConfig{Enabled: false},
-					DiskioEbsTotalReadTime:                      MetricConfig{Enabled: false},
-					DiskioEbsTotalWriteBytes:                    MetricConfig{Enabled: false},
-					DiskioEbsTotalWriteOps:                      MetricConfig{Enabled: false},
-					DiskioEbsTotalWriteTime:                     MetricConfig{Enabled: false},
-					DiskioEbsVolumePerformanceExceededIops:      MetricConfig{Enabled: false},
-					DiskioEbsVolumePerformanceExceededTp:        MetricConfig{Enabled: false},
-					DiskioEbsVolumeQueueLength:                  MetricConfig{Enabled: false},
+					DiskioEbsEc2InstancePerformanceExceededIops:      MetricConfig{Enabled: false},
+					DiskioEbsEc2InstancePerformanceExceededTp:        MetricConfig{Enabled: false},
+					DiskioEbsTotalReadBytes:                          MetricConfig{Enabled: false},
+					DiskioEbsTotalReadOps:                            MetricConfig{Enabled: false},
+					DiskioEbsTotalReadTime:                           MetricConfig{Enabled: false},
+					DiskioEbsTotalWriteBytes:                         MetricConfig{Enabled: false},
+					DiskioEbsTotalWriteOps:                           MetricConfig{Enabled: false},
+					DiskioEbsTotalWriteTime:                          MetricConfig{Enabled: false},
+					DiskioEbsVolumePerformanceExceededIops:           MetricConfig{Enabled: false},
+					DiskioEbsVolumePerformanceExceededTp:             MetricConfig{Enabled: false},
+					DiskioEbsVolumeQueueLength:                       MetricConfig{Enabled: false},
+					DiskioInstanceStoreTotalReadBytes:                MetricConfig{Enabled: false},
+					DiskioInstanceStoreTotalReadOps:                  MetricConfig{Enabled: false},
+					DiskioInstanceStoreTotalReadTime:                 MetricConfig{Enabled: false},
+					DiskioInstanceStoreTotalWriteBytes:               MetricConfig{Enabled: false},
+					DiskioInstanceStoreTotalWriteOps:                 MetricConfig{Enabled: false},
+					DiskioInstanceStoreTotalWriteTime:                MetricConfig{Enabled: false},
+					DiskioInstanceStoreVolumePerformanceExceededIops: MetricConfig{Enabled: false},
+					DiskioInstanceStoreVolumePerformanceExceededTp:   MetricConfig{Enabled: false},
+					DiskioInstanceStoreVolumeQueueLength:             MetricConfig{Enabled: false},
 				},
 				ResourceAttributes: ResourceAttributesConfig{
+					SerialID: ResourceAttributeConfig{Enabled: false},
 					VolumeID: ResourceAttributeConfig{Enabled: false},
 				},
 			},
@@ -79,7 +101,7 @@ func loadMetricsBuilderConfig(t *testing.T, name string) MetricsBuilderConfig {
 	sub, err := cm.Sub(name)
 	require.NoError(t, err)
 	cfg := DefaultMetricsBuilderConfig()
-	require.NoError(t, sub.Unmarshal(&cfg))
+	require.NoError(t, sub.Unmarshal(&cfg, confmap.WithIgnoreUnused()))
 	return cfg
 }
 
@@ -95,12 +117,14 @@ func TestResourceAttributesConfig(t *testing.T) {
 		{
 			name: "all_set",
 			want: ResourceAttributesConfig{
+				SerialID: ResourceAttributeConfig{Enabled: true},
 				VolumeID: ResourceAttributeConfig{Enabled: true},
 			},
 		},
 		{
 			name: "none_set",
 			want: ResourceAttributesConfig{
+				SerialID: ResourceAttributeConfig{Enabled: false},
 				VolumeID: ResourceAttributeConfig{Enabled: false},
 			},
 		},

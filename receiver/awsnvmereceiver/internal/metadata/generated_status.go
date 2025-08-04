@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	Type      = component.MustNewType("awsebsnvmereceiver")
-	ScopeName = "github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	Type      = component.MustNewType("awsnvmereceiver")
+	ScopeName = "github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 )
 
 const (

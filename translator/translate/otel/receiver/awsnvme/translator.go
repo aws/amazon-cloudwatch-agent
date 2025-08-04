@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsebsnvme
+package awsnvme
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -34,7 +34,7 @@ type translator struct {
 func NewTranslator(
 	opts ...common.TranslatorOption,
 ) common.ComponentTranslator {
-	t := &translator{factory: awsebsnvmereceiver.NewFactory()}
+	t := &translator{factory: awsnvmereceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -50,7 +50,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: baseKey}
 	}
 
-	cfg := t.factory.CreateDefaultConfig().(*awsebsnvmereceiver.Config)
+	cfg := t.factory.CreateDefaultConfig().(*awsnvmereceiver.Config)
 
 	intervalKeyChain := []string{
 		common.ConfigKey(baseKey, common.MetricsCollectionIntervalKey),

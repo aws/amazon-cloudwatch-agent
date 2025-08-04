@@ -237,7 +237,7 @@ processors:
                 - set(name, "TC_ERR") where name == "tomcat.errors"
         trace_statements: []
 receivers:
-    awsebsnvmereceiver:
+    awsnvmereceiver:
         collection_interval: 1m0s
         devices:
             - '*'
@@ -449,7 +449,7 @@ service:
             receivers:
                 - telegraf_net
                 - telegraf_diskio
-                - awsebsnvmereceiver
+                - awsnvmereceiver
         metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch

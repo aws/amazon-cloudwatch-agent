@@ -1,4 +1,4 @@
-type: awsebsnvmereceiver
+type: awsnvmereceiver
 
 status:
   class: receiver
@@ -13,6 +13,11 @@ resource_attributes:
     enabled: true
     description: Unique identifier to the EBS volume
     type: string
+  SerialId:
+    enabled: true
+    description: Unique identifier to the Local Storage
+    type: string
+
 
 metrics:
   diskio_ebs_total_read_ops:
@@ -101,3 +106,82 @@ metrics:
     gauge:
       value_type: int
     unit: "1"
+  diskio_instance_store_total_read_ops:
+    enabled: true
+    description: The total number of completed read operations for Instance Store devices
+    unit: "1"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_total_write_ops:
+    enabled: true
+    description: The total number of completed write operations for Instance Store devices
+    unit: "1"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_total_read_bytes:
+    enabled: true
+    description: The total number of read bytes transferred for Instance Store devices
+    unit: "By"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_total_write_bytes:
+    enabled: true
+    description: The total number of write bytes transferred for Instance Store devices
+    unit: "By"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_total_read_time:
+    enabled: true
+    description: The total time spent, in nanoseconds, by all completed read operations for Instance Store devices
+    unit: "ns"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_total_write_time:
+    enabled: true
+    description: The total time spent, in nanoseconds, by all completed write operations for Instance Store devices
+    unit: "ns"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_volume_performance_exceeded_iops:
+    enabled: true
+    description: The total time, in nanoseconds, that IOPS demand exceeded the Instance Store device's performance
+    unit: "ns"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_volume_performance_exceeded_tp:
+    enabled: true
+    description: The total time, in nanoseconds, that throughput demand exceeded the Instance Store device's performance
+    unit: "ns"
+    sum:
+      value_type: int
+      monotonic: true
+      aggregation_temporality: cumulative
+    attributes: [ ]
+  diskio_instance_store_volume_queue_length:
+    enabled: true
+    description: The number of read and write operations waiting to be completed for Instance Store devices
+    unit: "1"
+    gauge:
+      value_type: int
+    attributes: []

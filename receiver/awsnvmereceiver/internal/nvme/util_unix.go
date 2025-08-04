@@ -67,6 +67,14 @@ func (u *Util) IsEbsDevice(device *DeviceFileAttributes) (bool, error) {
 	return model == ebsNvmeModelName, nil
 }
 
+func (u *Util) IsInstanceStoreDevice(device *DeviceFileAttributes) (bool, error) {
+	model, err := u.GetDeviceModel(device)
+	if err != nil {
+		return false, err
+	}
+	return model == instanceStoreNvmeModelName, nil
+}
+
 func (u *Util) DevicePath(device string) (string, error) {
 	return filepath.Join(devDirectoryPath, device), nil
 }
