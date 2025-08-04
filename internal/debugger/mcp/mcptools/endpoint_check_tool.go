@@ -19,7 +19,22 @@ import (
 
 func NewEndpointCheckTool() mcp.Tool {
 	return mcp.NewTool("endpoint_check",
-		mcp.WithDescription("Check endpoint configuration for Cloudwatch agent."),
+		mcp.WithDescription(`Validates CloudWatch agent endpoint configuration and connectivity.
+
+		This tool checks the CloudWatch agent's endpoint configuration for both logs and metrics,
+		verifying that the agent can properly connect to AWS CloudWatch services. It examines
+		the merged configuration from both JSON config files and configuration directory to
+		determine the correct endpoints based on the current environment (EC2/on-premises).
+
+		The function automatically detects the platform (Linux/Windows/macOS) and retrieves
+		the appropriate endpoint settings, including regional endpoints, custom endpoints,
+		and proxy configurations if present.
+
+		Usage: Use this tool to diagnose connectivity issues or verify that the CloudWatch
+		agent is configured with the correct endpoints for your AWS region and environment.
+
+		Returns:
+			EndpointInfo: An object containing endpoint configuration details for logs and metrics`),
 	)
 }
 

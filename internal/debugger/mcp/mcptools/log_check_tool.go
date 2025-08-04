@@ -19,7 +19,23 @@ import (
 
 func NewLogCheckTool() mcp.Tool {
 	return mcp.NewTool("log_check",
-		mcp.WithDescription("Check the exitence and readability of configured logs for the CloudWatch agent."))
+		mcp.WithDescription(`Validates configured log files and their accessibility for CloudWatch agent log collection.
+
+		This tool examines all log files specified in the CloudWatch agent configuration,
+		verifying their existence, readability, and accessibility for log collection. It
+		parses the merged configuration from both JSON config files and configuration
+		directory to identify all configured log sources.
+
+		The function automatically detects the platform (Linux/Windows/macOS) and checks
+		each configured log file path, including log groups, log streams, and any associated
+		filtering or processing configurations.
+
+		Usage: Use this tool to troubleshoot log collection issues, verify that configured
+		log files are accessible, or diagnose why certain logs are not appearing in CloudWatch.
+
+		Returns:
+			LogConfigArray: An array containing detailed information about each configured
+			log file's status and accessibility`))
 }
 
 // No arguments are required for this check. These parameters are here to match the interface.

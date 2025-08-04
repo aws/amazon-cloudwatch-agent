@@ -18,7 +18,23 @@ import (
 
 func NewFileCheckTool() mcp.Tool {
 	return mcp.NewTool("file_check",
-		mcp.WithDescription("Check existence and readability of key files required for the CloudWatch agent to run."))
+		mcp.WithDescription(`Validates the existence and accessibility of critical CloudWatch agent files.
+
+		This tool performs a comprehensive check of all key files required for the CloudWatch
+		agent to function properly, including configuration files, log files, and runtime
+		directories. It verifies file existence, readability permissions, and validates JSON
+		configuration file syntax.
+
+		The function examines both required files (essential for agent operation) and optional
+		files, providing detailed status information for each. It automatically categorizes
+		files by importance and health status to help identify critical issues.
+
+		Usage: Use this tool to diagnose file-related issues when the CloudWatch agent fails
+		to start or behaves unexpectedly, or to verify proper installation and configuration.
+
+		Returns:
+			FileCheckResponse: An object containing file status details, health summary,
+			and JSON validation results for all checked files`))
 }
 
 type FileCheckResult struct {
