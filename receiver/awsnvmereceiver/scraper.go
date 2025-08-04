@@ -33,7 +33,7 @@ type deviceTypeCache struct {
 }
 
 type deviceTypeCacheEntry struct {
-	deviceType string
+	deviceType DeviceType
 	timestamp  time.Time
 	ttl        time.Duration
 }
@@ -60,9 +60,9 @@ type nvmeScraper struct {
 
 // nvmeDevices represents a group of devices with the same controller ID and device type
 type nvmeDevices struct {
-	deviceType   string   // "ebs" or "instance_store"
-	serialNumber string   // Device serial number or volume ID
-	deviceNames  []string // List of device names with same controller
+	deviceType   DeviceType // EBS or Instance Store device type
+	serialNumber string     // Device serial number or volume ID
+	deviceNames  []string   // List of device names with same controller
 }
 
 // devicesByController maps controller ID to device information
@@ -79,25 +79,25 @@ func newDeviceTypeCache() *deviceTypeCache {
 }
 
 // get retrieves a cached device type if it's still valid
-func (c *deviceTypeCache) get(deviceKey string) (string, bool) {
+func (c *deviceTypeCache) get(deviceKey string) (DeviceType, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
 	entry, exists := c.cache[deviceKey]
 	if !exists {
-		return "", false
+		return DeviceTypeUnknown, false
 	}
 
 	// Check if cache entry has expired
 	if time.Since(entry.timestamp) > entry.ttl {
-		return "", false
+		return DeviceTypeUnknown, false
 	}
 
 	return entry.deviceType, true
 }
 
 // set stores a device type in the cache
-func (c *deviceTypeCache) set(deviceKey, deviceType string, ttl time.Duration) {
+func (c *deviceTypeCache) set(deviceKey string, deviceType DeviceType, ttl time.Duration) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -272,7 +272,7 @@ func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 			// Route to appropriate parsing function based on device type with enhanced error handling
 			switch devices.deviceType {
-			case "ebs":
+			case DeviceTypeEBS:
 				if err := s.processEBSDeviceWithRecovery(devicePath, devices, instanceID, now); err != nil {
 					errorType := s.classifyError(err)
 					errorsByType[errorType]++
@@ -285,7 +285,7 @@ func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 					lastError = err
 					continue
 				}
-			case "instance_store":
+			case DeviceTypeInstanceStore:
 				if err := s.processInstanceStoreDeviceWithRecovery(devicePath, devices, instanceID, now); err != nil {
 					errorType := s.classifyError(err)
 					errorsByType[errorType]++
@@ -303,7 +303,7 @@ func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 				errorsByType["unknown_device_type"]++
 				s.logger.Error("unknown device type detected",
 					zap.String("device", deviceName),
-					zap.String("deviceType", devices.deviceType),
+					zap.String("deviceType", devices.deviceType.String()),
 					zap.Int("controllerID", controllerID))
 				continue
 			}
@@ -312,7 +312,7 @@ func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 			s.logger.Debug("successfully processed device",
 				zap.String("device", deviceName),
 				zap.String("devicePath", devicePath),
-				zap.String("deviceType", devices.deviceType),
+				zap.String("deviceType", devices.deviceType.String()),
 				zap.Int("controllerID", controllerID),
 				zap.Int("attempts", deviceAttempts))
 		}
@@ -323,7 +323,7 @@ func (s *nvmeScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 			errorType := s.classifyError(lastError)
 			s.logger.Warn("failed to get metrics for device controller after all attempts",
 				zap.Int("controllerID", controllerID),
-				zap.String("deviceType", devices.deviceType),
+				zap.String("deviceType", devices.deviceType.String()),
 				zap.String("serialNumber", devices.serialNumber),
 				zap.Strings("deviceNames", devices.deviceNames),
 				zap.Int("totalAttempts", deviceAttempts),
@@ -434,7 +434,7 @@ func (s *nvmeScraper) getDevicesByController() (devicesByController, error) {
 
 		// Detect device type using optimized detection logic with caching
 		cacheKey := fmt.Sprintf("controller-%d-namespace-%d", primaryDevice.Controller(), primaryDevice.Namespace())
-		var deviceType string
+		var deviceType DeviceType
 		var detectionErr error
 
 		if cachedType, found := s.deviceTypeCache.get(cacheKey); found {
@@ -470,14 +470,14 @@ func (s *nvmeScraper) getDevicesByController() (devicesByController, error) {
 			s.logger.Warn("unable to get serial number for controller, using fallback",
 				zap.Int("controllerID", controllerID),
 				zap.String("primaryDevice", deviceName),
-				zap.String("deviceType", deviceType),
+				zap.String("deviceType", deviceType.String()),
 				zap.String("errorType", errorType),
 				zap.String("fallbackSerial", serial),
 				zap.Error(err))
 		}
 
 		// For EBS devices, format the serial as volume ID with validation
-		if deviceType == "ebs" {
+		if deviceType == DeviceTypeEBS {
 			serial = s.formatEBSSerial(serial, deviceName)
 		}
 
@@ -495,7 +495,7 @@ func (s *nvmeScraper) getDevicesByController() (devicesByController, error) {
 
 		s.logger.Debug("discovered controller group",
 			zap.Int("controllerID", controllerID),
-			zap.String("deviceType", deviceType),
+			zap.String("deviceType", deviceType.String()),
 			zap.String("serialNumber", serial),
 			zap.Strings("deviceNames", deviceNames),
 			zap.Int("deviceCount", len(deviceNames)))
@@ -534,7 +534,7 @@ func (s *nvmeScraper) getDevicesByController() (devicesByController, error) {
 }
 
 // detectDeviceTypeWithRetry attempts device type detection with caching and retry logic for recoverable errors
-func (s *nvmeScraper) detectDeviceTypeWithRetry(device *nvme.DeviceFileAttributes) (string, error) {
+func (s *nvmeScraper) detectDeviceTypeWithRetry(device *nvme.DeviceFileAttributes) (DeviceType, error) {
 	deviceName := device.DeviceName()
 
 	// Create cache key based on device controller and namespace for uniqueness
@@ -544,7 +544,7 @@ func (s *nvmeScraper) detectDeviceTypeWithRetry(device *nvme.DeviceFileAttribute
 	if cachedType, found := s.deviceTypeCache.get(cacheKey); found {
 		s.logger.Debug("using cached device type",
 			zap.String("device", deviceName),
-			zap.String("deviceType", cachedType),
+			zap.String("deviceType", cachedType.String()),
 			zap.String("cacheKey", cacheKey))
 		return cachedType, nil
 	}
@@ -557,15 +557,22 @@ func (s *nvmeScraper) detectDeviceTypeWithRetry(device *nvme.DeviceFileAttribute
 	var lastError error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		deviceType, err := s.nvmeUtil.DetectDeviceType(device)
+		deviceTypeStr, err := s.nvmeUtil.DetectDeviceType(device)
 		if err == nil {
+			// Convert string to DeviceType enum
+			deviceType := ParseDeviceType(deviceTypeStr)
+			if !deviceType.IsValid() {
+				lastError = fmt.Errorf("unknown device type returned: %s", deviceTypeStr)
+				break
+			}
+
 			// Cache successful detection
 			s.deviceTypeCache.set(cacheKey, deviceType, successCacheTTL)
 
 			if attempt > 1 {
 				s.logger.Debug("device type detection succeeded after retry",
 					zap.String("device", deviceName),
-					zap.String("deviceType", deviceType),
+					zap.String("deviceType", deviceType.String()),
 					zap.Int("attempt", attempt),
 					zap.String("cacheKey", cacheKey))
 			}
@@ -604,14 +611,14 @@ func (s *nvmeScraper) detectDeviceTypeWithRetry(device *nvme.DeviceFileAttribute
 
 	// Don't cache permanent errors (like platform unsupported)
 	if s.isRecoverableError(lastError) {
-		s.deviceTypeCache.set(cacheKey, "", failureCacheTTL)
+		s.deviceTypeCache.set(cacheKey, DeviceTypeUnknown, failureCacheTTL)
 	}
 
-	return "", finalError
+	return DeviceTypeUnknown, finalError
 }
 
 // getDeviceSerialWithFallback gets device serial with fallback handling
-func (s *nvmeScraper) getDeviceSerialWithFallback(device *nvme.DeviceFileAttributes, deviceType string) (string, error) {
+func (s *nvmeScraper) getDeviceSerialWithFallback(device *nvme.DeviceFileAttributes, deviceType DeviceType) (string, error) {
 	serial, err := s.nvmeUtil.GetDeviceSerial(device)
 	if err != nil {
 		// Generate a fallback serial number that's still useful for identification

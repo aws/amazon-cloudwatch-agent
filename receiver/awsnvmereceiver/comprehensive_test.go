@@ -793,7 +793,7 @@ func TestScraper_Comprehensive_SerialNumberHandling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			device := createTestDevice(0, 1, "nvme0n1")
 
-			serial, err := scraper.getDeviceSerialWithFallback(&device, tt.deviceType)
+			serial, err := scraper.getDeviceSerialWithFallback(&device, ParseDeviceType(tt.deviceType))
 
 			if tt.expectError {
 				assert.Error(t, err)

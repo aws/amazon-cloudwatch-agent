@@ -358,12 +358,12 @@ func TestScraper_Performance_CacheExpiration(t *testing.T) {
 	cache := scraper.deviceTypeCache
 
 	// Set a cache entry with short TTL
-	cache.set("test-key", "ebs", 100*time.Millisecond)
+	cache.set("test-key", DeviceTypeEBS, 100*time.Millisecond)
 
 	// Should be able to retrieve immediately
 	deviceType, found := cache.get("test-key")
 	assert.True(t, found)
-	assert.Equal(t, "ebs", deviceType)
+	assert.Equal(t, DeviceTypeEBS, deviceType)
 
 	// Wait for expiration
 	time.Sleep(150 * time.Millisecond)
@@ -373,8 +373,8 @@ func TestScraper_Performance_CacheExpiration(t *testing.T) {
 	assert.False(t, found)
 
 	// Test cache cleanup
-	cache.set("key1", "ebs", 50*time.Millisecond)
-	cache.set("key2", "instance_store", 200*time.Millisecond)
+	cache.set("key1", DeviceTypeEBS, 50*time.Millisecond)
+	cache.set("key2", DeviceTypeInstanceStore, 200*time.Millisecond)
 
 	// Wait for first key to expire
 	time.Sleep(100 * time.Millisecond)
