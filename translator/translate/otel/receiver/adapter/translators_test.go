@@ -213,6 +213,37 @@ func TestFindReceiversInConfig(t *testing.T) {
 				component.NewID(telegrafDiskIOType): {"metrics::metrics_collected::diskio", time.Minute},
 			},
 		},
+		"WithOnlyInstanceStoreMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{
+							"measurement": []interface{}{
+								"diskio_instance_store_total_read_bytes",
+							},
+						},
+					},
+				},
+			},
+			os:   translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{},
+		},
+		"WithMixedNvmeMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{
+							"measurement": []interface{}{
+								"diskio_ebs_total_read_bytes",
+								"diskio_instance_store_total_read_bytes",
+							},
+						},
+					},
+				},
+			},
+			os:   translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

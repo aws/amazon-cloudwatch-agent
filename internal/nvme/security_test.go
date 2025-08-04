@@ -4,6 +4,7 @@
 package nvme
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 	"unsafe"
@@ -11,6 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// isLinuxPlatform checks if the current platform is Linux
+func isLinuxPlatform() bool {
+	return runtime.GOOS == "linux"
+}
 
 func TestParseEBSLogPageSecurityValidation(t *testing.T) {
 	tests := []struct {
@@ -374,6 +380,11 @@ func TestValidateHistogramBounds(t *testing.T) {
 }
 
 func TestDevicePathSecurityValidation(t *testing.T) {
+	// Skip on non-Linux platforms since NVMe operations are not supported
+	if !isLinuxPlatform() {
+		t.Skip("Skipping NVMe security tests on non-Linux platform")
+	}
+
 	util := &Util{}
 
 	tests := []struct {
@@ -422,6 +433,49 @@ func TestDevicePathSecurityValidation(t *testing.T) {
 			device:      "  nvme0n1  ",
 			expectError: false, // Should be trimmed and pass
 		},
+		// Enhanced security test cases
+		{
+			name:        "null byte injection",
+			device:      "nvme0n1\x00",
+			expectError: true,
+			errorMsg:    "device name cannot contain null bytes",
+		},
+		{
+			name:        "control character injection",
+			device:      "nvme0n1\x01",
+			expectError: true,
+			errorMsg:    "device name contains invalid control character",
+		},
+		{
+			name:        "backslash injection",
+			device:      "nvme0n1\\test",
+			expectError: true,
+			errorMsg:    "device name cannot contain backslashes",
+		},
+		{
+			name:        "path resolution mismatch",
+			device:      "nvme0n1/../nvme1n1",
+			expectError: true,
+			errorMsg:    "device name cannot contain path separators",
+		},
+		{
+			name:        "invalid device pattern - no namespace",
+			device:      "nvme0",
+			expectError: true,
+			errorMsg:    "device name too short for valid NVMe pattern",
+		},
+		{
+			name:        "invalid device pattern - multiple n separators",
+			device:      "nvme0n1n2",
+			expectError: true,
+			errorMsg:    "device name contains multiple namespace separators",
+		},
+		{
+			name:        "invalid device pattern - multiple p separators",
+			device:      "nvme0n1p1p2",
+			expectError: true,
+			errorMsg:    "device name contains multiple partition separators",
+		},
 	}
 
 	for _, tt := range tests {
@@ -432,6 +486,133 @@ func TestDevicePathSecurityValidation(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.errorMsg)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestSecurityDeviceNamePatternValidation tests the device name pattern validation for security
+func TestSecurityDeviceNamePatternValidation(t *testing.T) {
+	// Skip on non-Linux platforms since NVMe operations are not supported
+	if !isLinuxPlatform() {
+		t.Skip("Skipping NVMe security tests on non-Linux platform")
+	}
+
+	tests := []struct {
+		name        string
+		deviceName  string
+		expectError bool
+		errorMsg    string
+		description string
+	}{
+		// Valid patterns
+		{
+			name:        "simple valid pattern",
+			deviceName:  "0n1",
+			expectError: false,
+			description: "Simple valid NVMe pattern should pass",
+		},
+		{
+			name:        "multi-digit controller",
+			deviceName:  "10n1",
+			expectError: false,
+			description: "Multi-digit controller should be valid",
+		},
+		{
+			name:        "with partition",
+			deviceName:  "0n1p1",
+			expectError: false,
+			description: "Device with partition should be valid",
+		},
+
+		// Security-focused invalid patterns
+		{
+			name:        "command injection in controller",
+			deviceName:  "0;rm -rf /;n1",
+			expectError: true,
+			errorMsg:    "controller part contains non-digit character",
+			description: "Command injection in controller part should be rejected",
+		},
+		{
+			name:        "command injection in namespace",
+			deviceName:  "0n1;rm -rf /",
+			expectError: true,
+			errorMsg:    "namespace part contains non-digit character",
+			description: "Command injection in namespace part should be rejected",
+		},
+		{
+			name:        "command injection in partition",
+			deviceName:  "0n1p1;rm -rf /",
+			expectError: true,
+			errorMsg:    "partition part contains non-digit character",
+			description: "Command injection in partition part should be rejected",
+		},
+		{
+			name:        "format string attack",
+			deviceName:  "0n%s%d%x",
+			expectError: true,
+			errorMsg:    "namespace part contains non-digit character",
+			description: "Format string attack should be rejected",
+		},
+		{
+			name:        "buffer overflow attempt",
+			deviceName:  strings.Repeat("0", 50) + "n1",
+			expectError: false, // This should pass pattern validation but fail length validation elsewhere
+			description: "Very long device name should be handled",
+		},
+		{
+			name:        "multiple separators attack",
+			deviceName:  "0n1n2n3",
+			expectError: true,
+			errorMsg:    "device name contains multiple namespace separators",
+			description: "Multiple namespace separators should be rejected",
+		},
+		{
+			name:        "partition separator attack",
+			deviceName:  "0n1p1p2p3",
+			expectError: true,
+			errorMsg:    "device name contains multiple partition separators",
+			description: "Multiple partition separators should be rejected",
+		},
+		{
+			name:        "missing components",
+			deviceName:  "n1",
+			expectError: true,
+			errorMsg:    "missing controller number",
+			description: "Missing controller should be rejected",
+		},
+		{
+			name:        "empty controller",
+			deviceName:  "n1",
+			expectError: true,
+			errorMsg:    "missing controller number",
+			description: "Empty controller should be rejected",
+		},
+		{
+			name:        "empty namespace",
+			deviceName:  "0n",
+			expectError: true,
+			errorMsg:    "missing namespace number",
+			description: "Empty namespace should be rejected",
+		},
+		{
+			name:        "empty partition",
+			deviceName:  "0n1p",
+			expectError: true,
+			errorMsg:    "missing partition number after 'p'",
+			description: "Empty partition should be rejected",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateDeviceNamePattern(tt.deviceName)
+
+			if tt.expectError {
+				require.Error(t, err, "Expected error for security test: %s", tt.description)
+				assert.Contains(t, err.Error(), tt.errorMsg, "Error message should contain expected text")
+			} else {
+				require.NoError(t, err, "Expected no error for valid case: %s", tt.description)
 			}
 		})
 	}

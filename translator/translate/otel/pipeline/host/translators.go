@@ -15,12 +15,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsebsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (
-	diskIOPrefix    = "diskio_"
-	diskIOEbsPrefix = "ebs_"
+	diskIOPrefix              = "diskio_"
+	diskIOEbsPrefix           = "ebs_"
+	diskIOInstanceStorePrefix = "instance_store_"
 )
 
 var (
@@ -52,7 +54,9 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 		})
 	}
 
-	if shouldAddEbsReceiver(conf, configSection) {
+	if shouldAddUnifiedNvmeReceiver(conf, configSection) {
+		deltaReceivers.Set(awsnvme.NewTranslator())
+	} else if shouldAddEbsReceiver(conf, configSection) {
 		deltaReceivers.Set(awsebsnvme.NewTranslator())
 	}
 
@@ -131,6 +135,31 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	}
 
 	return translators, nil
+}
+
+func shouldAddUnifiedNvmeReceiver(conf *confmap.Conf, configSection string) bool {
+	diskioMap := conf.Get(common.ConfigKey(configSection, common.DiskIOKey))
+	if diskioMap == nil {
+		return false
+	}
+
+	measurements := common.GetMeasurements(diskioMap.(map[string]any))
+	hasEbsMetrics := false
+	hasInstanceStoreMetrics := false
+
+	for _, measurement := range measurements {
+		measurement = strings.TrimPrefix(measurement, diskIOPrefix)
+		if strings.HasPrefix(measurement, diskIOEbsPrefix) {
+			hasEbsMetrics = true
+		}
+		if strings.HasPrefix(measurement, diskIOInstanceStorePrefix) {
+			hasInstanceStoreMetrics = true
+		}
+	}
+
+	// Use unified receiver if we have both types or just Instance Store metrics
+	// For EBS-only, we can still use the existing receiver for backward compatibility
+	return hasInstanceStoreMetrics || (hasEbsMetrics && hasInstanceStoreMetrics)
 }
 
 func shouldAddEbsReceiver(conf *confmap.Conf, configSection string) bool {

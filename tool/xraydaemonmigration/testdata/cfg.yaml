@@ -43,7 +43,7 @@ processors:
         initial_value: 2
         max_staleness: 0s
 receivers:
-    awsebsnvmereceiver:
+    awsnvmereceiver:
         collection_interval: 1m0s
         devices:
             - '*'
@@ -72,9 +72,13 @@ receivers:
             diskio_ebs_volume_queue_length:
                 enabled: true
         resource_attributes:
-            VolumeId:
+            instance_id:
                 enabled: true
-            SerialId:
+            device_type:
+                enabled: true
+            device:
+                enabled: true
+            serial_number:
                 enabled: true
         timeout: 0s
 service:
@@ -90,7 +94,7 @@ service:
                 - cumulativetodelta/hostDeltaMetrics
                 - awsentity/resource
             receivers:
-                - awsebsnvmereceiver
+                - awsnvmereceiver
     telemetry:
         logs:
             development: false

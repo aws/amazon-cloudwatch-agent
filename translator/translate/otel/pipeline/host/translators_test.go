@@ -206,6 +206,65 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithInstanceStoreMetrics": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{"instance_store_total_read_bytes"},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"awsnvmereceiver"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"awsnvmereceiver"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithMixedNvmeMetrics": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{
+							"measurement": []interface{}{
+								"ebs_total_read_bytes",
+								"instance_store_total_read_bytes",
+							},
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"awsnvmereceiver"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/amp": {
+					receivers: []string{"awsnvmereceiver"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
 		"WithOtlpMetrics/CloudWatch": {
 			input: map[string]any{
 				"metrics": map[string]any{

@@ -103,21 +103,8 @@ func nvmeReadInstanceStoreLogPage(fd uintptr, logID uint8) ([]byte, error) {
 
 	status, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, 0xC0484E41, uintptr(unsafe.Pointer(&cmd)))
 	if errno != 0 {
-		// Provide more specific error messages based on common errno values
-		switch errno {
-		case syscall.EACCES, syscall.EPERM:
-			return nil, fmt.Errorf("%w: insufficient permissions for ioctl operation (errno: %v) - CAP_SYS_ADMIN capability required", ErrInsufficientPermissions, errno)
-		case syscall.ENODEV:
-			return nil, fmt.Errorf("%w: device does not support this operation (errno: %v)", ErrDeviceAccess, errno)
-		case syscall.EINVAL:
-			return nil, fmt.Errorf("%w: invalid ioctl parameters (errno: %v) - log page 0x%X may not be supported", ErrIoctlFailed, errno, logID)
-		case syscall.EIO:
-			return nil, fmt.Errorf("%w: I/O error during ioctl operation (errno: %v)", ErrIoctlFailed, errno)
-		case syscall.ENOTTY:
-			return nil, fmt.Errorf("%w: device does not support NVMe ioctl operations (errno: %v)", ErrIoctlFailed, errno)
-		default:
-			return nil, fmt.Errorf("%w: ioctl operation failed with errno %v", ErrIoctlFailed, errno)
-		}
+		// Use enhanced ioctl error handling for better error classification and recovery
+		return nil, EnhanceIoctlError(errno, fmt.Sprintf("read Instance Store log page 0x%X", logID), fmt.Sprintf("fd:%d", fd))
 	}
 	if status != 0 {
 		// NVMe command status codes - provide more meaningful error messages
@@ -203,21 +190,8 @@ func nvmeReadEBSLogPage(fd uintptr, logID uint8) ([]byte, error) {
 
 	status, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, 0xC0484E41, uintptr(unsafe.Pointer(&cmd)))
 	if errno != 0 {
-		// Provide more specific error messages based on common errno values
-		switch errno {
-		case syscall.EACCES, syscall.EPERM:
-			return nil, fmt.Errorf("%w: insufficient permissions for ioctl operation (errno: %v) - CAP_SYS_ADMIN capability required", ErrInsufficientPermissions, errno)
-		case syscall.ENODEV:
-			return nil, fmt.Errorf("%w: device does not support this operation (errno: %v)", ErrDeviceAccess, errno)
-		case syscall.EINVAL:
-			return nil, fmt.Errorf("%w: invalid ioctl parameters (errno: %v) - log page 0x%X may not be supported", ErrIoctlFailed, errno, logID)
-		case syscall.EIO:
-			return nil, fmt.Errorf("%w: I/O error during ioctl operation (errno: %v)", ErrIoctlFailed, errno)
-		case syscall.ENOTTY:
-			return nil, fmt.Errorf("%w: device does not support NVMe ioctl operations (errno: %v)", ErrIoctlFailed, errno)
-		default:
-			return nil, fmt.Errorf("%w: ioctl operation failed with errno %v", ErrIoctlFailed, errno)
-		}
+		// Use enhanced ioctl error handling for better error classification and recovery
+		return nil, EnhanceIoctlError(errno, fmt.Sprintf("read EBS log page 0x%X", logID), fmt.Sprintf("fd:%d", fd))
 	}
 	if status != 0 {
 		// NVMe command status codes - provide more meaningful error messages

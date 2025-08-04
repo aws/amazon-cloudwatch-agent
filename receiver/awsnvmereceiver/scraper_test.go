@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/nvme"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver/internal/metadata"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 )
 
 // MockDeviceInfoProvider is a mock implementation of nvme.DeviceInfoProvider
@@ -91,6 +92,31 @@ func (m *MockMetadataProvider) InstanceIdentityDocument(ctx context.Context) (in
 	return args.Get(0), args.Error(1)
 }
 
+func (m *MockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(ec2metadata.EC2InstanceIdentityDocument), args.Error(1)
+}
+
+func (m *MockMetadataProvider) Hostname(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockMetadataProvider) InstanceTags(ctx context.Context) ([]string, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *MockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
+	args := m.Called(ctx, tagKey)
+	return args.String(0), args.Error(1)
+}
+
 // Helper function to create test device attributes
 func createTestDevice(controller int, namespace int, deviceName string) nvme.DeviceFileAttributes {
 	device, _ := nvme.ParseNvmeDeviceFileName(deviceName)
@@ -146,7 +172,7 @@ func TestNewScraper(t *testing.T) {
 	assert.Equal(t, deviceSet, scraper.deviceSet)
 	assert.NotNil(t, scraper.logger)
 	assert.NotNil(t, scraper.mb)
-	assert.NotNil(t, scraper.metadataProvider)
+	assert.Nil(t, scraper.metadataProvider) // Should be nil until first scrape
 }
 
 func TestScraper_StartShutdown(t *testing.T) {
@@ -201,9 +227,11 @@ func TestScraper_Scrape_EBSDevice_Success(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("*")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create test EBS device
 	device := createTestDevice(0, 1, "nvme0n1")
@@ -215,6 +243,9 @@ func TestScraper_Scrape_EBSDevice_Success(t *testing.T) {
 	mockNvme.On("GetDeviceSerial", &device).Return("vol123456789", nil)
 	mockNvme.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
+	// Mock metadata provider
+	mockMetadata.On("InstanceID", mock.Anything).Return("i-1234567890abcdef0", nil)
+
 	ctx := context.Background()
 	metrics, _ := scraper.scrape(ctx)
 
@@ -223,6 +254,7 @@ func TestScraper_Scrape_EBSDevice_Success(t *testing.T) {
 	assert.NotNil(t, metrics)
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }
 
 func TestScraper_Scrape_InstanceStoreDevice_Success(t *testing.T) {
@@ -232,9 +264,11 @@ func TestScraper_Scrape_InstanceStoreDevice_Success(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("*")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create test Instance Store device
 	device := createTestDevice(1, 1, "nvme1n1")
@@ -246,6 +280,9 @@ func TestScraper_Scrape_InstanceStoreDevice_Success(t *testing.T) {
 	mockNvme.On("GetDeviceSerial", &device).Return("AWS12345678901234567", nil)
 	mockNvme.On("DevicePath", "nvme1n1").Return("/dev/nvme1n1", nil)
 
+	// Mock metadata provider
+	mockMetadata.On("InstanceID", mock.Anything).Return("i-1234567890abcdef0", nil)
+
 	ctx := context.Background()
 	metrics, _ := scraper.scrape(ctx)
 
@@ -254,6 +291,7 @@ func TestScraper_Scrape_InstanceStoreDevice_Success(t *testing.T) {
 	assert.NotNil(t, metrics)
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }
 
 func TestScraper_Scrape_MixedDevices_Success(t *testing.T) {
@@ -263,9 +301,11 @@ func TestScraper_Scrape_MixedDevices_Success(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("*")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create mixed devices
 	ebsDevice := createTestDevice(0, 1, "nvme0n1")
@@ -281,6 +321,9 @@ func TestScraper_Scrape_MixedDevices_Success(t *testing.T) {
 	mockNvme.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 	mockNvme.On("DevicePath", "nvme1n1").Return("/dev/nvme1n1", nil)
 
+	// Mock metadata provider
+	mockMetadata.On("InstanceID", mock.Anything).Return("i-1234567890abcdef0", nil)
+
 	ctx := context.Background()
 	metrics, _ := scraper.scrape(ctx)
 
@@ -289,6 +332,7 @@ func TestScraper_Scrape_MixedDevices_Success(t *testing.T) {
 	assert.NotNil(t, metrics)
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }
 
 func TestScraper_Scrape_DeviceTypeDetectionError(t *testing.T) {
@@ -313,9 +357,9 @@ func TestScraper_Scrape_DeviceTypeDetectionError(t *testing.T) {
 	ctx := context.Background()
 	metrics, err := scraper.scrape(ctx)
 
-	assert.NoError(t, err) // Should not fail, just skip the device
+	assert.Error(t, err) // Should fail when no devices can be processed
+	assert.Contains(t, err.Error(), "no devices found, encountered 1 errors during discovery")
 	assert.NotNil(t, metrics)
-	assert.Equal(t, 0, metrics.ResourceMetrics().Len()) // No metrics should be emitted
 
 	mockNvme.AssertExpectations(t)
 }
@@ -327,9 +371,11 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("nvme0n1")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create multiple devices, but only one should be processed
 	device1 := createTestDevice(0, 1, "nvme0n1")
@@ -343,6 +389,9 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	mockNvme.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 	// device2 should be skipped, so no mocks for it
 
+	// Mock metadata provider
+	mockMetadata.On("InstanceID", mock.Anything).Return("i-1234567890abcdef0", nil)
+
 	ctx := context.Background()
 	metrics, _ := scraper.scrape(ctx)
 
@@ -351,6 +400,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	assert.NotNil(t, metrics)
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }
 
 func TestScraper_Scrape_DevicePathError(t *testing.T) {
@@ -360,9 +410,11 @@ func TestScraper_Scrape_DevicePathError(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("*")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create test device
 	device := createTestDevice(0, 1, "nvme0n1")
@@ -374,6 +426,9 @@ func TestScraper_Scrape_DevicePathError(t *testing.T) {
 	mockNvme.On("GetDeviceSerial", &device).Return("vol123456789", nil)
 	mockNvme.On("DevicePath", "nvme0n1").Return("", errors.New("device path error"))
 
+	// Mock metadata provider
+	mockMetadata.On("InstanceID", mock.Anything).Return("i-1234567890abcdef0", nil)
+
 	ctx := context.Background()
 	metrics, err := scraper.scrape(ctx)
 
@@ -382,6 +437,7 @@ func TestScraper_Scrape_DevicePathError(t *testing.T) {
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len()) // No metrics should be emitted
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }
 
 func TestScraper_Scrape_UnknownDeviceType(t *testing.T) {
@@ -391,9 +447,11 @@ func TestScraper_Scrape_UnknownDeviceType(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("*")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create test device
 	device := createTestDevice(0, 1, "nvme0n1")
@@ -405,6 +463,9 @@ func TestScraper_Scrape_UnknownDeviceType(t *testing.T) {
 	mockNvme.On("GetDeviceSerial", &device).Return("serial123", nil)
 	mockNvme.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
+	// Mock metadata provider
+	mockMetadata.On("InstanceID", mock.Anything).Return("i-1234567890abcdef0", nil)
+
 	ctx := context.Background()
 	metrics, err := scraper.scrape(ctx)
 
@@ -413,6 +474,7 @@ func TestScraper_Scrape_UnknownDeviceType(t *testing.T) {
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len()) // No metrics should be emitted
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }
 
 func TestScraper_GetDevicesByController_SameController(t *testing.T) {
@@ -497,7 +559,7 @@ func TestScraper_Scrape_GetAllDevicesError(t *testing.T) {
 	metrics, err := scraper.scrape(ctx)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get devices by controller")
+	assert.Contains(t, err.Error(), "failed to discover NVMe devices")
 	assert.NotNil(t, metrics)
 
 	mockNvme.AssertExpectations(t)
@@ -510,9 +572,11 @@ func TestScraper_Scrape_InstanceIDError(t *testing.T) {
 	}
 	settings := receivertest.NewNopSettings(metadata.Type)
 	mockNvme := &MockDeviceInfoProvider{}
+	mockMetadata := &MockMetadataProvider{}
 	deviceSet := collections.NewSet("*")
 
 	scraper := newScraper(cfg, settings, mockNvme, deviceSet)
+	scraper.setMetadataProvider(mockMetadata)
 
 	// Create test device
 	device := createTestDevice(0, 1, "nvme0n1")
@@ -524,6 +588,9 @@ func TestScraper_Scrape_InstanceIDError(t *testing.T) {
 	mockNvme.On("GetDeviceSerial", &device).Return("vol123456789", nil)
 	mockNvme.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
+	// Mock metadata provider with error
+	mockMetadata.On("InstanceID", mock.Anything).Return("", errors.New("metadata service unavailable"))
+
 	ctx := context.Background()
 	metrics, _ := scraper.scrape(ctx)
 
@@ -533,4 +600,5 @@ func TestScraper_Scrape_InstanceIDError(t *testing.T) {
 	assert.NotNil(t, metrics)
 
 	mockNvme.AssertExpectations(t)
+	mockMetadata.AssertExpectations(t)
 }

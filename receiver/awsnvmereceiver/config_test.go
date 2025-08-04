@@ -227,6 +227,91 @@ func TestValidateDevice(t *testing.T) {
 			expectError: true,
 			errorMsg:    "device path contains invalid characters for NVMe device",
 		},
+		// Additional security-focused test cases
+		{
+			name:        "control character injection",
+			device:      "/dev/nvme0n1\x01",
+			expectError: true,
+			errorMsg:    "device path contains invalid control character",
+		},
+		{
+			name:        "tab character (should be allowed)",
+			device:      "/dev/nvme0n1\t",
+			expectError: true, // Tab should not be in device names
+			errorMsg:    "device path contains invalid control character",
+		},
+		{
+			name:        "unicode characters",
+			device:      "/dev/nvme0n1ñ",
+			expectError: true,
+			errorMsg:    "device path contains invalid character",
+		},
+		{
+			name:        "multiple path separators",
+			device:      "/dev/nvme0n1/../nvme1n1",
+			expectError: true,
+			errorMsg:    "device path cannot contain '..'",
+		},
+		{
+			name:        "absolute path resolution attack",
+			device:      "/dev/nvme0n1/../../../etc/passwd",
+			expectError: true,
+			errorMsg:    "device path cannot contain '..'",
+		},
+		{
+			name:        "device name with invalid NVMe pattern - no namespace",
+			device:      "/dev/nvme0",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name format",
+		},
+		{
+			name:        "device name with invalid NVMe pattern - multiple n separators",
+			device:      "/dev/nvme0n1n2",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name with invalid NVMe pattern - multiple p separators",
+			device:      "/dev/nvme0n1p1p2",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name with invalid controller characters",
+			device:      "/dev/nvmeAn1",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name with invalid namespace characters",
+			device:      "/dev/nvme0nA",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name with invalid partition characters",
+			device:      "/dev/nvme0n1pA",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name missing controller",
+			device:      "/dev/nvmen1",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name missing namespace",
+			device:      "/dev/nvme0n",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
+		{
+			name:        "device name missing partition number",
+			device:      "/dev/nvme0n1p",
+			expectError: true,
+			errorMsg:    "invalid NVMe device name pattern",
+		},
 	}
 
 	for _, tt := range tests {
