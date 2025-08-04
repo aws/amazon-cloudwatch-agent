@@ -1,0 +1,19 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "diskio": {
+        "measurement": [
+          "ebs_total_read_ops",
+          "ebs_total_write_ops",
+          "ebs_total_read_bytes",
+          "ebs_total_write_bytes",
+          "instance_store_total_read_ops",
+          "instance_store_total_write_ops",
+          "instance_store_total_read_bytes",
+          "instance_store_total_write_bytes"
+        ],
+        "resources": ["*"]
+      }
+    }
+  }
+}

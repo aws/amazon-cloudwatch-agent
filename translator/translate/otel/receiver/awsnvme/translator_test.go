@@ -4,12 +4,14 @@
 package awsnvme
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -30,24 +32,10 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"WithCompleteConfig": {
-			input: map[string]interface{}{
-				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"diskio": map[string]interface{}{
-							"measurement": []interface{}{
-								"diskio_ebs_total_read_ops",
-								"diskio_ebs_total_write_ops",
-								"diskio_instance_store_total_read_ops",
-								"diskio_instance_store_total_write_ops",
-							},
-							"metrics_collection_interval": 60,
-							"resources": []interface{}{
-								"*",
-							},
-						},
-					},
-				},
-			},
+			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
+		},
+		"WithAllResources": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "all_resources.json")),
 		},
 		"WithSpecificDevices": {
 			input: map[string]interface{}{
