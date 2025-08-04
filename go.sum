@@ -235,8 +235,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsconta
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250717174233-f514045fc484/go.mod h1:GipgrS7Hgv0MgjQ6c2CrEti5kWKsXSaqB+E2XrHmiy4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250717174233-f514045fc484 h1:7Eq8GHafdPwuj/zruhctXzYyhtXUmp0FVAcsHX0V6Co=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250717174233-f514045fc484/go.mod h1:iNL2C4bugyDA/nYSAu4O68xD859BudOWGd0+03+lWVs=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250717174233-f514045fc484 h1:ot2Q8zo4EQBwhCIOht3XkuRYkBsJhddWBQrng37LFWQ=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250717174233-f514045fc484/go.mod h1:tEB7CZP8f7qVEWH9y3F2sbI5EcvICSW3sZOFwXRge5U=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250804182057-1e48f5e23d81 h1:gCHu3Ti3Cyuk/PPdtrQ/BgdIomO4er+lZm9i38ycYEo=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250804182057-1e48f5e23d81/go.mod h1:tEB7CZP8f7qVEWH9y3F2sbI5EcvICSW3sZOFwXRge5U=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250717174233-f514045fc484 h1:hh+kKCO1UBFIvDIF4pxiwSbixO3AfbjOc36z6uuXujE=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250717174233-f514045fc484/go.mod h1:Tc/PSUfe91PN6BoGKEHFo6V0gb23gxp7QLTdsrK2meI=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=
