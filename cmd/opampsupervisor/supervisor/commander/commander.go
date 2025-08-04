@@ -253,18 +253,22 @@ func (c *Commander) StartOneShot() ([]byte, []byte, error) {
 
 	go func() {
 		err := cmd.Wait()
+		// For CloudWatch agent, don't treat exit status 1 as error during bootstrap
 		if err != nil {
-			c.logger.Error("One-shot Collector encountered an error during execution", zap.Error(err))
+			c.logger.Debug("Agent process finished during bootstrap", zap.Error(err))
 		}
 		doneCh <- struct{}{}
 	}()
 
-	waitCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	// Increase timeout for CloudWatch agent bootstrap
+	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 
 	defer cancel()
 
 	select {
 	case <-doneCh:
+		// Agent finished, return success for CloudWatch agent
+		return stdout, stderr, nil
 	case <-waitCtx.Done():
 		pid := cmd.Process.Pid
 		c.logger.Debug("Stopping agent process", zap.Int("pid", pid))

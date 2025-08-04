@@ -429,6 +429,34 @@ func (s *Supervisor) getBootstrapInfo() (err error) {
 		return err
 	}
 
+	// Check if this is a CloudWatch agent binary - if so, skip bootstrap
+	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		s.telemetrySettings.Logger.Info("Detected CloudWatch agent, skipping bootstrap")
+		// Set dummy agent description for CloudWatch agent
+		s.setAgentDescription(&protobufs.AgentDescription{
+			IdentifyingAttributes: []*protobufs.KeyValue{
+				{
+					Key: string(semconv.ServiceNameKey),
+					Value: &protobufs.AnyValue{
+						Value: &protobufs.AnyValue_StringValue{
+							StringValue: "amazon-cloudwatch-agent",
+						},
+					},
+				},
+				{
+					Key: string(semconv.ServiceInstanceIDKey),
+					Value: &protobufs.AnyValue{
+						Value: &protobufs.AnyValue_StringValue{
+							StringValue: s.persistentState.InstanceID.String(),
+						},
+					},
+				},
+			},
+		})
+		span.SetStatus(codes.Ok, "")
+		return nil
+	}
+
 	bootstrapConfig, err := s.composeNoopConfig()
 	if err != nil {
 		span.SetStatus(codes.Error, fmt.Sprintf("Could not compose noop config config: %v", err))

@@ -49,7 +49,7 @@ release: prepackage package-rpm package-deb package-win package-darwin
 nightly-release: prepackage package-rpm package-deb package-win
 nightly-release-mac: prepackage package-darwin
 
-build: check_secrets amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-darwin amazon-cloudwatch-agent-windows
+build: check_secrets amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-darwin amazon-cloudwatch-agent-windows build-opampsupervisor
 
 check_secrets::
 	if grep --exclude-dir=build --exclude-dir=vendor -exclude=integration/msi/tools/amazon-cloudwatch-agent.wxs -E "(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}|(\"|')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)(\"|')?\\s*(:|=>|=)\\s*(\"|')?[A-Za-z0-9/\\+=]{40}(\"|')?" -Rn .; then echo "check_secrets failed"; exit 1; fi;
@@ -341,7 +341,21 @@ package-darwin: package-prepare-darwin-tar
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
 	ARCH=arm64 TARGET_SUPPORTED_ARCH=aarch64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
 
-.PHONY: fmt fmt-sh build test clean
+# Build OpAMP supervisor separately since it has its own go.mod
+build-opampsupervisor:
+	@echo Building OpAMP Supervisor
+	mkdir -p "$(BUILD_SPACE)/bin/linux_amd64" "$(BUILD_SPACE)/bin/linux_arm64" "$(BUILD_SPACE)/bin/darwin_amd64" "$(BUILD_SPACE)/bin/darwin_arm64" "$(BUILD_SPACE)/bin/windows_amd64"
+	cd cmd/opampsupervisor && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="${LDFLAGS}" -o "$(BUILD_SPACE)/bin/linux_amd64/opampsupervisor" .
+	cd cmd/opampsupervisor && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="${LDFLAGS}" -o "$(BUILD_SPACE)/bin/linux_arm64/opampsupervisor" .
+ifneq ($(OS),Windows_NT)
+ifeq ($(shell uname -s),Darwin)
+	cd cmd/opampsupervisor && CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="${LDFLAGS}" -o "$(BUILD_SPACE)/bin/darwin_amd64/opampsupervisor" .
+	cd cmd/opampsupervisor && CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="${LDFLAGS}" -o "$(BUILD_SPACE)/bin/darwin_arm64/opampsupervisor" .
+endif
+endif
+	cd cmd/opampsupervisor && GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="${LDFLAGS}" -o "$(BUILD_SPACE)/bin/windows_amd64/opampsupervisor.exe" .
+
+.PHONY: fmt fmt-sh build test clean build-opampsupervisor
 
 .PHONY: dockerized-build dockerized-build-vendor
 dockerized-build:

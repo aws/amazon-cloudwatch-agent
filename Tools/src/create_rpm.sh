@@ -36,6 +36,7 @@ cp ${PREPKGPATH}/config-translator ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwat
 cp ${PREPKGPATH}/config-downloader ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/start-amazon-cloudwatch-agent ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/
+cp ${PREPKGPATH}/opampsupervisor ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/etc/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent.conf ${BUILD_ROOT}/SOURCES/etc/init/amazon-cloudwatch-agent.conf
@@ -44,6 +45,7 @@ cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}/SOURCES/opt/a
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
+chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/opampsupervisor
 tar -zcvf ${BUILD_ROOT}/SOURCES/amazon-cloudwatch-agent.tar.gz -C ${BUILD_ROOT}/SOURCES opt etc
 
 rm -rf ${BUILD_ROOT}/SOURCES/opt ${BUILD_ROOT}/SOURCES/etc
