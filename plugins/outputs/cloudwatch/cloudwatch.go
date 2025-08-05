@@ -522,12 +522,6 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 	for _, dist := range exphDistList {
 		values, counts := dist.ValuesAndCounts()
 
-		s := cloudwatch.StatisticSet{}
-		s.SetMaximum(dist.Maximum())
-		s.SetMinimum(dist.Minimum())
-		s.SetSampleCount(dist.SampleCount())
-		s.SetSum(dist.Sum())
-
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 			//metric datum
@@ -546,7 +540,6 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 				StorageResolution: metric.StorageResolution,
 				Values:            aws.Float64Slice(values),
 				Counts:            aws.Float64Slice(counts),
-				StatisticValues:   &s,
 			}
 			datums = append(datums, datum)
 		}
