@@ -24,6 +24,7 @@ const (
 	defaultCollectionInterval = time.Minute
 	diskIOPrefix              = "diskio_"
 	ebsPrefix                 = diskIOPrefix + "ebs_"
+	instanceStorePrefix       = diskIOPrefix + "instance_store_"
 )
 
 type translator struct {
@@ -90,8 +91,8 @@ func getEnabledMeasurements(conf *confmap.Conf) map[string]any {
 		if !strings.HasPrefix(m, diskIOPrefix) {
 			metricName = diskIOPrefix + m
 		}
-		// Only include EBS metrics. We do not want any Telegraf metrics here
-		if strings.HasPrefix(metricName, ebsPrefix) {
+		// Only include EBS/Instance Store metrics. We do not want any Telegraf metrics here
+		if strings.HasPrefix(metricName, ebsPrefix) || strings.HasPrefix(metricName, instanceStorePrefix) {
 			metrics[metricName] = map[string]any{
 				"enabled": true,
 			}

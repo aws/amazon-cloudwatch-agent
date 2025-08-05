@@ -31,7 +31,9 @@ type nvmeScraper struct {
 	mb     *metadata.MetricsBuilder
 	nvme   nvme.DeviceInfoProvider
 
-	allowedDevices collections.Set[string]
+	allowedDevices       collections.Set[string]
+	collectEbs           bool
+	collectInstanceStore bool
 }
 
 type nvmeDevices struct {
@@ -178,13 +180,21 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 		var deviceType, identifier string
 		switch model {
 		case ebsModel:
+			if !s.collectEbs {
+				s.logger.Debug("skipping EBS device as no EBS metrics enabled", zap.String("device", deviceName))
+				continue
+			}
 			deviceType = "ebs"
 			if !strings.HasPrefix(serial, "vol") || len(serial) < 4 {
 				s.logger.Debug("device serial is not a valid volume id", zap.String("device", deviceName), zap.String("serial", serial))
 				continue
 			}
 			identifier = fmt.Sprintf("vol-%s", serial[3:])
-		case instanceStoreModel:
+		case instanceStoreModel: // Verify if there is a prefix requirement like ebs- but I don't there is ???!!!
+			if !s.collectInstanceStore {
+				s.logger.Debug("skipping Instance Store device as no IS metrics enabled", zap.String("device", deviceName))
+				continue
+			}
 			deviceType = "instance_store"
 			identifier = serial
 		default:
@@ -207,12 +217,15 @@ func newScraper(cfg *Config,
 	nvme nvme.DeviceInfoProvider,
 	allowedDevices collections.Set[string],
 ) *nvmeScraper {
-	return &nvmeScraper{
+	scraper := &nvmeScraper{
 		logger:         settings.TelemetrySettings.Logger,
 		mb:             metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
 		nvme:           nvme,
 		allowedDevices: allowedDevices,
 	}
+
+	scraper.collectEbs, scraper.collectInstanceStore = computeCollectFlags(cfg)
+	return scraper
 }
 
 func (s *nvmeScraper) recordMetric(recordFn recordDataMetricFunc, ts pcommon.Timestamp, val uint64) {
@@ -229,4 +242,32 @@ func safeUint64ToInt64(value uint64) (int64, error) {
 		return 0, fmt.Errorf("value %d is too large for int64", value)
 	}
 	return int64(value), nil
+}
+
+// computeCollectFlags computes whether to collect for EBS and Instance Store based on enabled metrics
+func computeCollectFlags(cfg *Config) (collectEbs bool, collectInstanceStore bool) {
+	m := cfg.MetricsBuilderConfig.Metrics
+	collectEbs = m.DiskioEbsTotalReadOps.Enabled ||
+		m.DiskioEbsTotalWriteOps.Enabled ||
+		m.DiskioEbsTotalReadBytes.Enabled ||
+		m.DiskioEbsTotalWriteBytes.Enabled ||
+		m.DiskioEbsTotalReadTime.Enabled ||
+		m.DiskioEbsTotalWriteTime.Enabled ||
+		m.DiskioEbsVolumePerformanceExceededIops.Enabled ||
+		m.DiskioEbsVolumePerformanceExceededTp.Enabled ||
+		m.DiskioEbsEc2InstancePerformanceExceededIops.Enabled ||
+		m.DiskioEbsEc2InstancePerformanceExceededTp.Enabled ||
+		m.DiskioEbsVolumeQueueLength.Enabled
+
+	collectInstanceStore = m.DiskioInstanceStoreTotalReadOps.Enabled ||
+		m.DiskioInstanceStoreTotalWriteOps.Enabled ||
+		m.DiskioInstanceStoreTotalReadBytes.Enabled ||
+		m.DiskioInstanceStoreTotalWriteBytes.Enabled ||
+		m.DiskioInstanceStoreTotalReadTime.Enabled ||
+		m.DiskioInstanceStoreTotalWriteTime.Enabled ||
+		m.DiskioInstanceStoreVolumePerformanceExceededIops.Enabled ||
+		m.DiskioInstanceStoreVolumePerformanceExceededTp.Enabled ||
+		m.DiskioInstanceStoreVolumeQueueLength.Enabled
+
+	return
 }
