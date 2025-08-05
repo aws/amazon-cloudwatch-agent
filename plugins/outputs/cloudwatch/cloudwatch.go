@@ -475,11 +475,30 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 	for _, dist := range distList {
 		values, counts := dist.ValuesAndCounts()
 
+		if len(values) != len(counts) {
+			log.Printf("E! metric has a distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
+			continue
+		}
+
+		if len(values) == 0 {
+			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
+			continue
+		}
+
 		s := cloudwatch.StatisticSet{}
 		s.SetMaximum(dist.Maximum())
 		s.SetMinimum(dist.Minimum())
 		s.SetSampleCount(dist.SampleCount())
 		s.SetSum(dist.Sum())
+
+		// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
+		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
+		// the datasource does not provide a minimum and maximum value
+		if dist.Maximum() == 0 && dist.Minimum() == 0 {
+			min, max := minAndMax(values)
+			s.SetMinimum(min)
+			s.SetMaximum(max)
+		}
 
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
@@ -521,6 +540,30 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 
 	for _, dist := range exphDistList {
 		values, counts := dist.ValuesAndCounts()
+		if len(values) != len(counts) {
+			log.Printf("E! metric has an exponential histogram distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
+			continue
+		}
+
+		if len(values) == 0 {
+			log.Printf("E! metric has an exponential histogram distribution with no entries, %s", *metric.MetricName)
+			continue
+		}
+
+		s := cloudwatch.StatisticSet{}
+		s.SetMaximum(dist.Maximum())
+		s.SetMinimum(dist.Minimum())
+		s.SetSampleCount(dist.SampleCount())
+		s.SetSum(dist.Sum())
+
+		// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
+		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
+		// the datasource does not provide a minimum and maximum value
+		if dist.Maximum() == 0 && dist.Minimum() == 0 {
+			min, max := minAndMax(values)
+			s.SetMinimum(min)
+			s.SetMaximum(max)
+		}
 
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
@@ -540,11 +583,26 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 				StorageResolution: metric.StorageResolution,
 				Values:            aws.Float64Slice(values),
 				Counts:            aws.Float64Slice(counts),
+				StatisticValues:   &s,
 			}
 			datums = append(datums, datum)
 		}
 	}
 	return datums
+}
+
+func minAndMax(values []float64) (float64, float64) {
+	// assumes values has at least one value
+	min, max := values[0], values[0]
+	for _, v := range values[1:] {
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
+		}
+	}
+	return min, max
 }
 
 func (c *CloudWatch) IsDropping(metricName string) bool {
