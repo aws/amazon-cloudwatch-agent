@@ -86,7 +86,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		ClusterName:     clusterName,
 		ClusterRegion:   clusterRegion,
 		ResultFile:      resultFile,
-		JobLabelName:    defaultJobNameLabel,
+		JobLabelName:    getString(ecsSD, "sd_job_label_name"),
 	}
 	// Docker label based service discovery
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
