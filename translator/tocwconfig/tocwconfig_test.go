@@ -934,51 +934,6 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
-		// Add health check extension to expected results for Kubernetes environments
-		// The health check extension is automatically added for Kubernetes environments in the translator
-		if context.CurrentContext().KubernetesMode() != "" {
-			if expectedMap, ok := expected.(map[string]interface{}); ok {
-				// Ensure extensions map exists
-				if _, exists := expectedMap["extensions"]; !exists {
-					expectedMap["extensions"] = make(map[string]interface{})
-				}
-				if extMap, ok := expectedMap["extensions"].(map[string]interface{}); ok {
-					// Add health check extension if it doesn't exist
-					if _, exists := extMap["health_check/health_check"]; !exists {
-						extMap["health_check/health_check"] = map[string]interface{}{
-							"endpoint": "0.0.0.0:13133",
-							"path":     "/",
-						}
-					}
-				}
-				// Ensure service extensions list includes health check
-				if service, exists := expectedMap["service"]; exists {
-					if serviceMap, ok := service.(map[string]interface{}); ok {
-						if serviceExtensions, exists := serviceMap["extensions"]; exists {
-							if extSlice, ok := serviceExtensions.([]interface{}); ok {
-								// Check if health_check/health_check is already in the list
-								hasHealthCheck := false
-								for _, ext := range extSlice {
-									if extStr, ok := ext.(string); ok && extStr == "health_check/health_check" {
-										hasHealthCheck = true
-										break
-									}
-								}
-								// Add it if it's missing
-								if !hasHealthCheck {
-									extSlice = append(extSlice, "health_check/health_check")
-									serviceMap["extensions"] = extSlice
-								}
-							}
-						} else {
-							// Create extensions list with health check if it doesn't exist
-							serviceMap["extensions"] = []interface{}{"health_check/health_check"}
-						}
-					}
-				}
-			}
-		}
-
 		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
