@@ -91,8 +91,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
 		dockerConfig := ecsobserver.DockerLabelConfig{
 			CommonExporterConfig: ecsobserver.CommonExporterConfig{
-				JobName:     getString(tdMap, "sd_job_name"),
-				MetricsPath: getStringWithDefault(tdMap, "sd_metrics_path", defaultMetricsPath),
+				JobName:     getString(dockerLabel, "sd_job_name"),
+				MetricsPath: getString(dockerLabel, "sd_metrics_path"),
 			},
 			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
