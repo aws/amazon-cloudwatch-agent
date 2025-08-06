@@ -123,7 +123,6 @@ func TestLogWindowsEventConfig(t *testing.T) {
 	expectedErrorMap6["invalid_type"] = 1
 	expectedErrorMap6["enum"] = 1
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidFilterType.json", false, expectedErrorMap6)
-
 }
 
 func TestMetricsConfig(t *testing.T) {
