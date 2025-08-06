@@ -593,16 +593,16 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 
 func minAndMax(values []float64) (float64, float64) {
 	// assumes values has at least one value
-	min, max := values[0], values[0]
+	myMin, myMax := values[0], values[0] // avoid conflict with built-in min, max functions
 	for _, v := range values[1:] {
-		if v < min {
-			min = v
+		if v < myMin {
+			myMin = v
 		}
-		if v > max {
-			max = v
+		if v > myMax {
+			myMax = v
 		}
 	}
-	return min, max
+	return myMin, myMax
 }
 
 func (c *CloudWatch) IsDropping(metricName string) bool {
