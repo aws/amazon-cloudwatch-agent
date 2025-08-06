@@ -53,6 +53,9 @@ extensions:
     k8smetadata:
         objects:
             - endpointslices
+    health_check/health_check:
+        endpoint: 0.0.0.0:13133
+        path: /
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
@@ -107,6 +110,7 @@ service:
         - agenthealth/statuscode
         - entitystore
         - server
+        - health_check/health_check
     pipelines:
         metrics/hostOtlpMetrics/cloudwatchlogs:
             exporters:

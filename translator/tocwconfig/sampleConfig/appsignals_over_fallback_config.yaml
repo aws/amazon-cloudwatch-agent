@@ -318,6 +318,9 @@ extensions:
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
+    health_check/health_check:
+        endpoint: 0.0.0.0:13133
+        path: /
 processors:
     awsapplicationsignals:
         limiter:
@@ -1538,6 +1541,7 @@ service:
         - k8smetadata
         - entitystore
         - server
+        - health_check/health_check
     pipelines:
         metrics/application_signals:
             exporters:
