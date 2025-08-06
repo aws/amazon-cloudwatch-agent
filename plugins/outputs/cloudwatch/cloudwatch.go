@@ -495,9 +495,9 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
 		// the datasource does not provide a minimum and maximum value
 		if dist.Maximum() == 0 && dist.Minimum() == 0 {
-			min, max := minAndMax(values)
-			s.SetMinimum(min)
-			s.SetMaximum(max)
+			distMin, distMax := minAndMax(values)
+			s.SetMinimum(distMin)
+			s.SetMaximum(distMax)
 		}
 
 		for index, dimensions := range dimensionsList {
@@ -560,9 +560,9 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
 		// the datasource does not provide a minimum and maximum value
 		if dist.Maximum() == 0 && dist.Minimum() == 0 {
-			min, max := minAndMax(values)
-			s.SetMinimum(min)
-			s.SetMaximum(max)
+			distMin, distMax := minAndMax(values)
+			s.SetMinimum(distMin)
+			s.SetMaximum(distMax)
 		}
 
 		for index, dimensions := range dimensionsList {
