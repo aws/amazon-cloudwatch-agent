@@ -114,8 +114,8 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalWriteBytesDataPoint, now, metrics.WriteBytes)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalReadTimeDataPoint, now, metrics.TotalReadTime)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalWriteTimeDataPoint, now, metrics.TotalWriteTime)
-				s.recordMetric(s.mb.RecordDiskioInstanceStoreVolumePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
-				s.recordMetric(s.mb.RecordDiskioInstanceStoreVolumePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
+				s.recordMetric(s.mb.RecordDiskioInstanceStorePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
+				s.recordMetric(s.mb.RecordDiskioInstanceStorePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreVolumeQueueLengthDataPoint, now, metrics.QueueLength)
 			}
 
@@ -265,8 +265,8 @@ func computeCollectFlags(cfg *Config) (collectEbs bool, collectInstanceStore boo
 		m.DiskioInstanceStoreTotalWriteBytes.Enabled ||
 		m.DiskioInstanceStoreTotalReadTime.Enabled ||
 		m.DiskioInstanceStoreTotalWriteTime.Enabled ||
-		m.DiskioInstanceStoreVolumePerformanceExceededIops.Enabled ||
-		m.DiskioInstanceStoreVolumePerformanceExceededTp.Enabled ||
+		m.DiskioInstanceStorePerformanceExceededIops.Enabled ||
+		m.DiskioInstanceStorePerformanceExceededTp.Enabled ||
 		m.DiskioInstanceStoreVolumeQueueLength.Enabled
 
 	return

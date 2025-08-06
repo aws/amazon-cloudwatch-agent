@@ -1,10 +1,11 @@
 {
   "agent": {
-    "region": "us-east-1"
+    "metrics_collection_interval": "60s"
   },
   "metrics": {
     "metrics_collected": {
       "diskio": {
+        "metrics_collection_interval": "60s",
         "resources": ["*"],
         "measurement": [
           "diskio_ebs_total_read_ops",

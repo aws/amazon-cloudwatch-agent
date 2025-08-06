@@ -28,26 +28,26 @@ func (ms *MetricConfig) Unmarshal(parser *confmap.Conf) error {
 
 // MetricsConfig provides config for awsnvmereceiver metrics.
 type MetricsConfig struct {
-	DiskioEbsEc2InstancePerformanceExceededIops      MetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_iops"`
-	DiskioEbsEc2InstancePerformanceExceededTp        MetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_tp"`
-	DiskioEbsTotalReadBytes                          MetricConfig `mapstructure:"diskio_ebs_total_read_bytes"`
-	DiskioEbsTotalReadOps                            MetricConfig `mapstructure:"diskio_ebs_total_read_ops"`
-	DiskioEbsTotalReadTime                           MetricConfig `mapstructure:"diskio_ebs_total_read_time"`
-	DiskioEbsTotalWriteBytes                         MetricConfig `mapstructure:"diskio_ebs_total_write_bytes"`
-	DiskioEbsTotalWriteOps                           MetricConfig `mapstructure:"diskio_ebs_total_write_ops"`
-	DiskioEbsTotalWriteTime                          MetricConfig `mapstructure:"diskio_ebs_total_write_time"`
-	DiskioEbsVolumePerformanceExceededIops           MetricConfig `mapstructure:"diskio_ebs_volume_performance_exceeded_iops"`
-	DiskioEbsVolumePerformanceExceededTp             MetricConfig `mapstructure:"diskio_ebs_volume_performance_exceeded_tp"`
-	DiskioEbsVolumeQueueLength                       MetricConfig `mapstructure:"diskio_ebs_volume_queue_length"`
-	DiskioInstanceStoreTotalReadBytes                MetricConfig `mapstructure:"diskio_instance_store_total_read_bytes"`
-	DiskioInstanceStoreTotalReadOps                  MetricConfig `mapstructure:"diskio_instance_store_total_read_ops"`
-	DiskioInstanceStoreTotalReadTime                 MetricConfig `mapstructure:"diskio_instance_store_total_read_time"`
-	DiskioInstanceStoreTotalWriteBytes               MetricConfig `mapstructure:"diskio_instance_store_total_write_bytes"`
-	DiskioInstanceStoreTotalWriteOps                 MetricConfig `mapstructure:"diskio_instance_store_total_write_ops"`
-	DiskioInstanceStoreTotalWriteTime                MetricConfig `mapstructure:"diskio_instance_store_total_write_time"`
-	DiskioInstanceStoreVolumePerformanceExceededIops MetricConfig `mapstructure:"diskio_instance_store_volume_performance_exceeded_iops"`
-	DiskioInstanceStoreVolumePerformanceExceededTp   MetricConfig `mapstructure:"diskio_instance_store_volume_performance_exceeded_tp"`
-	DiskioInstanceStoreVolumeQueueLength             MetricConfig `mapstructure:"diskio_instance_store_volume_queue_length"`
+	DiskioEbsEc2InstancePerformanceExceededIops MetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_iops"`
+	DiskioEbsEc2InstancePerformanceExceededTp   MetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_tp"`
+	DiskioEbsTotalReadBytes                     MetricConfig `mapstructure:"diskio_ebs_total_read_bytes"`
+	DiskioEbsTotalReadOps                       MetricConfig `mapstructure:"diskio_ebs_total_read_ops"`
+	DiskioEbsTotalReadTime                      MetricConfig `mapstructure:"diskio_ebs_total_read_time"`
+	DiskioEbsTotalWriteBytes                    MetricConfig `mapstructure:"diskio_ebs_total_write_bytes"`
+	DiskioEbsTotalWriteOps                      MetricConfig `mapstructure:"diskio_ebs_total_write_ops"`
+	DiskioEbsTotalWriteTime                     MetricConfig `mapstructure:"diskio_ebs_total_write_time"`
+	DiskioEbsVolumePerformanceExceededIops      MetricConfig `mapstructure:"diskio_ebs_volume_performance_exceeded_iops"`
+	DiskioEbsVolumePerformanceExceededTp        MetricConfig `mapstructure:"diskio_ebs_volume_performance_exceeded_tp"`
+	DiskioEbsVolumeQueueLength                  MetricConfig `mapstructure:"diskio_ebs_volume_queue_length"`
+	DiskioInstanceStorePerformanceExceededIops  MetricConfig `mapstructure:"diskio_instance_store_performance_exceeded_iops"`
+	DiskioInstanceStorePerformanceExceededTp    MetricConfig `mapstructure:"diskio_instance_store_performance_exceeded_tp"`
+	DiskioInstanceStoreTotalReadBytes           MetricConfig `mapstructure:"diskio_instance_store_total_read_bytes"`
+	DiskioInstanceStoreTotalReadOps             MetricConfig `mapstructure:"diskio_instance_store_total_read_ops"`
+	DiskioInstanceStoreTotalReadTime            MetricConfig `mapstructure:"diskio_instance_store_total_read_time"`
+	DiskioInstanceStoreTotalWriteBytes          MetricConfig `mapstructure:"diskio_instance_store_total_write_bytes"`
+	DiskioInstanceStoreTotalWriteOps            MetricConfig `mapstructure:"diskio_instance_store_total_write_ops"`
+	DiskioInstanceStoreTotalWriteTime           MetricConfig `mapstructure:"diskio_instance_store_total_write_time"`
+	DiskioInstanceStoreVolumeQueueLength        MetricConfig `mapstructure:"diskio_instance_store_volume_queue_length"`
 }
 
 func DefaultMetricsConfig() MetricsConfig {
@@ -85,32 +85,32 @@ func DefaultMetricsConfig() MetricsConfig {
 		DiskioEbsVolumeQueueLength: MetricConfig{
 			Enabled: false,
 		},
+		DiskioInstanceStorePerformanceExceededIops: MetricConfig{
+			Enabled: false,
+		},
+		DiskioInstanceStorePerformanceExceededTp: MetricConfig{
+			Enabled: false,
+		},
 		DiskioInstanceStoreTotalReadBytes: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioInstanceStoreTotalReadOps: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioInstanceStoreTotalReadTime: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioInstanceStoreTotalWriteBytes: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioInstanceStoreTotalWriteOps: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioInstanceStoreTotalWriteTime: MetricConfig{
-			Enabled: true,
-		},
-		DiskioInstanceStoreVolumePerformanceExceededIops: MetricConfig{
-			Enabled: true,
-		},
-		DiskioInstanceStoreVolumePerformanceExceededTp: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 		DiskioInstanceStoreVolumeQueueLength: MetricConfig{
-			Enabled: true,
+			Enabled: false,
 		},
 	}
 }

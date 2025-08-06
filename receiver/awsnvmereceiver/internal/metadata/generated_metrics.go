@@ -46,6 +46,12 @@ var MetricsInfo = metricsInfo{
 	DiskioEbsVolumeQueueLength: metricInfo{
 		Name: "diskio_ebs_volume_queue_length",
 	},
+	DiskioInstanceStorePerformanceExceededIops: metricInfo{
+		Name: "diskio_instance_store_performance_exceeded_iops",
+	},
+	DiskioInstanceStorePerformanceExceededTp: metricInfo{
+		Name: "diskio_instance_store_performance_exceeded_tp",
+	},
 	DiskioInstanceStoreTotalReadBytes: metricInfo{
 		Name: "diskio_instance_store_total_read_bytes",
 	},
@@ -64,38 +70,32 @@ var MetricsInfo = metricsInfo{
 	DiskioInstanceStoreTotalWriteTime: metricInfo{
 		Name: "diskio_instance_store_total_write_time",
 	},
-	DiskioInstanceStoreVolumePerformanceExceededIops: metricInfo{
-		Name: "diskio_instance_store_volume_performance_exceeded_iops",
-	},
-	DiskioInstanceStoreVolumePerformanceExceededTp: metricInfo{
-		Name: "diskio_instance_store_volume_performance_exceeded_tp",
-	},
 	DiskioInstanceStoreVolumeQueueLength: metricInfo{
 		Name: "diskio_instance_store_volume_queue_length",
 	},
 }
 
 type metricsInfo struct {
-	DiskioEbsEc2InstancePerformanceExceededIops      metricInfo
-	DiskioEbsEc2InstancePerformanceExceededTp        metricInfo
-	DiskioEbsTotalReadBytes                          metricInfo
-	DiskioEbsTotalReadOps                            metricInfo
-	DiskioEbsTotalReadTime                           metricInfo
-	DiskioEbsTotalWriteBytes                         metricInfo
-	DiskioEbsTotalWriteOps                           metricInfo
-	DiskioEbsTotalWriteTime                          metricInfo
-	DiskioEbsVolumePerformanceExceededIops           metricInfo
-	DiskioEbsVolumePerformanceExceededTp             metricInfo
-	DiskioEbsVolumeQueueLength                       metricInfo
-	DiskioInstanceStoreTotalReadBytes                metricInfo
-	DiskioInstanceStoreTotalReadOps                  metricInfo
-	DiskioInstanceStoreTotalReadTime                 metricInfo
-	DiskioInstanceStoreTotalWriteBytes               metricInfo
-	DiskioInstanceStoreTotalWriteOps                 metricInfo
-	DiskioInstanceStoreTotalWriteTime                metricInfo
-	DiskioInstanceStoreVolumePerformanceExceededIops metricInfo
-	DiskioInstanceStoreVolumePerformanceExceededTp   metricInfo
-	DiskioInstanceStoreVolumeQueueLength             metricInfo
+	DiskioEbsEc2InstancePerformanceExceededIops metricInfo
+	DiskioEbsEc2InstancePerformanceExceededTp   metricInfo
+	DiskioEbsTotalReadBytes                     metricInfo
+	DiskioEbsTotalReadOps                       metricInfo
+	DiskioEbsTotalReadTime                      metricInfo
+	DiskioEbsTotalWriteBytes                    metricInfo
+	DiskioEbsTotalWriteOps                      metricInfo
+	DiskioEbsTotalWriteTime                     metricInfo
+	DiskioEbsVolumePerformanceExceededIops      metricInfo
+	DiskioEbsVolumePerformanceExceededTp        metricInfo
+	DiskioEbsVolumeQueueLength                  metricInfo
+	DiskioInstanceStorePerformanceExceededIops  metricInfo
+	DiskioInstanceStorePerformanceExceededTp    metricInfo
+	DiskioInstanceStoreTotalReadBytes           metricInfo
+	DiskioInstanceStoreTotalReadOps             metricInfo
+	DiskioInstanceStoreTotalReadTime            metricInfo
+	DiskioInstanceStoreTotalWriteBytes          metricInfo
+	DiskioInstanceStoreTotalWriteOps            metricInfo
+	DiskioInstanceStoreTotalWriteTime           metricInfo
+	DiskioInstanceStoreVolumeQueueLength        metricInfo
 }
 
 type metricInfo struct {
@@ -111,8 +111,8 @@ type metricDiskioEbsEc2InstancePerformanceExceededIops struct {
 // init fills diskio_ebs_ec2_instance_performance_exceeded_iops metric with initial data.
 func (m *metricDiskioEbsEc2InstancePerformanceExceededIops) init() {
 	m.data.SetName("diskio_ebs_ec2_instance_performance_exceeded_iops")
-	m.data.SetDescription("The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance")
-	m.data.SetUnit("us")
+	m.data.SetDescription("The total time, in nanoseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance")
+	m.data.SetUnit("ns")
 	m.data.SetEmptySum()
 	m.data.Sum().SetIsMonotonic(true)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -162,8 +162,8 @@ type metricDiskioEbsEc2InstancePerformanceExceededTp struct {
 // init fills diskio_ebs_ec2_instance_performance_exceeded_tp metric with initial data.
 func (m *metricDiskioEbsEc2InstancePerformanceExceededTp) init() {
 	m.data.SetName("diskio_ebs_ec2_instance_performance_exceeded_tp")
-	m.data.SetDescription("The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum throughput performance")
-	m.data.SetUnit("us")
+	m.data.SetDescription("The total time, in nanoseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum throughput performance")
+	m.data.SetUnit("ns")
 	m.data.SetEmptySum()
 	m.data.Sum().SetIsMonotonic(true)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -315,8 +315,8 @@ type metricDiskioEbsTotalReadTime struct {
 // init fills diskio_ebs_total_read_time metric with initial data.
 func (m *metricDiskioEbsTotalReadTime) init() {
 	m.data.SetName("diskio_ebs_total_read_time")
-	m.data.SetDescription("The total time spent, in microseconds, by all completed read operations")
-	m.data.SetUnit("us")
+	m.data.SetDescription("The total time spent, in nanoseconds, by all completed read operations")
+	m.data.SetUnit("ns")
 	m.data.SetEmptySum()
 	m.data.Sum().SetIsMonotonic(true)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -468,8 +468,8 @@ type metricDiskioEbsTotalWriteTime struct {
 // init fills diskio_ebs_total_write_time metric with initial data.
 func (m *metricDiskioEbsTotalWriteTime) init() {
 	m.data.SetName("diskio_ebs_total_write_time")
-	m.data.SetDescription("The total time spent, in microseconds, by all completed write operations")
-	m.data.SetUnit("us")
+	m.data.SetDescription("The total time spent, in nanoseconds, by all completed write operations")
+	m.data.SetUnit("ns")
 	m.data.SetEmptySum()
 	m.data.Sum().SetIsMonotonic(true)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -519,8 +519,8 @@ type metricDiskioEbsVolumePerformanceExceededIops struct {
 // init fills diskio_ebs_volume_performance_exceeded_iops metric with initial data.
 func (m *metricDiskioEbsVolumePerformanceExceededIops) init() {
 	m.data.SetName("diskio_ebs_volume_performance_exceeded_iops")
-	m.data.SetDescription("The total time, in microseconds, that IOPS demand exceeded the volume's provisioned IOPS performance")
-	m.data.SetUnit("us")
+	m.data.SetDescription("The total time, in nanoseconds, that IOPS demand exceeded the volume's provisioned IOPS performance")
+	m.data.SetUnit("ns")
 	m.data.SetEmptySum()
 	m.data.Sum().SetIsMonotonic(true)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -570,8 +570,8 @@ type metricDiskioEbsVolumePerformanceExceededTp struct {
 // init fills diskio_ebs_volume_performance_exceeded_tp metric with initial data.
 func (m *metricDiskioEbsVolumePerformanceExceededTp) init() {
 	m.data.SetName("diskio_ebs_volume_performance_exceeded_tp")
-	m.data.SetDescription("The total time, in microseconds, that throughput demand exceeded the volume's provisioned throughput performance")
-	m.data.SetUnit("us")
+	m.data.SetDescription("The total time, in nanoseconds, that throughput demand exceeded the volume's provisioned throughput performance")
+	m.data.SetUnit("ns")
 	m.data.SetEmptySum()
 	m.data.Sum().SetIsMonotonic(true)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -654,6 +654,108 @@ func (m *metricDiskioEbsVolumeQueueLength) emit(metrics pmetric.MetricSlice) {
 
 func newMetricDiskioEbsVolumeQueueLength(cfg MetricConfig) metricDiskioEbsVolumeQueueLength {
 	m := metricDiskioEbsVolumeQueueLength{config: cfg}
+	if cfg.Enabled {
+		m.data = pmetric.NewMetric()
+		m.init()
+	}
+	return m
+}
+
+type metricDiskioInstanceStorePerformanceExceededIops struct {
+	data     pmetric.Metric // data buffer for generated metric.
+	config   MetricConfig   // metric config provided by user.
+	capacity int            // max observed number of data points added to the metric.
+}
+
+// init fills diskio_instance_store_performance_exceeded_iops metric with initial data.
+func (m *metricDiskioInstanceStorePerformanceExceededIops) init() {
+	m.data.SetName("diskio_instance_store_performance_exceeded_iops")
+	m.data.SetDescription("The total time, in nanoseconds, that the Instance Store volume exceeded the attached Amazon EC2 instance's maximum IOPS performance")
+	m.data.SetUnit("ns")
+	m.data.SetEmptySum()
+	m.data.Sum().SetIsMonotonic(true)
+	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+}
+
+func (m *metricDiskioInstanceStorePerformanceExceededIops) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64) {
+	if !m.config.Enabled {
+		return
+	}
+	dp := m.data.Sum().DataPoints().AppendEmpty()
+	dp.SetStartTimestamp(start)
+	dp.SetTimestamp(ts)
+	dp.SetIntValue(val)
+}
+
+// updateCapacity saves max length of data point slices that will be used for the slice capacity.
+func (m *metricDiskioInstanceStorePerformanceExceededIops) updateCapacity() {
+	if m.data.Sum().DataPoints().Len() > m.capacity {
+		m.capacity = m.data.Sum().DataPoints().Len()
+	}
+}
+
+// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
+func (m *metricDiskioInstanceStorePerformanceExceededIops) emit(metrics pmetric.MetricSlice) {
+	if m.config.Enabled && m.data.Sum().DataPoints().Len() > 0 {
+		m.updateCapacity()
+		m.data.MoveTo(metrics.AppendEmpty())
+		m.init()
+	}
+}
+
+func newMetricDiskioInstanceStorePerformanceExceededIops(cfg MetricConfig) metricDiskioInstanceStorePerformanceExceededIops {
+	m := metricDiskioInstanceStorePerformanceExceededIops{config: cfg}
+	if cfg.Enabled {
+		m.data = pmetric.NewMetric()
+		m.init()
+	}
+	return m
+}
+
+type metricDiskioInstanceStorePerformanceExceededTp struct {
+	data     pmetric.Metric // data buffer for generated metric.
+	config   MetricConfig   // metric config provided by user.
+	capacity int            // max observed number of data points added to the metric.
+}
+
+// init fills diskio_instance_store_performance_exceeded_tp metric with initial data.
+func (m *metricDiskioInstanceStorePerformanceExceededTp) init() {
+	m.data.SetName("diskio_instance_store_performance_exceeded_tp")
+	m.data.SetDescription("The total time, in nanoseconds, that the Instance Store volume exceeded the attached Amazon EC2 instance's maximum throughput performance")
+	m.data.SetUnit("ns")
+	m.data.SetEmptySum()
+	m.data.Sum().SetIsMonotonic(true)
+	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+}
+
+func (m *metricDiskioInstanceStorePerformanceExceededTp) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64) {
+	if !m.config.Enabled {
+		return
+	}
+	dp := m.data.Sum().DataPoints().AppendEmpty()
+	dp.SetStartTimestamp(start)
+	dp.SetTimestamp(ts)
+	dp.SetIntValue(val)
+}
+
+// updateCapacity saves max length of data point slices that will be used for the slice capacity.
+func (m *metricDiskioInstanceStorePerformanceExceededTp) updateCapacity() {
+	if m.data.Sum().DataPoints().Len() > m.capacity {
+		m.capacity = m.data.Sum().DataPoints().Len()
+	}
+}
+
+// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
+func (m *metricDiskioInstanceStorePerformanceExceededTp) emit(metrics pmetric.MetricSlice) {
+	if m.config.Enabled && m.data.Sum().DataPoints().Len() > 0 {
+		m.updateCapacity()
+		m.data.MoveTo(metrics.AppendEmpty())
+		m.init()
+	}
+}
+
+func newMetricDiskioInstanceStorePerformanceExceededTp(cfg MetricConfig) metricDiskioInstanceStorePerformanceExceededTp {
+	m := metricDiskioInstanceStorePerformanceExceededTp{config: cfg}
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -967,108 +1069,6 @@ func newMetricDiskioInstanceStoreTotalWriteTime(cfg MetricConfig) metricDiskioIn
 	return m
 }
 
-type metricDiskioInstanceStoreVolumePerformanceExceededIops struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
-}
-
-// init fills diskio_instance_store_volume_performance_exceeded_iops metric with initial data.
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededIops) init() {
-	m.data.SetName("diskio_instance_store_volume_performance_exceeded_iops")
-	m.data.SetDescription("The total time, in nanoseconds, that IOPS demand exceeded the Instance Store device's performance")
-	m.data.SetUnit("ns")
-	m.data.SetEmptySum()
-	m.data.Sum().SetIsMonotonic(true)
-	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-}
-
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededIops) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64) {
-	if !m.config.Enabled {
-		return
-	}
-	dp := m.data.Sum().DataPoints().AppendEmpty()
-	dp.SetStartTimestamp(start)
-	dp.SetTimestamp(ts)
-	dp.SetIntValue(val)
-}
-
-// updateCapacity saves max length of data point slices that will be used for the slice capacity.
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededIops) updateCapacity() {
-	if m.data.Sum().DataPoints().Len() > m.capacity {
-		m.capacity = m.data.Sum().DataPoints().Len()
-	}
-}
-
-// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededIops) emit(metrics pmetric.MetricSlice) {
-	if m.config.Enabled && m.data.Sum().DataPoints().Len() > 0 {
-		m.updateCapacity()
-		m.data.MoveTo(metrics.AppendEmpty())
-		m.init()
-	}
-}
-
-func newMetricDiskioInstanceStoreVolumePerformanceExceededIops(cfg MetricConfig) metricDiskioInstanceStoreVolumePerformanceExceededIops {
-	m := metricDiskioInstanceStoreVolumePerformanceExceededIops{config: cfg}
-	if cfg.Enabled {
-		m.data = pmetric.NewMetric()
-		m.init()
-	}
-	return m
-}
-
-type metricDiskioInstanceStoreVolumePerformanceExceededTp struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
-}
-
-// init fills diskio_instance_store_volume_performance_exceeded_tp metric with initial data.
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededTp) init() {
-	m.data.SetName("diskio_instance_store_volume_performance_exceeded_tp")
-	m.data.SetDescription("The total time, in nanoseconds, that throughput demand exceeded the Instance Store device's performance")
-	m.data.SetUnit("ns")
-	m.data.SetEmptySum()
-	m.data.Sum().SetIsMonotonic(true)
-	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-}
-
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededTp) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64) {
-	if !m.config.Enabled {
-		return
-	}
-	dp := m.data.Sum().DataPoints().AppendEmpty()
-	dp.SetStartTimestamp(start)
-	dp.SetTimestamp(ts)
-	dp.SetIntValue(val)
-}
-
-// updateCapacity saves max length of data point slices that will be used for the slice capacity.
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededTp) updateCapacity() {
-	if m.data.Sum().DataPoints().Len() > m.capacity {
-		m.capacity = m.data.Sum().DataPoints().Len()
-	}
-}
-
-// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
-func (m *metricDiskioInstanceStoreVolumePerformanceExceededTp) emit(metrics pmetric.MetricSlice) {
-	if m.config.Enabled && m.data.Sum().DataPoints().Len() > 0 {
-		m.updateCapacity()
-		m.data.MoveTo(metrics.AppendEmpty())
-		m.init()
-	}
-}
-
-func newMetricDiskioInstanceStoreVolumePerformanceExceededTp(cfg MetricConfig) metricDiskioInstanceStoreVolumePerformanceExceededTp {
-	m := metricDiskioInstanceStoreVolumePerformanceExceededTp{config: cfg}
-	if cfg.Enabled {
-		m.data = pmetric.NewMetric()
-		m.init()
-	}
-	return m
-}
-
 type metricDiskioInstanceStoreVolumeQueueLength struct {
 	data     pmetric.Metric // data buffer for generated metric.
 	config   MetricConfig   // metric config provided by user.
@@ -1121,33 +1121,33 @@ func newMetricDiskioInstanceStoreVolumeQueueLength(cfg MetricConfig) metricDiski
 // MetricsBuilder provides an interface for scrapers to report metrics while taking care of all the transformations
 // required to produce metric representation defined in metadata and user config.
 type MetricsBuilder struct {
-	config                                                 MetricsBuilderConfig // config of the metrics builder.
-	startTime                                              pcommon.Timestamp    // start time that will be applied to all recorded data points.
-	metricsCapacity                                        int                  // maximum observed number of metrics per resource.
-	metricsBuffer                                          pmetric.Metrics      // accumulates metrics data before emitting.
-	buildInfo                                              component.BuildInfo  // contains version information.
-	resourceAttributeIncludeFilter                         map[string]filter.Filter
-	resourceAttributeExcludeFilter                         map[string]filter.Filter
-	metricDiskioEbsEc2InstancePerformanceExceededIops      metricDiskioEbsEc2InstancePerformanceExceededIops
-	metricDiskioEbsEc2InstancePerformanceExceededTp        metricDiskioEbsEc2InstancePerformanceExceededTp
-	metricDiskioEbsTotalReadBytes                          metricDiskioEbsTotalReadBytes
-	metricDiskioEbsTotalReadOps                            metricDiskioEbsTotalReadOps
-	metricDiskioEbsTotalReadTime                           metricDiskioEbsTotalReadTime
-	metricDiskioEbsTotalWriteBytes                         metricDiskioEbsTotalWriteBytes
-	metricDiskioEbsTotalWriteOps                           metricDiskioEbsTotalWriteOps
-	metricDiskioEbsTotalWriteTime                          metricDiskioEbsTotalWriteTime
-	metricDiskioEbsVolumePerformanceExceededIops           metricDiskioEbsVolumePerformanceExceededIops
-	metricDiskioEbsVolumePerformanceExceededTp             metricDiskioEbsVolumePerformanceExceededTp
-	metricDiskioEbsVolumeQueueLength                       metricDiskioEbsVolumeQueueLength
-	metricDiskioInstanceStoreTotalReadBytes                metricDiskioInstanceStoreTotalReadBytes
-	metricDiskioInstanceStoreTotalReadOps                  metricDiskioInstanceStoreTotalReadOps
-	metricDiskioInstanceStoreTotalReadTime                 metricDiskioInstanceStoreTotalReadTime
-	metricDiskioInstanceStoreTotalWriteBytes               metricDiskioInstanceStoreTotalWriteBytes
-	metricDiskioInstanceStoreTotalWriteOps                 metricDiskioInstanceStoreTotalWriteOps
-	metricDiskioInstanceStoreTotalWriteTime                metricDiskioInstanceStoreTotalWriteTime
-	metricDiskioInstanceStoreVolumePerformanceExceededIops metricDiskioInstanceStoreVolumePerformanceExceededIops
-	metricDiskioInstanceStoreVolumePerformanceExceededTp   metricDiskioInstanceStoreVolumePerformanceExceededTp
-	metricDiskioInstanceStoreVolumeQueueLength             metricDiskioInstanceStoreVolumeQueueLength
+	config                                            MetricsBuilderConfig // config of the metrics builder.
+	startTime                                         pcommon.Timestamp    // start time that will be applied to all recorded data points.
+	metricsCapacity                                   int                  // maximum observed number of metrics per resource.
+	metricsBuffer                                     pmetric.Metrics      // accumulates metrics data before emitting.
+	buildInfo                                         component.BuildInfo  // contains version information.
+	resourceAttributeIncludeFilter                    map[string]filter.Filter
+	resourceAttributeExcludeFilter                    map[string]filter.Filter
+	metricDiskioEbsEc2InstancePerformanceExceededIops metricDiskioEbsEc2InstancePerformanceExceededIops
+	metricDiskioEbsEc2InstancePerformanceExceededTp   metricDiskioEbsEc2InstancePerformanceExceededTp
+	metricDiskioEbsTotalReadBytes                     metricDiskioEbsTotalReadBytes
+	metricDiskioEbsTotalReadOps                       metricDiskioEbsTotalReadOps
+	metricDiskioEbsTotalReadTime                      metricDiskioEbsTotalReadTime
+	metricDiskioEbsTotalWriteBytes                    metricDiskioEbsTotalWriteBytes
+	metricDiskioEbsTotalWriteOps                      metricDiskioEbsTotalWriteOps
+	metricDiskioEbsTotalWriteTime                     metricDiskioEbsTotalWriteTime
+	metricDiskioEbsVolumePerformanceExceededIops      metricDiskioEbsVolumePerformanceExceededIops
+	metricDiskioEbsVolumePerformanceExceededTp        metricDiskioEbsVolumePerformanceExceededTp
+	metricDiskioEbsVolumeQueueLength                  metricDiskioEbsVolumeQueueLength
+	metricDiskioInstanceStorePerformanceExceededIops  metricDiskioInstanceStorePerformanceExceededIops
+	metricDiskioInstanceStorePerformanceExceededTp    metricDiskioInstanceStorePerformanceExceededTp
+	metricDiskioInstanceStoreTotalReadBytes           metricDiskioInstanceStoreTotalReadBytes
+	metricDiskioInstanceStoreTotalReadOps             metricDiskioInstanceStoreTotalReadOps
+	metricDiskioInstanceStoreTotalReadTime            metricDiskioInstanceStoreTotalReadTime
+	metricDiskioInstanceStoreTotalWriteBytes          metricDiskioInstanceStoreTotalWriteBytes
+	metricDiskioInstanceStoreTotalWriteOps            metricDiskioInstanceStoreTotalWriteOps
+	metricDiskioInstanceStoreTotalWriteTime           metricDiskioInstanceStoreTotalWriteTime
+	metricDiskioInstanceStoreVolumeQueueLength        metricDiskioInstanceStoreVolumeQueueLength
 }
 
 // MetricBuilderOption applies changes to default metrics builder.
@@ -1173,28 +1173,28 @@ func NewMetricsBuilder(mbc MetricsBuilderConfig, settings receiver.Settings, opt
 		startTime:     pcommon.NewTimestampFromTime(time.Now()),
 		metricsBuffer: pmetric.NewMetrics(),
 		buildInfo:     settings.BuildInfo,
-		metricDiskioEbsEc2InstancePerformanceExceededIops:      newMetricDiskioEbsEc2InstancePerformanceExceededIops(mbc.Metrics.DiskioEbsEc2InstancePerformanceExceededIops),
-		metricDiskioEbsEc2InstancePerformanceExceededTp:        newMetricDiskioEbsEc2InstancePerformanceExceededTp(mbc.Metrics.DiskioEbsEc2InstancePerformanceExceededTp),
-		metricDiskioEbsTotalReadBytes:                          newMetricDiskioEbsTotalReadBytes(mbc.Metrics.DiskioEbsTotalReadBytes),
-		metricDiskioEbsTotalReadOps:                            newMetricDiskioEbsTotalReadOps(mbc.Metrics.DiskioEbsTotalReadOps),
-		metricDiskioEbsTotalReadTime:                           newMetricDiskioEbsTotalReadTime(mbc.Metrics.DiskioEbsTotalReadTime),
-		metricDiskioEbsTotalWriteBytes:                         newMetricDiskioEbsTotalWriteBytes(mbc.Metrics.DiskioEbsTotalWriteBytes),
-		metricDiskioEbsTotalWriteOps:                           newMetricDiskioEbsTotalWriteOps(mbc.Metrics.DiskioEbsTotalWriteOps),
-		metricDiskioEbsTotalWriteTime:                          newMetricDiskioEbsTotalWriteTime(mbc.Metrics.DiskioEbsTotalWriteTime),
-		metricDiskioEbsVolumePerformanceExceededIops:           newMetricDiskioEbsVolumePerformanceExceededIops(mbc.Metrics.DiskioEbsVolumePerformanceExceededIops),
-		metricDiskioEbsVolumePerformanceExceededTp:             newMetricDiskioEbsVolumePerformanceExceededTp(mbc.Metrics.DiskioEbsVolumePerformanceExceededTp),
-		metricDiskioEbsVolumeQueueLength:                       newMetricDiskioEbsVolumeQueueLength(mbc.Metrics.DiskioEbsVolumeQueueLength),
-		metricDiskioInstanceStoreTotalReadBytes:                newMetricDiskioInstanceStoreTotalReadBytes(mbc.Metrics.DiskioInstanceStoreTotalReadBytes),
-		metricDiskioInstanceStoreTotalReadOps:                  newMetricDiskioInstanceStoreTotalReadOps(mbc.Metrics.DiskioInstanceStoreTotalReadOps),
-		metricDiskioInstanceStoreTotalReadTime:                 newMetricDiskioInstanceStoreTotalReadTime(mbc.Metrics.DiskioInstanceStoreTotalReadTime),
-		metricDiskioInstanceStoreTotalWriteBytes:               newMetricDiskioInstanceStoreTotalWriteBytes(mbc.Metrics.DiskioInstanceStoreTotalWriteBytes),
-		metricDiskioInstanceStoreTotalWriteOps:                 newMetricDiskioInstanceStoreTotalWriteOps(mbc.Metrics.DiskioInstanceStoreTotalWriteOps),
-		metricDiskioInstanceStoreTotalWriteTime:                newMetricDiskioInstanceStoreTotalWriteTime(mbc.Metrics.DiskioInstanceStoreTotalWriteTime),
-		metricDiskioInstanceStoreVolumePerformanceExceededIops: newMetricDiskioInstanceStoreVolumePerformanceExceededIops(mbc.Metrics.DiskioInstanceStoreVolumePerformanceExceededIops),
-		metricDiskioInstanceStoreVolumePerformanceExceededTp:   newMetricDiskioInstanceStoreVolumePerformanceExceededTp(mbc.Metrics.DiskioInstanceStoreVolumePerformanceExceededTp),
-		metricDiskioInstanceStoreVolumeQueueLength:             newMetricDiskioInstanceStoreVolumeQueueLength(mbc.Metrics.DiskioInstanceStoreVolumeQueueLength),
-		resourceAttributeIncludeFilter:                         make(map[string]filter.Filter),
-		resourceAttributeExcludeFilter:                         make(map[string]filter.Filter),
+		metricDiskioEbsEc2InstancePerformanceExceededIops: newMetricDiskioEbsEc2InstancePerformanceExceededIops(mbc.Metrics.DiskioEbsEc2InstancePerformanceExceededIops),
+		metricDiskioEbsEc2InstancePerformanceExceededTp:   newMetricDiskioEbsEc2InstancePerformanceExceededTp(mbc.Metrics.DiskioEbsEc2InstancePerformanceExceededTp),
+		metricDiskioEbsTotalReadBytes:                     newMetricDiskioEbsTotalReadBytes(mbc.Metrics.DiskioEbsTotalReadBytes),
+		metricDiskioEbsTotalReadOps:                       newMetricDiskioEbsTotalReadOps(mbc.Metrics.DiskioEbsTotalReadOps),
+		metricDiskioEbsTotalReadTime:                      newMetricDiskioEbsTotalReadTime(mbc.Metrics.DiskioEbsTotalReadTime),
+		metricDiskioEbsTotalWriteBytes:                    newMetricDiskioEbsTotalWriteBytes(mbc.Metrics.DiskioEbsTotalWriteBytes),
+		metricDiskioEbsTotalWriteOps:                      newMetricDiskioEbsTotalWriteOps(mbc.Metrics.DiskioEbsTotalWriteOps),
+		metricDiskioEbsTotalWriteTime:                     newMetricDiskioEbsTotalWriteTime(mbc.Metrics.DiskioEbsTotalWriteTime),
+		metricDiskioEbsVolumePerformanceExceededIops:      newMetricDiskioEbsVolumePerformanceExceededIops(mbc.Metrics.DiskioEbsVolumePerformanceExceededIops),
+		metricDiskioEbsVolumePerformanceExceededTp:        newMetricDiskioEbsVolumePerformanceExceededTp(mbc.Metrics.DiskioEbsVolumePerformanceExceededTp),
+		metricDiskioEbsVolumeQueueLength:                  newMetricDiskioEbsVolumeQueueLength(mbc.Metrics.DiskioEbsVolumeQueueLength),
+		metricDiskioInstanceStorePerformanceExceededIops:  newMetricDiskioInstanceStorePerformanceExceededIops(mbc.Metrics.DiskioInstanceStorePerformanceExceededIops),
+		metricDiskioInstanceStorePerformanceExceededTp:    newMetricDiskioInstanceStorePerformanceExceededTp(mbc.Metrics.DiskioInstanceStorePerformanceExceededTp),
+		metricDiskioInstanceStoreTotalReadBytes:           newMetricDiskioInstanceStoreTotalReadBytes(mbc.Metrics.DiskioInstanceStoreTotalReadBytes),
+		metricDiskioInstanceStoreTotalReadOps:             newMetricDiskioInstanceStoreTotalReadOps(mbc.Metrics.DiskioInstanceStoreTotalReadOps),
+		metricDiskioInstanceStoreTotalReadTime:            newMetricDiskioInstanceStoreTotalReadTime(mbc.Metrics.DiskioInstanceStoreTotalReadTime),
+		metricDiskioInstanceStoreTotalWriteBytes:          newMetricDiskioInstanceStoreTotalWriteBytes(mbc.Metrics.DiskioInstanceStoreTotalWriteBytes),
+		metricDiskioInstanceStoreTotalWriteOps:            newMetricDiskioInstanceStoreTotalWriteOps(mbc.Metrics.DiskioInstanceStoreTotalWriteOps),
+		metricDiskioInstanceStoreTotalWriteTime:           newMetricDiskioInstanceStoreTotalWriteTime(mbc.Metrics.DiskioInstanceStoreTotalWriteTime),
+		metricDiskioInstanceStoreVolumeQueueLength:        newMetricDiskioInstanceStoreVolumeQueueLength(mbc.Metrics.DiskioInstanceStoreVolumeQueueLength),
+		resourceAttributeIncludeFilter:                    make(map[string]filter.Filter),
+		resourceAttributeExcludeFilter:                    make(map[string]filter.Filter),
 	}
 	if mbc.ResourceAttributes.SerialID.MetricsInclude != nil {
 		mb.resourceAttributeIncludeFilter["SerialId"] = filter.CreateFilter(mbc.ResourceAttributes.SerialID.MetricsInclude)
@@ -1288,14 +1288,14 @@ func (mb *MetricsBuilder) EmitForResource(options ...ResourceMetricsOption) {
 	mb.metricDiskioEbsVolumePerformanceExceededIops.emit(ils.Metrics())
 	mb.metricDiskioEbsVolumePerformanceExceededTp.emit(ils.Metrics())
 	mb.metricDiskioEbsVolumeQueueLength.emit(ils.Metrics())
+	mb.metricDiskioInstanceStorePerformanceExceededIops.emit(ils.Metrics())
+	mb.metricDiskioInstanceStorePerformanceExceededTp.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreTotalReadBytes.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreTotalReadOps.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreTotalReadTime.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreTotalWriteBytes.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreTotalWriteOps.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreTotalWriteTime.emit(ils.Metrics())
-	mb.metricDiskioInstanceStoreVolumePerformanceExceededIops.emit(ils.Metrics())
-	mb.metricDiskioInstanceStoreVolumePerformanceExceededTp.emit(ils.Metrics())
 	mb.metricDiskioInstanceStoreVolumeQueueLength.emit(ils.Metrics())
 
 	for _, op := range options {
@@ -1383,6 +1383,16 @@ func (mb *MetricsBuilder) RecordDiskioEbsVolumeQueueLengthDataPoint(ts pcommon.T
 	mb.metricDiskioEbsVolumeQueueLength.recordDataPoint(mb.startTime, ts, val)
 }
 
+// RecordDiskioInstanceStorePerformanceExceededIopsDataPoint adds a data point to diskio_instance_store_performance_exceeded_iops metric.
+func (mb *MetricsBuilder) RecordDiskioInstanceStorePerformanceExceededIopsDataPoint(ts pcommon.Timestamp, val int64) {
+	mb.metricDiskioInstanceStorePerformanceExceededIops.recordDataPoint(mb.startTime, ts, val)
+}
+
+// RecordDiskioInstanceStorePerformanceExceededTpDataPoint adds a data point to diskio_instance_store_performance_exceeded_tp metric.
+func (mb *MetricsBuilder) RecordDiskioInstanceStorePerformanceExceededTpDataPoint(ts pcommon.Timestamp, val int64) {
+	mb.metricDiskioInstanceStorePerformanceExceededTp.recordDataPoint(mb.startTime, ts, val)
+}
+
 // RecordDiskioInstanceStoreTotalReadBytesDataPoint adds a data point to diskio_instance_store_total_read_bytes metric.
 func (mb *MetricsBuilder) RecordDiskioInstanceStoreTotalReadBytesDataPoint(ts pcommon.Timestamp, val int64) {
 	mb.metricDiskioInstanceStoreTotalReadBytes.recordDataPoint(mb.startTime, ts, val)
@@ -1411,16 +1421,6 @@ func (mb *MetricsBuilder) RecordDiskioInstanceStoreTotalWriteOpsDataPoint(ts pco
 // RecordDiskioInstanceStoreTotalWriteTimeDataPoint adds a data point to diskio_instance_store_total_write_time metric.
 func (mb *MetricsBuilder) RecordDiskioInstanceStoreTotalWriteTimeDataPoint(ts pcommon.Timestamp, val int64) {
 	mb.metricDiskioInstanceStoreTotalWriteTime.recordDataPoint(mb.startTime, ts, val)
-}
-
-// RecordDiskioInstanceStoreVolumePerformanceExceededIopsDataPoint adds a data point to diskio_instance_store_volume_performance_exceeded_iops metric.
-func (mb *MetricsBuilder) RecordDiskioInstanceStoreVolumePerformanceExceededIopsDataPoint(ts pcommon.Timestamp, val int64) {
-	mb.metricDiskioInstanceStoreVolumePerformanceExceededIops.recordDataPoint(mb.startTime, ts, val)
-}
-
-// RecordDiskioInstanceStoreVolumePerformanceExceededTpDataPoint adds a data point to diskio_instance_store_volume_performance_exceeded_tp metric.
-func (mb *MetricsBuilder) RecordDiskioInstanceStoreVolumePerformanceExceededTpDataPoint(ts pcommon.Timestamp, val int64) {
-	mb.metricDiskioInstanceStoreVolumePerformanceExceededTp.recordDataPoint(mb.startTime, ts, val)
 }
 
 // RecordDiskioInstanceStoreVolumeQueueLengthDataPoint adds a data point to diskio_instance_store_volume_queue_length metric.

@@ -79,6 +79,10 @@ func TestTranslator(t *testing.T) {
 			input: testutil.GetJson(t, filepath.Join("testdata", "mixed_metrics.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "mixed_metrics.yaml")),
 		},
+		"WithInstanceStorePrefixedMetrics": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "instance_store_and_ebs_metrics.json")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "instance_store_and_ebs_metrics.yaml")),
+		},
 	}
 	factory := awsnvmereceiver.NewFactory()
 	for name, testCase := range testCases {
@@ -109,7 +113,7 @@ func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsnvmerece
 	// Compare resources
 	assert.ElementsMatch(t, want.Devices, got.Devices)
 
-	// Compare metrics enabled state
+	// Compare metrics enabled state for EBS
 	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled)
 	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled,
@@ -133,9 +137,31 @@ func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsnvmerece
 	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled,
 		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled)
 
+	// Compare metrics enabled state for Instance Store
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadOps.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadOps.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadTime.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadTime.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled,
+		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled)
+
 	// Compare resource attributes
 	assert.Equal(t, want.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled,
 		got.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled)
+	assert.Equal(t, want.MetricsBuilderConfig.ResourceAttributes.SerialID.Enabled,
+		got.MetricsBuilderConfig.ResourceAttributes.SerialID.Enabled)
 }
 
 func TestNewTranslator(t *testing.T) {

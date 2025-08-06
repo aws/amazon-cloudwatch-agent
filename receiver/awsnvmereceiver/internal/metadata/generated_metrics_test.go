@@ -102,39 +102,30 @@ func TestMetricsBuilder(t *testing.T) {
 			allMetricsCount++
 			mb.RecordDiskioEbsVolumeQueueLengthDataPoint(ts, 1)
 
-			defaultMetricsCount++
+			allMetricsCount++
+			mb.RecordDiskioInstanceStorePerformanceExceededIopsDataPoint(ts, 1)
+
+			allMetricsCount++
+			mb.RecordDiskioInstanceStorePerformanceExceededTpDataPoint(ts, 1)
+
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreTotalReadBytesDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreTotalReadOpsDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreTotalReadTimeDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreTotalWriteBytesDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreTotalWriteOpsDataPoint(ts, 1)
 
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreTotalWriteTimeDataPoint(ts, 1)
 
-			defaultMetricsCount++
-			allMetricsCount++
-			mb.RecordDiskioInstanceStoreVolumePerformanceExceededIopsDataPoint(ts, 1)
-
-			defaultMetricsCount++
-			allMetricsCount++
-			mb.RecordDiskioInstanceStoreVolumePerformanceExceededTpDataPoint(ts, 1)
-
-			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordDiskioInstanceStoreVolumeQueueLengthDataPoint(ts, 1)
 
@@ -168,8 +159,8 @@ func TestMetricsBuilder(t *testing.T) {
 					validatedMetrics["diskio_ebs_ec2_instance_performance_exceeded_iops"] = true
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance", ms.At(i).Description())
-					assert.Equal(t, "us", ms.At(i).Unit())
+					assert.Equal(t, "The total time, in nanoseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
 					dp := ms.At(i).Sum().DataPoints().At(0)
@@ -182,8 +173,8 @@ func TestMetricsBuilder(t *testing.T) {
 					validatedMetrics["diskio_ebs_ec2_instance_performance_exceeded_tp"] = true
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time, in microseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum throughput performance", ms.At(i).Description())
-					assert.Equal(t, "us", ms.At(i).Unit())
+					assert.Equal(t, "The total time, in nanoseconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum throughput performance", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
 					dp := ms.At(i).Sum().DataPoints().At(0)
@@ -224,8 +215,8 @@ func TestMetricsBuilder(t *testing.T) {
 					validatedMetrics["diskio_ebs_total_read_time"] = true
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time spent, in microseconds, by all completed read operations", ms.At(i).Description())
-					assert.Equal(t, "us", ms.At(i).Unit())
+					assert.Equal(t, "The total time spent, in nanoseconds, by all completed read operations", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
 					dp := ms.At(i).Sum().DataPoints().At(0)
@@ -266,8 +257,8 @@ func TestMetricsBuilder(t *testing.T) {
 					validatedMetrics["diskio_ebs_total_write_time"] = true
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time spent, in microseconds, by all completed write operations", ms.At(i).Description())
-					assert.Equal(t, "us", ms.At(i).Unit())
+					assert.Equal(t, "The total time spent, in nanoseconds, by all completed write operations", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
 					dp := ms.At(i).Sum().DataPoints().At(0)
@@ -280,8 +271,8 @@ func TestMetricsBuilder(t *testing.T) {
 					validatedMetrics["diskio_ebs_volume_performance_exceeded_iops"] = true
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time, in microseconds, that IOPS demand exceeded the volume's provisioned IOPS performance", ms.At(i).Description())
-					assert.Equal(t, "us", ms.At(i).Unit())
+					assert.Equal(t, "The total time, in nanoseconds, that IOPS demand exceeded the volume's provisioned IOPS performance", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
 					dp := ms.At(i).Sum().DataPoints().At(0)
@@ -294,8 +285,8 @@ func TestMetricsBuilder(t *testing.T) {
 					validatedMetrics["diskio_ebs_volume_performance_exceeded_tp"] = true
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time, in microseconds, that throughput demand exceeded the volume's provisioned throughput performance", ms.At(i).Description())
-					assert.Equal(t, "us", ms.At(i).Unit())
+					assert.Equal(t, "The total time, in nanoseconds, that throughput demand exceeded the volume's provisioned throughput performance", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
 					dp := ms.At(i).Sum().DataPoints().At(0)
@@ -311,6 +302,34 @@ func TestMetricsBuilder(t *testing.T) {
 					assert.Equal(t, "The number of read and write operations waiting to be completed", ms.At(i).Description())
 					assert.Equal(t, "1", ms.At(i).Unit())
 					dp := ms.At(i).Gauge().DataPoints().At(0)
+					assert.Equal(t, start, dp.StartTimestamp())
+					assert.Equal(t, ts, dp.Timestamp())
+					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
+					assert.Equal(t, int64(1), dp.IntValue())
+				case "diskio_instance_store_performance_exceeded_iops":
+					assert.False(t, validatedMetrics["diskio_instance_store_performance_exceeded_iops"], "Found a duplicate in the metrics slice: diskio_instance_store_performance_exceeded_iops")
+					validatedMetrics["diskio_instance_store_performance_exceeded_iops"] = true
+					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
+					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
+					assert.Equal(t, "The total time, in nanoseconds, that the Instance Store volume exceeded the attached Amazon EC2 instance's maximum IOPS performance", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
+					assert.True(t, ms.At(i).Sum().IsMonotonic())
+					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
+					dp := ms.At(i).Sum().DataPoints().At(0)
+					assert.Equal(t, start, dp.StartTimestamp())
+					assert.Equal(t, ts, dp.Timestamp())
+					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
+					assert.Equal(t, int64(1), dp.IntValue())
+				case "diskio_instance_store_performance_exceeded_tp":
+					assert.False(t, validatedMetrics["diskio_instance_store_performance_exceeded_tp"], "Found a duplicate in the metrics slice: diskio_instance_store_performance_exceeded_tp")
+					validatedMetrics["diskio_instance_store_performance_exceeded_tp"] = true
+					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
+					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
+					assert.Equal(t, "The total time, in nanoseconds, that the Instance Store volume exceeded the attached Amazon EC2 instance's maximum throughput performance", ms.At(i).Description())
+					assert.Equal(t, "ns", ms.At(i).Unit())
+					assert.True(t, ms.At(i).Sum().IsMonotonic())
+					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
+					dp := ms.At(i).Sum().DataPoints().At(0)
 					assert.Equal(t, start, dp.StartTimestamp())
 					assert.Equal(t, ts, dp.Timestamp())
 					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
@@ -391,34 +410,6 @@ func TestMetricsBuilder(t *testing.T) {
 					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
 					assert.Equal(t, "The total time spent, in nanoseconds, by all completed write operations for Instance Store devices", ms.At(i).Description())
-					assert.Equal(t, "ns", ms.At(i).Unit())
-					assert.True(t, ms.At(i).Sum().IsMonotonic())
-					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
-					dp := ms.At(i).Sum().DataPoints().At(0)
-					assert.Equal(t, start, dp.StartTimestamp())
-					assert.Equal(t, ts, dp.Timestamp())
-					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
-					assert.Equal(t, int64(1), dp.IntValue())
-				case "diskio_instance_store_volume_performance_exceeded_iops":
-					assert.False(t, validatedMetrics["diskio_instance_store_volume_performance_exceeded_iops"], "Found a duplicate in the metrics slice: diskio_instance_store_volume_performance_exceeded_iops")
-					validatedMetrics["diskio_instance_store_volume_performance_exceeded_iops"] = true
-					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
-					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time, in nanoseconds, that IOPS demand exceeded the Instance Store device's performance", ms.At(i).Description())
-					assert.Equal(t, "ns", ms.At(i).Unit())
-					assert.True(t, ms.At(i).Sum().IsMonotonic())
-					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())
-					dp := ms.At(i).Sum().DataPoints().At(0)
-					assert.Equal(t, start, dp.StartTimestamp())
-					assert.Equal(t, ts, dp.Timestamp())
-					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
-					assert.Equal(t, int64(1), dp.IntValue())
-				case "diskio_instance_store_volume_performance_exceeded_tp":
-					assert.False(t, validatedMetrics["diskio_instance_store_volume_performance_exceeded_tp"], "Found a duplicate in the metrics slice: diskio_instance_store_volume_performance_exceeded_tp")
-					validatedMetrics["diskio_instance_store_volume_performance_exceeded_tp"] = true
-					assert.Equal(t, pmetric.MetricTypeSum, ms.At(i).Type())
-					assert.Equal(t, 1, ms.At(i).Sum().DataPoints().Len())
-					assert.Equal(t, "The total time, in nanoseconds, that throughput demand exceeded the Instance Store device's performance", ms.At(i).Description())
 					assert.Equal(t, "ns", ms.At(i).Unit())
 					assert.True(t, ms.At(i).Sum().IsMonotonic())
 					assert.Equal(t, pmetric.AggregationTemporalityCumulative, ms.At(i).Sum().AggregationTemporality())

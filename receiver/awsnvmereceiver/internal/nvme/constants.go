@@ -15,5 +15,5 @@ const (
 	nvmeIoctlAdminCmd  = 0xC0484E41
 	instanceStoreMagic = 0xEC2C0D7E
 	ebsMagic           = 0x3C23B510
-	logID              = 0xC0
+	logID              = 0xD0
 )
