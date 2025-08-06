@@ -530,7 +530,7 @@ func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsLi
 	datums := []*cloudwatch.MetricDatum{}
 
 	if metric.expHistDistribution.Size() == 0 {
-		log.Printf("E! metric has a exp histogram distribution with no entries, %s", *metric.MetricName)
+		log.Printf("E! metric has an exponential histogram distribution with no entries, %s", *metric.MetricName)
 		return datums
 	}
 	if metric.expHistDistribution.Unit() != "" {
