@@ -86,14 +86,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		ClusterName:     clusterName,
 		ClusterRegion:   clusterRegion,
 		ResultFile:      resultFile,
+		JobLabelName:    defaultJobNameLabel,
 	}
 	// Docker label based service discovery
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
 		dockerConfig := ecsobserver.DockerLabelConfig{
-			CommonExporterConfig: ecsobserver.CommonExporterConfig{
-				JobName:     getString(dockerLabel, "sd_job_name"),
-				MetricsPath: getString(dockerLabel, "sd_metrics_path"),
-			},
 			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
 			JobNameLabel:     getString(dockerLabel, "sd_job_name_label"),
@@ -105,12 +102,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if taskDefs, ok := ecsSD["task_definition_list"].([]interface{}); ok {
 		for _, td := range taskDefs {
 			if tdMap, ok := td.(map[string]interface{}); ok {
-				ports := parseMetricsPorts(getString(tdMap, "sd_metrics_ports"))
 				taskConfig := ecsobserver.TaskDefinitionConfig{
 					CommonExporterConfig: ecsobserver.CommonExporterConfig{
 						JobName:      getString(tdMap, "sd_job_name"),
 						MetricsPath:  getStringWithDefault(tdMap, "sd_metrics_path", defaultMetricsPath),
-						MetricsPorts: convertStringPortsToInt(ports),
+						MetricsPorts: convertStringPortsToInt(parseMetricsPorts(getString(tdMap, "sd_metrics_ports"))),
 					},
 					ArnPattern:           getString(tdMap, "sd_task_definition_arn_pattern"),
 					ContainerNamePattern: getString(tdMap, "sd_container_name_pattern"),
@@ -124,12 +120,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if services, ok := ecsSD["service_name_list_for_tasks"].([]interface{}); ok {
 		for _, svc := range services {
 			if svcMap, ok := svc.(map[string]interface{}); ok {
-				ports := parseMetricsPorts(getString(svcMap, "sd_metrics_ports"))
 				serviceConfig := ecsobserver.ServiceConfig{
 					CommonExporterConfig: ecsobserver.CommonExporterConfig{
 						JobName:      getString(svcMap, "sd_job_name"),
 						MetricsPath:  getStringWithDefault(svcMap, "sd_metrics_path", defaultMetricsPath),
-						MetricsPorts: convertStringPortsToInt(ports),
+						MetricsPorts: convertStringPortsToInt(parseMetricsPorts(getString(svcMap, "sd_metrics_ports"))),
 					},
 					NamePattern:          getString(svcMap, "sd_service_name_pattern"),
 					ContainerNamePattern: getString(svcMap, "sd_container_name_pattern"),
