@@ -6,6 +6,7 @@ package awsnvmereceiver
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -79,7 +80,9 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 			}
 
 			devicePath, err := s.nvme.DevicePath(device)
+			log.Println(devicePath)
 			if err != nil {
+				log.Println("Couldn't get path")
 				s.logger.Debug("unable to get device path", zap.String("device", device), zap.Error(err))
 				continue
 			}
@@ -143,6 +146,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 // so we group the devices by the controller ID.
 func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error) {
 	allNvmeDevices, err := s.nvme.GetAllDevices()
+	log.Println("Getting Nvme Devices")
 	if err != nil {
 		return nil, err
 	}
@@ -151,10 +155,13 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 
 	for _, device := range allNvmeDevices {
 		deviceName := device.DeviceName()
+		log.Println("Printing Nvme Device")
+		log.Println(deviceName)
 
 		// Check if all devices should be collected. Otherwise check if defined by user
 		hasAsterisk := s.allowedDevices.Contains("*")
 		if !hasAsterisk {
+			log.Println("We shouldn't be in here!")
 			if isAllowed := s.allowedDevices.Contains(deviceName); !isAllowed {
 				s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
 				continue
@@ -162,6 +169,9 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 		}
 
 		controllerID := device.Controller()
+		log.Println("Controller ID")
+		log.Println(controllerID)
+
 		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
 		// retrieving the volume ID and validating if it's an EBS/IS device
 		if entry, seenController := devices[controllerID]; seenController {
@@ -171,12 +181,16 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 		}
 
 		serial, err := s.nvme.GetDeviceSerial(&device)
+		log.Println("Getting Serial Id")
+		log.Println(serial)
 		if err != nil {
 			s.logger.Debug("unable to get serial number of device", zap.String("device", deviceName), zap.Error(err))
 			continue
 		}
 
 		model, err := s.nvme.GetDeviceModel(&device)
+		log.Println("Getting Model name")
+		log.Println(model)
 		if err != nil {
 			s.logger.Debug("unable to get device model", zap.String("device", deviceName), zap.Error(err))
 			continue
@@ -185,6 +199,7 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 		var deviceType, identifier string
 		switch model {
 		case ebsModel:
+			log.Println("Case Ebs Model")
 			if !s.collectEbs {
 				s.logger.Debug("skipping EBS device as no EBS metrics enabled", zap.String("device", deviceName))
 				continue
@@ -196,6 +211,8 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 			}
 			identifier = fmt.Sprintf("vol-%s", serial[3:])
 		case instanceStoreModel: // Verify if there is a prefix requirement like ebs- but I don't there is ???!!!
+			log.Println("Case Instance Store Model")
+
 			if !s.collectInstanceStore {
 				s.logger.Debug("skipping Instance Store device as no IS metrics enabled", zap.String("device", deviceName))
 				continue
