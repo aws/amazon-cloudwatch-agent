@@ -53,7 +53,16 @@ type InstanceStoreMetrics struct {
 	EC2IOPSExceeded       uint64
 	EC2ThroughputExceeded uint64
 	QueueLength           uint64
-	ReservedArea          [4000]byte // Skips histograms
+	NumHistograms         uint32
+	NumBins               uint32
+	IOSizeRange           [8]uint32 // 32B, 8 ranges
+	Bounds                [32]struct {
+		Lower uint64
+		Upper uint64
+	} // 512B, 32 pairs
+	ReadHistogramBins  [5][32]uint64 // 5 histograms, 32 bins each (256B per histogram)
+	WriteHistogramBins [5][32]uint64 // Same for write
+	ReservedArea       [888]byte
 }
 
 type Histogram struct {

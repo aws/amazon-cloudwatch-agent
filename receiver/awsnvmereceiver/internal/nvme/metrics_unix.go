@@ -26,6 +26,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"syscall"
@@ -54,15 +55,32 @@ type nvmePassthruCommand struct {
 	result      uint32
 }
 
+type Metrics struct {
+	ReadOps                            uint64
+	WriteOps                           uint64
+	ReadBytes                          uint64
+	WriteBytes                         uint64
+	TotalReadTime                      uint64
+	TotalWriteTime                     uint64
+	VolumePerformanceExceededIOPS      uint64
+	VolumePerformanceExceededTP        uint64
+	EC2InstancePerformanceExceededIOPS uint64
+	EC2InstancePerformanceExceededTP   uint64
+	QueueLength                        uint64
+}
+
 var (
-	ErrInvalidEBSMagic = errors.New("invalid EBS magic number")
-	ErrParseLogPage    = errors.New("failed to parse log page")
+	ErrInvalidEBSMagic           = errors.New("invalid EBS magic number")
+	ErrInvalidInstanceStoreMagic = errors.New("invalid Instance Store magic number")
+	ErrParseLogPage              = errors.New("failed to parse log page")
+	ErrUnsupportedMagic          = errors.New("unsupported magic number")
 )
 
-func GetMetrics(devicePath string) (EBSMetrics, error) {
+// GetMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
+func GetMetrics(devicePath string) (any, error) {
 	data, err := getNVMEMetrics(devicePath)
 	if err != nil {
-		return EBSMetrics{}, err
+		return nil, err
 	}
 
 	return parseLogPage(data)
@@ -111,48 +129,39 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 	return data, nil
 }
 
-// parseLogPage parses the binary data from the log page into Metrics, handling both EBS and Instance Store formats.
-func parseLogPage(data []byte) (Metrics, error) {
+// parseLogPage parses the binary data from an EBS or Instance Store log page into the corresponding struct.
+func parseLogPage(data []byte) (any, error) {
 	magic := binary.LittleEndian.Uint64(data[0:8])
-
-	var metrics Metrics
 
 	switch magic {
 	case ebsMagic:
-		var ebs EBSMetrics
+		log.Println("DEBUG: Parsing as EBS metrics")
+		var metrics EBSMetrics
 		reader := bytes.NewReader(data)
-		if err := binary.Read(reader, binary.LittleEndian, &ebs); err != nil {
-			return Metrics{}, fmt.Errorf("%w: %w", ErrParseLogPage, err)
+		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
 		}
-		metrics.ReadOps = ebs.ReadOps
-		metrics.WriteOps = ebs.WriteOps
-		metrics.ReadBytes = ebs.ReadBytes
-		metrics.WriteBytes = ebs.WriteBytes
-		metrics.TotalReadTime = ebs.TotalReadTime
-		metrics.TotalWriteTime = ebs.TotalWriteTime
-		metrics.VolumePerformanceExceededIOPS = ebs.EBSIOPSExceeded
-		metrics.VolumePerformanceExceededTP = ebs.EBSThroughputExceeded
-		metrics.EC2InstancePerformanceExceededIOPS = ebs.EC2IOPSExceeded
-		metrics.EC2InstancePerformanceExceededTP = ebs.EC2ThroughputExceeded
-		metrics.QueueLength = ebs.QueueLength
+		fmt.Printf("DEBUG: Parsed EBS metrics: ReadOps=%d, QueueLength=%d\n", metrics.ReadOps, metrics.QueueLength)
+		if metrics.EBSMagic != ebsMagic { // Allows us to check if struct was read correctly
+			return nil, fmt.Errorf("%w: %x", ErrInvalidEBSMagic, metrics.EBSMagic)
+		}
+		return metrics, nil
 	case instanceStoreMagic:
-		var is InstanceStoreMetrics
-		reader := bytes.NewReader(data)
-		if err := binary.Read(reader, binary.LittleEndian, &is); err != nil {
-			return Metrics{}, fmt.Errorf("%w: %w", ErrParseLogPage, err)
+		var metrics InstanceStoreMetrics
+		fmt.Printf("DEBUG: Parsed Instance Store metrics: ReadOps=%d, QueueLength=%d\n", metrics.ReadOps, metrics.QueueLength)
+		if metrics.Magic != uint32(instanceStoreMagic) {
+			fmt.Printf("DEBUG: Invalid Instance Store magic after parse: 0x%x\n", metrics.Magic)
+			return Metrics{}, fmt.Errorf("%w: 0x%x", ErrInvalidInstanceStoreMagic, metrics.Magic)
 		}
-		metrics.ReadOps = is.ReadOps
-		metrics.WriteOps = is.WriteOps
-		metrics.ReadBytes = is.ReadBytes
-		metrics.WriteBytes = is.WriteBytes
-		metrics.TotalReadTime = is.TotalReadTime
-		metrics.TotalWriteTime = is.TotalWriteTime
-		metrics.EC2InstancePerformanceExceededIOPS = is.EC2IOPSExceeded
-		metrics.EC2InstancePerformanceExceededTP = is.EC2ThroughputExceeded
-		metrics.QueueLength = is.QueueLength
+		reader := bytes.NewReader(data)
+		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
+		}
+		if metrics.Magic != instanceStoreMagic {
+			return nil, fmt.Errorf("%w: %x", ErrInvalidInstanceStoreMagic, metrics.Magic)
+		}
+		return metrics, nil
 	default:
-		return Metrics{}, fmt.Errorf("%w: 0x%x", ErrInvalidMagic, magic)
+		return nil, fmt.Errorf("%w: %x", ErrUnsupportedMagic, magic)
 	}
-
-	return metrics, nil
 }

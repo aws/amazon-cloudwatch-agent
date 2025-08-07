@@ -83,7 +83,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.logger.Debug("unable to get device path", zap.String("device", device), zap.Error(err))
 				continue
 			}
-			metrics, err := getMetrics(devicePath)
+			metricsAny, err := getMetrics(devicePath)
 			if err != nil {
 				s.logger.Debug("unable to get metrics for device", zap.String("device", device), zap.Error(err))
 				continue
@@ -93,7 +93,8 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 
 			rb := s.mb.NewResourceBuilder()
 
-			if nvmeDevices.deviceType == "ebs" {
+			switch metrics := metricsAny.(type) {
+			case nvme.EBSMetrics:
 				rb.SetVolumeID(nvmeDevices.identifier)
 				s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
 				s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
@@ -106,7 +107,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
 				s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
 				s.recordMetric(s.mb.RecordDiskioEbsVolumeQueueLengthDataPoint, now, metrics.QueueLength)
-			} else {
+			case nvme.InstanceStoreMetrics:
 				rb.SetSerialID(nvmeDevices.identifier)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalReadOpsDataPoint, now, metrics.ReadOps)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalWriteOpsDataPoint, now, metrics.WriteOps)
@@ -117,6 +118,10 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.recordMetric(s.mb.RecordDiskioInstanceStorePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
 				s.recordMetric(s.mb.RecordDiskioInstanceStorePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreVolumeQueueLengthDataPoint, now, metrics.QueueLength)
+				// Histograms not recorded (per problem: no implementation, but struct has them for exact layout)
+			default:
+				s.logger.Debug("unsupported metrics type", zap.String("device", device))
+				continue
 			}
 
 			s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
