@@ -1225,6 +1225,48 @@ processors:
                   new_label: Type
                   new_value: NodeGPU
               submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+              match_type: ""
+              new_name: container_gpu_tensor_core_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+              match_type: ""
+              new_name: pod_gpu_tensor_core_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+              match_type: ""
+              new_name: node_gpu_tensor_core_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
+              submatch_case: ""
             - action: update
               aggregation_type: ""
               include: execution_status_total
