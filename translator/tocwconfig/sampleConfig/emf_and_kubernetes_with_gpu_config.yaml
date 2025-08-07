@@ -157,6 +157,10 @@ exporters:
                 - pod_gpu_limit
                 - pod_gpu_usage_total
                 - pod_gpu_reserved_capacity
+                - pod_efa_request
+                - pod_efa_limit
+                - pod_efa_usage_total
+                - pod_efa_reserved_capacity
             - dimensions:
                 - - ClusterName
                   - InstanceId
