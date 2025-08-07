@@ -187,7 +187,7 @@ jobs:
 
   BuildMSI-2022:
     name: 'BuildMSI-2022'
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: [ MakeMSIZip ]
     permissions:
       id-token: write
