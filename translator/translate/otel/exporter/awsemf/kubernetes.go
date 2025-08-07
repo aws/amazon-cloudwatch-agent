@@ -154,7 +154,7 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 		"node_status_capacity_pods", "node_status_allocatable_pods",
 	}
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
-		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity")
+		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity")
 	}
 	if enhancedContainerInsightsEnabled {
 		return []*awsemfexporter.MetricDeclaration{
@@ -491,6 +491,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"container_gpu_memory_used",
 					"container_gpu_power_draw",
 					"container_gpu_temperature",
+					"container_gpu_tensor_core_utilization",
 				},
 			},
 			{
@@ -502,6 +503,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"pod_gpu_memory_used",
 					"pod_gpu_power_draw",
 					"pod_gpu_temperature",
+					"pod_gpu_tensor_core_utilization",
 				},
 			},
 			{
@@ -513,6 +515,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_gpu_memory_used",
 					"node_gpu_power_draw",
 					"node_gpu_temperature",
+					"node_gpu_tensor_core_utilization",
 				},
 			},
 		}...)
