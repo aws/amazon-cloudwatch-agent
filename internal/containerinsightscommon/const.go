@@ -91,7 +91,7 @@ const (
 	GpuRequest               = "gpu_request"
 	GpuLimit                 = "gpu_limit"
 	GpuTotal                 = "gpu_total"
-	GpuUniqueId              = "UUID"
+	GpuUniqueID              = "UUID"
 	GpuTensorCoreUtilization = "gpu_tensor_core_utilization"
 
 	NeuronCoreUtilization                       = "neuroncore_utilization"
