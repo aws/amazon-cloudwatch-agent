@@ -234,6 +234,11 @@ package-prepare-rpm:
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.spec $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
+	# Add supervisor config files
+	mkdir -p $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp
+	cp $(BASE_SPACE)/packaging/supervisor-config.yaml $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent.yaml $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_full.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent_minimal.yaml $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_minimal.yaml
 
 	# arm64 rpm
 	mkdir -p $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg
@@ -248,6 +253,11 @@ package-prepare-rpm:
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.spec $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
+	# Add supervisor config files
+	mkdir -p $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp
+	cp $(BASE_SPACE)/packaging/supervisor-config.yaml $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent.yaml $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_full.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent_minimal.yaml $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_minimal.yaml
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
 package-prepare-deb:
@@ -263,6 +273,11 @@ package-prepare-deb:
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.conf $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
+	# Add supervisor config files
+	mkdir -p $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp
+	cp $(BASE_SPACE)/packaging/supervisor-config.yaml $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent.yaml $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_full.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent_minimal.yaml $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_minimal.yaml
 
 	# arm64 deb
 	mkdir -p $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg
@@ -276,6 +291,11 @@ package-prepare-deb:
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.conf $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
+	# Add supervisor config files
+	mkdir -p $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp
+	cp $(BASE_SPACE)/packaging/supervisor-config.yaml $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent.yaml $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_full.yaml
+	cp $(BASE_SPACE)/cmd/opampsupervisor/examples/supervisor_cloudwatch_agent_minimal.yaml $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/etc/opamp/supervisor_minimal.yaml
 
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 	cp -rf $(BASE_SPACE)/packaging $(BUILD_SPACE)/

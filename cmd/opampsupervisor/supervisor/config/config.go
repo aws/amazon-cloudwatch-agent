@@ -280,6 +280,49 @@ type Metrics struct {
 	Readers []config.MetricReader `mapstructure:"readers"`
 }
 
+// DefaultCloudWatchAgentSupervisor returns the default supervisor config for CloudWatch Agent
+func DefaultCloudWatchAgentSupervisor() Supervisor {
+	return Supervisor{
+		Server: OpAMPServer{
+			Endpoint: "wss://opamp.monitoring.amazonaws.com/v1/opamp",
+			TLS: configtls.ClientConfig{
+				InsecureSkipVerify: false,
+			},
+		},
+		Capabilities: Capabilities{
+			AcceptsRemoteConfig:        true,
+			AcceptsRestartCommand:      true,
+			ReportsEffectiveConfig:     true,
+			ReportsOwnMetrics:          true,
+			ReportsHealth:              true,
+			ReportsRemoteConfig:        true,
+		},
+		Agent: Agent{
+			Executable:              "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent",
+			OrphanDetectionInterval: 5 * time.Second,
+			ConfigApplyTimeout:      30 * time.Second,
+			BootstrapTimeout:        10 * time.Second,
+			ConfigFiles: []string{
+				"/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+				"$OWN_TELEMETRY_CONFIG",
+				"$OPAMP_EXTENSION_CONFIG",
+				"$REMOTE_CONFIG",
+			},
+			Arguments: []string{"-c", "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"},
+		},
+		Storage: Storage{
+			Directory: "/opt/aws/amazon-cloudwatch-agent/var/opamp",
+		},
+		Telemetry: Telemetry{
+			Logs: Logs{
+				Level:            zapcore.InfoLevel,
+				OutputPaths:      []string{"/opt/aws/amazon-cloudwatch-agent/logs/opamp-supervisor.log"},
+				ErrorOutputPaths: []string{"/opt/aws/amazon-cloudwatch-agent/logs/opamp-supervisor-error.log"},
+			},
+		},
+	}
+}
+
 // DefaultSupervisor returns the default supervisor config
 func DefaultSupervisor() Supervisor {
 	defaultStorageDir := "/var/lib/otelcol/supervisor"
@@ -306,7 +349,7 @@ func DefaultSupervisor() Supervisor {
 			ReportsOwnTraces:               false,
 			ReportsHealth:                  true,
 			ReportsRemoteConfig:            false,
-			ReportsAvailableComponents:     false,
+			ReportsAvailableComponents:     true,
 		},
 		Storage: Storage{
 			Directory: defaultStorageDir,

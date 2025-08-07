@@ -1,0 +1,88 @@
+# Amazon CloudWatch Agent OpAMP Supervisor Configuration
+# This configuration enables OpAMP management for CloudWatch Agent
+
+server:
+  # OpAMP server endpoint - customers can modify this to point to their OpAMP server
+  endpoint: ${OPAMP_ENDPOINT:-wss://opamp.monitoring.amazonaws.com/v1/opamp}
+  
+  # Optional headers for authentication
+  headers:
+    # Example: Authorization header for AWS authentication
+    # Authorization: "Bearer ${AWS_TOKEN}"
+    
+  tls:
+    # Enable TLS verification for production use
+    insecure_skip_verify: ${OPAMP_TLS_INSECURE:-false}
+    # Optional: Custom CA certificate
+    # ca_pem: ${OPAMP_CA_CERT}
+    # Optional: Client certificate for mutual TLS
+    # cert_pem: ${OPAMP_CLIENT_CERT}
+    # key_pem: ${OPAMP_CLIENT_KEY}
+
+capabilities:
+  # Core capabilities - customers can enable/disable as needed
+  reports_effective_config: true
+  reports_health: true
+  reports_own_metrics: ${OPAMP_REPORTS_METRICS:-true}
+  reports_own_logs: ${OPAMP_REPORTS_LOGS:-false}
+  reports_own_traces: ${OPAMP_REPORTS_TRACES:-false}
+  
+  # Remote configuration capabilities
+  accepts_remote_config: ${OPAMP_ACCEPTS_REMOTE_CONFIG:-true}
+  reports_remote_config: ${OPAMP_REPORTS_REMOTE_CONFIG:-true}
+  
+  # Management capabilities
+  accepts_restart_command: ${OPAMP_ACCEPTS_RESTART:-true}
+  accepts_opamp_connection_settings: ${OPAMP_ACCEPTS_CONN_SETTINGS:-true}
+
+agent:
+  # CloudWatch Agent executable path
+  executable: ${CWA_EXECUTABLE:-/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent}
+  
+  # Configuration files for CloudWatch Agent
+  config_files:
+    - ${CWA_CONFIG_FILE:-/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json}
+    - "$OWN_TELEMETRY_CONFIG"
+    - "$OPAMP_EXTENSION_CONFIG" 
+    - "$REMOTE_CONFIG"
+  
+  # Agent process management settings
+  orphan_detection_interval: ${OPAMP_ORPHAN_DETECTION:-5s}
+  config_apply_timeout: ${OPAMP_CONFIG_TIMEOUT:-30s}
+  bootstrap_timeout: ${OPAMP_BOOTSTRAP_TIMEOUT:-10s}
+  
+  # CloudWatch Agent specific settings
+  passthrough_logs: ${OPAMP_PASSTHROUGH_LOGS:-false}
+  use_hup_config_reload: ${OPAMP_USE_HUP_RELOAD:-false}
+  
+  # Optional: Additional arguments for CloudWatch Agent
+  args:
+    - "-c"
+    - "${CWA_CONFIG_FILE:-/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json}"
+  
+  # Environment variables for CloudWatch Agent
+  env:
+    AWS_REGION: ${AWS_REGION:-us-east-1}
+    # Optional: AWS credentials (prefer IAM roles)
+    # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+
+storage:
+  # Directory for supervisor state and logs
+  directory: ${OPAMP_STORAGE_DIR:-/opt/aws/amazon-cloudwatch-agent/var/opamp}
+
+telemetry:
+  logs:
+    level: ${OPAMP_LOG_LEVEL:-info}
+    output_paths:
+      - ${OPAMP_LOG_OUTPUT:-/opt/aws/amazon-cloudwatch-agent/logs/opamp-supervisor.log}
+    error_output_paths:
+      - ${OPAMP_ERROR_LOG_OUTPUT:-/opt/aws/amazon-cloudwatch-agent/logs/opamp-supervisor-error.log}
+  
+  metrics:
+    level: ${OPAMP_METRICS_LEVEL:-basic}
+    
+  resource:
+    service.name: "amazon-cloudwatch-agent-supervisor"
+    service.version: "${CWA_VERSION:-1.0.0}"
+    aws.region: "${AWS_REGION:-us-east-1}"

@@ -46,6 +46,7 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 %dir /opt/aws/amazon-cloudwatch-agent/doc
 %dir /opt/aws/amazon-cloudwatch-agent/etc
 %dir /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
+%dir /opt/aws/amazon-cloudwatch-agent/etc/opamp
 %dir /opt/aws/amazon-cloudwatch-agent/logs
 %dir /opt/aws/amazon-cloudwatch-agent/var
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
@@ -59,6 +60,9 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 /opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar
 /opt/aws/amazon-cloudwatch-agent/doc/amazon-cloudwatch-agent-schema.json
 %config(noreplace) /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
+%config(noreplace) /opt/aws/amazon-cloudwatch-agent/etc/opamp/supervisor.yaml
+/opt/aws/amazon-cloudwatch-agent/etc/opamp/supervisor_full.yaml
+/opt/aws/amazon-cloudwatch-agent/etc/opamp/supervisor_minimal.yaml
 /opt/aws/amazon-cloudwatch-agent/LICENSE
 /opt/aws/amazon-cloudwatch-agent/NOTICE
 
