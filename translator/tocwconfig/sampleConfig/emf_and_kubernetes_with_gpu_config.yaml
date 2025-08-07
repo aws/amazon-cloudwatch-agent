@@ -185,6 +185,11 @@ exporters:
                 - node_gpu_limit
                 - node_gpu_usage_total
                 - node_gpu_reserved_capacity
+                - node_efa_limit
+                - node_efa_usage_total
+                - node_efa_reserved_capacity
+                - node_efa_unreserved_capacity
+                - node_efa_available_capacity
             - dimensions:
                 - - ClusterName
                   - InstanceId

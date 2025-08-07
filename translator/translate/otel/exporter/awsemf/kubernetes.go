@@ -108,6 +108,7 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 		}...)
 		if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
 			selectors = append(selectors, "pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity")
+			selectors = append(selectors, "pod_efa_request", "pod_efa_limit", "pod_efa_usage_total", "pod_efa_reserved_capacity")
 		}
 	}
 
@@ -155,6 +156,7 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 	}
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
 		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity")
+		nodeMetrics = append(nodeMetrics, "node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity")
 	}
 	if enhancedContainerInsightsEnabled {
 		return []*awsemfexporter.MetricDeclaration{
