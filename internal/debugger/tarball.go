@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -116,8 +118,7 @@ func CreateTarball(ssm bool) {
 		fmt.Println("Warning: Only the last 50,000 lines of the log file are included.")
 	}
 
-	etcPath := "/opt/aws/amazon-cloudwatch-agent/etc"
-	if err := addDirectoryToTarball(tarWriter, etcPath, "etc"); err != nil {
+	if err := addDirectoryToTarball(tarWriter, filepath.Dir(paths.TomlConfigPath), "etc"); err != nil {
 		fmt.Println("Error adding etc directory to tarball:", err)
 	}
 
@@ -127,6 +128,24 @@ func CreateTarball(ssm bool) {
 
 		if err := addTriageToTarball(tarWriter, answersContent, "debug-info.txt"); err != nil {
 			fmt.Println("Error adding answers to tarball:", err)
+		}
+
+		// Gather pprof data
+		if profilePaths, err := gatherPprofData(cwd); err != nil {
+			fmt.Printf("Warning: Failed to gather pprof data: %v\n", err)
+		} else {
+			for _, profilePath := range profilePaths {
+				filename := filepath.Base(profilePath)
+				tarPath := filepath.Join("pprof", filename)
+				if err := addFileToTarball(tarWriter, profilePath, tarPath); err != nil {
+					fmt.Printf("Warning: Failed to add %s to tarball: %v\n", filename, err)
+				} else {
+					fmt.Printf("%s added to tarball\n", filename)
+				}
+				if err := os.Remove(profilePath); err != nil {
+					fmt.Printf("Warning: Failed to delete %s: %v\n", filename, err)
+				}
+			}
 		}
 	}
 
@@ -373,4 +392,97 @@ func addDirectoryToTarball(tarWriter *tar.Writer, dirPath, tarPath string) error
 
 		return nil
 	})
+}
+
+func gatherPprofData(cwd string) ([]string, error) {
+	fmt.Print("WARNING: in order to grab performance profiling data, the agent will be RESTARTED with pprof enabled. THIS WILL OPEN PORT 6060 ON YOUR INSTANCE. Would you like to continue? (y/n) ")
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(strings.ToLower(input))
+	if input != "y" {
+		fmt.Println("Skipping pprof data collection...")
+		return nil, nil
+	}
+
+	if err := restartAgentWithPprof(); err != nil {
+		fmt.Printf("Warning: Failed to restart agent to enable pprof: %v\n", err)
+		return nil, err
+	}
+	fmt.Println("Agent restarted successfully with pprof enabled")
+
+	// Wait for agent to fully start
+	time.Sleep(5 * time.Second)
+
+	var profilePaths []string
+
+	heapPath := filepath.Join(cwd, "heap.profile")
+	if err := fetchProfile("http://localhost:6060/debug/pprof/heap?seconds=30", heapPath); err != nil {
+		fmt.Printf("Warning: Failed to fetch heap profile: %v\n", err)
+	} else {
+		fmt.Printf("Heap profile saved to: %s\n", heapPath)
+		profilePaths = append(profilePaths, heapPath)
+	}
+
+	cpuPath := filepath.Join(cwd, "cpu.profile")
+	if err := fetchProfile("http://localhost:6060/debug/pprof/profile?seconds=30", cpuPath); err != nil {
+		fmt.Printf("Warning: Failed to fetch CPU profile: %v\n", err)
+	} else {
+		fmt.Printf("CPU profile saved to: %s\n", cpuPath)
+		profilePaths = append(profilePaths, cpuPath)
+	}
+
+	return profilePaths, nil
+}
+
+func fetchProfile(url, filePath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to fetch profile: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pprof endpoint returned status: %d", resp.StatusCode)
+	}
+
+	profileData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read profile data: %v", err)
+	}
+
+	return os.WriteFile(filePath, profileData, 0644)
+}
+
+func stopExistingAgent() error {
+	cmd := exec.Command("systemctl", "stop", "amazon-cloudwatch-agent")
+	if err := cmd.Run(); err != nil {
+		cmd = exec.Command("pkill", "-f", "amazon-cloudwatch-agent")
+		return cmd.Run()
+	}
+	return nil
+}
+
+func restartAgentWithPprof() error {
+	if err := stopExistingAgent(); err != nil {
+		fmt.Printf("Warning: Failed to stop existing agent: %v\n", err)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	cmd := exec.Command(paths.TranslatorBinaryPath,
+		"--input-dir", paths.ConfigDirPath,
+		"--output", paths.TomlConfigPath,
+		"--mode", "auto",
+		"--multi-config", "remove")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to translate config: %v", err)
+	}
+
+	cmd = exec.Command(paths.AgentBinaryPath,
+		"-config", paths.TomlConfigPath,
+		"-envconfig", paths.EnvConfigPath,
+		"-pprof-addr", "localhost:6060")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Start()
 }
