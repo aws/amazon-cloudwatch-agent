@@ -147,6 +147,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	c.once.Do(func() {
 		if c.Concurrency > 1 {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
+			useragent.Get().SetLogConcurrencyFlag()
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
