@@ -118,9 +118,9 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 	cmd := nvmePassthruCommand{
 		opcode:  0x02,
 		addr:    uint64(uintptr(unsafe.Pointer(&data[0]))),
-		nsid:    1,
+		nsid:    0xFFFFFFFF, // Fixed: Broadcast to controller
 		dataLen: uint32(bufferLen),
-		cdw10:   uint32(logID) | (1024 << 16),
+		cdw10:   uint32(((bufferLen/4)-1)<<16) | uint32(logID), // Fixed: Correct dword count -1
 	}
 
 	status, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, nvmeIoctlAdminCmd, uintptr(unsafe.Pointer(&cmd)))
@@ -140,38 +140,41 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 func parseLogPage(data []byte) (any, error) {
 	log.Println("Inside parseLogPage")
 
-	magic := binary.LittleEndian.Uint64(data[0:8])
-	log.Println("magic number: ")
-	log.Println(magic)
-	switch magic {
-	case ebsMagic:
+	if len(data) < 8 {
+		return nil, fmt.Errorf("%w: input too short", ErrParseLogPage)
+	}
+
+	magic64 := binary.LittleEndian.Uint64(data[0:8])
+	magic32 := binary.LittleEndian.Uint32(data[0:4])
+
+	log.Printf("magic64: 0x%X, magic32: 0x%X\n", magic64, magic32)
+
+	switch {
+	case magic64 == ebsMagic:
 		log.Println("DEBUG: Parsing as EBS metrics")
 		var metrics EBSMetrics
 		reader := bytes.NewReader(data)
 		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
 		}
-		fmt.Printf("DEBUG: Parsed EBS metrics: ReadOps=%d, QueueLength=%d\n", metrics.ReadOps, metrics.QueueLength)
-		if metrics.EBSMagic != ebsMagic { // Allows us to check if struct was read correctly
-			return nil, fmt.Errorf("%w: %x", ErrInvalidEBSMagic, metrics.EBSMagic)
+		if metrics.EBSMagic != ebsMagic {
+			return nil, fmt.Errorf("%w: 0x%x", ErrInvalidEBSMagic, metrics.EBSMagic)
 		}
 		return metrics, nil
-	case instanceStoreMagic:
+
+	case magic32 == instanceStoreMagic:
+		log.Println("DEBUG: Parsing as Instance Store metrics")
 		var metrics InstanceStoreMetrics
-		fmt.Printf("DEBUG: Parsed Instance Store metrics: ReadOps=%d, QueueLength=%d\n", metrics.ReadOps, metrics.QueueLength)
-		if metrics.Magic != uint32(instanceStoreMagic) {
-			fmt.Printf("DEBUG: Invalid Instance Store magic after parse: 0x%x\n", metrics.Magic)
-			return Metrics{}, fmt.Errorf("%w: 0x%x", ErrInvalidInstanceStoreMagic, metrics.Magic)
-		}
 		reader := bytes.NewReader(data)
 		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
 		}
 		if metrics.Magic != instanceStoreMagic {
-			return nil, fmt.Errorf("%w: %x", ErrInvalidInstanceStoreMagic, metrics.Magic)
+			return nil, fmt.Errorf("%w: 0x%x", ErrInvalidInstanceStoreMagic, metrics.Magic)
 		}
 		return metrics, nil
+
 	default:
-		return nil, fmt.Errorf("%w: %x", ErrUnsupportedMagic, magic)
+		return nil, fmt.Errorf("%w: magic64=0x%x, magic32=0x%x", ErrUnsupportedMagic, magic64, magic32)
 	}
 }

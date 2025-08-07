@@ -24,7 +24,7 @@ import (
 
 const (
 	ebsModel           = "Amazon Elastic Block Store"
-	instanceStoreModel = "Amazon EC2 NVMe Instance Store"
+	instanceStoreModel = "Amazon EC2 NVMe Instance Storage"
 )
 
 type nvmeScraper struct {
@@ -210,9 +210,9 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 				continue
 			}
 			identifier = fmt.Sprintf("vol-%s", serial[3:])
-		case instanceStoreModel: // Verify if there is a prefix requirement like ebs- but I don't there is ???!!!
+		case instanceStoreModel:
 			log.Println("Case Instance Store Model")
-
+			log.Println(s.collectInstanceStore)
 			if !s.collectInstanceStore {
 				s.logger.Debug("skipping Instance Store device as no IS metrics enabled", zap.String("device", deviceName))
 				continue
