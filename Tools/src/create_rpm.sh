@@ -17,6 +17,7 @@ mkdir -p ${BUILD_ROOT}/{RPMS,SRPMS,BUILD,SOURCES,SPECS,BUILDROOT}
 mkdir -p ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/logs
 mkdir -p ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/var
 mkdir -p ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
+mkdir -p ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/etc/opamp
 mkdir -p ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin
 mkdir -p ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/doc
 mkdir -p ${BUILD_ROOT}/SOURCES/etc/init
@@ -41,6 +42,10 @@ cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}/SOURCES/opt/aws/ama
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/etc/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent.conf ${BUILD_ROOT}/SOURCES/etc/init/amazon-cloudwatch-agent.conf
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/doc/
+# Copy supervisor config files if they exist
+if [ -d "${PREPKGPATH}/etc/opamp" ]; then
+    cp ${PREPKGPATH}/etc/opamp/* ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/etc/opamp/
+fi
 
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
