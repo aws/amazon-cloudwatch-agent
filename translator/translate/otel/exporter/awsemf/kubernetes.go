@@ -108,6 +108,7 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 		}...)
 		if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
 			selectors = append(selectors, "pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity")
+			selectors = append(selectors, "pod_neuroncore_request", "pod_neuroncore_limit", "pod_neuroncore_usage_total", "pod_neuroncore_reserved_capacity")
 		}
 	}
 
@@ -155,6 +156,7 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 	}
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
 		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity")
+		nodeMetrics = append(nodeMetrics, "node_neuroncore_limit", "node_neuroncore_usage_total", "node_neuroncore_reserved_capacity", "node_neuroncore_unreserved_capacity", "node_neuroncore_available_capacity")
 	}
 	if enhancedContainerInsightsEnabled {
 		return []*awsemfexporter.MetricDeclaration{
