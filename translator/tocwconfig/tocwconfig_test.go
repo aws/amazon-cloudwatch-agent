@@ -400,11 +400,11 @@ func TestDiskIOTelegrafConfig(t *testing.T) {
 	checkTranslation(t, "diskio_telegraf_config_linux", "darwin", nil, "")
 }
 
-func TestDiskIOEBSConfig(t *testing.T) {
+func TestDiskIONVMeConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "diskio_ebs_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "diskio_nvme_config_linux", "linux", expectedEnvVars, "")
 }
 
 // Both Telegraf & EBS

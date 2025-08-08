@@ -28,6 +28,7 @@ import (
 const (
 	defaultMetricsCollectionInterval = time.Minute
 	ebsPrefix                        = "ebs_"
+	instanceStorePrefix              = "instance_store_"
 )
 
 var (
@@ -279,7 +280,7 @@ func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool
 		switch inputName {
 		case common.DiskIOKey:
 			trimmed := strings.TrimPrefix(m, common.DiskIOKey+"_")
-			if !strings.HasPrefix(trimmed, ebsPrefix) {
+			if !strings.HasPrefix(trimmed, ebsPrefix) && !strings.HasPrefix(trimmed, instanceStorePrefix) {
 				return false
 			}
 		default:
