@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
@@ -61,6 +62,32 @@ func (m *mockTargetManager) PutRetentionPolicy(target Target) {
 func TestSender(t *testing.T) {
 	logger := testutil.NewNopLogger()
 
+	t.Run("Send/Success", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		doneCallbackCalled := false
+		doneCallback := func() {
+			doneCallbackCalled = true
+		}
+		batch.append(newLogEvent(time.Now(), "Test message", doneCallback))
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
+
+		mockService := new(mockLogsService)
+		mockManager := new(mockTargetManager)
+		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
+
+		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s.Send(batch)
+
+		mockService.AssertExpectations(t)
+		assert.True(t, stateCallbackCalled, "State callback was not called in success scenario")
+		assert.True(t, doneCallbackCalled, "Done callback was not called in success scenario")
+	})
+
 	t.Run("Send/RejectedLogEvents", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
@@ -102,7 +129,17 @@ func TestSender(t *testing.T) {
 
 	t.Run("Error/InvalidParameter", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
-		batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+		doneCallbackCalled := false
+		doneCallback := func() {
+			doneCallbackCalled = true
+		}
+		batch.append(newLogEvent(time.Now(), "Test message", doneCallback))
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
@@ -113,11 +150,23 @@ func TestSender(t *testing.T) {
 		s.Send(batch)
 
 		mockService.AssertExpectations(t)
+		assert.True(t, stateCallbackCalled, "State callback was not called for InvalidParameterException")
+		assert.False(t, doneCallbackCalled, "Done callback should not be called for InvalidParameterException")
 	})
 
 	t.Run("Error/DataAlreadyAccepted", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
-		batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+		doneCallbackCalled := false
+		doneCallback := func() {
+			doneCallbackCalled = true
+		}
+		batch.append(newLogEvent(time.Now(), "Test message", doneCallback))
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
@@ -128,11 +177,23 @@ func TestSender(t *testing.T) {
 		s.Send(batch)
 
 		mockService.AssertExpectations(t)
+		assert.True(t, stateCallbackCalled, "State callback was not called for DataAlreadyAcceptedException")
+		assert.False(t, doneCallbackCalled, "Done callback should not be called for DataAlreadyAcceptedException")
 	})
 
 	t.Run("Error/DropOnGeneric", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
-		batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+		doneCallbackCalled := false
+		doneCallback := func() {
+			doneCallbackCalled = true
+		}
+		batch.append(newLogEvent(time.Now(), "Test message", doneCallback))
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
@@ -143,6 +204,8 @@ func TestSender(t *testing.T) {
 		s.Send(batch)
 
 		mockService.AssertExpectations(t)
+		assert.True(t, stateCallbackCalled, "State callback was not called for non-AWS error")
+		assert.False(t, doneCallbackCalled, "Done callback should not be called for non-AWS error")
 	})
 
 	t.Run("Error/RetryOnGenericAWS", func(t *testing.T) {
@@ -164,7 +227,17 @@ func TestSender(t *testing.T) {
 
 	t.Run("DropOnRetryExhaustion", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
-		batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+		doneCallbackCalled := false
+		doneCallback := func() {
+			doneCallbackCalled = true
+		}
+		batch.append(newLogEvent(time.Now(), "Test message", doneCallback))
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
@@ -175,11 +248,23 @@ func TestSender(t *testing.T) {
 		s.Send(batch)
 
 		mockService.AssertExpectations(t)
+		assert.True(t, stateCallbackCalled, "State callback was not called when retry attempts were exhausted")
+		assert.False(t, doneCallbackCalled, "Done callback should not be called when retry attempts are exhausted")
 	})
 
 	t.Run("StopChannelClosed", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
-		batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+		doneCallbackCalled := false
+		doneCallback := func() {
+			doneCallbackCalled = true
+		}
+		batch.append(newLogEvent(time.Now(), "Test message", doneCallback))
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
@@ -197,5 +282,7 @@ func TestSender(t *testing.T) {
 		s.Send(batch)
 
 		mockService.AssertExpectations(t)
+		assert.True(t, stateCallbackCalled, "State callback was not called when stop was requested")
+		assert.False(t, doneCallbackCalled, "Done callback should not be called when stop was requested")
 	})
 }

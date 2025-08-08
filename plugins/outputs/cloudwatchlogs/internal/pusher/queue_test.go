@@ -15,8 +15,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -64,6 +67,23 @@ func (s *stubLogsService) DescribeLogGroups(in *cloudwatchlogs.DescribeLogGroups
 		return s.dlg(in)
 	}
 	return nil, nil
+}
+
+type mockSender struct {
+	mock.Mock
+}
+
+func (m *mockSender) Send(batch *logEventBatch) {
+	m.Called(batch)
+}
+
+func (m *mockSender) SetRetryDuration(d time.Duration) {
+	m.Called(d)
+}
+
+func (m *mockSender) RetryDuration() time.Duration {
+	args := m.Called()
+	return args.Get(0).(time.Duration)
 }
 
 func TestAddSingleEvent_WithAccountId(t *testing.T) {
@@ -684,4 +704,99 @@ func testPreparationWithLogger(
 		wg,
 	)
 	return stop, q.(*queue)
+}
+
+func TestQueueCallbackRegistration(t *testing.T) {
+	t.Run("RegistersCallbacks", func(t *testing.T) {
+		var wg sync.WaitGroup
+		var s stubLogsService
+		var called bool
+
+		// Mock the PutLogEvents method to verify the batch has callbacks registered
+		s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+			called = true
+			return &cloudwatchlogs.PutLogEventsOutput{}, nil
+		}
+
+		mockSender := &mockSender{}
+		mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
+			batch := args.Get(0).(*logEventBatch)
+
+			assert.NotEmpty(t, batch.doneCallbacks, "Regular callbacks should be registered")
+			assert.Empty(t, batch.stateCallbacks, "State callbacks should not be registered")
+
+			s.PutLogEvents(batch.build())
+		}).Return()
+
+		logger := testutil.NewNopLogger()
+		stop := make(chan struct{})
+		q := &queue{
+			target:          Target{"G", "S", util.StandardLogGroupClass, -1},
+			logger:          logger,
+			converter:       newConverter(logger, Target{"G", "S", util.StandardLogGroupClass, -1}),
+			batch:           newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1}, nil),
+			sender:          mockSender,
+			eventsCh:        make(chan logs.LogEvent, 100),
+			flushCh:         make(chan struct{}),
+			resetTimerCh:    make(chan struct{}),
+			flushTimer:      time.NewTimer(10 * time.Millisecond),
+			stop:            stop,
+			startNonBlockCh: make(chan struct{}),
+			wg:              &wg,
+		}
+		q.flushTimeout.Store(10 * time.Millisecond)
+
+		q.batch.append(newLogEvent(time.Now(), "test message", nil))
+		q.send()
+
+		mockSender.AssertExpectations(t)
+		assert.True(t, called, "PutLogEvents should have been called")
+	})
+
+	t.Run("RegistersStateCallbacksForStatefulEvents", func(t *testing.T) {
+		var wg sync.WaitGroup
+
+		mrq := &mockRangeQueue{}
+		mrq.On("ID").Return("test-queue")
+		mrq.On("Enqueue", mock.Anything).Return()
+
+		mockSender := &mockSender{}
+		mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
+			batch := args.Get(0).(*logEventBatch)
+
+			assert.NotEmpty(t, batch.doneCallbacks, "Regular callbacks should be registered")
+			assert.NotEmpty(t, batch.stateCallbacks, "State callbacks should be registered")
+
+			batcher, ok := batch.batchers["test-queue"]
+			assert.True(t, ok, "Batch should have a batcher for our queue")
+			assert.NotNil(t, batcher, "Batcher should not be nil")
+		}).Return()
+
+		logger := testutil.NewNopLogger()
+		stop := make(chan struct{})
+		q := &queue{
+			target:          Target{"G", "S", util.StandardLogGroupClass, -1},
+			logger:          logger,
+			converter:       newConverter(logger, Target{"G", "S", util.StandardLogGroupClass, -1}),
+			batch:           newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1}, nil),
+			sender:          mockSender,
+			eventsCh:        make(chan logs.LogEvent, 100),
+			flushCh:         make(chan struct{}),
+			resetTimerCh:    make(chan struct{}),
+			flushTimer:      time.NewTimer(10 * time.Millisecond),
+			stop:            stop,
+			startNonBlockCh: make(chan struct{}),
+			wg:              &wg,
+		}
+		q.flushTimeout.Store(10 * time.Millisecond)
+
+		event := newStubStatefulLogEvent("test message", time.Now(), state.NewRange(10, 20), mrq)
+
+		convertedEvent := q.converter.convert(event)
+		q.batch.append(convertedEvent)
+
+		q.send()
+
+		mockSender.AssertExpectations(t)
+	})
 }
