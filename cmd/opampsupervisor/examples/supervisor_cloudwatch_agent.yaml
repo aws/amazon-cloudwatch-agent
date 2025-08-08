@@ -55,10 +55,10 @@ agent:
   passthrough_logs: ${OPAMP_PASSTHROUGH_LOGS:-false}
   use_hup_config_reload: ${OPAMP_USE_HUP_RELOAD:-false}
   
-  # Optional: Additional arguments for CloudWatch Agent
+  # Arguments for CloudWatch Agent binary
   args:
-    - "-c"
-    - "${CWA_CONFIG_FILE:-/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json}"
+    - "--config"
+    - "${CWA_CONFIG_FILE:-/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml}"
   
   # Environment variables for CloudWatch Agent
   env:

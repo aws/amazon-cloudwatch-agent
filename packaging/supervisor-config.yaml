@@ -18,9 +18,5 @@ agent:
   executable: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
   config_files:
     - /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml
-  args:
-    - "-c"
-    - "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
-
 storage:
   directory: /opt/aws/amazon-cloudwatch-agent/logs
