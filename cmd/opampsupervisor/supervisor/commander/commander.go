@@ -319,22 +319,6 @@ func (c *Commander) Exited() <-chan struct{} {
 
 // Pid returns Agent process PID if it is started or 0 if it is not.
 func (c *Commander) Pid() int {
-	// For CloudWatch agent, get the actual daemon PID
-	if c.isCloudWatchAgent() && c.running.Load() == 1 {
-		// Try to get the actual daemon PID from the control script
-		ctlPath := c.cfg.Executable
-		if filepath.Base(c.cfg.Executable) == "amazon-cloudwatch-agent" {
-			ctlPath = filepath.Join(filepath.Dir(c.cfg.Executable), "amazon-cloudwatch-agent-ctl")
-		}
-		statusCmd := exec.Command(ctlPath, "-a", "query")
-		statusCmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
-		if err := statusCmd.Run(); err == nil {
-			// Return a placeholder PID to indicate it's running
-			return 1
-		}
-		return 0
-	}
-	
 	if c.cmd == nil || c.cmd.Process == nil {
 		return 0
 	}
@@ -362,10 +346,7 @@ func (c *Commander) Stop(ctx context.Context) error {
 		return nil
 	}
 
-	// Handle CloudWatch Agent specific shutdown
-	if c.isCloudWatchAgent() {
-		return c.stopCloudWatchAgent(ctx)
-	}
+
 
 	pid := c.cmd.Process.Pid
 	c.logger.Debug("sending shutdown signal to agent process", zap.Int("pid", pid))
@@ -417,19 +398,7 @@ func (c *Commander) isCloudWatchAgent() bool {
 
 // startCloudWatchAgent starts CloudWatch Agent with proper handling
 func (c *Commander) startCloudWatchAgent(ctx context.Context, args []string) error {
-	// For CloudWatch agent binary, use the control script
-	if filepath.Base(c.cfg.Executable) == "amazon-cloudwatch-agent" {
-		// Use control script instead of binary directly
-		ctlPath := filepath.Join(filepath.Dir(c.cfg.Executable), "amazon-cloudwatch-agent-ctl")
-		return c.startCloudWatchAgentWithCtl(ctx, ctlPath, args)
-	}
-	
-	// If already using control script
-	if filepath.Base(c.cfg.Executable) == "amazon-cloudwatch-agent-ctl" {
-		return c.startCloudWatchAgentWithCtl(ctx, c.cfg.Executable, args)
-	}
-	
-	// Direct binary execution for other cases
+	// Direct binary execution for CloudWatch agent
 	c.cmd = exec.CommandContext(ctx, c.cfg.Executable, args...) // #nosec G204
 	c.cmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
 	c.cmd.SysProcAttr = sysProcAttrs()
@@ -440,113 +409,6 @@ func (c *Commander) startCloudWatchAgent(ctx context.Context, args []string) err
 	return c.startNormal()
 }
 
-// startCloudWatchAgentWithCtl starts CloudWatch Agent using control script
-func (c *Commander) startCloudWatchAgentWithCtl(ctx context.Context, ctlPath string, args []string) error {
-	// Extract config file from args
-	configFile := ""
-	for i, arg := range args {
-		if arg == "--config" && i+1 < len(args) {
-			configFile = args[i+1]
-			break
-		}
-	}
-	
-	// Start the agent using control script
-	startArgs := []string{"-a", "start"}
-	if configFile != "" {
-		startArgs = append(startArgs, "-c", configFile)
-	}
-	
-	startCmd := exec.CommandContext(ctx, ctlPath, startArgs...)
-	startCmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
-	
-	if err := startCmd.Run(); err != nil {
-		return fmt.Errorf("failed to start CloudWatch agent: %w", err)
-	}
-	
-	// Create a dummy process to monitor the daemon
-	c.cmd = &exec.Cmd{}
-	c.running.Store(1)
-	
-	// Monitor the daemon status
-	go c.watchCloudWatchDaemon()
-	
-	return nil
-}
 
-// watchCloudWatchDaemon monitors the CloudWatch agent daemon
-func (c *Commander) watchCloudWatchDaemon() {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	
-	for {
-		select {
-		case <-ticker.C:
-			// Check if daemon is running
-			ctlPath := c.cfg.Executable
-			if filepath.Base(c.cfg.Executable) == "amazon-cloudwatch-agent" {
-				ctlPath = filepath.Join(filepath.Dir(c.cfg.Executable), "amazon-cloudwatch-agent-ctl")
-			}
-			statusCmd := exec.Command(ctlPath, "-a", "query")
-			statusCmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
-			if err := statusCmd.Run(); err != nil {
-				// Daemon stopped
-				c.running.Store(0)
-				c.doneCh <- struct{}{}
-				c.exitCh <- struct{}{}
-				return
-			}
-		case <-c.doneCh:
-			return
-		}
-	}
-}
 
-// stopCloudWatchAgent stops CloudWatch Agent with proper handling
-func (c *Commander) stopCloudWatchAgent(ctx context.Context) error {
-	c.logger.Debug("stopping CloudWatch agent")
 
-	// If using CloudWatch agent, use control script to stop
-	if c.isCloudWatchAgent() {
-		ctlPath := c.cfg.Executable
-		if filepath.Base(c.cfg.Executable) == "amazon-cloudwatch-agent" {
-			ctlPath = filepath.Join(filepath.Dir(c.cfg.Executable), "amazon-cloudwatch-agent-ctl")
-		}
-		stopCmd := exec.CommandContext(ctx, ctlPath, "-a", "stop")
-		stopCmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
-		if err := stopCmd.Run(); err != nil {
-			c.logger.Debug("Control script stop failed", zap.Error(err))
-			return err
-		}
-		c.running.Store(0)
-		return nil
-	}
-
-	// Direct process management
-	if c.cmd == nil || c.cmd.Process == nil {
-		return nil
-	}
-	
-	pid := c.cmd.Process.Pid
-	c.logger.Debug("stopping CloudWatch agent process", zap.Int("pid", pid))
-
-	if err := sendShutdownSignal(c.cmd.Process); err != nil {
-		return err
-	}
-
-	waitCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	var innerErr error
-	go func() {
-		<-waitCtx.Done()
-		if errors.Is(waitCtx.Err(), context.DeadlineExceeded) {
-			c.logger.Debug("CloudWatch agent not responding, sending SIGKILL", zap.Int("pid", pid))
-			innerErr = c.cmd.Process.Signal(os.Kill)
-		}
-	}()
-
-	<-c.doneCh
-	c.running.Store(0)
-	return innerErr
-}

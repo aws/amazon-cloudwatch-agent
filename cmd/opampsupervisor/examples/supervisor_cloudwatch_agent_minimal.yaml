@@ -1,5 +1,4 @@
 # Minimal CloudWatch Agent OpAMP Supervisor Configuration
-# For customers who want basic OpAMP management
 
 server:
   endpoint: wss://opamp.monitoring.amazonaws.com/v1/opamp
@@ -14,6 +13,6 @@ agent:
   executable: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
   config_files:
     - /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml
-    
+
 storage:
-  directory: /opt/aws/amazon-cloudwatch-agent/var/opamp
+  directory: ./storage

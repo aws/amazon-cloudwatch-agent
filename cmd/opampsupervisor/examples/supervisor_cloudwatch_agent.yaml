@@ -1,5 +1,5 @@
 # Amazon CloudWatch Agent OpAMP Supervisor Configuration
-# This configuration enables OpAMP management for CloudWatch Agent
+
 
 server:
   # OpAMP server endpoint - customers can modify this to point to their OpAMP server
@@ -69,7 +69,7 @@ agent:
 
 storage:
   # Directory for supervisor state and logs
-  directory: ${OPAMP_STORAGE_DIR:-/opt/aws/amazon-cloudwatch-agent/var/opamp}
+  directory: ${OPAMP_STORAGE_DIR:-./storage}
 
 telemetry:
   logs:

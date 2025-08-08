@@ -338,7 +338,10 @@ func (s *Supervisor) Start() error {
 	// CloudWatch agent needs special handling
 	var flags []string
 	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		// CloudWatch agent needs both TOML config and OTEL config
+		tomlConfigPath := "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"
 		flags = []string{
+			"-config", tomlConfigPath,
 			"-otelconfig", s.agentConfigFilePath(),
 		}
 	} else {
@@ -447,8 +450,8 @@ func (s *Supervisor) getBootstrapInfo() (err error) {
 	// Check if this is a CloudWatch agent binary - if so, skip bootstrap
 	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
 		s.telemetrySettings.Logger.Info("Detected CloudWatch agent, skipping bootstrap")
-		// Set basic agent description for CloudWatch agent (will be updated after config load)
-		s.setAgentDescription(s.createBasicCloudWatchAgentDescription())
+		// Set comprehensive agent description for CloudWatch agent
+		s.setAgentDescription(s.createCloudWatchAgentDescription())
 		// Set empty available components for CloudWatch agent
 		s.setAvailableComponents(&protobufs.AvailableComponents{})
 		span.SetStatus(codes.Ok, "")

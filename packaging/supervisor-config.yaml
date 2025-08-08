@@ -1,5 +1,4 @@
 # Default CloudWatch Agent OpAMP Supervisor Configuration
-# Packaged with CloudWatch Agent installation
 
 server:
   endpoint: wss://127.0.0.1:4320/v1/opamp
@@ -19,4 +18,4 @@ agent:
   config_files:
     - /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.yaml
 storage:
-  directory: /opt/aws/amazon-cloudwatch-agent/logs
+  directory: ./storage
