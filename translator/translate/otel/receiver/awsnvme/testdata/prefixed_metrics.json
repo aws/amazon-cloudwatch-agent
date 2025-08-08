@@ -4,7 +4,9 @@
       "diskio": {
         "measurement": [
           "diskio_ebs_total_read_ops",
-          "diskio_ebs_total_write_ops"
+          "diskio_ebs_total_write_ops",
+          "diskio_instance_store_total_read_ops",
+          "diskio_instance_store_total_write_ops"
         ]
       }
     }

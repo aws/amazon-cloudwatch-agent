@@ -24,3 +24,21 @@ metrics:
     enabled: false
   diskio_ebs_volume_queue_length:
     enabled: false
+  diskio_instance_store_total_read_ops:
+    enabled: true
+  diskio_instance_store_total_write_ops:
+    enabled: true
+  diskio_instance_store_performance_exceeded_iops:
+    enabled: false
+  diskio_instance_store_performance_exceeded_tp:
+    enabled: false
+  diskio_instance_store_total_read_bytes:
+    enabled: false
+  diskio_instance_store_total_read_time:
+    enabled: false
+  diskio_instance_store_total_write_bytes:
+    enabled: false
+  diskio_instance_store_total_write_time:
+    enabled: false
+  diskio_instance_store_volume_queue_length:
+    enabled: false
