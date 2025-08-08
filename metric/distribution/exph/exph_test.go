@@ -63,7 +63,7 @@ func TestSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			exph := NewExpHistogramDistribution()
+			exph := newExpHistogramDistribution()
 			exph.positiveBuckets = map[int]uint64{}
 			exph.negativeBuckets = map[int]uint64{}
 			exph.zeroCount = tt.zeroCount
@@ -92,7 +92,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "positive buckets",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.positiveBuckets = make(map[int]uint64, 10)
 				for i := range 10 {
@@ -110,7 +110,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "positive buckets w/ some empty",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.positiveBuckets = make(map[int]uint64, 10)
 				for i := range 10 {
@@ -130,7 +130,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "negative buckets",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.negativeBuckets = make(map[int]uint64, 10)
 				for i := range 10 {
@@ -148,7 +148,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "negative buckets w/ some empty",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.negativeBuckets = make(map[int]uint64, 10)
 				for i := range 10 {
@@ -168,7 +168,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "zero bucket",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.zeroCount = 10
 				return exph
@@ -183,7 +183,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "positive, negative, and zero buckets",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.positiveBuckets = make(map[int]uint64, 120)
 				exph.negativeBuckets = make(map[int]uint64, 120)
@@ -257,7 +257,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "positive scale",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 2
 				exph.positiveBuckets = make(map[int]uint64, 10)
 				for i := range 10 {
@@ -281,7 +281,7 @@ func TestValuesAndCounts(t *testing.T) {
 		{
 			name: "negative scale",
 			histogram: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = -3
 				exph.positiveBuckets = make(map[int]uint64, 10)
 				for i := range 10 {
@@ -325,7 +325,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "zero bucket",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.max = 0
 				exph.min = 0
@@ -334,7 +334,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.max = 0
 				exph.min = 0
@@ -343,7 +343,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.scale = 0
 				exph.max = 0
 				exph.min = 0
@@ -355,7 +355,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "positive, non-overlapping buckets",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 48
 				exph.min = 2
 				exph.sampleCount = 21
@@ -367,7 +367,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 750
 				exph.min = 96
 				exph.sampleCount = 10
@@ -379,7 +379,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 750
 				exph.min = 2
 				exph.sampleCount = 31
@@ -394,7 +394,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "positive, overlapping buckets",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 1100
 				exph.min = 2
 				exph.sampleCount = 55
@@ -406,7 +406,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 48
 				exph.min = 1
 				exph.sampleCount = 21
@@ -418,7 +418,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 1100
 				exph.min = 1
 				exph.sampleCount = 76
@@ -433,7 +433,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "negative, non-overlapping buckets",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -2
 				exph.min = -48
 				exph.sampleCount = 21
@@ -445,7 +445,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -96
 				exph.min = -750
 				exph.sampleCount = 10
@@ -457,7 +457,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -2
 				exph.min = -750
 				exph.sampleCount = 31
@@ -472,7 +472,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "negative, overlapping buckets",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -2
 				exph.min = -1100
 				exph.sampleCount = 55
@@ -484,7 +484,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -1
 				exph.min = -48
 				exph.sampleCount = 21
@@ -496,7 +496,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -1
 				exph.min = -1100
 				exph.sampleCount = 76
@@ -511,7 +511,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "positive and negative, non-overlapping",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 1100
 				exph.min = 2
 				exph.sampleCount = 55
@@ -523,7 +523,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = -2
 				exph.min = -2500
 				exph.sampleCount = 66
@@ -535,7 +535,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 1100
 				exph.min = -2500
 				exph.sampleCount = 121
@@ -553,7 +553,7 @@ func TestAddDistribution(t *testing.T) {
 		{
 			name: "positive, negative, and zero buckets, non-overlapping and overlapping",
 			exph1: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 1100
 				exph.min = -2500
 				exph.sampleCount = 138
@@ -569,7 +569,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			exph2: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 4200
 				exph.min = -600
 				exph.sampleCount = 118
@@ -585,7 +585,7 @@ func TestAddDistribution(t *testing.T) {
 				return exph
 			}(),
 			expectedExph: func() *ExpHistogramDistribution {
-				exph := NewExpHistogramDistribution()
+				exph := newExpHistogramDistribution()
 				exph.max = 4200
 				exph.min = -2500
 				exph.sampleCount = 256
@@ -612,7 +612,7 @@ func TestAddDistribution(t *testing.T) {
 	}
 
 	t.Run("different scales", func(t *testing.T) {
-		exph1 := NewExpHistogramDistribution()
+		exph1 := newExpHistogramDistribution()
 		exph1.scale = 1
 		exph1.max = 48
 		exph1.min = 2
@@ -622,7 +622,7 @@ func TestAddDistribution(t *testing.T) {
 			0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6,
 		}
 
-		exph2 := NewExpHistogramDistribution()
+		exph2 := newExpHistogramDistribution()
 		exph2.scale = 0
 		exph2.max = 48
 		exph2.min = 2
@@ -666,7 +666,7 @@ func BenchmarkConvertFromOtel(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		h := NewExpHistogramDistribution()
+		h := newExpHistogramDistribution()
 		h.ConvertFromOtel(histogramDP, "count")
 	}
 }

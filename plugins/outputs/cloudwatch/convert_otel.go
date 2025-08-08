@@ -138,8 +138,9 @@ func convertOtelHistogramDataPoints(
 			entity:              entity,
 		}
 		// Assume function pointer is valid.
-		ad.distribution = distribution.NewDistribution()
-		ad.distribution.ConvertFromOtel(dp, unit)
+		classic := distribution.NewClassicDistribution()
+		classic.ConvertFromOtel(dp, unit)
+		ad.distribution = classic
 		datums = append(datums, &ad)
 	}
 	return datums
@@ -174,8 +175,9 @@ func convertOtelExponentialHistogramDataPoints(
 			entity:              entity,
 		}
 		// Assume function pointer is valid.
-		ad.expHistDistribution = exph.NewExpHistogramDistribution()
-		ad.expHistDistribution.ConvertFromOtel(dp, unit)
+		exp := exph.NewExponentialDistribution()
+		exp.ConvertFromOtel(dp, unit)
+		ad.distribution = exp
 		datums = append(datums, &ad)
 	}
 	return datums
