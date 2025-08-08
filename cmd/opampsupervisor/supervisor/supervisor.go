@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -329,12 +330,26 @@ func (s *Supervisor) Start() error {
 		return fmt.Errorf("failed loading initial config: %w", err)
 	}
 
-	flags := []string{
-		"--config", s.agentConfigFilePath(),
+	// Set agent description after config is loaded for CloudWatch agent
+	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		s.setAgentDescription(s.createCloudWatchAgentDescription())
 	}
-	featureGateFlag := s.getFeatureGateFlag()
-	if len(featureGateFlag) > 0 {
-		flags = append(flags, featureGateFlag...)
+
+	// CloudWatch agent needs special handling
+	var flags []string
+	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		flags = []string{
+			"-otelconfig", s.agentConfigFilePath(),
+		}
+	} else {
+		// Standard collector format
+		flags = []string{
+			"--config", s.agentConfigFilePath(),
+		}
+		featureGateFlag := s.getFeatureGateFlag()
+		if len(featureGateFlag) > 0 {
+			flags = append(flags, featureGateFlag...)
+		}
 	}
 	s.commander, err = commander.NewCommander(
 		s.telemetrySettings.Logger,
@@ -432,27 +447,10 @@ func (s *Supervisor) getBootstrapInfo() (err error) {
 	// Check if this is a CloudWatch agent binary - if so, skip bootstrap
 	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
 		s.telemetrySettings.Logger.Info("Detected CloudWatch agent, skipping bootstrap")
-		// Set dummy agent description for CloudWatch agent
-		s.setAgentDescription(&protobufs.AgentDescription{
-			IdentifyingAttributes: []*protobufs.KeyValue{
-				{
-					Key: string(semconv.ServiceNameKey),
-					Value: &protobufs.AnyValue{
-						Value: &protobufs.AnyValue_StringValue{
-							StringValue: "amazon-cloudwatch-agent",
-						},
-					},
-				},
-				{
-					Key: string(semconv.ServiceInstanceIDKey),
-					Value: &protobufs.AnyValue{
-						Value: &protobufs.AnyValue_StringValue{
-							StringValue: s.persistentState.InstanceID.String(),
-						},
-					},
-				},
-			},
-		})
+		// Set basic agent description for CloudWatch agent (will be updated after config load)
+		s.setAgentDescription(s.createBasicCloudWatchAgentDescription())
+		// Set empty available components for CloudWatch agent
+		s.setAvailableComponents(&protobufs.AvailableComponents{})
 		span.SetStatus(codes.Ok, "")
 		return nil
 	}
@@ -1320,6 +1318,11 @@ func (s *Supervisor) setupOwnTelemetry(_ context.Context, settings *protobufs.Co
 		return
 	}
 
+	// Update agent description for CloudWatch agent when config changes
+	if configChanged && strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		s.setAgentDescription(s.createCloudWatchAgentDescription())
+	}
+
 	return configChanged
 }
 
@@ -1375,6 +1378,11 @@ func (s *Supervisor) composeMergedConfig(incomingConfig *protobufs.AgentRemoteCo
 	if oldConfigState == nil || !oldConfigState.(*configState).equal(newConfigState) {
 		s.telemetrySettings.Logger.Debug("Merged config changed.")
 		configChanged = true
+		
+		// Update agent description for CloudWatch agent when config changes
+		if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+			s.setAgentDescription(s.createCloudWatchAgentDescription())
+		}
 	}
 
 	return configChanged, nil
@@ -1948,6 +1956,210 @@ func (*Supervisor) findRandomPort() (int, error) {
 func (s *Supervisor) getTracer() trace.Tracer {
 	tracer := s.telemetrySettings.TracerProvider.Tracer("github.com/open-telemetry/opentelemetry-collector-contrib/cmd/opampsupervisor")
 	return tracer
+}
+
+// getOSDescription returns OS description similar to what the extension reports
+func (s *Supervisor) getOSDescription() string {
+	if runtime.GOOS == "linux" {
+		if data, err := os.ReadFile("/etc/os-release"); err == nil {
+			lines := strings.Split(string(data), "\n")
+			for _, line := range lines {
+				if strings.HasPrefix(line, "PRETTY_NAME=") {
+					return strings.Trim(strings.TrimPrefix(line, "PRETTY_NAME="), `"`)
+				}
+			}
+		}
+	}
+	return runtime.GOOS
+}
+
+// getConfigAttributes extracts telemetry resource attributes from agent config
+func (s *Supervisor) getConfigAttributes() map[string]string {
+	cfgStateInterface := s.cfgState.Load()
+	if cfgStateInterface == nil {
+		return map[string]string{}
+	}
+	cfgState, ok := cfgStateInterface.(*configState)
+	if !ok || cfgState == nil {
+		return map[string]string{}
+	}
+	
+	k := koanf.New("::")
+	if err := k.Load(rawbytes.Provider([]byte(cfgState.mergedConfig)), yaml.Parser()); err != nil {
+		return map[string]string{}
+	}
+	
+	// Try opamp extension config first
+	opampAttrs := k.StringMap("extensions.opamp.agent_description.non_identifying_attributes")
+	if len(opampAttrs) > 0 {
+		s.telemetrySettings.Logger.Debug("Using opamp extension attributes", zap.Any("attrs", opampAttrs))
+		return opampAttrs
+	}
+	
+	// Fallback to telemetry resource
+	resourceMap := k.StringMap("service.telemetry.resource")
+	s.telemetrySettings.Logger.Debug("Using telemetry resource attributes", zap.Any("attrs", resourceMap))
+	return resourceMap
+}
+
+// getAttrOrDefault returns config attribute value or default
+func (s *Supervisor) getAttrOrDefault(attrs map[string]string, key, defaultVal string) string {
+	if val, ok := attrs[key]; ok && val != "" {
+		return val
+	}
+	return defaultVal
+}
+
+// createBasicCloudWatchAgentDescription creates a basic agent description for CloudWatch Agent during bootstrap
+func (s *Supervisor) createBasicCloudWatchAgentDescription() *protobufs.AgentDescription {
+	hostname, _ := os.Hostname()
+	version := "unknown"
+	
+	// Try to read version from CWAGENT_VERSION file
+	if versionBytes, err := os.ReadFile(filepath.Join(filepath.Dir(s.config.Agent.Executable), "CWAGENT_VERSION")); err == nil {
+		version = strings.TrimSpace(string(versionBytes))
+	}
+	
+	return &protobufs.AgentDescription{
+		IdentifyingAttributes: []*protobufs.KeyValue{
+			{
+				Key: string(semconv.ServiceNameKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: "CWAgent",
+					},
+				},
+			},
+			{
+				Key: string(semconv.ServiceInstanceIDKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.persistentState.InstanceID.String(),
+					},
+				},
+			},
+			{
+				Key: string(semconv.ServiceVersionKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: version,
+					},
+				},
+			},
+		},
+		NonIdentifyingAttributes: []*protobufs.KeyValue{
+			{
+				Key: "description",
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: "OpAMP Supervisor for Amazon CloudWatch Agent",
+					},
+				},
+			},
+			{
+				Key: string(semconv.HostNameKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: hostname,
+					},
+				},
+			},
+		},
+	}
+}
+
+// createCloudWatchAgentDescription creates a comprehensive agent description for CloudWatch Agent
+func (s *Supervisor) createCloudWatchAgentDescription() *protobufs.AgentDescription {
+	hostname, _ := os.Hostname()
+	version := "unknown"
+	osDesc := s.getOSDescription()
+	
+	// Try to read version from CWAGENT_VERSION file
+	if versionBytes, err := os.ReadFile(filepath.Join(filepath.Dir(s.config.Agent.Executable), "CWAGENT_VERSION")); err == nil {
+		version = strings.TrimSpace(string(versionBytes))
+	}
+	
+	// Try to get attributes from agent config
+	configAttrs := s.getConfigAttributes()
+	
+	return &protobufs.AgentDescription{
+		IdentifyingAttributes: []*protobufs.KeyValue{
+			{
+				Key: string(semconv.ServiceNameKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: "CWAgent",
+					},
+				},
+			},
+			{
+				Key: string(semconv.ServiceInstanceIDKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.persistentState.InstanceID.String(),
+					},
+				},
+			},
+			{
+				Key: string(semconv.ServiceVersionKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: version,
+					},
+				},
+			},
+		},
+		NonIdentifyingAttributes: []*protobufs.KeyValue{
+			{
+				Key: "agent.name",
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.getAttrOrDefault(configAttrs, "agent.name", "CWAgent"),
+					},
+				},
+			},
+			{
+				Key: "description",
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.getAttrOrDefault(configAttrs, "description", "OpAMP Supervisor for Amazon CloudWatch Agent"),
+					},
+				},
+			},
+			{
+				Key: string(semconv.HostNameKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.getAttrOrDefault(configAttrs, "host.name", hostname),
+					},
+				},
+			},
+			{
+				Key: string(semconv.HostArchKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.getAttrOrDefault(configAttrs, "host.arch", runtime.GOARCH),
+					},
+				},
+			},
+			{
+				Key: string(semconv.OSTypeKey),
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.getAttrOrDefault(configAttrs, "os.type", runtime.GOOS),
+					},
+				},
+			},
+			{
+				Key: "os.description",
+				Value: &protobufs.AnyValue{
+					Value: &protobufs.AnyValue_StringValue{
+						StringValue: s.getAttrOrDefault(configAttrs, "os.description", osDesc),
+					},
+				},
+			},
+		},
+	}
 }
 
 // The default koanf behavior is to override lists in the config.
