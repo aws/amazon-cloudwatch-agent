@@ -58,7 +58,7 @@ type InstanceStoreMetrics struct {
 	Bounds                [32]struct {
 		Lower uint64
 		Upper uint64
-	}                                // 512B, 32 pairs
+	} // 512B, 32 pairs
 	ReadHistogramBins  [5][32]uint64 // 5 histograms, 32 bins each (256B per histogram)
 	WriteHistogramBins [5][32]uint64 // Same for write
 	ReservedArea       [888]byte

@@ -1,10 +1,15 @@
 {
+  "agent": {
+    "metrics_collection_interval": "60s"
+  },
   "metrics": {
     "metrics_collected": {
       "diskio": {
         "measurement": [
           "ebs_total_read_ops",
-          "ebs_total_write_ops"
+          "ebs_total_write_ops",
+          "instance_store_total_read_ops",
+          "instance_store_total_write_ops"
         ]
       }
     }

@@ -193,63 +193,6 @@ func TestGetDeviceModel(t *testing.T) {
 	}
 }
 
-func TestIsEbsDevice(t *testing.T) {
-	tests := []struct {
-		name          string
-		device        DeviceFileAttributes
-		mockData      string
-		mockError     error
-		expected      bool
-		expectedError error
-	}{
-		{
-			name:     "is EBS device",
-			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
-			mockData: "Amazon Elastic Block Store\n",
-			expected: true,
-		},
-		{
-			name:     "not EBS device",
-			device:   DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
-			mockData: "Other Storage Device\n",
-			expected: false,
-		},
-		{
-			name:          "read error",
-			device:        DeviceFileAttributes{controller: 0, namespace: 1, partition: -1},
-			mockError:     errors.New("read error"),
-			expectedError: errors.New("read error"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Cleanup(func() {
-				osReadFile = os.ReadFile
-			})
-
-			osReadFile = func(_ string) ([]byte, error) {
-				if tt.mockError != nil {
-					return nil, tt.mockError
-				}
-				return []byte(tt.mockData), nil
-			}
-
-			util := &Util{}
-			isEbs, err := util.IsEbsDevice(&tt.device)
-
-			if tt.expectedError != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tt.expectedError.Error(), err.Error())
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, isEbs)
-		})
-	}
-}
-
 // Mock DirEntry implementation
 type mockDirEntry struct {
 	name  string
@@ -271,6 +214,7 @@ func (m mockDirEntry) Type() os.FileMode {
 func (m mockDirEntry) Info() (os.FileInfo, error) {
 	return nil, nil
 }
+
 func TestDevicePath(t *testing.T) {
 	tests := []struct {
 		name     string

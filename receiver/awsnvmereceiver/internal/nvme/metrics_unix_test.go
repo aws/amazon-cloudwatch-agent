@@ -29,17 +29,23 @@ import (
 )
 
 func TestParseLogPage(t *testing.T) {
+	const (
+		instanceStoreMagic = 0xEC2C0D7E
+		ebsMagic           = 0x3C23B510
+	)
+
 	tests := []struct {
 		name    string
 		input   []byte
-		want    EBSMetrics
+		wantEBS *EBSMetrics
+		wantIS  *InstanceStoreMetrics
 		wantErr string
 	}{
 		{
-			name: "valid log page",
+			name: "valid EBS log page",
 			input: func() []byte {
 				metrics := EBSMetrics{
-					EBSMagic:              0x3C23B510,
+					EBSMagic:              ebsMagic,
 					ReadOps:               100,
 					WriteOps:              200,
 					ReadBytes:             1024,
@@ -51,12 +57,12 @@ func TestParseLogPage(t *testing.T) {
 				}
 				buf := new(bytes.Buffer)
 				if err := binary.Write(buf, binary.LittleEndian, metrics); err != nil {
-					t.Fatalf("failed to create test data: %v", err)
+					t.Fatalf("failed to create EBS test data: %v", err)
 				}
 				return buf.Bytes()
 			}(),
-			want: EBSMetrics{
-				EBSMagic:              0x3C23B510,
+			wantEBS: &EBSMetrics{
+				EBSMagic:              ebsMagic,
 				ReadOps:               100,
 				WriteOps:              200,
 				ReadBytes:             1024,
@@ -66,28 +72,82 @@ func TestParseLogPage(t *testing.T) {
 				EBSIOPSExceeded:       10,
 				EBSThroughputExceeded: 20,
 			},
-			wantErr: "",
 		},
 		{
-			name: "invalid magic number",
+			name: "invalid EBS magic number",
 			input: func() []byte {
 				metrics := EBSMetrics{
 					EBSMagic: 0x12345678,
 				}
 				buf := new(bytes.Buffer)
 				if err := binary.Write(buf, binary.LittleEndian, metrics); err != nil {
-					t.Fatalf("failed to create test data: %v", err)
+					t.Fatalf("failed to create invalid EBS test data: %v", err)
 				}
 				return buf.Bytes()
 			}(),
-			want:    EBSMetrics{},
 			wantErr: ErrInvalidEBSMagic.Error(),
+		},
+		{
+			name: "valid Instance Store log page",
+			input: func() []byte {
+				metrics := InstanceStoreMetrics{
+					Magic:                 instanceStoreMagic,
+					ReadOps:               111,
+					WriteOps:              222,
+					ReadBytes:             333,
+					WriteBytes:            444,
+					TotalReadTime:         555,
+					TotalWriteTime:        666,
+					EC2IOPSExceeded:       777,
+					EC2ThroughputExceeded: 888,
+					QueueLength:           999,
+				}
+				buf := new(bytes.Buffer)
+				if err := binary.Write(buf, binary.LittleEndian, metrics); err != nil {
+					t.Fatalf("failed to create Instance Store test data: %v", err)
+				}
+				return buf.Bytes()
+			}(),
+			wantIS: &InstanceStoreMetrics{
+				Magic:                 instanceStoreMagic,
+				ReadOps:               111,
+				WriteOps:              222,
+				ReadBytes:             333,
+				WriteBytes:            444,
+				TotalReadTime:         555,
+				TotalWriteTime:        666,
+				EC2IOPSExceeded:       777,
+				EC2ThroughputExceeded: 888,
+				QueueLength:           999,
+			},
+		},
+		{
+			name: "invalid Instance Store magic number",
+			input: func() []byte {
+				metrics := InstanceStoreMetrics{
+					Magic: 0x87654321,
+				}
+				buf := new(bytes.Buffer)
+				if err := binary.Write(buf, binary.LittleEndian, metrics); err != nil {
+					t.Fatalf("failed to create invalid Instance Store test data: %v", err)
+				}
+				return buf.Bytes()
+			}(),
+			wantErr: ErrInvalidInstanceStoreMagic.Error(),
 		},
 		{
 			name:    "empty data",
 			input:   []byte{},
-			want:    EBSMetrics{},
 			wantErr: ErrParseLogPage.Error(),
+		},
+		{
+			name: "unsupported magic",
+			input: func() []byte {
+				buf := make([]byte, 8)
+				binary.LittleEndian.PutUint64(buf, 0xDEADBEEFDEADBEEF)
+				return buf
+			}(),
+			wantErr: ErrUnsupportedMagic.Error(),
 		},
 	}
 
@@ -97,35 +157,35 @@ func TestParseLogPage(t *testing.T) {
 
 			if tt.wantErr != "" {
 				if err == nil {
-					t.Errorf("parseLogPage() error = nil, wantErr %v", tt.wantErr)
-					return
+					t.Fatalf("expected error %q, got nil", tt.wantErr)
 				}
 				if !strings.Contains(err.Error(), tt.wantErr) {
-					t.Errorf("parseLogPage() error = %v, wantErr %v", err, tt.wantErr)
-					return
+					t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Errorf("parseLogPage() unexpected error = %v", err)
-				return
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if got.EBSMagic != tt.want.EBSMagic {
-				t.Errorf("parseLogPage() magic number = %x, want %x", got.EBSMagic, tt.want.EBSMagic)
-			}
-			if got.ReadOps != tt.want.ReadOps {
-				t.Errorf("parseLogPage() ReadOps = %v, want %v", got.ReadOps, tt.want.ReadOps)
-			}
-			if got.WriteOps != tt.want.WriteOps {
-				t.Errorf("parseLogPage() WriteOps = %v, want %v", got.WriteOps, tt.want.WriteOps)
-			}
-			if got.ReadBytes != tt.want.ReadBytes {
-				t.Errorf("parseLogPage() ReadBytes = %v, want %v", got.ReadBytes, tt.want.ReadBytes)
-			}
-			if got.WriteBytes != tt.want.WriteBytes {
-				t.Errorf("parseLogPage() WriteBytes = %v, want %v", got.WriteBytes, tt.want.WriteBytes)
+			switch v := got.(type) {
+			case EBSMetrics:
+				if tt.wantEBS == nil {
+					t.Fatalf("expected non-EBS result, got EBSMetrics: %+v", v)
+				}
+				if v != *tt.wantEBS {
+					t.Errorf("EBSMetrics mismatch:\n got: %+v\nwant: %+v", v, *tt.wantEBS)
+				}
+			case InstanceStoreMetrics:
+				if tt.wantIS == nil {
+					t.Fatalf("expected non-InstanceStore result, got InstanceStoreMetrics: %+v", v)
+				}
+				if v != *tt.wantIS {
+					t.Errorf("InstanceStoreMetrics mismatch:\n got: %+v\nwant: %+v", v, *tt.wantIS)
+				}
+			default:
+				t.Fatalf("unexpected type: %T", v)
 			}
 		})
 	}

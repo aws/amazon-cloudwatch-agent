@@ -26,7 +26,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"syscall"
@@ -78,8 +77,6 @@ var (
 
 // GetMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
 func GetMetrics(devicePath string) (any, error) {
-	log.Println("Inside GetMetrics")
-	log.Println(devicePath)
 	data, err := getNVMEMetrics(devicePath)
 	if err != nil {
 		return nil, err
@@ -90,7 +87,6 @@ func GetMetrics(devicePath string) (any, error) {
 
 // getNVMEMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
 func getNVMEMetrics(devicePath string) ([]byte, error) {
-	log.Println("Inside getNVMEMetrics")
 	f, err := os.OpenFile(devicePath, os.O_RDWR, 0)
 	if err != nil {
 		return nil, fmt.Errorf("getNVMEMetrics: error opening device: %w", err)
@@ -107,7 +103,6 @@ func getNVMEMetrics(devicePath string) ([]byte, error) {
 
 // nvmeReadLogPage reads an NVMe log page via an ioctl system call.
 func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
-	log.Println("Inside nvmeReadLogPage")
 	data := make([]byte, 4096) // 4096 bytes is the length of the log page.
 	bufferLen := len(data)
 
@@ -124,10 +119,7 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 	}
 
 	status, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, nvmeIoctlAdminCmd, uintptr(unsafe.Pointer(&cmd)))
-	log.Println(status)
 	if errno != 0 {
-		log.Println("ioctl failed ")
-
 		return nil, fmt.Errorf("nvmeReadLogPage: ioctl error %w", errno)
 	}
 	if status != 0 {
@@ -138,8 +130,6 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 
 // parseLogPage parses the binary data from an EBS or Instance Store log page into the corresponding struct.
 func parseLogPage(data []byte) (any, error) {
-	log.Println("Inside parseLogPage")
-
 	if len(data) < 8 {
 		return nil, fmt.Errorf("%w: input too short", ErrParseLogPage)
 	}
@@ -147,11 +137,8 @@ func parseLogPage(data []byte) (any, error) {
 	magic64 := binary.LittleEndian.Uint64(data[0:8])
 	magic32 := binary.LittleEndian.Uint32(data[0:4])
 
-	log.Printf("magic64: 0x%X, magic32: 0x%X\n", magic64, magic32)
-
 	switch {
 	case magic64 == ebsMagic:
-		log.Println("DEBUG: Parsing as EBS metrics")
 		var metrics EBSMetrics
 		reader := bytes.NewReader(data)
 		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
@@ -163,7 +150,6 @@ func parseLogPage(data []byte) (any, error) {
 		return metrics, nil
 
 	case magic32 == instanceStoreMagic:
-		log.Println("DEBUG: Parsing as Instance Store metrics")
 		var metrics InstanceStoreMetrics
 		reader := bytes.NewReader(data)
 		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
