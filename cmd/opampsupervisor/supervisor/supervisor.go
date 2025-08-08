@@ -1163,6 +1163,12 @@ func (s *Supervisor) composeAgentConfigFiles(incomingConfig *protobufs.AgentRemo
 			continue
 		}
 
+		// Skip JSON config files for CloudWatch agent - they should not be merged into effective config
+		if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") && strings.HasSuffix(file, ".json") {
+			s.telemetrySettings.Logger.Debug("Skipping JSON config file from merge for CloudWatch agent", zap.String("file", file))
+			continue
+		}
+
 		cfgBytes, err := os.ReadFile(file)
 		if err != nil {
 			s.telemetrySettings.Logger.Error("Could not read local config file", zap.Error(err))
@@ -1272,11 +1278,30 @@ func (s *Supervisor) createEffectiveConfigMsg() *protobufs.EffectiveConfig {
 		}
 	}
 
+	configMap := map[string]*protobufs.AgentConfigFile{
+		"effective.yaml": {Body: []byte(cfgStr)}, // Main merged config
+	}
+
+	// For CloudWatch agent, include JSON and TOML configs from configured paths
+	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		// Add JSON configs from configured files
+		for _, file := range s.config.Agent.ConfigFiles {
+			if strings.HasSuffix(file, ".json") {
+				if jsonConfig, err := os.ReadFile(file); err == nil {
+					configMap[filepath.Base(file)] = &protobufs.AgentConfigFile{Body: jsonConfig}
+				}
+			}
+		}
+		
+		// Add TOML config if it exists
+		if tomlConfig, err := os.ReadFile("/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"); err == nil {
+			configMap["amazon-cloudwatch-agent.toml"] = &protobufs.AgentConfigFile{Body: tomlConfig}
+		}
+	}
+
 	cfg := &protobufs.EffectiveConfig{
 		ConfigMap: &protobufs.AgentConfigMap{
-			ConfigMap: map[string]*protobufs.AgentConfigFile{
-				"": {Body: []byte(cfgStr)},
-			},
+			ConfigMap: configMap,
 		},
 	}
 
