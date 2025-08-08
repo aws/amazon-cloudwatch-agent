@@ -54,20 +54,6 @@ type nvmePassthruCommand struct {
 	result      uint32
 }
 
-type Metrics struct {
-	ReadOps                            uint64
-	WriteOps                           uint64
-	ReadBytes                          uint64
-	WriteBytes                         uint64
-	TotalReadTime                      uint64
-	TotalWriteTime                     uint64
-	VolumePerformanceExceededIOPS      uint64
-	VolumePerformanceExceededTP        uint64
-	EC2InstancePerformanceExceededIOPS uint64
-	EC2InstancePerformanceExceededTP   uint64
-	QueueLength                        uint64
-}
-
 var (
 	ErrInvalidEBSMagic           = errors.New("invalid EBS magic number")
 	ErrInvalidInstanceStoreMagic = errors.New("invalid Instance Store magic number")

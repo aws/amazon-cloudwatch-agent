@@ -59,9 +59,8 @@ type InstanceStoreMetrics struct {
 		Lower uint64
 		Upper uint64
 	} // 512B, 32 pairs
-	ReadHistogramBins  [5][32]uint64 // 5 histograms, 32 bins each (256B per histogram)
-	WriteHistogramBins [5][32]uint64 // Same for write
-	ReservedArea       [888]byte
+	Histograms   [5]HistogramPair // <-- read/write alternating
+	ReservedArea [888]byte
 }
 
 type Histogram struct {
@@ -73,4 +72,9 @@ type HistogramBin struct {
 	Lower uint64
 	Upper uint64
 	Count uint64
+}
+
+type HistogramPair struct {
+	Read  [32]uint64
+	Write [32]uint64
 }

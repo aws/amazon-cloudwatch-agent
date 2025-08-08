@@ -184,6 +184,7 @@ The number of read and write operations waiting to be completed for Instance Sto
 
 ## Resource Attributes
 
+
 | Name | Description | Values | Enabled |
 | ---- | ----------- | ------ | ------- |
 | SerialId | Unique identifier to the Local Storage | Any Str | true |
