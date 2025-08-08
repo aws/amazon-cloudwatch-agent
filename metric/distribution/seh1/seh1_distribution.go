@@ -25,7 +25,7 @@ type SEH1Distribution struct {
 	unit        string
 }
 
-func NewSEH1Distribution() distribution.Distribution {
+func NewSEH1Distribution() distribution.ClassicDistribution {
 	return &SEH1Distribution{
 		maximum:     0, // negative number is not supported for now, so zero is the min value
 		minimum:     math.MaxFloat64,

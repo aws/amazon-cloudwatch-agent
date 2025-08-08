@@ -11,6 +11,8 @@ import (
 	"slices"
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 type ExpHistogramDistribution struct {
@@ -18,7 +20,7 @@ type ExpHistogramDistribution struct {
 	min             float64
 	sampleCount     float64
 	sum             float64
-	scale           int32
+	scale           int
 	positiveBuckets map[int]uint64 // map of bucket index to count
 	negativeBuckets map[int]uint64 // map of bucket index to count
 	zeroThreshold   float64
@@ -26,7 +28,11 @@ type ExpHistogramDistribution struct {
 	unit            string
 }
 
-func NewExpHistogramDistribution() *ExpHistogramDistribution {
+func NewExponentialDistribution() distribution.ExponentialDistribution {
+	return newExpHistogramDistribution()
+}
+
+func newExpHistogramDistribution() *ExpHistogramDistribution {
 	return &ExpHistogramDistribution{
 		max:             -math.MaxFloat64,
 		min:             math.MaxFloat64,
@@ -81,8 +87,8 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	})
 	for _, offsetIndex := range posOffsetIndicies {
 		counter := d.positiveBuckets[offsetIndex]
-		bucketBegin := LowerBoundary(offsetIndex, int(d.scale))
-		bucketEnd := LowerBoundary(offsetIndex+1, int(d.scale))
+		bucketBegin := LowerBoundary(offsetIndex, d.scale)
+		bucketEnd := LowerBoundary(offsetIndex+1, d.scale)
 		value := (bucketBegin + bucketEnd) / 2.0
 		values = append(values, value)
 		counts = append(counts, float64(counter))
@@ -97,8 +103,8 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	negOffsetIndicies := slices.Sorted(maps.Keys(d.negativeBuckets))
 	for _, offsetIndex := range negOffsetIndicies {
 		counter := d.negativeBuckets[offsetIndex]
-		bucketBegin := LowerBoundary(offsetIndex, int(d.scale))
-		bucketEnd := LowerBoundary(offsetIndex+1, int(d.scale))
+		bucketBegin := LowerBoundary(offsetIndex, d.scale)
+		bucketEnd := LowerBoundary(offsetIndex+1, d.scale)
 		value := -(bucketBegin + bucketEnd) / 2.0
 		values = append(values, value)
 		counts = append(counts, float64(counter))
@@ -107,7 +113,24 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	return values, counts
 }
 
-func (d *ExpHistogramDistribution) AddDistribution(from *ExpHistogramDistribution) {
+// weight is 1/samplingRate
+func (d *ExpHistogramDistribution) AddEntry(value float64, weight float64) error {
+	return d.AddEntryWithUnit(value, weight, "")
+}
+
+// weight is 1/samplingRate
+func (d *ExpHistogramDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+	return nil
+}
+
+func (d *ExpHistogramDistribution) AddDistribution(from distribution.Distribution) {
+
+	expFrom, ok := from.(*ExpHistogramDistribution)
+	if !ok {
+		log.Printf("E! The from distribution is not an exponential histogram distribution. Cannot add distributions: %v", from)
+		return
+	}
+
 	if from.SampleCount() <= 0 {
 		log.Printf("D! SampleCount should be larger than 0: %v", from.SampleCount())
 		return
@@ -115,35 +138,35 @@ func (d *ExpHistogramDistribution) AddDistribution(from *ExpHistogramDistributio
 
 	// some scales are compatible due to perfect subsetting (buckets of an exponential histogram map exactly into
 	// buckets with a lesser scale). for simplicity, deny adding distributions if the scales dont match
-	if from.scale != d.scale {
-		log.Printf("E! The from distribution scale is not compatible with the to distribution scale: from distribution scale %v, to distribution scale %v", from.scale, d.scale)
+	if expFrom.scale != d.scale {
+		log.Printf("E! The from distribution scale is not compatible with the to distribution scale: from distribution scale %v, to distribution scale %v", expFrom.scale, d.scale)
 		return
 	}
 
-	if from.zeroThreshold != d.zeroThreshold {
-		log.Printf("E! The from distribution zeroThreshold is not compatible with the to distribution zeroThreshold: from distribution zeroThreshold %v, to distribution zeroThreshold %v", from.zeroThreshold, d.zeroThreshold)
+	if expFrom.zeroThreshold != d.zeroThreshold {
+		log.Printf("E! The from distribution zeroThreshold is not compatible with the to distribution zeroThreshold: from distribution zeroThreshold %v, to distribution zeroThreshold %v", expFrom.zeroThreshold, d.zeroThreshold)
 		return
 	}
 
-	d.max = max(d.max, from.Maximum())
-	d.min = min(d.min, from.Minimum())
-	d.sampleCount += from.SampleCount()
-	d.sum += from.Sum()
+	d.max = max(d.max, expFrom.Maximum())
+	d.min = min(d.min, expFrom.Minimum())
+	d.sampleCount += expFrom.SampleCount()
+	d.sum += expFrom.Sum()
 
-	for i := range from.positiveBuckets {
-		d.positiveBuckets[i] += from.positiveBuckets[i]
+	for i := range expFrom.positiveBuckets {
+		d.positiveBuckets[i] += expFrom.positiveBuckets[i]
 	}
 
-	d.zeroCount += from.zeroCount
+	d.zeroCount += expFrom.zeroCount
 
-	for i := range from.negativeBuckets {
-		d.negativeBuckets[i] += from.negativeBuckets[i]
+	for i := range expFrom.negativeBuckets {
+		d.negativeBuckets[i] += expFrom.negativeBuckets[i]
 	}
 
 	if d.unit == "" {
-		d.unit = from.Unit()
-	} else if d.unit != from.Unit() && from.Unit() != "" {
-		log.Printf("D! Multiple units are detected: %s, %s", d.unit, from.Unit())
+		d.unit = expFrom.Unit()
+	} else if d.unit != expFrom.Unit() && expFrom.Unit() != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", d.unit, expFrom.Unit())
 	}
 
 }
@@ -152,7 +175,7 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 	positiveBuckets := dp.Positive()
 	negativeBuckets := dp.Negative()
 
-	d.scale = dp.Scale()
+	d.scale = int(dp.Scale())
 	d.unit = unit
 
 	d.max = dp.Max()
@@ -181,7 +204,7 @@ func (d *ExpHistogramDistribution) ConvertFromOtel(dp pmetric.ExponentialHistogr
 	}
 }
 
-func (d *ExpHistogramDistribution) Resize(_ int) []*ExpHistogramDistribution {
+func (d *ExpHistogramDistribution) Resize(_ int) []distribution.Distribution {
 	// TODO: split data points into separate PMD requests if the number of buckets exceeds the API limit
-	return []*ExpHistogramDistribution{d}
+	return []distribution.Distribution{d}
 }

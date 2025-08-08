@@ -420,13 +420,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
 
-	datums := []*cloudwatch.MetricDatum{}
+	var datums []*cloudwatch.MetricDatum
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
 
 	if metric.distribution != nil {
 		datums = c.buildMetricDatumDist(metric, dimensionsList)
-	} else if metric.expHistDistribution != nil {
-		datums = c.buildMetricDatumExph(metric, dimensionsList)
 	} else {
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
@@ -482,71 +480,6 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 
 		if len(values) == 0 {
 			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
-			continue
-		}
-
-		s := cloudwatch.StatisticSet{}
-		s.SetMaximum(dist.Maximum())
-		s.SetMinimum(dist.Minimum())
-		s.SetSampleCount(dist.SampleCount())
-		s.SetSum(dist.Sum())
-
-		// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
-		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
-		// the datasource does not provide a minimum and maximum value
-		if dist.Maximum() == 0 && dist.Minimum() == 0 {
-			distMin, distMax := minAndMax(values)
-			s.SetMinimum(distMin)
-			s.SetMaximum(distMax)
-		}
-
-		for index, dimensions := range dimensionsList {
-			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
-			//metric datum
-			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
-				continue
-			}
-
-			// Beware there may be many datums sharing pointers to the same
-			// strings for metric names, dimensions, etc.
-			// It is fine since at this point the values will not change.
-			datum := &cloudwatch.MetricDatum{
-				MetricName:        metric.MetricName,
-				Dimensions:        dimensions,
-				Timestamp:         metric.Timestamp,
-				Unit:              metric.Unit,
-				StorageResolution: metric.StorageResolution,
-				Values:            aws.Float64Slice(values),
-				Counts:            aws.Float64Slice(counts),
-				StatisticValues:   &s,
-			}
-			datums = append(datums, datum)
-		}
-	}
-	return datums
-}
-
-func (c *CloudWatch) buildMetricDatumExph(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
-	datums := []*cloudwatch.MetricDatum{}
-
-	if metric.expHistDistribution.Size() == 0 {
-		log.Printf("E! metric has an exponential histogram distribution with no entries, %s", *metric.MetricName)
-		return datums
-	}
-	if metric.expHistDistribution.Unit() != "" {
-		metric.SetUnit(metric.expHistDistribution.Unit())
-	}
-	exphDistList := metric.expHistDistribution.Resize(c.config.MaxValuesPerDatum)
-
-	for _, dist := range exphDistList {
-		values, counts := dist.ValuesAndCounts()
-		if len(values) != len(counts) {
-			log.Printf("E! metric has an exponential histogram distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
-			continue
-		}
-
-		if len(values) == 0 {
-			log.Printf("E! metric has an exponential histogram distribution with no entries, %s", *metric.MetricName)
 			continue
 		}
 

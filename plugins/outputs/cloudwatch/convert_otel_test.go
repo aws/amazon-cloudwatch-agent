@@ -195,18 +195,6 @@ func checkDatum(
 		// Refer to how createTestHistogram() sets them.
 		assert.Equal(t, values[0], counts[0])
 		assert.Equal(t, values[1], counts[1])
-	} else if d.expHistDistribution != nil {
-		// Verify distribution
-		assert.Equal(t, float64(histogramMax), d.expHistDistribution.Maximum())
-		assert.Equal(t, float64(histogramMin), d.expHistDistribution.Minimum())
-		assert.Equal(t, float64(histogramSum), d.expHistDistribution.Sum())
-		assert.Equal(t, float64(histogramCount), d.expHistDistribution.SampleCount())
-		values, counts := d.expHistDistribution.ValuesAndCounts()
-		assert.Equal(t, 7, len(values))
-		assert.Equal(t, 7, len(counts))
-		// Refer to how createTestExponentialHistogram() sets them.
-		assert.Equal(t, []float64{6.0, 3.0, 1.5, 0, -1.5, -3.0, -6.0}, values)
-		assert.Equal(t, []float64{1, 2, 4, 5, 4, 2, 1}, counts)
 	} else {
 		// Verify single metric value.
 		assert.Equal(t, metricValue, *d.Value)
@@ -239,9 +227,9 @@ func TestConvertOtelMetrics_Histogram(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		if i%2 == 0 {
 			//distribution.NewDistribution = seh1.NewSEH1Distribution
-			distribution.NewDistribution = regular.NewRegularDistribution
+			distribution.NewClassicDistribution = regular.NewRegularDistribution
 		} else {
-			distribution.NewDistribution = regular.NewRegularDistribution
+			distribution.NewClassicDistribution = regular.NewRegularDistribution
 		}
 		metrics := createTestHistogram(i, i, 0, "Bytes")
 		datums := ConvertOtelMetrics(metrics)
@@ -265,8 +253,27 @@ func TestConvertOtelMetrics_ExponentialHistogram(t *testing.T) {
 
 		// Verify dimensions per metric.
 		for _, d := range datums {
+			assert.True(t, strings.HasPrefix(*d.MetricName, namePrefix))
+			assert.Equal(t, "Bytes", *d.Unit)
 			assert.Equal(t, 0, len(d.Dimensions))
-			checkDatum(t, d, "Bytes", i)
+			// Verify distribution
+			assert.Equal(t, float64(histogramMax), d.distribution.Maximum())
+			assert.Equal(t, float64(histogramMin), d.distribution.Minimum())
+			assert.Equal(t, float64(histogramSum), d.distribution.Sum())
+			assert.Equal(t, float64(histogramCount), d.distribution.SampleCount())
+			values, counts := d.distribution.ValuesAndCounts()
+			assert.Equal(t, 7, len(values))
+			assert.Equal(t, 7, len(counts))
+			// Refer to how createTestExponentialHistogram() sets them.
+			assert.Equal(t, []float64{6.0, 3.0, 1.5, 0, -1.5, -3.0, -6.0}, values)
+			assert.Equal(t, []float64{1, 2, 4, 5, 4, 2, 1}, counts)
+
+			// Assuming unit test does not take more than 1 s.
+			assert.Less(t, time.Since(*d.Timestamp), time.Second)
+			for _, dim := range d.Dimensions {
+				assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
+				assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))
+			}
 		}
 	}
 }
@@ -999,12 +1006,12 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 
 			assert.Equal(t, 1, len(dps))
 			for i, expectedDP := range tc.expected {
-				assert.Equal(t, dps[i].expHistDistribution.Maximum(), *expectedDP.StatisticValues.Maximum, "datapoint Maximum mismatch at index %d", i)
-				assert.Equal(t, dps[i].expHistDistribution.Minimum(), *expectedDP.StatisticValues.Minimum, "datapoint Minimum mismatch at index %d", i)
-				assert.Equal(t, dps[i].expHistDistribution.Sum(), *expectedDP.StatisticValues.Sum, "datapoint Sum mismatch at index %d", i)
-				assert.Equal(t, dps[i].expHistDistribution.SampleCount(), *expectedDP.StatisticValues.SampleCount, "datapoint Samplecount mismatch at index %d", i)
+				assert.Equal(t, dps[i].distribution.Maximum(), *expectedDP.StatisticValues.Maximum, "datapoint Maximum mismatch at index %d", i)
+				assert.Equal(t, dps[i].distribution.Minimum(), *expectedDP.StatisticValues.Minimum, "datapoint Minimum mismatch at index %d", i)
+				assert.Equal(t, dps[i].distribution.Sum(), *expectedDP.StatisticValues.Sum, "datapoint Sum mismatch at index %d", i)
+				assert.Equal(t, dps[i].distribution.SampleCount(), *expectedDP.StatisticValues.SampleCount, "datapoint Samplecount mismatch at index %d", i)
 
-				values, counts := dps[i].expHistDistribution.ValuesAndCounts()
+				values, counts := dps[i].distribution.ValuesAndCounts()
 				assert.Equal(t, tc.expectedValues[i], values, "datapoint values mismatch at index %d", i)
 				assert.Equal(t, tc.expectedCounts[i], counts, "datapoint counts mismatch at index %d", i)
 			}

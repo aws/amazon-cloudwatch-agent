@@ -71,9 +71,9 @@ func publishJitter(publishInterval time.Duration) time.Duration {
 
 func setNewDistributionFunc(maxValuesPerDatumLimit int) {
 	if maxValuesPerDatumLimit >= maxValuesPerDatum {
-		distribution.NewDistribution = seh1.NewSEH1Distribution
+		distribution.NewClassicDistribution = seh1.NewSEH1Distribution
 	} else {
-		distribution.NewDistribution = regular.NewRegularDistribution
+		distribution.NewClassicDistribution = regular.NewRegularDistribution
 	}
 }
 

@@ -24,7 +24,7 @@ type RegularDistribution struct {
 	unit        string
 }
 
-func NewRegularDistribution() distribution.Distribution {
+func NewRegularDistribution() distribution.ClassicDistribution {
 	return &RegularDistribution{
 		maximum:     0, // negative number is not supported for now, so zero is the min value
 		minimum:     math.MaxFloat64,
