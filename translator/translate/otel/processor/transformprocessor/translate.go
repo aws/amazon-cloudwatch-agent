@@ -32,6 +32,8 @@ func NewTranslatorWithName(name string) common.ComponentTranslator {
 	return &translator{name, transformprocessor.NewFactory()}
 }
 
+
+
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }

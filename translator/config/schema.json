@@ -108,8 +108,7 @@
         "metrics_destinations": {
           "type": "object",
           "properties": {
-            "cloudwatch": {
-            },
+            "cloudwatch": {},
             "amp": {
               "$ref": "#/definitions/metricsDefinition/definitions/ampDefinition"
             }
@@ -137,6 +136,9 @@
             },
             "swap": {
               "$ref": "#/definitions/metricsDefinition/definitions/swapDefinitions"
+            },
+            "load": {
+              "$ref": "#/definitions/metricsDefinition/definitions/loadDefinitions"
             },
             "mem": {
               "$ref": "#/definitions/metricsDefinition/definitions/memDefinitions"
@@ -166,7 +168,7 @@
               "$ref": "#/definitions/otlpDefinitions"
             },
             "prometheus": {
-             "$ref": "#/definitions/metricsDefinition/definitions/prometheusDefinitions"
+              "$ref": "#/definitions/metricsDefinition/definitions/prometheusDefinitions"
             }
           },
           "minProperties": 1,
@@ -273,7 +275,9 @@
             },
             "drop_original_metrics": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "uniqueItems": true
             },
@@ -396,7 +400,9 @@
             },
             "drop_original_metrics": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "uniqueItems": true
             },
@@ -428,6 +434,9 @@
           "additionalProperties": false
         },
         "swapDefinitions": {
+          "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
+        },
+        "loadDefinitions": {
           "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
         },
         "memDefinitions": {
@@ -537,7 +546,9 @@
             },
             "drop_original_metrics": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "uniqueItems": true
             }
@@ -959,7 +970,7 @@
                       "UTC"
                     ]
                   },
-                  "trim_timestamp" : {
+                  "trim_timestamp": {
                     "type": "boolean",
                     "description": "Whether to trim the timestamp in the log message"
                   },
@@ -1058,7 +1069,7 @@
                       "uniqueItems": true
                     }
                   },
-                  "event_ids":{
+                  "event_ids": {
                     "type": "array",
                     "items": {
                       "type": "integer",
@@ -1071,7 +1082,7 @@
                   "filters": {
                     "type": "array",
                     "items": {
-                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                      "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
                     }
                   },
                   "log_stream_name": {
@@ -1099,13 +1110,19 @@
                 ],
                 "anyOf": [
                   {
-                    "required": ["event_levels"]
+                    "required": [
+                      "event_levels"
+                    ]
                   },
                   {
-                    "required": ["event_ids"]
+                    "required": [
+                      "event_ids"
+                    ]
                   },
                   {
-                    "required": ["filters"]
+                    "required": [
+                      "filters"
+                    ]
                   }
                 ],
                 "additionalProperties": false

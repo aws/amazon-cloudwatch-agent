@@ -254,6 +254,25 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithLoadMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"load": map[string]interface{}{
+							"measurement":                 []interface{}{"load_average_1m", "load_average_5m", "load_average_15m"},
+							"metrics_collection_interval": 60,
+						},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/host": {
+					receivers: []string{"hostmetrics/loadaverage"},
+					exporters: []string{"awscloudwatch"},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

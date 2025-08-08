@@ -97,6 +97,7 @@ const (
 	NetStatMetricKey  = "netstat"
 	ProcessMetricKey  = "process"
 	ProcStatMetricKey = "procstat"
+	LoadMetricKey     = "load"
 
 	//Windows Plugins
 	MemMetricKeyWindows          = "Memory"

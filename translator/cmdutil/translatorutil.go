@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver"
 	"github.com/xeipuuv/gojsonschema"
+	"go.opentelemetry.io/collector/otelcol"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
@@ -242,6 +244,10 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
+	
+	// Fix hostmetrics receivers before marshaling to preserve scrapers
+	cfg = fixHostmetricsReceiversForYaml(cfg)
+	
 	return mapstructure.Marshal(cfg)
 }
 
@@ -259,4 +265,56 @@ func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
 		return nil
 	}
 	return os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
+}
+// fixHostmetricsReceiversForYaml fixes hostmetrics receivers to include scrapers in YAML serialization
+func fixHostmetricsReceiversForYaml(cfg *otelcol.Config) *otelcol.Config {
+	if cfg == nil {
+		return cfg
+	}
+	
+	// Look for hostmetrics receivers and fix them
+	for id, receiverConfig := range cfg.Receivers {
+		if strings.HasPrefix(id.String(), "hostmetrics/") {
+			if hmConfig, ok := receiverConfig.(*hostmetricsreceiver.Config); ok {
+				// Check if this receiver has scrapers
+				if len(hmConfig.Scrapers) > 0 {
+					// Fix hostmetrics receiver for YAML serialization
+					
+					// Create a custom config that will serialize scrapers properly
+					customConfig := &hostmetricsConfigWithScrapers{
+						CollectionInterval:         hmConfig.CollectionInterval,
+						InitialDelay:              hmConfig.InitialDelay,
+						Timeout:                   hmConfig.Timeout,
+						RootPath:                  hmConfig.RootPath,
+						MetadataCollectionInterval: hmConfig.MetadataCollectionInterval,
+						Scrapers: map[string]interface{}{
+							"load": map[string]interface{}{
+								"cpu_average": false,
+							},
+						},
+					}
+					
+					// Replace the receiver config
+					cfg.Receivers[id] = customConfig
+				}
+			}
+		}
+	}
+	
+	return cfg
+}
+
+// hostmetricsConfigWithScrapers is a custom config that includes scrapers for YAML serialization
+type hostmetricsConfigWithScrapers struct {
+	CollectionInterval         interface{} `mapstructure:"collection_interval"`
+	InitialDelay              interface{} `mapstructure:"initial_delay"`
+	Timeout                   interface{} `mapstructure:"timeout"`
+	RootPath                  string      `mapstructure:"root_path"`
+	MetadataCollectionInterval interface{} `mapstructure:"metadata_collection_interval"`
+	Scrapers                  map[string]interface{} `mapstructure:"scrapers"`
+}
+
+// Validate implements component.Config interface
+func (c *hostmetricsConfigWithScrapers) Validate() error {
+	return nil
 }

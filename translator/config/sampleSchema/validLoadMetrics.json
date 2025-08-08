@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "load": {
+        "measurement": ["load_average_1m", "load_average_5m", "load_average_15m"],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}

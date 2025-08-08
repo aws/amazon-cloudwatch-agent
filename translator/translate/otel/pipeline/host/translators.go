@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsebsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -34,6 +35,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	hostCustomReceivers := common.NewTranslatorMap[component.Config, component.ID]()
 	deltaReceivers := common.NewTranslatorMap[component.Config, component.ID]()
 	otlpReceivers := common.NewTranslatorMap[component.Config, component.ID]()
+	hostmetricsReceivers := common.NewTranslatorMap[component.Config, component.ID]()
 
 	// Gather adapter receivers
 	if configSection == MetricsKey {
@@ -54,6 +56,14 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 
 	if shouldAddEbsReceiver(conf, configSection) {
 		deltaReceivers.Set(awsebsnvme.NewTranslator())
+	}
+
+	// Check for load metrics configuration
+	if configSection == MetricsKey && conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.LoadMetricKey)) {
+		hostmetricsReceivers.Set(hostmetrics.NewTranslator(
+			common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.LoadMetricKey),
+			common.WithName("loadaverage"),
+		))
 	}
 
 	// Gather OTLP receivers
@@ -77,6 +87,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	hasHostCustomPipeline := hostCustomReceivers.Len() != 0
 	hasDeltaPipeline := deltaReceivers.Len() != 0
 	hasOtlpPipeline := otlpReceivers.Len() != 0
+	hasHostmetricsPipeline := hostmetricsReceivers.Len() != 0
 
 	var destinations []string
 	switch configSection {
@@ -94,16 +105,21 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 			receivers.Merge(hostReceivers)
 			receivers.Merge(deltaReceivers)
 			receivers.Merge(otlpReceivers)
+			receivers.Merge(hostmetricsReceivers)
 			translators.Set(NewTranslator(
 				common.PipelineNameHost,
 				receivers,
 				common.WithDestination(destination),
 			))
 		default:
-			if hasHostPipeline {
+			// Merge hostmetrics receivers with regular host receivers for the main host pipeline
+			if hasHostPipeline || hasHostmetricsPipeline {
+				receivers := common.NewTranslatorMap[component.Config, component.ID]()
+				receivers.Merge(hostReceivers)
+				receivers.Merge(hostmetricsReceivers)
 				translators.Set(NewTranslator(
 					common.PipelineNameHost,
-					hostReceivers,
+					receivers,
 					common.WithDestination(destination),
 				))
 			}
