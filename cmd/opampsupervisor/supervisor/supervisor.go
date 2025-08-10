@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -1278,6 +1279,11 @@ func (s *Supervisor) createEffectiveConfigMsg() *protobufs.EffectiveConfig {
 		}
 	}
 
+	// For CloudWatch agent, convert log configs to equivalent OTEL pipelines
+	if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") {
+		cfgStr = s.convertCloudWatchLogsToOTEL(cfgStr)
+	}
+
 	configMap := map[string]*protobufs.AgentConfigFile{
 		"effective.yaml": {Body: []byte(cfgStr)}, // Main merged config
 	}
@@ -2189,6 +2195,104 @@ func (s *Supervisor) createCloudWatchAgentDescription() *protobufs.AgentDescript
 		},
 	}
 }
+
+// convertCloudWatchLogsToOTEL converts CloudWatch agent log config to equivalent OpenTelemetry pipeline
+func (s *Supervisor) convertCloudWatchLogsToOTEL(cfgStr string) string {
+	// Parse CloudWatch agent JSON config to extract log settings
+	logConfigs := s.parseCloudWatchLogConfigs()
+	if len(logConfigs) == 0 {
+		return cfgStr
+	}
+
+	k := koanf.New("::")
+	if err := k.Load(rawbytes.Provider([]byte(cfgStr)), yaml.Parser()); err != nil {
+		return cfgStr
+	}
+
+	// Convert each log config to OTEL components
+	for i, logConfig := range logConfigs {
+		receiverName := fmt.Sprintf("filelog/%d", i)
+		exporterName := fmt.Sprintf("awscloudwatchlogs/%d", i)
+		pipelineName := fmt.Sprintf("logs/file_%d", i)
+
+		// Add filelog receiver
+		k.Set(fmt.Sprintf("receivers::%s::include", receiverName), []string{logConfig.FilePath})
+
+		// Add CloudWatch Logs exporter
+		k.Set(fmt.Sprintf("exporters::%s::log_group_name", exporterName), logConfig.LogGroupName)
+		k.Set(fmt.Sprintf("exporters::%s::log_stream_name", exporterName), logConfig.LogStreamName)
+
+		// Add pipeline
+		k.Set(fmt.Sprintf("service::pipelines::%s::receivers", pipelineName), []string{receiverName})
+		k.Set(fmt.Sprintf("service::pipelines::%s::exporters", pipelineName), []string{exporterName})
+	}
+
+	if modifiedConfig, err := k.Marshal(yaml.Parser()); err == nil {
+		return string(modifiedConfig)
+	}
+	return cfgStr
+}
+
+type CloudWatchLogConfig struct {
+	FilePath      string `json:"file_path"`
+	LogGroupName  string `json:"log_group_name"`
+	LogStreamName string `json:"log_stream_name"`
+}
+
+
+
+// parseCloudWatchLogConfigs extracts log configurations from CloudWatch agent JSON config
+func (s *Supervisor) parseCloudWatchLogConfigs() []CloudWatchLogConfig {
+	var configs []CloudWatchLogConfig
+
+	// Check configured JSON files for log settings
+	for _, file := range s.config.Agent.ConfigFiles {
+		if !strings.HasSuffix(file, ".json") {
+			continue
+		}
+
+		data, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+
+		var jsonConfig map[string]interface{}
+		if err := json.Unmarshal(data, &jsonConfig); err != nil {
+			continue
+		}
+
+		// Extract logs section with correct CloudWatch agent structure
+		if logs, ok := jsonConfig["logs"].(map[string]interface{}); ok {
+			if logsCollected, ok := logs["logs_collected"].(map[string]interface{}); ok {
+				if files, ok := logsCollected["files"].(map[string]interface{}); ok {
+					if collectList, ok := files["collect_list"].([]interface{}); ok {
+						for _, item := range collectList {
+							if logItem, ok := item.(map[string]interface{}); ok {
+								config := CloudWatchLogConfig{}
+								if fp, ok := logItem["file_path"].(string); ok {
+									config.FilePath = fp
+								}
+								if lgn, ok := logItem["log_group_name"].(string); ok {
+									config.LogGroupName = lgn
+								}
+								if lsn, ok := logItem["log_stream_name"].(string); ok {
+									config.LogStreamName = lsn
+								}
+								if config.FilePath != "" {
+									configs = append(configs, config)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return configs
+}
+
+
 
 // The default koanf behavior is to override lists in the config.
 // Instead, we provide this function, which merges the source and destination config's
