@@ -1170,6 +1170,14 @@ func (s *Supervisor) composeAgentConfigFiles(incomingConfig *protobufs.AgentRemo
 			continue
 		}
 
+		// Skip non-agent YAML files for CloudWatch agent - only merge the main agent YAML
+		if strings.Contains(s.config.Agent.Executable, "amazon-cloudwatch-agent") && (strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".yml")) {
+			if !strings.Contains(file, "amazon-cloudwatch-agent.yaml") {
+				s.telemetrySettings.Logger.Debug("Skipping non-agent YAML config file from merge for CloudWatch agent", zap.String("file", file))
+				continue
+			}
+		}
+
 		cfgBytes, err := os.ReadFile(file)
 		if err != nil {
 			s.telemetrySettings.Logger.Error("Could not read local config file", zap.Error(err))
@@ -1302,6 +1310,16 @@ func (s *Supervisor) createEffectiveConfigMsg() *protobufs.EffectiveConfig {
 		// Add TOML config if it exists
 		if tomlConfig, err := os.ReadFile("/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml"); err == nil {
 			configMap["amazon-cloudwatch-agent.toml"] = &protobufs.AgentConfigFile{Body: tomlConfig}
+		}
+		
+		// Add any YAML config files for display (not merged into agent config)
+		// Look for YAML files that should be displayed but not merged
+		for _, file := range s.config.Agent.ConfigFiles {
+			if strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".yml") {
+				if yamlConfig, err := os.ReadFile(file); err == nil {
+					configMap[filepath.Base(file)] = &protobufs.AgentConfigFile{Body: yamlConfig}
+				}
+			}
 		}
 	}
 
