@@ -83,6 +83,14 @@ func TestTranslator(t *testing.T) {
 			input: testutil.GetJson(t, filepath.Join("testdata", "instance_store_and_ebs_metrics.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "instance_store_and_ebs_metrics.yaml")),
 		},
+		"WithInstanceStoreOnlyMetrics": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "instance_store_only_metrics.json")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "instance_store_only_metrics.yaml")),
+		},
+		"WithInstanceStoreNonPrefixedMetrics": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "instance_store_non_prefixed_metrics.json")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "instance_store_non_prefixed_metrics.yaml")),
+		},
 	}
 	factory := awsnvmereceiver.NewFactory()
 	for name, testCase := range testCases {

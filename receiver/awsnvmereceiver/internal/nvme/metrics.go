@@ -38,7 +38,6 @@ type EBSMetrics struct {
 	WriteLatency          Histogram
 }
 
-// Need to update this struct!
 type InstanceStoreMetrics struct {
 	Magic                 uint32
 	Reserved              uint32
@@ -53,7 +52,15 @@ type InstanceStoreMetrics struct {
 	EC2IOPSExceeded       uint64
 	EC2ThroughputExceeded uint64
 	QueueLength           uint64
-	ReservedArea          [4000]byte // Skips histograms
+	NumHistograms         uint32
+	NumBins               uint32
+	IOSizeRange           [8]uint32
+	Bounds                [32]struct {
+		Lower uint64
+		Upper uint64
+	}
+	Histograms   [5]HistogramPair
+	ReservedArea [888]byte
 }
 
 type Histogram struct {
@@ -65,4 +72,9 @@ type HistogramBin struct {
 	Lower uint64
 	Upper uint64
 	Count uint64
+}
+
+type HistogramPair struct {
+	Read  [32]uint64
+	Write [32]uint64
 }

@@ -7,6 +7,6 @@ package nvme
 
 import "errors"
 
-func GetMetrics(_ string) (EBSMetrics, error) {
-	return EBSMetrics{}, errors.New("ebs metrics not supported")
+func GetMetrics(_ string) (any, error) {
+	return nil, errors.New("NVMe metrics not supported on this platform")
 }

@@ -23,7 +23,7 @@ import (
 
 const (
 	ebsModel           = "Amazon Elastic Block Store"
-	instanceStoreModel = "Amazon EC2 NVMe Instance Store"
+	instanceStoreModel = "Amazon EC2 NVMe Instance Storage"
 )
 
 type nvmeScraper struct {
@@ -67,6 +67,10 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 
 	now := pcommon.NewTimestampFromTime(time.Now())
 
+	// Controllers are grouped by ID because metrics (from log pages) are aggregated at the controller level and identical across all namespaces/partitions on that controller.
+	// The outer loop processes each unique controller group to emit metrics once per controller.
+	// The inner loop tries each namespace path in the group sequentially until we find one accessible via ioctl, then emits and breaks.
+	// This avoids duplication while handling permission issues on some namespaces.
 	for id, nvmeDevices := range nvmeDevicesByController {
 		// Some devices are owned by root:root, root:disk, etc, so the agent will attempt to
 		// retrieve the metric for a device (grouped by controller ID) until the first
@@ -83,7 +87,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.logger.Debug("unable to get device path", zap.String("device", device), zap.Error(err))
 				continue
 			}
-			metrics, err := getMetrics(devicePath)
+			metricsAny, err := getMetrics(devicePath)
 			if err != nil {
 				s.logger.Debug("unable to get metrics for device", zap.String("device", device), zap.Error(err))
 				continue
@@ -93,7 +97,8 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 
 			rb := s.mb.NewResourceBuilder()
 
-			if nvmeDevices.deviceType == "ebs" {
+			switch metrics := metricsAny.(type) {
+			case nvme.EBSMetrics:
 				rb.SetVolumeID(nvmeDevices.identifier)
 				s.recordMetric(s.mb.RecordDiskioEbsTotalReadOpsDataPoint, now, metrics.ReadOps)
 				s.recordMetric(s.mb.RecordDiskioEbsTotalWriteOpsDataPoint, now, metrics.WriteOps)
@@ -106,7 +111,7 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
 				s.recordMetric(s.mb.RecordDiskioEbsEc2InstancePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
 				s.recordMetric(s.mb.RecordDiskioEbsVolumeQueueLengthDataPoint, now, metrics.QueueLength)
-			} else {
+			case nvme.InstanceStoreMetrics:
 				rb.SetSerialID(nvmeDevices.identifier)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalReadOpsDataPoint, now, metrics.ReadOps)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreTotalWriteOpsDataPoint, now, metrics.WriteOps)
@@ -117,6 +122,10 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 				s.recordMetric(s.mb.RecordDiskioInstanceStorePerformanceExceededIopsDataPoint, now, metrics.EC2IOPSExceeded)
 				s.recordMetric(s.mb.RecordDiskioInstanceStorePerformanceExceededTpDataPoint, now, metrics.EC2ThroughputExceeded)
 				s.recordMetric(s.mb.RecordDiskioInstanceStoreVolumeQueueLengthDataPoint, now, metrics.QueueLength)
+				// Histograms not recorded (per problem: no implementation, but struct has them for exact layout)
+			default:
+				s.logger.Debug("unsupported metrics type", zap.String("device", device))
+				continue
 			}
 
 			s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
@@ -157,6 +166,7 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 		}
 
 		controllerID := device.Controller()
+
 		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
 		// retrieving the volume ID and validating if it's an EBS/IS device
 		if entry, seenController := devices[controllerID]; seenController {
@@ -190,7 +200,7 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 				continue
 			}
 			identifier = fmt.Sprintf("vol-%s", serial[3:])
-		case instanceStoreModel: // Verify if there is a prefix requirement like ebs- but I don't there is ???!!!
+		case instanceStoreModel:
 			if !s.collectInstanceStore {
 				s.logger.Debug("skipping Instance Store device as no IS metrics enabled", zap.String("device", deviceName))
 				continue
@@ -245,9 +255,9 @@ func safeUint64ToInt64(value uint64) (int64, error) {
 }
 
 // computeCollectFlags computes whether to collect for EBS and Instance Store based on enabled metrics
-func computeCollectFlags(cfg *Config) (collectEbs bool, collectInstanceStore bool) {
+func computeCollectFlags(cfg *Config) (bool, bool) {
 	m := cfg.MetricsBuilderConfig.Metrics
-	collectEbs = m.DiskioEbsTotalReadOps.Enabled ||
+	collectEbs := m.DiskioEbsTotalReadOps.Enabled ||
 		m.DiskioEbsTotalWriteOps.Enabled ||
 		m.DiskioEbsTotalReadBytes.Enabled ||
 		m.DiskioEbsTotalWriteBytes.Enabled ||
@@ -259,7 +269,7 @@ func computeCollectFlags(cfg *Config) (collectEbs bool, collectInstanceStore boo
 		m.DiskioEbsEc2InstancePerformanceExceededTp.Enabled ||
 		m.DiskioEbsVolumeQueueLength.Enabled
 
-	collectInstanceStore = m.DiskioInstanceStoreTotalReadOps.Enabled ||
+	collectInstanceStore := m.DiskioInstanceStoreTotalReadOps.Enabled ||
 		m.DiskioInstanceStoreTotalWriteOps.Enabled ||
 		m.DiskioInstanceStoreTotalReadBytes.Enabled ||
 		m.DiskioInstanceStoreTotalWriteBytes.Enabled ||
@@ -269,5 +279,5 @@ func computeCollectFlags(cfg *Config) (collectEbs bool, collectInstanceStore boo
 		m.DiskioInstanceStorePerformanceExceededTp.Enabled ||
 		m.DiskioInstanceStoreVolumeQueueLength.Enabled
 
-	return
+	return collectEbs, collectInstanceStore
 }

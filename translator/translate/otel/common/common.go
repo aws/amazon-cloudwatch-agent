@@ -126,6 +126,11 @@ const (
 	AppSignalsRules                  = "rules"
 )
 
+const (
+	ebsPrefix           = "diskio_ebs_"
+	instanceStorePrefix = "diskio_instance_store_"
+)
+
 var (
 	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
 	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
@@ -497,4 +502,10 @@ func GetClusterName(conf *confmap.Conf) string {
 	}
 
 	return util.GetClusterNameFromEc2Tagger()
+}
+
+// IsEBSOrInstanceStoreMetric returns true if the metric name is an EBS or Instance Store metric.
+// The caller must pass a metric name starting with diskIOPrefix.
+func IsEBSOrInstanceStoreMetric(metricName string) bool {
+	return strings.HasPrefix(metricName, ebsPrefix) || strings.HasPrefix(metricName, instanceStorePrefix)
 }

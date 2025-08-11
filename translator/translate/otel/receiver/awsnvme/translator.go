@@ -92,7 +92,7 @@ func getEnabledMeasurements(conf *confmap.Conf) map[string]any {
 			metricName = diskIOPrefix + m
 		}
 		// Only include EBS/Instance Store metrics. We do not want any Telegraf metrics here
-		if strings.HasPrefix(metricName, ebsPrefix) || strings.HasPrefix(metricName, instanceStorePrefix) {
+		if common.IsEBSOrInstanceStoreMetric(metricName) {
 			metrics[metricName] = map[string]any{
 				"enabled": true,
 			}

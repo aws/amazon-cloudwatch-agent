@@ -27,8 +27,7 @@ import (
 
 const (
 	defaultMetricsCollectionInterval = time.Minute
-	ebsPrefix                        = "ebs_"
-	instanceStorePrefix              = "instance_store_"
+	diskIOPrefix                     = "diskio_"
 )
 
 var (
@@ -276,11 +275,14 @@ func toAlias(inputName string) string {
 // emitted through the adapted receiver. This function is used to check if only non-adaptable
 // metrics are configured for.
 func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool {
+
 	for _, m := range measurements {
 		switch inputName {
 		case common.DiskIOKey:
-			trimmed := strings.TrimPrefix(m, common.DiskIOKey+"_")
-			if !strings.HasPrefix(trimmed, ebsPrefix) && !strings.HasPrefix(trimmed, instanceStorePrefix) {
+			if !strings.HasPrefix(m, "diskio") {
+				m = diskIOPrefix + m
+			}
+			if !common.IsEBSOrInstanceStoreMetric(m) {
 				return false
 			}
 		default:

@@ -400,11 +400,11 @@ func TestDiskIOTelegrafConfig(t *testing.T) {
 	checkTranslation(t, "diskio_telegraf_config_linux", "darwin", nil, "")
 }
 
-func TestDiskIOEBSConfig(t *testing.T) {
+func TestDiskIONVMeConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "diskio_ebs_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "diskio_nvme_config_linux", "linux", expectedEnvVars, "")
 }
 
 // Both Telegraf & EBS
@@ -934,7 +934,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
-		assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})

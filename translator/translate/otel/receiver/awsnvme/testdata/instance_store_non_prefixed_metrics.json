@@ -6,12 +6,10 @@
     "metrics_collected": {
       "diskio": {
         "measurement": [
-          "ebs_total_read_ops",
-          "diskio_ebs_total_write_ops",
           "instance_store_total_read_ops",
-          "diskio_instance_store_total_write_ops",
-          "io_time",
-          "read_time"
+          "instance_store_total_write_ops",
+          "instance_store_performance_exceeded_iops",
+          "instance_store_volume_queue_length"
         ]
       }
     }

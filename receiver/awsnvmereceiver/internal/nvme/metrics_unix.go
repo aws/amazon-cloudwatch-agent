@@ -55,14 +55,17 @@ type nvmePassthruCommand struct {
 }
 
 var (
-	ErrInvalidEBSMagic = errors.New("invalid EBS magic number")
-	ErrParseLogPage    = errors.New("failed to parse log page")
+	ErrInvalidEBSMagic           = errors.New("invalid EBS magic number")
+	ErrInvalidInstanceStoreMagic = errors.New("invalid Instance Store magic number")
+	ErrParseLogPage              = errors.New("failed to parse log page")
+	ErrUnsupportedMagic          = errors.New("unsupported magic number")
 )
 
-func GetMetrics(devicePath string) (EBSMetrics, error) {
+// GetMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
+func GetMetrics(devicePath string) (any, error) {
 	data, err := getNVMEMetrics(devicePath)
 	if err != nil {
-		return EBSMetrics{}, err
+		return nil, err
 	}
 
 	return parseLogPage(data)
@@ -98,7 +101,7 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 		addr:    uint64(uintptr(unsafe.Pointer(&data[0]))),
 		nsid:    1,
 		dataLen: uint32(bufferLen),
-		cdw10:   uint32(logID) | (1024 << 16),
+		cdw10:   uint32(logID) | (1023 << 16),
 	}
 
 	status, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, nvmeIoctlAdminCmd, uintptr(unsafe.Pointer(&cmd)))
@@ -111,48 +114,39 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 	return data, nil
 }
 
-// parseLogPage parses the binary data from the log page into Metrics, handling both EBS and Instance Store formats.
-func parseLogPage(data []byte) (Metrics, error) {
-	magic := binary.LittleEndian.Uint64(data[0:8])
-
-	var metrics Metrics
-
-	switch magic {
-	case ebsMagic:
-		var ebs EBSMetrics
-		reader := bytes.NewReader(data)
-		if err := binary.Read(reader, binary.LittleEndian, &ebs); err != nil {
-			return Metrics{}, fmt.Errorf("%w: %w", ErrParseLogPage, err)
-		}
-		metrics.ReadOps = ebs.ReadOps
-		metrics.WriteOps = ebs.WriteOps
-		metrics.ReadBytes = ebs.ReadBytes
-		metrics.WriteBytes = ebs.WriteBytes
-		metrics.TotalReadTime = ebs.TotalReadTime
-		metrics.TotalWriteTime = ebs.TotalWriteTime
-		metrics.VolumePerformanceExceededIOPS = ebs.EBSIOPSExceeded
-		metrics.VolumePerformanceExceededTP = ebs.EBSThroughputExceeded
-		metrics.EC2InstancePerformanceExceededIOPS = ebs.EC2IOPSExceeded
-		metrics.EC2InstancePerformanceExceededTP = ebs.EC2ThroughputExceeded
-		metrics.QueueLength = ebs.QueueLength
-	case instanceStoreMagic:
-		var is InstanceStoreMetrics
-		reader := bytes.NewReader(data)
-		if err := binary.Read(reader, binary.LittleEndian, &is); err != nil {
-			return Metrics{}, fmt.Errorf("%w: %w", ErrParseLogPage, err)
-		}
-		metrics.ReadOps = is.ReadOps
-		metrics.WriteOps = is.WriteOps
-		metrics.ReadBytes = is.ReadBytes
-		metrics.WriteBytes = is.WriteBytes
-		metrics.TotalReadTime = is.TotalReadTime
-		metrics.TotalWriteTime = is.TotalWriteTime
-		metrics.EC2InstancePerformanceExceededIOPS = is.EC2IOPSExceeded
-		metrics.EC2InstancePerformanceExceededTP = is.EC2ThroughputExceeded
-		metrics.QueueLength = is.QueueLength
-	default:
-		return Metrics{}, fmt.Errorf("%w: 0x%x", ErrInvalidMagic, magic)
+// parseLogPage parses the binary data from an EBS or Instance Store log page into the corresponding struct.
+func parseLogPage(data []byte) (any, error) {
+	if len(data) < 8 {
+		return nil, fmt.Errorf("%w: input too short", ErrParseLogPage)
 	}
 
-	return metrics, nil
+	magic64 := binary.LittleEndian.Uint64(data[0:8])
+	magic32 := binary.LittleEndian.Uint32(data[0:4])
+
+	switch {
+	case magic64 == ebsMagic:
+		var metrics EBSMetrics
+		reader := bytes.NewReader(data)
+		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
+		}
+		if metrics.EBSMagic != ebsMagic {
+			return nil, ErrInvalidEBSMagic
+		}
+		return metrics, nil
+
+	case magic32 == instanceStoreMagic:
+		var metrics InstanceStoreMetrics
+		reader := bytes.NewReader(data)
+		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
+		}
+		if metrics.Magic != instanceStoreMagic {
+			return nil, ErrInvalidInstanceStoreMagic
+		}
+		return metrics, nil
+
+	default:
+		return nil, ErrUnsupportedMagic
+	}
 }
