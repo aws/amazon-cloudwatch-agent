@@ -22,9 +22,8 @@ var (
 
 const (
 	defaultCollectionInterval = time.Minute
-	diskIOPrefix              = "diskio_"
-	ebsPrefix                 = diskIOPrefix + "ebs_"
-	instanceStorePrefix       = diskIOPrefix + "instance_store_"
+	ebsPrefix                 = "diskio_ebs_"
+	instanceStorePrefix       = "diskio_instance_store_"
 )
 
 type translator struct {
@@ -88,11 +87,11 @@ func getEnabledMeasurements(conf *confmap.Conf) map[string]any {
 
 	for _, m := range measurements {
 		metricName := m
-		if !strings.HasPrefix(m, diskIOPrefix) {
-			metricName = diskIOPrefix + m
+		if !strings.HasPrefix(m, common.DiskIOPrefix) {
+			metricName = common.DiskIOPrefix + m
 		}
 		// Only include EBS/Instance Store metrics. We do not want any Telegraf metrics here
-		if common.IsEBSOrInstanceStoreMetric(metricName) {
+		if IsNVMEMetric(metricName) {
 			metrics[metricName] = map[string]any{
 				"enabled": true,
 			}
@@ -100,4 +99,12 @@ func getEnabledMeasurements(conf *confmap.Conf) map[string]any {
 	}
 
 	return metrics
+}
+
+// IsNVMEMetric returns true if the metric name is an EBS or Instance Store metric.
+func IsNVMEMetric(metricName string) bool {
+	if !strings.HasPrefix(metricName, common.DiskIOPrefix) {
+		metricName = common.DiskIOPrefix + metricName
+	}
+	return strings.HasPrefix(metricName, ebsPrefix) || strings.HasPrefix(metricName, instanceStorePrefix)
 }

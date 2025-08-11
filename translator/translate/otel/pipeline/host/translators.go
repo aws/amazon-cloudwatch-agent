@@ -5,7 +5,6 @@ package host
 
 import (
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -16,12 +15,6 @@ import (
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
-)
-
-const (
-	diskIOPrefix              = "diskio_"
-	diskIOEbsPrefix           = "ebs_"
-	diskIOInstanceStorePrefix = "instance_store_"
 )
 
 var (
@@ -141,8 +134,7 @@ func shouldAddNvmeReceiver(conf *confmap.Conf, configSection string) bool {
 	}
 	measurements := common.GetMeasurements(diskioMap.(map[string]any))
 	for _, measurement := range measurements {
-		measurement = strings.TrimPrefix(measurement, diskIOPrefix)
-		if strings.HasPrefix(measurement, diskIOEbsPrefix) || strings.HasPrefix(measurement, diskIOInstanceStorePrefix) {
+		if awsnvme.IsNVMEMetric(measurement) {
 			return true
 		}
 	}

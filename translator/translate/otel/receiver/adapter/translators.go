@@ -6,7 +6,6 @@ package adapter
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -23,11 +22,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 )
 
 const (
 	defaultMetricsCollectionInterval = time.Minute
-	diskIOPrefix                     = "diskio_"
 )
 
 var (
@@ -275,14 +274,10 @@ func toAlias(inputName string) string {
 // emitted through the adapted receiver. This function is used to check if only non-adaptable
 // metrics are configured for.
 func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool {
-
 	for _, m := range measurements {
 		switch inputName {
 		case common.DiskIOKey:
-			if !strings.HasPrefix(m, "diskio") {
-				m = diskIOPrefix + m
-			}
-			if !common.IsEBSOrInstanceStoreMetric(m) {
+			if !awsnvme.IsNVMEMetric(m) {
 				return false
 			}
 		default:

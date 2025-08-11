@@ -29,11 +29,6 @@ import (
 )
 
 func TestParseLogPage(t *testing.T) {
-	const (
-		instanceStoreMagic = 0xEC2C0D7E
-		ebsMagic           = 0x3C23B510
-	)
-
 	tests := []struct {
 		name    string
 		input   []byte
@@ -85,7 +80,7 @@ func TestParseLogPage(t *testing.T) {
 				}
 				return buf.Bytes()
 			}(),
-			wantErr: "unsupported magic number: magic64=0x12345678, magic32=0x12345678",
+			wantErr: ErrUnsupportedMagic.Error(),
 		},
 		{
 			name: "valid Instance Store log page",
@@ -133,7 +128,7 @@ func TestParseLogPage(t *testing.T) {
 				}
 				return buf.Bytes()
 			}(),
-			wantErr: "unsupported magic number: magic64=0x87654321, magic32=0x87654321",
+			wantErr: ErrUnsupportedMagic.Error(),
 		},
 		{
 			name:    "empty data",
