@@ -25,26 +25,23 @@ type Flag struct {
 var execCommand = exec.Command
 
 // Make findAgentBinary a func variable to replace in tests
-var findAgentBinary = func(path string) (string, error) {
-	// check if the binary is at the normal path
-	if _, err := os.Stat(path); err == nil {
-		return path, nil
-	}
-
-	// if not, check in the current executable's directory
+var findAgentBinary = func() (string, error) {
+	// check in the current executable's directory first
 	execPath, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current executable path: %w", err)
-	}
-	execDir := filepath.Dir(execPath)
-	alternatePath := filepath.Join(execDir, paths.AgentBinaryName)
-
-	// check again with alternate path
-	if _, err := os.Stat(alternatePath); err == nil {
-		return alternatePath, nil
+	if err == nil {
+		execDir := filepath.Dir(execPath)
+		currentDirPath := filepath.Join(execDir, paths.AgentBinaryName)
+		if _, err := os.Stat(currentDirPath); err == nil {
+			return currentDirPath, nil
+		}
 	}
 
-	return "", fmt.Errorf("amazon-cloudwatch-agent binary not found. expected in one of the following paths: %s or %s", path, execDir)
+	// fallback to the default path
+	if _, err := os.Stat(paths.AgentBinaryPath); err == nil {
+		return paths.AgentBinaryPath, nil
+	}
+
+	return "", fmt.Errorf("amazon-cloudwatch-agent binary not found at default path: %s", paths.AgentBinaryPath)
 }
 
 func CreateFlagSet(command string, flagConfigs map[string]Flag) (*flag.FlagSet, map[string]*string) {
@@ -83,13 +80,12 @@ func ExecuteSubcommand(command string, flags map[string]*string) error {
 		}
 	}
 
-	log.Printf("Executing %s with arguments: %v", paths.AgentBinaryPath, args)
-
-	agentPath, err := findAgentBinary(paths.AgentBinaryPath)
+	agentPath, err := findAgentBinary()
 	if err != nil {
 		// Handle error appropriately
 		return err
 	}
+	log.Printf("Executing %s with arguments: %v", paths.AgentBinaryPath, args)
 	// Use execCommand instead of exec.Command directly
 	cmd := execCommand(agentPath, args...)
 	cmd.Stdout = os.Stdout
