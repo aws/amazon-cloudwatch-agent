@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/model/relabel"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
@@ -121,6 +124,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}
+	addDefaultRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs)
 
 	return cfg, nil
 }
@@ -159,4 +163,39 @@ func escapeStrings(node any) {
 			escapeStrings(v)
 		}
 	}
+}
+
+func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
+	defaultRelabelConfigs := []*relabel.Config{
+		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_started_by"}, Action: relabel.Replace, TargetLabel: "StartedBy", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_group"}, Action: relabel.Replace, TargetLabel: "TaskGroup", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_family"}, Action: relabel.Replace, TargetLabel: "TaskDefinitionFamily", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_revision"}, Action: relabel.Replace, TargetLabel: "TaskRevision", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Replacement: "$1"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Replacement: "$1"},
+	}
+
+	defaultMetricRelabelConfigs := []*relabel.Config{
+		{SourceLabels: model.LabelNames{"source"}, Regex: relabel.MustNewRegexp("^arn:aws:ecs:.*:.*:task.*\\/(.*)$"), Action: relabel.Replace, TargetLabel: "TaskId", Replacement: "$1"},
+	}
+
+	for _, scrapeConfig := range scrapeConfigs {
+		if hasFileServiceDiscovery(scrapeConfig) {
+			scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, defaultRelabelConfigs...)
+			scrapeConfig.MetricRelabelConfigs = append(scrapeConfig.MetricRelabelConfigs, defaultMetricRelabelConfigs...)
+		}
+	}
+}
+
+func hasFileServiceDiscovery(scrapeConfig *config.ScrapeConfig) bool {
+	for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
+		if sdConfig.Name() == "file" {
+			return true
+		}
+	}
+	return false
 }
