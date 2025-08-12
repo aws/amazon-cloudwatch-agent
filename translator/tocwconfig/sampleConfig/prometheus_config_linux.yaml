@@ -132,7 +132,7 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 5s
+        timeout: 30s
     prometheusadapter/prometheus/cloudwatchlogs: {}
 receivers:
     prometheus/prometheus/cloudwatchlogs:
@@ -160,7 +160,6 @@ receivers:
                   metric_relabel_configs:
                     - action: replace
                       regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
-                      replacement: $1
                       source_labels:
                         - source
                       target_label: TaskId
