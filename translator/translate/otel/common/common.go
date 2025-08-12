@@ -90,6 +90,7 @@ const (
 	CPUMetricKey      = "cpu"
 	DiskMetricKey     = "disk"
 	DiskIoMetricKey   = "diskio"
+	LoadKey           = "load"
 	StatsDMetricKey   = "statsd"
 	SwapMetricKey     = "swap"
 	MemMetricKey      = "mem"

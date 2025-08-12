@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsebsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -54,6 +55,11 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 
 	if shouldAddEbsReceiver(conf, configSection) {
 		deltaReceivers.Set(awsebsnvme.NewTranslator())
+	}
+
+	// Add hostmetrics receiver for load metrics
+	if shouldAddHostMetricsReceiver(conf, configSection) {
+		hostReceivers.Set(hostmetrics.NewTranslator(common.WithName("load")))
 	}
 
 	// Gather OTLP receivers
@@ -147,4 +153,8 @@ func shouldAddEbsReceiver(conf *confmap.Conf, configSection string) bool {
 		}
 	}
 	return false
+}
+
+func shouldAddHostMetricsReceiver(conf *confmap.Conf, configSection string) bool {
+	return conf.IsSet(common.ConfigKey(configSection, "load"))
 }
