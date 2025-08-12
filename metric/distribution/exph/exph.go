@@ -113,13 +113,14 @@ func (d *ExpHistogramDistribution) ValuesAndCounts() ([]float64, []float64) {
 	return values, counts
 }
 
-// weight is 1/samplingRate
+// this is unused but needed to satisfy distribution interface
 func (d *ExpHistogramDistribution) AddEntry(value float64, weight float64) error {
 	return d.AddEntryWithUnit(value, weight, "")
 }
 
-// weight is 1/samplingRate
-func (d *ExpHistogramDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+// this is unused but needed to satisfy distribution interface
+func (d *ExpHistogramDistribution) AddEntryWithUnit(_ float64, _ float64, _ string) error {
+	log.Printf("E! Exponential histogram distribution does not support AddEntryWithUnit.")
 	return nil
 }
 
