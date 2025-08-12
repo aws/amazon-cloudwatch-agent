@@ -14,22 +14,30 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-var (
-	baseKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.LoadKey)
-)
-
 const (
 	defaultCollectionInterval = time.Minute
 )
 
+// MetricType defines a hostmetrics metric type configuration.
+type MetricType struct {
+	Key         string // JSON configuration key
+	ScraperName string // OpenTelemetry scraper name
+}
+
+// supportedMetrics defines all hostmetrics types supported by the translator.
+// To add new metrics, append to this slice with the appropriate Key and ScraperName.
+var supportedMetrics = []MetricType{
+	{Key: "load", ScraperName: "load"},
+}
+
+// translator implements the hostmetrics receiver translator for CloudWatch agent.
 type translator struct {
 	common.NameProvider
 	factory receiver.Factory
 }
 
-func NewTranslator(
-	opts ...common.TranslatorOption,
-) common.ComponentTranslator {
+// NewTranslator creates a new hostmetrics receiver translator.
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: hostmetricsreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)
@@ -37,25 +45,52 @@ func NewTranslator(
 	return t
 }
 
+// ID returns the component ID for this translator.
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
+// Translate converts CloudWatch agent configuration to OpenTelemetry hostmetrics receiver configuration.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(baseKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: baseKey}
+	scrapers, interval, err := t.buildScrapers(conf)
+	if err != nil {
+		if missingKeyErr, ok := err.(*common.MissingKeyError); ok {
+			missingKeyErr.ID = t.ID()
+		}
+		return nil, err
 	}
-
-	intervalKeyChain := []string{
-		common.ConfigKey(baseKey, common.MetricsCollectionIntervalKey),
-		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
-	}
-	interval := common.GetOrDefaultDuration(conf, intervalKeyChain, defaultCollectionInterval)
 
 	return map[string]interface{}{
 		"collection_interval": interval.String(),
-		"scrapers": map[string]interface{}{
-			common.LoadKey: struct{}{},
-		},
+		"scrapers":           scrapers,
 	}, nil
+}
+
+// buildScrapers dynamically builds scrapers configuration based on configured metrics.
+func (t *translator) buildScrapers(conf *confmap.Conf) (map[string]interface{}, time.Duration, error) {
+	baseConfigKey := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+	scrapers := make(map[string]interface{})
+	interval := defaultCollectionInterval
+
+	for _, metric := range supportedMetrics {
+		metricKey := common.ConfigKey(baseConfigKey, metric.Key)
+		if conf.IsSet(metricKey) {
+			scrapers[metric.ScraperName] = struct{}{}
+			
+			// Use the collection interval from the first configured metric
+			if interval == defaultCollectionInterval {
+				intervalKeyChain := []string{
+					common.ConfigKey(metricKey, common.MetricsCollectionIntervalKey),
+					common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
+				}
+				interval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultCollectionInterval)
+			}
+		}
+	}
+
+	if len(scrapers) == 0 {
+		return nil, 0, &common.MissingKeyError{JsonKey: baseConfigKey}
+	}
+
+	return scrapers, interval, nil
 }

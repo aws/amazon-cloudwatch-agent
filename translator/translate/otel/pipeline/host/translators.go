@@ -57,9 +57,9 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 		deltaReceivers.Set(awsebsnvme.NewTranslator())
 	}
 
-	// Add hostmetrics receiver for load metrics
+	// Add hostmetrics receiver for supported metrics
 	if shouldAddHostMetricsReceiver(conf, configSection) {
-		hostReceivers.Set(hostmetrics.NewTranslator(common.WithName("load")))
+		hostReceivers.Set(hostmetrics.NewTranslator(common.WithName("hostmetrics")))
 	}
 
 	// Gather OTLP receivers
@@ -155,6 +155,18 @@ func shouldAddEbsReceiver(conf *confmap.Conf, configSection string) bool {
 	return false
 }
 
+// hostmetricsTypes defines all metric types supported by hostmetrics receiver
+var hostmetricsTypes = []string{
+	common.LoadKey,
+	// Add future hostmetrics types here when folders are created:
+	// "cpu", "memory", "disk", "filesystem", "network", "process"
+}
+
 func shouldAddHostMetricsReceiver(conf *confmap.Conf, configSection string) bool {
-	return conf.IsSet(common.ConfigKey(configSection, "load"))
+	for _, metricType := range hostmetricsTypes {
+		if conf.IsSet(common.ConfigKey(configSection, metricType)) {
+			return true
+		}
+	}
+	return false
 }
