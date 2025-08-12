@@ -43,6 +43,7 @@ const (
 	XrayKey                            = "xray"
 	OtlpKey                            = "otlp"
 	JmxKey                             = "jmx"
+	JournaldKey                        = "journald"
 	TLSKey                             = "tls"
 	Endpoint                           = "endpoint"
 	EndpointOverrideKey                = "endpoint_override"
@@ -137,6 +138,7 @@ var (
 		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
 	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	JournaldConfigKey          = ConfigKey(LogsKey, LogsCollectedKey, JournaldKey)
 	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
 
 	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}

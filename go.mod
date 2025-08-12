@@ -157,6 +157,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver v0.124.1

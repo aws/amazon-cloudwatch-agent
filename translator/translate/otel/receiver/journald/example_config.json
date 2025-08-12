@@ -1,0 +1,33 @@
+{
+  "agent": {
+    "debug": false
+  },
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "units": [
+          "nginx.service",
+          "apache2.service",
+          "docker.service"
+        ],
+        "priority": "info",
+        "directory": "/var/log/journal",
+        "files": [
+          "/var/log/journal/system.journal"
+        ],
+        "identifiers": [
+          "nginx",
+          "apache",
+          "docker"
+        ],
+        "grep": "ERROR|WARN|CRITICAL",
+        "dmesg": true,
+        "all": false,
+        "namespace": "system",
+        "since": "2024-01-01T00:00:00Z"
+      }
+    },
+    "log_group_name": "journald-logs",
+    "log_stream_name": "{instance_id}-journald"
+  }
+}
