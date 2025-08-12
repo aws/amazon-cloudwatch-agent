@@ -185,8 +185,12 @@ func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
 
 	for _, scrapeConfig := range scrapeConfigs {
 		if hasFileServiceDiscovery(scrapeConfig) {
-			scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, defaultRelabelConfigs...)
-			scrapeConfig.MetricRelabelConfigs = append(scrapeConfig.MetricRelabelConfigs, defaultMetricRelabelConfigs...)
+			if len(scrapeConfig.RelabelConfigs) == 0 {
+				scrapeConfig.RelabelConfigs = defaultRelabelConfigs
+			}
+			if len(scrapeConfig.MetricRelabelConfigs) == 0 {
+				scrapeConfig.MetricRelabelConfigs = defaultMetricRelabelConfigs
+			}
 		}
 	}
 }
