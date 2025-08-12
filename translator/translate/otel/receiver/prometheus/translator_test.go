@@ -307,7 +307,7 @@ func TestAddDefaultRelabelConfigs(t *testing.T) {
 
 	addDefaultRelabelConfigs(scrapeConfigs)
 
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 10, "ScrapeConfig with file SD should have 10 default relabel configs")
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 11, "ScrapeConfig with file SD should have 11 default relabel configs")
 	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
 	assert.Equal(t, "container_name", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
 	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 1, "ScrapeConfig with file SD should have 1 default metric relabel config")
