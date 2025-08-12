@@ -6,7 +6,6 @@ package adapter
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -23,11 +22,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 )
 
 const (
 	defaultMetricsCollectionInterval = time.Minute
-	ebsPrefix                        = "ebs_"
 )
 
 var (
@@ -278,8 +277,7 @@ func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool
 	for _, m := range measurements {
 		switch inputName {
 		case common.DiskIOKey:
-			trimmed := strings.TrimPrefix(m, common.DiskIOKey+"_")
-			if !strings.HasPrefix(trimmed, ebsPrefix) {
+			if !awsnvme.IsNVMEMetric(m) {
 				return false
 			}
 		default:

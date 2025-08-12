@@ -126,6 +126,10 @@ const (
 	AppSignalsRules                  = "rules"
 )
 
+const (
+	DiskIOPrefix = "diskio_"
+)
+
 var (
 	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
 	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
