@@ -94,6 +94,8 @@ replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api
 // forces version bump to support log group classes
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.48.6
 
+replace collectd.org v0.4.0 => github.com/collectd/go-collectd v0.4.0
+
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0

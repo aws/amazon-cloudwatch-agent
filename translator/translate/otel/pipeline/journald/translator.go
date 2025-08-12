@@ -4,7 +4,6 @@
 package journald
 
 import (
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
