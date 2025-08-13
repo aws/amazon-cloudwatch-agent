@@ -36,7 +36,7 @@ func TestTranslator(t *testing.T) {
 			},
 			isSystemd: true,
 			want: &awscontainerinsightskueuereceiver.Config{
-				CollectionInterval: 60 * time.Second,
+				CollectionInterval: defaultMetricsCollectionInterval,
 				ClusterName:        "TestCluster",
 			},
 		},
