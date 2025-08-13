@@ -66,7 +66,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -77,7 +77,7 @@ func Factories() (otelcol.Factories, error) {
 		awscontainerinsightreceiver.NewFactory(),
 		awscontainerinsightskueuereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
-		awsebsnvmereceiver.NewFactory(),
+		awsnvmereceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
 		jaegerreceiver.NewFactory(),

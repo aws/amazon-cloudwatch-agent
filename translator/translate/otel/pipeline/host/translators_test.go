@@ -141,11 +141,11 @@ func TestTranslators(t *testing.T) {
 			configSection: MetricsKey,
 			want: map[string]want{
 				"metrics/hostDeltaMetrics/cloudwatch": {
-					receivers: []string{"telegraf_diskio", "awsebsnvmereceiver"},
+					receivers: []string{"telegraf_diskio", "awsnvmereceiver"},
 					exporters: []string{"awscloudwatch"},
 				},
 				"metrics/host/amp": {
-					receivers: []string{"telegraf_diskio", "awsebsnvmereceiver"},
+					receivers: []string{"telegraf_diskio", "awsnvmereceiver"},
 					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
@@ -197,11 +197,11 @@ func TestTranslators(t *testing.T) {
 			configSection: MetricsKey,
 			want: map[string]want{
 				"metrics/hostDeltaMetrics/cloudwatch": {
-					receivers: []string{"awsebsnvmereceiver"},
+					receivers: []string{"awsnvmereceiver"},
 					exporters: []string{"awscloudwatch"},
 				},
 				"metrics/host/amp": {
-					receivers: []string{"awsebsnvmereceiver"},
+					receivers: []string{"awsnvmereceiver"},
 					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
