@@ -1,0 +1,23 @@
+# GoLand IDEA
+/.idea/
+*.iml
+
+# VS Code
+.vscode/
+.devcontainer/
+
+# Emacs
+*~
+\#*\#
+
+# Miscellaneous files
+*.sw[op]
+*.DS_Store
+
+# Coverage
+coverage.out
+coverage.txt
+coverage.html
+
+# Project tools
+.tools/

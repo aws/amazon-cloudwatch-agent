@@ -1,0 +1,145 @@
+{{ template "header.html" . }}
+
+<a href="/">Back to Agents List</a>
+
+<style>
+    td {
+        padding: 5px
+    }
+</style>
+
+<link rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.1.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+<hr/>
+
+<table>
+    <tr>
+        <td valign="top">
+            <h3>Agent</h3>
+            <table border="1" style="border-collapse: collapse">
+                <tr>
+                    <td>Instance ID:</td><td>{{ .InstanceIdStr }}</td>
+                </tr>
+                {{if .Status.Health }}
+                <tr>
+                    <td>Up:</td><td>{{ .Status.Health.Healthy }}</td>
+                </tr>
+                {{if .Status.Health.LastError }}
+                <tr>
+                    <td></td><td><span style="color:red">{{ .Status.Health.LastError }}</span></td>
+                </tr>
+                {{end}}
+                {{if .Status.Health.Healthy }}
+                <tr>
+                    <td>Up since:</td><td>{{ .StartedAt }}</td>
+                </tr>
+                {{end}}
+                {{end}}
+            </table>
+        </td>
+        <td valign="top">
+            <h3>Attributes</h3>
+            <table border="1" style="border-collapse: collapse">
+                {{ range .Status.AgentDescription.IdentifyingAttributes }}
+                </tr>
+                <td>{{ .Key }}</td><td>{{ .Value }}</td>
+                </tr>
+                {{ end }}
+                {{ range .Status.AgentDescription.NonIdentifyingAttributes }}
+                </tr>
+                <td>{{ .Key }}</td><td>{{ .Value }}</td>
+                </tr>
+                {{ end }}
+            </table>
+        </td>
+    </tr>
+</table>
+
+<hr/>
+
+<h3>Configuration</h3>
+<table width="100%">
+    <tr>
+        <td valign="top">
+            Current Effective Configuration:<br/>
+            <pre><code class="language-yaml">{{ .EffectiveConfig }}</code></pre>
+        </td>
+        <td valign="top">
+            Additional Configuration:<br/>
+            <form action="/save_config" method="post">
+            <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
+            <textarea cols="40" rows="20" name="config">{{ .CustomInstanceConfig }}</textarea><br/>
+             {{if .Status.RemoteConfigStatus }}
+                {{if .Status.RemoteConfigStatus.ErrorMessage }}
+                <span style="color:red">Failed: {{ .Status.RemoteConfigStatus.ErrorMessage }}</span><br/>
+                {{end}}
+             {{end}}
+            <input type="submit" value="Save and Send to Agent"/>
+            </form>
+        </td>
+    </tr>
+</table>
+
+<hr/>
+
+<h3>Client Certificate</h3>
+
+<table border="1" style="border-collapse: collapse">
+    {{if .ClientCert}}
+    <tr>
+        <td>Subject:</td><td>{{ .ClientCert.Subject }}</td>
+    </tr>
+    <tr>
+        <td>Not Valid Before:</td><td>{{ .ClientCert.NotBefore }}</td>
+    </tr>
+    <tr>
+        <td>Not Valid After:</td><td>{{ .ClientCert.NotAfter }}</td>
+    </tr>
+    <tr>
+        <td>SHA256 Fingerprint:</td><td>{{ .ClientCertSha256Fingerprint }}</td>
+    </tr>
+    {{else}}
+    <tr>
+        <td><span style="color:red">Client did not supply a certificate.</span></td>
+    </tr>
+    {{end}}
+</table>
+
+{{if .ClientCertOfferError }}
+<br/>
+<span style="color:red">Cannot apply offered certificate: {{ .ClientCertOfferError }}</span>
+<br/>
+{{end}}
+
+<br/>
+<form action="/rotate_client_cert" method="post">
+    <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
+    {{if .ClientCert}}
+    <input type="submit" value="Rotate Client Certificate"/>
+    {{else}}
+    <input type="submit" value="Accept and Offer Client Certificate"/>
+    {{end}}
+</form>
+
+<h3>OpAMP Connection Settings</h3>
+
+<br/>
+
+<form action="/opamp_connection_settings" method="post">
+    <input type="hidden" name="instanceid" value="{{ .InstanceIdStr }}"/>
+    <input type="radio" name="tls_min" value="TLSv1.0">
+      <label for="TLSv1.0">TLSv1.0</label><br/>
+    <input type="radio" name="tls_min" value="TLSv1.1">
+      <label for="TLSv1.1">TLSv1.1</label><br/>
+    <input type="radio" name="tls_min" value="TLSv1.2">
+      <label for="TLSv1.2">TLSv1.2</label><br/>
+    <input type="radio" name="tls_min" value="TLSv1.3">
+      <label for="TLSv1.3">TLSv1.3</label><br/>
+    <input type="submit" value="Set min TLS version"/>
+</form>
+
+</body>
+</html>

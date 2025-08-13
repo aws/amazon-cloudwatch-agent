@@ -1,0 +1,34 @@
+name: static-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  staticcheck:
+    name: staticcheck (project)
+    strategy:
+      matrix:
+        dir: ["client", "internal", "server", "protobufshelpers"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - id: install_go
+        uses: WillAbides/setup-go-faster@v1.14.0
+        with:
+          go-version-file: "go.mod"
+      - uses: dominikh/staticcheck-action@v1.4.0
+        with:
+          install-go: false
+          version: "2025.1.1"
+          working-directory: ${{ matrix.dir }}

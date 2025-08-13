@@ -1,0 +1,23 @@
+{{ template "header.html" . }}
+
+<h2>Agents</h2>
+
+<style>
+    td {
+        padding: 5px
+    }
+</style>
+
+<table width=100% border="1" style="border-collapse: collapse">
+    <tr>
+        <th>Instance ID</th>
+    </tr>
+{{ range . }}
+    <tr>
+        <td><a href="agent?instanceid={{ .InstanceIdStr }}">{{ .InstanceIdStr }}</a></td>
+    </tr>
+{{ end }}
+</table>
+
+</body>
+</html>

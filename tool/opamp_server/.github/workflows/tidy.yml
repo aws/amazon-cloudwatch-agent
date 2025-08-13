@@ -1,0 +1,49 @@
+name: go-mod-tidy
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, synchronize, reopened, labeled, unlabeled]
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  setup-environment:
+    permissions:
+      contents: write # to allow pushing changes to the branch
+    runs-on: ubuntu-latest
+    if: ${{ (github.actor == 'renovate[bot]' || contains(github.event.pull_request.labels.*.name, 'renovatebot')) }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Setup Go
+        uses: actions/setup-go@v5.5.0
+        with:
+          go-version: "1.22"
+      - name: Setup Go Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Cache Go
+        id: module-cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/go/pkg/mod
+          key: go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.mod', '**/go.sum') }}
+      - name: Install dependencies
+        if: steps.module-cache.outputs.cache-hit != 'true'
+        run: make gomoddownload
+      - name: Install Tools
+        if: steps.module-cache.outputs.cache-hit != 'true'
+        run: make install-tools
+      - name: go mod tidy, make all
+        run: |
+          make tidy && make all
+          git config user.name opentelemetrybot
+          git config user.email 107717825+opentelemetrybot@users.noreply.github.com
+          echo "git diff --exit-code || (git add . && git commit -m \"go mod tidy, make all\" && git push)"
+          git diff --exit-code || (git add . && git commit -m "go mod tidy, make all" && git push)
+      - uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: renovatebot
