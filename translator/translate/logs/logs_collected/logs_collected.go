@@ -11,7 +11,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/constants"
 )
 
 type Rule translator.Rule
@@ -26,8 +25,10 @@ var (
 	darwinMetricCollectRule  = map[string]Rule{}
 )
 
+const SectionKey = "logs_collected"
+
 func GetCurPath() string {
-	curPath := parent.GetCurPath() + constants.SectionKeyLogsCollected + "/"
+	curPath := parent.GetCurPath() + SectionKey + "/"
 	return curPath
 }
 
@@ -59,12 +60,12 @@ func (l *LogsCollected) ApplyRule(input interface{}) (returnKey string, returnVa
 		log.Panicf("E! Unknown target platform: %s ", translator.GetTargetPlatform())
 	}
 
-	if _, ok := im[constants.SectionKeyLogsCollected]; !ok {
+	if _, ok := im[SectionKey]; !ok {
 		returnKey = ""
 		returnVal = ""
 	} else {
 		for _, rule := range targetRuleMap {
-			key, val := rule.ApplyRule(im[constants.SectionKeyLogsCollected])
+			key, val := rule.ApplyRule(im[SectionKey])
 			if key == "inputs" {
 				result = translator.MergeTwoUniqueMaps(result, val.(map[string]interface{}))
 			}
@@ -78,11 +79,11 @@ func (l *LogsCollected) ApplyRule(input interface{}) (returnKey string, returnVa
 var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
 
 func (l *LogsCollected) Merge(source map[string]interface{}, result map[string]interface{}) {
-	mergeJsonUtil.MergeMap(source, result, constants.SectionKeyLogsCollected, MergeRuleMap, GetCurPath())
+	mergeJsonUtil.MergeMap(source, result, SectionKey, MergeRuleMap, GetCurPath())
 }
 
 func init() {
 	obj := new(LogsCollected)
-	parent.RegisterRule(constants.SectionKeyLogsCollected, obj)
-	parent.MergeRuleMap[constants.SectionKeyLogsCollected] = obj
+	parent.RegisterRule(SectionKey, obj)
+	parent.MergeRuleMap[SectionKey] = obj
 }
