@@ -3,7 +3,7 @@
 
 server:
   # OpAMP server endpoint - customers can modify this to point to their OpAMP server
-  endpoint: ${OPAMP_ENDPOINT:-wss://opamp.monitoring.amazonaws.com/v1/opamp}
+  endpoint: ${OPAMP_ENDPOINT:-wss://127.0.0.1:4320/v1/opamp}
   
   # Optional headers for authentication
   headers:
