@@ -17,12 +17,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver/internal/nvme"
 )
 
-const EbsMagic uint64 = 0x3C23B510
+const ebsMagic uint64 = 0x3C23B510
 
-var ErrInvalidEbsMagic = errors.New("invalid EBS magic number")
+var errInvalidEbsMagic = errors.New("invalid EBS magic number")
 
-// EBSMetrics represents the parsed metrics from the NVMe log page.
-type EBSMetrics struct {
+// Metrics represents the parsed EBS metrics from the NVMe log page.
+type Metrics struct {
 	EBSMagic              uint64
 	ReadOps               uint64
 	WriteOps              uint64
@@ -40,9 +40,8 @@ type EBSMetrics struct {
 	WriteLatency          Histogram
 }
 
-func (EBSMetrics) IsNVMeMetrics() {}
+func (Metrics) IsNVMeMetrics() {}
 
-// Histogram holds latency distribution bins.
 type Histogram struct {
 	BinCount uint64
 	Bins     [64]HistogramBin
@@ -57,7 +56,7 @@ type HistogramBin struct {
 // scraper implements DeviceTypeScraper for EBS devices.
 type scraper struct{}
 
-func NewScraper() *scraper {
+func NewScraper() nvme.DeviceTypeScraper {
 	return &scraper{}
 }
 
@@ -80,30 +79,30 @@ func (s *scraper) SetResourceAttribute(rb *metadata.ResourceBuilder, identifier 
 	rb.SetVolumeID(identifier)
 }
 
-func (s *scraper) ParseRawData(data []byte) (nvme.NVMeMetrics, error) {
-	log.Println("Parsing Raw Data EBS2")
+func (s *scraper) ParseRawData(data []byte) (nvme.Metrics, error) {
+	log.Println("Parsing Raw Data EBS3")
 	if len(data) < 8 {
-		return nil, fmt.Errorf("input too short: %w", ErrInvalidEbsMagic)
+		return nil, fmt.Errorf("input too short: %w", errInvalidEbsMagic)
 	}
 
 	magic64 := binary.LittleEndian.Uint64(data[0:8])
-	if magic64 != EbsMagic {
-		return nil, ErrInvalidEbsMagic
+	if magic64 != ebsMagic {
+		return nil, errInvalidEbsMagic
 	}
 
-	var metrics EBSMetrics
+	var metrics Metrics
 	reader := bytes.NewReader(data)
 	if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
 		return nil, fmt.Errorf("failed to parse log page: %w", err)
 	}
-	if metrics.EBSMagic != EbsMagic {
-		return nil, ErrInvalidEbsMagic
+	if metrics.EBSMagic != ebsMagic {
+		return nil, errInvalidEbsMagic
 	}
 	return metrics, nil
 }
 
-func (s *scraper) RecordMetrics(recordMetric nvme.RecordMetricFunc, mb *metadata.MetricsBuilder, ts pcommon.Timestamp, metrics nvme.NVMeMetrics) {
-	m, ok := metrics.(EBSMetrics)
+func (s *scraper) RecordMetrics(recordMetric nvme.RecordMetricFunc, mb *metadata.MetricsBuilder, ts pcommon.Timestamp, metrics nvme.Metrics) {
+	m, ok := metrics.(Metrics)
 	if !ok {
 		return
 	}

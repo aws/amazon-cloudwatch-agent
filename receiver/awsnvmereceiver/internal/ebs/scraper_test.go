@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package ebs
 
 import (
@@ -13,14 +16,14 @@ func TestParseRawData(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   []byte
-		want    *EBSMetrics
+		want    *Metrics
 		wantErr string
 	}{
 		{
 			name: "valid EBS log page",
 			input: func() []byte {
-				metrics := EBSMetrics{
-					EBSMagic:              EbsMagic,
+				metrics := Metrics{
+					EBSMagic:              ebsMagic,
 					ReadOps:               100,
 					WriteOps:              200,
 					ReadBytes:             1024,
@@ -36,8 +39,8 @@ func TestParseRawData(t *testing.T) {
 				}
 				return buf.Bytes()
 			}(),
-			want: &EBSMetrics{
-				EBSMagic:              EbsMagic,
+			want: &Metrics{
+				EBSMagic:              ebsMagic,
 				ReadOps:               100,
 				WriteOps:              200,
 				ReadBytes:             1024,
@@ -51,7 +54,7 @@ func TestParseRawData(t *testing.T) {
 		{
 			name: "invalid EBS magic number",
 			input: func() []byte {
-				metrics := EBSMetrics{
+				metrics := Metrics{
 					EBSMagic: 0x12345678,
 				}
 				buf := new(bytes.Buffer)
@@ -60,12 +63,12 @@ func TestParseRawData(t *testing.T) {
 				}
 				return buf.Bytes()
 			}(),
-			wantErr: ErrInvalidEbsMagic.Error(),
+			wantErr: errInvalidEbsMagic.Error(),
 		},
 		{
 			name:    "input too short",
 			input:   []byte{0x01, 0x02},
-			wantErr: ErrInvalidEbsMagic.Error(),
+			wantErr: errInvalidEbsMagic.Error(),
 		},
 	}
 
@@ -84,9 +87,9 @@ func TestParseRawData(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			got, ok := gotInterface.(EBSMetrics)
+			got, ok := gotInterface.(Metrics)
 			if !ok {
-				t.Fatalf("expected EBSMetrics type but got %T", gotInterface)
+				t.Fatalf("expected Metrics type but got %T", gotInterface)
 			}
 
 			if got != *tt.want {

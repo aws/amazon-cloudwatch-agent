@@ -22,30 +22,17 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver/internal/nvme"
 )
 
-// DeviceTypeScraper defines type-specific behavior for scraping EBS or Instance Store metrics.
-type DeviceTypeScraper interface {
-	Model() string
-	DeviceType() string
-	Identifier(serial string) (string, error)
-	SetResourceAttribute(rb *metadata.ResourceBuilder, identifier string)
-	// RecordMetrics accepts a typed record function and the typed NVMe metrics interface.
-	RecordMetrics(recordMetric nvme.RecordMetricFunc, mb *metadata.MetricsBuilder, ts pcommon.Timestamp, metrics nvme.NVMeMetrics)
-	IsEnabled(m *metadata.MetricsConfig) bool
-	ParseRawData(data []byte) (nvme.NVMeMetrics, error)
-}
-
 type nvmeScraper struct {
 	logger *zap.Logger
 	mb     *metadata.MetricsBuilder
 	nvme   nvme.DeviceInfoProvider
 
 	allowedDevices  collections.Set[string]
-	typeScrapers    []DeviceTypeScraper
-	scrapersByModel map[string]DeviceTypeScraper
+	enabledScrapers map[string]nvme.DeviceTypeScraper
 }
 
 type nvmeDevices struct {
-	scraper     DeviceTypeScraper
+	scraper     nvme.DeviceTypeScraper
 	deviceType  string
 	identifier  string
 	deviceNames []string
@@ -96,13 +83,13 @@ func (s *nvmeScraper) scrape(_ context.Context) (pmetric.Metrics, error) {
 			}
 			rawData, err := getRawData(devicePath)
 			if err != nil {
-				s.logger.Debug("unable to get raw data for device", zap.String("device", device), zap.Error(err))
+				s.logger.Debug("unable to get metrics for device", zap.String("device", device), zap.Error(err))
 				continue
 			}
 
 			metrics, err := nvmeDevices.scraper.ParseRawData(rawData)
 			if err != nil {
-				s.logger.Debug("unable to parse raw data for device", zap.String("device", device), zap.Error(err))
+				s.logger.Debug("unable to get metrics for device", zap.String("device", device), zap.Error(err))
 				continue
 			}
 
@@ -140,16 +127,20 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 	for _, device := range allNvmeDevices {
 		deviceName := device.DeviceName()
 
-		// Check if device is allowed (either wildcard "*" or explicitly allowed)
-		if !s.allowedDevices.Contains("*") && !s.allowedDevices.Contains(deviceName) {
-			s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
-			continue
+		// Check if all devices should be collected. Otherwise check if defined by user
+		hasAsterisk := s.allowedDevices.Contains("*")
+		if !hasAsterisk {
+			if isAllowed := s.allowedDevices.Contains(deviceName); !isAllowed {
+				s.logger.Debug("skipping un-allowed device", zap.String("device", deviceName))
+				continue
+			}
 		}
 
 		controllerID := device.Controller()
 
-		// If we already processed this controller, just add deviceName to list and continue
-		if entry, exists := devices[controllerID]; exists {
+		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
+		// retrieving the volume ID and validating if it's an EBS/IS device
+		if entry, seenController := devices[controllerID]; seenController {
 			entry.deviceNames = append(entry.deviceNames, deviceName)
 			s.logger.Debug("skipping unnecessary device validation steps", zap.String("device", deviceName))
 			continue
@@ -157,7 +148,7 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 
 		serial, err := s.nvme.GetDeviceSerial(&device)
 		if err != nil {
-			s.logger.Debug("unable to get serial number", zap.String("device", deviceName), zap.Error(err))
+			s.logger.Debug("unable to get serial number of device", zap.String("device", deviceName), zap.Error(err))
 			continue
 		}
 
@@ -167,9 +158,8 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 			continue
 		}
 
-		scraper, ok := s.scrapersByModel[model]
+		scraper, ok := s.enabledScrapers[model]
 		if !ok {
-			s.logger.Debug("skipping unknown device model", zap.String("device", deviceName), zap.String("model", model))
 			continue
 		}
 
@@ -179,7 +169,6 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 			continue
 		}
 
-		// Add device grouped by controller
 		devices[controllerID] = &nvmeDevices{
 			scraper:     scraper,
 			deviceType:  scraper.DeviceType(),
@@ -193,33 +182,26 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 
 func newScraper(cfg *Config,
 	settings receiver.Settings,
-	nvme nvme.DeviceInfoProvider,
+	nvmeInfo nvme.DeviceInfoProvider,
 	allowedDevices collections.Set[string],
 ) *nvmeScraper {
 	scraper := &nvmeScraper{
 		logger:         settings.TelemetrySettings.Logger,
 		mb:             metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
-		nvme:           nvme,
+		nvme:           nvmeInfo,
 		allowedDevices: allowedDevices,
 	}
 
-	allScrapers := []DeviceTypeScraper{
+	allScrapers := []nvme.DeviceTypeScraper{
 		ebs.NewScraper(),
 		instancestore.NewScraper(),
 	}
 
-	var enabledScrapers []DeviceTypeScraper
+	scraper.enabledScrapers = make(map[string]nvme.DeviceTypeScraper)
 	for _, ts := range allScrapers {
 		if ts.IsEnabled(&cfg.MetricsBuilderConfig.Metrics) {
-			enabledScrapers = append(enabledScrapers, ts)
+			scraper.enabledScrapers[ts.Model()] = ts
 		}
-	}
-	scraper.typeScrapers = enabledScrapers
-
-	// build fast lookup map model -> scraper
-	scraper.scrapersByModel = make(map[string]DeviceTypeScraper, len(enabledScrapers))
-	for _, ts := range enabledScrapers {
-		scraper.scrapersByModel[ts.Model()] = ts
 	}
 
 	return scraper

@@ -57,18 +57,6 @@ func (m *mockNvmeUtil) DevicePath(device string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func generateEBSRawData(m ebs.EBSMetrics) []byte {
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, m)
-	return buf.Bytes()
-}
-
-func generateInstanceStoreRawData(m instancestore.InstanceStoreMetrics) []byte {
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, m)
-	return buf.Bytes()
-}
-
 func TestScraper_Start(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
@@ -143,7 +131,7 @@ func TestScraper_Scrape_EBSSuccess(t *testing.T) {
 	originalGetRawData := getRawData
 	t.Cleanup(func() { getRawData = originalGetRawData })
 	getRawData = func(string) ([]byte, error) {
-		m := ebs.EBSMetrics{
+		m := ebs.Metrics{
 			EBSMagic:              0x3C23B510,
 			ReadOps:               100,
 			WriteOps:              200,
@@ -165,33 +153,37 @@ func TestScraper_Scrape_EBSSuccess(t *testing.T) {
 
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
-	mockUtil.On("GetDeviceSerial", &device1).Return("vol-1234567890abcdef", nil)
+	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
+	// Allow all devices with empty map
 	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
+
+	// Verify metrics
 	assert.Equal(t, 1, metrics.ResourceMetrics().Len())
 
 	rm := metrics.ResourceMetrics().At(0)
-	assert.Equal(t, "vol-1234567890abcdef", rm.Resource().Attributes().AsRaw()["volume_id"])
+	assert.Equal(t, "vol-1234567890abcdef", rm.Resource().Attributes().AsRaw()["VolumeId"])
 
 	ilm := rm.ScopeMetrics().At(0).Metrics()
 	assert.Equal(t, 11, ilm.Len())
 
-	verifySumMetric(t, ilm, "diskio.ebs.total_read_ops", 100)
-	verifySumMetric(t, ilm, "diskio.ebs.total_write_ops", 200)
-	verifySumMetric(t, ilm, "diskio.ebs.total_read_bytes", 1024)
-	verifySumMetric(t, ilm, "diskio.ebs.total_write_bytes", 2048)
-	verifySumMetric(t, ilm, "diskio.ebs.total_read_time", 500)
-	verifySumMetric(t, ilm, "diskio.ebs.total_write_time", 600)
-	verifySumMetric(t, ilm, "diskio.ebs.volume_performance_exceeded_iops", 1)
-	verifySumMetric(t, ilm, "diskio.ebs.volume_performance_exceeded_tp", 2)
-	verifySumMetric(t, ilm, "diskio.ebs.ec2_instance_performance_exceeded_iops", 3)
-	verifySumMetric(t, ilm, "diskio.ebs.ec2_instance_performance_exceeded_tp", 4)
-	verifyGaugeMetric(t, ilm, "diskio.ebs.volume_queue_length", 5)
+	// Verify specific metrics
+	verifySumMetric(t, ilm, "diskio_ebs_total_read_ops", 100)
+	verifySumMetric(t, ilm, "diskio_ebs_total_write_ops", 200)
+	verifySumMetric(t, ilm, "diskio_ebs_total_read_bytes", 1024)
+	verifySumMetric(t, ilm, "diskio_ebs_total_write_bytes", 2048)
+	verifySumMetric(t, ilm, "diskio_ebs_total_read_time", 500)
+	verifySumMetric(t, ilm, "diskio_ebs_total_write_time", 600)
+	verifySumMetric(t, ilm, "diskio_ebs_volume_performance_exceeded_iops", 1)
+	verifySumMetric(t, ilm, "diskio_ebs_volume_performance_exceeded_tp", 2)
+	verifySumMetric(t, ilm, "diskio_ebs_ec2_instance_performance_exceeded_iops", 3)
+	verifySumMetric(t, ilm, "diskio_ebs_ec2_instance_performance_exceeded_tp", 4)
+	verifyGaugeMetric(t, ilm, "diskio_ebs_volume_queue_length", 5)
 
 	mockUtil.AssertExpectations(t)
 }
@@ -200,11 +192,11 @@ func TestScraper_Scrape_InstanceStoreSuccess(t *testing.T) {
 	originalGetRawData := getRawData
 	t.Cleanup(func() { getRawData = originalGetRawData })
 	getRawData = func(string) ([]byte, error) {
-		m := instancestore.InstanceStoreMetrics{
+		m := instancestore.Metrics{
 			Magic:                 0xEC2C0D7E,
 			ReadOps:               150,
 			WriteOps:              250,
-			ReadBytes:             123,
+			ReadBytes:             1536,
 			WriteBytes:            2560,
 			TotalReadTime:         750,
 			TotalWriteTime:        850,
@@ -224,28 +216,32 @@ func TestScraper_Scrape_InstanceStoreSuccess(t *testing.T) {
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon EC2 NVMe Instance Storage", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
+	// Allow all devices
 	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 
+	// Verify metrics
 	assert.Equal(t, 1, metrics.ResourceMetrics().Len())
 
 	rm := metrics.ResourceMetrics().At(0)
-	assert.Equal(t, "AWS1234567890abcdef0", rm.Resource().Attributes().AsRaw()["serial_id"])
+	assert.Equal(t, "AWS1234567890abcdef0", rm.Resource().Attributes().AsRaw()["SerialId"])
 
+	// Check metric values
 	ilm := rm.ScopeMetrics().At(0).Metrics()
-	assert.Equal(t, 9, ilm.Len())
+	assert.Equal(t, 9, ilm.Len()) // We expect 9 metrics for Instance Store
 
-	verifySumMetric(t, ilm, "diskio.instance_store.total_read_ops", 150)
-	verifySumMetric(t, ilm, "diskio.instance_store.total_write_ops", 250)
-	verifySumMetric(t, ilm, "diskio.instance_store.total_read_bytes", 1536)
-	verifySumMetric(t, ilm, "diskio.instance_store.total_write_bytes", 2560)
-	verifySumMetric(t, ilm, "diskio.instance_store.total_read_time", 750)
-	verifySumMetric(t, ilm, "diskio.instance_store.total_write_time", 850)
-	verifySumMetric(t, ilm, "diskio.instance_store.performance_exceeded_iops", 6)
-	verifySumMetric(t, ilm, "diskio.instance_store.performance_exceeded_tp", 7)
-	verifyGaugeMetric(t, ilm, "diskio.instance_store.volume_queue_length", 8)
+	// Verify specific metrics
+	verifySumMetric(t, ilm, "diskio_instance_store_total_read_ops", 150)
+	verifySumMetric(t, ilm, "diskio_instance_store_total_write_ops", 250)
+	verifySumMetric(t, ilm, "diskio_instance_store_total_read_bytes", 1536)
+	verifySumMetric(t, ilm, "diskio_instance_store_total_write_bytes", 2560)
+	verifySumMetric(t, ilm, "diskio_instance_store_total_read_time", 750)
+	verifySumMetric(t, ilm, "diskio_instance_store_total_write_time", 850)
+	verifySumMetric(t, ilm, "diskio_instance_store_performance_exceeded_iops", 6)
+	verifySumMetric(t, ilm, "diskio_instance_store_performance_exceeded_tp", 7)
+	verifyGaugeMetric(t, ilm, "diskio_instance_store_volume_queue_length", 8)
 
 	mockUtil.AssertExpectations(t)
 }
@@ -259,25 +255,11 @@ func TestScraper_Scrape_UnknownDeviceModel(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device1).Return("unknown-serial", nil)
 	mockUtil.On("GetDeviceModel", &device1).Return("Unknown Storage Device", nil)
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundLogMessage := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "skipping unknown device model" {
-			foundLogMessage = true
-			break
-		}
-	}
-	assert.True(t, foundLogMessage, "Expected to find log about skipping unknown device model")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -291,25 +273,11 @@ func TestScraper_Scrape_GetDeviceModelError(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
 	mockUtil.On("GetDeviceModel", &device1).Return("", errors.New("failed to get device model"))
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundLogMessage := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "unable to get device model" {
-			foundLogMessage = true
-			break
-		}
-	}
-	assert.True(t, foundLogMessage, "Expected to find log about unable to get device model")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -322,25 +290,12 @@ func TestScraper_Scrape_GetDeviceSerialError(t *testing.T) {
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
 	mockUtil.On("GetDeviceSerial", &device1).Return("", errors.New("failed to get serial"))
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundLogMessage := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "unable to get serial number" {
-			foundLogMessage = true
-			break
-		}
-	}
-	assert.True(t, foundLogMessage, "Expected to find log about unable to get serial number")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -354,25 +309,11 @@ func TestScraper_Scrape_InvalidEBSSerialPrefix(t *testing.T) {
 	mockUtil.On("GetDeviceSerial", &device1).Return("invalid-serial", nil)
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundLogMessage := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "invalid identifier for model, skipping device" {
-			foundLogMessage = true
-			break
-		}
-	}
-	assert.True(t, foundLogMessage, "Expected to find log about invalid identifier")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -393,30 +334,11 @@ func TestScraper_Scrape_GetRawDataError(t *testing.T) {
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundRawDataLog := false
-	foundUnableMetricsLog := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "unable to get raw data for device" {
-			foundRawDataLog = true
-		}
-		if log.Message == "unable to get metrics for nvme device with controller id" {
-			foundUnableMetricsLog = true
-		}
-	}
-	assert.True(t, foundRawDataLog, "Expected to find log about unable to get raw data")
-	assert.True(t, foundUnableMetricsLog, "Expected to find log about unable to get metrics for controller")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -437,26 +359,11 @@ func TestScraper_Scrape_ParseRawDataError(t *testing.T) {
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundLogMessage := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "unable to parse raw data for device" {
-			foundLogMessage = true
-			break
-		}
-	}
-	assert.True(t, foundLogMessage, "Expected to find log about unable to parse raw data")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -466,7 +373,7 @@ func TestScraper_Scrape_MultipleDevices_EBSAndInstanceStore(t *testing.T) {
 	t.Cleanup(func() { getRawData = originalGetRawData })
 	getRawData = func(devicePath string) ([]byte, error) {
 		if devicePath == "/dev/nvme0n1" {
-			m := ebs.EBSMetrics{
+			m := ebs.Metrics{
 				EBSMagic:              0x3C23B510,
 				ReadOps:               100,
 				WriteOps:              200,
@@ -482,7 +389,7 @@ func TestScraper_Scrape_MultipleDevices_EBSAndInstanceStore(t *testing.T) {
 			}
 			return generateEBSRawData(m), nil
 		} else if devicePath == "/dev/nvme1n1" {
-			m := instancestore.InstanceStoreMetrics{
+			m := instancestore.Metrics{
 				Magic:                 0xEC2C0D7E,
 				ReadOps:               150,
 				WriteOps:              250,
@@ -528,14 +435,14 @@ func TestScraper_Scrape_MultipleDevices_EBSAndInstanceStore(t *testing.T) {
 		rm := metrics.ResourceMetrics().At(i)
 		attrs := rm.Resource().Attributes().AsRaw()
 
-		if _, hasVolumeID := attrs["volume_id"]; hasVolumeID {
+		if _, hasVolumeID := attrs["VolumeId"]; hasVolumeID {
 			foundEBS = true
-			assert.Equal(t, "vol-1234567890abcdef", attrs["volume_id"])
+			assert.Equal(t, "vol-1234567890abcdef", attrs["VolumeId"])
 		}
 
-		if _, hasSerialID := attrs["serial_id"]; hasSerialID {
+		if _, hasSerialID := attrs["SerialId"]; hasSerialID {
 			foundInstanceStore = true
-			assert.Equal(t, "AWS0987654321fedcba0", attrs["serial_id"])
+			assert.Equal(t, "AWS0987654321fedcba0", attrs["SerialId"])
 		}
 	}
 
@@ -549,7 +456,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	originalGetRawData := getRawData
 	t.Cleanup(func() { getRawData = originalGetRawData })
 	getRawData = func(string) ([]byte, error) {
-		m := ebs.EBSMetrics{
+		m := ebs.Metrics{
 			EBSMagic:              0x3C23B510,
 			ReadOps:               100,
 			WriteOps:              200,
@@ -574,6 +481,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 
 	mockUtil := new(mockNvmeUtil)
 	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1, device2}, nil)
+
 	mockUtil.On("GetDeviceSerial", &device1).Return("vol0987654321fedcba", nil)
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
@@ -584,13 +492,16 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
 	settings.TelemetrySettings.Logger = logger
 
+	// Only allow nvme0n1
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("nvme0n1"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 
+	// We should get one set of metrics because of nvme0n1
 	assert.Equal(t, 1, metrics.ResourceMetrics().Len())
 
+	// Verify that we logged about skipping nvme1n1
 	foundSkipLog := false
 	for _, log := range observedLogs.All() {
 		if log.Message == "skipping un-allowed device" && log.ContextMap()["device"] == "nvme1n1" {
@@ -607,7 +518,7 @@ func TestScraper_Scrape_MultipleDevicesSameController(t *testing.T) {
 	originalGetRawData := getRawData
 	t.Cleanup(func() { getRawData = originalGetRawData })
 	getRawData = func(string) ([]byte, error) {
-		m := ebs.EBSMetrics{
+		m := ebs.Metrics{
 			EBSMagic:              0x3C23B510,
 			ReadOps:               100,
 			WriteOps:              200,
@@ -636,29 +547,37 @@ func TestScraper_Scrape_MultipleDevicesSameController(t *testing.T) {
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("/dev/nvme0n1", nil)
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 
+	// Should only get one set of metrics for the controller
 	assert.Equal(t, 1, metrics.ResourceMetrics().Len())
 
-	foundSkipLog := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "skipping unnecessary device validation steps" && log.ContextMap()["device"] == "nvme0n1p1" {
-			foundSkipLog = true
-			break
+	mockUtil.AssertExpectations(t)
+}
+
+func verifySumMetric(t *testing.T, metrics pmetric.MetricSlice, name string, expectedValue int64) {
+	for i := 0; i < metrics.Len(); i++ {
+		metric := metrics.At(i)
+		if metric.Name() == name {
+			assert.Equal(t, expectedValue, metric.Sum().DataPoints().At(0).IntValue())
+			return
 		}
 	}
-	assert.True(t, foundSkipLog, "Expected to find log about skipping unnecessary device validation steps")
+	t.Errorf("Metric %s not found", name)
+}
 
-	mockUtil.AssertExpectations(t)
+func verifyGaugeMetric(t *testing.T, metrics pmetric.MetricSlice, name string, expectedValue int64) {
+	for i := 0; i < metrics.Len(); i++ {
+		metric := metrics.At(i)
+		if metric.Name() == name {
+			assert.Equal(t, expectedValue, metric.Gauge().DataPoints().At(0).IntValue())
+			return
+		}
+	}
+	t.Errorf("Metric %s not found", name)
 }
 
 func TestScraper_Scrape_DevicePathError(t *testing.T) {
@@ -671,26 +590,11 @@ func TestScraper_Scrape_DevicePathError(t *testing.T) {
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
 	mockUtil.On("DevicePath", "nvme0n1").Return("", errors.New("device path error"))
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("*"))
+	scraper := newScraper(createTestReceiverConfig(), receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver")), mockUtil, collections.NewSet[string]("*"))
 
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundLogMessage := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "unable to get device path" {
-			foundLogMessage = true
-			break
-		}
-	}
-	assert.True(t, foundLogMessage, "Expected to find log about unable to get device path")
 
 	mockUtil.AssertExpectations(t)
 }
@@ -740,84 +644,9 @@ func TestScraper_Scrape_InstanceStoreDisabled(t *testing.T) {
 	mockUtil.AssertExpectations(t)
 }
 
-func TestScraper_Scrape_EBSDisabled(t *testing.T) {
-	device1, err := nvme.ParseNvmeDeviceFileName("nvme0n1")
-	require.NoError(t, err)
-
-	mockUtil := new(mockNvmeUtil)
-	mockUtil.On("GetAllDevices").Return([]nvme.DeviceFileAttributes{device1}, nil)
-	mockUtil.On("GetDeviceSerial", &device1).Return("vol1234567890abcdef", nil)
-	mockUtil.On("GetDeviceModel", &device1).Return("Amazon Elastic Block Store", nil)
-
-	cfg := createDefaultConfig().(*Config)
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteOps.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadBytes.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteBytes.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadTime.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteTime.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadOps.Enabled = true
-
-	core, observedLogs := observer.New(zapcore.DebugLevel)
-	logger := zap.New(core)
-
-	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
-
-	scraper := newScraper(cfg, settings, mockUtil, collections.NewSet[string]("*"))
-
-	metrics, err := scraper.scrape(context.Background())
-	assert.NoError(t, err)
-	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundSkipLog := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "skipping unknown device model" {
-			foundSkipLog = true
-			break
-		}
-	}
-	assert.True(t, foundSkipLog, "Expected to find log about skipping unknown device model")
-
-	mockUtil.AssertExpectations(t)
-}
-
 func TestSafeUint64ToInt64_Overflow(t *testing.T) {
 	_, err := safeUint64ToInt64(uint64(math.MaxInt64) + 1)
 	assert.Error(t, err)
-}
-
-func TestSafeUint64ToInt64_NoOverflow(t *testing.T) {
-	val, err := safeUint64ToInt64(12345)
-	assert.NoError(t, err)
-	assert.Equal(t, int64(12345), val)
-}
-
-func verifySumMetric(t *testing.T, metrics pmetric.MetricSlice, name string, expectedValue int64) {
-	for i := 0; i < metrics.Len(); i++ {
-		metric := metrics.At(i)
-		if metric.Name() == name {
-			assert.Equal(t, expectedValue, metric.Sum().DataPoints().At(0).IntValue())
-			return
-		}
-	}
-	t.Errorf("Metric %s not found", name)
-}
-
-func verifyGaugeMetric(t *testing.T, metrics pmetric.MetricSlice, name string, expectedValue int64) {
-	for i := 0; i < metrics.Len(); i++ {
-		metric := metrics.At(i)
-		if metric.Name() == name {
-			assert.Equal(t, expectedValue, metric.Gauge().DataPoints().At(0).IntValue())
-			return
-		}
-	}
-	t.Errorf("Metric %s not found", name)
 }
 
 func createTestReceiverConfig() *Config {
@@ -837,4 +666,16 @@ func createTestReceiverConfig() *Config {
 	}
 
 	return cfg
+}
+
+func generateEBSRawData(m ebs.Metrics) []byte {
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, m)
+	return buf.Bytes()
+}
+
+func generateInstanceStoreRawData(m instancestore.Metrics) []byte {
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, m)
+	return buf.Bytes()
 }

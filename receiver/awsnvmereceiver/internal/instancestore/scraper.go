@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -17,12 +16,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver/internal/nvme"
 )
 
-const InstanceStoreMagic uint32 = 0xEC2C0D7E
+const instanceStoreMagic uint32 = 0xEC2C0D7E
 
-var ErrInvalidInstanceStoreMagic = errors.New("invalid Instance Store magic number")
+var errInvalidInstanceStoreMagic = errors.New("invalid Instance Store magic number")
 
-// InstanceStoreMetrics represents the parsed metrics from the NVMe log page.
-type InstanceStoreMetrics struct {
+// Metrics represents the parsed Instance Store metrics from the NVMe log page.
+type Metrics struct {
 	Magic                 uint32
 	Reserved              uint32
 	ReadOps               uint64
@@ -52,12 +51,12 @@ type HistogramPair struct {
 	Write [32]uint64
 }
 
-func (InstanceStoreMetrics) IsNVMeMetrics() {}
+func (Metrics) IsNVMeMetrics() {}
 
 // scraper implements DeviceTypeScraper for Instance Store devices.
 type scraper struct{}
 
-func NewScraper() *scraper {
+func NewScraper() nvme.DeviceTypeScraper {
 	return &scraper{}
 }
 
@@ -70,9 +69,6 @@ func (s *scraper) DeviceType() string {
 }
 
 func (s *scraper) Identifier(serial string) (string, error) {
-	if strings.TrimSpace(serial) == "" {
-		return "", fmt.Errorf("empty serial for instance store")
-	}
 	return serial, nil
 }
 
@@ -80,30 +76,30 @@ func (s *scraper) SetResourceAttribute(rb *metadata.ResourceBuilder, identifier 
 	rb.SetSerialID(identifier)
 }
 
-func (s *scraper) ParseRawData(data []byte) (nvme.NVMeMetrics, error) {
-	log.Println("Parsing Raw Data Instance Store2")
+func (s *scraper) ParseRawData(data []byte) (nvme.Metrics, error) {
+	log.Println("Parsing Raw Data Instance Store3")
 	if len(data) < 8 {
-		return nil, fmt.Errorf("input too short: %w", ErrInvalidInstanceStoreMagic)
+		return nil, fmt.Errorf("input too short: %w", errInvalidInstanceStoreMagic)
 	}
 
 	magic32 := binary.LittleEndian.Uint32(data[0:4])
-	if magic32 != InstanceStoreMagic {
-		return nil, ErrInvalidInstanceStoreMagic
+	if magic32 != instanceStoreMagic {
+		return nil, errInvalidInstanceStoreMagic
 	}
 
-	var metrics InstanceStoreMetrics
+	var metrics Metrics
 	reader := bytes.NewReader(data)
 	if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
 		return nil, fmt.Errorf("failed to parse log page: %w", err)
 	}
-	if metrics.Magic != InstanceStoreMagic {
-		return nil, ErrInvalidInstanceStoreMagic
+	if metrics.Magic != instanceStoreMagic {
+		return nil, errInvalidInstanceStoreMagic
 	}
 	return metrics, nil
 }
 
-func (s *scraper) RecordMetrics(recordMetric nvme.RecordMetricFunc, mb *metadata.MetricsBuilder, ts pcommon.Timestamp, metrics nvme.NVMeMetrics) {
-	m, ok := metrics.(InstanceStoreMetrics)
+func (s *scraper) RecordMetrics(recordMetric nvme.RecordMetricFunc, mb *metadata.MetricsBuilder, ts pcommon.Timestamp, metrics nvme.Metrics) {
+	m, ok := metrics.(Metrics)
 	if !ok {
 		return
 	}

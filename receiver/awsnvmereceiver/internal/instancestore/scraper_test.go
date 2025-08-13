@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package instancestore
 
 import (
@@ -7,21 +10,21 @@ import (
 	"testing"
 )
 
-// TestParseRawData tests parsing raw bytes into InstanceStoreMetrics struct
+// TestParseRawData tests parsing raw bytes into Metrics struct
 func TestParseRawData(t *testing.T) {
 	scraper := NewScraper()
 
 	tests := []struct {
 		name    string
 		input   []byte
-		want    *InstanceStoreMetrics
+		want    *Metrics
 		wantErr string
 	}{
 		{
 			name: "valid Instance Store log page",
 			input: func() []byte {
-				metrics := InstanceStoreMetrics{
-					Magic:                 InstanceStoreMagic,
+				metrics := Metrics{
+					Magic:                 instanceStoreMagic,
 					Reserved:              0xABCD1234,
 					ReadOps:               111,
 					WriteOps:              222,
@@ -39,15 +42,15 @@ func TestParseRawData(t *testing.T) {
 					IOSizeRange:           [8]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 				}
 
-				for i := 0; i < 32; i++ {
-					metrics.Bounds[i].Lower = uint64(1000 + i)
-					metrics.Bounds[i].Upper = uint64(2000 + i)
+				for i := uint64(0); i < 32; i++ {
+					metrics.Bounds[i].Lower = 1000 + i
+					metrics.Bounds[i].Upper = 2000 + i
 				}
 
-				for h := 0; h < 5; h++ {
-					for b := 0; b < 32; b++ {
-						metrics.Histograms[h].Read[b] = uint64(h*1000 + b)
-						metrics.Histograms[h].Write[b] = uint64(h*2000 + b)
+				for h := uint64(0); h < 5; h++ {
+					for b := uint64(0); b < 32; b++ {
+						metrics.Histograms[h].Read[b] = h*1000 + b
+						metrics.Histograms[h].Write[b] = h*2000 + b
 					}
 				}
 
@@ -57,8 +60,8 @@ func TestParseRawData(t *testing.T) {
 				}
 				return buf.Bytes()
 			}(),
-			want: &InstanceStoreMetrics{
-				Magic:                 InstanceStoreMagic,
+			want: &Metrics{
+				Magic:                 instanceStoreMagic,
 				Reserved:              0xABCD1234,
 				ReadOps:               111,
 				WriteOps:              222,
@@ -79,7 +82,7 @@ func TestParseRawData(t *testing.T) {
 		{
 			name: "invalid magic number",
 			input: func() []byte {
-				metrics := InstanceStoreMetrics{
+				metrics := Metrics{
 					Magic: 0x87654321,
 				}
 				buf := new(bytes.Buffer)
@@ -88,12 +91,12 @@ func TestParseRawData(t *testing.T) {
 				}
 				return buf.Bytes()
 			}(),
-			wantErr: ErrInvalidInstanceStoreMagic.Error(),
+			wantErr: errInvalidInstanceStoreMagic.Error(),
 		},
 		{
 			name:    "input too short",
 			input:   []byte{0x01, 0x02},
-			wantErr: ErrInvalidInstanceStoreMagic.Error(),
+			wantErr: errInvalidInstanceStoreMagic.Error(),
 		},
 	}
 
@@ -112,9 +115,9 @@ func TestParseRawData(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			got, ok := gotInterface.(InstanceStoreMetrics)
+			got, ok := gotInterface.(Metrics)
 			if !ok {
-				t.Fatalf("expected InstanceStoreMetrics type but got %T", gotInterface)
+				t.Fatalf("expected Metrics type but got %T", gotInterface)
 			}
 
 			// Only compare the fields that were set in the 'want' struct above (partial equality)
@@ -139,10 +142,10 @@ func TestParseRawData(t *testing.T) {
 	}
 }
 
-// TestBinaryEncodeDecode tests that encoding InstanceStoreMetrics to binary and decoding it back yields the same struct
+// TestBinaryEncodeDecode tests that encoding Metrics to binary and decoding it back yields the same struct
 func TestBinaryEncodeDecode(t *testing.T) {
-	expected := InstanceStoreMetrics{
-		Magic:                 InstanceStoreMagic,
+	expected := Metrics{
+		Magic:                 instanceStoreMagic,
 		Reserved:              0x9ABCDEF0,
 		ReadOps:               100,
 		WriteOps:              200,
@@ -160,15 +163,15 @@ func TestBinaryEncodeDecode(t *testing.T) {
 		IOSizeRange:           [8]uint32{1, 2, 3, 4, 5, 6, 7, 8},
 	}
 
-	for i := 0; i < 32; i++ {
-		expected.Bounds[i].Lower = uint64(1000 + i)
-		expected.Bounds[i].Upper = uint64(2000 + i)
+	for i := uint64(0); i < 32; i++ {
+		expected.Bounds[i].Lower = 1000 + i
+		expected.Bounds[i].Upper = 2000 + i
 	}
 
-	for h := 0; h < 5; h++ {
-		for b := 0; b < 32; b++ {
-			expected.Histograms[h].Read[b] = uint64(h*1000 + b)
-			expected.Histograms[h].Write[b] = uint64(h*2000 + b)
+	for h := uint64(0); h < 5; h++ {
+		for b := uint64(0); b < 32; b++ {
+			expected.Histograms[h].Read[b] = h*1000 + b
+			expected.Histograms[h].Write[b] = h*2000 + b
 		}
 	}
 
@@ -178,12 +181,11 @@ func TestBinaryEncodeDecode(t *testing.T) {
 	}
 	rawBytes := buf.Bytes()
 
-	var actual InstanceStoreMetrics
+	var actual Metrics
 	if err := binary.Read(bytes.NewReader(rawBytes), binary.LittleEndian, &actual); err != nil {
 		t.Fatalf("failed to read binary: %v", err)
 	}
 
-	// Check all fields for equality (can use reflect.DeepEqual if you want)
 	if actual != expected {
 		t.Fatalf("parsed struct does not match expected\nExpected: %+v\nActual: %+v", expected, actual)
 	}
