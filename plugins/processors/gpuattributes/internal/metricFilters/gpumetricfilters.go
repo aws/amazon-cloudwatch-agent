@@ -104,10 +104,11 @@ var PodNeuronLabelFilter = map[string]map[string]interface{}{
 		pod_owners:                           nil,
 		containerinsightscommon.K8sLabelsKey: nil,
 	},
-	internal.Region:                    nil,
-	internal.SubnetId:                  nil,
-	internal.NeuronCore:                nil,
-	containerinsightscommon.MetricType: nil,
+	internal.Region:                        nil,
+	internal.SubnetId:                      nil,
+	internal.NeuronCore:                    nil,
+	containerinsightscommon.MetricType:     nil,
+	containerinsightscommon.UltraServerKey: nil,
 }
 
 var ContainerNeuronLabelFilter = map[string]map[string]interface{}{
@@ -130,10 +131,11 @@ var ContainerNeuronLabelFilter = map[string]map[string]interface{}{
 		pod_owners:                           nil,
 		containerinsightscommon.K8sLabelsKey: nil,
 	},
-	internal.Region:                    nil,
-	internal.SubnetId:                  nil,
-	internal.NeuronCore:                nil,
-	containerinsightscommon.MetricType: nil,
+	internal.Region:                        nil,
+	internal.SubnetId:                      nil,
+	internal.NeuronCore:                    nil,
+	containerinsightscommon.MetricType:     nil,
+	containerinsightscommon.UltraServerKey: nil,
 }
 
 var NodeNeuronLabelFilter = map[string]map[string]interface{}{
@@ -149,8 +151,9 @@ var NodeNeuronLabelFilter = map[string]map[string]interface{}{
 		containerinsightscommon.HostKey:      nil,
 		containerinsightscommon.K8sLabelsKey: nil,
 	},
-	internal.Region:                    nil,
-	internal.SubnetId:                  nil,
-	internal.NeuronCore:                nil,
-	containerinsightscommon.MetricType: nil,
+	internal.Region:                        nil,
+	internal.SubnetId:                      nil,
+	internal.NeuronCore:                    nil,
+	containerinsightscommon.MetricType:     nil,
+	containerinsightscommon.UltraServerKey: nil,
 }
