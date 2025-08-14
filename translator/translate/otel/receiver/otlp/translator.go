@@ -27,9 +27,35 @@ const (
 	defaultJMXHttpEndpoint        = "0.0.0.0:4314"
 )
 
+// EndpointKey represents just the endpoint information for port conflict detection
+type EndpointKey struct {
+	GrpcEndpoint string
+	HttpEndpoint string
+}
+
+// EndpointConfig represents the full configuration for registry comparison
+type EndpointConfig struct {
+	GrpcEndpoint string
+	HttpEndpoint string
+	TLSCertFile  string
+	TLSKeyFile   string
+}
+
+func (e EndpointConfig) EndpointKey() EndpointKey {
+	return EndpointKey{
+		GrpcEndpoint: e.GrpcEndpoint,
+		HttpEndpoint: e.HttpEndpoint,
+	}
+}
+
+func (e EndpointConfig) IsJMX() bool {
+	return e.GrpcEndpoint == ""
+}
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
+	config    EndpointConfig
 	configKey string
 	signal    pipeline.Signal
 	factory   receiver.Factory
@@ -76,152 +102,140 @@ func (t *translator) ID() component.ID {
 
 var (
 	registryMu sync.RWMutex
-	registry   = make(map[string]common.ComponentTranslator)
-	counter    int
+	registry   = make(map[EndpointConfig]common.ComponentTranslator)
 )
 
-func getEndpointKey(conf *confmap.Conf, configKey string, index int, signal pipeline.Signal) (string, error) {
-	grpcEndpoint := defaultGrpcEndpoint
-	httpEndpoint := defaultHttpEndpoint
-	tlsCert, tlsKey := "", ""
-
-	// Handle application signals defaults
-	if appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[signal]; ok {
-		for _, appKey := range appSignalsConfigKeys {
-			if configKey == appKey {
-				grpcEndpoint = defaultAppSignalsGrpcEndpoint
-				httpEndpoint = defaultAppSignalsHttpEndpoint
-				break
-			}
-		}
+func parseEndpointConfig(conf *confmap.Conf, configKey string, index int, signal pipeline.Signal, name string) EndpointConfig {
+	config := EndpointConfig{
+		GrpcEndpoint: defaultGrpcEndpoint,
+		HttpEndpoint: defaultHttpEndpoint,
 	}
 
-	if conf != nil && conf.IsSet(configKey) {
+	// Handle JMX special case
+	if name == common.PipelineNameJmx {
+		config.GrpcEndpoint = ""
+		config.HttpEndpoint = defaultJMXHttpEndpoint
+		return config
+	}
+
+	// Handle app signals special case
+	if name == common.AppSignals {
+		config.GrpcEndpoint = defaultAppSignalsGrpcEndpoint
+		config.HttpEndpoint = defaultAppSignalsHttpEndpoint
+		return config
+	}
+
+	if conf != nil && configKey != "" && conf.IsSet(configKey) {
 		otlpMap := common.GetIndexedMap(conf, configKey, index)
 		if grpc, ok := otlpMap["grpc_endpoint"]; ok {
-			grpcEndpoint = grpc.(string)
+			config.GrpcEndpoint = grpc.(string)
 		}
 		if http, ok := otlpMap["http_endpoint"]; ok {
-			httpEndpoint = http.(string)
+			config.HttpEndpoint = http.(string)
 		}
 		if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
 			if cert, ok := tls["cert_file"].(string); ok {
-				tlsCert = cert
+				config.TLSCertFile = cert
 			}
 			if key, ok := tls["key_file"].(string); ok {
-				tlsKey = key
+				config.TLSKeyFile = key
 			}
 		}
 	}
 
-	portKey := fmt.Sprintf("%s|%s", grpcEndpoint, httpEndpoint)
-	fullKey := fmt.Sprintf("%s|%s|%s", portKey, tlsCert, tlsKey)
-
-	// Check for port conflicts with different TLS configs
-	for existingKey := range registry {
-		if existingKey != fullKey && existingKey[:len(portKey)] == portKey && len(existingKey) > len(portKey) {
-			return "", fmt.Errorf("port conflict: endpoints %s already in use with different TLS configuration", portKey)
-		}
-	}
-
-	return fullKey, nil
-}
-
-func NewSharedTranslator(conf *confmap.Conf, opts ...common.TranslatorOption) common.ComponentTranslator {
-	t := &translator{factory: otlpreceiver.NewFactory()}
-	t.SetIndex(-1)
-	for _, opt := range opts {
-		opt(t)
-	}
-
-	registryMu.Lock()
-	defer registryMu.Unlock()
-
-	key, err := getEndpointKey(conf, t.configKey, t.Index(), t.signal)
-	if err != nil {
-		// Return error translator that will fail during Translate()
-		return &errorTranslator{err: err}
-	}
-
-	if existing, exists := registry[key]; exists {
-		return existing
-	}
-
-	counter++
-	t.SetName(fmt.Sprintf("otlp_shared_%d", counter))
-	registry[key] = t
-	return t
-}
-
-type errorTranslator struct {
-	err error
-}
-
-func (e *errorTranslator) ID() component.ID {
-	return component.NewID(component.MustNewType("otlp"))
-}
-
-func (e *errorTranslator) Translate(*confmap.Conf) (component.Config, error) {
-	return nil, e.err
+	return config
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
-	if t.Name() == common.PipelineNameJmx {
-		cfg.GRPC = nil
-		cfg.HTTP.ServerConfig.Endpoint = defaultJMXHttpEndpoint
-		return cfg, nil
+	// If we have a pre-computed config (from registry), use it
+	if t.config.GrpcEndpoint != "" || t.config.HttpEndpoint != "" {
+		return t.applyConfig(cfg, t.config), nil
 	}
 
-	// init default configuration
-	configKey := t.configKey
-	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
-	cfg.HTTP.ServerConfig.Endpoint = defaultHttpEndpoint
-
-	if t.Name() == common.AppSignals {
-		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.signal]
-		if !ok {
-			return nil, fmt.Errorf("no application_signals config key defined for signal: %s", t.signal)
+	// For NewTranslator, parse configuration using existing parseEndpointConfig
+	var config EndpointConfig
+	if t.configKey != "" && conf.IsSet(t.configKey) {
+		config = parseEndpointConfig(conf, t.configKey, t.Index(), t.signal, t.Name())
+	} else if t.Name() == common.PipelineNameJmx {
+		config = parseEndpointConfig(conf, "", t.Index(), t.signal, t.Name())
+	} else if t.Name() == common.AppSignals {
+		config = parseEndpointConfig(conf, "", t.Index(), t.signal, t.Name())
+		// Handle app signals TLS parsing
+		if conf != nil {
+			appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.signal]
+			if ok {
+				for _, appKey := range appSignalsConfigKeys {
+					if conf.IsSet(appKey) {
+						otlpMap := common.GetIndexedMap(conf, appKey, t.Index())
+						if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
+							if cert, ok := tls["cert_file"].(string); ok {
+								config.TLSCertFile = cert
+							}
+							if key, ok := tls["key_file"].(string); ok {
+								config.TLSKeyFile = key
+							}
+						}
+						break
+					}
+				}
+			}
 		}
-		if conf.IsSet(appSignalsConfigKeys[0]) {
-			configKey = appSignalsConfigKeys[0]
-		} else {
-			configKey = appSignalsConfigKeys[1]
-		}
-		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
-		cfg.HTTP.ServerConfig.Endpoint = defaultAppSignalsHttpEndpoint
+	} else if t.configKey == "" {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: "missing config key"}
+	} else {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: t.configKey}
 	}
 
-	if conf == nil || !conf.IsSet(configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
-	}
-
-	otlpMap := common.GetIndexedMap(conf, configKey, t.Index())
-	var tlsSettings *configtls.ServerConfig
-	if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
-		tlsSettings = &configtls.ServerConfig{}
-		tlsSettings.CertFile = tls["cert_file"].(string)
-		tlsSettings.KeyFile = tls["key_file"].(string)
-	}
-	cfg.GRPC.TLSSetting = tlsSettings
-	cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
-
-	grpcEndpoint, grpcOk := otlpMap["grpc_endpoint"]
-	httpEndpoint, httpOk := otlpMap["http_endpoint"]
-	if grpcOk {
-		cfg.GRPC.NetAddr.Endpoint = grpcEndpoint.(string)
-	}
-	if httpOk {
-		cfg.HTTP.ServerConfig.Endpoint = httpEndpoint.(string)
-	}
-	return cfg, nil
-}
-
-// ResetRegistry clears the shared receiver registry for testing
-func ResetRegistry() {
+	// Check registry for sharing and port conflicts
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	registry = make(map[string]common.ComponentTranslator)
-	counter = 0
+
+	// Check if we already have this exact component configuration
+	if existing, exists := registry[config]; exists {
+		// Update this translator to use the shared config and name
+		t.config = config
+		t.SetName(existing.(*translator).Name())
+		return existing.Translate(conf)
+	}
+
+	// Check for port conflicts using EndpointKey
+	endpointKey := config.EndpointKey()
+	for existingConfig := range registry {
+		if existingConfig.EndpointKey() == endpointKey {
+			return nil, fmt.Errorf("port conflict: endpoints %s|%s already in use with different configuration", endpointKey.GrpcEndpoint, endpointKey.HttpEndpoint)
+		}
+	}
+
+	// Register this translator with the parsed config
+	t.config = config
+	t.SetName(fmt.Sprintf("otlp_%d", len(registry)))
+	registry[config] = t
+
+	return t.applyConfig(cfg, config), nil
+}
+
+func (t *translator) applyConfig(cfg *otlpreceiver.Config, config EndpointConfig) *otlpreceiver.Config {
+	if config.IsJMX() {
+		cfg.GRPC = nil
+		cfg.HTTP.ServerConfig.Endpoint = config.HttpEndpoint
+		return cfg
+	}
+
+	cfg.GRPC.NetAddr.Endpoint = config.GrpcEndpoint
+	cfg.HTTP.ServerConfig.Endpoint = config.HttpEndpoint
+
+	if config.TLSCertFile != "" && config.TLSKeyFile != "" {
+		tlsSettings := &configtls.ServerConfig{
+			Config: configtls.Config{
+				CertFile: config.TLSCertFile,
+				KeyFile:  config.TLSKeyFile,
+			},
+		}
+		cfg.GRPC.TLSSetting = tlsSettings
+		cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
+	}
+
+	return cfg
 }
