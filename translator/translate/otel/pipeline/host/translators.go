@@ -54,14 +54,14 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
 	case []any:
 		for index := range v {
-			otlpReceivers.Set(otlpreceiver.NewTranslator(
+			otlpReceivers.Set(otlpreceiver.NewSharedTranslator(conf,
 				otlpreceiver.WithSignal(pipeline.SignalMetrics),
 				otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 				common.WithIndex(index),
 			))
 		}
 	case map[string]any:
-		otlpReceivers.Set(otlpreceiver.NewTranslator(
+		otlpReceivers.Set(otlpreceiver.NewSharedTranslator(conf,
 			otlpreceiver.WithSignal(pipeline.SignalMetrics),
 			otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
 		))

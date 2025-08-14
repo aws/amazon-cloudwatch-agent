@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtls"
@@ -73,6 +74,97 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
+var (
+	registryMu sync.RWMutex
+	registry   = make(map[string]common.ComponentTranslator)
+	counter    int
+)
+
+func getEndpointKey(conf *confmap.Conf, configKey string, index int, signal pipeline.Signal) (string, error) {
+	grpcEndpoint := defaultGrpcEndpoint
+	httpEndpoint := defaultHttpEndpoint
+	tlsCert, tlsKey := "", ""
+
+	// Handle application signals defaults
+	if appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[signal]; ok {
+		for _, appKey := range appSignalsConfigKeys {
+			if configKey == appKey {
+				grpcEndpoint = defaultAppSignalsGrpcEndpoint
+				httpEndpoint = defaultAppSignalsHttpEndpoint
+				break
+			}
+		}
+	}
+
+	if conf != nil && conf.IsSet(configKey) {
+		otlpMap := common.GetIndexedMap(conf, configKey, index)
+		if grpc, ok := otlpMap["grpc_endpoint"]; ok {
+			grpcEndpoint = grpc.(string)
+		}
+		if http, ok := otlpMap["http_endpoint"]; ok {
+			httpEndpoint = http.(string)
+		}
+		if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
+			if cert, ok := tls["cert_file"].(string); ok {
+				tlsCert = cert
+			}
+			if key, ok := tls["key_file"].(string); ok {
+				tlsKey = key
+			}
+		}
+	}
+
+	portKey := fmt.Sprintf("%s|%s", grpcEndpoint, httpEndpoint)
+	fullKey := fmt.Sprintf("%s|%s|%s", portKey, tlsCert, tlsKey)
+
+	// Check for port conflicts with different TLS configs
+	for existingKey := range registry {
+		if existingKey != fullKey && existingKey[:len(portKey)] == portKey && len(existingKey) > len(portKey) {
+			return "", fmt.Errorf("port conflict: endpoints %s already in use with different TLS configuration", portKey)
+		}
+	}
+
+	return fullKey, nil
+}
+
+func NewSharedTranslator(conf *confmap.Conf, opts ...common.TranslatorOption) common.ComponentTranslator {
+	t := &translator{factory: otlpreceiver.NewFactory()}
+	t.SetIndex(-1)
+	for _, opt := range opts {
+		opt(t)
+	}
+
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	key, err := getEndpointKey(conf, t.configKey, t.Index(), t.signal)
+	if err != nil {
+		// Return error translator that will fail during Translate()
+		return &errorTranslator{err: err}
+	}
+
+	if existing, exists := registry[key]; exists {
+		return existing
+	}
+
+	counter++
+	t.SetName(fmt.Sprintf("otlp_shared_%d", counter))
+	registry[key] = t
+	return t
+}
+
+type errorTranslator struct {
+	err error
+}
+
+func (e *errorTranslator) ID() component.ID {
+	return component.NewID(component.MustNewType("otlp"))
+}
+
+func (e *errorTranslator) Translate(*confmap.Conf) (component.Config, error) {
+	return nil, e.err
+}
+
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
@@ -124,4 +216,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.HTTP.ServerConfig.Endpoint = httpEndpoint.(string)
 	}
 	return cfg, nil
+}
+
+// ResetRegistry clears the shared receiver registry for testing
+func ResetRegistry() {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	registry = make(map[string]common.ComponentTranslator)
+	counter = 0
 }

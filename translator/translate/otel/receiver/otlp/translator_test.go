@@ -424,3 +424,180 @@ func TestTranslateJMX(t *testing.T) {
 	assert.NotNil(t, gotCfg.HTTP)
 	assert.Equal(t, "0.0.0.0:4314", gotCfg.HTTP.ServerConfig.Endpoint)
 }
+
+func TestSharedTranslatorDeduplication(t *testing.T) {
+	ResetRegistry()
+
+	config := map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:4317",
+					"http_endpoint": "127.0.0.1:4318",
+				},
+			},
+		},
+		"traces": map[string]interface{}{
+			"traces_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:4317",
+					"http_endpoint": "127.0.0.1:4318",
+				},
+			},
+		},
+	}
+
+	conf := confmap.NewFromStringMap(config)
+
+	metricsTranslator := NewSharedTranslator(conf,
+		WithSignal(pipeline.SignalMetrics),
+		WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)),
+	)
+	tracesTranslator := NewSharedTranslator(conf,
+		WithSignal(pipeline.SignalTraces),
+		WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)),
+	)
+
+	assert.Equal(t, metricsTranslator.ID(), tracesTranslator.ID(), "Same endpoints should share receiver")
+
+	_, err1 := metricsTranslator.Translate(conf)
+	_, err2 := tracesTranslator.Translate(conf)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+}
+
+func TestArrayConfigDeduplication(t *testing.T) {
+	ResetRegistry()
+
+	config := map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"otlp": []interface{}{
+					map[string]interface{}{
+						"grpc_endpoint": "127.0.0.1:4317",
+						"http_endpoint": "127.0.0.1:4318",
+					},
+					map[string]interface{}{
+						"grpc_endpoint": "127.0.0.1:4317",
+						"http_endpoint": "127.0.0.1:4318",
+					},
+					map[string]interface{}{
+						"grpc_endpoint": "127.0.0.1:5317",
+						"http_endpoint": "127.0.0.1:5318",
+					},
+				},
+			},
+		},
+	}
+
+	conf := confmap.NewFromStringMap(config)
+	configKey := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)
+
+	translator1 := NewSharedTranslator(conf, WithSignal(pipeline.SignalMetrics), WithConfigKey(configKey), common.WithIndex(0))
+	translator2 := NewSharedTranslator(conf, WithSignal(pipeline.SignalMetrics), WithConfigKey(configKey), common.WithIndex(1))
+	translator3 := NewSharedTranslator(conf, WithSignal(pipeline.SignalMetrics), WithConfigKey(configKey), common.WithIndex(2))
+
+	assert.Equal(t, translator1.ID(), translator2.ID(), "Same endpoints should share")
+	assert.NotEqual(t, translator1.ID(), translator3.ID(), "Different endpoints should not share")
+}
+
+func TestPortConflictDetection(t *testing.T) {
+	ResetRegistry()
+
+	config := map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:4317",
+					"http_endpoint": "127.0.0.1:4318",
+					"tls": map[string]interface{}{
+						"cert_file": "/path/to/cert1.pem",
+						"key_file":  "/path/to/key1.pem",
+					},
+				},
+			},
+		},
+		"traces": map[string]interface{}{
+			"traces_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:4317", // Same ports
+					"http_endpoint": "127.0.0.1:4318", // Same ports
+					"tls": map[string]interface{}{
+						"cert_file": "/path/to/cert2.pem", // Different TLS
+						"key_file":  "/path/to/key2.pem",  // Different TLS
+					},
+				},
+			},
+		},
+	}
+
+	conf := confmap.NewFromStringMap(config)
+
+	// First translator should succeed
+	metricsTranslator := NewSharedTranslator(conf,
+		WithSignal(pipeline.SignalMetrics),
+		WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)),
+	)
+	_, err1 := metricsTranslator.Translate(conf)
+	assert.NoError(t, err1, "First translator should succeed")
+
+	// Second translator should fail due to port conflict
+	tracesTranslator := NewSharedTranslator(conf,
+		WithSignal(pipeline.SignalTraces),
+		WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)),
+	)
+	_, err2 := tracesTranslator.Translate(conf)
+	assert.Error(t, err2, "Second translator should fail due to port conflict")
+	assert.Contains(t, err2.Error(), "port conflict", "Error should mention port conflict")
+}
+
+func TestSamePortsSameTLS(t *testing.T) {
+	ResetRegistry()
+
+	config := map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:4317",
+					"http_endpoint": "127.0.0.1:4318",
+					"tls": map[string]interface{}{
+						"cert_file": "/path/to/cert.pem",
+						"key_file":  "/path/to/key.pem",
+					},
+				},
+			},
+		},
+		"traces": map[string]interface{}{
+			"traces_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:4317", // Same ports
+					"http_endpoint": "127.0.0.1:4318", // Same ports
+					"tls": map[string]interface{}{
+						"cert_file": "/path/to/cert.pem", // Same TLS
+						"key_file":  "/path/to/key.pem",  // Same TLS
+					},
+				},
+			},
+		},
+	}
+
+	conf := confmap.NewFromStringMap(config)
+
+	metricsTranslator := NewSharedTranslator(conf,
+		WithSignal(pipeline.SignalMetrics),
+		WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)),
+	)
+	tracesTranslator := NewSharedTranslator(conf,
+		WithSignal(pipeline.SignalTraces),
+		WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)),
+	)
+
+	// Should share same receiver (same endpoints and TLS)
+	assert.Equal(t, metricsTranslator.ID(), tracesTranslator.ID(), "Same ports and TLS should share receiver")
+
+	// Both should translate successfully
+	_, err1 := metricsTranslator.Translate(conf)
+	_, err2 := tracesTranslator.Translate(conf)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+}

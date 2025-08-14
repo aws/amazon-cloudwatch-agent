@@ -52,7 +52,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(otlp.NewTranslator(common.WithName(common.AppSignals), otlp.WithSignal(t.signal))),
+		Receivers:  common.NewTranslatorMap(otlp.NewSharedTranslator(conf, common.WithName(common.AppSignals), otlp.WithSignal(t.signal))),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
