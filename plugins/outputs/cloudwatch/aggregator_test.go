@@ -47,7 +47,7 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 	aggregator.AddMetric(m)
 
 	assertNoMetricsInChan(t, metricChan)
-	d := distribution.NewDistribution()
+	d := distribution.NewClassicDistribution()
 	d.AddEntryWithUnit(1, 1, "Percent")
 	want := map[string]distribution.Distribution{"mname": d}
 	testCheckMetrics(t, metricChan, 3*aggregationInterval, want)
@@ -80,7 +80,7 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 	// Expect just 1 datum at the 1 second interval.
-	d := distribution.NewDistribution()
+	d := distribution.NewClassicDistribution()
 	d.AddEntryWithUnit(1, 1, "Percent")
 	d.AddEntryWithUnit(2, 1, "Percent")
 	d.AddEntryWithUnit(3, 1, "Percent")
@@ -88,10 +88,10 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	testCheckMetrics(t, metricChan, 4*time.Second, want)
 	assertNoMetricsInChan(t, metricChan)
 	// Expect 2 datums at the 2 second interval.
-	d = distribution.NewDistribution()
+	d = distribution.NewClassicDistribution()
 	d.AddEntryWithUnit(4, 1, "Percent")
 	d.AddEntryWithUnit(5, 1, "Percent")
-	d2 := distribution.NewDistribution()
+	d2 := distribution.NewClassicDistribution()
 	d2.AddEntryWithUnit(1, 1, "Percent")
 	d2.AddEntryWithUnit(2, 1, "Percent")
 	want = map[string]distribution.Distribution{"mytrick": d, "metrique": d2}
@@ -114,7 +114,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	// The Aggregator creates a new durationAggregator for each metric.
 	// And there is a delay when each new durationAggregator begins.
 	// So submit a metric and wait for the first aggregation to occur.
-	d := distribution.NewDistribution()
+	d := distribution.NewClassicDistribution()
 	d.AddEntryWithUnit(1, 1, "Percent")
 	want := map[string]distribution.Distribution{"mname1": d}
 	testCheckMetrics(t, metricChan, 3*aggregationInterval, want)
@@ -135,7 +135,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 // If the same metric appears multiple times in a single aggregation interval then just expect 1 aggregated metric.
 // If the same metric appears multiple times in different aggregation intervals then expect multiple aggregated metrics.
 func TestDurationAggregator_aggregating(t *testing.T) {
-	distribution.NewDistribution = seh1.NewSEH1Distribution
+	distribution.NewClassicDistribution = seh1.NewSEH1Distribution
 	aggregationInterval := 1 * time.Second
 	shutdownChan := make(chan struct{})
 	metricChan := make(chan *aggregationDatum, metricChanBufferSize)
@@ -175,7 +175,7 @@ func TestDurationAggregator_aggregating(t *testing.T) {
 }
 
 func testPreparation() (chan *aggregationDatum, chan struct{}, Aggregator) {
-	distribution.NewDistribution = seh1.NewSEH1Distribution
+	distribution.NewClassicDistribution = seh1.NewSEH1Distribution
 	metricChan := make(chan *aggregationDatum, metricChanBufferSize)
 	shutdownChan := make(chan struct{})
 	aggregator := NewAggregator(metricChan, shutdownChan, &wg)
