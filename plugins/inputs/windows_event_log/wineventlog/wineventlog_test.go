@@ -343,6 +343,7 @@ func marshalRangeList(rl state.RangeList) string {
 }
 
 func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
+	time.Sleep(200 * time.Millisecond)
 	content, _ := os.ReadFile(fileName)
 	assert.Contains(t, string(content), marshalRangeList(rl))
 }
