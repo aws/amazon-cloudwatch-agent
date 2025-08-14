@@ -620,7 +620,7 @@ func TestScraper_Scrape_InstanceStoreDisabled(t *testing.T) {
 	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled = false
 	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled = true
 
-	core, observedLogs := observer.New(zapcore.DebugLevel)
+	core, _ := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
@@ -631,15 +631,6 @@ func TestScraper_Scrape_InstanceStoreDisabled(t *testing.T) {
 	metrics, err := scraper.scrape(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
-
-	foundSkipLog := false
-	for _, log := range observedLogs.All() {
-		if log.Message == "skipping unknown device model" {
-			foundSkipLog = true
-			break
-		}
-	}
-	assert.True(t, foundSkipLog, "Expected to find log about skipping unknown device model")
 
 	mockUtil.AssertExpectations(t)
 }

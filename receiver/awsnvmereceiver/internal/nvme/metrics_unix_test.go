@@ -19,7 +19,7 @@
 
 //go:build linux
 
-package nvme // Replace with the actual package name
+package nvme
 
 import (
 	"errors"

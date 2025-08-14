@@ -138,7 +138,6 @@ func (s *nvmeScraper) getNVMeDevicesByController() (map[int]*nvmeDevices, error)
 
 		controllerID := device.Controller()
 
-		// NVMe device with the same controller ID was already seen. We do not need to repeat the work of
 		// retrieving the volume ID and validating if it's an EBS/IS device
 		if entry, seenController := devices[controllerID]; seenController {
 			entry.deviceNames = append(entry.deviceNames, deviceName)

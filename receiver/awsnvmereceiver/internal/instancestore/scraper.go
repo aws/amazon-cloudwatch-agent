@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -77,7 +76,6 @@ func (s *scraper) SetResourceAttribute(rb *metadata.ResourceBuilder, identifier 
 }
 
 func (s *scraper) ParseRawData(data []byte) (nvme.Metrics, error) {
-	log.Println("Parsing Raw Data Instance Store3")
 	if len(data) < 8 {
 		return nil, fmt.Errorf("input too short: %w", errInvalidInstanceStoreMagic)
 	}
