@@ -189,6 +189,8 @@ exporters:
                 - node_gpu_limit
                 - node_gpu_usage_total
                 - node_gpu_reserved_capacity
+                - node_gpu_unreserved_capacity
+                - node_gpu_available_capacity
                 - node_efa_limit
                 - node_efa_usage_total
                 - node_efa_reserved_capacity
@@ -355,6 +357,7 @@ exporters:
                 - container_gpu_memory_used
                 - container_gpu_power_draw
                 - container_gpu_temperature
+                - container_gpu_tensor_core_utilization
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -381,6 +384,7 @@ exporters:
                 - pod_gpu_memory_used
                 - pod_gpu_power_draw
                 - pod_gpu_temperature
+                - pod_gpu_tensor_core_utilization
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -398,6 +402,7 @@ exporters:
                 - node_gpu_memory_used
                 - node_gpu_power_draw
                 - node_gpu_temperature
+                - node_gpu_tensor_core_utilization
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -495,6 +500,8 @@ exporters:
             - dimensions:
                 - - ClusterName
                 - - ClusterName
+                  - UltraServer
+                - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
@@ -514,6 +521,8 @@ exporters:
             - dimensions:
                 - - ClusterName
                 - - ClusterName
+                  - UltraServer
+                - - ClusterName
                   - InstanceId
                   - NodeName
               metric_name_selectors:
@@ -522,6 +531,8 @@ exporters:
                 - node_neuron_execution_latency
             - dimensions:
                 - - ClusterName
+                - - ClusterName
+                  - UltraServer
                 - - ClusterName
                   - InstanceId
                   - NodeName
@@ -1220,6 +1231,48 @@ processors:
               include: DCGM_FI_DEV_GPU_TEMP
               match_type: ""
               new_name: node_gpu_temperature
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+              match_type: ""
+              new_name: container_gpu_tensor_core_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+              match_type: ""
+              new_name: pod_gpu_tensor_core_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
+              match_type: ""
+              new_name: node_gpu_tensor_core_utilization
               operations:
                 - action: add_label
                   aggregation_type: ""

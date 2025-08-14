@@ -155,7 +155,7 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 		"node_status_capacity_pods", "node_status_allocatable_pods",
 	}
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
-		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity")
+		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity")
 		nodeMetrics = append(nodeMetrics, "node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity")
 	}
 	if enhancedContainerInsightsEnabled {
@@ -493,6 +493,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"container_gpu_memory_used",
 					"container_gpu_power_draw",
 					"container_gpu_temperature",
+					"container_gpu_tensor_core_utilization",
 				},
 			},
 			{
@@ -504,6 +505,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"pod_gpu_memory_used",
 					"pod_gpu_power_draw",
 					"pod_gpu_temperature",
+					"pod_gpu_tensor_core_utilization",
 				},
 			},
 			{
@@ -515,6 +517,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_gpu_memory_used",
 					"node_gpu_power_draw",
 					"node_gpu_temperature",
+					"node_gpu_tensor_core_utilization",
 				},
 			},
 		}...)
@@ -564,7 +567,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "UltraServer"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
 				MetricNameSelectors: []string{
 					"node_neuroncore_utilization",
 					"node_neuroncore_memory_usage_total",
@@ -576,7 +579,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "UltraServer"}, {"ClusterName", "InstanceId", "NodeName"}},
 				MetricNameSelectors: []string{
 					"node_neuron_execution_errors_total",
 					"node_neurondevice_runtime_memory_used_bytes",
@@ -584,7 +587,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "UltraServer"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
 				MetricNameSelectors: []string{
 					"node_neurondevice_hw_ecc_events_total",
 				},

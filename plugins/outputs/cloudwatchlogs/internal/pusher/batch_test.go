@@ -51,6 +51,137 @@ func TestLogEvent(t *testing.T) {
 }
 
 func TestLogEventBatch(t *testing.T) {
+	t.Run("UpdateStateOnly", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		successCallbackCalled := false
+		successCallback := func() {
+			successCallbackCalled = true
+		}
+
+		stateCallbackCalled := false
+		stateCallback := func() {
+			stateCallbackCalled = true
+		}
+
+		batch.addDoneCallback(successCallback)
+		batch.addStateCallback(stateCallback)
+
+		batch.updateState()
+
+		assert.False(t, successCallbackCalled, "Success callback should not have been called")
+		assert.True(t, stateCallbackCalled, "State callback should have been called")
+	})
+
+	t.Run("UpdateStateOnly_WithMultipleCallbacks", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		successCallbacksCalled := make([]bool, 3)
+		successCallbacks := []func(){
+			func() { successCallbacksCalled[0] = true },
+			func() { successCallbacksCalled[1] = true },
+			func() { successCallbacksCalled[2] = true },
+		}
+
+		stateCallbacksCalled := make([]bool, 3)
+		stateCallbacks := []func(){
+			func() { stateCallbacksCalled[0] = true },
+			func() { stateCallbacksCalled[1] = true },
+			func() { stateCallbacksCalled[2] = true },
+		}
+
+		for _, cb := range successCallbacks {
+			batch.addDoneCallback(cb)
+		}
+		for _, cb := range stateCallbacks {
+			batch.addStateCallback(cb)
+		}
+
+		batch.updateState()
+
+		// Verify none of the success callbacks were called
+		for i, called := range successCallbacksCalled {
+			assert.False(t, called, "Success callback %d should not have been called", i)
+		}
+
+		// Verify all state callbacks were called
+		for i, called := range stateCallbacksCalled {
+			assert.True(t, called, "State callback %d should have been called", i)
+		}
+	})
+
+	t.Run("UpdateStateOnly_WithRangeQueueBatcher", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		mrq1 := &mockRangeQueue{}
+		mrq1.On("ID").Return("test1")
+		mrq1.On("Enqueue", state.NewRange(10, 20)).Once()
+
+		mrq2 := &mockRangeQueue{}
+		mrq2.On("ID").Return("test2")
+		mrq2.On("Enqueue", state.NewRange(30, 40)).Once()
+
+		event1 := newStatefulLogEvent(time.Now(), "Test1", nil, &logEventState{
+			r:     state.NewRange(10, 20),
+			queue: mrq1,
+		})
+		event2 := newStatefulLogEvent(time.Now(), "Test2", nil, &logEventState{
+			r:     state.NewRange(30, 40),
+			queue: mrq2,
+		})
+
+		successCallbackCalled := false
+		batch.addDoneCallback(func() {
+			successCallbackCalled = true
+		})
+
+		batch.append(event1)
+		batch.append(event2)
+
+		batch.updateState()
+
+		mrq1.AssertExpectations(t)
+		mrq2.AssertExpectations(t)
+
+		assert.False(t, successCallbackCalled, "Success callback should not have been called")
+	})
+
+	t.Run("UpdateStateWithDone", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		mrq1 := &mockRangeQueue{}
+		mrq1.On("ID").Return("test1")
+		mrq1.On("Enqueue", state.NewRange(10, 20)).Once()
+
+		mrq2 := &mockRangeQueue{}
+		mrq2.On("ID").Return("test2")
+		mrq2.On("Enqueue", state.NewRange(30, 40)).Once()
+
+		event1 := newStatefulLogEvent(time.Now(), "Test1", nil, &logEventState{
+			r:     state.NewRange(10, 20),
+			queue: mrq1,
+		})
+		event2 := newStatefulLogEvent(time.Now(), "Test2", nil, &logEventState{
+			r:     state.NewRange(30, 40),
+			queue: mrq2,
+		})
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
+
+		batch.append(event1)
+		batch.append(event2)
+
+		batch.done()
+
+		mrq1.AssertExpectations(t)
+		mrq2.AssertExpectations(t)
+
+		assert.True(t, stateCallbackCalled, "State callback should have been called")
+	})
+
 	t.Run("Append", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 
