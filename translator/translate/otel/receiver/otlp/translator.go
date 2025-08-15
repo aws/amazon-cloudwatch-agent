@@ -5,16 +5,17 @@ package otlp
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
-	"strconv"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
+	"reflect"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -26,12 +27,19 @@ const (
 	defaultJMXHttpEndpoint        = "0.0.0.0:4314"
 )
 
+var (
+	httpCache = make(map[string]*otlpreceiver.Config)
+	grpcCache = make(map[string]*otlpreceiver.Config)
+)
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
 	configKey string
 	signal    pipeline.Signal
 	factory   receiver.Factory
+	cfg       *otlpreceiver.Config
+	err       error
 }
 
 // WithSignal determines where the translator should look to find
@@ -54,17 +62,57 @@ func WithConfigKey(configKey string) common.TranslatorOption {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
+func NewTranslator(conf *confmap.Conf, opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: otlpreceiver.NewFactory()}
 	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.Name() == "" && t.signal.String() != "" {
-		t.SetName(t.signal.String())
-		if t.Index() != -1 {
-			t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
+	if t.Name() == "" {
+		t.SetName("otlp")
+	}
+
+	var name string
+	errs := make([]error, 0)
+	cfg, err := t.translate(conf)
+
+	if err != nil {
+		errs = append(errs, err)
+	} else {
+
+		if cfg.HTTP != nil {
+			httpEndpoint := cfg.HTTP.ServerConfig.Endpoint
+			if httpCache[httpEndpoint] != nil {
+				if !reflect.DeepEqual(cfg, httpCache[httpEndpoint]) {
+					errs = append(errs, fmt.Errorf("same endpoint used in different otlp receivers: %s", httpEndpoint))
+				}
+			} else {
+				httpCache[httpEndpoint] = cfg
+				name += httpEndpoint
+			}
 		}
+
+		if cfg.GRPC != nil {
+			grpcEndpoint := cfg.GRPC.NetAddr.Endpoint
+			if grpcCache[grpcEndpoint] != nil {
+				if !reflect.DeepEqual(cfg, grpcCache[grpcEndpoint]) {
+					errs = append(errs, fmt.Errorf("same endpoint used in different otlp receivers: %s", grpcEndpoint))
+				}
+			} else {
+				grpcCache[grpcEndpoint] = cfg
+				name += grpcEndpoint
+			}
+		}
+
+		t.SetName(t.Name() + "/" + hash.HashName(name))
+	}
+
+	if len(errs) != 0 {
+		t.cfg = nil
+		t.err = errors.Join(errs...)
+	} else {
+		t.cfg = cfg
+		t.err = nil
 	}
 	return t
 }
@@ -73,7 +121,11 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+	return t.cfg, t.err
+}
+
+func (t *translator) translate(conf *confmap.Conf) (*otlpreceiver.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
 	if t.Name() == common.PipelineNameJmx {
