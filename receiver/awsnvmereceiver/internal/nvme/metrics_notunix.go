@@ -7,6 +7,6 @@ package nvme
 
 import "errors"
 
-func GetMetrics(_ string) (any, error) {
+func GetRawData(_ string) ([]byte, error) {
 	return nil, errors.New("NVMe metrics not supported on this platform")
 }

@@ -22,8 +22,6 @@
 package nvme
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
@@ -54,25 +52,8 @@ type nvmePassthruCommand struct {
 	result      uint32
 }
 
-var (
-	ErrInvalidEBSMagic           = errors.New("invalid EBS magic number")
-	ErrInvalidInstanceStoreMagic = errors.New("invalid Instance Store magic number")
-	ErrParseLogPage              = errors.New("failed to parse log page")
-	ErrUnsupportedMagic          = errors.New("unsupported magic number")
-)
-
-// GetMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
-func GetMetrics(devicePath string) (any, error) {
-	data, err := getNVMEMetrics(devicePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseLogPage(data)
-}
-
-// getNVMEMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
-func getNVMEMetrics(devicePath string) ([]byte, error) {
+// GetRawData retrieves raw NVMe log page data by reading from the NVMe device at the given path.
+func GetRawData(devicePath string) ([]byte, error) {
 	f, err := os.OpenFile(devicePath, os.O_RDWR, 0)
 	if err != nil {
 		return nil, fmt.Errorf("getNVMEMetrics: error opening device: %w", err)
@@ -112,41 +93,4 @@ func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
 		return nil, fmt.Errorf("nvmeReadLogPage: ioctl command failed with status %d", status)
 	}
 	return data, nil
-}
-
-// parseLogPage parses the binary data from an EBS or Instance Store log page into the corresponding struct.
-func parseLogPage(data []byte) (any, error) {
-	if len(data) < 8 {
-		return nil, fmt.Errorf("%w: input too short", ErrParseLogPage)
-	}
-
-	magic64 := binary.LittleEndian.Uint64(data[0:8])
-	magic32 := binary.LittleEndian.Uint32(data[0:4])
-
-	switch {
-	case magic64 == ebsMagic:
-		var metrics EBSMetrics
-		reader := bytes.NewReader(data)
-		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
-		}
-		if metrics.EBSMagic != ebsMagic {
-			return nil, ErrInvalidEBSMagic
-		}
-		return metrics, nil
-
-	case magic32 == instanceStoreMagic:
-		var metrics InstanceStoreMetrics
-		reader := bytes.NewReader(data)
-		if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrParseLogPage, err)
-		}
-		if metrics.Magic != instanceStoreMagic {
-			return nil, ErrInvalidInstanceStoreMagic
-		}
-		return metrics, nil
-
-	default:
-		return nil, ErrUnsupportedMagic
-	}
 }
