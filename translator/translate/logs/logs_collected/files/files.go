@@ -7,7 +7,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/constants"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected"
 )
 
@@ -17,7 +16,7 @@ type Files struct {
 }
 
 const (
-	SectionKey       = constants.SectionKeyFiles
+	SectionKey       = "files"
 	SectionMappedKey = "logfile"
 )
 
