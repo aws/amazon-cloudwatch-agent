@@ -183,7 +183,8 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				continue
 			} else if fileconfig.AutoRemoval {
 				// This logic means auto_removal does not work with publish_multi_logs
-				for _, dst := range dests {
+				for resolvedFilename, dst := range dests {
+					t.Log.Info("Stopping file " + resolvedFilename + " because we found newer " + filename)
 					// Stop all other tailers in favor of the newly found file
 					dst.tailer.StopAtEOF()
 				}
