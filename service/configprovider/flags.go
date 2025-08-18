@@ -4,6 +4,7 @@
 package configprovider
 
 import (
+	"flag"
 	"fmt"
 )
 
@@ -12,6 +13,8 @@ const (
 )
 
 type OtelConfigFlags []string
+
+var _ flag.Value = (*OtelConfigFlags)(nil)
 
 func (o *OtelConfigFlags) String() string {
 	return fmt.Sprint(*o)

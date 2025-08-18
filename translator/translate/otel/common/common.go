@@ -6,6 +6,7 @@ package common
 import (
 	"container/list"
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 )
 
 const (
@@ -57,6 +60,7 @@ const (
 	ForceFlushIntervalKey              = "force_flush_interval"
 	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
 	EnhancedContainerInsights          = "enhanced_container_insights"
+	ResourcesKey                       = "resources"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
 	EnableKueueContainerInsights       = "kueue_container_insights"
@@ -122,6 +126,10 @@ const (
 	AppSignalsRules                  = "rules"
 )
 
+const (
+	DiskIOPrefix = "diskio_"
+)
+
 var (
 	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
 	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
@@ -139,6 +147,8 @@ var (
 
 	AgentDebugConfigKey             = ConfigKey(AgentKey, DebugKey)
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
+	OTLPLogsKey                     = ConfigKey(LogsKey, MetricsCollectedKey, OtlpKey)
+	OTLPMetricsKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, OtlpKey)
 )
 
 type TranslatorID interface {
@@ -477,4 +487,18 @@ func IsAnySet(conf *confmap.Conf, keys []string) bool {
 
 func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
 	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
+}
+
+func GetClusterName(conf *confmap.Conf) string {
+	val, ok := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
+	if ok && val != "" {
+		return val
+	}
+
+	envVarClusterName := os.Getenv("K8S_CLUSTER_NAME")
+	if envVarClusterName != "" {
+		return envVarClusterName
+	}
+
+	return util.GetClusterNameFromEc2Tagger()
 }

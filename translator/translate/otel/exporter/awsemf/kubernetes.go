@@ -54,6 +54,8 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEFAMetricDeclarations(conf)...)
 
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEBSMetricDeclarations(conf)...)
+
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
@@ -106,6 +108,8 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 		}...)
 		if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
 			selectors = append(selectors, "pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity")
+			selectors = append(selectors, "pod_neuroncore_request", "pod_neuroncore_limit", "pod_neuroncore_usage_total", "pod_neuroncore_reserved_capacity")
+			selectors = append(selectors, "pod_efa_request", "pod_efa_limit", "pod_efa_usage_total", "pod_efa_reserved_capacity")
 		}
 	}
 
@@ -152,7 +156,9 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 		"node_status_capacity_pods", "node_status_allocatable_pods",
 	}
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
-		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity")
+		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity")
+		nodeMetrics = append(nodeMetrics, "node_neuroncore_limit", "node_neuroncore_usage_total", "node_neuroncore_reserved_capacity", "node_neuroncore_unreserved_capacity", "node_neuroncore_available_capacity")
+		nodeMetrics = append(nodeMetrics, "node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity")
 	}
 	if enhancedContainerInsightsEnabled {
 		return []*awsemfexporter.MetricDeclaration{
@@ -489,6 +495,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"container_gpu_memory_used",
 					"container_gpu_power_draw",
 					"container_gpu_temperature",
+					"container_gpu_tensor_core_utilization",
 				},
 			},
 			{
@@ -500,6 +507,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"pod_gpu_memory_used",
 					"pod_gpu_power_draw",
 					"pod_gpu_temperature",
+					"pod_gpu_tensor_core_utilization",
 				},
 			},
 			{
@@ -511,6 +519,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_gpu_memory_used",
 					"node_gpu_power_draw",
 					"node_gpu_temperature",
+					"node_gpu_tensor_core_utilization",
 				},
 			},
 		}...)
@@ -599,6 +608,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					{"ClusterName"},
 					{"ClusterName", "Namespace", "PodName", "ContainerName"},
 					{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NetworkInterfaceId"},
 				},
 				MetricNameSelectors: []string{
 					"container_efa_rx_bytes",
@@ -616,6 +626,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					{"ClusterName", "Namespace", "Service"},
 					{"ClusterName", "Namespace", "PodName"},
 					{"ClusterName", "Namespace", "PodName", "FullPodName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "NetworkInterfaceId"},
 				},
 				MetricNameSelectors: []string{
 					"pod_efa_rx_bytes",
@@ -630,6 +641,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				Dimensions: [][]string{
 					{"ClusterName"},
 					{"ClusterName", "NodeName", "InstanceId"},
+					{"ClusterName", "NodeName", "InstanceId", "InstanceType", "NetworkInterfaceId"},
 				},
 				MetricNameSelectors: []string{
 					"node_efa_rx_bytes",
@@ -638,6 +650,35 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_efa_rdma_read_bytes",
 					"node_efa_rdma_write_bytes",
 					"node_efa_rdma_write_recv_bytes",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getEBSMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "NodeName", "InstanceId"},
+					{"ClusterName", "NodeName", "InstanceId", "VolumeId"},
+				},
+				MetricNameSelectors: []string{
+					"node_diskio_ebs_total_read_ops",
+					"node_diskio_ebs_total_write_ops",
+					"node_diskio_ebs_total_read_bytes",
+					"node_diskio_ebs_total_write_bytes",
+					"node_diskio_ebs_total_read_time",
+					"node_diskio_ebs_total_write_time",
+					"node_diskio_ebs_volume_performance_exceeded_iops",
+					"node_diskio_ebs_volume_performance_exceeded_tp",
+					"node_diskio_ebs_ec2_instance_performance_exceeded_iops",
+					"node_diskio_ebs_ec2_instance_performance_exceeded_tp",
+					"node_diskio_ebs_volume_queue_length",
 				},
 			},
 		}

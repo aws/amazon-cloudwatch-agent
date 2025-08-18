@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.INTERNAL_AWS_ASSUME_ROLE }}
           aws-region: ${{ matrix.region }}
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets[matrix.role_secret] }}
           aws-region: ${{ matrix.region }}
@@ -150,7 +150,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
           aws-region: "cn-north-1"
@@ -159,7 +159,7 @@ jobs:
         working-directory: tool/clean
         run: go run ./clean_host/clean_host.go cn-north-1
 
-  clean-ecs-clusters:
+  clean-ecs-resources:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -169,14 +169,14 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      - name: Clean old ecs cluster
+      - name: Clean old ecs resources
         working-directory: tool/clean
-        run: go run ./clean_ecs/clean_ecs.go --tags=clean
+        run: go run --tags=clean ./clean_ecs/clean_ecs.go us-west-2
 
   clean-eks-clusters:
     runs-on: ubuntu-latest
@@ -188,7 +188,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -206,7 +206,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -225,7 +225,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -244,7 +244,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -262,7 +262,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -280,7 +280,7 @@ jobs:
       - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -288,3 +288,24 @@ jobs:
       - name: Clean old Log Groups
         working-directory: tool/clean
         run: go run ./clean_log_group/clean_log_group.go 
+  clean-security-groups:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean Old Security Groups
+        working-directory: tool/clean
+        run: |
+          set -e
+          go run ./clean_security_group/clean_security_group.go || { echo "Failed to clean security groups"; exit 1; }
+

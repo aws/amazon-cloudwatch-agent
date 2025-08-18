@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -43,6 +44,10 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 				hostReceivers.Set(translator)
 			}
 		})
+	}
+
+	if shouldAddNvmeReceiver(conf, configSection) {
+		deltaReceivers.Set(awsnvme.NewTranslator())
 	}
 
 	// Gather OTLP receivers
@@ -120,4 +125,18 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	}
 
 	return translators, nil
+}
+
+func shouldAddNvmeReceiver(conf *confmap.Conf, configSection string) bool {
+	diskioMap := conf.Get(common.ConfigKey(configSection, common.DiskIOKey))
+	if diskioMap == nil {
+		return false
+	}
+	measurements := common.GetMeasurements(diskioMap.(map[string]any))
+	for _, measurement := range measurements {
+		if awsnvme.IsNVMEMetric(measurement) {
+			return true
+		}
+	}
+	return false
 }

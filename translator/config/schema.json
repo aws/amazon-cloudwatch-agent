@@ -971,6 +971,13 @@
                   "auto_removal": {
                     "type": "boolean"
                   },
+                  "backpressure_mode": {
+                    "description": "Define the strategy during backpressure condition",
+                    "type": "string",
+                    "enum": [
+                      "fd_release"
+                    ]
+                  },
                   "blacklist": {
                     "type": "string",
                     "minLength": 1,
@@ -1051,6 +1058,22 @@
                       "uniqueItems": true
                     }
                   },
+                  "event_ids":{
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 65535
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
+                  },
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
@@ -1072,8 +1095,18 @@
                   }
                 },
                 "required": [
-                  "event_name",
-                  "event_levels"
+                  "event_name"
+                ],
+                "anyOf": [
+                  {
+                    "required": ["event_levels"]
+                  },
+                  {
+                    "required": ["event_ids"]
+                  },
+                  {
+                    "required": ["filters"]
+                  }
                 ],
                 "additionalProperties": false
               },
@@ -1345,6 +1378,18 @@
         },
         "tls": {
           "$ref": "#/definitions/tlsDefinitions"
+        },
+        "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 259
         }
       },
       "additionalProperties": false
@@ -1636,4 +1681,3 @@
     }
   }
 }
-

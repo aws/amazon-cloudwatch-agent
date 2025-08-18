@@ -1,5 +1,6 @@
 exporters:
     awsemf/containerinsights:
+        add_entity: true
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -7,6 +8,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: true
+        external_id: ""
         imds_retries: 1
         local_mode: true
         log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -275,6 +277,27 @@ exporters:
                 - - ClusterName
               metric_name_selectors:
                 - apiserver_flowcontrol_request_concurrency_limit
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                - - ClusterName
+                  - InstanceId
+                  - NodeName
+                  - VolumeId
+              metric_name_selectors:
+                - node_diskio_ebs_total_read_ops
+                - node_diskio_ebs_total_write_ops
+                - node_diskio_ebs_total_read_bytes
+                - node_diskio_ebs_total_write_bytes
+                - node_diskio_ebs_total_read_time
+                - node_diskio_ebs_total_write_time
+                - node_diskio_ebs_volume_performance_exceeded_iops
+                - node_diskio_ebs_volume_performance_exceeded_tp
+                - node_diskio_ebs_ec2_instance_performance_exceeded_iops
+                - node_diskio_ebs_ec2_instance_performance_exceeded_tp
+                - node_diskio_ebs_volume_queue_length
         metric_descriptors:
             - metric_name: apiserver_admission_controller_admission_duration_seconds
               overwrite: true
@@ -378,6 +401,9 @@ extensions:
         region: us-east-1
         shared_credential_file: fake-path
 processors:
+    awsentity/resource/containerinsights:
+        entity_type: Resource
+        platform: onPremise
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -407,6 +433,160 @@ processors:
               match_type: regexp
               new_name: apiserver_request_total_5xx
               submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_exceeded_iops_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_volume_performance_exceeded_iops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_exceeded_tp_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_volume_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_time
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_volume_queue_length
+              match_type: ""
+              new_name: node_diskio_ebs_volume_queue_length
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_write_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_write_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_bytes_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_bytes
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_write_bytes_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_write_bytes
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_write_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_write_time
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false
@@ -416,9 +596,11 @@ receivers:
         certificate_file_path: ""
         cluster_name: TestCluster
         collection_interval: 30s
+        collection_role: ALL
         container_orchestrator: eks
         enable_control_plane_metrics: true
         endpoint: ""
+        external_id: ""
         host_ip: ""
         host_name: ""
         imds_retries: 1
@@ -451,14 +633,12 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - awsentity/resource/containerinsights
                 - metricstransform/containerinsights
             receivers:
                 - awscontainerinsightreceiver
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -467,7 +647,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

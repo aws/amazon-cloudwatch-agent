@@ -1,0 +1,252 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: PR Test
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main*
+      - feature*
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  CheckLabel:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.has_label }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
+            echo "has_label=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_label=false" >> $GITHUB_OUTPUT
+          fi
+
+  BuildAndUpload:
+    needs: [ CheckLabel ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  OutputEnvVariables:
+    name: 'OutputEnvVariables'
+    needs: [ CheckLabel ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+    steps:
+      - name: SetOutputs
+        id: set-outputs
+        run: |
+          CWA_GITHUB_TEST_REPO_BRANCH=${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
+
+      - name: Echo test variables
+        run: |
+          echo "build_id: ${{ github.sha }}"
+          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+  StartLocalStack:
+    name: 'StartLocalStack'
+    needs: [ CheckLabel, OutputEnvVariables ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{ github.sha }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  GenerateTestMatrix:
+    name: 'GenerateTestMatrix'
+    needs: [ CheckLabel, OutputEnvVariables ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          go run --tags=generator generator/test_case_generator.go
+          # Convert the output to valid JSON and filter out metric_value_benchmark tests
+          jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_linux_complete_test_matrix.json > filtered_matrix.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix.json)
+          echo "ec2_linux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+           jq -c '[.[] | select(.test_dir != "./test/metric_value_benchmark")]' generator/resources/ec2_selinux_complete_test_matrix.json > filtered_matrix_selinux.json
+          # Escape the JSON for GitHub Actions
+          MATRIX=$(jq -c -r '@json' filtered_matrix_selinux.json)
+          echo "ec2_selinux_matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+
+      - name: Echo test plan matrix
+        run: |
+          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
+
+
+  EC2LinuxIntegrationTest:
+    name: 'EC2LinuxTests'
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ github.sha }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+    secrets: inherit
+
+  EC2SELinuxIntegrationTest:
+    name: 'EC2SELinuxTests'
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ github.sha }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_selinux_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
+    secrets: inherit
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    needs: [ CheckLabel, StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    if: ${{ always() && needs.StartLocalStack.result == 'success' && needs.CheckLabel.outputs.should_run == 'true'}}
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      github_sha: ${{ github.sha }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  verify-all:
+    name: Verify All PR Test Jobs
+    needs: [CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
+            GenerateTestMatrix, EC2LinuxIntegrationTest, EC2SELinuxIntegrationTest,
+            StopLocalStack]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Job Status
+        run: |
+          # Convert needs context to JSON and process with jq
+          needs_json='${{ toJSON(needs) }}'
+
+          failed_jobs=()
+          successful_jobs=()
+
+          # Loop through all jobs in needs context
+          for job in $(echo "$needs_json" | jq -r 'keys[]'); do
+            result=$(echo "$needs_json" | jq -r ".[\"$job\"].result")
+
+            if [[ "$result" == "failure" ]]; then
+              failed_jobs+=("$job")
+            elif [[ "$result" == "success" ]]; then
+              successful_jobs+=("$job")
+            fi
+          done
+
+          echo "Successfully validated jobs:"
+          printf '%s\n' "${successful_jobs[@]}"
+
+          if [ ${#failed_jobs[@]} -ne 0 ]; then
+            echo -e "\nFailed jobs:"
+            printf '%s\n' "${failed_jobs[@]}"
+            exit 1
+          fi
+
+          echo -e "\nAll required jobs completed without failures!"

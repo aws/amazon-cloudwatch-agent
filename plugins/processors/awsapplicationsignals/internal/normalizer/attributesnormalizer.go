@@ -12,6 +12,7 @@ import (
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
@@ -42,6 +43,9 @@ var attributesRenamingForMetric = map[string]string{
 	attr.AWSRemoteResourceType:                 common.CWMetricAttributeRemoteResourceType,
 	attr.AWSRemoteDbUser:                       common.MetricAttributeRemoteDbUser,
 	attr.AWSRemoteResourceCfnPrimaryIdentifier: common.MetricAttributeRemoteResourceCfnPrimaryIdentifier,
+	attr.AWSRemoteResourceAccountID:            common.MetricAttributeRemoteResourceAccountID,
+	attr.AWSRemoteResourceAccountAccessKey:     common.MetricAttributeRemoteResourceAccountAccessKey,
+	attr.AWSRemoteResourceRegion:               common.MetricAttributeRemoteResourceRegion,
 	attr.AWSECSClusterName:                     common.MetricAttributeECSCluster,
 	attr.AWSECSTaskID:                          common.MetricAttributeECSTaskId,
 }
@@ -79,9 +83,40 @@ var resourceToMetricAttributes = map[string]string{
 	semconv.AttributeAWSECSTaskFamily:   common.MetricAttributeECSTaskDefinitionFamily,
 }
 
+// Below resource attributes are already effectively copied as metric attributes and should not be copied twice.
+var normalizedResourceAttributeKeys = constructNormalizedResourceAttributeKeys()
+
+func constructNormalizedResourceAttributeKeys() collections.Set[string] {
+	keys := collections.NewSet[string]()
+
+	// Add keys from attributesRenamingForMetric
+	for key := range attributesRenamingForMetric {
+		keys.Add(key)
+	}
+
+	// Add keys from resourceToMetricAttributes
+	for key := range resourceToMetricAttributes {
+		keys.Add(key)
+	}
+
+	// Add keys from resolver & normalization logic.
+	keys.Add(attr.AWSHostedInEnvironment)
+	keys.Add(attr.ResourceDetectionHostId)
+	keys.Add(deprecatedsemconv.AttributeTelemetryAutoVersion)
+	keys.Add(semconv.AttributeServiceName)
+	keys.Add(semconv.AttributeTelemetryDistroName)
+	keys.Add(semconv.AttributeTelemetryDistroVersion)
+	keys.Add(semconv.AttributeTelemetrySDKLanguage)
+	keys.Add(semconv.AttributeTelemetrySDKName)
+	keys.Add(semconv.AttributeTelemetrySDKVersion)
+
+	return keys
+}
+
 const (
 	instrumentationModeAuto   = "Auto"
 	instrumentationModeManual = "Manual"
+	otelResourcePrefix        = "otel.resource."
 )
 
 func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
@@ -120,9 +155,26 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			attributes.PutStr(v, resourceAttrValue.AsString())
 			if k == semconv.AttributeK8SPodName {
 				// only copy "host.id" from resource attributes to "K8s.Node" in attributesif the pod name is set
-				if host, ok := resourceAttributes.Get("host.id"); ok {
+				if host, ok := resourceAttributes.Get(attr.ResourceDetectionHostId); ok {
 					attributes.PutStr("K8s.Node", host.AsString())
 				}
+			}
+		}
+	}
+	// Copy resource attributes to metric attributes if specified or all resource attributes if not.
+	metricResourceKeysString, ok := resourceAttributes.Get(attr.AWSApplicationSignalsMetricResourceKeys)
+	if ok && metricResourceKeysString.AsString() == "all_attributes" {
+		n.logger.Debug("all metric resource keys specified for copying")
+		resourceAttributes.Range(func(key string, value pcommon.Value) bool {
+			copyNonDuplicateResourceAttributeToMetricAttributes(key, value, attributes)
+			return true
+		})
+	} else if ok {
+		n.logger.Debug("metric resource keys specified for copying", zap.String("keys", metricResourceKeysString.AsString()))
+		metricResourceKeys := strings.Split(metricResourceKeysString.AsString(), "&")
+		for _, key := range metricResourceKeys {
+			if value, ok := resourceAttributes.Get(key); ok {
+				copyNonDuplicateResourceAttributeToMetricAttributes(key, value, attributes)
 			}
 		}
 	}
@@ -197,6 +249,13 @@ func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resource
 	}
 }
 
+// Copy resource attribute to metric attributes with prefix (to avoid collisions) only if we did not already copy it over in other normalization logic.
+func copyNonDuplicateResourceAttributeToMetricAttributes(key string, value pcommon.Value, attributes pcommon.Map) {
+	if !normalizedResourceAttributeKeys.Contains(key) {
+		attributes.PutStr(otelResourcePrefix+key, value.AsString())
+	}
+}
+
 func rename(attrs pcommon.Map, renameMap map[string]string) {
 	for original, replacement := range renameMap {
 		if value, ok := attrs.Get(original); ok {
@@ -204,7 +263,7 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 			attrs.Remove(original)
 			if original == semconv.AttributeK8SPodName {
 				// only rename host.id if the pod name is set
-				if host, ok := attrs.Get("host.id"); ok {
+				if host, ok := attrs.Get(attr.ResourceDetectionHostId); ok {
 					attrs.PutStr("K8s.Node", host.AsString())
 				}
 			}

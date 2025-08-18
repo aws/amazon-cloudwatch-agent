@@ -15,6 +15,14 @@
     "deployment.environment": "agent-level-environment"
   },
   "logs": {
+    "metrics_collected": {
+      "otlp": {
+        "service.name": "otlp-level-service",
+        "deployment.environment": "otlp-level-environment",
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    },
     "logs_collected": {
       "files": {
         "collect_list": [
@@ -32,7 +40,8 @@
             "log_group_name": "test.log",
             "log_stream_name": "test.log",
             "timezone": "UTC",
-            "auto_removal": true
+            "auto_removal": true,
+            "backpressure_mode": "fd_release"
           }
         ]
       }
@@ -47,6 +56,10 @@
   },
   "metrics": {
     "metrics_collected": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      },
       "collectd": {
         "service_address": "udp://127.0.0.1:25826",
         "name_prefix": "collectd_",

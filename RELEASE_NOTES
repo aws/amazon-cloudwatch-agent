@@ -1,5 +1,118 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300053.0 (2024-02-26)
+Amazon CloudWatch Agent 1.300059.0 (2025-08-15)
+========================================================================
+Features:
+* [Windows Events] Add windows event id filtering to CWAgent
+* [Windows Events] Add windows event regex filtering to CWAgent
+* [Host Metrics] Add mem_shared metric to CloudWatch Agent
+* [Host Metrics] Adding NVME Instance Store Metrics
+* [Container Insights] Add UltraServer support for CloudWatch agent
+* [Container Insights] Add new Tensor Core and GPU capacity metrics
+* [Container Insights] Add Neuron Core and EFA capacity metrics
+
+Enhancements:
+* [Logs] Zero-allocation optimization for sendLine and readLine
+* [Logs] Dynamic reader buffer for tail
+* [Logs] Update state when batch dropped
+* [Application Signals] Add aws.remote.resource.account.* attributes to Application Signals EMF logs
+
+Bug Fixes:
+* [Application Signals] Fix race conditions in applicationsignals processor
+* [Logs] Revert Add default log publishing concurrency
+
+========================================================================
+Amazon CloudWatch Agent 1.300058.0 (2025-07-17)
+========================================================================
+Enhancements:
+* [ContainerInsights] Added ability to set CollectionRole via environment variable
+* [ContainerInsights] Increased data cache TTL and cleanup interval to support metric collection intervals greater than 300s
+* [Logs] Set default concurrency for multi-threaded log processing
+* [Logs] Improved log state file handling for Windows event logs
+* [Logs] Increased maximum log event size to 1MB and improved handling of large log lines
+
+========================================================================
+Amazon CloudWatch Agent 1.300057.0 (2025-06-16)
+========================================================================
+Features:
+* [Related Telemetry] Allow service and environment configuration for OTLP in EC2
+
+Enhancements:
+* [Prometheus] mTLS support for Target Allocator
+* [OpenTelemetry] Update fallback for OTel config flag
+* [Logs] Improved log state management
+* [ApplicationSignals] Add support for deployment.environment.name
+* [OpenTelemetry] Bump OTel dependencies to v0.124.1
+
+Bug Fixes:
+* [ApplicationSignals] Concurrency bug fix
+* [ContainerInsights] Fix grouping for container insights metrics for mixed metric types
+* [ContainerInsights] Add perCore neuron empty metric as datapoints instead of individual metric object
+* [Logs] Fix concurrent map write crash
+
+========================================================================
+Amazon CloudWatch Agent 1.300056.0 (2025-05-16)
+========================================================================
+Features:
+* [ContainerInsights] Ingest EBS NVME metrics exposed by aws-ebs-csi-driver
+
+Enhancements:
+* [Application Signals] Enable customizable attribute copying from resources to metrics for better metric organization
+* [Explore Related] Add automatic EC2 metadata enrichment for OpenTelemetry data collection
+
+Bug Fixes:
+* [ContainerInsights] Fix endpoint slice to capture service name instead of slice name
+* [Exporter/awsemfexporter] Fix output of count/sum metrics for detailed summary metrics
+* [Metrics/nvidia_gpu] Update V12 XML schema for missing power_draw
+
+========================================================================
+Amazon CloudWatch Agent 1.300055.2 (2025-05-14)
+========================================================================
+Bug Fixes:
+* [ContainerInsights] Fix endpoint slice to capture service name instead of slice name
+
+========================================================================
+Amazon CloudWatch Agent 1.300055.1 (2025-04-30)
+========================================================================
+Enhancements:
+* Go1.24 dependency bump
+
+========================================================================
+Amazon CloudWatch Agent 1.300055.0 (2025-04-15)
+========================================================================
+Features:
+* [Logs] Add service entity support
+* [Metrics/OTLP] Support entity for custom metrics
+* [Related Telemetry] Implement Kubernetes Metadata Extension
+* [Metrics] Support delta counter and histogram prometheus metrics for AMP destination
+* [Metrics] Implement AWS EBS NVME Receiver
+* [Container Insights] Add platform type in EKS
+
+Enhancements:
+* [Related Telemetry & Container Insights] Reduce noisy warning logs
+
+Bug Fixes:
+* [Application Signals] Fix service ip to workload mapping in pods
+
+========================================================================
+Amazon CloudWatch Agent 1.300054.0 (2025-03-20)
+========================================================================
+Features:
+* [EFA] Added Elastic Network Interface (ENI) ID as a dimension to EFA (Elastic Fabric Adapter) metrics
+
+Enhancements:
+* [ContainerInsights] Switched to using EndpointSlices instead of Endpoints for improved performance in large EKS clusters
+* [Logs] Added option to trim timestamp from log messages if enabled by customer
+* [EC2Tagger] Set separate refresh intervals for tags (default 0) and volumes (default 5 minutes if VolumeId configured)
+
+Bug Fixes:
+* [CloudWatch Exporter] Fixed issue with nil metric values by dropping metrics with nil values
+* [Logs] Implemented fixed-size buffer to handle file descriptors in log tailer, controlled by a feature flag
+* [Logs] Added 'backpressure_drop' feature flag for granular control of log handling during file rotation
+* [Kubernetes] Implemented dynamic CA certificate handling for kubelet connections
+* [Kubernetes] Use Kubernetes Secret File for Bearer Token in Prometheus API Access
+
+========================================================================
+Amazon CloudWatch Agent 1.300053.0 (2025-02-26)
 ========================================================================
 Bug Fixes:
 * [Related Telemetry] Fix EKS cluster detection when aws-auth config map does not exist
@@ -14,7 +127,7 @@ Enhancements:
 * [OpenTelemetry] Bump otel dependencies to v0.115.0/v1.21.0
 
 ========================================================================
-Amazon CloudWatch Agent 1.300052.0 (2024-01-21)
+Amazon CloudWatch Agent 1.300052.0 (2025-01-21)
 ========================================================================
 
 Bug Fixes:
@@ -23,7 +136,7 @@ Bug Fixes:
 * Fix service startup failures on Windows by updating network depenencies
 
 Enhancements:
-* [Logs] Improve performance with multi-threaded log pusher implementation 
+* [Logs] Improve performance with multi-threaded log pusher implementation
 * [Related Telemetry] Add case insensitive  metadata support for EC2 tags
 * [Related Telemetry] Reduce number of entities in explore experience by retrieving instance tags simultaneously
 * [Related Telemetry] Add fallback to use application signals for entity population when IMDS tags are not enabled
@@ -54,7 +167,7 @@ Features:
 Amazon CloudWatch Agent 1.300049.1 (2024-11-06)
 ========================================================================
 Enhancements:
-* [Logs] Attach Account ID to entity for cross-account checks 
+* [Logs] Attach Account ID to entity for cross-account checks
 
 Bug Fixes:
 * [Logs] Fix log stream name placeholder resolution for EMF logs
@@ -133,7 +246,7 @@ Enhancements:
 Amazon CloudWatch Agent 1.300044.0 (2024-08-14)
 ========================================================================
 Bug Fixes:
-* [ContainerInsights] Update GPU usage metrics emitted 
+* [ContainerInsights] Update GPU usage metrics emitted
 * [ContainerInsights] Deprecate runtime tag from neuron metrics to fix false average calculation
 
 Enhancements:

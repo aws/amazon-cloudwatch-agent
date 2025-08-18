@@ -56,6 +56,13 @@ linters:
     - revive
     - unused
     - nonamedreturns
+  exclusions:
+    rules:
+      # Package name based on field in JSON
+      - path: 'translator/translate/logs/logs_collected/windows_events'
+        text: "var-naming: don't use an underscore in package name"
+        linters:
+          - revive
 
 issues:
   new-from-rev: 9af4477

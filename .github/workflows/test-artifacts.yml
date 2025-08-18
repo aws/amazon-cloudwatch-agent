@@ -44,6 +44,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  id:
+    name: Workflow ID Provider
+    runs-on: ubuntu-latest
+    steps:
+      - name: ${{ github.event.inputs.build_id }}
+        run: echo run identifier ${{ inputs.build_id }}
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
@@ -51,6 +57,7 @@ jobs:
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
       CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      CWA_COMMIT_DATE: ${{ steps.get-commit-date.outputs.commit_date }}
     steps:
       - name: SetOutputs
         id: set-outputs
@@ -61,12 +68,51 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout agent repository for commit date
+        uses: actions/checkout@v3
+        with:
+          repository: aws/amazon-cloudwatch-agent
+          fetch-depth: 0
+          path: agent-repo
+
+      - name: Get commit date
+        id: get-commit-date
+        run: |
+          cd agent-repo  # Navigate to agent repo checkout
+          echo "Extracting commit date from agent repository..."
+          
+          # Get commit date as Unix timestamp, fallback to 0 for easier backfilling
+          if [[ "${{ inputs.build_id }}" =~ ^[0-9a-f]{40}$ ]]; then
+            # Full SHA - get date from git log
+            echo "Full SHA detected: ${{ inputs.build_id }}"
+            COMMIT_DATE=$(git log -1 --format=%ct ${{ inputs.build_id }} 2>/dev/null || echo "0")
+          elif [[ "${{ inputs.build_id }}" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
+            # Version format like 1.300057.1b1168 - extract SHA and get date
+            SHA_PART=$(echo "${{ inputs.build_id }}" | sed 's/.*\.//')
+            echo "Version format detected, extracted SHA: $SHA_PART"
+            COMMIT_DATE=$(git log -1 --format=%ct --grep="$SHA_PART" 2>/dev/null || echo "0")
+          else
+            # Fallback to 0 for easier backfilling of historical data
+            echo "Unknown format, using 0 for easier backfilling"
+            COMMIT_DATE="0"
+          fi
+          
+          echo "commit_date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: ${{ inputs.build_id }}"
+          
+          if [[ "$COMMIT_DATE" != "0" ]]; then
+            echo "SUCCESS: Found commit date ${COMMIT_DATE}"
+          else
+            echo "Using 0 - can be backfilled later with historical data"
+          fi
+
       - name: Echo test variables
         run: |
           echo "build_id: ${{ inputs.build_id }}"
           echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
           echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "CWA_COMMIT_DATE: ${{ steps.get-commit-date.outputs.commit_date }}"
 
       - uses: actions/checkout@v3
         with:
@@ -85,6 +131,7 @@ jobs:
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
@@ -116,6 +163,7 @@ jobs:
           echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_performance_matrix=$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
@@ -134,6 +182,7 @@ jobs:
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
@@ -169,7 +218,7 @@ jobs:
           go-version: ~1.22.2
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -265,7 +314,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -276,6 +325,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -329,6 +380,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
+
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -378,7 +430,9 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
     secrets: inherit
+
 
   EC2LinuxIntegrationTestITAR:
     needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
@@ -416,22 +470,23 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
     secrets: inherit
 
-
-  LinuxOnPremIntegrationTest:
-    needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
-    name: 'OnpremLinux'
-    uses: ./.github/workflows/ec2-integration-test.yml
+  EC2SELinuxIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2SELinux'
+    uses:  ./.github/workflows/ec2-integration-test.yml
     with:
       build_id: ${{ inputs.build_id }}
-      test_dir: terraform/ec2/linux_onprem
-      job_id: linux-onprem-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_selinux_matrix}}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
       region: us-west-2
-    secrets: inherit
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: true
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
@@ -451,7 +506,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -462,6 +517,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -471,7 +528,7 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 30
+          timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
             if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
@@ -479,6 +536,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
+
             terraform init
             if terraform apply --auto-approve \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -494,7 +552,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -510,7 +567,6 @@ jobs:
               cd terraform/ec2/win
             fi
             terraform destroy --auto-approve
-
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: ${{matrix.arrays.testName}}
@@ -529,7 +585,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -540,6 +596,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -557,6 +615,7 @@ jobs:
             else
               cd terraform/ec2/mac
             fi
+
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -572,7 +631,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -592,7 +650,7 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -658,7 +716,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -670,6 +728,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -719,7 +779,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    needs: [GenerateTestMatrix, OutputEnvVariables]
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
       fail-fast: false
       matrix:
@@ -734,7 +794,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -746,6 +806,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -772,6 +834,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -805,7 +868,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -817,6 +880,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -880,7 +945,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -892,6 +957,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -914,12 +981,11 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ inputs.build_id }}" \
-              -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
+              -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -937,7 +1003,7 @@ jobs:
 
   PerformanceTrackingTest:
     name: ${{matrix.arrays.testName}}
-    needs: [GenerateTestMatrix, OutputEnvVariables]
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -953,7 +1019,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -961,6 +1027,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -977,6 +1045,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${{ inputs.build_id }}" \
+              -var="cwa_github_sha_date=${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
@@ -1015,7 +1084,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -1023,6 +1092,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1039,6 +1110,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${{ inputs.build_id }}" \
+              -var="cwa_github_sha_date=${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
@@ -1077,7 +1149,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -1085,6 +1157,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1141,7 +1215,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -1149,6 +1223,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1206,7 +1282,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -1214,6 +1290,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version

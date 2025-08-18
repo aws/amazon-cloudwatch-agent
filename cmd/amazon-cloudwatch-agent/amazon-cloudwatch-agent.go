@@ -309,6 +309,13 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
+	if envconfig.IsRunningInROSA() {
+		log.Println("I! Running in ROSA")
+	}
+
+	if envconfig.IsSelinuxEnabled() {
+		log.Println("I! SELinux Status: Enabled")
+	}
 
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
@@ -487,7 +494,7 @@ func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
-		_ = fOtelConfigs.Set(paths.YamlConfigPath)
+		_ = fOtelConfigs.Set(getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath))
 	}
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
@@ -735,4 +742,29 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 	}
 
 	return "", nil
+}
+
+// getFallbackOtelConfig returns the first fallback YAML file that exists. It checks files in the following order:
+//  1. Default YAML path
+//  2. Default YAML in the provided TOML directory
+//  3. YAML with the same name as the provided TOML
+func getFallbackOtelConfig(tomlPath, defaultYamlPath string) string {
+	candidatePaths := []string{defaultYamlPath}
+	if tomlPath != "" {
+		tomlDir := filepath.Dir(tomlPath)
+		samePathYAML := strings.TrimSuffix(tomlPath, filepath.Ext(tomlPath)) + ".yaml"
+		candidatePaths = append(candidatePaths,
+			filepath.Join(tomlDir, paths.YAML),
+			samePathYAML,
+		)
+	}
+	fallbackPath := defaultYamlPath
+	for _, candidatePath := range candidatePaths {
+		_, err := os.Stat(candidatePath)
+		if err == nil {
+			fallbackPath = candidatePath
+			break
+		}
+	}
+	return fallbackPath
 }

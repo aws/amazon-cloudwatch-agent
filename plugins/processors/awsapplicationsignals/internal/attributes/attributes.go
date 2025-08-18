@@ -15,9 +15,12 @@ const (
 	AWSRemoteTarget                       = "aws.remote.target"
 	AWSRemoteResourceIdentifier           = "aws.remote.resource.identifier"
 	AWSRemoteResourceType                 = "aws.remote.resource.type"
+	AWSRemoteResourceCfnPrimaryIdentifier = "aws.remote.resource.cfn.primary.identifier"
+	AWSRemoteResourceAccountID            = "aws.remote.resource.account.id"
+	AWSRemoteResourceAccountAccessKey     = "aws.remote.resource.account.access_key"
+	AWSRemoteResourceRegion               = "aws.remote.resource.region"
 	AWSHostedInEnvironment                = "aws.hostedin.environment"
 	AWSRemoteDbUser                       = "aws.remote.db.user"
-	AWSRemoteResourceCfnPrimaryIdentifier = "aws.remote.resource.cfn.primary.identifier"
 
 	AWSECSClusterName = "aws.ecs.cluster.name"
 	AWSECSTaskID      = "aws.ecs.task.id"
@@ -26,4 +29,11 @@ const (
 	ResourceDetectionHostId   = "host.id"
 	ResourceDetectionHostName = "host.name"
 	ResourceDetectionASG      = "ec2.tag.aws:autoscaling:groupName"
+
+	// deployment resource attributes
+	AttributeDeploymentEnvironment     = "deployment.environment"
+	AttributeDeploymentEnvironmentName = "deployment.environment.name"
+
+	// ApplicationSignals behaviour-changing attributes
+	AWSApplicationSignalsMetricResourceKeys = "aws.application_signals.metric_resource_keys"
 )

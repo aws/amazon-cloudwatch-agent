@@ -311,6 +311,8 @@ func TestTranslator(t *testing.T) {
 							"pod_container_status_waiting_reason_image_pull_error", "pod_container_status_waiting_reason_start_error", "pod_container_status_waiting_reason_create_container_error",
 							"pod_container_status_waiting_reason_create_container_config_error", "pod_container_status_terminated_reason_oom_killed",
 							"pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity",
+							"pod_neuroncore_request", "pod_neuroncore_limit", "pod_neuroncore_usage_total", "pod_neuroncore_reserved_capacity",
+							"pod_efa_request", "pod_efa_limit", "pod_efa_usage_total", "pod_efa_reserved_capacity",
 						},
 					},
 					{
@@ -319,8 +321,10 @@ func TestTranslator(t *testing.T) {
 							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
 							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
-							"node_status_capacity_pods", "node_status_allocatable_pods", "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity"},
+							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown", "node_status_capacity_pods", "node_status_allocatable_pods",
+							"node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity",
+							"node_neuroncore_limit", "node_neuroncore_usage_total", "node_neuroncore_reserved_capacity", "node_neuroncore_unreserved_capacity", "node_neuroncore_available_capacity",
+							"node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity"},
 					},
 					{
 						Dimensions: [][]string{
@@ -405,19 +409,19 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
+							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature", "container_gpu_tensor_core_utilization",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
+							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature", "pod_gpu_tensor_core_utilization",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature",
+							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_tensor_core_utilization",
 						},
 					},
 					{
@@ -483,21 +487,29 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
 							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes",
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
 							"pod_efa_rx_bytes", "pod_efa_tx_bytes", "pod_efa_rx_dropped", "pod_efa_rdma_read_bytes", "pod_efa_rdma_write_bytes", "pod_efa_rdma_write_recv_bytes",
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
 							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "VolumeId"}},
+						MetricNameSelectors: []string{
+							"node_diskio_ebs_total_read_ops", "node_diskio_ebs_total_write_ops", "node_diskio_ebs_total_read_bytes", "node_diskio_ebs_total_write_bytes",
+							"node_diskio_ebs_total_read_time", "node_diskio_ebs_total_write_time", "node_diskio_ebs_volume_performance_exceeded_iops", "node_diskio_ebs_volume_performance_exceeded_tp",
+							"node_diskio_ebs_ec2_instance_performance_exceeded_iops", "node_diskio_ebs_ec2_instance_performance_exceeded_tp", "node_diskio_ebs_volume_queue_length",
 						},
 					},
 				},

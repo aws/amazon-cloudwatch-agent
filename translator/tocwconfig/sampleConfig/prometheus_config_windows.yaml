@@ -1,5 +1,6 @@
 exporters:
     awsemf/prometheus:
+        add_entity: false
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -7,6 +8,7 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: https://fake_endpoint
         enhanced_container_insights: false
+        external_id: ""
         imds_retries: 1
         local_mode: false
         log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
@@ -95,9 +97,6 @@ service:
                 - telegraf_prometheus
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -106,7 +105,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

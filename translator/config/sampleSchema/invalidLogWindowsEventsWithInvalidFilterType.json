@@ -1,0 +1,37 @@
+{
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_ids": [2300],
+            "log_group_name": "System",
+            "log_stream_name": "System",
+            "filters": [
+              {
+                "type": "invalid",
+                "expression": "(TRACE|DEBUG)"
+              }
+            ]
+          },
+          {
+            "event_name": "Application",
+            "event_levels": [
+              "ERROR"
+            ],
+            "log_group_name": "Application",
+            "log_stream_name": "Application",
+            "filters": [
+              {
+                "type": "include",
+                "expression": 40
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

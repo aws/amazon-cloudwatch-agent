@@ -30,12 +30,13 @@ var metricDuplicateTypes = []string{
 }
 
 var renameMapForDcgm = map[string]string{
-	"DCGM_FI_DEV_GPU_UTIL":        containerinsightscommon.GpuUtilization,
-	"DCGM_FI_DEV_FB_USED_PERCENT": containerinsightscommon.GpuMemUtilization,
-	"DCGM_FI_DEV_FB_USED":         containerinsightscommon.GpuMemUsed,
-	"DCGM_FI_DEV_FB_TOTAL":        containerinsightscommon.GpuMemTotal,
-	"DCGM_FI_DEV_GPU_TEMP":        containerinsightscommon.GpuTemperature,
-	"DCGM_FI_DEV_POWER_USAGE":     containerinsightscommon.GpuPowerDraw,
+	"DCGM_FI_DEV_GPU_UTIL":            containerinsightscommon.GpuUtilization,
+	"DCGM_FI_DEV_FB_USED_PERCENT":     containerinsightscommon.GpuMemUtilization,
+	"DCGM_FI_DEV_FB_USED":             containerinsightscommon.GpuMemUsed,
+	"DCGM_FI_DEV_FB_TOTAL":            containerinsightscommon.GpuMemTotal,
+	"DCGM_FI_DEV_GPU_TEMP":            containerinsightscommon.GpuTemperature,
+	"DCGM_FI_DEV_POWER_USAGE":         containerinsightscommon.GpuPowerDraw,
+	"DCGM_FI_PROF_PIPE_TENSOR_ACTIVE": containerinsightscommon.GpuTensorCoreUtilization,
 }
 
 var renameMapForNeuronMonitor = map[string]string{
@@ -52,6 +53,20 @@ var renameMapForNeuronMonitor = map[string]string{
 	"neuron_hardware":                                 containerinsightscommon.NeuronHardware,
 	"hardware_ecc_events_total":                       containerinsightscommon.NeuronDeviceHardwareEccEvents,
 	"execution_latency_seconds":                       containerinsightscommon.NeuronExecutionLatency,
+}
+
+var renameMapForNvme = map[string]string{
+	"aws_ebs_csi_read_ops_total":                  containerinsightscommon.NvmeReadOpsTotal,
+	"aws_ebs_csi_write_ops_total":                 containerinsightscommon.NvmeWriteOpsTotal,
+	"aws_ebs_csi_read_bytes_total":                containerinsightscommon.NvmeReadBytesTotal,
+	"aws_ebs_csi_write_bytes_total":               containerinsightscommon.NvmeWriteBytesTotal,
+	"aws_ebs_csi_read_seconds_total":              containerinsightscommon.NvmeReadTime,
+	"aws_ebs_csi_write_seconds_total":             containerinsightscommon.NvmeWriteTime,
+	"aws_ebs_csi_exceeded_iops_seconds_total":     containerinsightscommon.NvmeExceededIOPSTime,
+	"aws_ebs_csi_exceeded_tp_seconds_total":       containerinsightscommon.NvmeExceededTPTime,
+	"aws_ebs_csi_ec2_exceeded_iops_seconds_total": containerinsightscommon.NvmeExceededEC2IOPSTime,
+	"aws_ebs_csi_ec2_exceeded_tp_seconds_total":   containerinsightscommon.NvmeExceededEC2TPTime,
+	"aws_ebs_csi_volume_queue_length":             containerinsightscommon.NvmeVolumeQueueLength,
 }
 
 type translator struct {
@@ -87,6 +102,22 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				"action":                    "insert",
 				"new_name":                  "apiserver_request_total_5xx",
 			},
+		}
+
+		if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+			for oldNvmeMetric, newNvmeMetric := range renameMapForNvme {
+				transformRules = append(transformRules, map[string]interface{}{
+					"include":  oldNvmeMetric,
+					"action":   "update",
+					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeNode, newNvmeMetric),
+					"operations": []map[string]interface{}{{
+						"action":    "add_label",
+						"new_label": containerinsightscommon.MetricType,
+						"new_value": containerinsightscommon.TypeNodeEBS,
+					}},
+				})
+			}
+
 		}
 
 		if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {

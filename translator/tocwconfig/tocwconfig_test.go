@@ -82,6 +82,7 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
+
 func TestContainerInsightsJMX(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -339,6 +340,18 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
+func TestWindowsEventIDOnly(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids", "windows", expectedEnvVars, "")
+}
+
+// test both event_ids and levels
+func TestWindowsEventIdsAndLevels(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids_and_levels", "windows", expectedEnvVars, "")
+}
 func TestStatsDConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
@@ -376,6 +389,30 @@ func TestCollectDConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "collectd_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
+}
+
+// diskio
+func TestDiskIOTelegrafConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "diskio_telegraf_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "diskio_telegraf_config_linux", "darwin", nil, "")
+}
+
+func TestDiskIONVMeConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "diskio_nvme_config_linux", "linux", expectedEnvVars, "")
+}
+
+// Both Telegraf & EBS
+func TestDiskIOMixedConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "diskio_mixed_config_linux", "linux", expectedEnvVars, "")
 }
 
 // prometheus
@@ -898,11 +935,10 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
-
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
-		// assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
+		//assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
 
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}

@@ -6,6 +6,7 @@ package awscontainerinsight
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -14,13 +15,13 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
@@ -82,6 +83,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
+	cfg.CollectionRole = getCollectionRole()
 	cfg.ContainerOrchestrator = configuredService.Value
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
@@ -128,12 +130,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) setClusterName(conf *confmap.Conf, cfg *awscontainerinsightreceiver.Config) error {
-	clusterNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "cluster_name")
-	if clusterName, ok := common.GetString(conf, clusterNameKey); ok {
-		cfg.ClusterName = clusterName
-	} else {
-		cfg.ClusterName = util.GetClusterNameFromEc2Tagger()
-	}
+	cfg.ClusterName = common.GetClusterName(conf)
 
 	if cfg.ClusterName == "" {
 		return errors.New("cluster name is not provided and was not auto-detected from EC2 tags")
@@ -168,4 +165,15 @@ func (t *translator) getConfiguredContainerService(conf *confmap.Conf) *collecti
 		}
 	}
 	return configuredService
+}
+
+func getCollectionRole() awscontainerinsightreceiver.CollectionRole {
+	switch strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)) {
+	case envconfig.LEADER:
+		return awscontainerinsightreceiver.LEADER
+	case envconfig.NODE:
+		return awscontainerinsightreceiver.NODE
+	default:
+		return awscontainerinsightreceiver.ALL
+	}
 }

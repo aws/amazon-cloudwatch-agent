@@ -5,13 +5,18 @@ package awsapplicationsignals
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
+	"golang.org/x/exp/rand"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
 )
@@ -129,6 +134,68 @@ func TestProcessMetricsLowercase(t *testing.T) {
 	assert.Equal(t, "Error", lowercaseMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
 	assert.Equal(t, "Latency", lowercaseMetrics.ResourceMetrics().At(1).ScopeMetrics().At(0).Metrics().At(0).Name())
 	assert.Equal(t, "Fault", lowercaseMetrics.ResourceMetrics().At(2).ScopeMetrics().At(0).Metrics().At(0).Name())
+}
+
+func TestProcessMetricsWithConcurrency(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ctx := context.Background()
+	ap := &awsapplicationsignalsprocessor{
+		logger: logger,
+		config: &config.Config{
+			Resolvers: []config.Resolver{config.NewGenericResolver("")},
+			Rules:     []rules.Rule{},
+			Limiter: &config.LimiterConfig{
+				Threshold:                 2,
+				Disabled:                  false,
+				LogDroppedMetrics:         false,
+				RotationInterval:          10 * time.Millisecond,
+				GarbageCollectionInterval: 20 * time.Millisecond,
+				ParentContext:             ctx,
+			},
+		},
+	}
+
+	ap.StartMetrics(ctx, nil)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			time.Sleep(time.Duration(rand.Intn(50)*100) * time.Millisecond)
+
+			lowercaseMetrics := pmetric.NewMetrics()
+			errorMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+			errorMetric.SetName("error")
+			errorGauge := errorMetric.SetEmptyGauge().DataPoints().AppendEmpty()
+			errorGauge.SetIntValue(1)
+			errorGauge.Attributes().PutStr("Telemetry.Source", "UnitTest")
+			errorGauge.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.Intn(200)))
+			latencyMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+			latencyMetric.SetName("latency")
+			histogram := latencyMetric.SetEmptyExponentialHistogram().DataPoints().AppendEmpty()
+			histogram.SetSum(1)
+			histogram.SetCount(1)
+			histogram.SetMin(0)
+			histogram.SetMax(1)
+			histogram.Attributes().PutStr("Telemetry.Source", "UnitTest")
+			histogram.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.Intn(200)))
+			faultMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+			faultGauge := faultMetric.SetEmptyGauge().DataPoints().AppendEmpty()
+			faultGauge.SetIntValue(1)
+			faultGauge.Attributes().PutStr("Telemetry.Source", "UnitTest")
+			faultGauge.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.Intn(200)))
+			faultMetric.SetName("fault")
+
+			ap.processMetrics(ctx, lowercaseMetrics)
+
+			assert.Equal(t, "Error", lowercaseMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
+			assert.Equal(t, "Latency", lowercaseMetrics.ResourceMetrics().At(1).ScopeMetrics().At(0).Metrics().At(0).Name())
+			assert.Equal(t, "Fault", lowercaseMetrics.ResourceMetrics().At(2).ScopeMetrics().At(0).Metrics().At(0).Name())
+		}()
+	}
+	wg.Wait()
 }
 
 func TestProcessTraces(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
@@ -28,6 +29,12 @@ type LogEvent interface {
 	Message() string
 	Time() time.Time
 	Done()
+}
+
+type StatefulLogEvent interface {
+	LogEvent
+	Range() state.Range
+	RangeQueue() state.FileRangeQueue
 }
 
 type LogEntityProvider interface {
@@ -144,9 +151,14 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
 
+	closed := false
 	src.SetOutput(func(e LogEvent) {
+		if closed {
+			return
+		}
 		if e == nil {
 			close(eventsCh)
+			closed = true
 			log.Printf("I! [logagent] Log src has stopped for %v/%v(%v)", src.Group(), src.Stream(), src.Description())
 			return
 		}

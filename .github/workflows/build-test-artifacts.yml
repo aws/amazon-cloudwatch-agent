@@ -15,6 +15,8 @@ on:
       - '!.github/workflows/build-test-artifacts.yml'
       - '!.github/workflows/integration-test.yml'
       - '!.github/workflows/application-signals-e2e-test.yml'
+  schedule:
+    - cron: '0 11 * * 1,2,3,4,5' # Every day at 11:00 UTC on Monday to Friday
   workflow_dispatch:
     inputs:
       test-image-before-upload:
@@ -108,7 +110,7 @@ jobs:
   StartApplicationSignalsE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
     # Workflow only runs against main
-    if: ${{ contains(github.ref_name, 'main') && (github.event_name == 'push' || inputs.test-image-before-upload) }}
+    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
