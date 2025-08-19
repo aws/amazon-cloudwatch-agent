@@ -167,16 +167,16 @@ func escapeStrings(node any) {
 
 func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
 	defaultRelabelConfigs := []*relabel.Config{
-		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_started_by"}, Action: relabel.Replace, TargetLabel: "StartedBy"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_group"}, Action: relabel.Replace, TargetLabel: "TaskGroup"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_family"}, Action: relabel.Replace, TargetLabel: "TaskDefinitionFamily"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_revision"}, Action: relabel.Replace, TargetLabel: "TaskRevision"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_started_by"}, Action: relabel.Replace, TargetLabel: "StartedBy", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_group"}, Action: relabel.Replace, TargetLabel: "TaskGroup", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_family"}, Action: relabel.Replace, TargetLabel: "TaskDefinitionFamily", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_revision"}, Action: relabel.Replace, TargetLabel: "TaskRevision", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
 		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: "$1"},
 	}
 
