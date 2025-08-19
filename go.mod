@@ -92,6 +92,9 @@ replace github.com/go-kit/kit => github.com/go-kit/kit v0.12.1-0.20220808180842-
 replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api v0.0.0-20180801171038-322a19404e37
 
 // forces version bump to support log group classes
+
+replace collectd.org v0.4.0 => github.com/collectd/go-collectd v0.4.0
+
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.48.6
 
 require (
@@ -157,6 +160,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver v0.124.1

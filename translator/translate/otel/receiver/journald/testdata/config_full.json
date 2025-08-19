@@ -1,0 +1,49 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "directory": "/var/log/journal",
+        "files": [
+          "system.journal",
+          "user-1000.journal",
+          "kernel.journal"
+        ],
+        "units": [
+          "sshd.service",
+          "nginx.service",
+          "docker.service",
+          "kubelet.service"
+        ],
+        "identifiers": [
+          "kernel",
+          "systemd",
+          "NetworkManager",
+          "dockerd"
+        ],
+        "priority": "info",
+        "grep": "error|warning|failed|critical",
+        "matches": [
+          {
+            "_SYSTEMD_UNIT": "sshd.service"
+          },
+          {
+            "PRIORITY": "6"
+          },
+          {
+            "_TRANSPORT": "kernel",
+            "PRIORITY": "4"
+          },
+          {
+            "_SYSTEMD_UNIT": "docker.service",
+            "SYSLOG_IDENTIFIER": "dockerd"
+          }
+        ],
+        "dmesg": true,
+        "all": false,
+        "start_at": "end",
+        "log_group_name": "/aws/amazoncloudwatch-agent/journald-full",
+        "log_stream_name": "{hostname}-{instance_id}"
+      }
+    }
+  }
+}

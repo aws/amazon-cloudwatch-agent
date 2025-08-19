@@ -119,6 +119,7 @@ func Test_ProcStatPlugin(t *testing.T) {
 		// However, its only able to use pgrep or PID file to find the target
 		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/procstat/procstat.go#L71-L79
 		// Therefore, the metrics are different based on number of processes/PID find by pgrep or PID File and not stable.
+		// Some memory metrics may not be available on all systems, so we only check for core metrics.
 		numMetricsComparator: assert.LessOrEqual,
 	})
 }

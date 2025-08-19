@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "log_group_name": "/aws/amazoncloudwatch-agent/journald",
+        "log_stream_name": "{instance_id}"
+      }
+    }
+  }
+}

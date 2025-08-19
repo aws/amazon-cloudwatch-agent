@@ -108,8 +108,7 @@
         "metrics_destinations": {
           "type": "object",
           "properties": {
-            "cloudwatch": {
-            },
+            "cloudwatch": {},
             "amp": {
               "$ref": "#/definitions/metricsDefinition/definitions/ampDefinition"
             }
@@ -166,7 +165,7 @@
               "$ref": "#/definitions/otlpDefinitions"
             },
             "prometheus": {
-             "$ref": "#/definitions/metricsDefinition/definitions/prometheusDefinitions"
+              "$ref": "#/definitions/metricsDefinition/definitions/prometheusDefinitions"
             }
           },
           "minProperties": 1,
@@ -273,7 +272,9 @@
             },
             "drop_original_metrics": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "uniqueItems": true
             },
@@ -396,7 +397,9 @@
             },
             "drop_original_metrics": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "uniqueItems": true
             },
@@ -537,7 +540,9 @@
             },
             "drop_original_metrics": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "minItems": 1,
               "uniqueItems": true
             }
@@ -630,6 +635,9 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "journald": {
+              "$ref": "#/definitions/logsDefinition/definitions/logsJournaldDefinition"
             }
           },
           "minProperties": 1,
@@ -959,7 +967,7 @@
                       "UTC"
                     ]
                   },
-                  "trim_timestamp" : {
+                  "trim_timestamp": {
                     "type": "boolean",
                     "description": "Whether to trim the timestamp in the log message"
                   },
@@ -1058,7 +1066,7 @@
                       "uniqueItems": true
                     }
                   },
-                  "event_ids":{
+                  "event_ids": {
                     "type": "array",
                     "items": {
                       "type": "integer",
@@ -1071,7 +1079,7 @@
                   "filters": {
                     "type": "array",
                     "items": {
-                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                      "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
                     }
                   },
                   "log_stream_name": {
@@ -1099,13 +1107,19 @@
                 ],
                 "anyOf": [
                   {
-                    "required": ["event_levels"]
+                    "required": [
+                      "event_levels"
+                    ]
                   },
                   {
-                    "required": ["event_ids"]
+                    "required": [
+                      "event_ids"
+                    ]
                   },
                   {
-                    "required": ["filters"]
+                    "required": [
+                      "filters"
+                    ]
                   }
                 ],
                 "additionalProperties": false
@@ -1119,6 +1133,96 @@
           "required": [
             "collect_list"
           ]
+        },
+        "logsJournaldDefinition": {
+          "type": "object",
+          "description": "Specifies the journald logs to be collected",
+          "properties": {
+            "directory": {
+              "type": "string",
+              "description": "Path to the directory containing journal files",
+              "maxLength": 4096
+            },
+            "files": {
+              "type": "array",
+              "description": "List of specific journal files to read",
+              "items": {
+                "type": "string",
+                "maxLength": 4096
+              }
+            },
+            "units": {
+              "type": "array",
+              "description": "List of systemd units to filter by",
+              "items": {
+                "type": "string",
+                "maxLength": 255
+              }
+            },
+            "identifiers": {
+              "type": "array",
+              "description": "List of syslog identifiers to filter by",
+              "items": {
+                "type": "string",
+                "maxLength": 255
+              }
+            },
+            "priority": {
+              "type": "string",
+              "description": "Minimum priority level to filter by",
+              "enum": [
+                "emerg",
+                "alert",
+                "crit",
+                "err",
+                "warning",
+                "notice",
+                "info",
+                "debug"
+              ]
+            },
+            "grep": {
+              "type": "string",
+              "description": "Regular expression to filter log messages",
+              "maxLength": 4096
+            },
+            "dmesg": {
+              "type": "boolean",
+              "description": "Whether to include kernel messages"
+            },
+            "all": {
+              "type": "boolean",
+              "description": "Whether to include all available entries"
+            },
+            "start_at": {
+              "type": "string",
+              "description": "Where to start reading from the journal",
+              "enum": [
+                "beginning",
+                "end"
+              ]
+            },
+            "matches": {
+              "type": "array",
+              "description": "List of match conditions for filtering journal entries",
+              "items": {
+                "type": "object",
+                "description": "Match condition with journal field name as key and value to match",
+                "additionalProperties": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "minProperties": 1
+              }
+            },
+            "log_group_name": {
+              "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+            },
+            "log_stream_name": {
+              "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+            }
+          },
+          "additionalProperties": false
         },
         "logGroupNameDefinition": {
           "type": "string",

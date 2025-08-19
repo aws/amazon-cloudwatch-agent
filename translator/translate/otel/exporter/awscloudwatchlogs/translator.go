@@ -59,6 +59,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := t.setEmfFields(c, cfg); err != nil {
 			return nil, err
 		}
+	} else if t.name == "journald_logs" && t.isJournald(c) {
+		if err := t.setJournaldFields(c, cfg); err != nil {
+			return nil, err
+		}
 	}
 
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
@@ -103,5 +107,39 @@ func (t *translator) setEmfFields(conf *confmap.Conf, cfg *awscloudwatchlogsexpo
 	} else {
 		cfg.LogStreamName = logStreamName.(string)
 	}
+	return nil
+}
+func (t *translator) isJournald(conf *confmap.Conf) bool {
+	journaldKey := common.ConfigKey(common.LogsKey, common.LogsCollectedKey, common.JournaldKey)
+	return conf.IsSet(journaldKey)
+}
+
+func (t *translator) setJournaldFields(conf *confmap.Conf, cfg *awscloudwatchlogsexporter.Config) error {
+	journaldKey := common.ConfigKey(common.LogsKey, common.LogsCollectedKey, common.JournaldKey)
+	cfg.Region = agent.Global_Config.Region
+
+	// Set log group name
+	logGroupNameKey := common.ConfigKey(journaldKey, common.LogGroupName)
+	if logGroupName, ok := common.GetString(conf, logGroupNameKey); ok {
+		cfg.LogGroupName = logGroupName
+	} else {
+		return &common.MissingKeyError{ID: t.ID(), JsonKey: logGroupNameKey}
+	}
+
+	// Set log stream name
+	logStreamNameKey := common.ConfigKey(journaldKey, common.LogStreamName)
+	if logStreamName, ok := common.GetString(conf, logStreamNameKey); ok {
+		cfg.LogStreamName = logStreamName
+	} else {
+		// Use global log stream name if not specified in journald section
+		rule := logs.LogStreamName{}
+		_, val := rule.ApplyRule(conf.Get(common.LogsKey))
+		if logStreamName, ok := val.(map[string]any)[common.LogStreamName]; ok {
+			cfg.LogStreamName = logStreamName.(string)
+		} else {
+			return &common.MissingKeyError{ID: t.ID(), JsonKey: logStreamNameKey}
+		}
+	}
+
 	return nil
 }
