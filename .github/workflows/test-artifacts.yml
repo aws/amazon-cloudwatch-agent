@@ -201,29 +201,10 @@ jobs:
             fi
 
             terraform init
-            if terraform apply --auto-approve \
+            terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ inputs.build_id }}" \
               -var="ami_type=${{ matrix.arrays.ami }}" \
               -var="instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
-              terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
-
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd terraform/eks/daemon
-            fi
-            terraform destroy --auto-approve
+              -var="k8s_version=${{ matrix.arrays.k8sVersion }}"
