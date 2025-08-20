@@ -177,7 +177,7 @@ func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
-		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: "$1"},
+		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: "${1}"},
 	}
 
 	defaultMetricRelabelConfigs := []*relabel.Config{

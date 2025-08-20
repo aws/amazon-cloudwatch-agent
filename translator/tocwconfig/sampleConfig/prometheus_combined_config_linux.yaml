@@ -287,7 +287,7 @@ receivers:
                       target_label: VpcId
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: $1
+                      replacement: ${1}
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -384,7 +384,7 @@ receivers:
                       target_label: VpcId
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: $1
+                      replacement: ${1}
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -481,7 +481,7 @@ receivers:
                       target_label: VpcId
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: $1
+                      replacement: ${1}
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
