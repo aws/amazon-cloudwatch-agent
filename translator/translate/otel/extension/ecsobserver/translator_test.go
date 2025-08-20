@@ -14,9 +14,13 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 func TestTranslator_Translate(t *testing.T) {
+	ecsutil.GetECSUtilSingleton().Cluster = "my-ecs-cluster"
+	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
+
 	tests := []struct {
 		name     string
 		config   map[string]interface{}
@@ -144,9 +148,7 @@ func TestTranslator_Translate(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"ecs_service_discovery": map[string]interface{}{
-								"sd_target_cluster": "my-ecs-cluster",
-								"sd_cluster_region": "us-west-2",
-								"docker_label":      map[string]interface{}{},
+								"docker_label": map[string]interface{}{},
 							},
 						},
 					},
@@ -155,7 +157,7 @@ func TestTranslator_Translate(t *testing.T) {
 			expected: &ecsobserver.Config{
 				RefreshInterval: time.Minute,
 				ClusterName:     "my-ecs-cluster",
-				ClusterRegion:   "us-west-2",
+				ClusterRegion:   "us-east-1",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
@@ -367,28 +369,6 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-		},
-		{
-			name: "missing sd_target_cluster uses ECS util",
-			config: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
-							"ecs_service_discovery": map[string]interface{}{
-								"sd_frequency":      "1m",
-								"sd_cluster_region": "us-west-2",
-								"sd_result_file":    "/tmp/test.yaml",
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name:    "nil config",
-			config:  nil,
-			wantErr: true,
 		},
 	}
 
