@@ -14,9 +14,13 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 func TestTranslator_Translate(t *testing.T) {
+	ecsutil.GetECSUtilSingleton().Cluster = "my-ecs-cluster"
+	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
+
 	tests := []struct {
 		name     string
 		config   map[string]interface{}
@@ -144,11 +148,7 @@ func TestTranslator_Translate(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"ecs_service_discovery": map[string]interface{}{
-								"sd_frequency":      "1m",
-								"sd_target_cluster": "my-ecs-cluster",
-								"sd_cluster_region": "us-west-2",
-								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
-								"docker_label":      map[string]interface{}{},
+								"docker_label": map[string]interface{}{},
 							},
 						},
 					},
@@ -157,12 +157,12 @@ func TestTranslator_Translate(t *testing.T) {
 			expected: &ecsobserver.Config{
 				RefreshInterval: time.Minute,
 				ClusterName:     "my-ecs-cluster",
-				ClusterRegion:   "us-west-2",
+				ClusterRegion:   "us-east-1",
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
 						JobNameLabel:     defaultJobNameLabel,
-						MetricsPathLabel: defaultMetricsPath,
+						MetricsPathLabel: defaultMetricsPathLabel,
 						PortLabel:        defaultPortLabel,
 					},
 				},
@@ -178,11 +178,11 @@ func TestTranslator_Translate(t *testing.T) {
 								"sd_frequency":      "15s",
 								"sd_target_cluster": "my-ecs-cluster",
 								"sd_cluster_region": "us-west-2",
-								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
+								"sd_result_file":    "/custom/result/file.yaml",
 								"docker_label": map[string]interface{}{
 									"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A",
-									"sd_metrics_path_label": "MY_METRICS_PATH",
-									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME",
+									"sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH_CUSTOM",
+									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME_CUSTOM",
 								},
 							},
 						},
@@ -193,11 +193,11 @@ func TestTranslator_Translate(t *testing.T) {
 				RefreshInterval: 15 * time.Second,
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
-				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
+				ResultFile:      "/custom/result/file.yaml",
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
-						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME",
-						MetricsPathLabel: "MY_METRICS_PATH",
+						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME_CUSTOM",
+						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH_CUSTOM",
 						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A",
 					},
 				},
@@ -369,26 +369,6 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-		},
-		{
-			name: "missing required fields",
-			config: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
-							"ecs_service_discovery": map[string]interface{}{
-								"sd_frequency": "1m",
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name:    "nil config",
-			config:  nil,
-			wantErr: true,
 		},
 	}
 

@@ -14,13 +14,14 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 const (
 	defaultMetricsPath      = "/metrics"
 	defaultPortLabel        = "ECS_PROMETHEUS_EXPORTER_PORT"
 	defaultMetricsPathLabel = "ECS_PROMETHEUS_METRICS_PATH"
-	defaultJobNameLabel     = ""
+	defaultJobNameLabel     = "job"
 )
 
 var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
@@ -62,30 +63,36 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ecsSDKey}
 	}
 
-	requiredFields := []string{"sd_target_cluster", "sd_cluster_region", "sd_result_file"}
-	for _, field := range requiredFields {
-		if _, ok := ecsSD[field]; !ok {
-			return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: field}
-		}
+	// ECS SD Top Level Fields
+	resultFile := getStringWithDefault(ecsSD, "sd_result_file", "/tmp/cwagent_ecs_auto_sd.yaml")
+
+	clusterName := getStringWithDefault(ecsSD, "sd_target_cluster", ecsutil.GetECSUtilSingleton().Cluster)
+	if clusterName == "" {
+		return nil, fmt.Errorf("ECS Target Cluster Name is not defined: %s", clusterName)
 	}
 
-	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "10s"))
+	clusterRegion := getStringWithDefault(ecsSD, "sd_cluster_region", ecsutil.GetECSUtilSingleton().Region)
+	if clusterRegion == "" {
+		return nil, fmt.Errorf("ECS Target Cluster Region is not defined: %s", clusterRegion)
+	}
+
+	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "1m"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh interval: %w", err)
 	}
 
 	cfg := &ecsobserver.Config{
 		RefreshInterval: refreshDuration,
-		ClusterName:     getString(ecsSD, "sd_target_cluster"),
-		ClusterRegion:   getString(ecsSD, "sd_cluster_region"),
-		ResultFile:      getString(ecsSD, "sd_result_file"),
+		ClusterName:     clusterName,
+		ClusterRegion:   clusterRegion,
+		ResultFile:      resultFile,
 	}
 	// Docker label based service discovery
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
 		dockerConfig := ecsobserver.DockerLabelConfig{
-			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPath),
+			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
-			JobNameLabel:     getString(dockerLabel, "sd_job_name_label"),
+			JobNameLabel:     getStringWithDefault(dockerLabel, "sd_job_name_label", defaultJobNameLabel),
 		}
 		cfg.DockerLabels = []ecsobserver.DockerLabelConfig{dockerConfig} // Initialize as slice with single element
 	}
