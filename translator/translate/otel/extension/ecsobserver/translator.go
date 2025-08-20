@@ -21,7 +21,7 @@ const (
 	defaultMetricsPath      = "/metrics"
 	defaultPortLabel        = "ECS_PROMETHEUS_EXPORTER_PORT"
 	defaultMetricsPathLabel = "ECS_PROMETHEUS_METRICS_PATH"
-	defaultJobNameLabel     = ""
+	defaultJobNameLabel     = "job"
 )
 
 var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, common.ECSServiceDiscovery)
@@ -92,7 +92,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		dockerConfig := ecsobserver.DockerLabelConfig{
 			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
-			JobNameLabel:     getString(dockerLabel, "sd_job_name_label"),
+			JobNameLabel:     getStringWithDefault(dockerLabel, "sd_job_name_label", defaultJobNameLabel),
 		}
 		cfg.DockerLabels = []ecsobserver.DockerLabelConfig{dockerConfig} // Initialize as slice with single element
 	}
