@@ -5,7 +5,6 @@ package ecsobserver
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 const (

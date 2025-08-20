@@ -383,7 +383,7 @@ func TestTranslator_Translate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true, // ECS util returns empty in test environment
+			wantErr: true,
 		},
 		{
 			name:    "nil config",
