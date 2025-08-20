@@ -40,7 +40,7 @@ func TestTranslator_Translate(t *testing.T) {
 								"sd_result_file":    "{ecsSdFileName}",
 								"docker_label": map[string]interface{}{
 									"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT",
-									"sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH",
+									"sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH_CUSTOM",
 									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME",
 								},
 								"task_definition_list": []interface{}{
@@ -92,7 +92,7 @@ func TestTranslator_Translate(t *testing.T) {
 					{
 						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT",
 						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME",
-						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH",
+						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH_CUSTOM",
 					},
 				},
 				TaskDefinitions: []ecsobserver.TaskDefinitionConfig{
@@ -162,7 +162,7 @@ func TestTranslator_Translate(t *testing.T) {
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
 						JobNameLabel:     defaultJobNameLabel,
-						MetricsPathLabel: defaultMetricsPath,
+						MetricsPathLabel: defaultMetricsPathLabel,
 						PortLabel:        defaultPortLabel,
 					},
 				},
