@@ -34,14 +34,14 @@ func TestTranslator_Translate(t *testing.T) {
 						"prometheus": map[string]interface{}{
 							"prometheus_config_path": "{prometheusFileName}",
 							"ecs_service_discovery": map[string]interface{}{
-								"sd_frequency":      "1m",
+								"sd_frequency":      "2m",
 								"sd_target_cluster": "my-ecs-cluster",
 								"sd_cluster_region": "us-west-2",
 								"sd_result_file":    "{ecsSdFileName}",
 								"docker_label": map[string]interface{}{
-									"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT",
+									"sd_port_label":         "ECS_PROMETHEUS_EXPORTER_PORT_CUSTOM",
 									"sd_metrics_path_label": "ECS_PROMETHEUS_METRICS_PATH_CUSTOM",
-									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME",
+									"sd_job_name_label":     "ECS_PROMETHEUS_JOB_NAME_CUSTOM",
 								},
 								"task_definition_list": []interface{}{
 									map[string]interface{}{
@@ -84,14 +84,14 @@ func TestTranslator_Translate(t *testing.T) {
 				},
 			},
 			expected: &ecsobserver.Config{
-				RefreshInterval: time.Minute,
+				RefreshInterval: (2 * time.Minute),
 				ClusterName:     "my-ecs-cluster",
 				ClusterRegion:   "us-west-2",
 				ResultFile:      "{ecsSdFileName}",
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
-						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT",
-						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME",
+						PortLabel:        "ECS_PROMETHEUS_EXPORTER_PORT_CUSTOM",
+						JobNameLabel:     "ECS_PROMETHEUS_JOB_NAME_CUSTOM",
 						MetricsPathLabel: "ECS_PROMETHEUS_METRICS_PATH_CUSTOM",
 					},
 				},
@@ -144,10 +144,8 @@ func TestTranslator_Translate(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"ecs_service_discovery": map[string]interface{}{
-								"sd_frequency":      "1m",
 								"sd_target_cluster": "my-ecs-cluster",
 								"sd_cluster_region": "us-west-2",
-								"sd_result_file":    "/tmp/cwagent_ecs_auto_sd.yaml",
 								"docker_label":      map[string]interface{}{},
 							},
 						},

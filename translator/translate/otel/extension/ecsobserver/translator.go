@@ -63,14 +63,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ecsSDKey}
 	}
 
-	requiredFields := []string{"sd_result_file"}
-	for _, field := range requiredFields {
-		if _, ok := ecsSD[field]; !ok {
-			return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: field}
-		}
-	}
-
 	// ECS SD Top Level Fields
+	resultFile := getStringWithDefault(ecsSD, "sd_result_file", "/tmp/cwagent_ecs_auto_sd.yaml")
+
 	clusterName := getStringWithDefault(ecsSD, "sd_target_cluster", ecsutil.GetECSUtilSingleton().Cluster)
 	if clusterName == "" {
 		return nil, fmt.Errorf("ECS Target Cluster Name is not defined: %s", clusterName)
@@ -81,7 +76,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, fmt.Errorf("ECS Target Cluster Region is not defined: %s", clusterRegion)
 	}
 
-	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "10s"))
+	refreshDuration, err := time.ParseDuration(getStringWithDefault(ecsSD, "sd_frequency", "1m"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh interval: %w", err)
 	}
@@ -90,7 +85,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		RefreshInterval: refreshDuration,
 		ClusterName:     clusterName,
 		ClusterRegion:   clusterRegion,
-		ResultFile:      getString(ecsSD, "sd_result_file"),
+		ResultFile:      resultFile,
 	}
 	// Docker label based service discovery
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
