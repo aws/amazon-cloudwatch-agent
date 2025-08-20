@@ -37,6 +37,9 @@ var ecsUtilInstance *ecsUtil
 var ecsUtilOnce sync.Once
 
 func GetECSUtilSingleton() *ecsUtil {
+	if ecsUtilInstance != nil {
+		return ecsUtilInstance
+	}
 	ecsUtilOnce.Do(func() {
 		ecsUtilInstance = initECSUtilSingleton()
 	})

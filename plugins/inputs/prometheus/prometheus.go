@@ -14,16 +14,14 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
 )
 
 //go:embed prometheus.toml
 var sampleConfig string
 
 type Prometheus struct {
-	PrometheusConfigPath string                                      `toml:"prometheus_config_path"`
-	ClusterName          string                                      `toml:"cluster_name"`
-	ECSSDConfig          *ecsservicediscovery.ServiceDiscoveryConfig `toml:"ecs_service_discovery"`
+	PrometheusConfigPath string `toml:"prometheus_config_path"`
+	ClusterName          string `toml:"cluster_name"`
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
 	wg                   sync.WaitGroup
@@ -54,25 +52,6 @@ func (p *Prometheus) Start(accIn telegraf.Accumulator) error {
 		clusterName: p.ClusterName,
 		mtHandler:   mth,
 	}
-
-	var configurer *awsmiddleware.Configurer
-	var ecssd *ecsservicediscovery.ServiceDiscovery
-	needEcssd := true
-
-	if p.middleware != nil {
-		configurer = awsmiddleware.NewConfigurer(p.middleware.Handlers())
-		if configurer != nil {
-			ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig, Configurer: configurer}
-			needEcssd = false
-		}
-	}
-	if needEcssd {
-		ecssd = &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
-	}
-
-	// Launch ECS Service Discovery as a goroutine
-	p.wg.Add(1)
-	go ecsservicediscovery.StartECSServiceDiscovery(ecssd, p.shutDownChan, &p.wg)
 
 	// Start scraping prometheus metrics from prometheus endpoints
 	p.wg.Add(1)
