@@ -100,6 +100,11 @@ func getOtelAttributes(m pmetric.Metric) []pcommon.Map {
 		for i := 0; i < dps.Len(); i++ {
 			attributes = append(attributes, dps.At(i).Attributes())
 		}
+	case pmetric.MetricTypeExponentialHistogram:
+		dps := m.ExponentialHistogram().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
 	}
 	return attributes
 }

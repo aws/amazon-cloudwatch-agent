@@ -534,7 +534,7 @@ func (s *Statsd) aggregate(m metric) {
 		field, ok := cached.fields[m.field]
 		if !ok {
 			// Assume function pointer is valid.
-			field = distribution.NewDistribution()
+			field = distribution.NewClassicDistribution()
 		}
 		weight := 1.0
 		if m.samplerate > 0 {
