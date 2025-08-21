@@ -35,6 +35,17 @@ type Config struct {
 	ResourceToTelemetrySettings resourcetotelemetry.Settings `mapstructure:"resource_to_telemetry_conversion"`
 	// MiddlewareID is an ID for an extension that can be used to configure the AWS client.
 	MiddlewareID *component.ID `mapstructure:"middleware,omitempty"`
+
+	// DiskIOFeatures controls which disk I/O features are enabled for feature flag detection
+	DiskIOFeatures DiskIOFeaturesConfig `mapstructure:"diskio_features,omitempty"`
+}
+
+// DiskIOFeaturesConfig represents configuration for disk I/O feature detection
+type DiskIOFeaturesConfig struct {
+	// EnableEBS controls whether EBS disk I/O metrics should trigger the nvme_ebs feature flag
+	EnableEBS bool `mapstructure:"enable_ebs"`
+	// EnableInstanceStore controls whether instance store disk I/O metrics should trigger the nvme_is feature flag
+	EnableInstanceStore bool `mapstructure:"enable_instance_store"`
 }
 
 var _ component.Config = (*Config)(nil)

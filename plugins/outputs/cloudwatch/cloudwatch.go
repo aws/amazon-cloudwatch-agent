@@ -5,15 +5,18 @@ package cloudwatch
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -53,6 +56,16 @@ const (
 	opPutMetricData = "PutMetricData"
 )
 
+const (
+	FeatureFlagNvmeEBS        = "nvme_ebs"
+	FeatureFlagNvmeIS         = "nvme_is"
+	MetricPrefixEBS           = "diskio_ebs_"
+	MetricPrefixInstanceStore = "diskio_instance_store_"
+)
+
+// Compile time interface check.
+var _ exporter.Metrics = (*CloudWatch)(nil)
+
 type CloudWatch struct {
 	config *Config
 	logger *zap.Logger
@@ -72,16 +85,17 @@ type CloudWatch struct {
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
 	lastRequestBytes       int
+	mu                     sync.RWMutex
+	featureList            map[string]struct{}
+	prebuiltFeature        string
 }
-
-// Compile time interface check.
-var _ exporter.Metrics = (*CloudWatch)(nil)
 
 func (c *CloudWatch) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: false}
 }
 
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
+	log.Println("DEBUG: Entering Start function")
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
@@ -111,15 +125,39 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	if c.config.MiddlewareID != nil {
 		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv1(&svc.Handlers))
 	}
+	// Add dynamic User-Agent handler for PutMetricData requests
+	svc.Handlers.Build.PushFrontNamed(request.NamedHandler{
+		Name: "FeatureUserAgent",
+		Fn: func(r *request.Request) {
+			if r.Operation.Name == opPutMetricData {
+				log.Println("DEBUG: In FeatureUserAgent handler for PutMetricData")
+				c.mu.RLock()
+				f := c.prebuiltFeature
+				c.mu.RUnlock()
+				if f != "" {
+					log.Printf("DEBUG: Appending feature string to User-Agent: %s", f)
+					request.AddToUserAgent(r, f)
+					log.Printf("DEBUG: Updated User-Agent: %s", r.HTTPRequest.Header.Get("User-Agent"))
+				} else {
+					log.Println("DEBUG: No feature string to append")
+				}
+			} else {
+				log.Printf("DEBUG: Skipping FeatureUserAgent handler for operation: %s", r.Operation.Name)
+			}
+		},
+	})
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
 	c.retryer = logThrottleRetryer
+	c.featureList = make(map[string]struct{})
 	c.startRoutines()
+	log.Println("DEBUG: Exiting Start function")
 	return nil
 }
 
 func (c *CloudWatch) startRoutines() {
+	log.Println("DEBUG: Entering startRoutines")
 	setNewDistributionFunc(c.config.MaxValuesPerDatum)
 	c.metricChan = make(chan *aggregationDatum, metricChanBufferSize)
 	c.datumBatchChan = make(chan map[string][]*cloudwatch.MetricDatum, datumBatchChanBufferSize)
@@ -130,9 +168,11 @@ func (c *CloudWatch) startRoutines() {
 	c.metricDatumBatch = newMetricDatumBatch(c.config.MaxDatumsPerCall, perRequestConstSize)
 	go c.pushMetricDatum()
 	go c.publish()
+	log.Println("DEBUG: Exiting startRoutines")
 }
 
 func (c *CloudWatch) Shutdown(ctx context.Context) error {
+	log.Println("DEBUG: Entering Shutdown")
 	log.Println("D! Stopping the CloudWatch output plugin")
 	for i := 0; i < 5; i++ {
 		if len(c.metricChan) == 0 && len(c.datumBatchChan) == 0 {
@@ -149,6 +189,7 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 	c.publisher.Close()
 	c.retryer.Stop()
 	log.Println("D! Stopped the CloudWatch output plugin")
+	log.Println("DEBUG: Exiting Shutdown")
 	return nil
 }
 
@@ -156,10 +197,12 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 // The actual publishing will occur in a long running goroutine.
 // This method can block when publishing is backed up.
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
+	log.Println("DEBUG: Entering ConsumeMetrics")
 	datums := ConvertOtelMetrics(metrics)
 	for _, d := range datums {
 		c.aggregator.AddMetric(d)
 	}
+	log.Println("DEBUG: Exiting ConsumeMetrics")
 	return nil
 }
 
@@ -167,25 +210,27 @@ func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics
 // When a batch is full it is queued up for sending.
 // Even if the batch is not full it will still get sent after the flush interval.
 func (c *CloudWatch) pushMetricDatum() {
+	log.Println("DEBUG: Entering pushMetricDatum")
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case metric := <-c.metricChan:
+			log.Println("DEBUG: Received metric in pushMetricDatum")
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
 			/* We currently do not account for entity information as a part of the payload size.
-			This is by design and should be revisited once the SDK protocol changes.
-			In the meantime there has been a payload limit increase applied in the background to accommodate this decision
+			   This is by design and should be revisited once the SDK protocol changes.
+			   In the meantime there has been a payload limit increase applied in the background to accommodate this decision
 
-			Otherwise to include entity size you would do something like this:
-			c.metricDatumBatch.Size += calculateEntitySize(entity)
+			   Otherwise to include entity size you would do something like this:
+			   c.metricDatumBatch.Size += calculateEntitySize(entity)
 
-			In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
-			added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
-			c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
+			   In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
+			   added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
+			   c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
 
-			File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
+			   File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
 			*/
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
@@ -194,6 +239,7 @@ func (c *CloudWatch) pushMetricDatum() {
 				c.metricDatumBatch.Count++
 				if c.metricDatumBatch.isFull() {
 					// if batch is full
+					log.Println("DEBUG: Batch is full, sending to datumBatchChan")
 					c.datumBatchChan <- c.metricDatumBatch.Partition
 					c.metricDatumBatch.clear()
 				}
@@ -201,11 +247,13 @@ func (c *CloudWatch) pushMetricDatum() {
 		case <-ticker.C:
 			if c.timeToPublish(c.metricDatumBatch) {
 				// if the time to publish comes
+				log.Println("DEBUG: Time to publish batch")
 				c.lastRequestBytes = c.metricDatumBatch.Size
 				c.datumBatchChan <- c.metricDatumBatch.Partition
 				c.metricDatumBatch.clear()
 			}
 		case <-c.shutdownChan:
+			log.Println("DEBUG: Exiting pushMetricDatum due to shutdown")
 			return
 		}
 	}
@@ -221,6 +269,7 @@ type MetricDatumBatch struct {
 }
 
 func newMetricDatumBatch(maxDatumsPerCall, perRequestConstSize int) *MetricDatumBatch {
+	log.Printf("DEBUG: Creating new MetricDatumBatch with maxDatums %d, constSize %d", maxDatumsPerCall, perRequestConstSize)
 	return &MetricDatumBatch{
 		MaxDatumsPerCall:    maxDatumsPerCall,
 		Partition:           map[string][]*cloudwatch.MetricDatum{},
@@ -232,6 +281,7 @@ func newMetricDatumBatch(maxDatumsPerCall, perRequestConstSize int) *MetricDatum
 }
 
 func (b *MetricDatumBatch) clear() {
+	log.Println("DEBUG: Clearing MetricDatumBatch")
 	b.Partition = map[string][]*cloudwatch.MetricDatum{}
 	b.BeginTime = time.Now()
 	b.Size = b.perRequestConstSize
@@ -239,11 +289,19 @@ func (b *MetricDatumBatch) clear() {
 }
 
 func (b *MetricDatumBatch) isFull() bool {
-	return b.Count >= b.MaxDatumsPerCall || b.Size >= bottomLinePayloadSizeInBytesToPublish
+	full := b.Count >= b.MaxDatumsPerCall || b.Size >= bottomLinePayloadSizeInBytesToPublish
+	if full {
+		log.Printf("DEBUG: MetricDatumBatch is full (Count: %d, Size: %d)", b.Count, b.Size)
+	}
+	return full
 }
 
 func (c *CloudWatch) timeToPublish(b *MetricDatumBatch) bool {
-	return len(b.Partition) > 0 && time.Since(b.BeginTime) >= c.config.ForceFlushInterval
+	publish := len(b.Partition) > 0 && time.Since(b.BeginTime) >= c.config.ForceFlushInterval
+	if publish {
+		log.Println("DEBUG: Time to publish MetricDatumBatch")
+	}
+	return publish
 }
 
 // getFirstPushMs returns the time at which the first upload should occur.
@@ -259,6 +317,7 @@ func getFirstPushMs(interval time.Duration) int64 {
 	if nextMs < nowMs {
 		nextMs += interval.Milliseconds()
 	}
+	log.Printf("DEBUG: First push scheduled at %d ms", nextMs)
 	return nextMs
 }
 
@@ -267,6 +326,7 @@ func getFirstPushMs(interval time.Duration) int64 {
 // If the batch buffer fills up the interval will be gradually reduced to avoid
 // many agents bursting the backend.
 func (c *CloudWatch) publish() {
+	log.Println("DEBUG: Entering publish loop")
 	currentInterval := c.config.ForceFlushInterval
 	nextMs := getFirstPushMs(currentInterval)
 	bufferFullOccurred := false
@@ -294,6 +354,7 @@ func (c *CloudWatch) publish() {
 					}
 					// Cut the remaining interval in half.
 					nextMs = nowMs + ((nextMs - nowMs) / 2)
+					log.Printf("DEBUG: Buffer full, reduced interval to %v, nextMs %d", currentInterval, nextMs)
 				}
 			}
 		}
@@ -303,11 +364,13 @@ func (c *CloudWatch) publish() {
 			// Restore interval if buffer did not fill up during this interval.
 			if !bufferFullOccurred {
 				currentInterval = c.config.ForceFlushInterval
+				log.Printf("DEBUG: Restoring interval to %v", currentInterval)
 			}
 			nextMs += currentInterval.Milliseconds()
 		}
 
 		if shouldPublish {
+			log.Println("DEBUG: Publishing batch")
 			c.pushMetricDatumBatch()
 			bufferFullOccurred = false
 		}
@@ -322,25 +385,33 @@ func (c *CloudWatch) publish() {
 
 // metricDatumBatchFull returns true if the channel/buffer of batches if full.
 func (c *CloudWatch) metricDatumBatchFull() bool {
-	return len(c.datumBatchChan) >= datumBatchChanBufferSize
+	full := len(c.datumBatchChan) >= datumBatchChanBufferSize
+	if full {
+		log.Println("DEBUG: datumBatchChan is full")
+	}
+	return full
 }
 
 // pushMetricDatumBatch will try receiving on the channel, and if successful,
 // then it publishes the received batch.
 func (c *CloudWatch) pushMetricDatumBatch() {
+	log.Println("DEBUG: Entering pushMetricDatumBatch")
 	for {
 		select {
 		case datumBatch := <-c.datumBatchChan:
+			log.Println("DEBUG: Publishing datumBatch")
 			c.publisher.Publish(datumBatch)
 			continue
 		default:
 		}
 		break
 	}
+	log.Println("DEBUG: Exiting pushMetricDatumBatch")
 }
 
 // backoffSleep sleeps some amount of time based on number of retries done.
 func (c *CloudWatch) backoffSleep() {
+	log.Printf("DEBUG: Entering backoffSleep with retries %d", c.retries)
 	d := 1 * time.Minute
 	if c.retries <= defaultRetryCount {
 		d = backoffRetryBase * time.Duration(1<<c.retries)
@@ -350,9 +421,11 @@ func (c *CloudWatch) backoffSleep() {
 		c.retries, d.Milliseconds())
 	c.retries++
 	time.Sleep(d)
+	log.Println("DEBUG: Exiting backoffSleep")
 }
 
 func createEntityMetricData(entityToMetrics map[string][]*cloudwatch.MetricDatum) []*cloudwatch.EntityMetricData {
+	log.Println("DEBUG: Entering createEntityMetricData")
 	var entityMetricData []*cloudwatch.EntityMetricData
 	for entityStr, metrics := range entityToMetrics {
 		if entityStr == "" {
@@ -364,10 +437,12 @@ func createEntityMetricData(entityToMetrics map[string][]*cloudwatch.MetricDatum
 			MetricData: metrics,
 		})
 	}
+	log.Println("DEBUG: Exiting createEntityMetricData")
 	return entityMetricData
 }
 
 func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
+	log.Println("DEBUG: Entering WriteToCloudWatch")
 	entityToMetricDatum := req.(map[string][]*cloudwatch.MetricDatum)
 
 	// PMD requires PutMetricData to have MetricData
@@ -385,6 +460,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
+		log.Printf("DEBUG: Attempt %d to PutMetricData", i+1)
 		_, err = c.svc.PutMetricData(params)
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
@@ -413,12 +489,41 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	if err != nil {
 		log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
 	}
+	log.Println("DEBUG: Exiting WriteToCloudWatch")
 }
 
 // BuildMetricDatum may just return the datum as-is.
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
+	log.Println("DEBUG: Entering BuildMetricDatum")
+	// Detect features based on metric name
+	if metric.MetricName != nil {
+		name := *metric.MetricName
+		c.mu.Lock()
+		changed := false
+		if _, exists := c.featureList[FeatureFlagNvmeEBS]; !exists && strings.HasPrefix(name, MetricPrefixEBS) {
+			log.Printf("DEBUG: Detected EBS metric: %s", name)
+			c.featureList[FeatureFlagNvmeEBS] = struct{}{}
+			changed = true
+		}
+		if _, exists := c.featureList[FeatureFlagNvmeIS]; !exists && strings.HasPrefix(name, MetricPrefixInstanceStore) {
+			log.Printf("DEBUG: Detected Instance Store metric: %s", name)
+			c.featureList[FeatureFlagNvmeIS] = struct{}{}
+			changed = true
+		}
+		if changed {
+			var features []string
+			for f := range c.featureList {
+				features = append(features, f)
+			}
+			sort.Strings(features)
+			c.prebuiltFeature = fmt.Sprintf(" feature:(%s)", strings.Join(features, " "))
+			log.Printf("DEBUG: Updated prebuiltFeature: %s", c.prebuiltFeature)
+		}
+		c.mu.Unlock()
+	}
+
 	var datums []*cloudwatch.MetricDatum
 	var distList []distribution.Distribution
 
@@ -485,10 +590,12 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 			}
 		}
 	}
+	log.Println("DEBUG: Exiting BuildMetricDatum")
 	return metric.entity, datums
 }
 
 func (c *CloudWatch) IsDropping(metricName string) bool {
+	log.Printf("DEBUG: Checking if dropping metric: %s", metricName)
 	// Check if any metrics are provided in drop_original_metrics
 	if len(c.config.DropOriginalConfigs) == 0 {
 		return false
@@ -503,6 +610,7 @@ func (c *CloudWatch) IsDropping(metricName string) bool {
 // Necessary for comparing a metric-name and its dimensions to determine
 // if 2 metrics are actually the same.
 func sortedTagKeys(tagMap map[string]string) []string {
+	log.Println("DEBUG: Sorting tag keys")
 	// Allocate slice with proper size and avoid append.
 	keys := make([]string, 0, len(tagMap))
 	for k := range tagMap {
@@ -518,6 +626,7 @@ func sortedTagKeys(tagMap map[string]string) []string {
 // This always includes the "host" tag if it exists.
 // See https://github.com/aws/amazon-cloudwatch-agent/issues/398
 func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
+	log.Println("DEBUG: Entering BuildDimensions")
 	if len(tagMap) > MaxDimensions {
 		log.Printf("D! cloudwatch: dropping dimensions, max %v, count %v",
 			MaxDimensions, len(tagMap))
@@ -547,11 +656,13 @@ func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
 			Value: aws.String(tagMap[k]),
 		})
 	}
+	log.Println("DEBUG: Exiting BuildDimensions")
 	return dimensions
 }
 
 // ProcessRollup creates the dimension sets based on the dimensions available in the original metric.
 func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
+	log.Println("DEBUG: Entering ProcessRollup")
 	rawDimensionMap := map[string]string{}
 	for _, v := range rawDimensions {
 		rawDimensionMap[*v.Name] = *v.Value
@@ -581,12 +692,14 @@ func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*c
 			fullDimensionsList = append(fullDimensionsList, extraDimensions)
 		}
 	}
+	log.Println("DEBUG: Exiting ProcessRollup")
 	return fullDimensionsList
 }
 
 // GetUniqueRollupList filters out duplicate dimensions within the sets and filters
 // duplicate sets.
 func GetUniqueRollupList(inputLists [][]string) [][]string {
+	log.Println("DEBUG: Entering GetUniqueRollupList")
 	var uniqueSets []collections.Set[string]
 	for _, inputList := range inputLists {
 		inputSet := collections.NewSet(inputList...)
@@ -607,6 +720,7 @@ func GetUniqueRollupList(inputLists [][]string) [][]string {
 		sort.Strings(uniqueLists[i])
 	}
 	log.Printf("I! cloudwatch: get unique roll up list %v", uniqueLists)
+	log.Println("DEBUG: Exiting GetUniqueRollupList")
 	return uniqueLists
 }
 
