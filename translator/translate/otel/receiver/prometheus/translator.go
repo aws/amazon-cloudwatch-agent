@@ -6,12 +6,14 @@ package prometheus
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/prometheus/prometheus/model/relabel"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -19,6 +21,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -27,7 +30,11 @@ const (
 	defaultTLSCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
 	defaultTLSCertPath     = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.crt"
 	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
+	ECS_SD_RESULT_FILE     = "sd_result_file"
+	defaultECSSDfileName   = "/tmp/cwagent_ecs_auto_sd.yaml"
 )
+
+var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, "ecs_service_discovery")
 
 type translator struct {
 	name      string
@@ -124,7 +131,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}
-	addDefaultRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs)
+	addDefaultECSRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, conf, t.configKey)
 
 	return cfg, nil
 }
@@ -165,7 +172,20 @@ func escapeStrings(node any) {
 	}
 }
 
-func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
+func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *confmap.Conf, promConfigKey string) {
+	// ECS Service Discovery Relabel Configs should only be added if enabled on ECS and configs are valid:
+	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
+		return
+	}
+
+	ecsSdResultFileKey := common.ConfigKey(ecsSDKey, ECS_SD_RESULT_FILE)
+	ecsSDFileName := defaultECSSDfileName
+	if conf.IsSet(ecsSdResultFileKey) {
+		if fileName, ok := conf.Get(ecsSdResultFileKey).(string); ok && fileName != "" {
+			ecsSDFileName = fileName
+		}
+	}
+
 	defaultRelabelConfigs := []*relabel.Config{
 		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
@@ -177,7 +197,7 @@ func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
-		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: "${1}"},
+		//{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: "${1}"},
 	}
 
 	defaultMetricRelabelConfigs := []*relabel.Config{
@@ -185,17 +205,23 @@ func addDefaultRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) {
 	}
 
 	for _, scrapeConfig := range scrapeConfigs {
-		if hasFileServiceDiscovery(scrapeConfig) {
+		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
 			scrapeConfig.RelabelConfigs = defaultRelabelConfigs
 			scrapeConfig.MetricRelabelConfigs = defaultMetricRelabelConfigs
 		}
 	}
 }
 
-func hasFileServiceDiscovery(scrapeConfig *config.ScrapeConfig) bool {
+func hasConfiguredServiceDiscoveryResultFile(scrapeConfig *config.ScrapeConfig, ecsSdResultFile string) bool {
 	for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
-		if sdConfig.Name() == "file" {
-			return true
+		fileSDConfig, ok := sdConfig.(*file.SDConfig)
+		if !ok {
+			return false
+		}
+		for _, filePath := range fileSDConfig.Files {
+			if slices.Contains([]string{filePath}, ecsSdResultFile) {
+				return true
+			}
 		}
 	}
 	return false
