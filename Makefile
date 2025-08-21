@@ -81,15 +81,15 @@ amazon-cloudwatch-agent-darwin: copy-version-file
 ifneq ($(OS),Windows_NT)
 ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS with ARM64 and AMD64
-# 	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(DARWIN_BUILD_ARM64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
-# 	$(DARWIN_BUILD_AMD64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(DARWIN_BUILD_AMD64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 	$(DARWIN_BUILD_ARM64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
-# 	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
-# 	$(DARWIN_BUILD_AMD64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(DARWIN_BUILD_AMD64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(DARWIN_BUILD_ARM64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
-# 	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 endif
 endif

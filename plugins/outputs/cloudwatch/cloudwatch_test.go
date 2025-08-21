@@ -5,8 +5,6 @@ package cloudwatch
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"log"
 	"math"
 	"net/http"
@@ -19,6 +17,8 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
@@ -742,10 +742,9 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create a dummy session and real client for handlers
 			sess := session.Must(session.NewSession(&aws.Config{
 				Region:   aws.String("us-west-2"),
-				Endpoint: aws.String("http://localhost:12345"), // Dummy endpoint to avoid real calls
+				Endpoint: aws.String("http://localhost:12345"),
 			}))
 			realSvc := cloudwatch.New(sess)
 			cw := &CloudWatch{
@@ -757,7 +756,6 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 				featureList: make(map[string]struct{}),
 			}
 
-			// Manually add the handler as in Start
 			realSvc.Handlers.Build.PushFrontNamed(request.NamedHandler{
 				Name: "FeatureUserAgent",
 				Fn: func(r *request.Request) {
