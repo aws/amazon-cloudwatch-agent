@@ -29,6 +29,7 @@ var imagePrefixes = []string{
 	"cloudwatch-agent-integration-test-al2",
 	"cloudwatch-agent-integration-test-alma-linux-8",
 	"cloudwatch-agent-integration-test-alma-linux-9",
+	"cloudwatch-agent-integration-test-alma-linux-10",
 	"cloudwatch-agent-integration-test-arm64-al2",
 	"cloudwatch-agent-integration-test-debian-12-arm64",
 	"cloudwatch-agent-integration-test-nvidia-gpu-al2",
