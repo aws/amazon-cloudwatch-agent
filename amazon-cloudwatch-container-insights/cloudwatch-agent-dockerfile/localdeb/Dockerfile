@@ -9,7 +9,7 @@ RUN apt-get update &&  \
 
 COPY ${TARGETARCH}/amazon-cloudwatch-agent.deb /tmp/amazon-cloudwatch-agent.deb
 
-RUN dpkg -i -E /tmp/amazon-cloudwatch-agent.deb && \
+RUN dpkg -i -E --force-scripts /tmp/amazon-cloudwatch-agent.deb && \
     rm -rf /tmp/* && \
     rm -rf /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard && \
     rm -rf /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl && \
