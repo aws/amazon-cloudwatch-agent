@@ -7,7 +7,12 @@ set -e
 # restart agent after upgrade
 if [ "$1" = "configure" ]; then
      if [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
-          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a cond-restart
+          # Skip restart in container environments where init systems may not be available
+          if [ -f /.dockerenv ] || [ -n "${container}" ]; then
+               echo "Container environment detected, skipping agent restart"
+          else
+               /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a cond-restart
+          fi
      fi
 fi
 
