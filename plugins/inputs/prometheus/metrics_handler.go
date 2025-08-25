@@ -5,6 +5,7 @@ package prometheus
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -52,6 +53,9 @@ func (mh *metricsHandler) handle(pmb PrometheusMetricBatch) {
 	// do calculation: calculate delta for counter
 	pmb = mh.calculator.Calculate(pmb)
 
+	// Apply K8s 1.34 compatibility transformations
+	pmb = applyK8s134Compatibility(pmb)
+
 	// do merge: merge metrics which are sharing same tags
 	metricMaterials := mergeMetrics(pmb)
 
@@ -92,4 +96,51 @@ func (mh *metricsHandler) setEmfMetadata(mms []*metricMaterial) {
 			mm.tags["JobName"] = "default"
 		}
 	}
+}
+
+// applyK8s134Compatibility applies transformations for K8s 1.34 compatibility
+// K8s 1.34 splits labels into group+resource and renames apiserver_storage_objects → apiserver_resource_objects
+// We maintain pre-1.34 behavior with no user config changes
+func applyK8s134Compatibility(pmb PrometheusMetricBatch) PrometheusMetricBatch {
+	for _, pm := range pmb {
+		// Rename: If metric name == apiserver_resource_objects, report it as apiserver_storage_objects
+		if pm.metricName == "apiserver_resource_objects" {
+			pm.metricName = "apiserver_storage_objects"
+			
+			// Set legacy resource = resource + (group != "" ? "." + group : ""); drop/ignore group
+			if resource, hasResource := pm.tags["resource"]; hasResource {
+				if group, hasGroup := pm.tags["group"]; hasGroup && group != "" {
+					pm.tags["resource"] = resource + "." + group
+				}
+				delete(pm.tags, "group")
+			}
+		}
+
+		// Label shims for control-plane metrics that carry a resource label
+		if resource, hasResource := pm.tags["resource"]; hasResource {
+			group := pm.tags["group"] // treat missing group as ""
+			
+			// Add resource_prefix = resource + (group != "" ? "." + group : "")
+			if group != "" {
+				pm.tags["resource_prefix"] = resource + "." + group
+			} else {
+				pm.tags["resource_prefix"] = resource
+			}
+
+			// For etcd_request metrics, set type = resource + (group != "" ? "." + group : "")
+			if strings.HasPrefix(pm.metricName, "etcd_request") {
+				if group != "" {
+					pm.tags["type"] = resource + "." + group
+				} else {
+					pm.tags["type"] = resource
+				}
+			}
+
+			// For apiserver_watch_ metrics, set kind = resource
+			if strings.HasPrefix(pm.metricName, "apiserver_watch_") {
+				pm.tags["kind"] = resource
+			}
+		}
+	}
+	return pmb
 }
