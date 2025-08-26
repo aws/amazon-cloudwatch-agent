@@ -188,7 +188,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - delete_matching_keys(attributes, "^cloud.*")
                 - delete_matching_keys(attributes, "^host.*")
