@@ -335,6 +335,10 @@ func (tail *Tail) readlineUtf16() (string, error) {
 }
 
 func (tail *Tail) tailFileSync() {
+	fmt.Printf("tailFileSync started for %s\n", tail.Filename)
+	defer func() {
+		fmt.Printf("tailFileSync ended for %s\n", tail.Filename)
+	}()
 	defer tail.Done()
 	defer tail.close()
 
@@ -414,6 +418,7 @@ func (tail *Tail) tailFileSync() {
 
 		// Process `line` even if err is EOF.
 		if err == nil {
+			fmt.Printf("got line %s\n", line)
 			cooloff := !tail.sendLine(line, tail.curOffset)
 			if cooloff {
 				// Wait a second before seeking till the end of
@@ -545,12 +550,13 @@ func (tail *Tail) waitForChanges() error {
 
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
+	defer tail.lk.Unlock()
+
 	if tail.useLargeBuffer {
 		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
 	} else {
 		tail.reader = bufio.NewReaderSize(tail.file, constants.DefaultReaderBufferSize)
 	}
-	tail.lk.Unlock()
 }
 
 func (tail *Tail) readSlice(delim byte) ([]byte, error) {
