@@ -231,6 +231,8 @@ require (
 	k8s.io/klog/v2 v2.130.1
 )
 
+require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.124.1
+
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect

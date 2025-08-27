@@ -1,0 +1,7 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {}
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "system-logs",
+            "log_stream_name": "{instance_id}",
+            "log_group_class": "STANDARD",
+            "retention_in_days": 7,
+            "filters": [
+              {
+                "type": "exclude",
+                "expression": ".*debug.*"
+              },
+              {
+                "type": "include", 
+                "expression": "error|warning|critical"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

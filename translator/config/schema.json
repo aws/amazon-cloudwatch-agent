@@ -630,6 +630,9 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "journald": {
+              "$ref": "#/definitions/logsDefinition/definitions/logsJournaldDefinition"
             }
           },
           "minProperties": 1,
@@ -1119,6 +1122,56 @@
           "required": [
             "collect_list"
           ]
+        },
+        "logsJournaldDefinition": {
+          "type": "object",
+          "description": "Specifies the journald logs to be collected",
+          "properties": {
+            "collect_list": {
+              "type": "array",
+              "description": "List of journald log configurations",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "log_group_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+                  },
+                  "log_stream_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+                  },
+                  "retention_in_days": {
+                    "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "filters": {
+                    "type": "array",
+                    "description": "List of filters to apply to journal entries",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["include", "exclude"],
+                          "description": "Type of filter to apply"
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "Regular expression for filtering",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": ["type", "expression"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": ["log_group_name", "log_stream_name"],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["collect_list"],
+          "additionalProperties": false
         },
         "logGroupNameDefinition": {
           "type": "string",

@@ -13,6 +13,8 @@ type Collection struct {
 	Files *Files
 	// windows events
 	WinEvents *Events
+	// journald logs
+	Journald *Journald
 }
 
 func (config *Collection) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -25,6 +27,10 @@ func (config *Collection) ToMap(ctx *runtime.Context) (string, map[string]interf
 	// WinEvents should be nil if the target Os is windows
 	if config.WinEvents != nil {
 		util.AddToMap(ctx, resultMap, config.WinEvents)
+	}
+
+	if config.Journald != nil {
+		util.AddToMap(ctx, resultMap, config.Journald)
 	}
 
 	return "logs_collected", resultMap
@@ -42,4 +48,11 @@ func (config *Collection) AddLogFile(filePath, logGroupName, logStreamName strin
 		config.Files = &Files{}
 	}
 	config.Files.AddLogFile(filePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, retention, logGroupClass)
+}
+
+func (config *Collection) AddJournald(logGroupName, logStreamName string, filters []*EventFilter, retention int) {
+	if config.Journald == nil {
+		config.Journald = &Journald{}
+	}
+	config.Journald.AddJournald(logGroupName, logStreamName, filters, retention)
 }

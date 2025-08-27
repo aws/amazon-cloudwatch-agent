@@ -29,6 +29,7 @@ const (
 
 var (
 	emfBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.Emf)
+	journaldBasePathKey = common.ConfigKey(common.LogsKey, common.LogsCollectedKey, common.JournaldKey)
 	roleARNPathKey      = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 	endpointOverrideKey = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
 	streamNameKey       = common.ConfigKey(common.LogsKey, common.LogStreamName)
@@ -57,6 +58,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	// Add more else if when otel supports log reading
 	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
 		if err := t.setEmfFields(c, cfg); err != nil {
+			return nil, err
+		}
+	} else if t.name == common.PipelineNameJournaldLogs && t.isJournald(c) {
+		if err := t.setJournaldFields(c, cfg); err != nil {
 			return nil, err
 		}
 	}
@@ -90,6 +95,10 @@ func (t *translator) isEmf(conf *confmap.Conf) bool {
 	return conf.IsSet(emfBasePathKey)
 }
 
+func (t *translator) isJournald(conf *confmap.Conf) bool {
+	return conf.IsSet(journaldBasePathKey)
+}
+
 func (t *translator) setEmfFields(conf *confmap.Conf, cfg *awscloudwatchlogsexporter.Config) error {
 	cfg.Region = agent.Global_Config.Region
 	cfg.EmfOnly = true
@@ -103,5 +112,56 @@ func (t *translator) setEmfFields(conf *confmap.Conf, cfg *awscloudwatchlogsexpo
 	} else {
 		cfg.LogStreamName = logStreamName.(string)
 	}
+	return nil
+}
+
+func (t *translator) setJournaldFields(conf *confmap.Conf, cfg *awscloudwatchlogsexporter.Config) error {
+	cfg.Region = agent.Global_Config.Region
+	cfg.EmfOnly = false
+	cfg.RawLog = true
+
+	journaldConf := conf.Get(journaldBasePathKey)
+	journaldMap, ok := journaldConf.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	collectList, ok := journaldMap["collect_list"].([]interface{})
+	if !ok || len(collectList) == 0 {
+		return nil
+	}
+
+	firstItem, ok := collectList[0].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	logStreamRule := logs.LogStreamName{}
+	_, logStreamVal := logStreamRule.ApplyRule(firstItem)
+	logStreamMap, ok := logStreamVal.(map[string]interface{})
+	if !ok {
+		return &common.MissingKeyError{ID: t.ID(), JsonKey: "log_stream_name"}
+	}
+
+	logStreamName, ok := logStreamMap["log_stream_name"].(string)
+	if !ok || logStreamName == "" {
+		return &common.MissingKeyError{ID: t.ID(), JsonKey: "log_stream_name"}
+	}
+	cfg.LogStreamName = logStreamName
+
+	logGroupName, ok := firstItem["log_group_name"].(string)
+	if !ok || logGroupName == "" {
+		return &common.MissingKeyError{ID: t.ID(), JsonKey: "log_group_name"}
+	}
+	cfg.LogGroupName = logGroupName
+
+	if retentionInDays, ok := firstItem["retention_in_days"]; ok {
+		if val, ok := retentionInDays.(float64); ok {
+			cfg.LogRetention = int64(val)
+		} else if val, ok := retentionInDays.(int); ok {
+			cfg.LogRetention = int64(val)
+		}
+	}
+
 	return nil
 }

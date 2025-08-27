@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/events"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/tracesconfig"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/journald"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
@@ -52,8 +52,10 @@ func TestProcessor_Process(t *testing.T) {
 func TestProcessor_NextProcessor(t *testing.T) {
 	ctx := new(runtime.Context)
 	conf := new(data.Config)
+
+	ctx.OsParameter = util.OsTypeLinux
 	nextProcessor := Processor.NextProcessor(ctx, conf)
-	assert.Equal(t, tracesconfig.Processor, nextProcessor)
+	assert.Equal(t, journald.Processor, nextProcessor)
 
 	ctx.OsParameter = util.OsTypeWindows
 	nextProcessor = Processor.NextProcessor(ctx, conf)

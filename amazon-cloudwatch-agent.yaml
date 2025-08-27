@@ -1,0 +1,111 @@
+exporters:
+    awscloudwatchlogs/journald_logs:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: system-logs
+        log_retention: 7
+        log_stream_name: i-UNKNOWN
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-east-1
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
+processors:
+    batch/journald_logs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    filter:
+        error_mode: ignore
+        logs:
+            log_record:
+                - IsMatch(body, ".*debug.*")
+                - not IsMatch(body, "error|warning|critical")
+        metrics: {}
+        spans: {}
+        traces: {}
+receivers:
+    journald:
+        id: journald_input
+        operators: []
+        priority: debug
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        start_at: end
+        type: journald_input
+service:
+    extensions:
+        - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        logs/journald_logs:
+            exporters:
+                - awscloudwatchlogs/journald_logs
+            processors:
+                - filter
+                - batch/journald_logs
+            receivers:
+                - journald
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

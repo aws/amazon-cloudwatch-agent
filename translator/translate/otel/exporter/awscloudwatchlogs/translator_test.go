@@ -169,3 +169,100 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslatorJournald(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
+	agent.Global_Config.Credentials = map[string]any{
+		"profile":                "some_profile",
+		"shared_credential_file": "/some/credentials",
+	}
+	globallogs.GlobalLogConfig.MetadataInfo = logsutil.GetMetadataInfo(testMetadata)
+	tt := NewTranslatorWithName(common.PipelineNameJournaldLogs)
+	require.EqualValues(t, "awscloudwatchlogs/journald_logs", tt.ID().String())
+
+	testCases := map[string]struct {
+		input   map[string]any
+		want    *confmap.Conf
+		wantErr error
+	}{
+		"BasicJournaldConfig": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"logs_collected": map[string]any{
+						"journald": map[string]any{
+							"collect_list": []any{
+								map[string]any{
+									"log_group_name":  "system-logs",
+									"log_stream_name": "{instance_id}",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path":   "/ca/bundle",
+				"emf_only":                false,
+				"imds_retries":            1,
+				"log_group_name":          "system-logs",
+				"log_stream_name":         "some_instance_id",
+				"middleware":              "agenthealth/logs",
+				"profile":                 "some_profile",
+				"raw_log":                 true,
+				"region":                  "us-east-1",
+				"role_arn":                "global_arn",
+				"shared_credentials_file": "/some/credentials",
+			}),
+		},
+		"JournaldWithRetention": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"logs_collected": map[string]any{
+						"journald": map[string]any{
+							"collect_list": []any{
+								map[string]any{
+									"log_group_name":    "system-logs",
+									"log_stream_name":   "{hostname}",
+									"retention_in_days": 7,
+								},
+							},
+						},
+					},
+				},
+			},
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path":   "/ca/bundle",
+				"emf_only":                false,
+				"imds_retries":            1,
+				"log_group_name":          "system-logs",
+				"log_retention":           int64(7),
+				"log_stream_name":         "some_hostname",
+				"middleware":              "agenthealth/logs",
+				"profile":                 "some_profile",
+				"raw_log":                 true,
+				"region":                  "us-east-1",
+				"role_arn":                "global_arn",
+				"shared_credentials_file": "/some/credentials",
+			}),
+		},
+	}
+
+	factory := awscloudwatchlogsexporter.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*awscloudwatchlogsexporter.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}

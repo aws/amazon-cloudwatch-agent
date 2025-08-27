@@ -26,6 +26,9 @@ var containerInsightsJmxConfig string
 //go:embed filter_containerinsights_config.yaml
 var containerInsightsConfig string
 
+//go:embed filter_journald_config.yaml
+var journaldConfig string
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
@@ -55,6 +58,28 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	// Check for journald logs filtering
+	journaldKey := common.ConfigKey(common.LogsKey, common.LogsCollectedKey, common.JournaldKey)
+	if conf.IsSet(journaldKey) {
+		cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
+		
+		// Generate filter conditions from journald config
+		conditions := t.buildJournaldFilters(conf.Get(journaldKey))
+		if len(conditions) > 0 {
+			c := confmap.NewFromStringMap(map[string]interface{}{
+				"error_mode": "ignore",
+				"logs": map[string]interface{}{
+					"log_record": conditions,
+				},
+			})
+			if err := c.Unmarshal(&cfg); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal journald filter processor (%s): %w", t.ID(), err)
+			}
+			return cfg, nil
+		}
+		return common.GetYamlFileToYamlConfig(cfg, journaldConfig)
+	}
+
 	// also checking for container insights pipeline to add default filtering for prometheus metadata
 	if conf == nil || (t.Name() != common.PipelineNameContainerInsights && t.Name() != common.PipelineNameKueue && t.Name() != common.PipelineNameContainerInsightsJmx && !conf.IsSet(common.JmxConfigKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
@@ -91,4 +116,47 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// buildJournaldFilters extracts filter conditions from journald config
+func (t *translator) buildJournaldFilters(journaldConf interface{}) []string {
+	var conditions []string
+	journaldMap, ok := journaldConf.(map[string]interface{})
+	if !ok {
+		return conditions
+	}
+	collectList, ok := journaldMap["collect_list"].([]interface{})
+	if !ok {
+		return conditions
+	}
+	for _, item := range collectList {
+		itemMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		filters, ok := itemMap["filters"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, filter := range filters {
+			filterMap, ok := filter.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			filterType, _ := filterMap["type"].(string)
+			expression, _ := filterMap["expression"].(string)
+			if expression == "" {
+				continue
+			}
+			// Exclude filters: drop logs that match the pattern
+			if filterType == "exclude" {
+				conditions = append(conditions, fmt.Sprintf(`IsMatch(body, "%s")`, expression))
+			}
+			// Include filters: drop logs that DON'T match the pattern
+			if filterType == "include" {
+				conditions = append(conditions, fmt.Sprintf(`not IsMatch(body, "%s")`, expression))
+			}
+		}
+	}
+	return conditions
 }
