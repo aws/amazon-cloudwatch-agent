@@ -230,6 +230,11 @@ receivers:
                       regex: (.*)
                       source_labels:
                         - __meta_ecs_cluster_name
+                      target_label: ClusterName
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
@@ -281,6 +286,14 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_labels_app_x
+                      target_label: app_x
+                    - action: labelmap
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: ${1}
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -323,95 +336,7 @@ receivers:
                       regex: (.*)
                       source_labels:
                         - __meta_ecs_cluster_name
-                      target_label: TaskClusterName
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_container_name
-                      target_label: container_name
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_task_launch_type
-                      target_label: LaunchType
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_task_started_by
-                      target_label: StartedBy
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_task_group
-                      target_label: TaskGroup
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_task_definition_family
-                      target_label: TaskDefinitionFamily
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_task_definition_revision
-                      target_label: TaskRevision
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_ec2_instance_type
-                      target_label: InstanceType
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_ec2_subnet_id
-                      target_label: SubnetId
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_ec2_vpc_id
-                      target_label: VpcId
-                    - action: replace
-                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
-                      source_labels:
-                        - __meta_ecs_source
-                      target_label: TaskId
-                  sample_limit: 10000
-                  scheme: http
-                  scrape_interval: 5m
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
-                  scrape_timeout: 5s
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
-    prometheus/prometheus/cloudwatchlogs:
-        config:
-            global:
-                evaluation_interval: 1m
-                scrape_interval: 5m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
-                scrape_timeout: 5s
-            scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  fallback_scrape_protocol: PrometheusText0.0.4
-                  file_sd_configs:
-                    - files:
-                      - {ecsSdFileName}
-                      refresh_interval: 5m
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: cwagent-ecs-file-sd-config
-                  metrics_path: /metrics
-                  relabel_configs:
+                      target_label: ClusterName
                     - action: replace
                       regex: (.*)
                       source_labels:
@@ -467,6 +392,120 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_labels_app_x
+                      target_label: app_x
+                    - action: labelmap
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: ${1}
+                  sample_limit: 10000
+                  scheme: http
+                  scrape_interval: 5m
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 5s
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/prometheus/cloudwatchlogs:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 5m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 5s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  fallback_scrape_protocol: PrometheusText0.0.4
+                  file_sd_configs:
+                    - files:
+                      - {ecsSdFileName}
+                      refresh_interval: 5m
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: cwagent-ecs-file-sd-config
+                  metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_cluster_name
+                      target_label: ClusterName
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_cluster_name
+                      target_label: TaskClusterName
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_name
+                      target_label: container_name
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_launch_type
+                      target_label: LaunchType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_started_by
+                      target_label: StartedBy
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_group
+                      target_label: TaskGroup
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_family
+                      target_label: TaskDefinitionFamily
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_revision
+                      target_label: TaskRevision
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_instance_type
+                      target_label: InstanceType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_subnet_id
+                      target_label: SubnetId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_vpc_id
+                      target_label: VpcId
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - __meta_ecs_source
+                      target_label: TaskId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_labels_app_x
+                      target_label: app_x
+                    - action: labelmap
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: ${1}
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
