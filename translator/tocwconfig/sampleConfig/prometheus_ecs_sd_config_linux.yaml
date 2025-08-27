@@ -228,72 +228,99 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_cluster_name
                       target_label: ClusterName
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_container_name
                       target_label: container_name
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_launch_type
                       target_label: LaunchType
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_started_by
                       target_label: StartedBy
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_group
                       target_label: TaskGroup
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_definition_family
                       target_label: TaskDefinitionFamily
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_definition_revision
                       target_label: TaskRevision
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_instance_type
                       target_label: InstanceType
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_subnet_id
                       target_label: SubnetId
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_vpc_id
                       target_label: VpcId
                     - action: replace
                       regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_container_labels_app_x
                       target_label: app_x
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: ${1}
+                      replacement: $1
+                      separator: ";"
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -334,72 +361,99 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_cluster_name
                       target_label: ClusterName
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_container_name
                       target_label: container_name
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_launch_type
                       target_label: LaunchType
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_started_by
                       target_label: StartedBy
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_group
                       target_label: TaskGroup
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_definition_family
                       target_label: TaskDefinitionFamily
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_definition_revision
                       target_label: TaskRevision
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_instance_type
                       target_label: InstanceType
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_subnet_id
                       target_label: SubnetId
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_vpc_id
                       target_label: VpcId
                     - action: replace
                       regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_container_labels_app_x
                       target_label: app_x
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: ${1}
+                      replacement: $1
+                      separator: ";"
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -440,72 +494,99 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_cluster_name
                       target_label: ClusterName
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_container_name
                       target_label: container_name
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_launch_type
                       target_label: LaunchType
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_started_by
                       target_label: StartedBy
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_group
                       target_label: TaskGroup
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_definition_family
                       target_label: TaskDefinitionFamily
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_task_definition_revision
                       target_label: TaskRevision
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_instance_type
                       target_label: InstanceType
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_subnet_id
                       target_label: SubnetId
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_ec2_vpc_id
                       target_label: VpcId
                     - action: replace
                       regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
                     - action: replace
                       regex: (.*)
+                      replacement: $1
+                      separator: ";"
                       source_labels:
                         - __meta_ecs_container_labels_app_x
                       target_label: app_x
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: ${1}
+                      replacement: $1
+                      separator: ";"
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m

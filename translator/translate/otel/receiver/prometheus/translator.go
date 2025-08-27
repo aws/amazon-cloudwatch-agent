@@ -6,15 +6,10 @@ package prometheus
 import (
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
-	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/discovery/file"
-	"github.com/prometheus/prometheus/model/relabel"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
@@ -91,6 +86,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, fmt.Errorf("unable to read prometheus config from path: %w", err)
 	}
 
+	content, err = addDefaultECSRelabelConfigs(content, conf, t.configKey)
+	if err != nil {
+		return nil, fmt.Errorf("unable to add ECS relabel configs: %w", err)
+	}
+
 	escapedContent, err := escapePrometheusConfig(content)
 	if err != nil {
 		return nil, fmt.Errorf("unable to escape prometheus config: %w", err)
@@ -131,7 +131,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}
-	addDefaultECSRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, conf, t.configKey)
 
 	return cfg, nil
 }
@@ -172,12 +171,13 @@ func escapeStrings(node any) {
 	}
 }
 
-func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *confmap.Conf, promConfigKey string) {
+func addDefaultECSRelabelConfigs(content []byte, conf *confmap.Conf, promConfigKey string) ([]byte, error) {
 	// ECS Service Discovery Relabel Configs should only be added if enabled on ECS and configs are valid:
-	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
-		return
+	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) {
+		return content, nil
 	}
 
+	// Retrieve the ECS SD Result Filename
 	ecsSdResultFileKey := common.ConfigKey(ecsSDKey, ECS_SD_RESULT_FILE)
 	ecsSDFileName := defaultECSSDfileName
 	if conf.IsSet(ecsSdResultFileKey) {
@@ -186,41 +186,69 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		}
 	}
 
-	defaultRelabelConfigs := []*relabel.Config{
-		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "ClusterName", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_started_by"}, Action: relabel.Replace, TargetLabel: "StartedBy", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_group"}, Action: relabel.Replace, TargetLabel: "TaskGroup", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_family"}, Action: relabel.Replace, TargetLabel: "TaskDefinitionFamily", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_revision"}, Action: relabel.Replace, TargetLabel: "TaskRevision", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
-		{SourceLabels: model.LabelNames{"__meta_ecs_source"}, Regex: relabel.MustNewRegexp("^arn:aws:ecs:.*:.*:task.*\\/(.*)$"), Action: relabel.Replace, TargetLabel: "TaskId"},
-		{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_app_x"}, Action: relabel.Replace, TargetLabel: "app_x", Regex: relabel.MustNewRegexp("(.*)")},
-		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: "${1}"},
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return nil, err
 	}
 
-	defaultMetricRelabelConfigs := []*relabel.Config{}
+	scrapeConfigs, ok := config["scrape_configs"].([]interface{})
+	if !ok {
+		return content, nil
+	}
+
+	defaultRelabelConfigs := []interface{}{
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_cluster_name"}, "action": "replace", "target_label": "ClusterName", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_cluster_name"}, "action": "replace", "target_label": "TaskClusterName", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_container_name"}, "action": "replace", "target_label": "container_name", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_task_launch_type"}, "action": "replace", "target_label": "LaunchType", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_task_started_by"}, "action": "replace", "target_label": "StartedBy", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_task_group"}, "action": "replace", "target_label": "TaskGroup", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_task_definition_family"}, "action": "replace", "target_label": "TaskDefinitionFamily", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_task_definition_revision"}, "action": "replace", "target_label": "TaskRevision", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_ec2_instance_type"}, "action": "replace", "target_label": "InstanceType", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_ec2_subnet_id"}, "action": "replace", "target_label": "SubnetId", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_ec2_vpc_id"}, "action": "replace", "target_label": "VpcId", "regex": "(.*)"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_source"}, "regex": "^arn:aws:ecs:.*:.*:task.*\\/(.*)$", "action": "replace", "target_label": "TaskId"},
+		map[string]interface{}{"source_labels": []interface{}{"__meta_ecs_container_labels_app_x"}, "action": "replace", "target_label": "app_x", "regex": "(.*)"},
+		map[string]interface{}{"regex": "^__meta_ecs_container_labels_(.+)$", "action": "labelmap"},
+	}
 
 	for _, scrapeConfig := range scrapeConfigs {
-		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
-			scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-			scrapeConfig.MetricRelabelConfigs = defaultMetricRelabelConfigs
+		if sc, ok := scrapeConfig.(map[string]interface{}); ok {
+			if hasConfiguredServiceDiscoveryResultFile(sc, ecsSDFileName) {
+				sc["relabel_configs"] = defaultRelabelConfigs
+			}
 		}
 	}
+
+	return yaml.Marshal(config)
 }
 
-func hasConfiguredServiceDiscoveryResultFile(scrapeConfig *config.ScrapeConfig, ecsSdResultFile string) bool {
-	for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
-		fileSDConfig, ok := sdConfig.(*file.SDConfig)
-		if !ok {
-			return false
+func hasConfiguredServiceDiscoveryResultFile(scrapeConfig interface{}, ecsSdResultFile string) bool {
+	var sdConfigs []interface{}
+	var ok bool
+
+	// Handle both map[string]interface{} and map[any]any
+	if sc, isStringMap := scrapeConfig.(map[string]interface{}); isStringMap {
+		sdConfigs, ok = sc["file_sd_configs"].([]interface{})
+	} else if sc, isAnyMap := scrapeConfig.(map[any]any); isAnyMap {
+		sdConfigs, ok = sc["file_sd_configs"].([]any)
+	}
+
+	if !ok {
+		return false
+	}
+
+	for _, sdConfig := range sdConfigs {
+		var files []interface{}
+		if fileSD, isStringMap := sdConfig.(map[string]interface{}); isStringMap {
+			files, _ = fileSD["files"].([]interface{})
+		} else if fileSD, isAnyMap := sdConfig.(map[any]any); isAnyMap {
+			files, _ = fileSD["files"].([]any)
 		}
-		for _, filePath := range fileSDConfig.Files {
-			if slices.Contains([]string{filePath}, ecsSdResultFile) {
+
+		for _, file := range files {
+			if fileStr, ok := file.(string); ok && fileStr == ecsSdResultFile {
 				return true
 			}
 		}

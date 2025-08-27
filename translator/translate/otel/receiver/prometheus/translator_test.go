@@ -15,9 +15,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
-	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
-	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/config/confighttp"
@@ -29,6 +27,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
+
+const prometheusYamlFile = `
+scrape_configs:
+  - job_name: test-scrape-configs-job
+    file_sd_configs:
+      - files: ["/tmp/cwagent_ecs_auto_sd.yaml"]
+`
 
 func TestMetricsTranslator(t *testing.T) {
 	testCases := map[string]struct {
@@ -297,17 +302,6 @@ func TestMetricsEmfTranslator(t *testing.T) {
 func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
 
-	scrapeConfigWithFileSD := &config.ScrapeConfig{
-		JobName: "test-scrape-configs-job",
-		ServiceDiscoveryConfigs: discovery.Configs{
-			&file.SDConfig{
-				Files: []string{defaultECSSDfileName},
-			},
-		},
-	}
-
-	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
-
 	// ecs_service_discovery is configured
 	conf := confmap.NewFromStringMap(map[string]any{
 		"logs": map[string]any{
@@ -325,33 +319,25 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 
 	configKey := "logs.metrics_collected.prometheus"
 
-	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+	result, err := addDefaultECSRelabelConfigs([]byte(prometheusYamlFile), conf, configKey)
+	assert.NoError(t, err)
 
-	// Should add configs because ecs_service_discovery is explicitly configured
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should add 14 relabel configs when ecs_service_discovery is explicitly configured")
-	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
-	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
-	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
-	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
-	assert.Equal(t, relabel.LabelMap, scrapeConfigWithFileSD.RelabelConfigs[13].Action)
-	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 0, "Should add 0 metric relabel configs")
+	t.Logf("Generated YAML:\n%s", string(result))
+
+	// Parse result to verify relabel configs were added
+	var config map[string]interface{}
+	err = yaml.Unmarshal(result, &config)
+	assert.NoError(t, err)
+
+	scrapeConfigs := config["scrape_configs"].([]interface{})
+	scrapeConfig := scrapeConfigs[0].(map[string]interface{})
+	relabelConfigs := scrapeConfig["relabel_configs"].([]interface{})
+
+	assert.Len(t, relabelConfigs, 14, "Should add 14 relabel configs")
 }
 
 func TestAddDefaultRelabelConfigs_notECS(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = ""
-
-	scrapeConfigWithFileSD := &config.ScrapeConfig{
-		JobName: "test-scrape-configs-job",
-		ServiceDiscoveryConfigs: discovery.Configs{
-			&file.SDConfig{
-				Files: []string{defaultECSSDfileName},
-			},
-		},
-		RelabelConfigs:       []*relabel.Config{},
-		MetricRelabelConfigs: []*relabel.Config{},
-	}
-
-	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
 
 	// ecs_service_discovery is configured
 	conf := confmap.NewFromStringMap(map[string]any{
@@ -369,27 +355,23 @@ func TestAddDefaultRelabelConfigs_notECS(t *testing.T) {
 
 	configKey := "logs.metrics_collected.prometheus"
 
-	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+	result, err := addDefaultECSRelabelConfigs([]byte(prometheusYamlFile), conf, configKey)
+	assert.NoError(t, err)
 
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when not in ECS")
-	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 0, "ScrapeConfig should have no metric relabel configs when not in ECS")
+	// Parse result to verify relabel configs were added
+	var config map[any]any
+	err = yaml.Unmarshal(result, &config)
+	assert.NoError(t, err)
+
+	scrapeConfigs := config["scrape_configs"].([]interface{})
+	scrapeConfig := scrapeConfigs[0].(map[string]interface{})
+	relabelConfigs := scrapeConfig["relabel_configs"]
+
+	assert.Nil(t, relabelConfigs, "ScrapeConfig should have no relabel configs when not in ECS")
 }
 
 func TestAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
-
-	scrapeConfigWithFileSD := &config.ScrapeConfig{
-		JobName: "test-scrape-configs-job",
-		ServiceDiscoveryConfigs: discovery.Configs{
-			&file.SDConfig{
-				Files: []string{defaultECSSDfileName},
-			},
-		},
-		RelabelConfigs:       []*relabel.Config{},
-		MetricRelabelConfigs: []*relabel.Config{},
-	}
-
-	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
 
 	// ecs_service_discovery not configured
 	conf := confmap.NewFromStringMap(map[string]any{
@@ -404,27 +386,23 @@ func TestAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
 
 	configKey := "logs.metrics_collected.prometheus"
 
-	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+	result, err := addDefaultECSRelabelConfigs([]byte(prometheusYamlFile), conf, configKey)
+	assert.NoError(t, err)
 
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when ecs_service_discovery is not configured")
-	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 0, "ScrapeConfig should have no metric relabel configs when ecs_service_discovery is not configured")
+	// Parse result to verify relabel configs were added
+	var config map[any]any
+	err = yaml.Unmarshal(result, &config)
+	assert.NoError(t, err)
+
+	scrapeConfigs := config["scrape_configs"].([]interface{})
+	scrapeConfig := scrapeConfigs[0].(map[string]interface{})
+	relabelConfigs := scrapeConfig["relabel_configs"]
+
+	assert.Nil(t, relabelConfigs, "ScrapeConfig should have no relabel configs when ecs_service_discovery is not configured")
 }
 
 func TestAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
-
-	scrapeConfigWithFileSD := &config.ScrapeConfig{
-		JobName: "test-scrape-configs-job",
-		ServiceDiscoveryConfigs: discovery.Configs{
-			&file.SDConfig{
-				Files: []string{defaultECSSDfileName},
-			},
-		},
-		RelabelConfigs:       []*relabel.Config{},
-		MetricRelabelConfigs: []*relabel.Config{},
-	}
-
-	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
 
 	// Create config with ecs_service_discovery configured
 	conf := confmap.NewFromStringMap(map[string]any{
@@ -443,16 +421,25 @@ func TestAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
 
 	configKey := "logs.metrics_collected.prometheus"
 
-	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+	result, err := addDefaultECSRelabelConfigs([]byte(prometheusYamlFile), conf, configKey)
+	assert.NoError(t, err)
 
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when sd_result_file doesn't match")
-	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 0, "ScrapeConfig should have no metric relabel configs when sd_result_file doesn't match")
+	// Parse result to verify relabel configs were added
+	var config map[any]any
+	err = yaml.Unmarshal(result, &config)
+	assert.NoError(t, err)
+
+	scrapeConfigs := config["scrape_configs"].([]interface{})
+	scrapeConfig := scrapeConfigs[0].(map[string]interface{})
+	relabelConfigs := scrapeConfig["relabel_configs"]
+
+	assert.Nil(t, relabelConfigs, "ScrapeConfig should have no relabel configs when sd_result_file doesn't match")
 }
 
 func TestAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
 
-	scrapeConfigs := []*config.ScrapeConfig{}
+	prometheusYamlFile := `scrape_configs:`
 
 	// ecs_service_discovery is configured
 	conf := confmap.NewFromStringMap(map[string]any{
@@ -470,10 +457,17 @@ func TestAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
 
 	configKey := "logs.metrics_collected.prometheus"
 
-	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+	result, err := addDefaultECSRelabelConfigs([]byte(prometheusYamlFile), conf, configKey)
+	assert.NoError(t, err)
+
+	// Parse result to verify relabel configs were added
+	var config map[any]any
+	err = yaml.Unmarshal(result, &config)
+	assert.NoError(t, err)
 
 	// Should not panic with empty scrape configs
-	assert.Len(t, scrapeConfigs, 0, "Should remain empty")
+	scrapeConfigs := config["scrape_configs"]
+	assert.Nil(t, scrapeConfigs, "ScrapeConfig should remain empty")
 }
 
 func TestEscapeStrings(t *testing.T) {
