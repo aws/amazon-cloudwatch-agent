@@ -52,4 +52,5 @@ func TestJmxTranslate(t *testing.T) {
 	assert.Len(t, actualCfg.MetricStatements, 1)
 	sort.Strings(expectedCfg.MetricStatements[0].Statements)
 	sort.Strings(actualCfg.MetricStatements[0].Statements)
+	assert.Equal(t, string(actualCfg.ErrorMode), "propagate")
 }

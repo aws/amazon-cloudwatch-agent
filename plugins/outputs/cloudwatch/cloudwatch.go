@@ -5,15 +5,18 @@ package cloudwatch
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -53,6 +56,13 @@ const (
 	opPutMetricData = "PutMetricData"
 )
 
+const (
+	featureFlagNvmeEBS        = "nvme_ebs"
+	featureFlagNvmeIS         = "nvme_is"
+	metricPrefixEBS           = "diskio_ebs_"
+	metricPrefixInstanceStore = "diskio_instance_store_"
+)
+
 type CloudWatch struct {
 	config *Config
 	logger *zap.Logger
@@ -72,6 +82,9 @@ type CloudWatch struct {
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
 	lastRequestBytes       int
+	mu                     sync.RWMutex
+	featureList            map[string]struct{}
+	prebuiltFeature        string
 }
 
 // Compile time interface check.
@@ -111,10 +124,29 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	if c.config.MiddlewareID != nil {
 		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv1(&svc.Handlers))
 	}
+
+	svc.Handlers.Build.PushFrontNamed(request.NamedHandler{
+		Name: "FeatureUserAgent",
+		Fn: func(r *request.Request) {
+			if r.Operation.Name == opPutMetricData {
+				c.mu.RLock()
+				f := c.prebuiltFeature
+				c.mu.RUnlock()
+				if f != "" {
+					currentUA := r.HTTPRequest.Header.Get("User-Agent")
+					if !strings.Contains(currentUA, f) {
+						request.AddToUserAgent(r, f)
+					}
+				}
+			}
+		},
+	})
+
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
 	c.retryer = logThrottleRetryer
+	c.featureList = make(map[string]struct{})
 	c.startRoutines()
 	return nil
 }
@@ -175,17 +207,17 @@ func (c *CloudWatch) pushMetricDatum() {
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
 			/* We currently do not account for entity information as a part of the payload size.
-			This is by design and should be revisited once the SDK protocol changes.
-			In the meantime there has been a payload limit increase applied in the background to accommodate this decision
+			   This is by design and should be revisited once the SDK protocol changes.
+			   In the meantime there has been a payload limit increase applied in the background to accommodate this decision
 
-			Otherwise to include entity size you would do something like this:
-			c.metricDatumBatch.Size += calculateEntitySize(entity)
+			   Otherwise to include entity size you would do something like this:
+			   c.metricDatumBatch.Size += calculateEntitySize(entity)
 
-			In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
-			added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
-			c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
+			   In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
+			   added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
+			   c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
 
-			File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
+			   File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
 			*/
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
@@ -419,6 +451,28 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
+	if metric.MetricName != nil {
+		name := *metric.MetricName
+		c.mu.Lock()
+		changed := false
+		if _, exists := c.featureList[featureFlagNvmeEBS]; !exists && strings.HasPrefix(name, metricPrefixEBS) {
+			c.featureList[featureFlagNvmeEBS] = struct{}{}
+			changed = true
+		}
+		if _, exists := c.featureList[featureFlagNvmeIS]; !exists && strings.HasPrefix(name, metricPrefixInstanceStore) {
+			c.featureList[featureFlagNvmeIS] = struct{}{}
+			changed = true
+		}
+		if changed {
+			var features []string
+			for f := range c.featureList {
+				features = append(features, f)
+			}
+			sort.Strings(features)
+			c.prebuiltFeature = fmt.Sprintf(" feature:(%s)", strings.Join(features, " "))
+		}
+		c.mu.Unlock()
+	}
 
 	var datums []*cloudwatch.MetricDatum
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
