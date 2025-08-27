@@ -9,7 +9,11 @@ RUN yum update -y &&  \
 
 COPY ${TARGETARCH}/amazon-cloudwatch-agent.rpm /tmp/amazon-cloudwatch-agent.rpm
 
-RUN rpm -i /tmp/amazon-cloudwatch-agent.rpm && \
+# Installing RPM normally will cause %posttrans script to fail as it will try to run the
+# ctl script to conditionally restart the agent, but the script will fail since the base image
+# doesn't have systemd installed by default. We don't care about this particular functionality
+# so we can simply skip the %posttrans step.
+RUN rpm -i --noposttrans /tmp/amazon-cloudwatch-agent.rpm && \
     rm -rf /tmp/* && \
     rm -rf /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard && \
     rm -rf /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl && \
