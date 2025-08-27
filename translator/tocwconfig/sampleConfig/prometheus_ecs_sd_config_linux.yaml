@@ -169,9 +169,6 @@ extensions:
               metrics_path: /metrics
               metrics_ports:
                 - 9902
-    entitystore:
-        mode: ec2
-        region: us-west-2
     sigv4auth:
         assume_role:
             sts_region: us-west-2
@@ -227,7 +224,64 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
+                  metric_relabel_configs:
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - source
+                      target_label: TaskId
                   metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_cluster_name
+                      target_label: TaskClusterName
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_name
+                      target_label: container_name
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_launch_type
+                      target_label: LaunchType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_started_by
+                      target_label: StartedBy
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_group
+                      target_label: TaskGroup
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_family
+                      target_label: TaskDefinitionFamily
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_revision
+                      target_label: TaskRevision
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_instance_type
+                      target_label: InstanceType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_subnet_id
+                      target_label: SubnetId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_vpc_id
+                      target_label: VpcId
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -264,7 +318,64 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
+                  metric_relabel_configs:
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - source
+                      target_label: TaskId
                   metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_cluster_name
+                      target_label: TaskClusterName
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_name
+                      target_label: container_name
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_launch_type
+                      target_label: LaunchType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_started_by
+                      target_label: StartedBy
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_group
+                      target_label: TaskGroup
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_family
+                      target_label: TaskDefinitionFamily
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_revision
+                      target_label: TaskRevision
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_instance_type
+                      target_label: InstanceType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_subnet_id
+                      target_label: SubnetId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_vpc_id
+                      target_label: VpcId
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -301,7 +412,64 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
+                  metric_relabel_configs:
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - source
+                      target_label: TaskId
                   metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_cluster_name
+                      target_label: TaskClusterName
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_container_name
+                      target_label: container_name
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_launch_type
+                      target_label: LaunchType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_started_by
+                      target_label: StartedBy
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_group
+                      target_label: TaskGroup
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_family
+                      target_label: TaskDefinitionFamily
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_task_definition_revision
+                      target_label: TaskRevision
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_instance_type
+                      target_label: InstanceType
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_subnet_id
+                      target_label: SubnetId
+                    - action: replace
+                      regex: (.*)
+                      source_labels:
+                        - __meta_ecs_ec2_vpc_id
+                      target_label: VpcId
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -323,7 +491,6 @@ service:
         - sigv4auth
         - agenthealth/logs
         - ecs_observer
-        - entitystore
     pipelines:
         metrics/prometheus/amp:
             exporters:

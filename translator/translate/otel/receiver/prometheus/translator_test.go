@@ -295,7 +295,7 @@ func TestMetricsEmfTranslator(t *testing.T) {
 }
 
 func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
-	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
+	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
 
 	scrapeConfigWithFileSD := &config.ScrapeConfig{
 		JobName: "test-scrape-configs-job",
