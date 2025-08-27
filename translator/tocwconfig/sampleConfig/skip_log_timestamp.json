@@ -3,7 +3,6 @@
     "logfile": "/opt/tmp/a.log"
   },
   "logs": {
-    "concurrency": 1,
     "logs_collected": {
       "files": {
         "collect_list": [

@@ -1,6 +1,5 @@
 {
   "logs": {
-    "concurrency": 10,
     "logs_collected": {
       "files": {
         "collect_list": [
@@ -37,6 +36,7 @@
         ]
       }
     },
+    "concurrency": 10,
     "log_stream_name": "LOG_STREAM_NAME"
   }
 }

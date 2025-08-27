@@ -38,16 +38,24 @@ type Distribution interface {
 	// weight is 1/samplingRate
 	AddEntry(value float64, weight float64) error
 
-	AddDistribution(distribution Distribution)
+	AddDistribution(Distribution)
+	Resize(int) []Distribution
+}
 
-	AddDistributionWithWeight(distribution Distribution, weight float64)
-
+type ClassicDistribution interface {
+	Distribution
 	ConvertToOtel(dp pmetric.HistogramDataPoint)
 
 	ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string)
 }
 
-var NewDistribution func() Distribution
+type ExponentialDistribution interface {
+	Distribution
+
+	ConvertFromOtel(dp pmetric.ExponentialHistogramDataPoint, unit string)
+}
+
+var NewClassicDistribution func() ClassicDistribution
 
 // IsSupportedValue checks to see if the metric is between the min value and 2^360 and not a NaN.
 // This matches the accepted range described in the MetricDatum documentation

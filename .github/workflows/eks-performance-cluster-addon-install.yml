@@ -67,6 +67,8 @@ env:
 
   # Github repository environment variables
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 jobs:
   # Check if this workflow should run
@@ -171,11 +173,27 @@ jobs:
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
+      # TODO: Revert to using main helm branch when changes from leader-election are merged in
       - name: Clone Helm Charts Repository
         run: |
           rm -rf ./helm-charts
-          git clone -b ${{ inputs.helm-charts-branch || 'main' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
+          git clone -b ${{ inputs.helm-charts-branch || 'sky333999/leader-election' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
 
+      - name: Clone Test Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          path: ./test-repo
+
+      - name: Replace hostname in override files
+        run: |
+          HOSTNAME=$(kubectl get nodes -l eks.amazonaws.com/nodegroup=$CLUSTER_NAME-leader-node -o jsonpath='{.items[0].metadata.name}')
+          for file in ./test-repo/test/performance/eks/resources/leader_election_overrides/*; do
+            sed -i "s/<hostname>/$HOSTNAME/g" "$file"
+          done
+
+      # TODO: Revert to using workflow built agent image once required changes are made on main branch
       - name: Check node count and manage Helm chart
         run: |
           NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
@@ -196,18 +214,19 @@ jobs:
             echo "MANAGER_TAG: ${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}"
             echo "MANAGER_REPOSITORY_DOMAIN: ${{ steps.login-ecr.outputs.registry }}"
           
-            helm upgrade --install amazon-cloudwatch-observability \
+            helm upgrade --install --wait amazon-cloudwatch-observability \
               ./helm-charts/charts/amazon-cloudwatch-observability \
               --namespace amazon-cloudwatch \
               --create-namespace \
               --set clusterName=${{ inputs.cluster_name ||env.CLUSTER_NAME }} \
               --set region=${{ inputs.region || env.AWS_REGION }} \
-              --set agent.image.repository=${{ inputs.cloudwatch_agent_repository || env.AGENT_ECR_TEST_REPO }} \
-              --set agent.image.tag=${{ inputs.cloudwatch_agent_tag || github.sha }} \
-              --set agent.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
+              --set agent.image.repository="cloudwatch-agent" \
+              --set agent.image.tag="latest" \
+              --set agent.image.repositoryDomainMap.public="public.ecr.aws/q4e2d9n7" \
               --set manager.image.repository=${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }} \
               --set manager.image.tag=${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }} \
-              --set manager.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }}
+              --set manager.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
+              --values ./test-repo/test/performance/eks/resources/leader_election_overrides/base-overrides.yml
           fi
 
   cleanup-on-failure:

@@ -1,0 +1,135 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-east-1
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
+processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
+        scrape_datapoint_attribute: true
+    cumulativetodelta/hostDeltaMetrics:
+        exclude:
+            match_type: strict
+            metrics:
+                - iops_in_progress
+                - diskio_iops_in_progress
+                - diskio_ebs_volume_queue_length
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    ec2tagger:
+        ec2_metadata_tags:
+            - InstanceId
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
+receivers:
+    awsnvmereceiver:
+        collection_interval: 1m0s
+        devices:
+            - '*'
+        initial_delay: 1s
+        metrics:
+            diskio_ebs_ec2_instance_performance_exceeded_iops:
+                enabled: true
+            diskio_ebs_ec2_instance_performance_exceeded_tp:
+                enabled: true
+            diskio_ebs_total_read_bytes:
+                enabled: true
+            diskio_ebs_total_read_ops:
+                enabled: true
+            diskio_ebs_total_read_time:
+                enabled: true
+            diskio_ebs_total_write_bytes:
+                enabled: true
+            diskio_ebs_total_write_ops:
+                enabled: true
+            diskio_ebs_total_write_time:
+                enabled: true
+            diskio_ebs_volume_performance_exceeded_iops:
+                enabled: true
+            diskio_ebs_volume_performance_exceeded_tp:
+                enabled: true
+            diskio_ebs_volume_queue_length:
+                enabled: true
+            diskio_instance_store_performance_exceeded_iops:
+                enabled: true
+            diskio_instance_store_performance_exceeded_tp:
+                enabled: true
+            diskio_instance_store_total_read_bytes:
+                enabled: true
+            diskio_instance_store_total_read_ops:
+                enabled: true
+            diskio_instance_store_total_read_time:
+                enabled: true
+            diskio_instance_store_total_write_bytes:
+                enabled: true
+            diskio_instance_store_total_write_ops:
+                enabled: true
+            diskio_instance_store_total_write_time:
+                enabled: true
+            diskio_instance_store_volume_queue_length:
+                enabled: true
+        resource_attributes:
+            SerialId:
+                enabled: true
+            VolumeId:
+                enabled: true
+        timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        metrics/hostDeltaMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostDeltaMetrics
+                - ec2tagger
+                - awsentity/resource
+            receivers:
+                - awsnvmereceiver
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

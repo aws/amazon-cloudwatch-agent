@@ -478,11 +478,11 @@ processors:
         log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
             - context: metric
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - set(unit, "Bytes") where name == "jvm.memory.heap.used"
                 - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"

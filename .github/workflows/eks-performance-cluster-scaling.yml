@@ -27,14 +27,19 @@ on:
         description: 'Count of node groups'
         type: number
         default: 10
+      leader_node_desired_capacity:
+        description: 'Desired capacity for leader node group (manual execution only)'
+        type: number
+        default: 1
 
 env:
   AWS_REGION: ${{ inputs.region || 'us-west-2' }}
   CLUSTER_NAME: ${{ inputs.cluster_name || 'eks-performance' }}
   NODE_GROUP_COUNT: ${{ inputs.node_group_count || 10 }}
   DESIRED_CAPACITY_PER_NODEGROUP: ${{ inputs.desired_capacity_per_nodegroup || 500 }}
+  LEADER_NODE_DESIRED_CAPACITY: ${{ inputs.leader_node_desired_capacity || 1 }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 3600  # 1 hour duration
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400  # 4 hour duration
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
@@ -54,7 +59,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: ${{ inputs.region || 'us-west-2' }}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
@@ -71,6 +76,17 @@ jobs:
         if: github.event.schedule == '0 9 * * 0'
         run: |
           echo "Starting scale UP operation with desired capacity: $DESIRED_CAPACITY_PER_NODEGROUP"
+          
+          # Scale leader node to 1
+          echo "Scaling leader node group: $CLUSTER_NAME-leader-node to 1"
+          aws eks update-nodegroup-config \
+            --cluster-name $CLUSTER_NAME \
+            --nodegroup-name $CLUSTER_NAME-leader-node \
+            --region $AWS_REGION \
+            --scaling-config desiredSize=1
+          
+          echo "Waiting 1 minute before scaling regular node groups..."
+          sleep 60
           
           for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: $CLUSTER_NAME-node-${i} to $DESIRED_CAPACITY_PER_NODEGROUP"
@@ -89,6 +105,17 @@ jobs:
         run: |
           echo "Starting scale DOWN operation with desired capacity: 0"
           
+          # Scale leader node to 0
+          echo "Scaling leader node group: $CLUSTER_NAME-leader-node to 0"
+          aws eks update-nodegroup-config \
+            --cluster-name $CLUSTER_NAME \
+            --nodegroup-name $CLUSTER_NAME-leader-node \
+            --region $AWS_REGION \
+            --scaling-config desiredSize=0
+          
+          echo "Waiting 1 minute before scaling regular node groups..."
+          sleep 60
+          
           for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: $CLUSTER_NAME-node-${i} to 0"
             aws eks update-nodegroup-config \
@@ -105,6 +132,18 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           echo "Starting manual scaling operation with desired capacity: $DESIRED_CAPACITY_PER_NODEGROUP"
+          echo "Leader node desired capacity: $LEADER_NODE_DESIRED_CAPACITY"
+          
+          # Scale leader node to specified capacity
+          echo "Scaling leader node group: $CLUSTER_NAME-leader-node to $LEADER_NODE_DESIRED_CAPACITY"
+          aws eks update-nodegroup-config \
+            --cluster-name $CLUSTER_NAME \
+            --nodegroup-name $CLUSTER_NAME-leader-node \
+            --region $AWS_REGION \
+            --scaling-config desiredSize=$LEADER_NODE_DESIRED_CAPACITY
+          
+          echo "Waiting 1 minute before scaling regular node groups..."
+          sleep 60
           
           for i in $(seq 1 $NODE_GROUP_COUNT); do
             echo "Scaling node group: $CLUSTER_NAME-node-${i} to $DESIRED_CAPACITY_PER_NODEGROUP"
@@ -118,17 +157,17 @@ jobs:
 
       - name: Validate total node count
         run: |
-          echo "Waiting 20 minutes for scaling operations to complete..."
-          sleep 1200
+          echo "Waiting 30 minutes for scaling operations to complete and stabilize..."
+          sleep 1800
           
           echo "Validating total number of nodes in the cluster..."
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
           
           # Determine expected count based on trigger type
           if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
-            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * 0))
+            EXPECTED_NODE_COUNT=0
           else
-            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP))
+            EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP + $LEADER_NODE_DESIRED_CAPACITY))
           fi
           
           echo "Expected total nodes: $EXPECTED_NODE_COUNT"

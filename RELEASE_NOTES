@@ -1,4 +1,26 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300059.0 (2025-08-15)
+========================================================================
+Features:
+* [Windows Events] Add windows event id filtering to CWAgent
+* [Windows Events] Add windows event regex filtering to CWAgent
+* [Host Metrics] Add mem_shared metric to CloudWatch Agent
+* [Host Metrics] Adding NVME Instance Store Metrics
+* [Container Insights] Add UltraServer support for CloudWatch agent
+* [Container Insights] Add new Tensor Core and GPU capacity metrics
+* [Container Insights] Add Neuron Core and EFA capacity metrics
+
+Enhancements:
+* [Logs] Zero-allocation optimization for sendLine and readLine
+* [Logs] Dynamic reader buffer for tail
+* [Logs] Update state when batch dropped
+* [Application Signals] Add aws.remote.resource.account.* attributes to Application Signals EMF logs
+
+Bug Fixes:
+* [Application Signals] Fix race conditions in applicationsignals processor
+* [Logs] Revert Add default log publishing concurrency
+
+========================================================================
 Amazon CloudWatch Agent 1.300058.0 (2025-07-17)
 ========================================================================
 Enhancements:

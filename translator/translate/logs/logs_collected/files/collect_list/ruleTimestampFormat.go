@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/constants"
 )
 
 /*
@@ -146,9 +145,9 @@ func (t *TimestampRegex) ApplyRule(input interface{}) (returnKey string, returnV
 	//Convert the input string into []rune and iterate the map and build the output []rune
 	m := input.(map[string]interface{})
 	//If user not specify the timestamp_format, then no config entry for "timestamp_layout" in TOML
-	if val, ok := m[constants.SectionKeyTimestampFormat]; !ok {
+	if val, ok := m["timestamp_format"]; !ok {
 		return "", ""
-	} else if m[constants.SectionKeyFilePath] == context.CurrentContext().GetAgentLogFile() {
+	} else if m["file_path"] == context.CurrentContext().GetAgentLogFile() {
 		fmt.Printf("timestamp_format set file_path : %s is the same as agent log file %s thus do not use timestamp_regex \n", m["file_path"], context.CurrentContext().GetAgentLogFile())
 		return "", ""
 	} else {
@@ -165,7 +164,7 @@ func (t *TimestampRegex) ApplyRule(input interface{}) (returnKey string, returnV
 		res = "(" + res + ")"
 		returnKey = "timestamp_regex"
 		if _, err := regexp.Compile(res); err != nil {
-			translator.AddErrorMessages(GetCurPath()+constants.SectionKeyTimestampFormat, fmt.Sprintf("Timestamp format %s is invalid", val))
+			translator.AddErrorMessages(GetCurPath()+"timestamp_format", fmt.Sprintf("Timestamp format %s is invalid", val))
 			return
 		}
 		returnVal = res
@@ -182,9 +181,9 @@ func (t *TimestampLayout) ApplyRule(input interface{}) (returnKey string, return
 	//Convert the input string into []rune and iterate the map and build the output []rune
 	m := input.(map[string]interface{})
 	//If user not specify the timestamp_format, then no config entry for "timestamp_layout" in TOML
-	if val, ok := m[constants.SectionKeyTimestampFormat]; !ok {
+	if val, ok := m["timestamp_format"]; !ok {
 		return "", ""
-	} else if m[constants.SectionKeyFilePath] == context.CurrentContext().GetAgentLogFile() {
+	} else if m["file_path"] == context.CurrentContext().GetAgentLogFile() {
 		fmt.Printf("timestamp_format set file_path : %s is the same as agent log file %s thus do not use timestamp_layout \n", m["file_path"], context.CurrentContext().GetAgentLogFile())
 		return "", ""
 	} else {
@@ -233,5 +232,5 @@ func init() {
 	t2 := new(TimestampRegex)
 	t3 := new(Timezone)
 	r := []Rule{t1, t2, t3}
-	RegisterRule(constants.SectionKeyTimestampFormat, r)
+	RegisterRule("timestamp_format", r)
 }

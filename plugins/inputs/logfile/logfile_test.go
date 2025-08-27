@@ -765,16 +765,27 @@ func TestLogsFileWithRangeGaps(t *testing.T) {
 		evts <- e
 	})
 
-	e := <-evts
-	el := "Content\n"
-	if e.Message() != el {
-		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	// Collect both events (order may vary due to gap processing)
+	var events []logs.LogEvent
+	events = append(events, <-evts)
+	events = append(events, <-evts)
+
+	// Verify we got the expected messages regardless of order
+	expectedMessages := map[string]bool{"Content\n": false, "Range": false}
+	for _, e := range events {
+		msg := e.Message()
+		if _, exists := expectedMessages[msg]; exists {
+			expectedMessages[msg] = true
+		} else {
+			t.Errorf("Unexpected log message: %v", msg)
+		}
 	}
 
-	e = <-evts
-	el = "Range"
-	if e.Message() != el {
-		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	// Check that all expected messages were received
+	for msg, received := range expectedMessages {
+		if !received {
+			t.Errorf("Expected message not received: %v", msg)
+		}
 	}
 
 	lsrc.Stop()
@@ -824,22 +835,28 @@ func TestLogsFileWithEOFRangeGaps(t *testing.T) {
 		evts <- e
 	})
 
-	e := <-evts
-	el := "Content"
-	if e.Message() != el {
-		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	// Collect all three events (order may vary due to gap processing)
+	var events []logs.LogEvent
+	events = append(events, <-evts)
+	events = append(events, <-evts)
+	events = append(events, <-evts)
+
+	// Verify we got the expected messages regardless of order
+	expectedMessages := map[string]bool{"Content": false, "bbbbb": false, "Range": false}
+	for _, e := range events {
+		msg := e.Message()
+		if _, exists := expectedMessages[msg]; exists {
+			expectedMessages[msg] = true
+		} else {
+			t.Errorf("Unexpected log message: %v", msg)
+		}
 	}
 
-	e = <-evts
-	el = "bbbbb"
-	if e.Message() != el {
-		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
-	}
-
-	e = <-evts
-	el = "Range"
-	if e.Message() != el {
-		t.Errorf("Wrong log found after offset: \n%v\nExpecting:\n%v\n", e.Message(), el)
+	// Check that all expected messages were received
+	for msg, received := range expectedMessages {
+		if !received {
+			t.Errorf("Expected message not received: %v", msg)
+		}
 	}
 
 	lsrc.Stop()

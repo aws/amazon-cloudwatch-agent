@@ -15,7 +15,6 @@
     "deployment.environment": "agent-level-environment"
   },
   "logs": {
-    "concurrency": 1,
     "metrics_collected": {
       "otlp": {
         "service.name": "otlp-level-service",

@@ -1,0 +1,19 @@
+{
+  "agent": {
+    "metrics_collection_interval": "60s"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "diskio": {
+        "measurement": [
+          "ebs_total_read_ops",
+          "diskio_ebs_total_write_ops",
+          "instance_store_total_read_ops",
+          "diskio_instance_store_total_write_ops",
+          "io_time",
+          "read_time"
+        ]
+      }
+    }
+  }
+}
