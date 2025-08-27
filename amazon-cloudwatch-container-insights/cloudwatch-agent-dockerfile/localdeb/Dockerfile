@@ -17,8 +17,6 @@ RUN dpkg -i -E /tmp/amazon-cloudwatch-agent.deb && \
 
 FROM scratch
 
-# Need to create /tmp or plugin files such as prometheus is missing
-# Must use copy because scratch does not contain shell so mkdir won't work
 COPY --from=build /tmp /tmp
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /opt/aws/amazon-cloudwatch-agent /opt/aws/amazon-cloudwatch-agent
