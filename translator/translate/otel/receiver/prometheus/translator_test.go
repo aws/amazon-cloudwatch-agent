@@ -328,11 +328,12 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
 	// Should add configs because ecs_service_discovery is explicitly configured
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 10, "Should add 10 relabel configs when ecs_service_discovery is explicitly configured")
-	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
-	assert.Equal(t, "container_name", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
-	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 1, "Should add 1 metric relabel config")
-	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.MetricRelabelConfigs[0].TargetLabel)
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 13, "Should add 14 relabel configs when ecs_service_discovery is explicitly configured")
+	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
+	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
+	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
+	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
+	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 0, "Should add 0 metric relabel configs")
 }
 
 func TestAddDefaultRelabelConfigs_notECS(t *testing.T) {
