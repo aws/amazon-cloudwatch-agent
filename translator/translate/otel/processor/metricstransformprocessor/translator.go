@@ -23,6 +23,9 @@ var metricTransformJmxConfig string
 //go:embed appsignals_runtime_config.yaml
 var appSignalsRuntimeConfig string
 
+//go:embed metricstransform_hostmetrics_config.yaml
+var metricTransformHostmetricsConfig string
+
 var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeGpuContainer,
 	containerinsightscommon.TypeGpuPod,
@@ -90,6 +93,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return common.GetYamlFileToYamlConfig(cfg, metricTransformJmxConfig)
 	} else if t.name == common.AppSignals {
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsRuntimeConfig)
+	} else if t.name == common.PipelineNameHostmetrics {
+		return common.GetYamlFileToYamlConfig(cfg, metricTransformHostmetricsConfig)
 	}
 
 	var transformRules []map[string]interface{}

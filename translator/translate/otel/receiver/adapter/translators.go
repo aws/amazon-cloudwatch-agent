@@ -23,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 )
 
 const (
@@ -278,6 +279,10 @@ func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool
 		switch inputName {
 		case common.DiskIOKey:
 			if !awsnvme.IsNVMEMetric(m) {
+				return false
+			}
+		case common.CPUKey:
+			if !hostmetrics.IsHostmetricsMetric(m) {
 				return false
 			}
 		default:

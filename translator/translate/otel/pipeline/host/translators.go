@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -48,6 +49,10 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 
 	if shouldAddNvmeReceiver(conf, configSection) {
 		deltaReceivers.Set(awsnvme.NewTranslator())
+	}
+
+	if shouldAddHostmetricsReceiver(conf, configSection) {
+		hostReceivers.Set(hostmetrics.NewTranslator())
 	}
 
 	// Gather OTLP receivers
@@ -136,6 +141,33 @@ func shouldAddNvmeReceiver(conf *confmap.Conf, configSection string) bool {
 	for _, measurement := range measurements {
 		if awsnvme.IsNVMEMetric(measurement) {
 			return true
+		}
+	}
+	return false
+}
+
+func shouldAddHostmetricsReceiver(conf *confmap.Conf, configSection string) bool {
+	cpuMap := conf.Get(common.ConfigKey(configSection, common.CPUKey))
+	if cpuMap == nil {
+		return false
+	}
+	cpuMapTyped := cpuMap.(map[string]any)
+	
+	// Check measurements directly since common.GetMeasurements doesn't handle []string
+	if measurementValue, ok := cpuMapTyped["measurement"]; ok {
+		switch measurements := measurementValue.(type) {
+		case []string:
+			for _, measurement := range measurements {
+				if hostmetrics.IsHostmetricsMetric(measurement) {
+					return true
+				}
+			}
+		case []any:
+			for _, measurement := range measurements {
+				if str, ok := measurement.(string); ok && hostmetrics.IsHostmetricsMetric(str) {
+					return true
+				}
+			}
 		}
 	}
 	return false

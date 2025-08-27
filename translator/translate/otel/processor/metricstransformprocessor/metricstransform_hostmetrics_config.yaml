@@ -1,0 +1,13 @@
+transforms:
+  - include: system.cpu.load_average.1m
+    match_type: strict
+    action: update
+    new_name: cpu_load_average
+    operations:
+      - action: add_label
+        new_label: cpu
+        new_value: "cpu-total"
+      - action: add_label
+        new_label: InstanceId
+        new_value: "${aws:InstanceId}"
+      

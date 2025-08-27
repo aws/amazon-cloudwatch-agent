@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["cpu_load_average"],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}

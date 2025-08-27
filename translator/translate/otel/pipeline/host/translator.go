@@ -28,6 +28,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
@@ -88,6 +89,12 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
+	}
+
+	// Add metricstransform processor if hostmetrics receiver is present
+	if shouldAddHostmetricsReceiver(conf, MetricsKey) {
+		log.Printf("D! metricstransform processor required because hostmetrics receiver is set")
+		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.PipelineNameHostmetrics))
 	}
 
 	if t.Destination() != common.CloudWatchLogsKey {

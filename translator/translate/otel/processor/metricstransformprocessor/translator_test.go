@@ -85,6 +85,34 @@ func TestTranslator(t *testing.T) {
 				},
 			}),
 		},
+		"HostmetricsSection": {
+			translator: NewTranslatorWithName(common.PipelineNameHostmetrics),
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{},
+			},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"transforms": []map[string]interface{}{
+					{
+						"include":  "system.cpu.load_average.1m",
+						"match_type": "strict",
+						"action":   "update",
+						"new_name": "cpu_load_average",
+						"operations": []map[string]interface{}{
+							{
+								"action":    "add_label",
+								"new_label": "cpu",
+								"new_value": "cpu-total",
+							},
+							{
+								"action":    "add_label",
+								"new_label": "InstanceId",
+								"new_value": "${aws:InstanceId}",
+							},
+						},
+					},
+				},
+			}),
+		},
 		"UnknownProcessorName": {
 			translator: NewTranslatorWithName("unknown"),
 			input: map[string]interface{}{

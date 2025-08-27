@@ -23,6 +23,7 @@ func TestComponents(t *testing.T) {
 		"awsnvmereceiver",
 		"awsxray",
 		"filelog",
+		"hostmetrics",
 		"jaeger",
 		"jmx",
 		"kafka",

@@ -1,0 +1,102 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-east-1
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
+processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
+    metricstransform/hostmetrics:
+        transforms:
+            - action: update
+              aggregation_type: ""
+              include: system.cpu.load_average.1m
+              match_type: strict
+              new_name: cpu_load_average
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: cpu
+                  new_value: cpu-total
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: InstanceId
+                  new_value: ${aws:InstanceId}
+              submatch_case: ""
+receivers:
+    hostmetrics:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        metadata_collection_interval: 5m0s
+        root_path: ""
+        scrapers:
+            load:
+                cpu_average: true
+                metrics:
+                    system.cpu.load_average.1m:
+                        enabled: true
+                    system.cpu.load_average.5m:
+                        enabled: false
+                    system.cpu.load_average.15m:
+                        enabled: false
+        timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - metricstransform/hostmetrics
+                - awsentity/resource
+            receivers:
+                - hostmetrics
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
