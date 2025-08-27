@@ -224,12 +224,6 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
-                  metric_relabel_configs:
-                    - action: replace
-                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
-                      source_labels:
-                        - source
-                      target_label: TaskId
                   metrics_path: /metrics
                   relabel_configs:
                     - action: replace
@@ -282,6 +276,11 @@ receivers:
                       source_labels:
                         - __meta_ecs_ec2_vpc_id
                       target_label: VpcId
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - __meta_ecs_source
+                      target_label: TaskId
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -318,12 +317,6 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
-                  metric_relabel_configs:
-                    - action: replace
-                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
-                      source_labels:
-                        - source
-                      target_label: TaskId
                   metrics_path: /metrics
                   relabel_configs:
                     - action: replace
@@ -376,6 +369,11 @@ receivers:
                       source_labels:
                         - __meta_ecs_ec2_vpc_id
                       target_label: VpcId
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - __meta_ecs_source
+                      target_label: TaskId
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
@@ -412,12 +410,6 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
-                  metric_relabel_configs:
-                    - action: replace
-                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
-                      source_labels:
-                        - source
-                      target_label: TaskId
                   metrics_path: /metrics
                   relabel_configs:
                     - action: replace
@@ -470,6 +462,11 @@ receivers:
                       source_labels:
                         - __meta_ecs_ec2_vpc_id
                       target_label: VpcId
+                    - action: replace
+                      regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+                      source_labels:
+                        - __meta_ecs_source
+                      target_label: TaskId
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
