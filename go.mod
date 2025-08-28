@@ -52,7 +52,7 @@ replace (
 )
 
 // Replace ecsobserver with custom fork - use the entire repo
-replace github.com/open-telemetry/opentelemetry-collector-contrib => github.com/amazon-contributing/opentelemetry-collector-contrib v0.74.1-0.20250806184646-48a12ccac3be
+replace github.com/open-telemetry/opentelemetry-collector-contrib => github.com/amazon-contributing/opentelemetry-collector-contrib v0.74.1-0.20250820144544-47895af7d372
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
 replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d // indirect
@@ -117,7 +117,7 @@ require (
 	github.com/google/btree v1.1.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/golang-lru v1.0.2
+	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/influxdata/telegraf v0.0.0-00010101000000-000000000000
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/jellydator/ttlcache/v3 v3.3.0
