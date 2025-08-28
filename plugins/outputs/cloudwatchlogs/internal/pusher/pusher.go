@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -35,9 +36,10 @@ func NewPusher(
 	retryDuration time.Duration,
 	stop <-chan struct{},
 	wg *sync.WaitGroup,
+	outputLogger *log.Logger,
 ) *Pusher {
 	s := createSender(logger, service, targetManager, workerPool, retryDuration, stop)
-	q := newQueue(logger, target, flushTimeout, entityProvider, s, stop, wg)
+	q := newQueue(logger, target, flushTimeout, entityProvider, s, stop, wg, outputLogger)
 	targetManager.PutRetentionPolicy(target)
 	return &Pusher{
 		Target:         target,

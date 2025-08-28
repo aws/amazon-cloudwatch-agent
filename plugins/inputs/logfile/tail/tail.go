@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -89,13 +90,15 @@ type Tail struct {
 	FileDeletedCh chan struct{}
 
 	linePool sync.Pool
+
+	inputLogger *log.Logger
 }
 
 // TailFile begins tailing the file. Output stream is made available
 // via the `Tail.Lines` channel. To handle errors during tailing,
 // invoke the `Wait` or `Err` method after finishing reading from the
 // `Lines` channel.
-func TailFile(filename string, config Config) (*Tail, error) {
+func TailFile(filename string, config Config, inputLogger *log.Logger) (*Tail, error) {
 	if config.ReOpen && !config.Follow {
 		return nil, errors.New("cannot set ReOpen without Follow.")
 	}
@@ -108,6 +111,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		linePool: sync.Pool{
 			New: func() any { return &Line{} },
 		},
+		inputLogger: inputLogger,
 	}
 
 	// when Logger was not specified in config, create new one
@@ -618,6 +622,7 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 	}
 
 	for i, line := range lines {
+		tail.inputLogger.Print(line)
 		// This select is to avoid blockage on the tail.Lines chan
 		// Warning: Make sure to release line once done!
 		lineObject := tail.linePool.Get().(*Line)

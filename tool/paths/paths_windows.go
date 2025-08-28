@@ -50,6 +50,8 @@ func init() {
 	YamlConfigPath = filepath.Join(AgentConfigDir, YAML)
 	CommonConfigPath = filepath.Join(AgentConfigDir, COMMON_CONFIG)
 	AgentLogFilePath = filepath.Join(AgentConfigDir, AGENT_LOG_FILE)
+	AgentLogFileInputsPath = filepath.Join(AgentConfigDir, AGENT_LOG_FILE_INPUTS)
+	AgentLogFileOutputsPath = filepath.Join(AgentConfigDir, AGENT_LOG_FILE_OUTPUTS)
 	TranslatorBinaryPath = filepath.Join(AgentRootDir, TranslatorBinaryName)
 	AgentBinaryPath = filepath.Join(AgentRootDir, AgentBinaryName)
 	JMXJarPath = filepath.Join(AgentRootDir, JMXJarName)

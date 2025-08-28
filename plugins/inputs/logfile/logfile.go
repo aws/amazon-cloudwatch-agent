@@ -6,6 +6,7 @@ package logfile
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
@@ -21,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 type LogFile struct {
@@ -39,14 +42,17 @@ type LogFile struct {
 	done              chan struct{}
 	removeTailerSrcCh chan *tailerSrc
 	started           bool
+
+	inputLogger *log.Logger
 }
 
-func NewLogFile() *LogFile {
+func NewLogFile(logger *log.Logger) *LogFile {
 
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
 		removeTailerSrcCh: make(chan *tailerSrc, 100),
+		inputLogger:       logger,
 	}
 }
 
@@ -223,7 +229,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 					Poll:        true,
 					MaxLineSize: fileconfig.MaxEventSize,
 					IsUTF16:     isutf16,
-				})
+				}, t.inputLogger)
 
 			if err != nil {
 				t.Log.Errorf("Failed to tail file %v with error: %v", filename, err)
@@ -442,7 +448,15 @@ func isDirectory(filename string) (bool, error) {
 }
 
 func init() {
+	writer := &lumberjack.Logger{
+		Filename:   paths.AgentLogFileInputsPath,
+		MaxSize:    100, //MB
+		MaxBackups: 5,   //backup files
+		MaxAge:     7,   //days
+		Compress:   true,
+	}
+	inputLogger := log.New(writer, "", log.LstdFlags)
 	inputs.Add("logfile", func() telegraf.Input {
-		return NewLogFile()
+		return NewLogFile(inputLogger)
 	})
 }

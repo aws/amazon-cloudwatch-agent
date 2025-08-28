@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,6 +41,8 @@ type queue struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+
+	outputLogger *log.Logger
 }
 
 func newQueue(
@@ -50,6 +53,7 @@ func newQueue(
 	sender Sender,
 	stop <-chan struct{},
 	wg *sync.WaitGroup,
+	outputLogger *log.Logger,
 ) Queue {
 	q := &queue{
 		target:          target,
@@ -64,6 +68,7 @@ func newQueue(
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		outputLogger:    outputLogger,
 	}
 	q.flushTimeout.Store(flushTimeout)
 	q.wg.Add(1)
@@ -140,6 +145,7 @@ func (q *queue) start() {
 			if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.eventBytes) {
 				q.send()
 			}
+			q.outputLogger.Print(event.message)
 			q.batch.append(event)
 		case <-q.flushCh:
 			lastSentTime, _ := q.lastSentTime.Load().(time.Time)

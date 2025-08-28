@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go.uber.org/zap"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -28,6 +30,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
@@ -81,6 +84,8 @@ type CloudWatchLogs struct {
 	targetManager   pusher.TargetManager
 	once            sync.Once
 	middleware      awsmiddleware.Middleware
+
+	outputLogger *log.Logger
 }
 
 func (c *CloudWatchLogs) Connect() error {
@@ -150,7 +155,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
+	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup, c.outputLogger)
 	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
 	c.cwDests.Store(t, cwd)
 	return cwd
@@ -400,6 +405,15 @@ func (c *CloudWatchLogs) SampleConfig() string {
 }
 
 func init() {
+	writer := &lumberjack.Logger{
+		Filename:   paths.AgentLogFileOutputsPath,
+		MaxSize:    100, //MB
+		MaxBackups: 5,   //backup files
+		MaxAge:     7,   //days
+		Compress:   true,
+	}
+	outputLogger := log.New(writer, "", log.LstdFlags)
+
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
@@ -413,6 +427,7 @@ func init() {
 					IsStatusCodeEnabled: true,
 				},
 			),
+			outputLogger: outputLogger,
 		}
 	})
 }
