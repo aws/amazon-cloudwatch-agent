@@ -336,6 +336,78 @@ exporters:
                 - node_diskio_ebs_ec2_instance_performance_exceeded_iops
                 - node_diskio_ebs_ec2_instance_performance_exceeded_tp
                 - node_diskio_ebs_volume_queue_length
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                - - ClusterName
+                  - Namespace
+                  - WorkloadKind
+                  - WorkloadName
+                - - ClusterName
+                  - Namespace
+                  - WorkloadKind
+                  - WorkloadName
+                  - PodName
+                - - ClusterName
+                  - Namespace
+                  - PersistentVolumeClaimName
+                - - ClusterName
+                  - Namespace
+                  - PersistentVolumeClaimName
+                  - VolumeName
+                - - ClusterName
+                  - Namespace
+                  - PodName
+                  - PersistentVolumeClaimName
+                - - ClusterName
+                  - Namespace
+                  - FullPodName
+                  - PodName
+                  - ContainerName
+              metric_name_selectors:
+                - container_diskio_io_service_bytes_read
+                - container_diskio_io_service_bytes_write
+                - container_diskio_io_service_bytes_total
+                - container_diskio_io_serviced_read
+                - container_diskio_io_serviced_write
+                - container_diskio_io_serviced_total
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                - - ClusterName
+                  - Namespace
+                  - PersistentVolumeClaimName
+              metric_name_selectors:
+                - persistent_volume_claim_status_bound
+                - persistent_volume_claim_status_lost
+                - persistent_volume_claim_status_pending
+                - persistent_volume_claim_count
+            - dimensions:
+                - - ClusterName
+                  - StorageClass
+              metric_name_selectors:
+                - pvc_storage_class_count
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - VolumeName
+              metric_name_selectors:
+                - persistent_volume_capacity
+                - persistent_volume_available
+                - persistent_volume_used
+                - persistent_volume_utilization
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - persistent_volume_count
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+              metric_name_selectors:
+                - ingress_resource_count
         metric_descriptors:
             - metric_name: apiserver_admission_controller_admission_duration_seconds
               overwrite: true
