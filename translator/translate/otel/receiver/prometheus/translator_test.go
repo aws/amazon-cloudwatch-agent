@@ -296,6 +296,7 @@ func TestMetricsEmfTranslator(t *testing.T) {
 
 func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+	ecsutil.GetECSUtilSingleton().Cluster = "my-test-cluster"
 
 	scrapeConfigWithFileSD := &config.ScrapeConfig{
 		JobName: "test-scrape-configs-job",
@@ -328,7 +329,56 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
 	// Should add configs because ecs_service_discovery is explicitly configured
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 13, "Should add 14 relabel configs when ecs_service_discovery is explicitly configured")
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 13, "Should add 13 relabel configs when ecs_service_discovery is explicitly configured")
+	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
+	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
+	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
+	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
+	assert.Len(t, scrapeConfigWithFileSD.MetricRelabelConfigs, 0, "Should add 0 metric relabel configs")
+}
+
+func TestAddDefaultECSRelabelConfigs_ClusterNameProvided(t *testing.T) {
+	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+
+	scrapeConfigWithFileSD := &config.ScrapeConfig{
+		JobName: "test-scrape-configs-job",
+		ServiceDiscoveryConfigs: discovery.Configs{
+			&file.SDConfig{
+				Files: []string{defaultECSSDfileName},
+			},
+		},
+		RelabelConfigs: []*relabel.Config{
+			{
+				Action:      relabel.Replace,
+				TargetLabel: "ClusterName",
+				Replacement: "custom-cluster-name",
+			},
+		},
+	}
+
+	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
+
+	// ecs_service_discovery is configured
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{
+			"metrics_collected": map[string]any{
+				"prometheus": map[string]any{
+					"prometheus_config_path": "env:PROMETHEUS_CONFIG_CONTENT",
+					"ecs_service_discovery": map[string]any{
+						"sd_frequency":   "50s",
+						"sd_result_file": defaultECSSDfileName,
+					},
+				},
+			},
+		},
+	})
+
+	configKey := "logs.metrics_collected.prometheus"
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+
+	// Should add configs because ecs_service_discovery is explicitly configured
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 13, "Should add 13 relabel configs when ecs_service_discovery is explicitly configured")
 	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
 	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
 	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
