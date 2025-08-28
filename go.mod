@@ -17,7 +17,7 @@ replace (
 replace (
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250814150312-af455c296233
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250814150312-af455c296233
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250820144544-47895af7d372
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250827230838-11c1a6d359fa
 )
 
 replace (

@@ -195,8 +195,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmidd
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250814150312-af455c296233/go.mod h1:dPrPFF41rwaHrheryuROroCF4qQ0MBmUXMD9q2/GngY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250814150312-af455c296233 h1:RLXLOY9jLNZVf3oNpxGDdSm4OMeBgd7ui7JI8cfdxHY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250814150312-af455c296233/go.mod h1:pRTBZfP6Egzort/GDxeGzUnWJ+iV/QaGUC5QnVDJkvM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250820144544-47895af7d372 h1:quIQvJ6eTZ33cMe4vY0Jugt86nLnDwFbx8xeW77wf5s=
-github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250820144544-47895af7d372/go.mod h1:Lo0vXPmgtfEgB9xlahRywuCsxFc2q3y6bBQsjsvxU6M=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250827230838-11c1a6d359fa h1:sMsOc6P4KHqMHqbXpT4qraSwUFjFh4VwyWyJoL3wQxE=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250827230838-11c1a6d359fa/go.mod h1:Lo0vXPmgtfEgB9xlahRywuCsxFc2q3y6bBQsjsvxU6M=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250814150312-af455c296233 h1:dUS84NPhPoOPJnbfMfKW/+0qsAOJ5HkTno6atJl432g=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250814150312-af455c296233/go.mod h1:AbdplNaM4g1LnEbDczU5tDqnF1xhzlgBvpB1xwEUlhg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250814150312-af455c296233 h1:yXZCJMo633bSg8caTGEVUBVa5kDDoLtqbu+5RyWjMws=
