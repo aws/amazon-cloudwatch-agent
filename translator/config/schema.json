@@ -1537,10 +1537,6 @@
         "sd_target_cluster": {
           "description": "The target ECS cluster to be scanned for Prometheus exporters",
           "type": "string"
-        },
-        "sd_job_label_name": {
-          "description": "Job label name for ECS service discovery",
-          "type": "string"
         }
       },
       "additionalProperties": false,

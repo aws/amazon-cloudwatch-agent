@@ -86,14 +86,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		ClusterName:     clusterName,
 		ClusterRegion:   clusterRegion,
 		ResultFile:      resultFile,
-		JobLabelName:    getString(ecsSD, "sd_job_label_name"),
 	}
 	// Docker label based service discovery
 	if dockerLabel, ok := ecsSD["docker_label"].(map[string]interface{}); ok {
 		dockerConfig := ecsobserver.DockerLabelConfig{
 			MetricsPathLabel: getStringWithDefault(dockerLabel, "sd_metrics_path_label", defaultMetricsPathLabel),
 			PortLabel:        getStringWithDefault(dockerLabel, "sd_port_label", defaultPortLabel),
-			JobNameLabel:     getString(dockerLabel, "sd_job_name_label"),
+			JobNameLabel:     getStringWithDefault(dockerLabel, "sd_job_name_label", defaultJobNameLabel),
 		}
 		cfg.DockerLabels = []ecsobserver.DockerLabelConfig{dockerConfig} // Initialize as slice with single element
 	}
