@@ -52,6 +52,14 @@ var (
 	cacheMutex  sync.RWMutex
 )
 
+// ClearConfigCache clears the OTLP config cache.
+// this is intended for testing purposes only from in and out of package.
+func ClearConfigCache() {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+	configCache = make(map[EndpointConfig]component.Config)
+}
+
 func WithSignal(signal pipeline.Signal) common.TranslatorOption {
 	return func(target any) {
 		if t, ok := target.(*translator); ok {
@@ -84,7 +92,6 @@ func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) c
 		return t
 	}
 
-	// check for conflicting TLS configurations
 	for cachedConfig := range configCache {
 		if cachedConfig.protocol == otlpConfig.protocol && cachedConfig.endpoint == otlpConfig.endpoint &&
 			(cachedConfig.certFile != otlpConfig.certFile || cachedConfig.keyFile != otlpConfig.keyFile) {
@@ -125,10 +132,6 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 }
 
 func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, signal pipeline.Signal, index int) ([]EndpointConfig, error) {
-	if conf == nil {
-		return nil, nil
-	}
-
 	// JMX only supports HTTP
 	if pipelineName == common.PipelineNameJmx {
 		return []EndpointConfig{{protocol: HTTP, endpoint: defaultJMXHttpEndpoint}}, nil
@@ -138,22 +141,22 @@ func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, 
 	httpDefault := defaultHttpEndpoint
 
 	if pipelineName == common.AppSignals {
-		appSignalsKeys := common.AppSignalsConfigKeys[signal]
-		if conf.IsSet(appSignalsKeys[0]) {
-			configKey = appSignalsKeys[0]
+		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[signal]
+		if !ok {
+			return nil, fmt.Errorf("no application_signals config key defined for signal: %s", signal)
+		}
+		if conf.IsSet(appSignalsConfigKeys[0]) {
+			configKey = appSignalsConfigKeys[0]
 		} else {
-			configKey = appSignalsKeys[1]
+			configKey = appSignalsConfigKeys[1]
 		}
 		grpcDefault = defaultAppSignalsGrpcEndpoint
 		httpDefault = defaultAppSignalsHttpEndpoint
 	}
 
-	// Use defaults if no config
-	if !conf.IsSet(configKey) {
-		return []EndpointConfig{
-			{protocol: GRPC, endpoint: grpcDefault},
-			{protocol: HTTP, endpoint: httpDefault},
-		}, nil
+	if conf == nil || !conf.IsSet(configKey) {
+		pipelineType, _ := component.NewType(pipelineName)
+		return nil, &common.MissingKeyError{ID: component.NewID(pipelineType), JsonKey: configKey}
 	}
 
 	// Parse config
@@ -164,13 +167,14 @@ func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, 
 		keyFile, _ = tls["key_file"].(string)
 	}
 
+	// creates 2 separate config entry by protocol
 	var configs []EndpointConfig
-	if grpcEndpoint, ok := otlpMap["grpc_endpoint"].(string); ok {
+	if grpcEndpoint, ok := otlpMap["grpc_endpoint"].(string); ok && grpcEndpoint != "" {
 		configs = append(configs, EndpointConfig{
 			protocol: GRPC, endpoint: grpcEndpoint, certFile: certFile, keyFile: keyFile,
 		})
 	}
-	if httpEndpoint, ok := otlpMap["http_endpoint"].(string); ok {
+	if httpEndpoint, ok := otlpMap["http_endpoint"].(string); ok && httpEndpoint != "" {
 		configs = append(configs, EndpointConfig{
 			protocol: HTTP, endpoint: httpEndpoint, certFile: certFile, keyFile: keyFile,
 		})
