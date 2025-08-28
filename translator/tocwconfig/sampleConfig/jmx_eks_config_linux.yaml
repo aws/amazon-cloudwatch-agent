@@ -199,7 +199,7 @@ processors:
                 - delete_matching_keys(attributes, "^telemetry.*")
         trace_statements: []
 receivers:
-    otlp/jmx:
+    otlp/http_4314:
         protocols:
             http:
                 cors: {}
@@ -228,7 +228,7 @@ service:
                 - batch/jmx/amp/0
                 - deltatocumulative/jmx/amp/0
             receivers:
-                - otlp/jmx
+                - otlp/http_4314
         metrics/jmx/amp/1:
             exporters:
                 - prometheusremotewrite/amp
@@ -241,7 +241,7 @@ service:
                 - batch/jmx/amp/1
                 - deltatocumulative/jmx/amp/1
             receivers:
-                - otlp/jmx
+                - otlp/http_4314
         metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch
@@ -253,7 +253,7 @@ service:
                 - transform/jmx/0
                 - cumulativetodelta/jmx
             receivers:
-                - otlp/jmx
+                - otlp/http_4314
         metrics/jmx/cloudwatch/1:
             exporters:
                 - awscloudwatch
@@ -265,7 +265,7 @@ service:
                 - transform/jmx/1
                 - cumulativetodelta/jmx
             receivers:
-                - otlp/jmx
+                - otlp/http_4314
     telemetry:
         logs:
             encoding: console

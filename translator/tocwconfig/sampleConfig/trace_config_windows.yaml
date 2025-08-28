@@ -66,7 +66,7 @@ receivers:
             shared_credentials_file:
                 - /root/.aws/credentials
         transport: udp
-    otlp/traces:
+    otlp/grpc_4317:
         protocols:
             grpc:
                 endpoint: 127.0.0.1:4317
@@ -75,6 +75,8 @@ receivers:
                     server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
+    otlp/http_4318:
+        protocols:
             http:
                 cors: {}
                 endpoint: 127.0.0.1:4318
@@ -97,7 +99,8 @@ service:
                 - batch/xray
             receivers:
                 - awsxray
-                - otlp/traces
+                - otlp/grpc_4317
+                - otlp/http_4318
     telemetry:
         logs:
             encoding: console

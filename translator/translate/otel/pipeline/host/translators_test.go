@@ -217,7 +217,7 @@ func TestTranslators(t *testing.T) {
 			configSection: MetricsKey,
 			want: map[string]want{
 				"metrics/hostOtlpMetrics": {
-					receivers: []string{"otlp/metrics"},
+					receivers: []string{"otlp/grpc_4317", "otlp/http_4318"},
 					exporters: []string{"awscloudwatch"},
 				},
 			},
@@ -233,7 +233,7 @@ func TestTranslators(t *testing.T) {
 			configSection: LogsKey,
 			want: map[string]want{
 				"metrics/hostOtlpMetrics/cloudwatchlogs": {
-					receivers: []string{"otlp/metrics"},
+					receivers: []string{"otlp/grpc_4317", "otlp/http_4318"},
 					exporters: []string{"awsemf"},
 				},
 			},

@@ -1,4 +1,13 @@
 exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
     awsemf:
         add_entity: true
         certificate_file_path: ""
@@ -30,6 +39,26 @@ exporters:
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
+    awsxray:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        index_all_attributes: false
+        local_mode: false
+        max_retries: 2
+        middleware: agenthealth/traces
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        role_arn: ""
+        telemetry:
+            enabled: true
+            include_metadata: true
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -37,37 +66,55 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-                mode: K8E
+                mode: EC2
+                region_type: ACJ
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
                 region_type: ACJ
     agenthealth/statuscode:
         is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             usage_flags:
-                mode: K8E
+                mode: EC2
+                region_type: ACJ
+    agenthealth/traces:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutTraceSegments
+            usage_flags:
+                mode: EC2
                 region_type: ACJ
     entitystore:
-        kubernetes_mode: K8sEC2
         mode: ec2
         region: us-west-2
-    k8smetadata:
-        objects:
-            - endpointslices
-    server:
-        listen_addr: :4311
-        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
-        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
-        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
 processors:
     awsentity/service/otlp:
         entity_type: Service
-        kubernetes_mode: K8sEC2
         platform: ec2
     batch/hostOtlpMetrics/cloudwatchlogs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 30s
+        timeout: 5s
+    batch/xray:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    cumulativetodelta/hostOtlpMetrics:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
     cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
         exclude:
             match_type: ""
@@ -75,6 +122,17 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
 receivers:
     otlp/grpc_1234:
         protocols:
@@ -104,12 +162,22 @@ receivers:
                 write_timeout: 0s
 service:
     extensions:
-        - k8smetadata
-        - agenthealth/logs
+        - agenthealth/metrics
         - agenthealth/statuscode
+        - agenthealth/logs
+        - agenthealth/traces
         - entitystore
-        - server
     pipelines:
+        metrics/hostOtlpMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostOtlpMetrics
+                - ec2tagger
+                - awsentity/service/otlp
+            receivers:
+                - otlp/grpc_1234
+                - otlp/http_2345
         metrics/hostOtlpMetrics/cloudwatchlogs:
             exporters:
                 - awsemf
@@ -120,10 +188,20 @@ service:
             receivers:
                 - otlp/grpc_1234
                 - otlp/http_2345
+        traces/xray:
+            exporters:
+                - awsxray
+            processors:
+                - batch/xray
+            receivers:
+                - otlp/grpc_1234
+                - otlp/http_2345
     telemetry:
         logs:
             encoding: console
             level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2

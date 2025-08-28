@@ -54,17 +54,20 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
 	case []any:
 		for index := range v {
-			otlpReceivers.Set(otlpreceiver.NewTranslator(
-				otlpreceiver.WithSignal(pipeline.SignalMetrics),
-				otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
-				common.WithIndex(index),
-			))
+			otlps, err := common.ParseOtlpConfig(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey), pipeline.SignalMetrics, index)
+			if err == nil {
+				for _, otlpConfig := range otlps {
+					otlpReceivers.Set(otlpreceiver.NewTranslator(otlpConfig))
+				}
+			}
 		}
 	case map[string]any:
-		otlpReceivers.Set(otlpreceiver.NewTranslator(
-			otlpreceiver.WithSignal(pipeline.SignalMetrics),
-			otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
-		))
+		otlps, err := common.ParseOtlpConfig(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey), pipeline.SignalMetrics, -1)
+		if err == nil {
+			for _, otlpConfig := range otlps {
+				otlpReceivers.Set(otlpreceiver.NewTranslator(otlpConfig))
+			}
+		}
 	}
 
 	hasHostPipeline := hostReceivers.Len() != 0

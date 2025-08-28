@@ -58,7 +58,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/traces"},
+				receivers:  []string{"otlp/grpc_4317", "otlp/http_4318"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
 				extensions: []string{"agenthealth/traces", "agenthealth/statuscode"},
@@ -74,7 +74,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"awsxray", "otlp/traces"},
+				receivers:  []string{"awsxray", "otlp/grpc_4317", "otlp/http_4318"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
 				extensions: []string{"agenthealth/traces", "agenthealth/statuscode"},
