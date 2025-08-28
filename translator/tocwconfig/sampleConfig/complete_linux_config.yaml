@@ -340,7 +340,7 @@ receivers:
         truststore_path: /truststore
         truststore_type: PKCS12
         username: cwagent
-    otlp/traces:
+    otlp/grpc_1111:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:1111
@@ -349,6 +349,8 @@ receivers:
                     server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
+    otlp/http_2222:
+        protocols:
             http:
                 cors: {}
                 endpoint: 0.0.0.0:2222
@@ -441,13 +443,13 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_processes
-                - telegraf_disk
                 - telegraf_netstat
+                - telegraf_disk
+                - telegraf_mem
                 - telegraf_cpu
+                - telegraf_processes
                 - telegraf_procstat/1917393364
                 - telegraf_swap
-                - telegraf_mem
         metrics/hostCustomMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -499,7 +501,8 @@ service:
                 - batch/xray
             receivers:
                 - awsxray
-                - otlp/traces
+                - otlp/grpc_1111
+                - otlp/http_2222
     telemetry:
         logs:
             encoding: console

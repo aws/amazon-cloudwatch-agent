@@ -150,7 +150,7 @@ func TestTranslator(t *testing.T) {
 			isContainer: true,
 			want: &want{
 				pipelineID: "metrics/jmx",
-				receivers:  []string{"otlp/jmx"},
+				receivers:  []string{"otlp/http_4314"},
 				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "cumulativetodelta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
@@ -177,7 +177,7 @@ func TestTranslator(t *testing.T) {
 			isContainer: true,
 			want: &want{
 				pipelineID: "metrics/jmx",
-				receivers:  []string{"otlp/jmx"},
+				receivers:  []string{"otlp/http_4314"},
 				processors: []string{"filter/jmx", "metricstransform/jmx", "resource/jmx", "transform/jmx/drop", "cumulativetodelta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
@@ -237,7 +237,7 @@ func TestTranslator(t *testing.T) {
 			isContainer: true,
 			want: &want{
 				pipelineID: "metrics/jmx/amp",
-				receivers:  []string{"otlp/jmx"},
+				receivers:  []string{"otlp/http_4314"},
 				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "batch/jmx/amp", "deltatocumulative/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
@@ -337,7 +337,7 @@ func TestTranslator(t *testing.T) {
 			isContainer: true,
 			want: &want{
 				pipelineID: "metrics/jmx/amp/0",
-				receivers:  []string{"otlp/jmx"},
+				receivers:  []string{"otlp/http_4314"},
 				processors: []string{"filter/jmx/0", "metricstransform/jmx", "transform/jmx/drop", "transform/jmx/0", "batch/jmx/amp/0", "deltatocumulative/jmx/amp/0"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
