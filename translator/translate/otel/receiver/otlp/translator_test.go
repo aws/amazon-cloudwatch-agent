@@ -155,8 +155,7 @@ func TestCaching(t *testing.T) {
 }
 
 func TestTLSConflictDetection(t *testing.T) {
-	// Clear cache before test
-	configCache = make(map[EndpointConfig]component.Config)
+	ClearConfigCache() // Clear cache before test
 
 	// First translator with TLS
 	config1 := EndpointConfig{
@@ -184,7 +183,7 @@ func TestTLSConflictDetection(t *testing.T) {
 
 func TestParseOtlpConfig_NilConf(t *testing.T) {
 	configs, err := ParseOtlpConfig(nil, "test", "otlp", pipeline.SignalTraces, -1)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, configs)
 }
 
@@ -199,7 +198,13 @@ func TestParseOtlpConfig_JMX(t *testing.T) {
 }
 
 func TestParseOtlpConfig_AppSignals(t *testing.T) {
-	conf := confmap.New()
+	conf := confmap.NewFromStringMap(map[string]any{
+		"traces": map[string]any{
+			"traces_collected": map[string]any{
+				"app_signals": map[string]any{},
+			},
+		},
+	})
 	configs, err := ParseOtlpConfig(conf, common.AppSignals, "", pipeline.SignalTraces, -1)
 
 	assert.NoError(t, err)
@@ -211,7 +216,9 @@ func TestParseOtlpConfig_AppSignals(t *testing.T) {
 }
 
 func TestParseOtlpConfig_DefaultEndpoints(t *testing.T) {
-	conf := confmap.New()
+	conf := confmap.NewFromStringMap(map[string]any{
+		"otlp": map[string]any{},
+	})
 	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
 
 	assert.NoError(t, err)

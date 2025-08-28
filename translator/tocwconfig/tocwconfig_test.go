@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -905,6 +906,9 @@ func resetContext(t *testing.T) {
 	}
 	ecsutil.GetECSUtilSingleton().Region = ""
 	context.ResetContext()
+
+	// Clear OTLP config cache to avoid conflicts between tests
+	otlp.ClearConfigCache()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
 }
