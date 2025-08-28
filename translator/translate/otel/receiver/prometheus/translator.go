@@ -187,7 +187,6 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 	}
 
 	defaultRelabelConfigs := []*relabel.Config{
-		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "ClusterName", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
@@ -202,13 +201,35 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_app_x"}, Action: relabel.Replace, TargetLabel: "app_x", Regex: relabel.MustNewRegexp("(.*)")},
 	}
 
-	defaultMetricRelabelConfigs := []*relabel.Config{}
-
 	for _, scrapeConfig := range scrapeConfigs {
 		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
-			scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-			scrapeConfig.MetricRelabelConfigs = defaultMetricRelabelConfigs
+			addClusterNameRelabelConfig(scrapeConfig, conf)
+			scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, defaultRelabelConfigs...)
 		}
+	}
+}
+
+/*
+Adds ClusterName relabelConfig if not already set by customer.
+Customer can specify the clusterName in the scraping job's relabel_config
+CWAgent won't overwrite in this case to support cross-cluster monitoring
+*/
+func addClusterNameRelabelConfig(scrapeConfig *config.ScrapeConfig, conf *confmap.Conf) {
+	for _, relabelConfig := range scrapeConfig.RelabelConfigs {
+		// If ClusterName relabel config is defined by customer, dont override
+		if relabelConfig.TargetLabel == "ClusterName" {
+			return
+		}
+	}
+
+	clusterName := ecsutil.GetECSUtilSingleton().Cluster
+	if clusterName != "" {
+		clusterNameConfig := &relabel.Config{
+			Action:      relabel.Replace,
+			TargetLabel: "ClusterName",
+			Replacement: clusterName,
+		}
+		scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, clusterNameConfig)
 	}
 }
 

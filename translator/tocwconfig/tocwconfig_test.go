@@ -560,6 +560,7 @@ func TestPrometheusEcsSdConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	ecsutil.GetECSUtilSingleton().Region = "us-west-2"
+	ecsutil.GetECSUtilSingleton().Cluster = "test-ecs-cluster-0123456789"
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
