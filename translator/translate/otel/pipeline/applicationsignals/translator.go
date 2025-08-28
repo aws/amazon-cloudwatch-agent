@@ -58,8 +58,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 
-	// Add OTLP receivers, passed configKey[0] doesn't really matter as appsignals is handled in the parse function
-	otlps, err := common.ParseOtlpConfig(conf, common.AppSignals, configKey[0], t.signal, -1)
+	// Add OTLP receivers
+	otlps, err := otlp.ParseOtlpConfig(conf, common.AppSignals, "", t.signal, -1)
 	if err == nil {
 		for _, otlpConfig := range otlps {
 			translators.Receivers.Set(otlp.NewTranslator(
