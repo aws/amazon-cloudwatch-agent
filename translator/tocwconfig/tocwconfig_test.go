@@ -328,6 +328,12 @@ func TestOtlpMetricsEmfConfigKubernetes(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "windows", nil, "")
 }
 
+func TestSharedOtlp(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "shared_otlp_config", "linux", nil, "")
+}
+
 func TestProcstatMemorySwapConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
@@ -955,6 +961,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
