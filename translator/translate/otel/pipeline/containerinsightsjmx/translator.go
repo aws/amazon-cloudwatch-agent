@@ -74,7 +74,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	// Add OTLP receivers
-	otlps, err := common.ParseOtlpConfig(conf, common.PipelineNameJmx, common.OtlpKey, pipeline.SignalMetrics, -1)
+	otlps, err := otlp.ParseOtlpConfig(conf, common.PipelineNameJmx, common.OtlpKey, pipeline.SignalMetrics, -1)
 	if err == nil {
 		for _, otlpConfig := range otlps {
 			translators.Receivers.Set(otlp.NewTranslator(otlpConfig))
