@@ -17,6 +17,7 @@ replace (
 replace (
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250814150312-af455c296233
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250814150312-af455c296233
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250820144544-47895af7d372
 )
 
 replace (
@@ -50,9 +51,6 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250814150312-af455c296233
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250814150312-af455c296233
 )
-
-// Replace ecsobserver with custom fork - use the entire repo
-replace github.com/open-telemetry/opentelemetry-collector-contrib => github.com/amazon-contributing/opentelemetry-collector-contrib v0.74.1-0.20250820144544-47895af7d372
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
 replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d // indirect
