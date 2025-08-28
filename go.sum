@@ -195,6 +195,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmidd
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20250814150312-af455c296233/go.mod h1:dPrPFF41rwaHrheryuROroCF4qQ0MBmUXMD9q2/GngY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250814150312-af455c296233 h1:RLXLOY9jLNZVf3oNpxGDdSm4OMeBgd7ui7JI8cfdxHY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20250814150312-af455c296233/go.mod h1:pRTBZfP6Egzort/GDxeGzUnWJ+iV/QaGUC5QnVDJkvM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250820144544-47895af7d372 h1:quIQvJ6eTZ33cMe4vY0Jugt86nLnDwFbx8xeW77wf5s=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.0.0-20250820144544-47895af7d372/go.mod h1:Lo0vXPmgtfEgB9xlahRywuCsxFc2q3y6bBQsjsvxU6M=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250814150312-af455c296233 h1:dUS84NPhPoOPJnbfMfKW/+0qsAOJ5HkTno6atJl432g=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20250814150312-af455c296233/go.mod h1:AbdplNaM4g1LnEbDczU5tDqnF1xhzlgBvpB1xwEUlhg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20250814150312-af455c296233 h1:yXZCJMo633bSg8caTGEVUBVa5kDDoLtqbu+5RyWjMws=
@@ -1218,8 +1220,6 @@ github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusrem
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.124.1/go.mod h1:AwoFFkNgtHnOczLkEwlGAPhu54t2LtrOGOg8zxKpPgo=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.124.1 h1:uV7jdTAvpuivYA2w4lGvRf4zSJS5fwhyiLENvVuuTbs=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.124.1/go.mod h1:l9sJPl8ZZIra4izRkf3bCuKJ1trM1KrO7vDMbUtthOg=
-github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.124.1 h1:jY6k/b/maC2p62qmQnDhCeQpPZ+1K+IL7oZI4UMjgbY=
-github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.124.1/go.mod h1:7OgrPAJcfZRSeNa1bpJFVPTD6o448W/dKlIGJ7aiyb4=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.124.1 h1:46evS2baudLPanhtLY3r0S96UTihfQo825T0vGxN8kE=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.124.1/go.mod h1:b2oVJgWayzhUbFlwG9tofHl6qfe/fhXUBvQm7kiCJVw=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension v0.124.1 h1:ugfBVI1oitugX5Rpanw3zLp1WfXsUaWus8JBNupDhVg=
