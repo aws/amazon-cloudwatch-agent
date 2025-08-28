@@ -1334,7 +1334,7 @@ processors:
                     enabled: false
         timeout: 2s
 receivers:
-    otlp/application_signals:
+    otlp/grpc_4315:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:4315
@@ -1343,6 +1343,8 @@ receivers:
                     server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
+    otlp/http_4316:
+        protocols:
             http:
                 cors: {}
                 endpoint: 0.0.0.0:4316
@@ -1370,7 +1372,8 @@ service:
                 - awsapplicationsignals
                 - awsentity/service/application_signals
             receivers:
-                - otlp/application_signals
+                - otlp/grpc_4315
+                - otlp/http_4316
         traces/application_signals:
             exporters:
                 - debug/application_signals
@@ -1379,7 +1382,8 @@ service:
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
-                - otlp/application_signals
+                - otlp/grpc_4315
+                - otlp/http_4316
     telemetry:
         logs:
             encoding: console
