@@ -56,6 +56,10 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEBSMetricDeclarations(conf)...)
 
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getVolumesMetricDeclarations(conf)...)
+
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getIngressMetricDeclarations(conf)...)
+
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
@@ -679,6 +683,82 @@ func getEBSMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_diskio_ebs_ec2_instance_performance_exceeded_iops",
 					"node_diskio_ebs_ec2_instance_performance_exceeded_tp",
 					"node_diskio_ebs_volume_queue_length",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getVolumesMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+					{"ClusterName", "Namespace", "WorkloadKind", "WorkloadName"},
+					{"ClusterName", "Namespace", "WorkloadKind", "WorkloadName", "PodName"},
+					{"ClusterName", "Namespace", "PersistentVolumeClaimName"},
+					{"ClusterName", "Namespace", "PersistentVolumeClaimName", "VolumeName"},
+					{"ClusterName", "Namespace", "PodName", "PersistentVolumeClaimName"},
+					{"ClusterName", "Namespace", "FullPodName", "PodName", "ContainerName"},
+				},
+				MetricNameSelectors: []string{
+					"container_diskio_io_service_bytes_read", "container_diskio_io_service_bytes_write", "container_diskio_io_service_bytes_total",
+					"container_diskio_io_serviced_read", "container_diskio_io_serviced_write", "container_diskio_io_serviced_total",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+					{"ClusterName", "Namespace", "PersistentVolumeClaimName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_claim_status_bound",
+					"persistent_volume_claim_status_lost",
+					"persistent_volume_claim_status_pending",
+					"persistent_volume_claim_count",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "VolumeName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_capacity",
+					"persistent_volume_available",
+					"persistent_volume_used",
+					"persistent_volume_utilization",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_count",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getIngressMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+				},
+				MetricNameSelectors: []string{
+					"ingress_resource_count",
 				},
 			},
 		}
