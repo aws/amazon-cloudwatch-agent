@@ -1,0 +1,52 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "cloudwatch": {},
+      "amp": {
+        "workspace_id": "ws-12345"
+      }
+    },
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "{prometheusFileName}"
+      }
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "{prometheusFileName}",
+        "ecs_service_discovery": {
+          "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
+          "docker_label": {},
+          "task_definition_list": [
+            {
+              "sd_task_definition_arn_pattern": ".*:task-definition/nginx.*:[0-9]+",
+              "metrics_path": "/metrics",
+              "metrics_ports": "9113"
+            }
+          ]
+        },
+        "emf_processor": {
+          "metric_declaration_dedup": true,
+          "metric_namespace": "ECS/ContainerInsights/Prometheus",
+          "metric_unit": {},
+          "metric_declaration": [
+            {
+              "source_labels": ["Service"],
+              "label_matcher": "nginx.*",
+              "dimensions": [["Service"]],
+              "metric_selectors": ["^nginx_request_count$"]
+            }
+          ]
+        },
+        "log_group_name": "/aws/ecs/containerinsights/TestCluster/prometheus"
+      }
+    },
+    "force_flush_interval": 5,
+    "endpoint_override": "https://fake_endpoint"
+  }
+}
