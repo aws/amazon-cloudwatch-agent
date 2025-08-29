@@ -199,6 +199,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_source"}, Regex: relabel.MustNewRegexp("^arn:aws:ecs:.*:.*:task.*\\/(.*)$"), Action: relabel.Replace, TargetLabel: "TaskId"},
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_app_x"}, Action: relabel.Replace, TargetLabel: "app_x", Regex: relabel.MustNewRegexp("(.*)")},
+		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: prometheusreceiver.CaptureGroupOne},
 	}
 
 	for _, scrapeConfig := range scrapeConfigs {

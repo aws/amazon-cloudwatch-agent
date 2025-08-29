@@ -161,7 +161,7 @@ func TestTranslator_Translate(t *testing.T) {
 				ResultFile:      "/tmp/cwagent_ecs_auto_sd.yaml",
 				DockerLabels: []ecsobserver.DockerLabelConfig{
 					{
-						JobNameLabel:     "",
+						JobNameLabel:     defaultJobNameLabel,
 						MetricsPathLabel: defaultMetricsPathLabel,
 						PortLabel:        defaultPortLabel,
 					},
