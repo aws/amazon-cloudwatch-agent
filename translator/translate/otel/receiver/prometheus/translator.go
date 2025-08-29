@@ -131,7 +131,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}
+	customerRelabelConfigs := extractCustomerRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs)
+
 	addDefaultECSRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, conf, t.configKey)
+	
+	appendCustomerRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, customerRelabelConfigs, conf, t.configKey)
 
 	return cfg, nil
 }
@@ -202,12 +206,9 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: prometheusreceiver.CaptureGroupOne},
 	}
 
-	defaultMetricRelabelConfigs := []*relabel.Config{}
-
 	for _, scrapeConfig := range scrapeConfigs {
 		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
 			scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-			scrapeConfig.MetricRelabelConfigs = defaultMetricRelabelConfigs
 		}
 	}
 }
@@ -225,4 +226,37 @@ func hasConfiguredServiceDiscoveryResultFile(scrapeConfig *config.ScrapeConfig, 
 		}
 	}
 	return false
+}
+
+func extractCustomerRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) map[*config.ScrapeConfig][]*relabel.Config {
+	customerConfigs := make(map[*config.ScrapeConfig][]*relabel.Config)
+	for _, scrapeConfig := range scrapeConfigs {
+		if len(scrapeConfig.RelabelConfigs) > 0 {
+			customerConfigs[scrapeConfig] = scrapeConfig.RelabelConfigs
+		}
+	}
+	return customerConfigs
+}
+
+func appendCustomerRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, customerConfigs map[*config.ScrapeConfig][]*relabel.Config, conf *confmap.Conf, promConfigKey string) {
+	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
+		return
+	}
+
+	ecsSdResultFileKey := common.ConfigKey(ecsSDKey, ECS_SD_RESULT_FILE)
+	ecsSDFileName := defaultECSSDfileName
+	if conf.IsSet(ecsSdResultFileKey) {
+		if fileName, ok := conf.Get(ecsSdResultFileKey).(string); ok && fileName != "" {
+			ecsSDFileName = fileName
+		}
+	}
+
+	for _, scrapeConfig := range scrapeConfigs {
+		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
+			if customerRelabelConfigs, exists := customerConfigs[scrapeConfig]; exists {
+				// Append customer configs after default ECS configs
+				scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, customerRelabelConfigs...)
+			}
+		}
+	}
 }
