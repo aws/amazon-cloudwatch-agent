@@ -740,7 +740,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushCh:         make(chan struct{}),
 			resetTimerCh:    make(chan struct{}),
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
-			stop:            stop,
+			stopCh:          stop,
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
 		}
@@ -784,7 +784,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushCh:         make(chan struct{}),
 			resetTimerCh:    make(chan struct{}),
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
-			stop:            stop,
+			stopCh:          stop,
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
 		}

@@ -49,6 +49,10 @@ func NewPusher(
 	}
 }
 
+func (p *Pusher) Stop() {
+	p.Queue.Stop()
+}
+
 // createSender initializes a Sender. Wraps it in a senderPool if a WorkerPool is provided.
 func createSender(
 	logger telegraf.Logger,

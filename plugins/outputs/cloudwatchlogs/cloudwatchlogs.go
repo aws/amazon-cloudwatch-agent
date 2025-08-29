@@ -50,6 +50,8 @@ var (
 	containerInsightsRegexp = regexp.MustCompile("^/aws/.*containerinsights/.*/(performance|prometheus)$")
 )
 
+var _ logs.LogBackend = (*CloudWatchLogs)(nil)
+
 type CloudWatchLogs struct {
 	Region           string `toml:"region"`
 	RegionType       string `toml:"region_type"`
@@ -136,6 +138,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	if cwd, ok := c.cwDests.Load(t); ok {
 		return cwd.(*cwDest)
 	}
+	fmt.Printf("Did not find pusher target for %v, creating a new one", t.Stream)
 
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := c.createClient(logThrottleRetryer)
@@ -324,6 +327,8 @@ type cwDest struct {
 	retryer *retryer.LogThrottleRetryer
 }
 
+var _ logs.LogDest = (*cwDest)(nil)
+
 func (cd *cwDest) Publish(events []logs.LogEvent) error {
 	for _, e := range events {
 		if !cd.isEMF {
@@ -342,6 +347,7 @@ func (cd *cwDest) Publish(events []logs.LogEvent) error {
 
 func (cd *cwDest) Stop() {
 	cd.retryer.Stop()
+	cd.pusher.Stop()
 	cd.stopped = true
 }
 
@@ -352,6 +358,10 @@ func (cd *cwDest) AddEvent(e logs.LogEvent) {
 	} else {
 		cd.pusher.AddEvent(e)
 	}
+}
+
+func (cd *cwDest) Name() string {
+	return cd.pusher.Target.Group + "/" + cd.pusher.Target.Stream
 }
 
 func (cd *cwDest) switchToEMF() {
