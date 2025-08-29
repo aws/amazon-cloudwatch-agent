@@ -17,6 +17,7 @@ import (
 type Queue interface {
 	AddEvent(e logs.LogEvent)
 	AddEventNonBlocking(e logs.LogEvent)
+	Stop()
 }
 
 type queue struct {
@@ -35,6 +36,7 @@ type queue struct {
 	flushTimer   *time.Timer
 	flushTimeout atomic.Value
 	stop         <-chan struct{}
+	queueStop    chan struct{}
 	lastSentTime atomic.Value
 
 	initNonBlockingChOnce sync.Once
@@ -62,6 +64,7 @@ func newQueue(
 		resetTimerCh:    make(chan struct{}),
 		flushTimer:      time.NewTimer(flushTimeout),
 		stop:            stop,
+		queueStop:       make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
 	}
@@ -112,16 +115,31 @@ func (q *queue) start() {
 
 	// Merge events from both blocking and non-blocking channel
 	go func() {
+		defer close(mergeChan)
 		var nonBlockingEventsCh <-chan logs.LogEvent
 		for {
 			select {
 			case e := <-q.eventsCh:
-				mergeChan <- e
+				select {
+				case mergeChan <- e:
+				case <-q.stop:
+					return
+				case <-q.queueStop:
+					return
+				}
 			case e := <-nonBlockingEventsCh:
-				mergeChan <- e
+				select {
+				case mergeChan <- e:
+				case <-q.stop:
+					return
+				case <-q.queueStop:
+					return
+				}
 			case <-q.startNonBlockCh:
 				nonBlockingEventsCh = q.nonBlockingEventsCh
 			case <-q.stop:
+				return
+			case <-q.queueStop:
 				return
 			}
 		}
@@ -150,6 +168,11 @@ func (q *queue) start() {
 				q.resetFlushTimer()
 			}
 		case <-q.stop:
+			if len(q.batch.events) > 0 {
+				q.send()
+			}
+			return
+		case <-q.queueStop:
 			if len(q.batch.events) > 0 {
 				q.send()
 			}
@@ -197,6 +220,9 @@ func (q *queue) manageFlushTimer() {
 		case <-q.stop:
 			q.stopFlushTimer()
 			return
+		case <-q.queueStop:
+			q.stopFlushTimer()
+			return
 		}
 	}
 }
@@ -231,4 +257,9 @@ func hasValidTime(e logs.LogEvent) bool {
 		}
 	}
 	return true
+}
+
+// Stop stops all goroutines associated with this queue instance.
+func (q *queue) Stop() {
+	close(q.queueStop)
 }
