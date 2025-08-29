@@ -518,6 +518,54 @@ func normalizeYAML(s string) string {
 	return buf.String()
 }
 
+func TestAppendCustomerRelabelConfigs(t *testing.T) {
+	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
+
+	customerRelabelConfig := &relabel.Config{
+		Action:       relabel.Replace,
+		SourceLabels: model.LabelNames{"StartedBy"},
+		TargetLabel:  "CustomStartedBy",
+		Regex:        relabel.MustNewRegexp("(.*)"),
+	}
+
+	scrapeConfigWithFileSD := &config.ScrapeConfig{
+		JobName: "test-job",
+		ServiceDiscoveryConfigs: []discovery.Config{
+			&file.SDConfig{
+				Files: []string{defaultECSSDfileName},
+			},
+		},
+		RelabelConfigs: []*relabel.Config{customerRelabelConfig},
+	}
+
+	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
+
+	customerConfigs := extractCustomerRelabelConfigs(scrapeConfigs)
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"ecs_service_discovery": map[string]interface{}{
+						"sd_result_file": defaultECSSDfileName,
+					},
+				},
+			},
+		},
+	})
+	configKey := "logs.metrics_collected.prometheus"
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+	appendCustomerRelabelConfigs(scrapeConfigs, customerConfigs, conf)
+
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should have 13 default + 1 customer relabel config")
+	validateRelabelFields(t, scrapeConfigWithFileSD)
+
+	customerProvidedConfig := scrapeConfigWithFileSD.RelabelConfigs[13]
+	assert.Equal(t, "CustomStartedBy", customerProvidedConfig.TargetLabel)
+	assert.Equal(t, model.LabelNames{"StartedBy"}, customerProvidedConfig.SourceLabels)
+}
+
 func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeConfig) {
 	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
 	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
