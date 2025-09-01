@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -127,6 +128,7 @@ func determineRegion(ctx *runtime.Context) string {
 
 func sendConfigToParameterStore(config, parameterStoreName, region string, creds *credentials.Credentials) error {
 	awsConfig := aws.NewConfig().WithRegion(region)
+	awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 	if creds != nil {
 		awsConfig = awsConfig.WithCredentials(creds)
 	}

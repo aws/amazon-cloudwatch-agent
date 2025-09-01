@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -171,6 +172,7 @@ func backupConfigFile(configFilePath, backupDirPath string) error {
 
 func SDKRegion() (region string) {
 	ses, err := session.NewSession()
+	ses.Config.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 
 	if err != nil {
 		return
@@ -183,7 +185,7 @@ func SDKRegion() (region string) {
 
 func SDKRegionWithProfile(profile string) (region string) {
 	ses, err := session.NewSessionWithOptions(session.Options{Profile: profile, SharedConfigState: session.SharedConfigEnable})
-
+	ses.Config.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 	if err != nil {
 		return
 	}
@@ -195,6 +197,7 @@ func SDKRegionWithProfile(profile string) (region string) {
 
 func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentials) {
 	ses, err := session.NewSession()
+	ses.Config.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 	if err != nil {
 		return
 	}
@@ -216,10 +219,12 @@ func DefaultEC2Region() (region string) {
 		Logger:                    configaws.SDKLogger{},
 		EC2MetadataEnableFallback: aws.Bool(false),
 		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
+		UseDualStackEndpoint:      endpoints.DualStackEndpointStateEnabled,
 	})
 	sesFallBackEnabled, err := session.NewSession(&aws.Config{
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
+		LogLevel:             configaws.SDKLogLevel(),
+		Logger:               configaws.SDKLogger{},
+		UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 	})
 	if err != nil {
 		return

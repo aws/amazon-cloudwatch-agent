@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
@@ -64,6 +65,7 @@ func GetClusterNameFromEc2Tagger() string {
 		CredentialsChainVerboseErrors: aws.Bool(true),
 		LogLevel:                      configaws.SDKLogLevel(),
 		Logger:                        configaws.SDKLogger{},
+		UseDualStackEndpoint:          endpoints.DualStackEndpointStateEnabled,
 	}
 
 	input := &ec2.DescribeTagsInput{

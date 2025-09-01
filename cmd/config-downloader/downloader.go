@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -46,9 +47,10 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 	profile, profileOk := credsMap[commonconfig.CredentialProfile]
 	sharedConfigFile, sharedConfigFileOk := credsMap[commonconfig.CredentialFile]
 	rootconfig := &aws.Config{
-		Region:   aws.String(region),
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
+		Region:               aws.String(region),
+		LogLevel:             configaws.SDKLogLevel(),
+		Logger:               configaws.SDKLogger{},
+		UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 	}
 	if profileOk || sharedConfigFileOk {
 		rootconfig.Credentials = credentials.NewCredentials(&credentials.SharedCredentialsProvider{

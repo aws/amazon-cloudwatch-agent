@@ -131,6 +131,7 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 		HTTPClient:                    &http.Client{Timeout: 1 * time.Minute},
 		LogLevel:                      SDKLogLevel(),
 		Logger:                        SDKLogger{},
+		UseDualStackEndpoint:          endpoints.DualStackEndpointStateEnabled,
 	}
 	config.Credentials = getRootCredentialsFromChain(c)
 	return getSession(config)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -91,6 +92,7 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 
 func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	ses, err := session.NewSession()
+	ses.Config.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 
 	if err != nil {
 		return err

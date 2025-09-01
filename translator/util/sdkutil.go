@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
@@ -100,6 +101,7 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region s
 	CheckAndSetHomeDir()
 	opts.SharedConfigState = session.SharedConfigEnable
 	ses, err := session.NewSessionWithOptions(opts)
+	ses.Config.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
 	if err != nil {
 		return ""
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/influxdata/telegraf"
@@ -743,8 +744,9 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sess := session.Must(session.NewSession(&aws.Config{
-				Region:   aws.String("us-west-2"),
-				Endpoint: aws.String("http://localhost:12345"),
+				Region:               aws.String("us-west-2"),
+				Endpoint:             aws.String("http://localhost:12345"),
+				UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 			}))
 			realSvc := cloudwatch.New(sess)
 			cw := &CloudWatch{
