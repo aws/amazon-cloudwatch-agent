@@ -129,7 +129,7 @@ func TestEmf(t *testing.T) {
 	}
 	ua := newUserAgent()
 	if len(ua.inputs) == 0 {
-    	ua.isRoot = false
+		ua.isRoot = false
 	}
 	ua.SetComponents(otelCfg, &telegraf.Config{})
 	assert.Len(t, ua.inputs, 2)
