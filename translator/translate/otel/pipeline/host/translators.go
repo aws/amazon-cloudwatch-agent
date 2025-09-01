@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -48,6 +49,10 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 
 	if shouldAddNvmeReceiver(conf, configSection) {
 		deltaReceivers.Set(awsnvme.NewTranslator())
+	}
+
+	if shouldAddHostmetricsReceiver(conf, configSection) {
+		hostReceivers.Set(hostmetrics.NewTranslator())
 	}
 
 	// Gather OTLP receivers
@@ -135,6 +140,34 @@ func shouldAddNvmeReceiver(conf *confmap.Conf, configSection string) bool {
 	measurements := common.GetMeasurements(diskioMap.(map[string]any))
 	for _, measurement := range measurements {
 		if awsnvme.IsNVMEMetric(measurement) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldAddHostmetricsReceiver(conf *confmap.Conf, configSection string) bool {
+	memMap := conf.Get(common.ConfigKey(configSection, common.MemKey))
+	if memMap == nil {
+		return false
+	}
+	measurements := common.GetMeasurements(memMap.(map[string]any))
+	for _, measurement := range measurements {
+		if hostmetrics.IsHostmetricsMemoryMetric(measurement) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldAddHostmetricsReceiver(conf *confmap.Conf, configSection string) bool {
+	memMap := conf.Get(common.ConfigKey(configSection, common.MemKey))
+	if memMap == nil {
+		return false
+	}
+	measurements := common.GetMeasurements(memMap.(map[string]any))
+	for _, measurement := range measurements {
+		if hostmetrics.IsHostmetricsMemoryMetric(measurement) {
 			return true
 		}
 	}

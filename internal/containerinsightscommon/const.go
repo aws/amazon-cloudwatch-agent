@@ -52,6 +52,7 @@ const (
 	MemUtilization             = "memory_utilization"
 	MemReservedCapacity        = "memory_reserved_capacity"
 	MemUtilizationOverPodLimit = "memory_utilization_over_pod_limit"
+	MemShared                  = "shared"
 
 	NetIfce       = "interface"
 	NetRxBytes    = "network_rx_bytes"

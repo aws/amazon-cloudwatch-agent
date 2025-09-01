@@ -12,7 +12,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	translatorConfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
+	"	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics""
 )
 
 const (
@@ -32,6 +33,7 @@ const (
 	Default_Windows_Smi_Path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
 
 	diskIOPluginName = "diskio"
+	memPluginName    = "mem"
 )
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
@@ -208,6 +210,8 @@ func shouldFilterPluginSpecificMetrics(pluginName string, metricName string) boo
 	switch pluginName {
 	case diskIOPluginName:
 		return awsnvme.IsNVMEMetric(metricName)
+	case memPluginName:
+		return hostmetrics.IsHostmetricsMemoryMetric(metricName)
 	default:
 		return false
 	}

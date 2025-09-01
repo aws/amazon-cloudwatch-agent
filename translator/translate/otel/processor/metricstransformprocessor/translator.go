@@ -23,6 +23,9 @@ var metricTransformJmxConfig string
 //go:embed appsignals_runtime_config.yaml
 var appSignalsRuntimeConfig string
 
+//go:embed hostmetrics_config.yaml
+var hostmetricsConfig string
+
 var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeGpuContainer,
 	containerinsightscommon.TypeGpuPod,
@@ -69,6 +72,10 @@ var renameMapForNvme = map[string]string{
 	"aws_ebs_csi_volume_queue_length":             containerinsightscommon.NvmeVolumeQueueLength,
 }
 
+var renameMapForHostmetrics = map[string]string{
+	"system.linux.memory.shared": containerinsightscommon.MemShared,
+}
+
 type translator struct {
 	name    string
 	factory processor.Factory
@@ -93,6 +100,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	var transformRules []map[string]interface{}
+	
+	// Add hostmetrics transformations for host pipeline
+	if t.name == common.PipelineNameHost {
+		for oldHostmetricsMetric, newHostmetricsMetric := range renameMapForHostmetrics {
+			transformRules = append(transformRules, map[string]interface{}{
+				"include":  oldHostmetricsMetric,
+				"action":   "update",
+				"new_name": newHostmetricsMetric,
+			})
+		}
+	}
+	
 	if t.name == common.PipelineNameContainerInsights {
 		transformRules = []map[string]interface{}{
 			{
@@ -118,6 +137,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				})
 			}
 
+		}
+	} else if t.name == common.PipelineNameHost {
+		// Add hostmetrics transformations for host pipeline
+		for oldHostmetricsMetric, newHostmetricsMetric := range renameMapForHostmetrics {
+			transformRules = append(transformRules, map[string]interface{}{
+				"include":  oldHostmetricsMetric,
+				"action":   "update",
+				"new_name": newHostmetricsMetric,
+			})
 		}
 
 		if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {

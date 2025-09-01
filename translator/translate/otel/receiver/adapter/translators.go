@@ -6,6 +6,7 @@ package adapter
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -280,9 +281,30 @@ func containsOnlyNonAdaptedMetrics(inputName string, measurements []string) bool
 			if !awsnvme.IsNVMEMetric(m) {
 				return false
 			}
+		case common.MemKey:
+			if !isHostmetricsMemoryMetric(m) {
+				return false
+			}
 		default:
 			return false
 		}
 	}
 	return true
+}
+
+// isHostmetricsMemoryMetric returns true if the metric should be collected by hostmetrics receiver instead of Telegraf
+func isHostmetricsMemoryMetric(metricName string) bool {
+	hostmetricsMemoryMetrics := []string{
+		"shared", // mem_shared -> system.linux.memory.shared
+	}
+	
+	// Remove mem_ prefix if present for comparison
+	cleanMetricName := strings.TrimPrefix(metricName, "mem_")
+	
+	for _, metric := range hostmetricsMemoryMetrics {
+		if cleanMetricName == metric {
+			return true
+		}
+	}
+	return false
 }
