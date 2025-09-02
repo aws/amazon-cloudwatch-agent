@@ -59,10 +59,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		otlps, err := otlp.ParseOtlpConfig(conf, pipelineName, otlpKey, pipeline.SignalTraces, -1)
 		if err == nil {
 			for _, otlpConfig := range otlps {
-				translators.Receivers.Set(otlp.NewTranslator(
-					otlpConfig,
-					otlp.WithSignal(pipeline.SignalTraces)),
-				)
+				translators.Receivers.Set(otlp.NewTranslator(otlpConfig))
 			}
 		}
 	}

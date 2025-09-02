@@ -75,7 +75,7 @@ func TestTracesTranslator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Clear cache before each test case
 			configCache = make(map[EndpointConfig]component.Config)
-			tt := NewTranslator(testCase.config, WithSignal(pipeline.SignalTraces))
+			tt := NewTranslator(testCase.config)
 			got, err := tt.Translate(confmap.New())
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
@@ -121,7 +121,7 @@ func TestMetricsTranslator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Clear cache before each test case
 			configCache = make(map[EndpointConfig]component.Config)
-			tt := NewTranslator(testCase.config, WithSignal(pipeline.SignalMetrics))
+			tt := NewTranslator(testCase.config)
 			got, err := tt.Translate(confmap.New())
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {

@@ -20,12 +20,7 @@
   },
   "traces": {
     "traces_collected": {
-      "application_signals": {
-        "tls": {
-          "cert_file": "path/to/cert.crt",
-          "key_file": "path/to/key.key"
-        }
-      }
+      "application_signals": {}
     }
   }
 }
