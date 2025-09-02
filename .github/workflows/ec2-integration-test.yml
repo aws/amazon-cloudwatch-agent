@@ -91,6 +91,13 @@ jobs:
         with:
           stack: dual  # Enables both IPv4 and IPv6 (default is dual, but explicit for clarity)
 
+      # Check IPv6 connectivity
+      - name: Debug IPv6 connectivity
+        run: |
+          echo "Testing IPv6 connectivity..."
+          curl -6 ifconfig.io || echo "No IPv6"
+          ping6 google.com -c 3 || echo "Can't reach IPv6 internet"
+
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         uses: nick-fields/retry@v2
