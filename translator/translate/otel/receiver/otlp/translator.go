@@ -34,10 +34,10 @@ const (
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	signal  pipeline.Signal
-	factory receiver.Factory
-	cfg     component.Config
-	err     error
+	factory      receiver.Factory
+	cfg          component.Config
+	err          error
+	pipelineName string
 }
 
 type EndpointConfig struct {
@@ -60,14 +60,6 @@ func ClearConfigCache() {
 	configCache = make(map[EndpointConfig]component.Config)
 }
 
-func WithSignal(signal pipeline.Signal) common.TranslatorOption {
-	return func(target any) {
-		if t, ok := target.(*translator); ok {
-			t.signal = signal
-		}
-	}
-}
-
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
@@ -80,6 +72,7 @@ func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) c
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
+	t.pipelineName = t.Name()
 	// set name as "{type - http or grpc}" then appends "_{port}" if available
 	t.SetName(string(otlpConfig.protocol))
 	if parts := strings.Split(otlpConfig.endpoint, ":"); len(parts) > 1 {
@@ -95,6 +88,11 @@ func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) c
 	for cachedConfig := range configCache {
 		if cachedConfig.protocol == otlpConfig.protocol && cachedConfig.endpoint == otlpConfig.endpoint &&
 			(cachedConfig.certFile != otlpConfig.certFile || cachedConfig.keyFile != otlpConfig.keyFile) {
+			// ignores (missing) TLS conflict for application signals pipelines https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
+			if t.pipelineName == common.AppSignals {
+				t.cfg = cachedConfig
+				break
+			}
 			t.err = fmt.Errorf("conflicting TLS configuration for %s endpoint %s", otlpConfig.protocol, otlpConfig.endpoint)
 			return t
 		}

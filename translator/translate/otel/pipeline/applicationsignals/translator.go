@@ -64,7 +64,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		for _, otlpConfig := range otlps {
 			translators.Receivers.Set(otlp.NewTranslator(
 				otlpConfig,
-				otlp.WithSignal(t.signal),
 				common.WithName(common.AppSignals)),
 			)
 		}
