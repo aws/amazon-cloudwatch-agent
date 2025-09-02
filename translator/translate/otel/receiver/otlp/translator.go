@@ -34,10 +34,9 @@ const (
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	factory      receiver.Factory
-	cfg          component.Config
-	err          error
-	pipelineName string
+	factory        receiver.Factory
+	endpointConfig EndpointConfig
+	pipelineName   string
 }
 
 type EndpointConfig struct {
@@ -63,14 +62,14 @@ func ClearConfigCache() {
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
-	t := &translator{factory: otlpreceiver.NewFactory()}
+	t := &translator{
+		factory:        otlpreceiver.NewFactory(),
+		endpointConfig: otlpConfig,
+	}
 	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
-
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
 
 	t.pipelineName = t.Name()
 	// set name as "{type - http or grpc}" then appends "_{port}" if available
@@ -79,45 +78,6 @@ func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) c
 		t.SetName(t.Name() + "_" + parts[1])
 	}
 
-	// check and get existing receiver config in the cache
-	if existingCfg, exists := configCache[otlpConfig]; exists {
-		t.cfg = existingCfg
-		return t
-	}
-
-	for cachedConfig := range configCache {
-		if cachedConfig.protocol == otlpConfig.protocol && cachedConfig.endpoint == otlpConfig.endpoint &&
-			(cachedConfig.certFile != otlpConfig.certFile || cachedConfig.keyFile != otlpConfig.keyFile) {
-			// ignores (missing) TLS conflict for application signals pipelines https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
-			if t.pipelineName == common.AppSignals {
-				t.cfg = cachedConfig
-				break
-			}
-			t.err = fmt.Errorf("conflicting TLS configuration for %s endpoint %s", otlpConfig.protocol, otlpConfig.endpoint)
-			return t
-		}
-	}
-
-	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
-
-	tlsSettings := &configtls.ServerConfig{}
-	if otlpConfig.certFile != "" || otlpConfig.keyFile != "" {
-		tlsSettings.CertFile = otlpConfig.certFile
-		tlsSettings.KeyFile = otlpConfig.keyFile
-	}
-
-	if otlpConfig.protocol == HTTP {
-		cfg.GRPC = nil
-		cfg.HTTP.ServerConfig.Endpoint = otlpConfig.endpoint
-		cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
-	} else {
-		cfg.HTTP = nil
-		cfg.GRPC.NetAddr.Endpoint = otlpConfig.endpoint
-		cfg.GRPC.TLSSetting = tlsSettings
-	}
-
-	configCache[otlpConfig] = cfg
-	t.cfg = cfg
 	return t
 }
 
@@ -126,7 +86,45 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
-	return t.cfg, t.err
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	// check and get existing receiver config in the cache
+	if existingCfg, exists := configCache[t.endpointConfig]; exists {
+		return existingCfg, nil
+	}
+
+	for cachedConfig := range configCache {
+		if cachedConfig.protocol == t.endpointConfig.protocol && cachedConfig.endpoint == t.endpointConfig.endpoint &&
+			(cachedConfig.certFile != t.endpointConfig.certFile || cachedConfig.keyFile != t.endpointConfig.keyFile) {
+			// ignores (missing) TLS conflict for application signals pipelines https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
+			if t.pipelineName == common.AppSignals {
+				return configCache[cachedConfig], nil
+			}
+			return nil, fmt.Errorf("conflicting TLS configuration for %s endpoint %s", t.endpointConfig.protocol, t.endpointConfig.endpoint)
+		}
+	}
+
+	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
+
+	tlsSettings := &configtls.ServerConfig{}
+	if t.endpointConfig.certFile != "" || t.endpointConfig.keyFile != "" {
+		tlsSettings.CertFile = t.endpointConfig.certFile
+		tlsSettings.KeyFile = t.endpointConfig.keyFile
+	}
+
+	if t.endpointConfig.protocol == HTTP {
+		cfg.GRPC = nil
+		cfg.HTTP.ServerConfig.Endpoint = t.endpointConfig.endpoint
+		cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
+	} else {
+		cfg.HTTP = nil
+		cfg.GRPC.NetAddr.Endpoint = t.endpointConfig.endpoint
+		cfg.GRPC.TLSSetting = tlsSettings
+	}
+
+	configCache[t.endpointConfig] = cfg
+	return cfg, nil
 }
 
 func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, signal pipeline.Signal, index int) ([]EndpointConfig, error) {
