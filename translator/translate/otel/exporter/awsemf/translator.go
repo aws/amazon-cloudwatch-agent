@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
@@ -23,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 )
 
 //go:embed awsemf_default_generic.yaml
