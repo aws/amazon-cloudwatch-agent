@@ -1,49 +1,67 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
+set -u
+set -x
+set -o pipefail
+echo "****************************************"
+echo "Creating tar file for Mac OS X ${ARCH}  "
+echo "****************************************"
 
+AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
+echo "BUILD_SPACE: ${BUILD_SPACE}    agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
 
-echo "Moving amazon-cloudwatch-agent-ctl binary and config.json to /tmp..."
-sudo mv /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl /tmp/
-sudo mv /opt/aws/amazon-cloudwatch-agent/bin/config.json /tmp/
-sudo mv /opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION /tmp/
-# Step 3: Remove everything from /opt/aws/amazon-cloudwatch-agent/bin
-echo "Removing everything from /opt/aws/amazon-cloudwatch-agent/bin..."
-sudo rm -rf /opt/aws/amazon-cloudwatch-agent/bin/*
+mkdir -p ${BUILD_SPACE}/bin/darwin/${ARCH}/
 
-# Step 4: Replace everything in bin with contents from /local/home/siprmp/amazon-cloudwatch-agent/build/bin/linux_amd64/
-echo "Copying files from /local/home/siprmp/amazon-cloudwatch-agent/build/bin/linux_amd64/ to /opt/aws/amazon-cloudwatch-agent/bin/..."
-sudo cp -r /home/ec2-user/amazon-cloudwatch-agent/build/bin/linux_amd64/* /opt/aws/amazon-cloudwatch-agent/bin/
+echo "Creating darwin folders"
+MACHINE_ROOT="/opt/aws/amazon-cloudwatch-agent/"
+BUILD_ROOT="${BUILD_SPACE}/private/darwin_${ARCH}"
+TAR_NAME="amazon-cloudwatch-agent.tar.gz"
 
-# Step 5: Move amazon-cloudwatch-agent-ctl binary and config.json back to the bin directory
-echo "Moving amazon-cloudwatch-agent-ctl binary and config.json back to /opt/aws/amazon-cloudwatch-agent/bin/..."
-sudo mv /tmp/amazon-cloudwatch-agent-ctl /opt/aws/amazon-cloudwatch-agent/bin/
-sudo mv /tmp/config.json /opt/aws/amazon-cloudwatch-agent/bin/
-sudo mv /tmp/CWAGENT_VERSION /opt/aws/amazon-cloudwatch-agent/bin/
+echo "Creating darwin workspace"
+mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}logs
+mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}bin
+mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}etc
+mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}etc/amazon-cloudwatch-agent.d
+mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}var
+mkdir -p ${BUILD_ROOT}${MACHINE_ROOT}doc
+mkdir -p ${BUILD_ROOT}/Library/LaunchDaemons
 
-# Step 6: Stop CloudWatch Agent
-echo "Stopping CloudWatch Agent..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a stop
+############################# create the symbolic links
+# log
+mkdir -p ${BUILD_ROOT}/var/log/amazon
+ln -f -s /opt/aws/amazon-cloudwatch-agent/logs ${BUILD_ROOT}/var/log/amazon/amazon-cloudwatch-agent
 
-# Step 7: Remove CloudWatch Agent logs
-echo "Removing CloudWatch Agent logs..."
-sleep 2
-sudo rm /opt/aws/amazon-cloudwatch/logs/amazon-cloudwatch-agent.log
-sleep 5
-# Step 8: Print the status of CloudWatch Agent
-echo "Printing CloudWatch Agent status..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a status
+echo "Copying application files"
+cp ${PREPKGPATH}/LICENSE ${BUILD_ROOT}${MACHINE_ROOT}
+cp ${PREPKGPATH}/NOTICE ${BUILD_ROOT}${MACHINE_ROOT}
+cp ${PREPKGPATH}/THIRD-PARTY-LICENSES ${BUILD_ROOT}${MACHINE_ROOT}
+cp ${PREPKGPATH}/RELEASE_NOTES ${BUILD_ROOT}${MACHINE_ROOT}
+cp ${PREPKGPATH}/CWAGENT_VERSION ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/amazon-cloudwatch-agent ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/amazon-cloudwatch-agent-ctl ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/config-translator ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/config-downloader ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/start-amazon-cloudwatch-agent ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}${MACHINE_ROOT}etc/
+cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}${MACHINE_ROOT}doc/
+cp ${PREPKGPATH}/com.amazon.cloudwatch.agent.plist ${BUILD_ROOT}/Library/LaunchDaemons/
 
-# Step 9: Echo starting the agent
-echo "Starting the CloudWatch Agent..."
+echo "Setting permissions as required by launchd"
+chmod 600 ${BUILD_ROOT}/Library/LaunchDaemons/*
+chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/amazon-cloudwatch-agent
+chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/amazon-cloudwatch-agent-ctl
+chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/start-amazon-cloudwatch-agent
 
-echo "Printing CloudWatch Agent status before start..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a status
+echo "Creating tar"
+(
+     cd ${BUILD_ROOT}
+     tar -czf $TAR_NAME *
+)
 
-sudo chmod 777 -R /opt/aws/amazon-cloudwatch-agent/bin
+echo "Archive created at ${BUILD_ROOT}/${TAR_NAME}"
 
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
-
-echo "Printing CloudWatch Agent status after start..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a status
-
-echo "Printing CloudWatch Agent logs..."
-sudo tail -f /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+echo "Copying tarball to bin"
+mv ${BUILD_ROOT}/${TAR_NAME} ${BUILD_SPACE}/bin/darwin/${ARCH}/${TAR_NAME}
+ls -ltr ${BUILD_SPACE}/bin/darwin/${ARCH}/*.tar.gz
