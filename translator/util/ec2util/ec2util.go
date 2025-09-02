@@ -103,10 +103,12 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		Logger:                    configaws.SDKLogger{},
 		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
 		EC2MetadataEnableFallback: aws.Bool(false),
+		UseDualStackEndpoint:      endpoints.DualStackEndpointStateEnabled,
 	})
 	mdEnableFallback := ec2metadata.New(ses, &aws.Config{
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
+		LogLevel:             configaws.SDKLogLevel(),
+		Logger:               configaws.SDKLogger{},
+		UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 	})
 
 	// ec2 and ecs treats retries for getting host name differently

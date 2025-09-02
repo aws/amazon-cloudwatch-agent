@@ -5,6 +5,7 @@ package entitystore
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -270,8 +271,9 @@ var getEC2Provider = func(region string, ec2CredentialConfig *configaws.Credenti
 	return ec2.New(
 		ec2CredentialConfig.Credentials(),
 		&aws.Config{
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
+			LogLevel:             configaws.SDKLogLevel(),
+			Logger:               configaws.SDKLogger{},
+			UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 		})
 }
 

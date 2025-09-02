@@ -5,6 +5,7 @@ package ec2metadataprovider
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"log"
 	"strings"
 
@@ -39,10 +40,12 @@ func NewMetadataProvider(p client.ConfigProvider, retries int) MetadataProvider 
 		Logger:                    configaws.SDKLogger{},
 		Retryer:                   retryer.NewIMDSRetryer(retries),
 		EC2MetadataEnableFallback: aws.Bool(false),
+		UseDualStackEndpoint:      endpoints.DualStackEndpointStateEnabled,
 	}
 	enableFallbackConfig := &aws.Config{
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
+		LogLevel:             configaws.SDKLogLevel(),
+		Logger:               configaws.SDKLogger{},
+		UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 	}
 	return &metadataClient{
 		metadataFallbackDisabled: ec2metadata.New(p, disableFallbackConfig),

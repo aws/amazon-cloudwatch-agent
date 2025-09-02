@@ -5,6 +5,7 @@ package ec2tagger
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"hash/fnv"
 	"os"
 	"sync"
@@ -74,8 +75,9 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
 				&aws.Config{
-					LogLevel: configaws.SDKLogLevel(),
-					Logger:   configaws.SDKLogger{},
+					LogLevel:             configaws.SDKLogLevel(),
+					Logger:               configaws.SDKLogger{},
+					UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 				})
 		},
 	}

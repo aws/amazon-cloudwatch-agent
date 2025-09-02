@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"regexp"
 	"strings"
 	"sync"
@@ -169,10 +170,11 @@ func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlog
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{
-			Endpoint: aws.String(c.EndpointOverride),
-			Retryer:  retryer,
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
+			Endpoint:             aws.String(c.EndpointOverride),
+			Retryer:              retryer,
+			LogLevel:             configaws.SDKLogLevel(),
+			Logger:               configaws.SDKLogger{},
+			UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))

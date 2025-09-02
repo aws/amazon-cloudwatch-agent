@@ -140,10 +140,11 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 	rootCredentials := c.rootCredentials()
 	config := &aws.Config{
-		Region:     aws.String(c.Region),
-		HTTPClient: &http.Client{Timeout: 1 * time.Minute},
-		LogLevel:   SDKLogLevel(),
-		Logger:     SDKLogger{},
+		Region:               aws.String(c.Region),
+		HTTPClient:           &http.Client{Timeout: 1 * time.Minute},
+		LogLevel:             SDKLogLevel(),
+		Logger:               SDKLogger{},
+		UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 	}
 	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region)
 	return getSession(config)
@@ -178,11 +179,12 @@ func (s *stsCredentialProvider) Retrieve() (credentials.Value, error) {
 func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *credentials.Credentials {
 	regional := &stscreds.AssumeRoleProvider{
 		Client: newStsClient(c, &aws.Config{
-			Region:              aws.String(region),
-			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
-			HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
-			LogLevel:            SDKLogLevel(),
-			Logger:              SDKLogger{},
+			Region:               aws.String(region),
+			STSRegionalEndpoint:  endpoints.RegionalSTSEndpoint,
+			HTTPClient:           &http.Client{Timeout: 1 * time.Minute},
+			LogLevel:             SDKLogLevel(),
+			Logger:               SDKLogger{},
+			UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 		}),
 		RoleARN:  roleARN,
 		Duration: stscreds.DefaultDuration,
@@ -192,12 +194,13 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *
 
 	partitional := &stscreds.AssumeRoleProvider{
 		Client: newStsClient(c, &aws.Config{
-			Region:              aws.String(fallbackRegion),
-			Endpoint:            aws.String(getFallbackEndpoint(fallbackRegion)),
-			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
-			HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
-			LogLevel:            SDKLogLevel(),
-			Logger:              SDKLogger{},
+			Region:               aws.String(fallbackRegion),
+			Endpoint:             aws.String(getFallbackEndpoint(fallbackRegion)),
+			STSRegionalEndpoint:  endpoints.RegionalSTSEndpoint,
+			HTTPClient:           &http.Client{Timeout: 1 * time.Minute},
+			LogLevel:             SDKLogLevel(),
+			Logger:               SDKLogger{},
+			UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 		}),
 		RoleARN:  roleARN,
 		Duration: stscreds.DefaultDuration,

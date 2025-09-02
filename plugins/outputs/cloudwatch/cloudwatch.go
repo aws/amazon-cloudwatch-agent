@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"log"
 	"reflect"
 	"sort"
@@ -115,10 +116,11 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	svc := cloudwatch.New(
 		configProvider,
 		&aws.Config{
-			Endpoint: aws.String(c.config.EndpointOverride),
-			Retryer:  logThrottleRetryer,
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
+			Endpoint:             aws.String(c.config.EndpointOverride),
+			Retryer:              logThrottleRetryer,
+			LogLevel:             configaws.SDKLogLevel(),
+			Logger:               configaws.SDKLogger{},
+			UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 		})
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
 	if c.config.MiddlewareID != nil {

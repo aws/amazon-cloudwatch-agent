@@ -4,6 +4,7 @@
 package aws
 
 import (
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -62,8 +63,9 @@ func TestConfusedDeputyHeaders(t *testing.T) {
 			client := newStsClient(mock.Session, &aws.Config{
 				// These are examples credentials pulled from:
 				// https://docs.aws.amazon.com/STS/latest/APIReference/API_GetAccessKeyInfo.html
-				Credentials: credentials.NewStaticCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", ""),
-				Region:      aws.String("us-east-1"),
+				Credentials:          credentials.NewStaticCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", ""),
+				Region:               aws.String("us-east-1"),
+				UseDualStackEndpoint: endpoints.DualStackEndpointStateEnabled,
 			})
 
 			request, _ := client.AssumeRoleRequest(&sts.AssumeRoleInput{
