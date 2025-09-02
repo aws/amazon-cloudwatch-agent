@@ -48,8 +48,11 @@ const (
 	ecsSdFileNameToken      = "ecsSdFileName"
 )
 
-//go:embed sampleConfig/prometheus_config.yaml
-var prometheusConfig string
+//go:embed sampleConfig/prometheus_ecs_config.yaml
+var ecsPrometheusConfig string
+
+//go:embed sampleConfig/prometheus_kubernetes_config.yaml
+var k8sPrometheusConfig string
 
 type testCase struct {
 	filename        string
@@ -430,7 +433,7 @@ func TestPrometheusConfig(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -453,7 +456,7 @@ func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -479,7 +482,7 @@ func TestOtelPrometheusConfig(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -502,13 +505,29 @@ func TestCombinedPrometheusConfig(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
 	// In the following checks, we first load the json and replace tokens with the temp files
 	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
 	checkTranslation(t, "prometheus_combined_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+}
+
+func TestPrometheusAndKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(k8sPrometheusConfig), os.ModePerm)
+	require.NoError(t, err)
+	checkTranslation(t, "prometheus_and_kubernetes_config", "linux", expectedEnvVars, "")
 }
 
 func TestBasicConfig(t *testing.T) {

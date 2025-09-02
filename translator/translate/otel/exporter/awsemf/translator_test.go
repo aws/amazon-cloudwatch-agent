@@ -32,10 +32,12 @@ func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
-		env     map[string]string
-		input   map[string]any
-		want    map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
-		wantErr error
+		env            map[string]string
+		input          map[string]any
+		want           map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
+		wantErr        error
+		mockECS        bool
+		mockPrometheus bool
 	}{
 		"GenerateAwsEmfExporterConfigEcs": {
 			input: map[string]any{
@@ -76,6 +78,7 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockECS: true,
 		},
 		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
 			input: map[string]any{
@@ -118,6 +121,7 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockECS: true,
 		},
 		"GenerateAwsEmfExporterConfigKubernetes": {
 			input: map[string]any{
@@ -675,6 +679,7 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
+			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
 			input: map[string]any{
@@ -709,6 +714,7 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
 			input: map[string]any{
@@ -752,6 +758,7 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
+			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
 			input: map[string]any{
@@ -785,12 +792,110 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockPrometheus: true,
+		},
+		"GenerateAwsEmfExporterConfigPrometheusFromSeparateTest": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"log_group_name":  "/test/log/group",
+							"log_stream_name": "{LogStreamName}",
+							"emf_processor": map[string]any{
+								"metric_declaration": []any{
+									map[string]any{
+										"source_labels":    []string{"Service", "Namespace"},
+										"label_matcher":    "(.*node-exporter.*|.*kube-dns.*);kube-system$",
+										"dimensions":       [][]string{{"Service", "Namespace"}},
+										"metric_selectors": []string{"^coredns_dns_request_type_count_total$"},
+									},
+								},
+								"metric_unit": map[string]any{
+									"jvm_gc_collection_seconds_sum": "Milliseconds",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]any{
+				"namespace":                              "CWAgent/Prometheus",
+				"log_group_name":                         "/test/log/group",
+				"log_stream_name":                        "{JobName}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions:          [][]string{{"Service", "Namespace"}},
+						MetricNameSelectors: []string{"^coredns_dns_request_type_count_total$"},
+						LabelMatchers: []*awsemfexporter.LabelMatcher{
+							{
+								LabelNames: []string{"Service", "Namespace"},
+								Regex:      "(.*node-exporter.*|.*kube-dns.*);kube-system$",
+							},
+						},
+					},
+				},
+				"metric_descriptors": []awsemfexporter.MetricDescriptor{
+					{
+						MetricName: "jvm_gc_collection_seconds_sum",
+						Unit:       "Milliseconds",
+					},
+				},
+				"local_mode": false,
+			},
+			mockPrometheus: true,
+		},
+		"GenerateAwsEmfExporterConfigOTLP": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"otlp": map[string]any{},
+					},
+				},
+			},
+			want: map[string]any{
+				"namespace":                              "CWAgent",
+				"log_group_name":                         "/aws/cwagent",
+				"log_stream_name":                        "",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration(nil),
+				"metric_descriptors":  nilMetricDescriptorsSlice,
+				"local_mode":          false,
+				"add_entity":          true,
+			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			if testCase.mockECS {
+				originalIsEcsFunc := isEcsFunc
+				isEcsFunc = func() bool { return true }
+				defer func() { isEcsFunc = originalIsEcsFunc }()
+			}
+
+			translator := tt
+			if testCase.mockPrometheus {
+				translator = NewTranslatorWithName(common.PipelineNamePrometheus)
+			}
+
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf)
+			got, err := translator.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
 			if err == nil {
@@ -810,6 +915,9 @@ func TestTranslator(t *testing.T) {
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
 				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				if addEntity, exists := testCase.want["add_entity"]; exists {
+					assert.Equal(t, addEntity, gotCfg.AddEntity)
+				}
 				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)
@@ -910,6 +1018,9 @@ func TestTranslatorForKueue(t *testing.T) {
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
 				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				if addEntity, exists := testCase.want["add_entity"]; exists {
+					assert.Equal(t, addEntity, gotCfg.AddEntity)
+				}
 				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)

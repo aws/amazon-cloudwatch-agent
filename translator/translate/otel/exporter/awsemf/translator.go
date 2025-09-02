@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -55,6 +56,11 @@ var (
 	roleARNPathKey             = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 )
 
+// func variable to override in tests
+var isEcsFunc = func() bool {
+	return ecsutil.GetECSUtilSingleton().IsECS()
+}
+
 type translator struct {
 	name    string
 	factory exporter.Factory
@@ -88,10 +94,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultEcsConfig
 	} else if isKubernetesKueue(c, t.name) {
 		defaultConfig = defaultKubernetesKueueConfig
+	} else if isPrometheus(c, t.name) {
+		defaultConfig = defaultPrometheusConfig
 	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
-	} else if isPrometheus(c) {
-		defaultConfig = defaultPrometheusConfig
 	}
 
 	if isOTLP(c) {
@@ -144,12 +150,12 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setKubernetesKueueFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if isKubernetes(c) {
-		if err := setKubernetesFields(c, cfg); err != nil {
+	} else if isPrometheus(c, t.name) {
+		if err := setPrometheusFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if isPrometheus(c) {
-		if err := setPrometheusFields(c, cfg); err != nil {
+	} else if isKubernetes(c) {
+		if err := setKubernetesFields(c, cfg); err != nil {
 			return nil, err
 		}
 	}
@@ -164,7 +170,7 @@ func (t *translator) isCiJMX(conf *confmap.Conf) bool {
 }
 
 func isEcs(conf *confmap.Conf) bool {
-	return conf.IsSet(ecsBasePathKey)
+	return conf.IsSet(ecsBasePathKey) && isEcsFunc()
 }
 
 func isKubernetes(conf *confmap.Conf) bool {
@@ -176,8 +182,8 @@ func isKubernetesKueue(conf *confmap.Conf, pipelineName string) bool {
 	return isKubernetes(conf) && pipelineName == common.PipelineNameKueue && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
 }
 
-func isPrometheus(conf *confmap.Conf) bool {
-	return conf.IsSet(prometheusBasePathKey)
+func isPrometheus(conf *confmap.Conf, pipelineName string) bool {
+	return conf.IsSet(prometheusBasePathKey) && pipelineName == common.PipelineNamePrometheus
 }
 
 func isOTLP(conf *confmap.Conf) bool {
