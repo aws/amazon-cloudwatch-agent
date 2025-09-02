@@ -80,6 +80,11 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
+      # Install resolvconf to replace openresolv
+      - name: Install resolvconf
+        run: sudo apt-get update && sudo apt-get install -y resolvconf
+
+
       # Add this step to enable IPv6 via Cloudflare Warp
       - name: Setup Cloudflare Warp for IPv6
         uses: fscarmen/warp-on-actions@v1.3
