@@ -80,6 +80,12 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
+      # Add this step to enable IPv6 via Cloudflare Warp
+      - name: Setup Cloudflare Warp for IPv6
+        uses: fscarmen/warp-on-actions@v1.3
+        with:
+          stack: dual  # Enables both IPv4 and IPv6 (default is dual, but explicit for clarity)
+
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         uses: nick-fields/retry@v2
