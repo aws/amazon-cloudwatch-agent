@@ -17,7 +17,7 @@ import (
 )
 
 func TestTranslatorWithoutDataType(t *testing.T) {
-	config := endpointConfig{
+	config := EndpointConfig{
 		protocol: HTTP,
 		endpoint: "127.0.0.1:4318",
 	}
@@ -30,15 +30,15 @@ func TestTranslatorWithoutDataType(t *testing.T) {
 
 func TestTracesTranslator(t *testing.T) {
 	// Clear cache before test
-	configCache = make(map[endpointConfig]component.Config)
+	configCache = make(map[EndpointConfig]component.Config)
 
 	testCases := map[string]struct {
-		config  endpointConfig
+		config  EndpointConfig
 		want    func(*otlpreceiver.Config) bool
 		wantErr error
 	}{
 		"WithGRPCDefault": {
-			config: endpointConfig{
+			config: EndpointConfig{
 				protocol: GRPC,
 				endpoint: "127.0.0.1:4317",
 			},
@@ -47,7 +47,7 @@ func TestTracesTranslator(t *testing.T) {
 			},
 		},
 		"WithHTTPDefault": {
-			config: endpointConfig{
+			config: EndpointConfig{
 				protocol: HTTP,
 				endpoint: "127.0.0.1:4318",
 			},
@@ -56,7 +56,7 @@ func TestTracesTranslator(t *testing.T) {
 			},
 		},
 		"WithTLS": {
-			config: endpointConfig{
+			config: EndpointConfig{
 				protocol: GRPC,
 				endpoint: "127.0.0.1:4317",
 				certFile: "path/to/cert.crt",
@@ -74,7 +74,7 @@ func TestTracesTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Clear cache before each test case
-			configCache = make(map[endpointConfig]component.Config)
+			configCache = make(map[EndpointConfig]component.Config)
 			tt := NewTranslator(testCase.config)
 			got, err := tt.Translate(confmap.New())
 			assert.Equal(t, testCase.wantErr, err)
@@ -90,15 +90,15 @@ func TestTracesTranslator(t *testing.T) {
 
 func TestMetricsTranslator(t *testing.T) {
 	// Clear cache before test
-	configCache = make(map[endpointConfig]component.Config)
+	configCache = make(map[EndpointConfig]component.Config)
 
 	testCases := map[string]struct {
-		config  endpointConfig
+		config  EndpointConfig
 		want    func(*otlpreceiver.Config) bool
 		wantErr error
 	}{
 		"WithGRPCEndpoint": {
-			config: endpointConfig{
+			config: EndpointConfig{
 				protocol: GRPC,
 				endpoint: "127.0.0.1:1234",
 			},
@@ -107,7 +107,7 @@ func TestMetricsTranslator(t *testing.T) {
 			},
 		},
 		"WithHTTPEndpoint": {
-			config: endpointConfig{
+			config: EndpointConfig{
 				protocol: HTTP,
 				endpoint: "127.0.0.1:2345",
 			},
@@ -120,7 +120,7 @@ func TestMetricsTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Clear cache before each test case
-			configCache = make(map[endpointConfig]component.Config)
+			configCache = make(map[EndpointConfig]component.Config)
 			tt := NewTranslator(testCase.config)
 			got, err := tt.Translate(confmap.New())
 			assert.Equal(t, testCase.wantErr, err)
@@ -136,9 +136,9 @@ func TestMetricsTranslator(t *testing.T) {
 
 func TestCaching(t *testing.T) {
 	// Clear cache before test
-	configCache = make(map[endpointConfig]component.Config)
+	configCache = make(map[EndpointConfig]component.Config)
 
-	config := endpointConfig{
+	config := EndpointConfig{
 		protocol: HTTP,
 		endpoint: "127.0.0.1:4318",
 	}
@@ -158,7 +158,7 @@ func TestTLSConflictDetection(t *testing.T) {
 	ClearConfigCache() // Clear cache before test
 
 	// First translator with TLS
-	config1 := endpointConfig{
+	config1 := EndpointConfig{
 		protocol: HTTP,
 		endpoint: "127.0.0.1:4318",
 		certFile: "cert1.pem",
@@ -169,7 +169,7 @@ func TestTLSConflictDetection(t *testing.T) {
 	assert.NoError(t, err1)
 
 	// Second translator with different TLS for same endpoint
-	config2 := endpointConfig{
+	config2 := EndpointConfig{
 		protocol: HTTP,
 		endpoint: "127.0.0.1:4318",
 		certFile: "cert2.pem",
