@@ -76,7 +76,6 @@ type CloudWatchLogs struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	pusherStopChan  chan struct{}
 	pusherWaitGroup sync.WaitGroup
 	cwDests         sync.Map
 	workerPool      pusher.WorkerPool
@@ -92,8 +91,6 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
-	close(c.pusherStopChan)
-	c.pusherWaitGroup.Wait()
 
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
@@ -101,6 +98,8 @@ func (c *CloudWatchLogs) Close() error {
 		}
 		return true
 	})
+
+	c.pusherWaitGroup.Wait()
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
@@ -155,7 +154,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, c.pusherStopChan, &c.pusherWaitGroup)
+	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
 	c.cwDests.Store(t, cwd)
 	return cwd
@@ -418,7 +417,6 @@ func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
-			pusherStopChan:     make(chan struct{}),
 			cwDests:            sync.Map{},
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
