@@ -202,12 +202,9 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_app_x"}, Action: relabel.Replace, TargetLabel: "app_x", Regex: relabel.MustNewRegexp("(.*)")},
 	}
 
-	defaultMetricRelabelConfigs := []*relabel.Config{}
-
 	for _, scrapeConfig := range scrapeConfigs {
 		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
 			scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-			scrapeConfig.MetricRelabelConfigs = defaultMetricRelabelConfigs
 		}
 	}
 }
