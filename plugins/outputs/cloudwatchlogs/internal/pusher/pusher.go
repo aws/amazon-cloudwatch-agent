@@ -33,11 +33,10 @@ func NewPusher(
 	workerPool WorkerPool,
 	flushTimeout time.Duration,
 	retryDuration time.Duration,
-	stop <-chan struct{},
 	wg *sync.WaitGroup,
 ) *Pusher {
-	s := createSender(logger, service, targetManager, workerPool, retryDuration, stop)
-	q := newQueue(logger, target, flushTimeout, entityProvider, s, stop, wg)
+	s := createSender(logger, service, targetManager, workerPool, retryDuration)
+	q := newQueue(logger, target, flushTimeout, entityProvider, s, wg)
 	targetManager.PutRetentionPolicy(target)
 	return &Pusher{
 		Target:         target,
@@ -51,6 +50,7 @@ func NewPusher(
 
 func (p *Pusher) Stop() {
 	p.Queue.Stop()
+	p.Sender.Stop()
 }
 
 // createSender initializes a Sender. Wraps it in a senderPool if a WorkerPool is provided.
@@ -60,9 +60,8 @@ func createSender(
 	targetManager TargetManager,
 	workerPool WorkerPool,
 	retryDuration time.Duration,
-	stop <-chan struct{},
 ) Sender {
-	s := newSender(logger, service, targetManager, retryDuration, stop)
+	s := newSender(logger, service, targetManager, retryDuration)
 	if workerPool == nil {
 		return s
 	}

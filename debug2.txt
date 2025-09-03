@@ -1,0 +1,639 @@
+goroutine 956 [running]:
+runtime/pprof.writeGoroutineStacks({0x7765fe0, 0xc000ad0460})
+	runtime/pprof/pprof.go:764 +0x6a
+runtime/pprof.writeGoroutine({0x7765fe0?, 0xc000ad0460?}, 0xb?)
+	runtime/pprof/pprof.go:753 +0x25
+runtime/pprof.(*Profile).WriteTo(0xae74d30?, {0x7765fe0?, 0xc000ad0460?}, 0xc?)
+	runtime/pprof/pprof.go:377 +0x14b
+net/http/pprof.handler.ServeHTTP({0xc0007fa8b1, 0x9}, {0x77c3f28, 0xc000ad0460}, 0xc000a81180)
+	net/http/pprof/pprof.go:272 +0x52f
+net/http/pprof.Index({0x77c3f28, 0xc000ad0460}, 0xc000a81180?)
+	net/http/pprof/pprof.go:389 +0xde
+net/http.HandlerFunc.ServeHTTP(0xb047fc0?, {0x77c3f28?, 0xc000ad0460?}, 0x738f96?)
+	net/http/server.go:2294 +0x29
+net/http.(*ServeMux).ServeHTTP(0x477199?, {0x77c3f28, 0xc000ad0460}, 0xc000a81180)
+	net/http/server.go:2822 +0x1c4
+net/http.serverHandler.ServeHTTP({0xc000e0eb70?}, {0x77c3f28?, 0xc000ad0460?}, 0x1?)
+	net/http/server.go:3301 +0x8e
+net/http.(*conn).serve(0xc001706480, {0x77e7db8, 0xc000fa04e0})
+	net/http/server.go:2102 +0x625
+created by net/http.(*Server).Serve in goroutine 14
+	net/http/server.go:3454 +0x485
+
+goroutine 1 [select, 3 minutes]:
+go.opentelemetry.io/collector/otelcol.(*Collector).Run(0xc000ae1180, {0x77e7d80, 0xb07b0c0})
+	go.opentelemetry.io/collector/otelcol@v0.124.0/collector.go:345 +0x3ef
+go.opentelemetry.io/collector/otelcol.NewCommand.func1(0xc0006ac908, {0x6d26623?, 0x7?, 0x6d16ae3?})
+	go.opentelemetry.io/collector/otelcol@v0.124.0/command.go:39 +0xa7
+github.com/spf13/cobra.(*Command).execute(0xc0006ac908, {0xc000accf20, 0x1, 0x1})
+	github.com/spf13/cobra@v1.9.1/command.go:1015 +0xaaa
+github.com/spf13/cobra.(*Command).ExecuteC(0xc0006ac908)
+	github.com/spf13/cobra@v1.9.1/command.go:1148 +0x46f
+github.com/spf13/cobra.(*Command).Execute(0x0?)
+	github.com/spf13/cobra@v1.9.1/command.go:1071 +0x13
+main.runAgent({0x77e7df0, 0xc000f291d0}, {0xb07b0c0, 0x0, 0x0}, {0xb07b0c0, 0x0, 0x0})
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:395 +0x1705
+main.reloadLoop(0xc000102620, {0xb07b0c0, 0x0, 0x0}, {0xb07b0c0, 0x0, 0x0}, {0xc000d9fde0, 0x0, 0x0}, ...)
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:180 +0x347
+main.main()
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:683 +0xb9c
+
+goroutine 49 [select, 3 minutes]:
+main.reloadLoop.func1()
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:118 +0x7e
+created by main.reloadLoop in goroutine 1
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:117 +0x205
+
+goroutine 14 [IO wait]:
+internal/poll.runtime_pollWait(0x7f61d4166f08, 0x72)
+	runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc000865580?, 0x900000036?, 0x0)
+	internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Accept(0xc000865580)
+	internal/poll/fd_unix.go:620 +0x295
+net.(*netFD).accept(0xc000865580)
+	net/fd_unix.go:172 +0x29
+net.(*TCPListener).accept(0xc00099d4c0)
+	net/tcpsock_posix.go:159 +0x1b
+net.(*TCPListener).Accept(0xc00099d4c0)
+	net/tcpsock.go:380 +0x30
+net/http.(*Server).Serve(0xc0009cc000, {0x77c45a0, 0xc00099d4c0})
+	net/http/server.go:3424 +0x30c
+net/http.(*Server).ListenAndServe(0xc0009cc000)
+	net/http/server.go:3350 +0x71
+net/http.ListenAndServe(...)
+	net/http/server.go:3665
+main.main.func1()
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:534 +0x24b
+created by main.main in goroutine 1
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:521 +0x55f
+
+goroutine 15 [chan receive, 2 minutes]:
+main.main.func2()
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:543 +0x94
+created by main.main in goroutine 1
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:539 +0x56b
+
+goroutine 33 [syscall, 3 minutes]:
+os/signal.signal_recv()
+	runtime/sigqueue.go:152 +0x29
+os/signal.loop()
+	os/signal/signal_unix.go:23 +0x13
+created by os/signal.Notify.func1.1 in goroutine 1
+	os/signal/signal.go:152 +0x1f
+
+goroutine 50 [select, 2 minutes]:
+main.reloadLoop.func2({0x77e7df0, 0xc000f291d0})
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:135 +0xef
+created by main.reloadLoop in goroutine 1
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:131 +0x25b
+
+goroutine 51 [select, 2 minutes]:
+main.reloadLoop.func3({0x77e7df0, 0xc000f291d0}, {0x7ffdbb6da631, 0x34})
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:153 +0x11a
+created by main.reloadLoop in goroutine 1
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:148 +0x305
+
+goroutine 52 [chan receive, 3 minutes]:
+gopkg.in/natefinch/lumberjack%2ev2.(*Logger).millRun(...)
+	gopkg.in/natefinch/lumberjack.v2@v2.0.0/lumberjack.go:379
+created by gopkg.in/natefinch/lumberjack%2ev2.(*Logger).mill.func1 in goroutine 1
+	gopkg.in/natefinch/lumberjack.v2@v2.0.0/lumberjack.go:390 +0x96
+
+goroutine 53 [select]:
+github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).Run(0xc000fa1c80, {0x77e7df0, 0xc000f291d0})
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:120 +0x65b
+created by main.runAgent in goroutine 1
+	github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go:324 +0xb0a
+
+goroutine 54 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*LogFile).Start.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/logfile.go:121 +0xbf
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*LogFile).Start in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/logfile.go:116 +0x113
+
+goroutine 106 [sleep]:
+time.Sleep(0xee6b280)
+	runtime/time.go:338 +0x165
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:80 +0x94
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents in goroutine 122
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:71 +0x18b
+
+goroutine 118 [select, 2 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).exitOnDeletion(0xc000d4d0e0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:699 +0xef
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:134 +0x3c5
+
+goroutine 104 [sleep]:
+time.Sleep(0xee6b280)
+	runtime/time.go:338 +0x165
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:80 +0x94
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents in goroutine 116
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:71 +0x18b
+
+goroutine 117 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/state.(*rangeManager).Run(0xc0010e19c0, {0xc001156af0?, 0xc001156b60?})
+	github.com/aws/amazon-cloudwatch-agent/internal/state/manager.go:109 +0x32c
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.NewTailerSrc in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:125 +0x389
+
+goroutine 137 [select]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 62 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/extension/entitystore.(*Retryer).refreshLoop(0xc001112f00, 0xc001140440)
+	github.com/aws/amazon-cloudwatch-agent/extension/entitystore/retryer.go:66 +0x191
+created by github.com/aws/amazon-cloudwatch-agent/extension/entitystore.(*serviceprovider).startServiceProvider in goroutine 44
+	github.com/aws/amazon-cloudwatch-agent/extension/entitystore/serviceprovider.go:90 +0x238
+
+goroutine 63 [select, 2 minutes]:
+github.com/aws/amazon-cloudwatch-agent/extension/entitystore.(*Retryer).refreshLoop(0xc001112f50, 0xc001140450)
+	github.com/aws/amazon-cloudwatch-agent/extension/entitystore/retryer.go:66 +0x191
+created by github.com/aws/amazon-cloudwatch-agent/extension/entitystore.(*serviceprovider).startServiceProvider in goroutine 44
+	github.com/aws/amazon-cloudwatch-agent/extension/entitystore/serviceprovider.go:91 +0x2c9
+
+goroutine 105 [sleep]:
+time.Sleep(0xee6b280)
+	runtime/time.go:338 +0x165
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:80 +0x94
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents in goroutine 119
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:71 +0x18b
+
+goroutine 147 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).manageFlushTimer(0xc000bd22d0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:212 +0x96
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 141
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:148 +0x10f
+
+goroutine 116 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).waitForChanges(0xc000d4cd80)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:520 +0xd9
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).tailFileSync(0xc000d4cd80)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:465 +0x776
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:137 +0x405
+
+goroutine 115 [select, 2 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).exitOnDeletion(0xc000d4cd80)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:699 +0xef
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:134 +0x3c5
+
+goroutine 119 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).waitForChanges(0xc000d4d0e0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:520 +0xd9
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).tailFileSync(0xc000d4d0e0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:465 +0x776
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:137 +0x405
+
+goroutine 120 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/state.(*rangeManager).Run(0xc0010e1a00, {0xc001156cb0?, 0xc001156d20?})
+	github.com/aws/amazon-cloudwatch-agent/internal/state/manager.go:109 +0x32c
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.NewTailerSrc in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:125 +0x389
+
+goroutine 121 [select, 2 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).exitOnDeletion(0xc000d4d320)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:699 +0xef
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:134 +0x3c5
+
+goroutine 122 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).waitForChanges(0xc000d4d320)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:520 +0xd9
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).tailFileSync(0xc000d4d320)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:465 +0x776
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:137 +0x405
+
+goroutine 123 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/state.(*rangeManager).Run(0xc0010e1a40, {0xc001156e70?, 0xc001156ee0?})
+	github.com/aws/amazon-cloudwatch-agent/internal/state/manager.go:109 +0x32c
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.NewTailerSrc in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:125 +0x389
+
+goroutine 406 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 127 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/retryer.(*LogThrottleRetryer).watchThrottleEvents(0xc0009eee10)
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:77 +0x174
+created by github.com/aws/amazon-cloudwatch-agent/internal/retryer.NewLogThrottleRetryer in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:46 +0xec
+
+goroutine 136 [select, 2 minutes]:
+github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*StatusCodeProvider).startProcessing.func1()
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/statuscode.go:60 +0x94
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*StatusCodeProvider).startProcessing in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/statuscode.go:58 +0x4f
+
+goroutine 146 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:121 +0x11e
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 141
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:117 +0xcd
+
+goroutine 138 [chan receive, 2 minutes]:
+github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*processStats).updateLoop(0xc0010dba10)
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/process.go:71 +0x65
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.newProcessStats in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/process.go:91 +0xfa
+
+goroutine 139 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*targetManager).processDescribeLogGroup(0xc0009ef900)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/target.go:184 +0x125
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.NewTargetManager in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/target.go:60 +0x136
+
+goroutine 140 [chan receive, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*targetManager).processPutRetentionPolicy(0xc0009ef900)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/target.go:231 +0x6c
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.NewTargetManager in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/target.go:61 +0x176
+
+goroutine 141 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start(0xc000bd22d0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:151 +0x1af
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.newQueue in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:73 +0x53b
+
+goroutine 142 [chan receive, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).runSrcToDest(0x0?, {0x781fb40, 0xc000d4cfc0}, {0x77c53c0, 0xc0010e5e00})
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:167 +0x153
+created by github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).Run in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:140 +0xb70
+
+goroutine 143 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/retryer.(*LogThrottleRetryer).watchThrottleEvents(0xc0009ef9a0)
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:77 +0x174
+created by github.com/aws/amazon-cloudwatch-agent/internal/retryer.NewLogThrottleRetryer in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:46 +0xec
+
+goroutine 148 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).runTail(0xc000d4cfc0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:201 +0x16f
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).SetOutput.func1 in goroutine 142
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:138 +0x58
+
+goroutine 168 [select]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 155 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:121 +0x11e
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 169
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:117 +0xcd
+
+goroutine 170 [chan receive, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).runSrcToDest(0xc0008bafd0?, {0x781fb40, 0xc000d4d200}, {0x77c53c0, 0xc000c86520})
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:167 +0x153
+created by github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).Run in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:140 +0xb70
+
+goroutine 169 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start(0xc000bd23c0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:151 +0x1af
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.newQueue in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:73 +0x53b
+
+goroutine 171 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/retryer.(*LogThrottleRetryer).watchThrottleEvents(0xc000ba47d0)
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:77 +0x174
+created by github.com/aws/amazon-cloudwatch-agent/internal/retryer.NewLogThrottleRetryer in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:46 +0xec
+
+goroutine 180 [select]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 156 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).manageFlushTimer(0xc000bd23c0)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:212 +0x96
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 169
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:148 +0x10f
+
+goroutine 157 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).runTail(0xc000d4d200)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:201 +0x16f
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).SetOutput.func1 in goroutine 170
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:138 +0x58
+
+goroutine 356 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 294 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 573 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 181 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start(0xc000ca0000)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:151 +0x1af
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.newQueue in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:73 +0x53b
+
+goroutine 182 [chan receive, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).runSrcToDest(0xc000c35d50?, {0x781fb40, 0xc000d4d440}, {0x77c53c0, 0xc00113bf40})
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:167 +0x153
+created by github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).Run in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:140 +0xb70
+
+goroutine 927 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).waitForChanges(0xc001700120)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:520 +0xd9
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).tailFileSync(0xc001700120)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:465 +0x776
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:137 +0x405
+
+goroutine 211 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 188 [select, 3 minutes]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:121 +0x11e
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 181
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:117 +0xcd
+
+goroutine 189 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).manageFlushTimer(0xc000ca0000)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:212 +0x96
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 181
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:148 +0x10f
+
+goroutine 190 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).runTail(0xc000d4d440)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:201 +0x16f
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).SetOutput.func1 in goroutine 182
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:138 +0x58
+
+goroutine 249 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 941 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).runTail(0xc001700240)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:201 +0x16f
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.(*tailerSrc).SetOutput.func1 in goroutine 940
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:138 +0x58
+
+goroutine 324 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 227 [sleep, 3 minutes]:
+time.Sleep(0x45d964b800)
+	runtime/time.go:338 +0x165
+github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*intervalStats).allowNextGetAfter(0xc0009ef8b0, 0x0?)
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/interval.go:49 +0x2b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*intervalStats).Stats.func1 in goroutine 212
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/interval.go:35 +0x207
+
+goroutine 646 [IO wait, 2 minutes]:
+internal/poll.runtime_pollWait(0x7f61d4166cd8, 0x72)
+	runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc0008cbb80?, 0xc000c1c000?, 0x0)
+	internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc0008cbb80, {0xc000c1c000, 0x1800, 0x1800})
+	internal/poll/fd_unix.go:165 +0x27a
+net.(*netFD).Read(0xc0008cbb80, {0xc000c1c000?, 0xc000c1c000?, 0x5?})
+	net/fd_posix.go:55 +0x25
+net.(*conn).Read(0xc000782358, {0xc000c1c000?, 0x7f621ad980d0?, 0x7f621ad8f5c0?})
+	net/net.go:194 +0x45
+crypto/tls.(*atLeastReader).Read(0xc00000e480, {0xc000c1c000?, 0x17fb?, 0xc00097d9d0?})
+	crypto/tls/conn.go:809 +0x3b
+bytes.(*Buffer).ReadFrom(0xc000fee638, {0x77675a0, 0xc00000e480})
+	bytes/buffer.go:211 +0x98
+crypto/tls.(*Conn).readFromUntil(0xc000fee388, {0x7767860, 0xc000782358}, 0x441194?)
+	crypto/tls/conn.go:831 +0xde
+crypto/tls.(*Conn).readRecordOrCCS(0xc000fee388, 0x0)
+	crypto/tls/conn.go:629 +0x3cf
+crypto/tls.(*Conn).readRecord(...)
+	crypto/tls/conn.go:591
+crypto/tls.(*Conn).Read(0xc000fee388, {0xc00167e000, 0x1000, 0xc001133170?})
+	crypto/tls/conn.go:1385 +0x145
+net/http.(*persistConn).Read(0xc000aba900, {0xc00167e000?, 0x753265?, 0x7765620?})
+	net/http/transport.go:2122 +0x47
+bufio.(*Reader).fill(0xc000101260)
+	bufio/bufio.go:113 +0x103
+bufio.(*Reader).Peek(0xc000101260, 0x1)
+	bufio/bufio.go:152 +0x53
+net/http.(*persistConn).readLoop(0xc000aba900)
+	net/http/transport.go:2275 +0x172
+created by net/http.(*Transport).dialConn in goroutine 624
+	net/http/transport.go:1944 +0x174f
+
+goroutine 955 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).manageFlushTimer(0xc000bd2f00)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:212 +0x96
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 939
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:148 +0x10f
+
+goroutine 834 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 551 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 783 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 386 [select]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 949 [sleep]:
+time.Sleep(0xee6b280)
+	runtime/time.go:338 +0x165
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:80 +0x94
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch.(*PollingFileWatcher).ChangeEvents in goroutine 927
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch/polling.go:71 +0x18b
+
+goroutine 928 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/state.(*rangeManager).Run(0xc000efa400, {0xc0017d0150?, 0xc0017d01c0?})
+	github.com/aws/amazon-cloudwatch-agent/internal/state/manager.go:109 +0x32c
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile.NewTailerSrc in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tailersrc.go:125 +0x389
+
+goroutine 448 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 647 [select, 2 minutes]:
+net/http.(*persistConn).writeLoop(0xc000aba900)
+	net/http/transport.go:2590 +0xe7
+created by net/http.(*Transport).dialConn in goroutine 624
+	net/http/transport.go:1945 +0x17a5
+
+goroutine 666 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 518 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 940 [chan receive]:
+github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).runSrcToDest(0xc00009de90?, {0x781fb40, 0xc001700240}, {0x77c53c0, 0xc00082c340})
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:167 +0x153
+created by github.com/aws/amazon-cloudwatch-agent/logs.(*LogAgent).Run in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/logs/logs.go:140 +0xb70
+
+goroutine 485 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 939 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start(0xc000bd2f00)
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:151 +0x1af
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.newQueue in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:73 +0x53b
+
+goroutine 764 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 938 [select]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 926 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.(*Tail).exitOnDeletion(0xc001700120)
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:699 +0xef
+created by github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail.TailFile in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/tail.go:134 +0x3c5
+
+goroutine 706 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 884 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 727 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 919 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 605 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 870 [sleep, 2 minutes]:
+time.Sleep(0xdf8475800)
+	runtime/time.go:338 +0x165
+github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*intervalStats).allowNextGetAfter(0xc0009ef860, 0xc000bd30e0?)
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/interval.go:49 +0x2b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider.(*intervalStats).Stats.func1 in goroutine 865
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider/interval.go:35 +0x207
+
+goroutine 945 [select]:
+github.com/aws/amazon-cloudwatch-agent/internal/retryer.(*LogThrottleRetryer).watchThrottleEvents(0xc0007861e0)
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:77 +0x174
+created by github.com/aws/amazon-cloudwatch-agent/internal/retryer.NewLogThrottleRetryer in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/internal/retryer/logthrottle.go:46 +0xec
+
+goroutine 954 [select]:
+github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start.func1()
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:121 +0x11e
+created by github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher.(*queue).start in goroutine 939
+	github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher/queue.go:117 +0xcd
+
+goroutine 832 [select, 2 minutes]:
+github.com/jellydator/ttlcache/v3.(*Cache[...]).Start(0x7888880)
+	github.com/jellydator/ttlcache/v3@v3.3.0/cache.go:621 +0x11b
+created by github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client.NewHandler in goroutine 53
+	github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client/client.go:59 +0x167
+
+goroutine 957 [IO wait]:
+internal/poll.runtime_pollWait(0x7f61d4166bc0, 0x72)
+	runtime/netpoll.go:351 +0x85
+internal/poll.(*pollDesc).wait(0xc000892880?, 0xc000e0eb81?, 0x0)
+	internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.(*pollDesc).waitRead(...)
+	internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc000892880, {0xc000e0eb81, 0x1, 0x1})
+	internal/poll/fd_unix.go:165 +0x27a
+net.(*netFD).Read(0xc000892880, {0xc000e0eb81?, 0x781fb40?, 0xc0014e6c60?})
+	net/fd_posix.go:55 +0x25
+net.(*conn).Read(0xc000a1a090, {0xc000e0eb81?, 0xc000da7f40?, 0xc000da7fd0?})
+	net/net.go:194 +0x45
+net/http.(*connReader).backgroundRead(0xc000e0eb70)
+	net/http/server.go:690 +0x37
+created by net/http.(*connReader).startBackgroundRead in goroutine 956
+	net/http/server.go:686 +0xb6

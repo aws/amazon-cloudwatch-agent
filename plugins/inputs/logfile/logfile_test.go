@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -1362,5 +1361,3 @@ func TestGenerateLogGroupName(t *testing.T) {
 		logGroupName,
 		expectLogGroup))
 }
-
-

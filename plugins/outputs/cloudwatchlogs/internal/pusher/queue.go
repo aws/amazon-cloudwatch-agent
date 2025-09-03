@@ -35,8 +35,7 @@ type queue struct {
 	resetTimerCh chan struct{}
 	flushTimer   *time.Timer
 	flushTimeout atomic.Value
-	stop         <-chan struct{}
-	queueStop    chan struct{}
+	stop         chan struct{}
 	lastSentTime atomic.Value
 
 	initNonBlockingChOnce sync.Once
@@ -44,13 +43,14 @@ type queue struct {
 	wg                    *sync.WaitGroup
 }
 
+var _ (Queue) = (*queue)(nil)
+
 func newQueue(
 	logger telegraf.Logger,
 	target Target,
 	flushTimeout time.Duration,
 	entityProvider logs.LogEntityProvider,
 	sender Sender,
-	stop <-chan struct{},
 	wg *sync.WaitGroup,
 ) Queue {
 	q := &queue{
@@ -63,8 +63,7 @@ func newQueue(
 		flushCh:         make(chan struct{}),
 		resetTimerCh:    make(chan struct{}),
 		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            stop,
-		queueStop:       make(chan struct{}),
+		stop:            make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
 	}
@@ -108,6 +107,11 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 	}
 }
 
+// Stop stops all goroutines associated with this queue instance.
+func (q *queue) Stop() {
+	close(q.stop)
+}
+
 // start is the main loop for processing events and managing the queue.
 func (q *queue) start() {
 	defer q.wg.Done()
@@ -120,26 +124,12 @@ func (q *queue) start() {
 		for {
 			select {
 			case e := <-q.eventsCh:
-				select {
-				case mergeChan <- e:
-				case <-q.stop:
-					return
-				case <-q.queueStop:
-					return
-				}
+				mergeChan <- e
 			case e := <-nonBlockingEventsCh:
-				select {
-				case mergeChan <- e:
-				case <-q.stop:
-					return
-				case <-q.queueStop:
-					return
-				}
+				mergeChan <- e
 			case <-q.startNonBlockCh:
 				nonBlockingEventsCh = q.nonBlockingEventsCh
 			case <-q.stop:
-				return
-			case <-q.queueStop:
 				return
 			}
 		}
@@ -149,7 +139,11 @@ func (q *queue) start() {
 
 	for {
 		select {
-		case e := <-mergeChan:
+		case e, ok := <-mergeChan:
+			if !ok {
+				q.send()
+				return
+			}
 			// Start timer when first event of the batch is added (happens after a flush timer timeout)
 			if len(q.batch.events) == 0 {
 				q.resetFlushTimer()
@@ -167,16 +161,6 @@ func (q *queue) start() {
 			} else {
 				q.resetFlushTimer()
 			}
-		case <-q.stop:
-			if len(q.batch.events) > 0 {
-				q.send()
-			}
-			return
-		case <-q.queueStop:
-			if len(q.batch.events) > 0 {
-				q.send()
-			}
-			return
 		}
 	}
 }
@@ -220,9 +204,6 @@ func (q *queue) manageFlushTimer() {
 		case <-q.stop:
 			q.stopFlushTimer()
 			return
-		case <-q.queueStop:
-			q.stopFlushTimer()
-			return
 		}
 	}
 }
@@ -257,9 +238,4 @@ func hasValidTime(e logs.LogEvent) bool {
 		}
 	}
 	return true
-}
-
-// Stop stops all goroutines associated with this queue instance.
-func (q *queue) Stop() {
-	close(q.queueStop)
 }
