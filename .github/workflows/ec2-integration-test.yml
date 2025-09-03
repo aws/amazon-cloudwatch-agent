@@ -84,19 +84,23 @@ jobs:
       - name: Install resolvconf
         run: sudo apt-get update && sudo apt-get install -y resolvconf
 
-
-      # Add this step to enable IPv6 via Cloudflare Warp
+      # Non-manual setup for Cloudflare Warp to enable IPv6 (replaces manual run step)
       - name: Setup Cloudflare Warp for IPv6
-        uses: fscarmen/warp-on-actions@v1.3
+        uses: boywithkeyboard/warp@v1
         with:
-          stack: dual  # Enables both IPv4 and IPv6 (default is dual, but explicit for clarity)
+          familyMode: off  # Optional: Disables content blocking; set to 'malware' or 'on' if needed
+          onlyDoH: false   # Optional: Full WARP routing (with IPv6) instead of DNS-only
 
-      # Check IPv6 connectivity
       - name: Debug IPv6 connectivity
         run: |
-          echo "Testing IPv6 connectivity..."
-          curl -6 ifconfig.io || echo "No IPv6"
-          ping6 google.com -c 3 || echo "Can't reach IPv6 internet"
+          echo "Warp status:"
+          warp-cli status || echo "Warp not running"
+          echo "IPv6 address:"
+          curl -6 ifconfig.io || echo "No IPv6 address"
+          echo "Ping IPv6:"
+          ping6 -c 3 google.com || echo "IPv6 ping failed"
+          echo "DNS resolution:"
+          dig AAAA google.com || echo "IPv6 DNS failed"
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
