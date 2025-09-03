@@ -82,7 +82,9 @@ type CloudWatchLogs struct {
 	workerPool      pusher.WorkerPool
 	targetManager   pusher.TargetManager
 	once            sync.Once
+	configurerOnce  sync.Once
 	middleware      awsmiddleware.Middleware
+	configurer      *awsmiddleware.Configurer
 }
 
 func (c *CloudWatchLogs) Connect() error {
@@ -180,7 +182,10 @@ func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlog
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	if c.middleware != nil {
-		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
+		c.configurerOnce.Do(func() {
+			c.configurer = awsmiddleware.NewConfigurer(c.middleware.Handlers())
+		})
+		if err := c.configurer.Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
 			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
 		} else {
 			c.Log.Debug("Configured middleware on AWS client")
