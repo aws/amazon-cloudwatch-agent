@@ -130,11 +130,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}
-	customerRelabelConfigs := extractCustomerRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs)
-
 	addDefaultECSRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, conf, t.configKey)
-
-	appendCustomerRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, customerRelabelConfigs, conf)
 
 	return cfg, nil
 }
@@ -210,48 +206,8 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
 				for _, filePath := range fileSDConfig.Files {
 					if filePath == ecsSDFileName {
-						scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-						break
-					}
-				}
-			}
-		}
-	}
-}
-
-func extractCustomerRelabelConfigs(scrapeConfigs []*config.ScrapeConfig) map[*config.ScrapeConfig][]*relabel.Config {
-	customerConfigs := make(map[*config.ScrapeConfig][]*relabel.Config)
-	for _, scrapeConfig := range scrapeConfigs {
-		if len(scrapeConfig.RelabelConfigs) > 0 {
-			customerConfigs[scrapeConfig] = scrapeConfig.RelabelConfigs
-		}
-	}
-	return customerConfigs
-}
-
-func appendCustomerRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, customerConfigs map[*config.ScrapeConfig][]*relabel.Config, conf *confmap.Conf) {
-	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
-		return
-	}
-
-	ecsSdResultFileKey := common.ConfigKey(ecsSDKey, ECS_SD_RESULT_FILE)
-	ecsSDFileName := defaultECSSDfileName
-	if conf.IsSet(ecsSdResultFileKey) {
-		if fileName, ok := conf.Get(ecsSdResultFileKey).(string); ok && fileName != "" {
-			ecsSDFileName = fileName
-		}
-	}
-
-	for _, scrapeConfig := range scrapeConfigs {
-		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
-			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
-				for _, filePath := range fileSDConfig.Files {
-					if filePath == ecsSDFileName {
-						if customerRelabelConfigs, exists := customerConfigs[scrapeConfig]; exists {
-							// Append customer configs after default ECS configs
-							scrapeConfig.RelabelConfigs = append(scrapeConfig.RelabelConfigs, customerRelabelConfigs...)
-							break
-						}
+						// Prepend defaultRelabelConfigs to customer configs for ecs_service_discovery. 
+						scrapeConfig.RelabelConfigs = append(defaultRelabelConfigs, scrapeConfig.RelabelConfigs...)
 					}
 				}
 			}

@@ -1034,7 +1034,7 @@ func TestPrometheusCustomerRelabelConfigs(t *testing.T) {
 	tokenReplacements := map[string]string{
 		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
 	}
-	
+
 	testPrometheusConfig := `global:
   scrape_interval: 1m
   scrape_timeout: 10s
@@ -1046,10 +1046,10 @@ scrape_configs:
       - action: replace
         source_labels: [StartedBy]
         target_label: CustomStartedBy`
-	
+
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
-	
+
 	checkTranslation(t, "prometheus_customer_relabel_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 }
 
