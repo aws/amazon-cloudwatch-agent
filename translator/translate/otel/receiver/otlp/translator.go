@@ -35,11 +35,11 @@ type translator struct {
 	common.NameProvider
 	common.IndexProvider
 	factory        receiver.Factory
-	endpointConfig EndpointConfig
+	endpointConfig endpointConfig
 	pipelineName   string
 }
 
-type EndpointConfig struct {
+type endpointConfig struct {
 	protocol protocol
 	endpoint string
 	certFile string
@@ -47,7 +47,7 @@ type EndpointConfig struct {
 }
 
 var (
-	configCache = make(map[EndpointConfig]component.Config)
+	configCache = make(map[endpointConfig]component.Config)
 	cacheMutex  sync.RWMutex
 )
 
@@ -56,12 +56,12 @@ var (
 func ClearConfigCache() {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
-	configCache = make(map[EndpointConfig]component.Config)
+	configCache = make(map[endpointConfig]component.Config)
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
+func NewTranslator(otlpConfig endpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{
 		factory:        otlpreceiver.NewFactory(),
 		endpointConfig: otlpConfig,
@@ -127,10 +127,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, signal pipeline.Signal, index int) ([]EndpointConfig, error) {
+func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, signal pipeline.Signal, index int) ([]endpointConfig, error) {
 	// JMX only supports HTTP
 	if pipelineName == common.PipelineNameJmx {
-		return []EndpointConfig{{protocol: HTTP, endpoint: defaultJMXHttpEndpoint}}, nil
+		return []endpointConfig{{protocol: HTTP, endpoint: defaultJMXHttpEndpoint}}, nil
 	}
 
 	grpcDefault := defaultGrpcEndpoint
@@ -164,26 +164,23 @@ func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, 
 	}
 
 	// creates 2 separate config entry by protocol
-	var configs []EndpointConfig
+	var configs []endpointConfig
 	if grpcEndpoint, ok := otlpMap["grpc_endpoint"].(string); ok && grpcEndpoint != "" {
-		configs = append(configs, EndpointConfig{
+		configs = append(configs, endpointConfig{
 			protocol: GRPC, endpoint: grpcEndpoint, certFile: certFile, keyFile: keyFile,
 		})
 	}
 	if httpEndpoint, ok := otlpMap["http_endpoint"].(string); ok && httpEndpoint != "" {
-		configs = append(configs, EndpointConfig{
+		configs = append(configs, endpointConfig{
 			protocol: HTTP, endpoint: httpEndpoint, certFile: certFile, keyFile: keyFile,
 		})
 	}
 
 	// If no specific endpoints configured, return defaults
 	if len(configs) == 0 {
-		configs = append(configs, EndpointConfig{
-			protocol: GRPC, endpoint: grpcDefault, certFile: certFile, keyFile: keyFile,
-		})
-		configs = append(configs, EndpointConfig{
-			protocol: HTTP, endpoint: httpDefault, certFile: certFile, keyFile: keyFile,
-		})
+		configs = append(configs,
+			endpointConfig{protocol: GRPC, endpoint: grpcDefault, certFile: certFile, keyFile: keyFile},
+			endpointConfig{protocol: HTTP, endpoint: httpDefault, certFile: certFile, keyFile: keyFile})
 	}
 
 	return configs, nil
