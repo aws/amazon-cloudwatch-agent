@@ -6,10 +6,15 @@ package prometheus
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/config"
+	"github.com/prometheus/prometheus/discovery/file"
+	"github.com/prometheus/prometheus/model/relabel"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
@@ -17,6 +22,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 const (
@@ -24,7 +30,11 @@ const (
 	defaultTLSCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
 	defaultTLSCertPath     = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.crt"
 	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
+	ECS_SD_RESULT_FILE     = "sd_result_file"
+	defaultECSSDfileName   = "/tmp/cwagent_ecs_auto_sd.yaml"
 )
+
+var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, "ecs_service_discovery")
 
 type translator struct {
 	name      string
@@ -121,6 +131,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
 		}
 	}
+	addDefaultECSRelabelConfigs(cfg.PrometheusConfig.ScrapeConfigs, conf, t.configKey)
 
 	return cfg, nil
 }
@@ -157,6 +168,50 @@ func escapeStrings(node any) {
 	case []any:
 		for _, v := range n {
 			escapeStrings(v)
+		}
+	}
+}
+
+func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *confmap.Conf, promConfigKey string) {
+	// ECS Service Discovery Relabel Configs should only be added if enabled on ECS and configs are valid:
+	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
+		return
+	}
+
+	ecsSdResultFileKey := common.ConfigKey(ecsSDKey, ECS_SD_RESULT_FILE)
+	ecsSDFileName := defaultECSSDfileName
+	if conf.IsSet(ecsSdResultFileKey) {
+		if fileName, ok := conf.Get(ecsSdResultFileKey).(string); ok && fileName != "" {
+			ecsSDFileName = fileName
+		}
+	}
+
+	defaultRelabelConfigs := []*relabel.Config{
+		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "ClusterName", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_started_by"}, Action: relabel.Replace, TargetLabel: "StartedBy", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_group"}, Action: relabel.Replace, TargetLabel: "TaskGroup", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_family"}, Action: relabel.Replace, TargetLabel: "TaskDefinitionFamily", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_task_definition_revision"}, Action: relabel.Replace, TargetLabel: "TaskRevision", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_instance_type"}, Action: relabel.Replace, TargetLabel: "InstanceType", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
+		{SourceLabels: model.LabelNames{"__meta_ecs_source"}, Regex: relabel.MustNewRegexp("^arn:aws:ecs:.*:.*:task.*\\/(.*)$"), Action: relabel.Replace, TargetLabel: "TaskId"},
+		{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_app_x"}, Action: relabel.Replace, TargetLabel: "app_x", Regex: relabel.MustNewRegexp("(.*)")},
+	}
+
+	for _, scrapeConfig := range scrapeConfigs {
+		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
+			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
+				for _, filePath := range fileSDConfig.Files {
+					if slices.Contains([]string{filePath}, ecsSDFileName) {
+						scrapeConfig.RelabelConfigs = defaultRelabelConfigs
+						break
+					}
+				}
+			}
 		}
 	}
 }
