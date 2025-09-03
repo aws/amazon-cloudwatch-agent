@@ -203,23 +203,15 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 	}
 
 	for _, scrapeConfig := range scrapeConfigs {
-		if hasConfiguredServiceDiscoveryResultFile(scrapeConfig, ecsSDFileName) {
-			scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-		}
-	}
-}
-
-func hasConfiguredServiceDiscoveryResultFile(scrapeConfig *config.ScrapeConfig, ecsSdResultFile string) bool {
-	for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
-		fileSDConfig, ok := sdConfig.(*file.SDConfig)
-		if !ok {
-			return false
-		}
-		for _, filePath := range fileSDConfig.Files {
-			if slices.Contains([]string{filePath}, ecsSdResultFile) {
-				return true
+		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
+			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
+				for _, filePath := range fileSDConfig.Files {
+					if slices.Contains([]string{filePath}, ecsSDFileName) {
+						scrapeConfig.RelabelConfigs = defaultRelabelConfigs
+						break
+					}
+				}
 			}
 		}
 	}
-	return false
 }
