@@ -175,6 +175,8 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 			return
 		}
 	}
+
+	// eventsCh has been closed meaning the src has been stopped
 	dest.Stop()
 }
 

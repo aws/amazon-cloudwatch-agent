@@ -109,6 +109,10 @@ func (s *senderPool) Send(batch *logEventBatch) {
 	})
 }
 
+func (s *senderPool) Stop() {
+	// nothing to stop
+}
+
 // SetRetryDuration sets the retry duration on the wrapped Sender.
 func (s *senderPool) SetRetryDuration(duration time.Duration) {
 	s.sender.SetRetryDuration(duration)
