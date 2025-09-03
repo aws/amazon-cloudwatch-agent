@@ -622,7 +622,7 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 	}
 
 	for i, line := range lines {
-		tail.inputLogger.Print(line)
+		tail.inputLogger.Printf("%d | %s", offset, line)
 		// This select is to avoid blockage on the tail.Lines chan
 		// Warning: Make sure to release line once done!
 		lineObject := tail.linePool.Get().(*Line)

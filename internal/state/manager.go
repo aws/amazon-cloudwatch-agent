@@ -80,6 +80,9 @@ func (m *rangeManager) Restore() (RangeList, error) {
 		return RangeList{}, err
 	}
 	restored := tracker.Ranges()
+	if marshal, err := tracker.MarshalText(); err == nil {
+		log.Printf("State file content: %s\n", marshal)
+	}
 	m.replaceTrackerCh <- tracker
 	log.Printf("I! Reading from offset range %s in %s", restored, m.name)
 	return restored, nil

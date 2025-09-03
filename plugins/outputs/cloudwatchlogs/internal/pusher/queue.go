@@ -145,7 +145,7 @@ func (q *queue) start() {
 			if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.eventBytes) {
 				q.send()
 			}
-			q.outputLogger.Print(event.message)
+			q.outputLogger.Printf("%d | %s", event.eventBytes, event.message)
 			q.batch.append(event)
 		case <-q.flushCh:
 			lastSentTime, _ := q.lastSentTime.Load().(time.Time)
