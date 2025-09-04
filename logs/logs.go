@@ -65,8 +65,7 @@ type LogBackend interface {
 // e.g. a particular log stream in cloudwatchlogs.
 type LogDest interface {
 	Publish(events []LogEvent) error
-	Stop()
-	Name() string
+	NotifySourceStopped()
 }
 
 // LogAgent is the agent handles pure log pipelines
@@ -167,17 +166,18 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	for e := range eventsCh {
 		err := dest.Publish([]LogEvent{e})
 		if err == ErrOutputStopped {
-			log.Printf("I! [logagent] Log destination %v has stopped, finalizing %v/%v", dest.Name(), src.Group(), src.Stream())
+			log.Printf("I! [logagent] Log destination %v has stopped, finalizing %v/%v", src.Destination(), src.Group(), src.Stream())
 			return
 		}
 		if err != nil {
-			log.Printf("E! [logagent] Failed to publish log to %v, error: %v", dest.Name(), err)
+			log.Printf("E! [logagent] Failed to publish log to %v, error: %v", src.Destination(), err)
 			return
 		}
 	}
 
 	// eventsCh has been closed meaning the src has been stopped
-	dest.Stop()
+	// tell the destination that there is one
+	dest.NotifySourceStopped()
 }
 
 func (l *LogAgent) checkRetentionAlreadyAttempted(retention int, logGroup string) int {

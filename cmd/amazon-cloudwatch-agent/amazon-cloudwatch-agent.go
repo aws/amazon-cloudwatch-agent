@@ -576,17 +576,15 @@ func main() {
 				log.Fatal("E! " + err.Error())
 			}
 		}()
-
-		go func() {
-			ticker := time.NewTicker(10 * time.Second)
-			for {
-				select {
-				case <-ticker.C:
-					fmt.Printf("NumGoRoutines: %d\n", runtime.NumGoroutine())
-				}
-			}
-		}()
 	}
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			fmt.Printf("NumGoRoutines: %d\n", runtime.NumGoroutine())
+		}
+	}()
 
 	if len(args) > 0 {
 		switch args[0] {

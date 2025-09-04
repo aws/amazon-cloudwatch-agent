@@ -50,8 +50,6 @@ var (
 	containerInsightsRegexp = regexp.MustCompile("^/aws/.*containerinsights/.*/(performance|prometheus)$")
 )
 
-var _ logs.LogBackend = (*CloudWatchLogs)(nil)
-
 type CloudWatchLogs struct {
 	Region           string `toml:"region"`
 	RegionType       string `toml:"region_type"`
@@ -81,10 +79,13 @@ type CloudWatchLogs struct {
 	workerPool      pusher.WorkerPool
 	targetManager   pusher.TargetManager
 	once            sync.Once
-	configurerOnce  sync.Once
 	middleware      awsmiddleware.Middleware
 	configurer      *awsmiddleware.Configurer
+	configurerOnce  sync.Once
 }
+
+var _ logs.LogBackend = (*CloudWatchLogs)(nil)
+var _ telegraf.Output = (*CloudWatchLogs)(nil)
 
 func (c *CloudWatchLogs) Connect() error {
 	return nil
@@ -94,7 +95,7 @@ func (c *CloudWatchLogs) Close() error {
 
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
-			d.Stop()
+			d.stop()
 		}
 		return true
 	})
@@ -109,6 +110,7 @@ func (c *CloudWatchLogs) Close() error {
 }
 
 func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
+	fmt.Printf("CloudWatchLogs.Write: %d metrics\n", len(metrics))
 	for _, m := range metrics {
 		c.writeMetricAsStructuredLog(m)
 	}
@@ -137,9 +139,14 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 
 func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	if cwd, ok := c.cwDests.Load(t); ok {
-		return cwd.(*cwDest)
+		d := cwd.(*cwDest)
+		d.Lock()
+		defer d.Unlock()
+		if !d.stopped {
+			d.refCount++
+			return d
+		}
 	}
-	fmt.Printf("Did not find pusher target for %v, creating a new one", t.Stream)
 
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := c.createClient(logThrottleRetryer)
@@ -155,7 +162,9 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
 	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
-	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer}
+	cwd := &cwDest{pusher: p, retryer: logThrottleRetryer, onStopFunc: func() {
+		c.cwDests.Delete(t)
+	}}
 	c.cwDests.Store(t, cwd)
 	return cwd
 }
@@ -326,9 +335,11 @@ func (e *structuredLogEvent) Done() {}
 type cwDest struct {
 	pusher *pusher.Pusher
 	sync.Mutex
-	isEMF   bool
-	stopped bool
-	retryer *retryer.LogThrottleRetryer
+	isEMF      bool
+	retryer    *retryer.LogThrottleRetryer
+	refCount   int
+	stopped    bool
+	onStopFunc func()
 }
 
 var _ logs.LogDest = (*cwDest)(nil)
@@ -349,10 +360,23 @@ func (cd *cwDest) Publish(events []logs.LogEvent) error {
 	return nil
 }
 
-func (cd *cwDest) Stop() {
+func (cd *cwDest) NotifySourceStopped() {
+	cd.Lock()
+	defer cd.Unlock()
+	cd.refCount--
+	if cd.refCount <= 0 {
+		cd.stop()
+	}
+}
+
+func (cd *cwDest) stop() {
+	if cd.stopped {
+		return
+	}
 	cd.retryer.Stop()
 	cd.pusher.Stop()
 	cd.stopped = true
+	cd.onStopFunc()
 }
 
 func (cd *cwDest) AddEvent(e logs.LogEvent) {
@@ -362,10 +386,6 @@ func (cd *cwDest) AddEvent(e logs.LogEvent) {
 	} else {
 		cd.pusher.AddEvent(e)
 	}
-}
-
-func (cd *cwDest) Name() string {
-	return cd.pusher.Target.Group + "/" + cd.pusher.Target.Stream
 }
 
 func (cd *cwDest) switchToEMF() {
@@ -415,7 +435,7 @@ func (c *CloudWatchLogs) SampleConfig() string {
 
 func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
-		return &CloudWatchLogs{
+		c := &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			cwDests:            sync.Map{},
 			middleware: agenthealth.NewAgentHealth(
@@ -427,5 +447,19 @@ func init() {
 				},
 			),
 		}
+
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+			for range ticker.C {
+				length := 0
+				c.cwDests.Range(func(_, _ interface{}) bool {
+					length++
+					return true
+				})
+				fmt.Printf("Size of cwDests: %d\n", length)
+			}
+		}()
+
+		return c
 	})
 }

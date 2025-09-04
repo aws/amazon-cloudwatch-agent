@@ -35,7 +35,8 @@ type queue struct {
 	resetTimerCh chan struct{}
 	flushTimer   *time.Timer
 	flushTimeout atomic.Value
-	stop         chan struct{}
+	stopCh       chan struct{}
+	stopped      bool
 	lastSentTime atomic.Value
 
 	initNonBlockingChOnce sync.Once
@@ -63,7 +64,7 @@ func newQueue(
 		flushCh:         make(chan struct{}),
 		resetTimerCh:    make(chan struct{}),
 		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            make(chan struct{}),
+		stopCh:          make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
 	}
@@ -109,7 +110,11 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 
 // Stop stops all goroutines associated with this queue instance.
 func (q *queue) Stop() {
-	close(q.stop)
+	if q.stopped {
+		return
+	}
+	close(q.stopCh)
+	q.stopped = true
 }
 
 // start is the main loop for processing events and managing the queue.
@@ -117,24 +122,7 @@ func (q *queue) start() {
 	defer q.wg.Done()
 	mergeChan := make(chan logs.LogEvent)
 
-	// Merge events from both blocking and non-blocking channel
-	go func() {
-		defer close(mergeChan)
-		var nonBlockingEventsCh <-chan logs.LogEvent
-		for {
-			select {
-			case e := <-q.eventsCh:
-				mergeChan <- e
-			case e := <-nonBlockingEventsCh:
-				mergeChan <- e
-			case <-q.startNonBlockCh:
-				nonBlockingEventsCh = q.nonBlockingEventsCh
-			case <-q.stop:
-				return
-			}
-		}
-	}()
-
+	go q.merge(mergeChan)
 	go q.manageFlushTimer()
 
 	for {
@@ -161,6 +149,24 @@ func (q *queue) start() {
 			} else {
 				q.resetFlushTimer()
 			}
+		}
+	}
+}
+
+// merge merges events from both blocking and non-blocking channel
+func (q *queue) merge(mergeChan chan logs.LogEvent) {
+	defer close(mergeChan)
+	var nonBlockingEventsCh <-chan logs.LogEvent
+	for {
+		select {
+		case e := <-q.eventsCh:
+			mergeChan <- e
+		case e := <-nonBlockingEventsCh:
+			mergeChan <- e
+		case <-q.startNonBlockCh:
+			nonBlockingEventsCh = q.nonBlockingEventsCh
+		case <-q.stopCh:
+			return
 		}
 	}
 }
@@ -201,7 +207,7 @@ func (q *queue) manageFlushTimer() {
 			if flushTimeout, ok := q.flushTimeout.Load().(time.Duration); ok {
 				q.flushTimer.Reset(flushTimeout)
 			}
-		case <-q.stop:
+		case <-q.stopCh:
 			q.stopFlushTimer()
 			return
 		}

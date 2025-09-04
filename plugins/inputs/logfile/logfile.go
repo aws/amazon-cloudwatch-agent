@@ -41,8 +41,9 @@ type LogFile struct {
 	started           bool
 }
 
-func NewLogFile() *LogFile {
+var _ logs.LogCollection = (*LogFile)(nil)
 
+func NewLogFile() *LogFile {
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
@@ -249,11 +250,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				} else {
 					streamName = generateLogStreamName(filename, fileconfig.LogStreamName)
 				}
-			}
-
-			destination := fileconfig.Destination
-			if destination == "" {
-				destination = t.Destination
 			}
 
 			src := NewTailerSrc(

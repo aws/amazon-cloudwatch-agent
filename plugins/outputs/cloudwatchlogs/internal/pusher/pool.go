@@ -110,7 +110,7 @@ func (s *senderPool) Send(batch *logEventBatch) {
 }
 
 func (s *senderPool) Stop() {
-	// nothing to stop
+	// workerpool is stopped by the plugin
 }
 
 // SetRetryDuration sets the retry duration on the wrapped Sender.

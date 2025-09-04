@@ -72,6 +72,7 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 	for _, tt := range tests {
 		logger, _ := zap.NewDevelopment()
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			ei := &EC2Info{
 				metadataProvider: tt.args.metadataProvider,
 				logger:           logger,
@@ -92,20 +93,17 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want EC2Info
 	}{
 		{
 			name: "AutoScalingGroupWithInstanceTags",
 			args: args{
 				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: map[string]string{"aws:autoscaling:groupName": tagVal3}},
 			},
-			want: EC2Info{
-				InstanceID: mockedInstanceIdentityDoc.InstanceID,
-			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Create a buffer to capture the logger output
 			var buf bytes.Buffer
 
@@ -137,6 +135,7 @@ func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Create a buffer to capture the logger output
 			var buf bytes.Buffer
 
