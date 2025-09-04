@@ -56,6 +56,10 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEBSMetricDeclarations(conf)...)
 
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getVolumesMetricDeclarations(conf)...)
+
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getIngressMetricDeclarations(conf)...)
+
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
@@ -679,6 +683,54 @@ func getEBSMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_diskio_ebs_ec2_instance_performance_exceeded_iops",
 					"node_diskio_ebs_ec2_instance_performance_exceeded_tp",
 					"node_diskio_ebs_volume_queue_length",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getVolumesMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+					{"ClusterName", "Namespace", "PersistentVolumeClaimName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_claim_status_bound",
+					"persistent_volume_claim_status_lost",
+					"persistent_volume_claim_status_pending",
+					"persistent_volume_claim_count",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_count",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getIngressMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+				},
+				MetricNameSelectors: []string{
+					"ingress_resource_count",
 				},
 			},
 		}
