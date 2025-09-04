@@ -6,7 +6,6 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -142,7 +141,6 @@ var getPodServiceEnvironmentMapping = func() *ttlcache.Cache[string, entitystore
 	if es != nil && es.GetPodServiceEnvironmentMapping() != nil {
 		return es.GetPodServiceEnvironmentMapping()
 	}
-	fmt.Println("new ttlcache in getPodServiceEnvironmentMapping")
 	return ttlcache.New[string, entitystore.ServiceEnvironment](
 		ttlcache.WithTTL[string, entitystore.ServiceEnvironment](time.Hour * 1),
 	)
