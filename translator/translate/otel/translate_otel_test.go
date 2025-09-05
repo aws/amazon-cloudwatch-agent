@@ -208,6 +208,56 @@ func TestTranslator(t *testing.T) {
 			},
 			wantErrContains: common.ConfigKey(prometheus.MetricsKey, common.PrometheusConfigPathKey),
 		},
+		"WithJournaldConfig": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name":   "system-logs",
+									"log_stream_name":  "{instance_id}",
+									"retention_in_days": 7,
+									"units":            []interface{}{"systemd", "sshd"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"WithJournaldAndFilesConfig": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"files": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"file_path":      "/var/log/messages",
+									"log_group_name": "system-messages",
+								},
+							},
+						},
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name":   "system-logs",
+									"log_stream_name":  "{instance_id}",
+									"retention_in_days": 7,
+									"units":            []interface{}{"systemd"},
+									"filters": []interface{}{
+										map[string]interface{}{
+											"type":       "exclude",
+											"expression": ".*debug.*",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

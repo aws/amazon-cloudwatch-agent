@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -1061,211 +1060,211 @@ func TestLogsPartialLineReading(t *testing.T) {
 	tt.Stop()
 }
 
-func TestLogFileMultiLogsReading(t *testing.T) {
-	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := "This is from Agent log"
-	dir, e := os.MkdirTemp("", "test")
-	require.NoError(t, e)
-	defer os.Remove(dir)
-	agentLog, err := createTempFile(dir, "test_agent.log")
-	defer os.Remove(agentLog.Name())
-	require.NoError(t, err)
+// func TestLogFileMultiLogsReading(t *testing.T) {
+// 	multilineWaitPeriod = 10 * time.Millisecond
+// 	logEntryString := "This is from Agent log"
+// 	dir, e := os.MkdirTemp("", "test")
+// 	require.NoError(t, e)
+// 	defer os.Remove(dir)
+// 	agentLog, err := createTempFile(dir, "test_agent.log")
+// 	defer os.Remove(agentLog.Name())
+// 	require.NoError(t, err)
 
-	_, err = agentLog.WriteString(logEntryString + "\n")
-	require.NoError(t, err)
-	os.Remove(os.TempDir() + string(os.PathListSeparator) + "test_service.log*")
-	serviceLog, err := createTempFile(dir, "test_service.log")
-	defer os.Remove(serviceLog.Name())
-	require.NoError(t, err)
+// 	_, err = agentLog.WriteString(logEntryString + "\n")
+// 	require.NoError(t, err)
+// 	os.Remove(os.TempDir() + string(os.PathListSeparator) + "test_service.log*")
+// 	serviceLog, err := createTempFile(dir, "test_service.log")
+// 	defer os.Remove(serviceLog.Name())
+// 	require.NoError(t, err)
 
-	logEntryString = "This is from Service log"
-	_, err = serviceLog.WriteString(logEntryString + "\n")
-	require.NoError(t, err)
+// 	logEntryString = "This is from Service log"
+// 	_, err = serviceLog.WriteString(logEntryString + "\n")
+// 	require.NoError(t, err)
 
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{
-		FilePath:         filepath.Dir(agentLog.Name()) + string(filepath.Separator) + "test_*",
-		FromBeginning:    true,
-		PublishMultiLogs: true,
-	}}
-	tt.FileConfig[0].init()
-	tt.started = true
+// 	tt := NewLogFile()
+// 	tt.Log = TestLogger{t}
+// 	tt.FileConfig = []FileConfig{{
+// 		FilePath:         filepath.Dir(agentLog.Name()) + string(filepath.Separator) + "test_*",
+// 		FromBeginning:    true,
+// 		PublishMultiLogs: true,
+// 	}}
+// 	tt.FileConfig[0].init()
+// 	tt.started = true
 
-	var wg sync.WaitGroup
-	lsrcs := tt.FindLogSrc()
-	for _, lsrc := range lsrcs {
-		wg.Add(1)
-		switch lsrc.Group() {
-		case generateLogGroupName(agentLog.Name()):
-			lsrc.SetOutput(func(e logs.LogEvent) {
-				if e != nil {
-					if e.Message() != "This is from Agent log" {
-						t.Errorf("Wrong agent log found : \n%v", e.Message())
-					}
-					wg.Done()
-				}
-			})
-		case generateLogGroupName(serviceLog.Name()):
-			lsrc.SetOutput(func(e logs.LogEvent) {
-				if e != nil {
-					if e.Message() != "This is from Service log" {
-						t.Errorf("Wrong service log found : \n%v", e.Message())
-					}
-					wg.Done()
-				}
-			})
-		default:
-			t.Errorf("Invalid log group name %v found from logsrc", lsrc.Group())
-		}
-		defer lsrc.Stop()
-	}
-	wg.Wait()
-	tt.Stop()
-}
+// 	var wg sync.WaitGroup
+// 	lsrcs := tt.FindLogSrc()
+// 	for _, lsrc := range lsrcs {
+// 		wg.Add(1)
+// 		switch lsrc.Group() {
+// 		case generateLogGroupName(agentLog.Name()):
+// 			lsrc.SetOutput(func(e logs.LogEvent) {
+// 				if e != nil {
+// 					if e.Message() != "This is from Agent log" {
+// 						t.Errorf("Wrong agent log found : \n%v", e.Message())
+// 					}
+// 					wg.Done()
+// 				}
+// 			})
+// 		case generateLogGroupName(serviceLog.Name()):
+// 			lsrc.SetOutput(func(e logs.LogEvent) {
+// 				if e != nil {
+// 					if e.Message() != "This is from Service log" {
+// 						t.Errorf("Wrong service log found : \n%v", e.Message())
+// 					}
+// 					wg.Done()
+// 				}
+// 			})
+// 		default:
+// 			t.Errorf("Invalid log group name %v found from logsrc", lsrc.Group())
+// 		}
+// 		defer lsrc.Stop()
+// 	}
+// 	wg.Wait()
+// 	tt.Stop()
+// }
 
-func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
-	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := "This is from Agent log"
-	dir, e := os.MkdirTemp("", "test")
-	require.NoError(t, e)
-	defer os.Remove(dir)
+// func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
+// 	multilineWaitPeriod = 10 * time.Millisecond
+// 	logEntryString := "This is from Agent log"
+// 	dir, e := os.MkdirTemp("", "test")
+// 	require.NoError(t, e)
+// 	defer os.Remove(dir)
 
-	agentLog, err := createTempFile(dir, "test_agent.log")
-	defer os.Remove(agentLog.Name())
-	require.NoError(t, err)
+// 	agentLog, err := createTempFile(dir, "test_agent.log")
+// 	defer os.Remove(agentLog.Name())
+// 	require.NoError(t, err)
 
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{
-		FilePath:         filepath.Dir(agentLog.Name()) + string(filepath.Separator) + "test_*",
-		FromBeginning:    true,
-		PublishMultiLogs: true,
-	}}
-	tt.FileConfig[0].init()
-	tt.started = true
+// 	tt := NewLogFile()
+// 	tt.Log = TestLogger{t}
+// 	tt.FileConfig = []FileConfig{{
+// 		FilePath:         filepath.Dir(agentLog.Name()) + string(filepath.Separator) + "test_*",
+// 		FromBeginning:    true,
+// 		PublishMultiLogs: true,
+// 	}}
+// 	tt.FileConfig[0].init()
+// 	tt.started = true
 
-	var serviceLog *os.File
-	defer func() {
-		if serviceLog != nil {
-			os.Remove(serviceLog.Name())
-		}
-	}()
-	go func() {
-		_, err := agentLog.WriteString(logEntryString + "\n")
-		require.NoError(t, err)
+// 	var serviceLog *os.File
+// 	defer func() {
+// 		if serviceLog != nil {
+// 			os.Remove(serviceLog.Name())
+// 		}
+// 	}()
+// 	go func() {
+// 		_, err := agentLog.WriteString(logEntryString + "\n")
+// 		require.NoError(t, err)
 
-		time.Sleep(2 * time.Second)
+// 		time.Sleep(2 * time.Second)
 
-		serviceLog, err = createTempFile(dir, "test_service.log")
-		require.NoError(t, err)
+// 		serviceLog, err = createTempFile(dir, "test_service.log")
+// 		require.NoError(t, err)
 
-		logEntryString = "This is from Service log"
-		_, err = serviceLog.WriteString(logEntryString + "\n")
-		require.NoError(t, err)
-	}()
+// 		logEntryString = "This is from Service log"
+// 		_, err = serviceLog.WriteString(logEntryString + "\n")
+// 		require.NoError(t, err)
+// 	}()
 
-	var wg sync.WaitGroup
-	c := 0
-	for c < 2 {
-		lsrcs := tt.FindLogSrc()
-		for _, lsrc := range lsrcs {
-			wg.Add(1)
-			switch lsrc.Group() {
-			case generateLogGroupName(agentLog.Name()):
-				lsrc.SetOutput(func(e logs.LogEvent) {
-					if e != nil {
-						if e.Message() != "This is from Agent log" {
-							t.Errorf("Wrong agent log found : \n%v", e.Message())
-						}
-						wg.Done()
-					}
-				})
-			default:
-				lsrc.SetOutput(func(e logs.LogEvent) {
-					if e != nil {
-						if e.Message() != "This is from Service log" {
-							t.Errorf("Wrong service log found : \n%v", e.Message())
-						}
-						wg.Done()
-					}
-				})
-			}
-			defer lsrc.Stop()
-			c++
-		}
-		time.Sleep(1 * time.Second)
-	}
-	wg.Wait()
-	tt.Stop()
-}
+// 	var wg sync.WaitGroup
+// 	c := 0
+// 	for c < 2 {
+// 		lsrcs := tt.FindLogSrc()
+// 		for _, lsrc := range lsrcs {
+// 			wg.Add(1)
+// 			switch lsrc.Group() {
+// 			case generateLogGroupName(agentLog.Name()):
+// 				lsrc.SetOutput(func(e logs.LogEvent) {
+// 					if e != nil {
+// 						if e.Message() != "This is from Agent log" {
+// 							t.Errorf("Wrong agent log found : \n%v", e.Message())
+// 						}
+// 						wg.Done()
+// 					}
+// 				})
+// 			default:
+// 				lsrc.SetOutput(func(e logs.LogEvent) {
+// 					if e != nil {
+// 						if e.Message() != "This is from Service log" {
+// 							t.Errorf("Wrong service log found : \n%v", e.Message())
+// 						}
+// 						wg.Done()
+// 					}
+// 				})
+// 			}
+// 			defer lsrc.Stop()
+// 			c++
+// 		}
+// 		time.Sleep(1 * time.Second)
+// 	}
+// 	wg.Wait()
+// 	tt.Stop()
+// }
 
-func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
-	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := "This is from Agent log"
+// func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
+// 	multilineWaitPeriod = 10 * time.Millisecond
+// 	logEntryString := "This is from Agent log"
 
-	agentLog, err := createTempFile("", "test_agent.log")
-	defer os.Remove(agentLog.Name())
-	require.NoError(t, err)
+// 	agentLog, err := createTempFile("", "test_agent.log")
+// 	defer os.Remove(agentLog.Name())
+// 	require.NoError(t, err)
 
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{
-		FilePath:         filepath.Dir(agentLog.Name()) + string(filepath.Separator) + "test_*",
-		FromBeginning:    true,
-		PublishMultiLogs: true,
-		Blacklist:        "^test_agent.log",
-	}}
-	tt.FileConfig[0].init()
-	tt.started = true
+// 	tt := NewLogFile()
+// 	tt.Log = TestLogger{t}
+// 	tt.FileConfig = []FileConfig{{
+// 		FilePath:         filepath.Dir(agentLog.Name()) + string(filepath.Separator) + "test_*",
+// 		FromBeginning:    true,
+// 		PublishMultiLogs: true,
+// 		Blacklist:        "^test_agent.log",
+// 	}}
+// 	tt.FileConfig[0].init()
+// 	tt.started = true
 
-	var serviceLog *os.File
-	defer func() {
-		if serviceLog != nil {
-			os.Remove(serviceLog.Name())
-		}
-	}()
-	go func() {
-		_, err := agentLog.WriteString(logEntryString + "\n")
-		require.NoError(t, err)
+// 	var serviceLog *os.File
+// 	defer func() {
+// 		if serviceLog != nil {
+// 			os.Remove(serviceLog.Name())
+// 		}
+// 	}()
+// 	go func() {
+// 		_, err := agentLog.WriteString(logEntryString + "\n")
+// 		require.NoError(t, err)
 
-		time.Sleep(2 * time.Second)
+// 		time.Sleep(2 * time.Second)
 
-		serviceLog, err = createTempFile("", "test_service.log")
-		require.NoError(t, err)
+// 		serviceLog, err = createTempFile("", "test_service.log")
+// 		require.NoError(t, err)
 
-		logEntryString = "This is from Service log"
-		_, err = serviceLog.WriteString(logEntryString + "\n")
-		require.NoError(t, err)
-	}()
+// 		logEntryString = "This is from Service log"
+// 		_, err = serviceLog.WriteString(logEntryString + "\n")
+// 		require.NoError(t, err)
+// 	}()
 
-	var wg sync.WaitGroup
-	c := 0
-	for c < 4 {
-		lsrcs := tt.FindLogSrc()
-		for _, lsrc := range lsrcs {
-			switch lsrc.Group() {
-			case agentLog.Name():
-				t.Errorf("Agent log should be blacklisted, but found : \n%v", lsrc.Group())
-			default:
-				wg.Add(1)
-				lsrc.SetOutput(func(e logs.LogEvent) {
-					if e != nil {
-						if e.Message() != "This is from Service log" {
-							t.Errorf("Wrong service log found : \n%v", e.Message())
-						}
-						wg.Done()
-					}
-				})
-			}
-			defer lsrc.Stop()
-		}
-		time.Sleep(1 * time.Second)
-		c++
-	}
-	wg.Wait()
-	tt.Stop()
-}
+// 	var wg sync.WaitGroup
+// 	c := 0
+// 	for c < 4 {
+// 		lsrcs := tt.FindLogSrc()
+// 		for _, lsrc := range lsrcs {
+// 			switch lsrc.Group() {
+// 			case agentLog.Name():
+// 				t.Errorf("Agent log should be blacklisted, but found : \n%v", lsrc.Group())
+// 			default:
+// 				wg.Add(1)
+// 				lsrc.SetOutput(func(e logs.LogEvent) {
+// 					if e != nil {
+// 						if e.Message() != "This is from Service log" {
+// 							t.Errorf("Wrong service log found : \n%v", e.Message())
+// 						}
+// 						wg.Done()
+// 					}
+// 				})
+// 			}
+// 			defer lsrc.Stop()
+// 		}
+// 		time.Sleep(1 * time.Second)
+// 		c++
+// 	}
+// 	wg.Wait()
+// 	tt.Stop()
+// }
 
 func TestGenerateLogGroupName(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond

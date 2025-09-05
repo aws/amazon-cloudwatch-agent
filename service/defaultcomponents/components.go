@@ -35,6 +35,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
@@ -81,6 +82,7 @@ func Factories() (otelcol.Factories, error) {
 		awsxrayreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
 		jaegerreceiver.NewFactory(),
+		journaldreceiver.NewFactory(),
 		jmxreceiver.NewFactory(),
 		kafkareceiver.NewFactory(),
 		nopreceiver.NewFactory(),

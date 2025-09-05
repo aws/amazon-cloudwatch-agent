@@ -51,6 +51,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20250820144544-47895af7d372
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20250820144544-47895af7d372
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250820144544-47895af7d372
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/journaldreceiver v0.0.0-20250820144544-47895af7d372
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250820144544-47895af7d372
 )
 
@@ -235,6 +236,8 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/klog/v2 v2.130.1
 )
+
+require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.0.0-00010101000000-000000000000
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect

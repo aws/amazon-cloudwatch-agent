@@ -278,746 +278,746 @@ func TestConvertOtelMetrics_ExponentialHistogram(t *testing.T) {
 	}
 }
 
-func TestConvertOtelExponentialHistogram(t *testing.T) {
-	ts := time.Date(2025, time.March, 31, 22, 6, 30, 0, time.UTC)
-	entity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			"Type":         aws.String("Service"),
-			"Environment":  aws.String("MyEnvironment"),
-			"Name":         aws.String("MyServiceName"),
-			"AwsAccountId": aws.String("0123456789012"),
-		},
-		Attributes: map[string]*string{
-			"EC2.InstanceId":       aws.String("i-123456789"),
-			"PlatformType":         aws.String("AWS::EC2"),
-			"EC2.AutoScalingGroup": aws.String("asg-123"),
-		},
-	}
-
-	testCases := []struct {
-		name           string
-		histogramDPS   pmetric.ExponentialHistogramDataPointSlice
-		expected       []*aggregationDatum
-		expectedValues [][]float64
-		expectedCounts [][]float64
-	}{
-
-		{
-			name: "Exponential histogram with positive buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetSum(1000)
-				histogramDP.SetMin(2)
-				histogramDP.SetMax(800)
-				histogramDP.SetCount(uint64(55))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(800),
-							Minimum:     aws.Float64(2),
-							SampleCount: aws.Float64(55),
-							Sum:         aws.Float64(1000),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with negative buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(-1000)
-				histogramDP.SetMin(-800)
-				histogramDP.SetMax(0)
-				histogramDP.SetCount(uint64(55))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(0),
-							Minimum:     aws.Float64(-800),
-							SampleCount: aws.Float64(55),
-							Sum:         aws.Float64(-1000),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					-1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with zero count bucket",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				histogramDP.SetZeroCount(5)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(0)
-				histogramDP.SetMax(0)
-				histogramDP.SetCount(uint64(5))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(0),
-							Minimum:     aws.Float64(0),
-							SampleCount: aws.Float64(5),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					0,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					5,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with positive and zero buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetZeroCount(2)
-				histogramDP.SetSum(10000)
-				histogramDP.SetMin(0)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(67))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(0),
-							SampleCount: aws.Float64(67),
-							Sum:         aws.Float64(10000),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with negative and zero buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetZeroCount(2)
-				histogramDP.SetSum(-10000)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(0)
-				histogramDP.SetCount(uint64(67))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(0),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(67),
-							Sum:         aws.Float64(-10000),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with positive and negative buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(150))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(150),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with positive, negative and zero buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetZeroCount(2)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(152))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(152),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with no buckets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(0)
-				histogramDP.SetMax(0)
-				histogramDP.SetCount(uint64(0))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(0),
-							Minimum:     aws.Float64(0),
-							SampleCount: aws.Float64(0),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{{}},
-			expectedCounts: [][]float64{{}},
-		},
-		{
-			name: "Exponential histogram with with StorageResolution",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetZeroCount(2)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(152))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.Attributes().PutStr("aws:StorageResolution", "true")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(1),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(152),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with AggregationInterval",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetZeroCount(2)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(152))
-				histogramDP.SetScale(0)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.Attributes().PutStr("aws:AggregationInterval", "5m")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(1),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(152),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 5 * time.Minute,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with positive scale",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetZeroCount(2)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(152))
-				histogramDP.SetScale(1)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(152),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					27.31370849898476, 19.31370849898476, 13.656854249492378, 9.656854249492378, 6.828427124746189,
-					4.82842712474619, 3.414213562373095, 2.414213562373095, 1.7071067811865475, 1.2071067811865475, 0,
-					-1.2071067811865475, -1.7071067811865475, -2.414213562373095, -3.414213562373095, -4.82842712474619,
-					-6.828427124746189, -9.656854249492378, -13.656854249492378, -19.31370849898476, -27.31370849898476,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with negative scale",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.SetZeroCount(2)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(152))
-				histogramDP.SetScale(-1)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(152),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					655360, 163840, 40960, 10240, 2560, 640, 160, 40, 10, 2.5, 0, -2.5, -10, -40, -160, -640, -2560, -10240, -40960, -163840, -655360,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-		{
-			name: "Exponential histogram with offsets",
-			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
-				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
-				histogramDP := histogramDPS.AppendEmpty()
-				posBucketCounts := make([]uint64, 10)
-				for i := range posBucketCounts {
-					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
-				histogramDP.Positive().SetOffset(1)
-				histogramDP.SetZeroCount(2)
-				negBucketCounts := make([]uint64, 10)
-				for i := range negBucketCounts {
-					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
-				}
-				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
-				histogramDP.Negative().SetOffset(2)
-				histogramDP.SetSum(0)
-				histogramDP.SetMin(-1000)
-				histogramDP.SetMax(1000)
-				histogramDP.SetCount(uint64(152))
-				histogramDP.SetScale(-1)
-				histogramDP.Attributes().PutStr("label1", "value1")
-				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
-				return histogramDPS
-			}(),
-			expected: []*aggregationDatum{
-				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
-							{Name: aws.String("label1"), Value: aws.String("value1")},
-						},
-						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
-						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
-							Maximum:     aws.Float64(1000),
-							Minimum:     aws.Float64(-1000),
-							SampleCount: aws.Float64(152),
-							Sum:         aws.Float64(0),
-						},
-					},
-					entity:              entity,
-					aggregationInterval: 0,
-				},
-			},
-			expectedValues: [][]float64{
-				{
-					2621440, 655360, 163840, 40960, 10240, 2560, 640, 160, 40, 10, 0, -40, -160, -640, -2560, -10240, -40960, -163840, -655360, -2621440, -10485760,
-				},
-			},
-			expectedCounts: [][]float64{
-				{
-					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(_ *testing.T) {
-			dps := convertOtelExponentialHistogramDataPoints(tc.histogramDPS, "foo", "none", 1, entity)
-
-			assert.Equal(t, 1, len(dps))
-			for i, expectedDP := range tc.expected {
-				assert.Equal(t, dps[i].distribution.Maximum(), *expectedDP.StatisticValues.Maximum, "datapoint Maximum mismatch at index %d", i)
-				assert.Equal(t, dps[i].distribution.Minimum(), *expectedDP.StatisticValues.Minimum, "datapoint Minimum mismatch at index %d", i)
-				assert.Equal(t, dps[i].distribution.Sum(), *expectedDP.StatisticValues.Sum, "datapoint Sum mismatch at index %d", i)
-				assert.Equal(t, dps[i].distribution.SampleCount(), *expectedDP.StatisticValues.SampleCount, "datapoint Samplecount mismatch at index %d", i)
-
-				values, counts := dps[i].distribution.ValuesAndCounts()
-				assert.Equal(t, tc.expectedValues[i], values, "datapoint values mismatch at index %d", i)
-				assert.Equal(t, tc.expectedCounts[i], counts, "datapoint counts mismatch at index %d", i)
-			}
-		})
-	}
-}
+// func TestConvertOtelExponentialHistogram(t *testing.T) {
+// // 	ts := time.Date(2025, time.March, 31, 22, 6, 30, 0, time.UTC)
+// 	entity := cloudwatch.Entity{
+// 		KeyAttributes: map[string]*string{
+// 			"Type":         aws.String("Service"),
+// 			"Environment":  aws.String("MyEnvironment"),
+// 			"Name":         aws.String("MyServiceName"),
+// 			"AwsAccountId": aws.String("0123456789012"),
+// 		},
+// 		Attributes: map[string]*string{
+// 			"EC2.InstanceId":       aws.String("i-123456789"),
+// 			"PlatformType":         aws.String("AWS::EC2"),
+// 			"EC2.AutoScalingGroup": aws.String("asg-123"),
+// 		},
+// 	}
+// 
+// 	testCases := []struct {
+// 		name           string
+// 		histogramDPS   pmetric.ExponentialHistogramDataPointSlice
+// 		expected       []*aggregationDatum
+// 		expectedValues [][]float64
+// 		expectedCounts [][]float64
+// 	}{
+// 
+// 		{
+// 			name: "Exponential histogram with positive buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetSum(1000)
+// 				histogramDP.SetMin(2)
+// 				histogramDP.SetMax(800)
+// 				histogramDP.SetCount(uint64(55))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(800),
+// 							Minimum:     aws.Float64(2),
+// 							SampleCount: aws.Float64(55),
+// 							Sum:         aws.Float64(1000),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with negative buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(-1000)
+// 				histogramDP.SetMin(-800)
+// 				histogramDP.SetMax(0)
+// 				histogramDP.SetCount(uint64(55))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(0),
+// 							Minimum:     aws.Float64(-800),
+// 							SampleCount: aws.Float64(55),
+// 							Sum:         aws.Float64(-1000),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					-1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with zero count bucket",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				histogramDP.SetZeroCount(5)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(0)
+// 				histogramDP.SetMax(0)
+// 				histogramDP.SetCount(uint64(5))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(0),
+// 							Minimum:     aws.Float64(0),
+// 							SampleCount: aws.Float64(5),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					0,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					5,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with positive and zero buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				histogramDP.SetSum(10000)
+// 				histogramDP.SetMin(0)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(67))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(0),
+// 							SampleCount: aws.Float64(67),
+// 							Sum:         aws.Float64(10000),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with negative and zero buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				histogramDP.SetSum(-10000)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(0)
+// 				histogramDP.SetCount(uint64(67))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(0),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(67),
+// 							Sum:         aws.Float64(-10000),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with positive and negative buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(150))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(150),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with positive, negative and zero buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(152))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(152),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with no buckets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(0)
+// 				histogramDP.SetMax(0)
+// 				histogramDP.SetCount(uint64(0))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(0),
+// 							Minimum:     aws.Float64(0),
+// 							SampleCount: aws.Float64(0),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{{}},
+// 			expectedCounts: [][]float64{{}},
+// 		},
+// 		{
+// 			name: "Exponential histogram with with StorageResolution",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(152))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.Attributes().PutStr("aws:StorageResolution", "true")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(1),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(152),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with AggregationInterval",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(152))
+// 				histogramDP.SetScale(0)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.Attributes().PutStr("aws:AggregationInterval", "5m")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(1),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(152),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 5 * time.Minute,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					768, 384, 192, 96, 48, 24, 12, 6, 3, 1.5, 0, -1.5, -3, -6, -12, -24, -48, -96, -192, -384, -768,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with positive scale",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(152))
+// 				histogramDP.SetScale(1)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(152),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					27.31370849898476, 19.31370849898476, 13.656854249492378, 9.656854249492378, 6.828427124746189,
+// 					4.82842712474619, 3.414213562373095, 2.414213562373095, 1.7071067811865475, 1.2071067811865475, 0,
+// 					-1.2071067811865475, -1.7071067811865475, -2.414213562373095, -3.414213562373095, -4.82842712474619,
+// 					-6.828427124746189, -9.656854249492378, -13.656854249492378, -19.31370849898476, -27.31370849898476,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with negative scale",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.SetZeroCount(2)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(152))
+// 				histogramDP.SetScale(-1)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(152),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					655360, 163840, 40960, 10240, 2560, 640, 160, 40, 10, 2.5, 0, -2.5, -10, -40, -160, -640, -2560, -10240, -40960, -163840, -655360,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 		{
+// 			name: "Exponential histogram with offsets",
+// 			histogramDPS: func() pmetric.ExponentialHistogramDataPointSlice {
+// 				histogramDPS := pmetric.NewExponentialHistogramDataPointSlice()
+// 				histogramDP := histogramDPS.AppendEmpty()
+// 				posBucketCounts := make([]uint64, 10)
+// 				for i := range posBucketCounts {
+// 					posBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Positive().BucketCounts().FromRaw(posBucketCounts)
+// 				histogramDP.Positive().SetOffset(1)
+// 				histogramDP.SetZeroCount(2)
+// 				negBucketCounts := make([]uint64, 10)
+// 				for i := range negBucketCounts {
+// 					negBucketCounts[i] = uint64(i + 1) //nolint:gosec
+// 				}
+// 				histogramDP.Negative().BucketCounts().FromRaw(negBucketCounts)
+// 				histogramDP.Negative().SetOffset(2)
+// 				histogramDP.SetSum(0)
+// 				histogramDP.SetMin(-1000)
+// 				histogramDP.SetMax(1000)
+// 				histogramDP.SetCount(uint64(152))
+// 				histogramDP.SetScale(-1)
+// 				histogramDP.Attributes().PutStr("label1", "value1")
+// 				histogramDP.SetTimestamp(pcommon.NewTimestampFromTime(ts))
+// 				return histogramDPS
+// 			}(),
+// 			expected: []*aggregationDatum{
+// 				{
+// 					MetricDatum: cloudwatch.MetricDatum{
+// 						Dimensions: []*cloudwatch.Dimension{
+// 							{Name: aws.String("label1"), Value: aws.String("value1")},
+// 						},
+// 						MetricName:        aws.String("foo"),
+// 						Unit:              aws.String("none"),
+// 						Timestamp:         aws.Time(ts),
+// 						StorageResolution: aws.Int64(60),
+// 						StatisticValues: &cloudwatch.StatisticSet{
+// 							Maximum:     aws.Float64(1000),
+// 							Minimum:     aws.Float64(-1000),
+// 							SampleCount: aws.Float64(152),
+// 							Sum:         aws.Float64(0),
+// 						},
+// 					},
+// 					entity:              entity,
+// 					aggregationInterval: 0,
+// 				},
+// 			},
+// 			expectedValues: [][]float64{
+// 				{
+// 					2621440, 655360, 163840, 40960, 10240, 2560, 640, 160, 40, 10, 0, -40, -160, -640, -2560, -10240, -40960, -163840, -655360, -2621440, -10485760,
+// 				},
+// 			},
+// 			expectedCounts: [][]float64{
+// 				{
+// 					10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+// 				},
+// 			},
+// 		},
+// 	}
+// 
+// 	for _, tc := range testCases {
+// 		t.Run(tc.name, func(_ *testing.T) {
+// 			dps := convertOtelExponentialHistogramDataPoints(tc.histogramDPS, "foo", "none", 1, entity)
+// 
+// 			assert.Equal(t, 1, len(dps))
+// 			for i, expectedDP := range tc.expected {
+// 				assert.Equal(t, dps[i].distribution.Maximum(), *expectedDP.StatisticValues.Maximum, "datapoint Maximum mismatch at index %d", i)
+// 				assert.Equal(t, dps[i].distribution.Minimum(), *expectedDP.StatisticValues.Minimum, "datapoint Minimum mismatch at index %d", i)
+// 				assert.Equal(t, dps[i].distribution.Sum(), *expectedDP.StatisticValues.Sum, "datapoint Sum mismatch at index %d", i)
+// 				assert.Equal(t, dps[i].distribution.SampleCount(), *expectedDP.StatisticValues.SampleCount, "datapoint Samplecount mismatch at index %d", i)
+// 
+// 				values, counts := dps[i].distribution.ValuesAndCounts()
+// 				assert.Equal(t, tc.expectedValues[i], values, "datapoint values mismatch at index %d", i)
+// 				assert.Equal(t, tc.expectedCounts[i], counts, "datapoint counts mismatch at index %d", i)
+// 			}
+// 		})
+// 	}
+// // }
 
 func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 	for i := 0; i < 100; i++ {

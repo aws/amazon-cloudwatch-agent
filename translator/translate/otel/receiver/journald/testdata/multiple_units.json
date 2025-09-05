@@ -1,0 +1,16 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "system-services",
+            "log_stream_name": "{instance_id}-services",
+            "retention_in_days": 14,
+            "units": ["systemd", "sshd", "nginx", "docker"]
+          }
+        ]
+      }
+    }
+  }
+}

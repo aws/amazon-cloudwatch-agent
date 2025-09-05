@@ -630,6 +630,9 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "journald": {
+              "$ref": "#/definitions/logsDefinition/definitions/logsJournaldDefinition"
             }
           },
           "minProperties": 1,
@@ -1119,6 +1122,67 @@
           "required": [
             "collect_list"
           ]
+        },
+        "logsJournaldDefinition": {
+          "type": "object",
+          "descriptions": "Specifies the journald logs to be collected",
+          "properties": {
+            "collect_list": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "log_group_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+                  },
+                  "log_stream_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+                  },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
+                  "retention_in_days": {
+                    "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
+                  },
+                  "directory": {
+                    "type": "string",
+                    "description": "Path to a directory to read entries from",
+                    "maxLength": 4096
+                  },
+                  "files": {
+                    "type": "array",
+                    "description": "Array of journal files to read from",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 4096
+                    }
+                  },
+                  "units": {
+                    "type": "array",
+                    "description": "Array of systemd units to read from",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 256
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 16384,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "collect_list"
+          ],
+          "additionalProperties": false
         },
         "logGroupNameDefinition": {
           "type": "string",

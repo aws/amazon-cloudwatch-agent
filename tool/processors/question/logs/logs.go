@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/events"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/journald"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/tracesconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
@@ -28,6 +29,9 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) interface{} {
 	if ctx.OsParameter == util.OsTypeWindows {
 		return events.Processor
+	}
+	if ctx.OsParameter == util.OsTypeLinux {
+		return journald.Processor
 	}
 	return tracesconfig.Processor
 }

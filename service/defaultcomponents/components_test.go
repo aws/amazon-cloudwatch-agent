@@ -24,6 +24,7 @@ func TestComponents(t *testing.T) {
 		"awsxray",
 		"filelog",
 		"jaeger",
+		"journald",
 		"jmx",
 		"kafka",
 		"nop",

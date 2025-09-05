@@ -82,6 +82,7 @@ const (
 	NameKey                            = "name"
 	RenameKey                          = "rename"
 	UnitKey                            = "unit"
+	JournaldKey                        = "journald"
 )
 
 const (
