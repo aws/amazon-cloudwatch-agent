@@ -334,8 +334,13 @@ func (e *structuredLogEvent) Done() {}
 type cwDest struct {
 	pusher *pusher.Pusher
 	sync.Mutex
-	isEMF      bool
-	retryer    *retryer.LogThrottleRetryer
+	isEMF   bool
+	retryer *retryer.LogThrottleRetryer
+
+	// refCount keeps track of how many LogSrc objects are referencing
+	// this cwDest object at any given time. Once there are no more
+	// references, the cwDest object stops itself, closing all goroutines,
+	// and it can no longer be used
 	refCount   int
 	stopped    bool
 	onStopFunc func()
@@ -344,6 +349,9 @@ type cwDest struct {
 var _ logs.LogDest = (*cwDest)(nil)
 
 func (cd *cwDest) Publish(events []logs.LogEvent) error {
+	if cd.stopped {
+		return fmt.Errorf("cannot publish events: destination has been stopped")
+	}
 	for _, e := range events {
 		if !cd.isEMF {
 			msg := e.Message()
@@ -381,6 +389,10 @@ func (cd *cwDest) stop() {
 }
 
 func (cd *cwDest) AddEvent(e logs.LogEvent) {
+	if cd.stopped {
+		// cannot add event, destination has been stopped
+		return
+	}
 	// Drop events for metric path logs when queue is full
 	if cd.isEMF {
 		cd.pusher.AddEventNonBlocking(e)
