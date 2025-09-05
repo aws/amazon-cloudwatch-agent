@@ -110,7 +110,6 @@ func (c *CloudWatchLogs) Close() error {
 }
 
 func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
-	fmt.Printf("CloudWatchLogs.Write: %d metrics\n", len(metrics))
 	for _, m := range metrics {
 		c.writeMetricAsStructuredLog(m)
 	}
@@ -376,7 +375,9 @@ func (cd *cwDest) stop() {
 	cd.retryer.Stop()
 	cd.pusher.Stop()
 	cd.stopped = true
-	cd.onStopFunc()
+	if cd.onStopFunc != nil {
+		cd.onStopFunc()
+	}
 }
 
 func (cd *cwDest) AddEvent(e logs.LogEvent) {
@@ -435,7 +436,7 @@ func (c *CloudWatchLogs) SampleConfig() string {
 
 func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
-		c := &CloudWatchLogs{
+		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			cwDests:            sync.Map{},
 			middleware: agenthealth.NewAgentHealth(
@@ -447,19 +448,5 @@ func init() {
 				},
 			),
 		}
-
-		go func() {
-			ticker := time.NewTicker(10 * time.Second)
-			for range ticker.C {
-				length := 0
-				c.cwDests.Range(func(_, _ interface{}) bool {
-					length++
-					return true
-				})
-				fmt.Printf("Size of cwDests: %d\n", length)
-			}
-		}()
-
-		return c
 	})
 }
