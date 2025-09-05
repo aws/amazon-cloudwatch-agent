@@ -19,17 +19,19 @@ const (
 type EventFormat struct {
 }
 
-func (r *EventFormat) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (r *EventFormat) ApplyRule(input interface{}) (string, interface{}) {
+	var returnKey string
+	var returnVal interface{}
 	_, returnVal = translator.DefaultCase(EventFormatSectionKey, "", input)
 	if returnVal == "" {
-		return
+		return returnKey, returnVal
 	}
 	if returnVal != EventFormatXML && returnVal != EVentFormatPlainText {
 		translator.AddErrorMessages(GetCurPath()+EventFormatSectionKey, fmt.Sprintf("event_format value %s is not a valid value.", returnVal))
-		return
+		return returnKey, returnVal
 	}
 	returnKey = EventFormatSectionKey
-	return
+	return returnKey, returnVal
 }
 
 func init() {

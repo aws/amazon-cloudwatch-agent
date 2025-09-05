@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package windows_events
+package windowsevents
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 
 func TestApplyRule(t *testing.T) {
 	w := new(WindowsEvent)
-	var rawJsonString = `
+	var rawJSONString = `
 {
 	"windows_events": {
         "collect_list": [
@@ -53,7 +53,7 @@ func TestApplyRule(t *testing.T) {
 
 	var actual interface{}
 
-	err := json.Unmarshal([]byte(rawJsonString), &input)
+	err := json.Unmarshal([]byte(rawJSONString), &input)
 	if err == nil {
 		context.CurrentContext().SetOs(config.OS_TYPE_WINDOWS)
 		_, actual = w.ApplyRule(input)

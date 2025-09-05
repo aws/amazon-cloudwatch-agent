@@ -12,14 +12,16 @@ import (
 type LogStreamName struct {
 }
 
-func (l *LogStreamName) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (l *LogStreamName) ApplyRule(input interface{}) (string, interface{}) {
+	var returnKey string
+	var returnVal interface{}
 	key, val := translator.DefaultCase("log_stream_name", "", input)
 	if val == "" {
-		return
+		return returnKey, returnVal
 	}
 	returnKey = key
 	returnVal = util.ResolvePlaceholder(val.(string), logs.GlobalLogConfig.MetadataInfo)
-	return
+	return returnKey, returnVal
 }
 
 func init() {
