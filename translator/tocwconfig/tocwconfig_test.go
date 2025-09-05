@@ -1003,6 +1003,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
