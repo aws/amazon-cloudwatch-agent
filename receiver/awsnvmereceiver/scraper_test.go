@@ -61,7 +61,7 @@ func TestScraper_Start(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
+	settings.Logger = logger
 
 	mockUtil := new(mockNvmeUtil)
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]())
@@ -83,7 +83,7 @@ func TestScraper_Shutdown(t *testing.T) {
 	core, observedLogs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
+	settings.Logger = logger
 
 	mockUtil := new(mockNvmeUtil)
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]())
@@ -372,7 +372,8 @@ func TestScraper_Scrape_MultipleDevices_EBSAndInstanceStore(t *testing.T) {
 	originalGetRawData := getRawData
 	t.Cleanup(func() { getRawData = originalGetRawData })
 	getRawData = func(devicePath string) ([]byte, error) {
-		if devicePath == "/dev/nvme0n1" {
+		switch devicePath {
+		case "/dev/nvme0n1":
 			m := ebs.Metrics{
 				EBSMagic:              0x3C23B510,
 				ReadOps:               100,
@@ -388,7 +389,7 @@ func TestScraper_Scrape_MultipleDevices_EBSAndInstanceStore(t *testing.T) {
 				QueueLength:           5,
 			}
 			return generateEBSRawData(m), nil
-		} else if devicePath == "/dev/nvme1n1" {
+		case "/dev/nvme1n1":
 			m := instancestore.Metrics{
 				Magic:                 0xEC2C0D7E,
 				ReadOps:               150,
@@ -490,7 +491,7 @@ func TestScraper_Scrape_FilteredDevices(t *testing.T) {
 	logger := zap.New(core)
 
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
+	settings.Logger = logger
 
 	// Only allow nvme0n1
 	scraper := newScraper(createTestReceiverConfig(), settings, mockUtil, collections.NewSet[string]("nvme0n1"))
@@ -609,22 +610,22 @@ func TestScraper_Scrape_InstanceStoreDisabled(t *testing.T) {
 	mockUtil.On("GetDeviceModel", &device1).Return("Amazon EC2 NVMe Instance Storage", nil)
 
 	cfg := createDefaultConfig().(*Config)
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadOps.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadTime.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled = false
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled = true
+	cfg.Metrics.DiskioInstanceStoreTotalReadOps.Enabled = false
+	cfg.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled = false
+	cfg.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled = false
+	cfg.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled = false
+	cfg.Metrics.DiskioInstanceStoreTotalReadTime.Enabled = false
+	cfg.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled = false
+	cfg.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled = false
+	cfg.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled = false
+	cfg.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled = false
+	cfg.Metrics.DiskioEbsTotalReadOps.Enabled = true
 
 	core, _ := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
 	settings := receivertest.NewNopSettings(component.MustNewType("awsnvmereceiver"))
-	settings.TelemetrySettings.Logger = logger
+	settings.Logger = logger
 
 	scraper := newScraper(cfg, settings, mockUtil, collections.NewSet[string]("*"))
 

@@ -68,7 +68,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	// Total Read Ops is the only metric enabled by default. Disable it so that
 	// the measurements from the agent config are used instead.
-	cfg.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled = false
+	cfg.Metrics.DiskioEbsTotalReadOps.Enabled = false
 	c := confmap.NewFromStringMap(map[string]any{
 		"metrics": getEnabledMeasurements(conf),
 	})
