@@ -180,11 +180,6 @@ receivers:
                       regex: (.*)
                       source_labels:
                         - __meta_ecs_cluster_name
-                      target_label: ClusterName
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
@@ -247,6 +242,10 @@ receivers:
                       source_labels:
                         - StartedBy
                       target_label: CustomStartedBy
+                    - action: replace
+                      separator: ;
+                      replacement: custom-ecs-cluster-name
+                      target_label: ClusterName
                   scheme: http
                   scrape_interval: 1m
                   scrape_protocols:
@@ -288,11 +287,6 @@ receivers:
                       regex: (.*)
                       source_labels:
                         - __meta_ecs_cluster_name
-                      target_label: ClusterName
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
@@ -355,6 +349,10 @@ receivers:
                       source_labels:
                         - StartedBy
                       target_label: CustomStartedBy
+                    - action: replace
+                      separator: ;
+                      replacement: custom-ecs-cluster-name
+                      target_label: ClusterName
                   scheme: http
                   scrape_interval: 1m
                   scrape_protocols:
@@ -396,11 +394,6 @@ receivers:
                       regex: (.*)
                       source_labels:
                         - __meta_ecs_cluster_name
-                      target_label: ClusterName
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_cluster_name
                       target_label: TaskClusterName
                     - action: replace
                       regex: (.*)
@@ -463,6 +456,10 @@ receivers:
                       source_labels:
                         - StartedBy
                       target_label: CustomStartedBy
+                    - action: replace
+                      separator: ;
+                      replacement: custom-ecs-cluster-name
+                      target_label: ClusterName
                   scheme: http
                   scrape_interval: 1m
                   scrape_protocols:
