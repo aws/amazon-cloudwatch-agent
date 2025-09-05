@@ -80,8 +80,9 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 		assert.True(t, stateCallbackCalled, "State callback was not called in success scenario")
@@ -102,8 +103,9 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 	})
@@ -120,8 +122,9 @@ func TestSender(t *testing.T) {
 		mockManager.On("InitTarget", mock.Anything).Return(nil).Once()
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 		mockManager.AssertExpectations(t)
@@ -146,8 +149,9 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.InvalidParameterException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 		assert.True(t, stateCallbackCalled, "State callback was not called for InvalidParameterException")
@@ -173,8 +177,9 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.DataAlreadyAcceptedException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 		assert.True(t, stateCallbackCalled, "State callback was not called for DataAlreadyAcceptedException")
@@ -200,8 +205,9 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, errors.New("test")).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 		assert.True(t, stateCallbackCalled, "State callback was not called for non-AWS error")
@@ -219,8 +225,9 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 	})
@@ -244,8 +251,9 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		s := newSender(logger, mockService, mockManager, 100*time.Millisecond, make(chan struct{}))
+		s := newSender(logger, mockService, mockManager, 100*time.Millisecond)
 		s.Send(batch)
+		s.Stop()
 
 		mockService.AssertExpectations(t)
 		assert.True(t, stateCallbackCalled, "State callback was not called when retry attempts were exhausted")
@@ -271,12 +279,11 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		stopCh := make(chan struct{})
-		s := newSender(logger, mockService, mockManager, time.Second, stopCh)
+		s := newSender(logger, mockService, mockManager, time.Second)
 
 		go func() {
 			time.Sleep(50 * time.Millisecond)
-			close(stopCh)
+			s.Stop()
 		}()
 
 		s.Send(batch)
