@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -321,6 +321,10 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 					Files: []string{defaultECSSDfileName},
 				},
 			},
+			RelabelConfigs: []*relabel.Config{
+				{SourceLabels: model.LabelNames{"__address__"}, Action: relabel.Replace, TargetLabel: "custom_label", Regex: relabel.MustNewRegexp("(.*)")},
+				{SourceLabels: model.LabelNames{"__name__"}, Action: relabel.Drop, Regex: relabel.MustNewRegexp("unwanted_.*")},
+			},
 		},
 	}
 
@@ -340,18 +344,18 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 	})
 
 	configKey := "logs.metrics_collected.prometheus"
+
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
 	// Should add configs because ecs_service_discovery is explicitly configured
 	assert.Len(t, scrapeConfigs[0].RelabelConfigs, 13, "Should add relabel configs when ecs_service_discovery is explicitly configured")
 	validateRelabelFields(t, scrapeConfigs[0])
 	assert.Empty(t, scrapeConfigs[1].RelabelConfigs, "Other job should not have relabel configs")
-	assert.Len(t, scrapeConfigs[2].RelabelConfigs, 13, "Should add relabel configs when ecs_service_discovery is explicitly configured")
+	assert.Len(t, scrapeConfigs[2].RelabelConfigs, 15, "Should prepend relabel configs when customer provides relabel configs ")
 	validateRelabelFields(t, scrapeConfigs[2])
-
 }
 
-func TestAddDefaultRelabelConfigs_notECS(t *testing.T) {
+func TestDontAddDefaultRelabelConfigs_notECS(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = ""
 
 	scrapeConfigWithFileSD := &config.ScrapeConfig{
@@ -387,7 +391,7 @@ func TestAddDefaultRelabelConfigs_notECS(t *testing.T) {
 	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when not in ECS")
 }
 
-func TestAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
+func TestDontAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
 
 	scrapeConfigWithFileSD := &config.ScrapeConfig{
@@ -420,7 +424,7 @@ func TestAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
 	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when ecs_service_discovery is not configured")
 }
 
-func TestAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
+func TestDontAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
 
 	scrapeConfigWithFileSD := &config.ScrapeConfig{
@@ -457,7 +461,7 @@ func TestAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
 	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when sd_result_file doesn't match")
 }
 
-func TestAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
+func TestDontAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
 
 	scrapeConfigs := []*config.ScrapeConfig{}
@@ -482,6 +486,67 @@ func TestAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
 
 	// Should not panic with empty scrape configs
 	assert.Len(t, scrapeConfigs, 0, "Should remain empty")
+}
+
+func TestAppendCustomerRelabelConfigs(t *testing.T) {
+	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
+
+	customerRelabelConfig := &relabel.Config{
+		Action:       relabel.Replace,
+		SourceLabels: model.LabelNames{"StartedBy"},
+		TargetLabel:  "CustomStartedBy",
+		Regex:        relabel.MustNewRegexp("(.*)"),
+	}
+
+	scrapeConfigWithFileSD := &config.ScrapeConfig{
+		JobName: "test-job",
+		ServiceDiscoveryConfigs: []discovery.Config{
+			&file.SDConfig{
+				Files: []string{defaultECSSDfileName},
+			},
+		},
+		RelabelConfigs: []*relabel.Config{customerRelabelConfig},
+	}
+
+	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"ecs_service_discovery": map[string]interface{}{
+						"sd_result_file": defaultECSSDfileName,
+					},
+				},
+			},
+		},
+	})
+	configKey := "logs.metrics_collected.prometheus"
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should have 13 default + 1 customer relabel config")
+	validateRelabelFields(t, scrapeConfigWithFileSD)
+
+	customerProvidedConfig := scrapeConfigWithFileSD.RelabelConfigs[13]
+	assert.Equal(t, "CustomStartedBy", customerProvidedConfig.TargetLabel)
+	assert.Equal(t, model.LabelNames{"StartedBy"}, customerProvidedConfig.SourceLabels)
+}
+
+func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeConfig) {
+	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
+	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
+	assert.Equal(t, "container_name", scrapeConfigWithFileSD.RelabelConfigs[2].TargetLabel)
+	assert.Equal(t, "LaunchType", scrapeConfigWithFileSD.RelabelConfigs[3].TargetLabel)
+	assert.Equal(t, "StartedBy", scrapeConfigWithFileSD.RelabelConfigs[4].TargetLabel)
+	assert.Equal(t, "TaskGroup", scrapeConfigWithFileSD.RelabelConfigs[5].TargetLabel)
+	assert.Equal(t, "TaskDefinitionFamily", scrapeConfigWithFileSD.RelabelConfigs[6].TargetLabel)
+	assert.Equal(t, "TaskRevision", scrapeConfigWithFileSD.RelabelConfigs[7].TargetLabel)
+	assert.Equal(t, "InstanceType", scrapeConfigWithFileSD.RelabelConfigs[8].TargetLabel)
+	assert.Equal(t, "SubnetId", scrapeConfigWithFileSD.RelabelConfigs[9].TargetLabel)
+	assert.Equal(t, "VpcId", scrapeConfigWithFileSD.RelabelConfigs[10].TargetLabel)
+	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
+	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
 }
 
 func TestEscapeStrings(t *testing.T) {
@@ -516,20 +581,4 @@ func normalizeYAML(s string) string {
 		}
 	}
 	return buf.String()
-}
-
-func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeConfig) {
-	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
-	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
-	assert.Equal(t, "container_name", scrapeConfigWithFileSD.RelabelConfigs[2].TargetLabel)
-	assert.Equal(t, "LaunchType", scrapeConfigWithFileSD.RelabelConfigs[3].TargetLabel)
-	assert.Equal(t, "StartedBy", scrapeConfigWithFileSD.RelabelConfigs[4].TargetLabel)
-	assert.Equal(t, "TaskGroup", scrapeConfigWithFileSD.RelabelConfigs[5].TargetLabel)
-	assert.Equal(t, "TaskDefinitionFamily", scrapeConfigWithFileSD.RelabelConfigs[6].TargetLabel)
-	assert.Equal(t, "TaskRevision", scrapeConfigWithFileSD.RelabelConfigs[7].TargetLabel)
-	assert.Equal(t, "InstanceType", scrapeConfigWithFileSD.RelabelConfigs[8].TargetLabel)
-	assert.Equal(t, "SubnetId", scrapeConfigWithFileSD.RelabelConfigs[9].TargetLabel)
-	assert.Equal(t, "VpcId", scrapeConfigWithFileSD.RelabelConfigs[10].TargetLabel)
-	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
-	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
 }

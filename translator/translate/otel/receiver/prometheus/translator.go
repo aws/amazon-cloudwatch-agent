@@ -6,7 +6,6 @@ package prometheus
 import (
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -206,9 +205,9 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
 			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
 				for _, filePath := range fileSDConfig.Files {
-					if slices.Contains([]string{filePath}, ecsSDFileName) {
-						scrapeConfig.RelabelConfigs = defaultRelabelConfigs
-						break
+					if filePath == ecsSDFileName {
+						// Prepend defaultRelabelConfigs to customer configs for ecs_service_discovery. 
+						scrapeConfig.RelabelConfigs = append(defaultRelabelConfigs, scrapeConfig.RelabelConfigs...)
 					}
 				}
 			}
