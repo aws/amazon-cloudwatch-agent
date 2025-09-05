@@ -421,7 +421,7 @@ func (tail *Tail) tailFileSync() {
 			if cooloff {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
-				msg := "Too much log activity; waiting a second before resuming tailing"
+				msg := "too much log activity; waiting a second before resuming tailing"
 				// Warning: Make sure to release line once done!
 				lineObject := tail.linePool.Get().(*Line)
 				lineObject.Text = msg
