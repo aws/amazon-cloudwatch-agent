@@ -202,6 +202,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 
 	for _, scrapeConfig := range scrapeConfigs {
 		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
+
 			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
 				for _, filePath := range fileSDConfig.Files {
 					if filePath == ecsSDFileName {
@@ -211,12 +212,13 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 					}
 				}
 			}
+
 		}
 	}
 }
 
 /*
-Adds ClusterName relabelConfig if not already set by customer.
+addClusterNameRelabelConfig Adds ClusterName relabelConfig if not already set by customer.
 Customer can specify the clusterName in the scraping job's relabel_config
 CWAgent won't overwrite in this case to support cross-cluster monitoring
 */
