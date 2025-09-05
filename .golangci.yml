@@ -33,6 +33,11 @@ linters:
       - third_party$
       - builtin$
       - examples$
+    rules:
+      - linters:
+        - revive
+        path: 'translator/translate/util/*'
+        text: 'var-naming: avoid meaningless package names'
 issues:
   new-from-rev: 9af4477
 formatters:
