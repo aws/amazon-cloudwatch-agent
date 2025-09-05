@@ -1046,7 +1046,10 @@ scrape_configs:
     relabel_configs:
       - action: replace
         source_labels: [StartedBy]
-        target_label: CustomStartedBy`
+        target_label: CustomStartedBy
+      - action: replace
+        replacement: custom-ecs-cluster-name
+        target_label: ClusterName`
 
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)

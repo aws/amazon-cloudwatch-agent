@@ -590,6 +590,19 @@ func TestAppendCustomerRelabelConfigs(t *testing.T) {
 }
 
 func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeConfig, clusterNameValue string) {
+	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
+	assert.Equal(t, "container_name", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
+	assert.Equal(t, "LaunchType", scrapeConfigWithFileSD.RelabelConfigs[2].TargetLabel)
+	assert.Equal(t, "StartedBy", scrapeConfigWithFileSD.RelabelConfigs[3].TargetLabel)
+	assert.Equal(t, "TaskGroup", scrapeConfigWithFileSD.RelabelConfigs[4].TargetLabel)
+	assert.Equal(t, "TaskDefinitionFamily", scrapeConfigWithFileSD.RelabelConfigs[5].TargetLabel)
+	assert.Equal(t, "TaskRevision", scrapeConfigWithFileSD.RelabelConfigs[6].TargetLabel)
+	assert.Equal(t, "InstanceType", scrapeConfigWithFileSD.RelabelConfigs[7].TargetLabel)
+	assert.Equal(t, "SubnetId", scrapeConfigWithFileSD.RelabelConfigs[8].TargetLabel)
+	assert.Equal(t, "VpcId", scrapeConfigWithFileSD.RelabelConfigs[9].TargetLabel)
+	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[10].TargetLabel)
+	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
+
 	// Find ClusterName config instead of assuming position
 	var clusterNameConfig *relabel.Config
 	for _, config := range scrapeConfigWithFileSD.RelabelConfigs {
