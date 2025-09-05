@@ -545,7 +545,6 @@ func (tail *Tail) waitForChanges() error {
 
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
-
 	if tail.useLargeBuffer {
 		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
 	} else {
