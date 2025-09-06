@@ -4,423 +4,285 @@
 package otlp
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslatorWithoutDataType(t *testing.T) {
-	tt := NewTranslator()
-	assert.EqualValues(t, "otlp", tt.ID().String())
+	config := EndpointConfig{
+		protocol: HTTP,
+		endpoint: "127.0.0.1:4318",
+	}
+	tt := NewTranslator(config)
+	assert.Contains(t, tt.ID().String(), "otlp")
 	got, err := tt.Translate(confmap.New())
-	assert.Error(t, err)
-	assert.Nil(t, got)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
 }
 
 func TestTracesTranslator(t *testing.T) {
-	tt := NewTranslator(WithSignal(pipeline.SignalTraces), WithConfigKey(common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)))
+	// Clear cache before test
+	configCache = make(map[EndpointConfig]component.Config)
+
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *confmap.Conf
+		config  EndpointConfig
+		want    func(*otlpreceiver.Config) bool
 		wantErr error
 	}{
-		"WithMissingKey": {
-			input: map[string]interface{}{"logs": map[string]interface{}{}},
-			wantErr: &common.MissingKeyError{
-				ID:      tt.ID(),
-				JsonKey: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
+		"WithGRPCDefault": {
+			config: EndpointConfig{
+				protocol: GRPC,
+				endpoint: "127.0.0.1:4317",
+			},
+			want: func(cfg *otlpreceiver.Config) bool {
+				return cfg.GRPC != nil && cfg.GRPC.NetAddr.Endpoint == "127.0.0.1:4317" && cfg.HTTP == nil
 			},
 		},
-		"WithDefault": {
-			input: map[string]interface{}{"traces": map[string]interface{}{"traces_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
-					},
-				},
-			}),
+		"WithHTTPDefault": {
+			config: EndpointConfig{
+				protocol: HTTP,
+				endpoint: "127.0.0.1:4318",
+			},
+			want: func(cfg *otlpreceiver.Config) bool {
+				return cfg.HTTP != nil && cfg.HTTP.ServerConfig.Endpoint == "127.0.0.1:4318" && cfg.GRPC == nil
+			},
 		},
 		"WithTLS": {
-			input: map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
-					},
-					"tls": map[string]interface{}{
-						"cert_file": "path/to/cert.crt",
-						"key_file":  "path/to/key.key",
-					},
-				}},
-			wantErr: &common.MissingKeyError{
-				ID:      tt.ID(),
-				JsonKey: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
+			config: EndpointConfig{
+				protocol: GRPC,
+				endpoint: "127.0.0.1:4317",
+				certFile: "path/to/cert.crt",
+				keyFile:  "path/to/key.key",
+			},
+			want: func(cfg *otlpreceiver.Config) bool {
+				return cfg.GRPC != nil &&
+					cfg.GRPC.TLSSetting != nil &&
+					cfg.GRPC.TLSSetting.CertFile == "path/to/cert.crt" &&
+					cfg.GRPC.TLSSetting.KeyFile == "path/to/key.key"
 			},
 		},
-		"WithCompleteConfig": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "traces", "config.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "traces", "config.yaml")),
-		},
 	}
-	factory := otlpreceiver.NewFactory()
+
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf)
+			// Clear cache before each test case
+			configCache = make(map[EndpointConfig]component.Config)
+			tt := NewTranslator(testCase.config)
+			got, err := tt.Translate(confmap.New())
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*otlpreceiver.Config)
 				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, testCase.want.Unmarshal(wantCfg))
-				assert.Equal(t, wantCfg, gotCfg)
+				assert.True(t, testCase.want(gotCfg))
 			}
 		})
 	}
 }
 
 func TestMetricsTranslator(t *testing.T) {
-	multiConfig := map[string]interface{}{"metrics": map[string]interface{}{
-		"metrics_collected": map[string]interface{}{
-			"otlp": []any{
-				map[string]interface{}{},
-				map[string]interface{}{
-					"grpc_endpoint": "127.0.0.1:1234",
-					"http_endpoint": "127.0.0.1:2345",
-				},
-			},
-		},
-	}}
+	// Clear cache before test
+	configCache = make(map[EndpointConfig]component.Config)
 
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		index   int
-		want    *confmap.Conf
+		config  EndpointConfig
+		want    func(*otlpreceiver.Config) bool
 		wantErr error
 	}{
-		"WithMissingKey": {
-			input: map[string]interface{}{"metrics": map[string]interface{}{}},
-			index: -1,
-			wantErr: &common.MissingKeyError{
-				ID:      NewTranslator(WithSignal(pipeline.SignalMetrics)).ID(),
-				JsonKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey),
+		"WithGRPCEndpoint": {
+			config: EndpointConfig{
+				protocol: GRPC,
+				endpoint: "127.0.0.1:1234",
+			},
+			want: func(cfg *otlpreceiver.Config) bool {
+				return cfg.GRPC != nil && cfg.GRPC.NetAddr.Endpoint == "127.0.0.1:1234"
 			},
 		},
-		"WithDefault": {
-			input: map[string]interface{}{"metrics": map[string]interface{}{"metrics_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
-			index: -1,
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
-					},
-				},
-			}),
-		},
-		"WithMultiple_0": {
-			input: multiConfig,
-			index: 0,
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
-					},
-				},
-			}),
-		},
-		"WithMultiple_1": {
-			input: multiConfig,
-			index: 1,
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:1234",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:2345",
-					},
-				},
-			}),
-		},
-		"WithCompleteConfig": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "metrics", "config.json")),
-			index: -1,
-			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics", "config.yaml")),
+		"WithHTTPEndpoint": {
+			config: EndpointConfig{
+				protocol: HTTP,
+				endpoint: "127.0.0.1:2345",
+			},
+			want: func(cfg *otlpreceiver.Config) bool {
+				return cfg.HTTP != nil && cfg.HTTP.ServerConfig.Endpoint == "127.0.0.1:2345"
+			},
 		},
 	}
-	factory := otlpreceiver.NewFactory()
+
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(WithSignal(pipeline.SignalMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)))
-			if testCase.index != -1 {
-				tt = NewTranslator(WithSignal(pipeline.SignalMetrics), WithConfigKey(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)), common.WithIndex(testCase.index))
-			}
-			got, err := tt.Translate(conf)
+			// Clear cache before each test case
+			configCache = make(map[EndpointConfig]component.Config)
+			tt := NewTranslator(testCase.config)
+			got, err := tt.Translate(confmap.New())
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*otlpreceiver.Config)
 				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, testCase.want.Unmarshal(wantCfg))
-				assert.Equal(t, wantCfg, gotCfg)
+				assert.True(t, testCase.want(gotCfg))
 			}
 		})
 	}
 }
 
-func TestMetricsEmfTranslator(t *testing.T) {
-	multiConfig := map[string]interface{}{"logs": map[string]interface{}{
-		"metrics_collected": map[string]interface{}{
-			"otlp": []any{
-				map[string]interface{}{},
-				map[string]interface{}{
-					"grpc_endpoint": "127.0.0.1:1234",
-					"http_endpoint": "127.0.0.1:2345",
-				},
-			},
-		},
-	}}
+func TestCaching(t *testing.T) {
+	// Clear cache before test
+	configCache = make(map[EndpointConfig]component.Config)
 
-	testCases := map[string]struct {
-		input   map[string]interface{}
-		index   int
-		want    *confmap.Conf
-		wantErr error
-	}{
-		"WithMissingKey": {
-			input: map[string]interface{}{"logs": map[string]interface{}{}},
-			index: -1,
-			wantErr: &common.MissingKeyError{
-				ID:      NewTranslator(WithSignal(pipeline.SignalMetrics)).ID(),
-				JsonKey: common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey),
-			},
-		},
-		"WithDefault": {
-			input: map[string]interface{}{"logs": map[string]interface{}{"metrics_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
-			index: -1,
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
-					},
-				},
-			}),
-		},
-		"WithMultiple_0": {
-			input: multiConfig,
-			index: 0,
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:4317",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:4318",
-					},
-				},
-			}),
-		},
-		"WithMultiple_1": {
-			input: multiConfig,
-			index: 1,
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "127.0.0.1:1234",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "127.0.0.1:2345",
-					},
-				},
-			}),
-		},
-		"WithCompleteConfig": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "metrics_emf", "config.json")),
-			index: -1,
-			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics_emf", "config.yaml")),
-		},
+	config := EndpointConfig{
+		protocol: HTTP,
+		endpoint: "127.0.0.1:4318",
 	}
-	factory := otlpreceiver.NewFactory()
-	for name, testCase := range testCases {
-		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(
-				WithSignal(pipeline.SignalMetrics),
-				WithConfigKey(common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)),
-				common.WithIndex(testCase.index),
-			)
-			got, err := tt.Translate(conf)
-			assert.Equal(t, testCase.wantErr, err)
-			if err == nil {
-				require.NotNil(t, got)
-				gotCfg, ok := got.(*otlpreceiver.Config)
-				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, testCase.want.Unmarshal(wantCfg))
-				assert.Equal(t, wantCfg, gotCfg)
-			}
-		})
-	}
+
+	tt1 := NewTranslator(config)
+	tt2 := NewTranslator(config)
+
+	cfg1, err1 := tt1.Translate(confmap.New())
+	cfg2, err2 := tt2.Translate(confmap.New())
+
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.Equal(t, cfg1, cfg2) // Should be the same cached config
 }
 
-func TestTranslateAppSignals(t *testing.T) {
-	tt := NewTranslator(common.WithName(common.AppSignals), WithSignal(pipeline.SignalTraces))
-	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *confmap.Conf
-		wantErr error
-	}{
-		"WithAppSignalsEnabledTraces": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{},
-					},
-				}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "0.0.0.0:4315",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "0.0.0.0:4316",
-					},
-				},
-			}),
-		},
-		"WithAppSignalsEnabledTracesWithTLS": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{
-							"tls": map[string]interface{}{
-								"cert_file": "path/to/cert.crt",
-								"key_file":  "path/to/key.key",
-							},
-						},
-					},
-				}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "0.0.0.0:4315",
-						"tls": map[string]interface{}{
-							"cert_file": "path/to/cert.crt",
-							"key_file":  "path/to/key.key",
-						},
-					},
-					"http": map[string]interface{}{
-						"endpoint": "0.0.0.0:4316",
-						"tls": map[string]interface{}{
-							"cert_file": "path/to/cert.crt",
-							"key_file":  "path/to/key.key",
-						},
-					},
-				},
-			}),
-		},
-		"WithAppSignalsFallbackEnabledTraces": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
-					},
-				}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "0.0.0.0:4315",
-					},
-					"http": map[string]interface{}{
-						"endpoint": "0.0.0.0:4316",
-					},
-				},
-			}),
-		},
-		"WithAppSignalsFallbackEnabledTracesWithTLS": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{
-							"tls": map[string]interface{}{
-								"cert_file": "path/to/cert.crt",
-								"key_file":  "path/to/key.key",
-							},
-						},
-					},
-				}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"protocols": map[string]interface{}{
-					"grpc": map[string]interface{}{
-						"endpoint": "0.0.0.0:4315",
-						"tls": map[string]interface{}{
-							"cert_file": "path/to/cert.crt",
-							"key_file":  "path/to/key.key",
-						},
-					},
-					"http": map[string]interface{}{
-						"endpoint": "0.0.0.0:4316",
-						"tls": map[string]interface{}{
-							"cert_file": "path/to/cert.crt",
-							"key_file":  "path/to/key.key",
-						},
-					},
-				},
-			}),
-		},
+func TestTLSConflictDetection(t *testing.T) {
+	ClearConfigCache() // Clear cache before test
+
+	// First translator with TLS
+	config1 := EndpointConfig{
+		protocol: HTTP,
+		endpoint: "127.0.0.1:4318",
+		certFile: "cert1.pem",
+		keyFile:  "key1.pem",
 	}
-	factory := otlpreceiver.NewFactory()
-	for name, testCase := range testCases {
-		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf)
-			assert.Equal(t, testCase.wantErr, err)
-			if err == nil {
-				require.NotNil(t, got)
-				gotCfg, ok := got.(*otlpreceiver.Config)
-				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, testCase.want.Unmarshal(wantCfg))
-				assert.Equal(t, wantCfg, gotCfg)
-			}
-		})
+	tt1 := NewTranslator(config1)
+	_, err1 := tt1.Translate(confmap.New())
+	assert.NoError(t, err1)
+
+	// Second translator with different TLS for same endpoint
+	config2 := EndpointConfig{
+		protocol: HTTP,
+		endpoint: "127.0.0.1:4318",
+		certFile: "cert2.pem",
+		keyFile:  "key2.pem",
 	}
+	tt2 := NewTranslator(config2)
+	_, err2 := tt2.Translate(confmap.New())
+	assert.Error(t, err2)
+	assert.Contains(t, err2.Error(), "conflicting TLS configuration")
 }
 
-func TestTranslateJMX(t *testing.T) {
-	tt := NewTranslator(common.WithName(common.PipelineNameJmx))
-	got, err := tt.Translate(nil)
+func TestParseOtlpConfig_NilConf(t *testing.T) {
+	configs, err := ParseOtlpConfig(nil, "test", "otlp", pipeline.SignalTraces, -1)
+	assert.Error(t, err)
+	assert.Nil(t, configs)
+}
+
+func TestParseOtlpConfig_JMX(t *testing.T) {
+	conf := confmap.New()
+	configs, err := ParseOtlpConfig(conf, common.PipelineNameJmx, common.OtlpKey, pipeline.SignalMetrics, -1)
+
 	assert.NoError(t, err)
-	assert.NotNil(t, got)
-	gotCfg, ok := got.(*otlpreceiver.Config)
-	require.True(t, ok)
-	assert.Nil(t, gotCfg.GRPC)
-	assert.NotNil(t, gotCfg.HTTP)
-	assert.Equal(t, "0.0.0.0:4314", gotCfg.HTTP.ServerConfig.Endpoint)
+	assert.Len(t, configs, 1)
+	assert.Equal(t, HTTP, configs[0].protocol)
+	assert.Equal(t, "0.0.0.0:4314", configs[0].endpoint)
+}
+
+func TestParseOtlpConfig_AppSignals(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"traces": map[string]any{
+			"traces_collected": map[string]any{
+				"app_signals": map[string]any{},
+			},
+		},
+	})
+	configs, err := ParseOtlpConfig(conf, common.AppSignals, "", pipeline.SignalTraces, -1)
+
+	assert.NoError(t, err)
+	assert.Len(t, configs, 2)
+	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, "0.0.0.0:4315", configs[0].endpoint)
+	assert.Equal(t, HTTP, configs[1].protocol)
+	assert.Equal(t, "0.0.0.0:4316", configs[1].endpoint)
+}
+
+func TestParseOtlpConfig_DefaultEndpoints(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"otlp": map[string]any{},
+	})
+	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+
+	assert.NoError(t, err)
+	assert.Len(t, configs, 2)
+	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, "127.0.0.1:4317", configs[0].endpoint)
+	assert.Equal(t, HTTP, configs[1].protocol)
+	assert.Equal(t, "127.0.0.1:4318", configs[1].endpoint)
+}
+
+func TestParseOtlpConfig_CustomEndpoints(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"otlp": map[string]any{
+			"grpc_endpoint": "custom-grpc:4317",
+			"http_endpoint": "custom-http:4318",
+			"tls": map[string]any{
+				"cert_file": "/path/to/cert",
+				"key_file":  "/path/to/key",
+			},
+		},
+	})
+
+	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+
+	assert.NoError(t, err)
+	assert.Len(t, configs, 2)
+
+	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, "custom-grpc:4317", configs[0].endpoint)
+	assert.Equal(t, "/path/to/cert", configs[0].certFile)
+	assert.Equal(t, "/path/to/key", configs[0].keyFile)
+
+	assert.Equal(t, HTTP, configs[1].protocol)
+	assert.Equal(t, "custom-http:4318", configs[1].endpoint)
+	assert.Equal(t, "/path/to/cert", configs[1].certFile)
+	assert.Equal(t, "/path/to/key", configs[1].keyFile)
+}
+
+func TestParseOtlpConfig_OnlyGRPC(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"otlp": map[string]any{
+			"grpc_endpoint": "grpc-only:4317",
+		},
+	})
+
+	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+
+	assert.NoError(t, err)
+	assert.Len(t, configs, 1)
+	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, "grpc-only:4317", configs[0].endpoint)
+}
+
+func TestParseOtlpConfig_OnlyHTTP(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"otlp": map[string]any{
+			"http_endpoint": "http-only:4318",
+		},
+	})
+
+	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+
+	assert.NoError(t, err)
+	assert.Len(t, configs, 1)
+	assert.Equal(t, HTTP, configs[0].protocol)
+	assert.Equal(t, "http-only:4318", configs[0].endpoint)
 }

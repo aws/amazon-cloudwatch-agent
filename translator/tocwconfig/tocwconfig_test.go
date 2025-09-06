@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -326,6 +327,12 @@ func TestOtlpMetricsEmfConfigKubernetes(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "linux", nil, "")
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "darwin", nil, "")
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "windows", nil, "")
+}
+
+func TestSharedOtlp(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "shared_otlp_config", "linux", nil, "")
 }
 
 func TestProcstatMemorySwapConfig(t *testing.T) {
@@ -900,6 +907,9 @@ func resetContext(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = ""
 	context.ResetContext()
 
+	// Clear OTLP config cache to avoid conflicts between tests
+	otlp.ClearConfigCache()
+
 	t.Setenv("ProgramData", "c:\\ProgramData")
 }
 
@@ -955,6 +965,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})

@@ -52,10 +52,21 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(otlp.NewTranslator(common.WithName(common.AppSignals), otlp.WithSignal(t.signal))),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+	}
+
+	// Add OTLP receivers
+	otlps, err := otlp.ParseOtlpConfig(conf, common.AppSignals, "", t.signal, -1)
+	if err == nil {
+		for _, otlpConfig := range otlps {
+			translators.Receivers.Set(otlp.NewTranslator(
+				otlpConfig,
+				common.WithName(common.AppSignals)),
+			)
+		}
 	}
 
 	if t.signal == pipeline.SignalMetrics {
