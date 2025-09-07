@@ -1505,10 +1505,10 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-    otlp/grpc_4315:
+    otlp/grpc_127_0_0_1_4317:
         protocols:
             grpc:
-                endpoint: 0.0.0.0:4315
+                endpoint: 127.0.0.1:4317
                 keepalive:
                     enforcement_policy: {}
                     server_parameters: {}
@@ -1517,11 +1517,11 @@ receivers:
                     cert_file: path/to/cert.crt
                     key_file: path/to/key.key
                 transport: tcp
-    otlp/http_4316:
+    otlp/http_127_0_0_1_4318:
         protocols:
             http:
                 cors: {}
-                endpoint: 0.0.0.0:4316
+                endpoint: 127.0.0.1:4318
                 idle_timeout: 0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
@@ -1550,8 +1550,8 @@ service:
                 - awsapplicationsignals
                 - awsentity/service/application_signals
             receivers:
-                - otlp/grpc_4315
-                - otlp/http_4316
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
         metrics/containerinsights:
             exporters:
                 - awsemf/containerinsights
@@ -1568,8 +1568,8 @@ service:
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
-                - otlp/grpc_4315
-                - otlp/http_4316
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
     telemetry:
         logs:
             encoding: console

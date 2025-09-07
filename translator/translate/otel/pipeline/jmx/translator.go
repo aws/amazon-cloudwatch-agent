@@ -87,12 +87,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	if context.CurrentContext().RunInContainer() {
-		otlps, err := otlp.ParseOtlpConfig(conf, common.PipelineNameJmx, common.OtlpKey, pipeline.SignalMetrics, -1)
-		if err == nil {
-			for _, otlpConfig := range otlps {
-				translators.Receivers.Set(otlp.NewTranslator(otlpConfig))
-			}
-		}
+		translators.Receivers.Merge(otlp.NewTranslators(conf, common.PipelineNameJmx, pipeline.SignalMetrics.String()))
 		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.JmxKey))
 		if hasAppendDimensions(conf, t.Index()) {
 			translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())))

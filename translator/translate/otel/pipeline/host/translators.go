@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
-	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 var (
@@ -50,25 +50,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 		deltaReceivers.Set(awsnvme.NewTranslator())
 	}
 
-	// Gather OTLP receivers
-	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
-	case []any:
-		for index := range v {
-			otlps, err := otlpreceiver.ParseOtlpConfig(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey), pipeline.SignalMetrics, index)
-			if err == nil {
-				for _, otlpConfig := range otlps {
-					otlpReceivers.Set(otlpreceiver.NewTranslator(otlpConfig))
-				}
-			}
-		}
-	case map[string]any:
-		otlps, err := otlpreceiver.ParseOtlpConfig(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey), pipeline.SignalMetrics, -1)
-		if err == nil {
-			for _, otlpConfig := range otlps {
-				otlpReceivers.Set(otlpreceiver.NewTranslator(otlpConfig))
-			}
-		}
-	}
+	otlpReceivers.Merge(otlp.NewTranslators(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey)))
 
 	hasHostPipeline := hostReceivers.Len() != 0
 	hasHostCustomPipeline := hostCustomReceivers.Len() != 0

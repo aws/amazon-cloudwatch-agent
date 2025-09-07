@@ -4,7 +4,6 @@
 package containerinsightsjmx
 
 import (
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
@@ -53,7 +52,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, nil
 	}
 	translators := common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config, component.ID](),
+		Receivers: otlp.NewTranslators(conf, common.PipelineNameJmx, pipeline.SignalLogs.String()),
 		Processors: common.NewTranslatorMap(
 			filterprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)),   // Filter metrics
 			resourceprocessor.NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)), // Change resource attribute names
@@ -72,15 +71,5 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true),
 		),
 	}
-
-	// Add OTLP receivers
-	otlps, err := otlp.ParseOtlpConfig(conf, common.PipelineNameJmx, common.OtlpKey, pipeline.SignalMetrics, -1)
-	if err == nil {
-		for _, otlpConfig := range otlps {
-			translators.Receivers.Set(otlp.NewTranslator(otlpConfig))
-		}
-	}
-
 	return &translators, nil
-
 }

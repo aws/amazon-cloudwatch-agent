@@ -5,13 +5,12 @@ package otlp
 
 import (
 	"fmt"
-	"strings"
+	"regexp"
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
@@ -21,8 +20,8 @@ import (
 type protocol string
 
 const (
-	HTTP protocol = "http"
-	GRPC protocol = "grpc"
+	http protocol = "http"
+	grpc protocol = "grpc"
 
 	defaultGrpcEndpoint           = "127.0.0.1:4317"
 	defaultHttpEndpoint           = "127.0.0.1:4318"
@@ -44,11 +43,13 @@ type EndpointConfig struct {
 	endpoint string
 	certFile string
 	keyFile  string
+	err      error
 }
 
 var (
 	configCache = make(map[EndpointConfig]component.Config)
 	cacheMutex  sync.RWMutex
+	epRegex     = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 )
 
 // ClearConfigCache clears the OTLP config cache.
@@ -61,10 +62,10 @@ func ClearConfigCache() {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
+func NewTranslator(epConfig EndpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{
 		factory:        otlpreceiver.NewFactory(),
-		endpointConfig: otlpConfig,
+		endpointConfig: epConfig,
 	}
 	t.SetIndex(-1)
 	for _, opt := range opts {
@@ -72,11 +73,8 @@ func NewTranslator(otlpConfig EndpointConfig, opts ...common.TranslatorOption) c
 	}
 
 	t.pipelineName = t.Name()
-	// set name as "{type - http or grpc}" then appends "_{port}" if available
-	t.SetName(string(otlpConfig.protocol))
-	if parts := strings.Split(otlpConfig.endpoint, ":"); len(parts) > 1 {
-		t.SetName(t.Name() + "_" + parts[1])
-	}
+	// set name as "{type - http or grpc}" then appends an endpoint by replacing special chars with '_' eg. 'http_0_0_0_0_4316'
+	t.SetName(string(epConfig.protocol) + "_" + epRegex.ReplaceAllString(epConfig.endpoint, "_"))
 
 	return t
 }
@@ -89,6 +87,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
+	if t.endpointConfig.err != nil {
+		return nil, t.endpointConfig.err
+	}
+
 	// check and get existing receiver config in the cache
 	if existingCfg, exists := configCache[t.endpointConfig]; exists {
 		return existingCfg, nil
@@ -97,7 +99,8 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	for cachedConfig := range configCache {
 		if cachedConfig.protocol == t.endpointConfig.protocol && cachedConfig.endpoint == t.endpointConfig.endpoint &&
 			(cachedConfig.certFile != t.endpointConfig.certFile || cachedConfig.keyFile != t.endpointConfig.keyFile) {
-			// ignores (missing) TLS conflict for application signals pipelines https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
+			// ignores (missing) TLS conflict for application signals pipelines
+			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
 			if t.pipelineName == common.AppSignals {
 				return configCache[cachedConfig], nil
 			}
@@ -113,7 +116,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		tlsSettings.KeyFile = t.endpointConfig.keyFile
 	}
 
-	if t.endpointConfig.protocol == HTTP {
+	if t.endpointConfig.protocol == http {
 		cfg.GRPC = nil
 		cfg.HTTP.ServerConfig.Endpoint = t.endpointConfig.endpoint
 		cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
@@ -127,61 +130,44 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func ParseOtlpConfig(conf *confmap.Conf, pipelineName string, configKey string, signal pipeline.Signal, index int) ([]EndpointConfig, error) {
-	// JMX only supports HTTP
+func TranslateToEndpointConfig(conf *confmap.Conf, pipelineName string, configKey string, index int) []EndpointConfig {
 	if pipelineName == common.PipelineNameJmx {
-		return []EndpointConfig{{protocol: HTTP, endpoint: defaultJMXHttpEndpoint}}, nil
+		return []EndpointConfig{{protocol: http, endpoint: defaultJMXHttpEndpoint}}
 	}
 
-	grpcDefault := defaultGrpcEndpoint
-	httpDefault := defaultHttpEndpoint
+	grpcDefault, httpDefault := defaultGrpcEndpoint, defaultHttpEndpoint
+
+	if conf == nil || !conf.IsSet(configKey) {
+		pipelineType, _ := component.NewType(pipelineName)
+		return []EndpointConfig{{err: &common.MissingKeyError{ID: component.NewID(pipelineType), JsonKey: configKey}}}
+	}
 
 	if pipelineName == common.AppSignals {
-		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[signal]
-		if !ok {
-			return nil, fmt.Errorf("no application_signals config key defined for signal: %s", signal)
-		}
-		if conf.IsSet(appSignalsConfigKeys[0]) {
-			configKey = appSignalsConfigKeys[0]
-		} else {
-			configKey = appSignalsConfigKeys[1]
-		}
 		grpcDefault = defaultAppSignalsGrpcEndpoint
 		httpDefault = defaultAppSignalsHttpEndpoint
 	}
 
-	if conf == nil || !conf.IsSet(configKey) {
-		pipelineType, _ := component.NewType(pipelineName)
-		return nil, &common.MissingKeyError{ID: component.NewID(pipelineType), JsonKey: configKey}
-	}
-
-	// Parse config
 	otlpMap := common.GetIndexedMap(conf, configKey, index)
-	var certFile, keyFile string
+	certFile, keyFile := "", ""
 	if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
 		certFile, _ = tls["cert_file"].(string)
 		keyFile, _ = tls["key_file"].(string)
 	}
 
-	// creates 2 separate config entry by protocol
 	var configs []EndpointConfig
 	if grpcEndpoint, ok := otlpMap["grpc_endpoint"].(string); ok && grpcEndpoint != "" {
-		configs = append(configs, EndpointConfig{
-			protocol: GRPC, endpoint: grpcEndpoint, certFile: certFile, keyFile: keyFile,
-		})
+		configs = append(configs, EndpointConfig{grpc, grpcEndpoint, certFile, keyFile, nil})
 	}
 	if httpEndpoint, ok := otlpMap["http_endpoint"].(string); ok && httpEndpoint != "" {
-		configs = append(configs, EndpointConfig{
-			protocol: HTTP, endpoint: httpEndpoint, certFile: certFile, keyFile: keyFile,
-		})
+		configs = append(configs, EndpointConfig{http, httpEndpoint, certFile, keyFile, nil})
 	}
 
-	// If no specific endpoints configured, return defaults
 	if len(configs) == 0 {
-		configs = append(configs,
-			EndpointConfig{protocol: GRPC, endpoint: grpcDefault, certFile: certFile, keyFile: keyFile},
-			EndpointConfig{protocol: HTTP, endpoint: httpDefault, certFile: certFile, keyFile: keyFile})
+		configs = []EndpointConfig{
+			{grpc, grpcDefault, certFile, keyFile, nil},
+			{http, httpDefault, certFile, keyFile, nil},
+		}
 	}
 
-	return configs, nil
+	return configs
 }

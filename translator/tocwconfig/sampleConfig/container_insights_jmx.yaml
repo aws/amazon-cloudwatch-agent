@@ -538,7 +538,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-    otlp/http_4314:
+    otlp/http_0_0_0_0_4314:
         protocols:
             http:
                 cors: {}
@@ -574,7 +574,7 @@ service:
                 - metricstransform/containerinsightsjmx
                 - cumulativetodelta/containerinsightsjmx
             receivers:
-                - otlp/http_4314
+                - otlp/http_0_0_0_0_4314
     telemetry:
         logs:
             encoding: console

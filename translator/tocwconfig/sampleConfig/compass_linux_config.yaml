@@ -137,7 +137,7 @@ processors:
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
-    otlp/grpc_4317:
+    otlp/grpc_127_0_0_1_4317:
         protocols:
             grpc:
                 endpoint: 127.0.0.1:4317
@@ -146,7 +146,7 @@ receivers:
                     server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
-    otlp/http_4318:
+    otlp/http_127_0_0_1_4318:
         protocols:
             http:
                 cors: {}
@@ -189,8 +189,8 @@ service:
                 - ec2tagger
                 - awsentity/service/otlp/cloudwatch
             receivers:
-                - otlp/grpc_4317
-                - otlp/http_4318
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
         metrics/hostOtlpMetrics/cloudwatchlogs:
             exporters:
                 - awsemf
@@ -199,8 +199,8 @@ service:
                 - awsentity/service/otlp/cloudwatchlogs
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:
-                - otlp/grpc_4317
-                - otlp/http_4318
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
     telemetry:
         logs:
             encoding: console

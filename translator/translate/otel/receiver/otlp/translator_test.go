@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -18,7 +17,7 @@ import (
 
 func TestTranslatorWithoutDataType(t *testing.T) {
 	config := EndpointConfig{
-		protocol: HTTP,
+		protocol: http,
 		endpoint: "127.0.0.1:4318",
 	}
 	tt := NewTranslator(config)
@@ -39,7 +38,7 @@ func TestTracesTranslator(t *testing.T) {
 	}{
 		"WithGRPCDefault": {
 			config: EndpointConfig{
-				protocol: GRPC,
+				protocol: grpc,
 				endpoint: "127.0.0.1:4317",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
@@ -48,7 +47,7 @@ func TestTracesTranslator(t *testing.T) {
 		},
 		"WithHTTPDefault": {
 			config: EndpointConfig{
-				protocol: HTTP,
+				protocol: http,
 				endpoint: "127.0.0.1:4318",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
@@ -57,7 +56,7 @@ func TestTracesTranslator(t *testing.T) {
 		},
 		"WithTLS": {
 			config: EndpointConfig{
-				protocol: GRPC,
+				protocol: grpc,
 				endpoint: "127.0.0.1:4317",
 				certFile: "path/to/cert.crt",
 				keyFile:  "path/to/key.key",
@@ -99,7 +98,7 @@ func TestMetricsTranslator(t *testing.T) {
 	}{
 		"WithGRPCEndpoint": {
 			config: EndpointConfig{
-				protocol: GRPC,
+				protocol: grpc,
 				endpoint: "127.0.0.1:1234",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
@@ -108,7 +107,7 @@ func TestMetricsTranslator(t *testing.T) {
 		},
 		"WithHTTPEndpoint": {
 			config: EndpointConfig{
-				protocol: HTTP,
+				protocol: http,
 				endpoint: "127.0.0.1:2345",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
@@ -135,11 +134,10 @@ func TestMetricsTranslator(t *testing.T) {
 }
 
 func TestCaching(t *testing.T) {
-	// Clear cache before test
-	configCache = make(map[EndpointConfig]component.Config)
+	ClearConfigCache()
 
 	config := EndpointConfig{
-		protocol: HTTP,
+		protocol: http,
 		endpoint: "127.0.0.1:4318",
 	}
 
@@ -151,15 +149,14 @@ func TestCaching(t *testing.T) {
 
 	assert.NoError(t, err1)
 	assert.NoError(t, err2)
-	assert.Equal(t, cfg1, cfg2) // Should be the same cached config
+	assert.Equal(t, cfg1, cfg2)
 }
 
 func TestTLSConflictDetection(t *testing.T) {
-	ClearConfigCache() // Clear cache before test
+	ClearConfigCache()
 
-	// First translator with TLS
 	config1 := EndpointConfig{
-		protocol: HTTP,
+		protocol: http,
 		endpoint: "127.0.0.1:4318",
 		certFile: "cert1.pem",
 		keyFile:  "key1.pem",
@@ -168,9 +165,8 @@ func TestTLSConflictDetection(t *testing.T) {
 	_, err1 := tt1.Translate(confmap.New())
 	assert.NoError(t, err1)
 
-	// Second translator with different TLS for same endpoint
 	config2 := EndpointConfig{
-		protocol: HTTP,
+		protocol: http,
 		endpoint: "127.0.0.1:4318",
 		certFile: "cert2.pem",
 		keyFile:  "key2.pem",
@@ -181,55 +177,63 @@ func TestTLSConflictDetection(t *testing.T) {
 	assert.Contains(t, err2.Error(), "conflicting TLS configuration")
 }
 
-func TestParseOtlpConfig_NilConf(t *testing.T) {
-	configs, err := ParseOtlpConfig(nil, "test", "otlp", pipeline.SignalTraces, -1)
-	assert.Error(t, err)
-	assert.Nil(t, configs)
+func TestAppSignalsTLSIgnore(t *testing.T) {
+	ClearConfigCache()
+
+	config1 := EndpointConfig{
+		protocol: http,
+		endpoint: "127.0.0.1:4318",
+		certFile: "cert1.pem",
+		keyFile:  "key1.pem",
+	}
+	tt1 := NewTranslator(config1)
+	tt1.(*translator).pipelineName = common.AppSignals
+	_, err1 := tt1.Translate(confmap.New())
+	assert.NoError(t, err1)
+
+	config2 := EndpointConfig{
+		protocol: http,
+		endpoint: "127.0.0.1:4318",
+		certFile: "cert2.pem",
+		keyFile:  "key2.pem",
+	}
+	tt2 := NewTranslator(config2)
+	tt2.(*translator).pipelineName = common.AppSignals
+	_, err2 := tt2.Translate(confmap.New())
+	assert.NoError(t, err2)
 }
 
-func TestParseOtlpConfig_JMX(t *testing.T) {
+func TestTranslateToEndpointConfig_JMX(t *testing.T) {
 	conf := confmap.New()
-	configs, err := ParseOtlpConfig(conf, common.PipelineNameJmx, common.OtlpKey, pipeline.SignalMetrics, -1)
+	configs := TranslateToEndpointConfig(conf, common.PipelineNameJmx, common.OtlpKey, -1)
 
-	assert.NoError(t, err)
 	assert.Len(t, configs, 1)
-	assert.Equal(t, HTTP, configs[0].protocol)
+	assert.Equal(t, http, configs[0].protocol)
 	assert.Equal(t, "0.0.0.0:4314", configs[0].endpoint)
 }
 
-func TestParseOtlpConfig_AppSignals(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]any{
-		"traces": map[string]any{
-			"traces_collected": map[string]any{
-				"app_signals": map[string]any{},
-			},
-		},
-	})
-	configs, err := ParseOtlpConfig(conf, common.AppSignals, "", pipeline.SignalTraces, -1)
+func TestTranslateToEndpointConfig_MissingKey(t *testing.T) {
+	conf := confmap.New()
+	configs := TranslateToEndpointConfig(conf, "test", "missing", -1)
 
-	assert.NoError(t, err)
-	assert.Len(t, configs, 2)
-	assert.Equal(t, GRPC, configs[0].protocol)
-	assert.Equal(t, "0.0.0.0:4315", configs[0].endpoint)
-	assert.Equal(t, HTTP, configs[1].protocol)
-	assert.Equal(t, "0.0.0.0:4316", configs[1].endpoint)
+	assert.Len(t, configs, 1)
+	assert.Error(t, configs[0].err)
 }
 
-func TestParseOtlpConfig_DefaultEndpoints(t *testing.T) {
+func TestTranslateToEndpointConfig_DefaultEndpoints(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]any{
 		"otlp": map[string]any{},
 	})
-	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
 
-	assert.NoError(t, err)
 	assert.Len(t, configs, 2)
-	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, grpc, configs[0].protocol)
 	assert.Equal(t, "127.0.0.1:4317", configs[0].endpoint)
-	assert.Equal(t, HTTP, configs[1].protocol)
+	assert.Equal(t, http, configs[1].protocol)
 	assert.Equal(t, "127.0.0.1:4318", configs[1].endpoint)
 }
 
-func TestParseOtlpConfig_CustomEndpoints(t *testing.T) {
+func TestTranslateToEndpointConfig_CustomEndpoints(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]any{
 		"otlp": map[string]any{
 			"grpc_endpoint": "custom-grpc:4317",
@@ -241,48 +245,45 @@ func TestParseOtlpConfig_CustomEndpoints(t *testing.T) {
 		},
 	})
 
-	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
 
-	assert.NoError(t, err)
 	assert.Len(t, configs, 2)
 
-	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, grpc, configs[0].protocol)
 	assert.Equal(t, "custom-grpc:4317", configs[0].endpoint)
 	assert.Equal(t, "/path/to/cert", configs[0].certFile)
 	assert.Equal(t, "/path/to/key", configs[0].keyFile)
 
-	assert.Equal(t, HTTP, configs[1].protocol)
+	assert.Equal(t, http, configs[1].protocol)
 	assert.Equal(t, "custom-http:4318", configs[1].endpoint)
 	assert.Equal(t, "/path/to/cert", configs[1].certFile)
 	assert.Equal(t, "/path/to/key", configs[1].keyFile)
 }
 
-func TestParseOtlpConfig_OnlyGRPC(t *testing.T) {
+func TestTranslateToEndpointConfig_OnlyGRPC(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]any{
 		"otlp": map[string]any{
 			"grpc_endpoint": "grpc-only:4317",
 		},
 	})
 
-	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
 
-	assert.NoError(t, err)
 	assert.Len(t, configs, 1)
-	assert.Equal(t, GRPC, configs[0].protocol)
+	assert.Equal(t, grpc, configs[0].protocol)
 	assert.Equal(t, "grpc-only:4317", configs[0].endpoint)
 }
 
-func TestParseOtlpConfig_OnlyHTTP(t *testing.T) {
+func TestTranslateToEndpointConfig_OnlyHTTP(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]any{
 		"otlp": map[string]any{
 			"http_endpoint": "http-only:4318",
 		},
 	})
 
-	configs, err := ParseOtlpConfig(conf, "regular", common.OtlpKey, pipeline.SignalTraces, -1)
+	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
 
-	assert.NoError(t, err)
 	assert.Len(t, configs, 1)
-	assert.Equal(t, HTTP, configs[0].protocol)
+	assert.Equal(t, http, configs[0].protocol)
 	assert.Equal(t, "http-only:4318", configs[0].endpoint)
 }
