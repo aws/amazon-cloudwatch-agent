@@ -47,7 +47,7 @@ func NewTranslators(conf *confmap.Conf, pipelineName string, configKey string) c
 				translators.Set(NewTranslator(epConfig))
 			}
 		}
-	case map[string]any:
+	case map[string]any, nil:
 		epConfigs := TranslateToEndpointConfig(conf, pipelineName, configKey, -1)
 		for _, epConfig := range epConfigs {
 			translators.Set(NewTranslator(epConfig))
