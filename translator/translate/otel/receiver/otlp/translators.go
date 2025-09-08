@@ -31,7 +31,7 @@ func NewTranslators(conf *confmap.Conf, pipelineName string, configKey string) c
 
 	// this is for appsignals backword compatibility but can potentially be removed now
 	if pipelineName == common.AppSignals {
-		appSignalsConfigKeys, _ := common.AppSignalsConfigKeys[signal]
+		appSignalsConfigKeys := common.AppSignalsConfigKeys[signal]
 		if conf.IsSet(appSignalsConfigKeys[0]) {
 			configKey = appSignalsConfigKeys[0]
 		} else {
