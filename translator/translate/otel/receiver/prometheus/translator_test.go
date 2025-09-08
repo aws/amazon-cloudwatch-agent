@@ -315,10 +315,10 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 			},
 		},
 		{
-			JobName: "ecs-job2",
+			JobName: "ecs-job-dont-duplicate-default-relabel-configs",
 			ServiceDiscoveryConfigs: discovery.Configs{
 				&file.SDConfig{
-					Files: []string{defaultECSSDfileName},
+					Files: []string{defaultECSSDfileName, defaultECSSDfileName},
 				},
 			},
 			RelabelConfigs: []*relabel.Config{
