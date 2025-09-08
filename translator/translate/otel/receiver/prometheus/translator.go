@@ -206,8 +206,9 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 			if fileSDConfig, ok := sdConfig.(*file.SDConfig); ok {
 				for _, filePath := range fileSDConfig.Files {
 					if filePath == ecsSDFileName {
-						// Prepend defaultRelabelConfigs to customer configs for ecs_service_discovery. 
+						// Prepend defaultRelabelConfigs to customer configs for ecs_service_discovery.
 						scrapeConfig.RelabelConfigs = append(defaultRelabelConfigs, scrapeConfig.RelabelConfigs...)
+						break
 					}
 				}
 			}
