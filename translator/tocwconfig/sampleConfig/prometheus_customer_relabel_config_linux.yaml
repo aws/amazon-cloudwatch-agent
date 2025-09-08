@@ -236,11 +236,9 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                          - __meta_ecs_container_labels_app_x
-                      target_label: app_x
+                    - action: labelmap
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: __capture_group_1__
                     - action: replace
                       replacement: $1
                       separator: ;
@@ -344,11 +342,9 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_container_labels_app_x
-                      target_label: app_x
+                    - action: labelmap
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: __capture_group_1__
                     - action: replace
                       replacement: $1
                       separator: ;
@@ -452,11 +448,9 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
-                    - action: replace
-                      regex: (.*)
-                      source_labels:
-                        - __meta_ecs_container_labels_app_x
-                      target_label: app_x
+                    - action: labelmap
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: __capture_group_1__
                     - action: replace
                       replacement: $1
                       separator: ;
