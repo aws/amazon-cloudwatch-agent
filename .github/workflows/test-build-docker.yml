@@ -310,12 +310,13 @@ jobs:
           REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
+          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
+          docker manifest push $REGISTRY/$OrigREPOSITORY
 #          docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
 #          docker manifest push $REGISTRY/$REPOSITORYWindows
 
 #          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019 --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
-          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
-          docker manifest push $REGISTRY/$OrigREPOSITORY
+#          docker manifest push $REGISTRY/$OrigREPOSITORY
 
   #GH actions set up gpg only works on ubuntu as of this commit date
 #  GPGSignWindowsPackage:
