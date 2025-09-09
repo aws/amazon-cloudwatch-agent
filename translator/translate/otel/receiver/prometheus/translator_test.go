@@ -546,7 +546,8 @@ func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeCo
 	assert.Equal(t, "SubnetId", scrapeConfigWithFileSD.RelabelConfigs[9].TargetLabel)
 	assert.Equal(t, "VpcId", scrapeConfigWithFileSD.RelabelConfigs[10].TargetLabel)
 	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
-	assert.Equal(t, "app_x", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
+	assert.Equal(t, relabel.LabelMap, scrapeConfigWithFileSD.RelabelConfigs[12].Action)
+	assert.Equal(t, prometheusreceiver.EscapedCaptureGroupOne, scrapeConfigWithFileSD.RelabelConfigs[12].Replacement)
 }
 
 func TestEscapeStrings(t *testing.T) {
