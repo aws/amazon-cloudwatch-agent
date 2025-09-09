@@ -286,6 +286,12 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
+                    - action: replace
+                      regex: (.*)
+                      replacement: ""
+                      source_labels:
+                        - __meta_ecs_container_labels_job
+                      target_label: __meta_ecs_container_labels_job
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
                       replacement: __capture_group_1__
@@ -387,6 +393,12 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
+                    - action: replace
+                      regex: (.*)
+                      replacement: ""
+                      source_labels:
+                        - __meta_ecs_container_labels_job
+                      target_label: __meta_ecs_container_labels_job
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
                       replacement: __capture_group_1__
@@ -488,6 +500,12 @@ receivers:
                       source_labels:
                         - __meta_ecs_source
                       target_label: TaskId
+                    - action: replace
+                      regex: (.*)
+                      replacement: ""
+                      source_labels:
+                        - __meta_ecs_container_labels_job
+                      target_label: __meta_ecs_container_labels_job
                     - action: labelmap
                       regex: ^__meta_ecs_container_labels_(.+)$
                       replacement: __capture_group_1__
