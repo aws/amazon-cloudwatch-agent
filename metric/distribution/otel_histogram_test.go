@@ -103,14 +103,14 @@ func getTestCases() []HistogramTestCase {
 			},
 		},
 		{
-			Name: "No Buckets",
+			Name: "Single Bucket",
 			Input: HistogramInput{
 				Count:      51,
 				Sum:        1000,
 				Min:        ptr(5.0),
 				Max:        ptr(75.0),
 				Boundaries: []float64{},
-				Counts:     []uint64{},
+				Counts:     []uint64{51},
 				Attributes: map[string]string{"service.name": "auth-service"},
 			},
 			Expected: ExpectedMetrics{
@@ -129,7 +129,7 @@ func getTestCases() []HistogramTestCase {
 			},
 		},
 		{
-			Name: "Single Bucket",
+			Name: "Two Buckets",
 			Input: HistogramInput{
 				Count:      31,
 				Sum:        150,
@@ -388,6 +388,32 @@ func getTestCases() []HistogramTestCase {
 				},
 			},
 		},
+		{
+			Name: "Unbounded Histogram",
+			Input: HistogramInput{
+				Count:      75,
+				Sum:        3500,
+				Min:        nil,
+				Max:        nil,
+				Boundaries: []float64{},
+				Counts:     []uint64{},
+				Attributes: map[string]string{"service.name": "unbounded-service"},
+			},
+			Expected: ExpectedMetrics{
+				Count:   75,
+				Sum:     3500,
+				Average: 46.67,
+				MedianRange: struct {
+					Low  float64
+					High float64
+				}{
+					Low:  math.Inf(-1),
+					High: math.Inf(1),
+				},
+				Min: nil,
+				Max: nil,
+			},
+		},
 		// >100 buckets will be used for testing request splitting in PMD path
 		{
 			Name: "126 Buckets",
@@ -640,15 +666,15 @@ func ptr(f float64) *float64 {
 }
 
 func checkFeasibility(hi HistogramInput) (bool, string) {
+
 	// Special case: empty histogram is valid
 	if len(hi.Boundaries) == 0 && len(hi.Counts) == 0 {
 		return true, ""
 	}
 
-	// Either both boundaries and counts must be present, or both must be empty
-	if (len(hi.Boundaries) == 0) != (len(hi.Counts) == 0) {
-		return false, fmt.Sprintf("boundaries and counts must either both be present or both be empty. boundaries: %d, counts: %d",
-			len(hi.Boundaries), len(hi.Counts))
+	// Check counts length matches boundaries + 1
+	if len(hi.Counts) != len(hi.Boundaries)+1 {
+		return false, "Can't have counts without boundaries"
 	}
 
 	if hi.Max != nil && hi.Min != nil && *hi.Min > *hi.Max {
@@ -772,7 +798,7 @@ func calculateMedianRange(hi HistogramInput) (float64, float64) {
 		if hi.Min != nil && hi.Max != nil {
 			return *hi.Min, *hi.Max
 		}
-		return 0, 0
+		return math.Inf(-1), math.Inf(1)
 	}
 
 	medianPosition := hi.Count / 2
@@ -893,7 +919,7 @@ func TestInvalidHistogramFeasibility(t *testing.T) {
 
 func TestVisualizeHistograms(t *testing.T) {
 	// comment the next line to visualize the input histograms
-	t.Skip("Skip visualization test")
+	//t.Skip("Skip visualization test")
 	testCases := getTestCases()
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
