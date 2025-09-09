@@ -127,6 +127,8 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 
 	if !ua.isRoot {
 		ua.inputs.Add(flagRunAsUser)
+	} else if len(ua.inputs) == 0 {
+		ua.inputs.Add(flagRunAsUser)
 	}
 
 	ua.inputsStr.Store(componentsStr(typeInputs, ua.inputs))
