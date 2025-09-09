@@ -6,6 +6,7 @@ package distribution
 import (
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,8 @@ type ExpectedMetrics struct {
 	Count       uint64
 	Sum         float64
 	Average     float64
+	Min         *float64
+	Max         *float64
 	MedianRange struct {
 		Low  float64
 		High float64
@@ -46,7 +49,7 @@ func getTestCases() []HistogramTestCase {
 		boundaries125[i] = float64(i+1) * 10
 		counts125[i] = 11
 	}
-	counts125[125] = 11 // 1,386 total items
+	counts125[125] = 11
 
 	boundaries175 := make([]float64, 175)
 	counts175 := make([]uint64, 176)
@@ -54,7 +57,7 @@ func getTestCases() []HistogramTestCase {
 		boundaries175[i] = float64(i+1) * 10
 		counts175[i] = 11
 	}
-	counts175[175] = 11 // 1,936 total items
+	counts175[175] = 11
 
 	boundaries225 := make([]float64, 225)
 	counts225 := make([]uint64, 226)
@@ -62,7 +65,7 @@ func getTestCases() []HistogramTestCase {
 		boundaries225[i] = float64(i+1) * 10
 		counts225[i] = 11
 	}
-	counts225[225] = 11 // 2,486 total items
+	counts225[225] = 11
 
 	boundaries325 := make([]float64, 325)
 	counts325 := make([]uint64, 326)
@@ -70,7 +73,7 @@ func getTestCases() []HistogramTestCase {
 		boundaries325[i] = float64(i+1) * 10
 		counts325[i] = 11
 	}
-	counts325[325] = 11 // 3,586 total items
+	counts325[325] = 11
 
 	return []HistogramTestCase{
 		{
@@ -88,6 +91,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   101,
 				Sum:     6000,
 				Average: 59.41,
+				Min:     ptr(10.0),
+				Max:     ptr(200.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -112,6 +117,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   51,
 				Sum:     1000,
 				Average: 19.61,
+				Min:     ptr(5.0),
+				Max:     ptr(75.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -136,6 +143,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   31,
 				Sum:     150,
 				Average: 4.84,
+				Min:     ptr(1.0),
+				Max:     ptr(10.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -160,6 +169,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   101,
 				Sum:     25000,
 				Average: 247.52,
+				Min:     ptr(0.0),
+				Max:     ptr(1500.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -184,6 +195,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   1001,
 				Sum:     100000000000,
 				Average: 99900099.90,
+				Min:     ptr(1000000.0),
+				Max:     ptr(1000000000.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -208,6 +221,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   1111,
 				Sum:     350000,
 				Average: 315.03,
+				Min:     ptr(1.0),
+				Max:     ptr(1100.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -232,6 +247,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   101,
 				Sum:     0.00015,
 				Average: 0.00000149,
+				Min:     ptr(0.0000001),
+				Max:     ptr(0.000006),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -256,6 +273,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   101,
 				Sum:     -3000,
 				Average: -29.70,
+				Min:     ptr(-100.0),
+				Max:     ptr(60.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -280,6 +299,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   75,
 				Sum:     3500,
 				Average: 46.67,
+				Min:     nil,
+				Max:     nil,
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -304,6 +325,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   101,
 				Sum:     17500,
 				Average: 173.27,
+				Min:     nil,
+				Max:     ptr(750.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -328,6 +351,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   51,
 				Sum:     4000,
 				Average: 78.43,
+				Min:     ptr(25.0),
+				Max:     nil,
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -352,6 +377,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   1,
 				Sum:     100,
 				Average: 100.0,
+				Min:     nil,
+				Max:     nil,
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -377,6 +404,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   1386,
 				Sum:     870555,
 				Average: 573.14,
+				Min:     ptr(5.0),
+				Max:     ptr(1300.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -402,6 +431,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   1936,
 				Sum:     1557000,
 				Average: 804.23,
+				Min:     ptr(5.0),
+				Max:     ptr(1800.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -428,6 +459,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   2486,
 				Sum:     2803750,
 				Average: 1027.25,
+				Min:     ptr(5.0),
+				Max:     ptr(2300.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -454,6 +487,8 @@ func getTestCases() []HistogramTestCase {
 				Count:   3586,
 				Sum:     5830500,
 				Average: 1486.47,
+				Min:     ptr(5.0),
+				Max:     ptr(3300.0),
 				MedianRange: struct {
 					Low  float64
 					High float64
@@ -616,6 +651,10 @@ func checkFeasibility(hi HistogramInput) (bool, string) {
 			len(hi.Boundaries), len(hi.Counts))
 	}
 
+	if hi.Max != nil && hi.Min != nil && *hi.Min > *hi.Max {
+		return false, fmt.Sprintf("min %f is greater than max %f", *hi.Min, *hi.Max)
+	}
+
 	// Rest of checks only apply if we have boundaries/counts
 	if len(hi.Boundaries) > 0 || len(hi.Counts) > 0 {
 		// Check boundaries are in ascending order
@@ -765,6 +804,17 @@ func calculateMedianRange(hi HistogramInput) (float64, float64) {
 	return 0, 0 // Should never reach here for valid histograms
 }
 
+func assertOptionalFloat(t *testing.T, name string, expected, actual *float64) {
+	if expected != nil {
+		assert.NotNil(t, actual, "Expected %s defined but not defined on input", name)
+		if actual != nil {
+			assert.Equal(t, expected, actual)
+		}
+	} else {
+		assert.Nil(t, actual, "Input %s defined but no %s is expected", name, name)
+	}
+}
+
 func TestHistogramFeasibility(t *testing.T) {
 	testCases := getTestCases()
 	for _, tc := range testCases {
@@ -776,7 +826,57 @@ func TestHistogramFeasibility(t *testing.T) {
 			calculatedLow, calculatedHigh := calculateMedianRange(tc.Input)
 			assert.Equal(t, calculatedLow, tc.Expected.MedianRange.Low, "calculated low does not match expected low. check test definition")
 			assert.Equal(t, calculatedHigh, tc.Expected.MedianRange.High, "calculated high does not match expected high. check test definition")
+
+			assertOptionalFloat(t, "min", tc.Expected.Min, tc.Input.Min)
+			assertOptionalFloat(t, "max", tc.Expected.Max, tc.Input.Max)
 		})
+	}
+}
+
+func visualizeHistogram(hi HistogramInput) {
+	fmt.Printf("\nHistogram Visualization\n")
+	fmt.Printf("Count: %d, Sum: %.2f\n", hi.Count, hi.Sum)
+	if hi.Min != nil {
+		fmt.Printf("Min: %.2f ", *hi.Min)
+	}
+	if hi.Max != nil {
+		fmt.Printf("Max: %.2f", *hi.Max)
+	}
+	fmt.Println()
+
+	if len(hi.Boundaries) == 0 {
+		fmt.Println("No buckets defined")
+		return
+	}
+
+	maxCount := uint64(0)
+	for _, count := range hi.Counts {
+		if count > maxCount {
+			maxCount = count
+		}
+	}
+
+	for i, count := range hi.Counts {
+		var bucketLabel string
+		if i == 0 {
+			if hi.Min != nil {
+				bucketLabel = fmt.Sprintf("(%.2f, %.1f]", *hi.Min, hi.Boundaries[0])
+			} else {
+				bucketLabel = fmt.Sprintf("(-∞, %.1f]", hi.Boundaries[0])
+			}
+		} else if i == len(hi.Boundaries) {
+			if hi.Max != nil {
+				bucketLabel = fmt.Sprintf("(%.1f, %.2f]", hi.Boundaries[i-1], *hi.Max)
+			} else {
+				bucketLabel = fmt.Sprintf("(%.1f, +∞)", hi.Boundaries[i-1])
+			}
+		} else {
+			bucketLabel = fmt.Sprintf("(%.1f, %.1f]", hi.Boundaries[i-1], hi.Boundaries[i])
+		}
+
+		barLength := int(float64(count) / float64(maxCount) * 40)
+		bar := strings.Repeat("█", barLength)
+		fmt.Printf("%-30s %4d |%s\n", bucketLabel, count, bar)
 	}
 }
 
@@ -787,6 +887,17 @@ func TestInvalidHistogramFeasibility(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			feasible, reason := checkFeasibility(tc.Input)
 			assert.False(t, feasible, reason)
+		})
+	}
+}
+
+func TestVisualizeHistograms(t *testing.T) {
+	// comment the next line to visualize the input histograms
+	t.Skip("Skip visualization test")
+	testCases := getTestCases()
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			visualizeHistogram(tc.Input)
 		})
 	}
 }
