@@ -31,6 +31,7 @@ const (
 	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
 	ECS_SD_RESULT_FILE     = "sd_result_file"
 	defaultECSSDfileName   = "/tmp/cwagent_ecs_auto_sd.yaml"
+	defaultJobLabelName    = "job"
 )
 
 var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, "ecs_service_discovery")
@@ -218,7 +219,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 
 func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs []*relabel.Config) []*relabel.Config {
 	if hasJobLabelConfigured(conf) {
-		defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_job"}, Regex: relabel.MustNewRegexp("(.*)"), TargetLabel: "__meta_ecs_container_labels_job", Replacement: "", Action: relabel.Replace})
+		defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_job"}, Regex: relabel.MustNewRegexp(".*"), Action: relabel.Drop})
 	}
 	defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: prometheusreceiver.EscapedCaptureGroupOne})
 	return defaultRelabelConfigs
@@ -229,7 +230,7 @@ func hasJobLabelConfigured(conf *confmap.Conf) bool {
 	// docker_label configuration
 	dockerLabelKey := common.ConfigKey(ecsSDKey, "docker_label", "sd_job_name_label")
 	if conf.IsSet(dockerLabelKey) {
-		if jobLabelName, ok := conf.Get(dockerLabelKey).(string); ok && jobLabelName != "" {
+		if jobLabelName, ok := conf.Get(dockerLabelKey).(string); ok && jobLabelName != "" && jobLabelName != defaultJobLabelName {
 			return true
 		}
 	}

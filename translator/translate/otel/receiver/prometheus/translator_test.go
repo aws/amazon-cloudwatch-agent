@@ -682,7 +682,8 @@ func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeCo
 	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
 
 	if hasConfiguredJob {
-		assert.Equal(t, "__meta_ecs_container_labels_job", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
+		assert.Equal(t, relabel.Drop, scrapeConfigWithFileSD.RelabelConfigs[12].Action)
+		assert.Equal(t, model.LabelNames{"__meta_ecs_container_labels_job"}, scrapeConfigWithFileSD.RelabelConfigs[12].SourceLabels)
 		assert.Equal(t, relabel.LabelMap, scrapeConfigWithFileSD.RelabelConfigs[13].Action)
 		assert.Equal(t, prometheusreceiver.EscapedCaptureGroupOne, scrapeConfigWithFileSD.RelabelConfigs[13].Replacement)
 	} else {
