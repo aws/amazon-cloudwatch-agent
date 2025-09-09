@@ -349,10 +349,10 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 
 	// Should add configs because ecs_service_discovery is explicitly configured
 	assert.Len(t, scrapeConfigs[0].RelabelConfigs, 13, "Should add relabel configs when ecs_service_discovery is explicitly configured")
-	validateRelabelFields(t, scrapeConfigs[0])
+	validateRelabelFields(t, scrapeConfigs[0], false)
 	assert.Empty(t, scrapeConfigs[1].RelabelConfigs, "Other job should not have relabel configs")
 	assert.Len(t, scrapeConfigs[2].RelabelConfigs, 15, "Should prepend relabel configs when customer provides relabel configs ")
-	validateRelabelFields(t, scrapeConfigs[2])
+	validateRelabelFields(t, scrapeConfigs[2], false)
 }
 
 func TestDontAddDefaultRelabelConfigs_notECS(t *testing.T) {
@@ -525,15 +525,149 @@ func TestAppendCustomerRelabelConfigs(t *testing.T) {
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
-	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should have 13 default + 1 customer relabel config")
-	validateRelabelFields(t, scrapeConfigWithFileSD)
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should have default + 1 customer relabel config")
+	validateRelabelFields(t, scrapeConfigWithFileSD, false)
 
 	customerProvidedConfig := scrapeConfigWithFileSD.RelabelConfigs[13]
 	assert.Equal(t, "CustomStartedBy", customerProvidedConfig.TargetLabel)
 	assert.Equal(t, model.LabelNames{"StartedBy"}, customerProvidedConfig.SourceLabels)
 }
 
-func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeConfig) {
+func TestJobLabelPriority_DockerJobLabel(t *testing.T) {
+	testClusterName := "my-test-cluster"
+	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+	ecsutil.GetECSUtilSingleton().Cluster = testClusterName
+
+	scrapeConfigWithFileSD := &config.ScrapeConfig{
+		JobName: "test-scrape-configs-job",
+		ServiceDiscoveryConfigs: discovery.Configs{
+			&file.SDConfig{
+				Files: []string{defaultECSSDfileName},
+			},
+		},
+	}
+
+	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
+
+	// Configuration with custom job label name
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"ecs_service_discovery": map[string]interface{}{
+						"sd_frequency":   "50s",
+						"sd_result_file": defaultECSSDfileName,
+						"docker_label": map[string]interface{}{
+							"sd_job_name_label": "CUSTOM_JOB_LABEL",
+						},
+					},
+				},
+			},
+		},
+	})
+
+	configKey := "logs.metrics_collected.prometheus"
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+
+	// Should add relabel configs including job label override
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should add relabel config to drop docker_label job")
+	validateRelabelFields(t, scrapeConfigWithFileSD, true)
+}
+
+func TestJobLabelPriority_TaskDefinitionJobName(t *testing.T) {
+	testClusterName := "my-test-cluster"
+	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+	ecsutil.GetECSUtilSingleton().Cluster = testClusterName
+
+	scrapeConfigWithFileSD := &config.ScrapeConfig{
+		JobName: "test-scrape-configs-job",
+		ServiceDiscoveryConfigs: discovery.Configs{
+			&file.SDConfig{
+				Files: []string{defaultECSSDfileName},
+			},
+		},
+	}
+
+	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
+
+	// Configuration with task definition job name
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"ecs_service_discovery": map[string]interface{}{
+						"sd_frequency":   "50s",
+						"sd_result_file": defaultECSSDfileName,
+						"task_definition_list": []interface{}{
+							map[string]interface{}{
+								"sd_job_name":                    "custom-task-job",
+								"sd_metrics_ports":               "9090",
+								"sd_task_definition_arn_pattern": ".*:task-definition/my-task:.*",
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	configKey := "logs.metrics_collected.prometheus"
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+
+	// Should add relabel configs including job label override
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should add relabel config to drop docker_label job")
+	validateRelabelFields(t, scrapeConfigWithFileSD, true)
+}
+
+func TestJobLabelPriority_ServiceNameJobName(t *testing.T) {
+	testClusterName := "my-test-cluster"
+	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+	ecsutil.GetECSUtilSingleton().Cluster = testClusterName
+
+	scrapeConfigWithFileSD := &config.ScrapeConfig{
+		JobName: "test-scrape-configs-job",
+		ServiceDiscoveryConfigs: discovery.Configs{
+			&file.SDConfig{
+				Files: []string{defaultECSSDfileName},
+			},
+		},
+	}
+
+	scrapeConfigs := []*config.ScrapeConfig{scrapeConfigWithFileSD}
+
+	// Configuration with service name job name
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"ecs_service_discovery": map[string]interface{}{
+						"sd_frequency":   "50s",
+						"sd_result_file": defaultECSSDfileName,
+						"service_name_list_for_tasks": []interface{}{
+							map[string]interface{}{
+								"sd_job_name":             "custom-service-job",
+								"sd_metrics_ports":        "9090",
+								"sd_service_name_pattern": "my-service",
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	configKey := "logs.metrics_collected.prometheus"
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
+
+	// Should add relabel configs including job label override
+	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 14, "Should add relabel config to drop docker_label job")
+	validateRelabelFields(t, scrapeConfigWithFileSD, true)
+}
+
+func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeConfig, hasConfiguredJob bool) {
 	assert.Equal(t, "ClusterName", scrapeConfigWithFileSD.RelabelConfigs[0].TargetLabel)
 	assert.Equal(t, "TaskClusterName", scrapeConfigWithFileSD.RelabelConfigs[1].TargetLabel)
 	assert.Equal(t, "container_name", scrapeConfigWithFileSD.RelabelConfigs[2].TargetLabel)
@@ -546,8 +680,15 @@ func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeCo
 	assert.Equal(t, "SubnetId", scrapeConfigWithFileSD.RelabelConfigs[9].TargetLabel)
 	assert.Equal(t, "VpcId", scrapeConfigWithFileSD.RelabelConfigs[10].TargetLabel)
 	assert.Equal(t, "TaskId", scrapeConfigWithFileSD.RelabelConfigs[11].TargetLabel)
-	assert.Equal(t, relabel.LabelMap, scrapeConfigWithFileSD.RelabelConfigs[12].Action)
-	assert.Equal(t, prometheusreceiver.EscapedCaptureGroupOne, scrapeConfigWithFileSD.RelabelConfigs[12].Replacement)
+
+	if hasConfiguredJob {
+		assert.Equal(t, "__meta_ecs_container_labels_job", scrapeConfigWithFileSD.RelabelConfigs[12].TargetLabel)
+		assert.Equal(t, relabel.LabelMap, scrapeConfigWithFileSD.RelabelConfigs[13].Action)
+		assert.Equal(t, prometheusreceiver.EscapedCaptureGroupOne, scrapeConfigWithFileSD.RelabelConfigs[13].Replacement)
+	} else {
+		assert.Equal(t, relabel.LabelMap, scrapeConfigWithFileSD.RelabelConfigs[12].Action)
+		assert.Equal(t, prometheusreceiver.EscapedCaptureGroupOne, scrapeConfigWithFileSD.RelabelConfigs[12].Replacement)
+	}
 }
 
 func TestEscapeStrings(t *testing.T) {
