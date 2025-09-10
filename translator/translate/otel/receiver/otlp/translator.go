@@ -132,7 +132,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func TranslateToEndpointConfig(conf *confmap.Conf, pipelineName string, configKey string, index int) []EndpointConfig {
+func translateToEndpointConfig(conf *confmap.Conf, pipelineName string, configKey string, index int) []EndpointConfig {
 	if pipelineName == common.PipelineNameJmx {
 		return []EndpointConfig{{protocol: http, endpoint: defaultJMXHttpEndpoint}}
 	}

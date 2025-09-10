@@ -281,7 +281,7 @@ func TestAppSignalsTLSIgnore(t *testing.T) {
 
 func TestTranslateToEndpointConfig_JMX(t *testing.T) {
 	conf := confmap.New()
-	configs := TranslateToEndpointConfig(conf, common.PipelineNameJmx, common.OtlpKey, -1)
+	configs := translateToEndpointConfig(conf, common.PipelineNameJmx, common.OtlpKey, -1)
 
 	assert.Len(t, configs, 1)
 	assert.Equal(t, http, configs[0].protocol)
@@ -290,7 +290,7 @@ func TestTranslateToEndpointConfig_JMX(t *testing.T) {
 
 func TestTranslateToEndpointConfig_MissingKey(t *testing.T) {
 	conf := confmap.New()
-	configs := TranslateToEndpointConfig(conf, "test", "missing", -1)
+	configs := translateToEndpointConfig(conf, "test", "missing", -1)
 
 	assert.Len(t, configs, 1)
 	assert.Error(t, configs[0].err)
@@ -300,7 +300,7 @@ func TestTranslateToEndpointConfig_DefaultEndpoints(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]any{
 		"otlp": map[string]any{},
 	})
-	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
+	configs := translateToEndpointConfig(conf, "regular", "otlp", -1)
 
 	assert.Len(t, configs, 2)
 	assert.Equal(t, grpc, configs[0].protocol)
@@ -321,7 +321,7 @@ func TestTranslateToEndpointConfig_CustomEndpoints(t *testing.T) {
 		},
 	})
 
-	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
+	configs := translateToEndpointConfig(conf, "regular", "otlp", -1)
 
 	assert.Len(t, configs, 2)
 
@@ -343,7 +343,7 @@ func TestTranslateToEndpointConfig_OnlyGRPC(t *testing.T) {
 		},
 	})
 
-	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
+	configs := translateToEndpointConfig(conf, "regular", "otlp", -1)
 
 	assert.Len(t, configs, 1)
 	assert.Equal(t, grpc, configs[0].protocol)
@@ -357,7 +357,7 @@ func TestTranslateToEndpointConfig_OnlyHTTP(t *testing.T) {
 		},
 	})
 
-	configs := TranslateToEndpointConfig(conf, "regular", "otlp", -1)
+	configs := translateToEndpointConfig(conf, "regular", "otlp", -1)
 
 	assert.Len(t, configs, 1)
 	assert.Equal(t, http, configs[0].protocol)

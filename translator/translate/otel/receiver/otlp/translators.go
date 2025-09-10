@@ -42,14 +42,14 @@ func NewTranslators(conf *confmap.Conf, pipelineName string, configKey string) c
 	switch v := conf.Get(configKey).(type) {
 	case []any:
 		for index := range v {
-			epConfigs := TranslateToEndpointConfig(conf, pipelineName, configKey, index)
+			epConfigs := translateToEndpointConfig(conf, pipelineName, configKey, index)
 			for _, epConfig := range epConfigs {
 				translators.Set(NewTranslator(epConfig, common.WithName(pipelineName)))
 			}
 		}
 	default: // default handles an empty otlp section as well
 		if conf.IsSet(configKey) {
-			epConfigs := TranslateToEndpointConfig(conf, pipelineName, configKey, -1)
+			epConfigs := translateToEndpointConfig(conf, pipelineName, configKey, -1)
 			for _, epConfig := range epConfigs {
 				translators.Set(NewTranslator(epConfig, common.WithName(pipelineName)))
 			}
