@@ -279,6 +279,10 @@ func (cd *cwDest) NotifySourceStopped() {
 	if cd.refCount <= 0 {
 		cd.stop()
 	}
+
+	if cd.refCount < 0 {
+		fmt.Printf("E! Negative refCount on cwDest detected. refCount: %d, logGroup: %s, logStream: %s", cd.refCount, cd.pusher.Group, cd.pusher.Stream)
+	}
 }
 
 func (cd *cwDest) Stop() {
