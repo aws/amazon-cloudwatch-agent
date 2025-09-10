@@ -178,29 +178,105 @@ func TestTLSConflictDetection(t *testing.T) {
 }
 
 func TestAppSignalsTLSIgnore(t *testing.T) {
-	ClearConfigCache()
+	t.Run("AllowsMixedTLSAndNoTLS", func(t *testing.T) {
+		ClearConfigCache()
 
-	config1 := EndpointConfig{
-		protocol: http,
-		endpoint: "127.0.0.1:4318",
-		certFile: "cert1.pem",
-		keyFile:  "key1.pem",
-	}
-	tt1 := NewTranslator(config1)
-	tt1.(*translator).pipelineName = common.AppSignals
-	_, err1 := tt1.Translate(confmap.New())
-	assert.NoError(t, err1)
+		// First config with TLS
+		config1 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+			certFile: "cert1.pem",
+			keyFile:  "key1.pem",
+		}
+		tt1 := NewTranslator(config1, common.WithName(common.AppSignals))
+		_, err1 := tt1.Translate(confmap.New())
+		assert.NoError(t, err1)
 
-	config2 := EndpointConfig{
-		protocol: http,
-		endpoint: "127.0.0.1:4318",
-		certFile: "cert2.pem",
-		keyFile:  "key2.pem",
-	}
-	tt2 := NewTranslator(config2)
-	tt2.(*translator).pipelineName = common.AppSignals
-	_, err2 := tt2.Translate(confmap.New())
-	assert.NoError(t, err2)
+		// Second config without TLS - should be allowed for AppSignals
+		config2 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+		}
+		tt2 := NewTranslator(config2, common.WithName(common.AppSignals))
+		_, err2 := tt2.Translate(confmap.New())
+		assert.NoError(t, err2)
+	})
+
+	t.Run("AllowsNoTLSThenTLS", func(t *testing.T) {
+		ClearConfigCache()
+
+		// First config without TLS
+		config1 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+		}
+		tt1 := NewTranslator(config1, common.WithName(common.AppSignals))
+		_, err1 := tt1.Translate(confmap.New())
+		assert.NoError(t, err1)
+
+		// Second config with TLS - should be allowed for AppSignals
+		config2 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+			certFile: "cert1.pem",
+			keyFile:  "key1.pem",
+		}
+		tt2 := NewTranslator(config2, common.WithName(common.AppSignals))
+		_, err2 := tt2.Translate(confmap.New())
+		assert.NoError(t, err2)
+	})
+
+	t.Run("ErrorsOnDifferentTLSConfigs", func(t *testing.T) {
+		ClearConfigCache()
+
+		// First config with TLS
+		config1 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+			certFile: "cert1.pem",
+			keyFile:  "key1.pem",
+		}
+		tt1 := NewTranslator(config1, common.WithName(common.AppSignals))
+		_, err1 := tt1.Translate(confmap.New())
+		assert.NoError(t, err1)
+
+		// Second config with different TLS - should error even for AppSignals
+		config2 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+			certFile: "cert2.pem",
+			keyFile:  "key2.pem",
+		}
+		tt2 := NewTranslator(config2, common.WithName(common.AppSignals))
+		_, err2 := tt2.Translate(confmap.New())
+		assert.Error(t, err2)
+		assert.Contains(t, err2.Error(), "conflicting TLS configuration")
+	})
+
+	t.Run("EmptyPipelineNameErrorsOnTLSConflict", func(t *testing.T) {
+		ClearConfigCache()
+
+		// First config with TLS
+		config1 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+			certFile: "cert1.pem",
+			keyFile:  "key1.pem",
+		}
+		tt1 := NewTranslator(config1, common.WithName(""))
+		_, err1 := tt1.Translate(confmap.New())
+		assert.NoError(t, err1)
+
+		// Second config without TLS - should error for empty pipeline name
+		config2 := EndpointConfig{
+			protocol: http,
+			endpoint: "127.0.0.1:4318",
+		}
+		tt2 := NewTranslator(config2, common.WithName(""))
+		_, err2 := tt2.Translate(confmap.New())
+		assert.Error(t, err2)
+		assert.Contains(t, err2.Error(), "conflicting TLS configuration")
+	})
 }
 
 func TestTranslateToEndpointConfig_JMX(t *testing.T) {

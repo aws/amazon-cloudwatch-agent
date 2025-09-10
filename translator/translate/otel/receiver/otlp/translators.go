@@ -44,14 +44,14 @@ func NewTranslators(conf *confmap.Conf, pipelineName string, configKey string) c
 		for index := range v {
 			epConfigs := TranslateToEndpointConfig(conf, pipelineName, configKey, index)
 			for _, epConfig := range epConfigs {
-				translators.Set(NewTranslator(epConfig))
+				translators.Set(NewTranslator(epConfig, common.WithName(pipelineName)))
 			}
 		}
 	default: // default handles an empty otlp section as well
 		if conf.IsSet(configKey) {
 			epConfigs := TranslateToEndpointConfig(conf, pipelineName, configKey, -1)
 			for _, epConfig := range epConfigs {
-				translators.Set(NewTranslator(epConfig))
+				translators.Set(NewTranslator(epConfig, common.WithName(pipelineName)))
 			}
 		}
 	}

@@ -32,7 +32,6 @@ const (
 
 type translator struct {
 	common.NameProvider
-	common.IndexProvider
 	factory        receiver.Factory
 	endpointConfig EndpointConfig
 	pipelineName   string
@@ -67,7 +66,6 @@ func NewTranslator(epConfig EndpointConfig, opts ...common.TranslatorOption) com
 		factory:        otlpreceiver.NewFactory(),
 		endpointConfig: epConfig,
 	}
-	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
 	}
@@ -99,10 +97,14 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	for cachedConfig := range configCache {
 		if cachedConfig.protocol == t.endpointConfig.protocol && cachedConfig.endpoint == t.endpointConfig.endpoint &&
 			(cachedConfig.certFile != t.endpointConfig.certFile || cachedConfig.keyFile != t.endpointConfig.keyFile) {
-			// ignores (missing) TLS conflict for application signals pipelines
+			// ignores (missing) TLS conflict for application signals pipelines when one has TLS and the other doesn't
 			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
 			if t.pipelineName == common.AppSignals {
-				return configCache[cachedConfig], nil
+				cachedHasTLS := cachedConfig.certFile != "" || cachedConfig.keyFile != ""
+				currentHasTLS := t.endpointConfig.certFile != "" || t.endpointConfig.keyFile != ""
+				if cachedHasTLS != currentHasTLS {
+					return configCache[cachedConfig], nil
+				}
 			}
 			return nil, fmt.Errorf("conflicting TLS configuration for %s endpoint %s", t.endpointConfig.protocol, t.endpointConfig.endpoint)
 		}
