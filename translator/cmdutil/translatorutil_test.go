@@ -93,6 +93,7 @@ func TestLogWindowsEventConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventName.json", false, expectedErrorMap)
 	expectedErrorMap1 := map[string]int{}
 	expectedErrorMap1["required"] = 2
+	expectedErrorMap1["number_any_of"] = 1
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithMissingEventNameAndLevel.json", false, expectedErrorMap1)
 	expectedErrorMap2 := map[string]int{}
 	expectedErrorMap2["invalid_type"] = 1
