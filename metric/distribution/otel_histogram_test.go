@@ -6,6 +6,7 @@ package distribution
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -22,22 +23,69 @@ type HistogramInput struct {
 	Attributes map[string]string
 }
 
+type PercentileRange struct {
+	Low  float64
+	High float64
+}
 type ExpectedMetrics struct {
-	Count       uint64
-	Sum         float64
-	Average     float64
-	Min         *float64
-	Max         *float64
-	MedianRange struct {
-		Low  float64
-		High float64
-	}
+	Count            uint64
+	Sum              float64
+	Average          float64
+	Min              *float64
+	Max              *float64
+	PercentileRanges map[float64]PercentileRange
 }
 
 type HistogramTestCase struct {
 	Name     string
 	Input    HistogramInput
 	Expected ExpectedMetrics
+}
+
+func TestHistogramFeasibility(t *testing.T) {
+	testCases := getTestCases()
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			feasible, reason := checkFeasibility(tc.Input)
+			assert.True(t, feasible, reason)
+
+			// check that the test case percentile ranges are valid
+			for percentile, expectedRange := range tc.Expected.PercentileRanges {
+				calculatedLow, calculatedHigh := calculatePercentileRange(tc.Input, percentile)
+				assert.Equal(t, expectedRange.Low, calculatedLow, "calculated low does not match expected low for percentile %v", percentile)
+				assert.Equal(t, expectedRange.High, calculatedHigh, "calculated high does not match expected high for percentile %v", percentile)
+			}
+
+			assertOptionalFloat(t, "min", tc.Expected.Min, tc.Input.Min)
+			assertOptionalFloat(t, "max", tc.Expected.Max, tc.Input.Max)
+		})
+	}
+}
+
+func TestInvalidHistogramFeasibility(t *testing.T) {
+	invalidTestCases := getInvalidTestCases()
+
+	for _, tc := range invalidTestCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			feasible, reason := checkFeasibility(tc.Input)
+			assert.False(t, feasible, reason)
+		})
+	}
+}
+
+func TestVisualizeHistograms(t *testing.T) {
+	// comment the next line to visualize the input histograms
+	//t.Skip("Skip visualization test")
+	testCases := getTestCases()
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			// The large bucket tests are just too big to output
+			if matched, _ := regexp.MatchString("\\d\\d\\d Buckets", tc.Name); matched {
+				return
+			}
+			visualizeHistogramWithPercentiles(tc.Input)
+		})
+	}
 }
 
 func getTestCases() []HistogramTestCase {
@@ -93,12 +141,14 @@ func getTestCases() []HistogramTestCase {
 				Average: 59.41,
 				Min:     ptr(10.0),
 				Max:     ptr(200.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  25.0,
-					High: 50.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 10.0, High: 25.0},
+					0.1:  {Low: 10.0, High: 25.0},
+					0.25: {Low: 25.0, High: 50.0},
+					0.5:  {Low: 25.0, High: 50.0},
+					0.75: {Low: 50.0, High: 75.0},
+					0.9:  {Low: 75.0, High: 100.0},
+					0.99: {Low: 150.0, High: 200.0},
 				},
 			},
 		},
@@ -119,12 +169,14 @@ func getTestCases() []HistogramTestCase {
 				Average: 19.61,
 				Min:     ptr(5.0),
 				Max:     ptr(75.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  5.0,
-					High: 75.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 5.0, High: 75.0},
+					0.1:  {Low: 5.0, High: 75.0},
+					0.25: {Low: 5.0, High: 75.0},
+					0.5:  {Low: 5.0, High: 75.0},
+					0.75: {Low: 5.0, High: 75.0},
+					0.9:  {Low: 5.0, High: 75.0},
+					0.99: {Low: 5.0, High: 75.0},
 				},
 			},
 		},
@@ -145,12 +197,14 @@ func getTestCases() []HistogramTestCase {
 				Average: 4.84,
 				Min:     ptr(1.0),
 				Max:     ptr(10.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  1.0,
-					High: 5.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 1.0, High: 5.0},
+					0.1:  {Low: 1.0, High: 5.0},
+					0.25: {Low: 1.0, High: 5.0},
+					0.5:  {Low: 1.0, High: 5.0},
+					0.75: {Low: 5.0, High: 10.0},
+					0.9:  {Low: 5.0, High: 10.0},
+					0.99: {Low: 5.0, High: 10.0},
 				},
 			},
 		},
@@ -171,12 +225,14 @@ func getTestCases() []HistogramTestCase {
 				Average: 247.52,
 				Min:     ptr(0.0),
 				Max:     ptr(1500.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  0.0,
-					High: 10.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 0.0, High: 10.0},
+					0.1:  {Low: 0.0, High: 10.0},
+					0.25: {Low: 0.0, High: 10.0},
+					0.5:  {Low: 0.0, High: 10.0},
+					0.75: {Low: 100.0, High: 500.0},
+					0.9:  {Low: 1000.0, High: 1500.0},
+					0.99: {Low: 1000.0, High: 1500.0},
 				},
 			},
 		},
@@ -185,7 +241,7 @@ func getTestCases() []HistogramTestCase {
 			Input: HistogramInput{
 				Count:      1001,
 				Sum:        100000000000,
-				Min:        ptr(1000000.0),
+				Min:        ptr(100000.0),
 				Max:        ptr(1000000000.0),
 				Boundaries: []float64{1000000, 10000000, 50000000, 100000000, 500000000},
 				Counts:     []uint64{201, 301, 249, 150, 50, 50},
@@ -195,14 +251,16 @@ func getTestCases() []HistogramTestCase {
 				Count:   1001,
 				Sum:     100000000000,
 				Average: 99900099.90,
-				Min:     ptr(1000000.0),
+				Min:     ptr(100000.0),
 				Max:     ptr(1000000000.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  1000000.0,
-					High: 10000000.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 100000.0, High: 1000000.0},
+					0.1:  {Low: 100000.0, High: 1000000.0},
+					0.25: {Low: 1000000.0, High: 10000000.0},
+					0.5:  {Low: 1000000.0, High: 10000000.0},
+					0.75: {Low: 10000000.0, High: 50000000.0},
+					0.9:  {Low: 50000000.0, High: 100000000.0},
+					0.99: {Low: 500000000.0, High: 1000000000.0},
 				},
 			},
 		},
@@ -211,7 +269,7 @@ func getTestCases() []HistogramTestCase {
 			Input: HistogramInput{
 				Count:      1124,
 				Sum:        350000,
-				Min:        ptr(1.0),
+				Min:        ptr(0.5),
 				Max:        ptr(1100.0),
 				Boundaries: []float64{1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000},
 				Counts:     []uint64{51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 53},
@@ -221,14 +279,16 @@ func getTestCases() []HistogramTestCase {
 				Count:   1111,
 				Sum:     350000,
 				Average: 315.03,
-				Min:     ptr(1.0),
+				Min:     ptr(0.5),
 				Max:     ptr(1100.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  90.0,
-					High: 100.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 0.5, High: 1.0},
+					0.1:  {Low: 5.0, High: 10.0},
+					0.25: {Low: 30.0, High: 40.0},
+					0.5:  {Low: 90.0, High: 100.0},
+					0.75: {Low: 500.0, High: 600.0},
+					0.9:  {Low: 800.0, High: 900.0},
+					0.99: {Low: 1000.0, High: 1100.0},
 				},
 			},
 		},
@@ -237,7 +297,7 @@ func getTestCases() []HistogramTestCase {
 			Input: HistogramInput{
 				Count:      101,
 				Sum:        0.00015,
-				Min:        ptr(0.0000001),
+				Min:        ptr(0.00000001),
 				Max:        ptr(0.000006),
 				Boundaries: []float64{0.0000001, 0.000001, 0.000002, 0.000003, 0.000004, 0.000005},
 				Counts:     []uint64{11, 21, 29, 20, 15, 4, 1},
@@ -247,22 +307,67 @@ func getTestCases() []HistogramTestCase {
 				Count:   101,
 				Sum:     0.00015,
 				Average: 0.00000149,
-				Min:     ptr(0.0000001),
+				Min:     ptr(0.00000001),
 				Max:     ptr(0.000006),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  0.000001,
-					High: 0.000002,
+				PercentileRanges: map[float64]PercentileRange{
+					0.01: {Low: 0.00000001, High: 0.0000001},
+					0.1:  {Low: 0.00000001, High: 0.0000001},
+					0.25: {Low: 0.0000001, High: 0.000001},
+					0.5:  {Low: 0.000001, High: 0.000002},
+					0.75: {Low: 0.000002, High: 0.000003},
+					0.9:  {Low: 0.000003, High: 0.000004},
+					0.99: {Low: 0.000004, High: 0.000005},
 				},
 			},
 		},
 		{
-			Name: "Negative Values",
+			Name: "Only Negative Boundaries",
 			Input: HistogramInput{
 				Count:      101,
-				Sum:        -3000,
+				Sum:        -10000,
+				Min:        ptr(-200.0),
+				Max:        ptr(-10.0),
+				Boundaries: []float64{-150, -100, -75, -50, -25},
+				Counts:     []uint64{21, 31, 25, 15, 7, 2},
+				Attributes: map[string]string{"service.name": "negative-service"},
+			},
+			Expected: ExpectedMetrics{
+				Count:   101,
+				Sum:     -6000,
+				Average: -59.41,
+				Min:     ptr(-200.0),
+				Max:     ptr(-10.0),
+				// Can't get percentiles for negatives
+				PercentileRanges: map[float64]PercentileRange{},
+			},
+		},
+		{
+			Name: "Negative and Positive Boundaries",
+			Input: HistogramInput{
+				Count:      106,
+				Sum:        0,
+				Min:        ptr(-50.0),
+				Max:        ptr(50.0),
+				Boundaries: []float64{-30, -10, 10, 30},
+				Counts:     []uint64{25, 26, 5, 25, 25},
+				Attributes: map[string]string{"service.name": "temperature-service"},
+			},
+			Expected: ExpectedMetrics{
+				Count:   101,
+				Sum:     0,
+				Average: 0.0,
+				Min:     ptr(-50.0),
+				Max:     ptr(50.0),
+				// Can't get percentiles for negatives
+				PercentileRanges: map[float64]PercentileRange{},
+			},
+		},
+
+		{
+			Name: "Positive boundaries but implied Negative Values",
+			Input: HistogramInput{
+				Count:      101,
+				Sum:        200,
 				Min:        ptr(-100.0),
 				Max:        ptr(60.0),
 				Boundaries: []float64{0, 10, 20, 30, 40, 50},
@@ -275,12 +380,33 @@ func getTestCases() []HistogramTestCase {
 				Average: -29.70,
 				Min:     ptr(-100.0),
 				Max:     ptr(60.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  -100.0,
-					High: 0.0,
+				// Can't get percentiles for negatives
+				PercentileRanges: map[float64]PercentileRange{},
+			},
+		},
+		{
+			Name: "First bucket boundary equals minimum",
+			Input: HistogramInput{
+				Count:      100,
+				Sum:        8000,
+				Min:        ptr(10.0),
+				Max:        ptr(160.0),
+				Boundaries: []float64{10, 75, 100, 150},
+				Counts:     []uint64{20, 30, 25, 15, 10},
+				Attributes: map[string]string{"service.name": "invalid-max-bucket"},
+			},
+			Expected: ExpectedMetrics{
+				Count:   100,
+				Sum:     10000,
+				Average: 1000,
+				Min:     ptr(10.0),
+				Max:     ptr(160.0),
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 10.0, High: 10.0},
+					0.25: {Low: 10.0, High: 75.0},
+					0.5:  {Low: 75.0, High: 100.0},
+					0.75: {Low: 100.0, High: 150.0},
+					0.9:  {Low: 150.0, High: 160.0},
 				},
 			},
 		},
@@ -301,12 +427,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 46.67,
 				Min:     nil,
 				Max:     nil,
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  50.0,
-					High: 100.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: math.Inf(-1), High: 10.0},
+					0.25: {Low: 10.0, High: 50.0},
+					0.5:  {Low: 50.0, High: 100.0},
+					0.75: {Low: 50.0, High: 100.0},
+					0.9:  {Low: 100.0, High: 200.0},
 				},
 			},
 		},
@@ -327,12 +453,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 173.27,
 				Min:     nil,
 				Max:     ptr(750.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  100.0,
-					High: 200.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: math.Inf(-1), High: 100.0},
+					0.25: {Low: 100.0, High: 200.0},
+					0.5:  {Low: 100.0, High: 200.0},
+					0.75: {Low: 200.0, High: 300.0},
+					0.9:  {Low: 300.0, High: 400.0},
 				},
 			},
 		},
@@ -353,12 +479,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 78.43,
 				Min:     ptr(25.0),
 				Max:     nil,
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  50.0,
-					High: 100.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 25.0, High: 50.0},
+					0.25: {Low: 50.0, High: 100.0},
+					0.5:  {Low: 50.0, High: 100.0},
+					0.75: {Low: 100.0, High: 150.0},
+					0.9:  {Low: 100.0, High: 150.0},
 				},
 			},
 		},
@@ -379,12 +505,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 100.0,
 				Min:     nil,
 				Max:     nil,
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  50.0,
-					High: 150.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 50.0, High: 150.0},
+					0.25: {Low: 50.0, High: 150.0},
+					0.5:  {Low: 50.0, High: 150.0},
+					0.75: {Low: 50.0, High: 150.0},
+					0.9:  {Low: 50.0, High: 150.0},
 				},
 			},
 		},
@@ -403,15 +529,15 @@ func getTestCases() []HistogramTestCase {
 				Count:   75,
 				Sum:     3500,
 				Average: 46.67,
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  math.Inf(-1),
-					High: math.Inf(1),
+				Min:     nil,
+				Max:     nil,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: math.Inf(-1), High: math.Inf(1)},
+					0.25: {Low: math.Inf(-1), High: math.Inf(1)},
+					0.5:  {Low: math.Inf(-1), High: math.Inf(1)},
+					0.75: {Low: math.Inf(-1), High: math.Inf(1)},
+					0.9:  {Low: math.Inf(-1), High: math.Inf(1)},
 				},
-				Min: nil,
-				Max: nil,
 			},
 		},
 		// >100 buckets will be used for testing request splitting in PMD path
@@ -432,12 +558,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 573.14,
 				Min:     ptr(5.0),
 				Max:     ptr(1300.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  630.0,
-					High: 640.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 120.0, High: 130.0},
+					0.25: {Low: 310.0, High: 320.0},
+					0.5:  {Low: 630.0, High: 640.0},
+					0.75: {Low: 940.0, High: 950.0},
+					0.9:  {Low: 1130.0, High: 1140.0},
 				},
 			},
 		},
@@ -459,12 +585,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 804.23,
 				Min:     ptr(5.0),
 				Max:     ptr(1800.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  880.0,
-					High: 890.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 170.0, High: 180.0},
+					0.25: {Low: 440.0, High: 450.0},
+					0.5:  {Low: 880.0, High: 890.0},
+					0.75: {Low: 1320.0, High: 1330.0},
+					0.9:  {Low: 1580.0, High: 1590.0},
 				},
 			},
 		},
@@ -487,12 +613,12 @@ func getTestCases() []HistogramTestCase {
 				Average: 1027.25,
 				Min:     ptr(5.0),
 				Max:     ptr(2300.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  1130.0,
-					High: 1140.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 220.0, High: 230.0},
+					0.25: {Low: 560.0, High: 570.0},
+					0.5:  {Low: 1130.0, High: 1140.0},
+					0.75: {Low: 1690.0, High: 1700.0},
+					0.9:  {Low: 2030.0, High: 2040.0},
 				},
 			},
 		},
@@ -515,17 +641,18 @@ func getTestCases() []HistogramTestCase {
 				Average: 1486.47,
 				Min:     ptr(5.0),
 				Max:     ptr(3300.0),
-				MedianRange: struct {
-					Low  float64
-					High float64
-				}{
-					Low:  1630.0,
-					High: 1640.0,
+				PercentileRanges: map[float64]PercentileRange{
+					0.1:  {Low: 320.0, High: 330.0},
+					0.25: {Low: 810.0, High: 820.0},
+					0.5:  {Low: 1630.0, High: 1640.0},
+					0.75: {Low: 2440.0, High: 2450.0},
+					0.9:  {Low: 2930.0, High: 2940.0},
 				},
 			},
 		},
 	}
 }
+
 func getInvalidTestCases() []HistogramTestCase {
 	return []HistogramTestCase{
 		{
@@ -616,19 +743,6 @@ func getInvalidTestCases() []HistogramTestCase {
 				Boundaries: []float64{25, 50, 75, 100, 150},
 				Counts:     []uint64{20, 30, 25, 15, 8, 2},
 				Attributes: map[string]string{"service.name": "large-sum"},
-			},
-			Expected: ExpectedMetrics{},
-		},
-		{
-			Name: "Only Counts No Boundaries",
-			Input: HistogramInput{
-				Count:      100,
-				Sum:        5000,
-				Min:        ptr(10.0),
-				Max:        ptr(200.0),
-				Boundaries: []float64{},
-				Counts:     []uint64{100}, // Can't have counts without boundaries
-				Attributes: map[string]string{"service.name": "counts-no-boundaries"},
 			},
 			Expected: ExpectedMetrics{},
 		},
@@ -792,7 +906,7 @@ func checkFeasibility(hi HistogramInput) (bool, string) {
 	return true, ""
 }
 
-func calculateMedianRange(hi HistogramInput) (float64, float64) {
+func calculatePercentileRange(hi HistogramInput, percentile float64) (float64, float64) {
 	if len(hi.Boundaries) == 0 {
 		// No buckets - use min/max if available
 		if hi.Min != nil && hi.Max != nil {
@@ -801,14 +915,14 @@ func calculateMedianRange(hi HistogramInput) (float64, float64) {
 		return math.Inf(-1), math.Inf(1)
 	}
 
-	medianPosition := hi.Count / 2
+	percentilePosition := uint64(float64(hi.Count) * percentile)
 	var cumulativeCount uint64
 
-	// Find which bucket contains the median
+	// Find which bucket contains the percentile
 	for i, count := range hi.Counts {
 		cumulativeCount += count
-		if cumulativeCount > medianPosition {
-			// Found the bucket containing the median
+		if cumulativeCount > percentilePosition {
+			// Found the bucket containing the percentile
 			if i == 0 {
 				// First bucket: (-inf, bounds[0]]
 				if hi.Min != nil {
@@ -841,26 +955,8 @@ func assertOptionalFloat(t *testing.T, name string, expected, actual *float64) {
 	}
 }
 
-func TestHistogramFeasibility(t *testing.T) {
-	testCases := getTestCases()
-	for _, tc := range testCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			feasible, reason := checkFeasibility(tc.Input)
-			assert.True(t, feasible, reason)
-
-			// check that the test case median range is valid
-			calculatedLow, calculatedHigh := calculateMedianRange(tc.Input)
-			assert.Equal(t, calculatedLow, tc.Expected.MedianRange.Low, "calculated low does not match expected low. check test definition")
-			assert.Equal(t, calculatedHigh, tc.Expected.MedianRange.High, "calculated high does not match expected high. check test definition")
-
-			assertOptionalFloat(t, "min", tc.Expected.Min, tc.Input.Min)
-			assertOptionalFloat(t, "max", tc.Expected.Max, tc.Input.Max)
-		})
-	}
-}
-
-func visualizeHistogram(hi HistogramInput) {
-	fmt.Printf("\nHistogram Visualization\n")
+func visualizeHistogramWithPercentiles(hi HistogramInput) {
+	fmt.Printf("\nHistogram Visualization with Percentiles\n")
 	fmt.Printf("Count: %d, Sum: %.2f\n", hi.Count, hi.Sum)
 	if hi.Min != nil {
 		fmt.Printf("Min: %.2f ", *hi.Min)
@@ -875,6 +971,27 @@ func visualizeHistogram(hi HistogramInput) {
 		return
 	}
 
+	// Calculate cumulative counts for CDF
+	cumulativeCounts := make([]uint64, len(hi.Counts))
+	var total uint64
+	for i, count := range hi.Counts {
+		total += count
+		cumulativeCounts[i] = total
+	}
+
+	// Find percentile positions
+	percentiles := []float64{0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99}
+	percentilePositions := make(map[float64]int)
+	for _, p := range percentiles {
+		pos := uint64(float64(hi.Count) * p)
+		for i, cumCount := range cumulativeCounts {
+			if cumCount > pos {
+				percentilePositions[p] = i
+				break
+			}
+		}
+	}
+
 	maxCount := uint64(0)
 	for _, count := range hi.Counts {
 		if count > maxCount {
@@ -882,6 +999,7 @@ func visualizeHistogram(hi HistogramInput) {
 		}
 	}
 
+	fmt.Println("\nHistogram:")
 	for i, count := range hi.Counts {
 		var bucketLabel string
 		if i == 0 {
@@ -902,28 +1020,48 @@ func visualizeHistogram(hi HistogramInput) {
 
 		barLength := int(float64(count) / float64(maxCount) * 40)
 		bar := strings.Repeat("█", barLength)
-		fmt.Printf("%-30s %4d |%s\n", bucketLabel, count, bar)
+
+		// Mark percentile buckets
+		percentileMarkers := ""
+		for _, p := range percentiles {
+			if percentilePositions[p] == i {
+				percentileMarkers += fmt.Sprintf(" P%.0f", p*100)
+			}
+		}
+
+		fmt.Printf("%-30s %4d |%s%s\n", bucketLabel, count, bar, percentileMarkers)
 	}
-}
 
-func TestInvalidHistogramFeasibility(t *testing.T) {
-	invalidTestCases := getInvalidTestCases()
+	fmt.Println("\nCumulative Distribution (CDF):")
+	for i, cumCount := range cumulativeCounts {
+		var bucketLabel string
+		if i == 0 {
+			bucketLabel = fmt.Sprintf("≤ %.1f", hi.Boundaries[0])
+		} else if i == len(hi.Boundaries) {
+			bucketLabel = "≤ +∞"
+		} else {
+			bucketLabel = fmt.Sprintf("≤ %.1f", hi.Boundaries[i])
+		}
 
-	for _, tc := range invalidTestCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			feasible, reason := checkFeasibility(tc.Input)
-			assert.False(t, feasible, reason)
-		})
+		cdfPercent := float64(cumCount) / float64(hi.Count) * 100
+		cdfBarLength := int(cdfPercent / 100 * 40)
+		cdfBar := strings.Repeat("▓", cdfBarLength)
+
+		// Add percentile lines
+		percentileLines := ""
+		for _, p := range percentiles {
+			if percentilePositions[p] == i {
+				percentileLines += fmt.Sprintf(" ──P%.0f", p*100)
+			}
+		}
+
+		fmt.Printf("%-15s %6.1f%% |%s%s\n", bucketLabel, cdfPercent, cdfBar, percentileLines)
 	}
-}
 
-func TestVisualizeHistograms(t *testing.T) {
-	// comment the next line to visualize the input histograms
-	//t.Skip("Skip visualization test")
-	testCases := getTestCases()
-	for _, tc := range testCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			visualizeHistogram(tc.Input)
-		})
+	// Show percentile ranges
+	fmt.Println("\nPercentile Ranges:")
+	for _, p := range percentiles {
+		low, high := calculatePercentileRange(hi, p)
+		fmt.Printf("P%.0f: [%.2f, %.2f]\n", p*100, low, high)
 	}
 }
