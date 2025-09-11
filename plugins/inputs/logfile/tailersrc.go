@@ -59,18 +59,19 @@ func (le LogEvent) RangeQueue() state.FileRangeQueue {
 }
 
 type tailerSrc struct {
-	group           string
-	stream          string
-	class           string
-	fileGlobPath    string
-	destination     string
-	stateManager    state.FileRangeManager
-	tailer          *tail.Tail
-	autoRemoval     bool
-	timestampFn     func(string) (time.Time, string)
-	enc             encoding.Encoding
-	maxEventSize    int
-	retentionInDays int
+	group              string
+	stream             string
+	class              string
+	fileGlobPath       string
+	destination        string
+	stateManager       state.FileRangeManager
+	initialStateOffset int64
+	tailer             *tail.Tail
+	autoRemoval        bool
+	timestampFn        func(string) (time.Time, string)
+	enc                encoding.Encoding
+	maxEventSize       int
+	retentionInDays    int
 
 	outputFn           func(logs.LogEvent)
 	isMLStart          func(string) bool
@@ -89,6 +90,7 @@ var _ logs.LogSrc = (*tailerSrc)(nil)
 func NewTailerSrc(
 	group, stream, destination string,
 	stateManager state.FileRangeManager,
+	initialStateOffset int64,
 	logClass, fileGlobPath string,
 	tailer *tail.Tail,
 	autoRemoval bool,
@@ -105,6 +107,7 @@ func NewTailerSrc(
 		stream:             stream,
 		destination:        destination,
 		stateManager:       stateManager,
+		initialStateOffset: initialStateOffset,
 		class:              logClass,
 		fileGlobPath:       fileGlobPath,
 		tailer:             tailer,
@@ -195,6 +198,9 @@ func (ts *tailerSrc) runTail() {
 	var msgBuf bytes.Buffer
 	var cnt int
 	fo := state.Range{}
+	if ts.initialStateOffset > 0 {
+		fo.SetInt64(0, ts.initialStateOffset)
+	}
 	ignoreUntilNextEvent := false
 
 	for {
