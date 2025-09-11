@@ -4,6 +4,8 @@
 package prometheusremotewrite
 
 import (
+	"log"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"go.opentelemetry.io/collector/component"
@@ -49,11 +51,23 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.ResourceToTelemetrySettings = resourcetotelemetry.Settings{Enabled: true, ClearAfterCopy: true}
 	// ignoring bool return value since we are checking with isSet beforehand
 	value, _ := common.GetString(conf, common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))
+
+	// Debug logging for dual-stack endpoint selection
+	log.Printf("[DEBUG] AMP Translator - Workspace ID: %s", value)
+	log.Printf("[DEBUG] AMP Translator - Region: %s", agent.Global_Config.Region)
+	log.Printf("[DEBUG] AMP Translator - UseDualStackEndpoint: %t", agent.Global_Config.UseDualStackEndpoint)
+
 	domain := "amazonaws.com"
 	if agent.Global_Config.UseDualStackEndpoint {
 		domain = "api.aws"
+		log.Printf("[DEBUG] AMP Translator - Using dual-stack domain: %s", domain)
+	} else {
+		log.Printf("[DEBUG] AMP Translator - Using IPv4-only domain: %s", domain)
 	}
+
 	ampEndpoint := "https://aps-workspaces." + agent.Global_Config.Region + "." + domain + "/workspaces/" + value + "/api/v1/remote_write"
+	log.Printf("[DEBUG] AMP Translator - Final endpoint: %s", ampEndpoint)
+
 	cfg.ClientConfig.Endpoint = ampEndpoint
 	return cfg, nil
 }

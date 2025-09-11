@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-
 const (
 	userAgentKey            = "user_agent"
 	debugKey                = "debug"
@@ -46,11 +45,16 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 
 		// Set AWS_USE_DUALSTACK_ENDPOINT in env config based on agent section configuration
 		if useDualStack, ok := agentMap[useDualStackEndpointKey].(bool); ok {
+			log.Printf("[DEBUG] EnvConfig - Found use_dualstack_endpoint setting: %t", useDualStack)
 			if useDualStack {
 				envVars["AWS_USE_DUALSTACK_ENDPOINT"] = "true"
+				log.Printf("[DEBUG] EnvConfig - Set AWS_USE_DUALSTACK_ENDPOINT=true")
 			} else {
 				envVars["AWS_USE_DUALSTACK_ENDPOINT"] = "false"
+				log.Printf("[DEBUG] EnvConfig - Set AWS_USE_DUALSTACK_ENDPOINT=false")
 			}
+		} else {
+			log.Printf("[DEBUG] EnvConfig - No use_dualstack_endpoint setting found in agent config")
 		}
 	}
 
