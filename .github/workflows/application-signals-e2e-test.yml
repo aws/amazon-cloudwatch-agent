@@ -65,6 +65,14 @@ jobs:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
+  java-ec2-ubuntu-e2e-test:
+    needs: CheckBuildTestArtifacts
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-ubuntu-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
   java-ec2-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-test.yml@main
@@ -198,6 +206,14 @@ jobs:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
+  dotnet-ec2-linux-asg-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-asg-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
   dotnet-eks-e2e-test:
     needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-eks-test.yml@main
@@ -231,4 +247,4 @@ jobs:
   validate-all-tests-are-accounted-for:
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/validate-e2e-tests-are-accounted-for.yml@main
     with:
-      exclusions: dotnet-ec2-nuget-test.yml,dotnet-ec2-asg-test.yml,dotnet-eks-windows-test.yml,java-ec2-ubuntu-test.yml
+      exclusions: dotnet-ec2-nuget-test.yml,dotnet-eks-windows-test.yml
