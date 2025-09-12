@@ -203,8 +203,11 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}
 
+			var initialStateOffset int64
 			var gapsToRead state.RangeList
-			if !restored.OnlyUseMaxOffset() {
+			if restored.OnlyUseMaxOffset() {
+				initialStateOffset = restored.Last().EndOffsetInt64()
+			} else {
 				gapsToRead = state.InvertRanges(restored)
 			}
 			isutf16 := false
@@ -257,6 +260,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				groupName, streamName,
 				t.Destination,
 				stateManager,
+				initialStateOffset,
 				fileconfig.LogGroupClass,
 				fileconfig.FilePath,
 				tailer,

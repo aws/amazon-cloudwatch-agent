@@ -72,8 +72,11 @@ func TestTailerSrc(t *testing.T) {
 	})
 
 	ts := NewTailerSrc(
-		"groupName", "streamName",
-		"destination", m,
+		"groupName",
+		"streamName",
+		"destination",
+		m,
+		0,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -181,9 +184,11 @@ func TestEventDoneCallback(t *testing.T) {
 	})
 
 	ts := NewTailerSrc(
-		"groupName", "streamName",
+		"groupName",
+		"streamName",
 		"destination",
 		m,
+		0,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,
@@ -414,6 +419,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 		t.Name(),
 		"destination",
 		m,
+		0,
 		util.InfrequentAccessLogGroupClass,
 		"tailsrctest-*.log",
 		tailer,

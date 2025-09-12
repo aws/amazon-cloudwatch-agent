@@ -172,6 +172,9 @@ func (w *windowsEventLog) run() {
 	defer ticker.Stop()
 
 	r := state.Range{}
+	if w.gapsToRead == nil {
+		r.Set(0, w.eventOffset)
+	}
 	retryCount := 0
 	var shouldResubscribe bool
 	for {
@@ -182,7 +185,9 @@ func (w *windowsEventLog) run() {
 			if shouldResubscribe {
 				restored, _ := w.stateManager.Restore()
 				w.eventOffset = restored.Last().EndOffset()
-				if !restored.OnlyUseMaxOffset() {
+				if restored.OnlyUseMaxOffset() {
+					r.Set(0, w.eventOffset)
+				} else {
 					w.gapsToRead = state.InvertRanges(restored)
 				}
 				if err := w.resubscribe(); err != nil {
