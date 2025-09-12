@@ -21,7 +21,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-	sdkutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (
@@ -84,9 +83,9 @@ func readFromFile(filePath string) (string, error) {
 
 func EscapeFilePath(filePath string) (escapedFilePath string) {
 	escapedFilePath = filepath.ToSlash(filePath)
-	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
+	escapedFilePath = strings.ReplaceAll(escapedFilePath, "/", "_")
+	escapedFilePath = strings.ReplaceAll(escapedFilePath, " ", "_")
+	escapedFilePath = strings.ReplaceAll(escapedFilePath, ":", "_")
 	return
 }
 
@@ -147,7 +146,7 @@ func main() {
 		log.Panic(errorMessage)
 	}
 
-	mode = sdkutil.DetectAgentMode(mode)
+	mode = util.DetectAgentMode(mode)
 
 	region, _ = util.DetectRegion(mode, cc.CredentialsMap())
 

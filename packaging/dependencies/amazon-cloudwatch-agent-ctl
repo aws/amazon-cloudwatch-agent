@@ -35,6 +35,7 @@ UsageString="
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
+                [--use-dualstack]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -43,6 +44,8 @@ UsageString="
             amazon-cloudwatch-agent-ctl -a append-config -m onPremise -c file:/tmp/config.json -s
         3. query agent status:
             amazon-cloudwatch-agent-ctl -a status
+        4. apply a SSM parameter store config with dual-stack endpoints:
+            amazon-cloudwatch-agent-ctl --use-dualstack -a fetch-config -m ec2 -c ssm:AmazonCloudWatch-Config.json -s
 
         -a: action
             stop:                                   stop the agent process.
@@ -69,6 +72,9 @@ UsageString="
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
+
+        --use-dualstack: enable dual-stack endpoints for AWS API calls during config download
+            this parameter is used for 'fetch-config', 'append-config', 'remove-config' actions only.
 
 "
 
@@ -236,6 +242,7 @@ config_all() {
      restart="${2:-}"
      mode="${3:-}"
      multi_config="${4:-}"
+     use_dualstack="${5:-}"
 
      if [ -z "${cwa_config_location}" ]; then
           cwa_config_location='default'
@@ -245,7 +252,7 @@ config_all() {
 
      if [ -n "${cwa_config_location}" ]; then
           echo "****** processing amazon-cloudwatch-agent ******"
-          cwa_config "${cwa_config_location}" "${restart}" "${mode}" "${multi_config}"
+          cwa_config "${cwa_config_location}" "${restart}" "${mode}" "${multi_config}" "${use_dualstack}"
      fi
 }
 
@@ -254,6 +261,7 @@ cwa_config() {
      restart="${2:-}"
      param_mode="${3:-}"
      multi_config="${4:-}"
+     use_dualstack="${5:-}"
 
      if [ "${cwa_config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
           echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
@@ -263,7 +271,11 @@ cwa_config() {
      if [ "${cwa_config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${cwa_config_location}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
+          downloader_cmd="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${cwa_config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+          if [ "${use_dualstack}" = 'true' ]; then
+               downloader_cmd="${downloader_cmd} --use-dualstack"
+          fi
+          runDownloaderCommand=$(${downloader_cmd})
           echo ${runDownloaderCommand} || return
      fi
 
@@ -354,6 +366,7 @@ main() {
      cwa_config_location=''
      restart='false'
      mode='ec2'
+     use_dualstack='false'
 
      # detect which init system is in use
      if [ "$(/sbin/init --version 2>/dev/null | grep -c upstart)" = 1 ]; then
@@ -367,6 +380,26 @@ main() {
           echo "unknown init system" >&2
           exit 1
      fi
+
+     # Parse long options first
+     while [ $# -gt 0 ]; do
+          case "$1" in
+               --use-dualstack)
+                    use_dualstack='true'
+                    shift
+                    ;;
+               --)
+                    shift
+                    break
+                    ;;
+               -*)
+                    break
+                    ;;
+               *)
+                    break
+                    ;;
+          esac
+     done
 
      OPTIND=1
      while getopts ":hsa:c:m:l:" opt; do
@@ -405,9 +438,9 @@ main() {
      case "${action}" in
      stop) stop_all ;;
      start) start_all "${mode}" ;;
-     fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' ;;
-     append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' ;;
-     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' ;;
+     fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' "${use_dualstack}" ;;
+     append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' "${use_dualstack}" ;;
+     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' "${use_dualstack}" ;;
      status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
