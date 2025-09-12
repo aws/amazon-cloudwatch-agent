@@ -68,7 +68,6 @@ func TestTranslator(t *testing.T) {
 }
 
 func TestTranslatorDualStack(t *testing.T) {
-	// Save original state
 	originalUseDualStack := agent.Global_Config.UseDualStackEndpoint
 	originalRegion := agent.Global_Config.Region
 	defer func() {
@@ -112,7 +111,6 @@ func TestTranslatorDualStack(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// Set up test configuration
 			agent.Global_Config.Region = testCase.region
 			agent.Global_Config.UseDualStackEndpoint = testCase.useDualStack
 

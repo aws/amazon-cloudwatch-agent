@@ -11,7 +11,6 @@ import (
 )
 
 func TestUseDualStackEndpoint_ApplyRule(t *testing.T) {
-	// Save original state
 	originalUseDualStack := Global_Config.UseDualStackEndpoint
 	defer func() {
 		Global_Config.UseDualStackEndpoint = originalUseDualStack
@@ -39,37 +38,37 @@ func TestUseDualStackEndpoint_ApplyRule(t *testing.T) {
 			input:          "true",
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
-			expectedGlobal: false, // Should remain unchanged
+			expectedGlobal: false,
 		},
 		"InvalidInputInt": {
 			input:          1,
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
-			expectedGlobal: false, // Should remain unchanged
+			expectedGlobal: false,
 		},
 		"InvalidInputNil": {
 			input:          nil,
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
-			expectedGlobal: false, // Should remain unchanged
+			expectedGlobal: false,
 		},
 		"InvalidInputFloat": {
 			input:          3.14,
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
-			expectedGlobal: false, // Should remain unchanged
+			expectedGlobal: false,
 		},
 		"InvalidInputSlice": {
 			input:          []string{"true"},
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
-			expectedGlobal: false, // Should remain unchanged
+			expectedGlobal: false,
 		},
 		"InvalidInputMap": {
 			input:          map[string]interface{}{"enabled": true},
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
-			expectedGlobal: false, // Should remain unchanged
+			expectedGlobal: false,
 		},
 	}
 
@@ -89,34 +88,28 @@ func TestUseDualStackEndpoint_ApplyRule(t *testing.T) {
 }
 
 func TestUseDualStackEndpoint_Registration(t *testing.T) {
-	// Test that the rule is properly registered
 	rule, exists := ChildRule["use_dualstack_endpoint"]
 	assert.True(t, exists, "use_dualstack_endpoint rule should be registered")
 	assert.NotNil(t, rule, "use_dualstack_endpoint rule should not be nil")
 
-	// Test that it's the correct type
 	_, ok := rule.(*UseDualStackEndpoint)
 	assert.True(t, ok, "registered rule should be of type *UseDualStackEndpoint")
 }
 
 func TestUseDualStackEndpoint_GlobalConfigIntegration(t *testing.T) {
-	// Save original state
 	originalUseDualStack := Global_Config.UseDualStackEndpoint
 	defer func() {
 		Global_Config.UseDualStackEndpoint = originalUseDualStack
 	}()
 
-	// Test that Global_Config is properly updated
 	rule := &UseDualStackEndpoint{}
 
-	// Enable dual-stack
 	Global_Config.UseDualStackEndpoint = false
 	key, value := rule.ApplyRule(true)
 	assert.Equal(t, "use_dualstack_endpoint", key)
 	assert.Equal(t, true, value)
 	assert.True(t, Global_Config.UseDualStackEndpoint)
 
-	// Disable dual-stack
 	key, value = rule.ApplyRule(false)
 	assert.Equal(t, "use_dualstack_endpoint", key)
 	assert.Equal(t, false, value)
@@ -124,7 +117,6 @@ func TestUseDualStackEndpoint_GlobalConfigIntegration(t *testing.T) {
 }
 
 func TestUseDualStackEndpoint_GlobalConfigPreservation(t *testing.T) {
-	// Save original state
 	originalUseDualStack := Global_Config.UseDualStackEndpoint
 	defer func() {
 		Global_Config.UseDualStackEndpoint = originalUseDualStack
@@ -132,14 +124,12 @@ func TestUseDualStackEndpoint_GlobalConfigPreservation(t *testing.T) {
 
 	rule := &UseDualStackEndpoint{}
 
-	// Test that invalid input preserves existing global config state
 	Global_Config.UseDualStackEndpoint = true
 	key, value := rule.ApplyRule("invalid")
 	assert.Equal(t, "", key)
 	assert.Equal(t, translator.ErrorMessages, value)
 	assert.True(t, Global_Config.UseDualStackEndpoint, "Global config should remain unchanged on invalid input")
 
-	// Test with different initial state
 	Global_Config.UseDualStackEndpoint = false
 	key, value = rule.ApplyRule(123)
 	assert.Equal(t, "", key)

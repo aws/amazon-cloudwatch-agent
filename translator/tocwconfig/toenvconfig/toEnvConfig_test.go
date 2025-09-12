@@ -299,27 +299,21 @@ func TestToEnvConfig_DualStackEndpoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup clean context
 			context.CurrentContext().SetProxy(map[string]string{})
 			context.CurrentContext().SetSSL(map[string]string{})
 
 			result := ToEnvConfig(tt.input)
 
-			// Verify JSON output format is correct
 			var actualEnv map[string]string
 			err := json.Unmarshal(result, &actualEnv)
 			assert.NoError(t, err, "JSON output should be valid")
-
-			// Verify expected environment variables are set correctly
 			assert.Equal(t, tt.expectedEnv, actualEnv, tt.description)
 
-			// Verify JSON is properly formatted (indented)
 			var prettyJSON map[string]string
 			err = json.Unmarshal(result, &prettyJSON)
 			assert.NoError(t, err, "JSON should be parseable")
 
 			if len(tt.expectedEnv) > 0 {
-				// Verify the result contains properly formatted JSON
 				assert.Contains(t, string(result), "\t", "JSON should be indented with tabs")
 			}
 		})
@@ -367,21 +361,16 @@ func TestToEnvConfig_DualStackEndpoint_InvalidTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup clean context
 			context.CurrentContext().SetProxy(map[string]string{})
 			context.CurrentContext().SetSSL(map[string]string{})
 
 			result := ToEnvConfig(tt.input)
 
-			// Verify JSON output format is correct
 			var actualEnv map[string]string
 			err := json.Unmarshal(result, &actualEnv)
 			assert.NoError(t, err, "JSON output should be valid")
-
-			// Verify expected environment variables are set correctly
 			assert.Equal(t, tt.expectedEnv, actualEnv, tt.description)
 
-			// Specifically verify AWS_USE_DUALSTACK_ENDPOINT is not set
 			_, exists := actualEnv["AWS_USE_DUALSTACK_ENDPOINT"]
 			assert.False(t, exists, "AWS_USE_DUALSTACK_ENDPOINT should not be set for invalid types")
 		})
