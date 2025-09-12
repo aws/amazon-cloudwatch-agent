@@ -108,6 +108,7 @@ func main() {
 	}()
 
 	var region, mode, downloadLocation, outputDir, inputConfig, multiConfig string
+	var useDualStack bool
 
 	flag.StringVar(&mode, "mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, onPrem, auto")
 	flag.StringVar(&downloadLocation, "download-source", "",
@@ -115,6 +116,7 @@ func main() {
 	flag.StringVar(&outputDir, "output-dir", "", "Path of output json config directory.")
 	flag.StringVar(&inputConfig, "config", "", "Please provide the common-config file")
 	flag.StringVar(&multiConfig, "multi-config", "default", "valid values: default, append, remove")
+	flag.BoolVar(&useDualStack, "use-dualstack", false, "Use dual-stack endpoints for AWS API calls")
 	flag.Parse()
 
 	cc := commonconfig.New()
@@ -130,6 +132,10 @@ func main() {
 	}
 	util.SetProxyEnv(cc.ProxyMap())
 	util.SetSSLEnv(cc.SSLMap())
+
+	if useDualStack {
+		os.Setenv("AWS_USE_DUALSTACK_ENDPOINT", "true")
+	}
 	var errorMessage string
 	if downloadLocation == "" || outputDir == "" {
 		var errorMessage string
