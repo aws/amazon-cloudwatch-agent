@@ -156,9 +156,9 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 		"node_status_capacity_pods", "node_status_allocatable_pods",
 	}
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
-		nodeMetrics = append(nodeMetrics, "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity")
-		nodeMetrics = append(nodeMetrics, "node_neuroncore_limit", "node_neuroncore_usage_total", "node_neuroncore_reserved_capacity", "node_neuroncore_unreserved_capacity", "node_neuroncore_available_capacity")
-		nodeMetrics = append(nodeMetrics, "node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity")
+		nodeMetrics = append(nodeMetrics, "node_gpu_request", "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity")
+		nodeMetrics = append(nodeMetrics, "node_neuroncore_request", "node_neuroncore_limit", "node_neuroncore_usage_total", "node_neuroncore_reserved_capacity", "node_neuroncore_unreserved_capacity", "node_neuroncore_available_capacity")
+		nodeMetrics = append(nodeMetrics, "node_efa_request", "node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity")
 	}
 	if enhancedContainerInsightsEnabled {
 		return []*awsemfexporter.MetricDeclaration{
