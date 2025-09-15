@@ -57,6 +57,106 @@ func TestToEnvConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "agent section with dual-stack endpoint enabled",
+			input: map[string]interface{}{
+				agent.SectionKey: map[string]interface{}{
+					useDualStackEndpointKey: true,
+				},
+			},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				"AWS_USE_DUALSTACK_ENDPOINT": "true",
+			},
+			contextSetup: func() {
+				context.CurrentContext().SetProxy(map[string]string{})
+				context.CurrentContext().SetSSL(map[string]string{})
+			},
+		},
+		{
+			name: "agent section with dual-stack endpoint disabled",
+			input: map[string]interface{}{
+				agent.SectionKey: map[string]interface{}{
+					useDualStackEndpointKey: false,
+				},
+			},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				"AWS_USE_DUALSTACK_ENDPOINT": "false",
+			},
+			contextSetup: func() {
+				context.CurrentContext().SetProxy(map[string]string{})
+				context.CurrentContext().SetSSL(map[string]string{})
+			},
+		},
+		{
+			name: "combined configuration with dual-stack",
+			input: map[string]interface{}{
+				agent.SectionKey: map[string]interface{}{
+					userAgentKey:            "custom-agent",
+					debugKey:                true,
+					useDualStackEndpointKey: true,
+					awsSdkLogLevelKey:       "INFO",
+				},
+			},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_USER_AGENT: "custom-agent",
+				envconfig.CWAGENT_LOG_LEVEL:  "DEBUG",
+				envconfig.AWS_SDK_LOG_LEVEL:  "INFO",
+				"AWS_USE_DUALSTACK_ENDPOINT": "true",
+				envconfig.HTTP_PROXY:         "http://proxy.test",
+				envconfig.AWS_CA_BUNDLE:      "/test/ca-bundle.pem",
+			},
+			contextSetup: func() {
+				context.CurrentContext().SetProxy(map[string]string{
+					"http_proxy": "http://proxy.test",
+				})
+				context.CurrentContext().SetSSL(map[string]string{
+					"ca_bundle_path": "/test/ca-bundle.pem",
+				})
+			},
+		},
+		{
+			name: "invalid dual-stack type string",
+			input: map[string]interface{}{
+				agent.SectionKey: map[string]interface{}{
+					useDualStackEndpointKey: "true",
+				},
+			},
+			expectedEnv: map[string]string{},
+			contextSetup: func() {
+				context.CurrentContext().SetProxy(map[string]string{})
+				context.CurrentContext().SetSSL(map[string]string{})
+			},
+		},
+		{
+			name: "invalid dual-stack type number",
+			input: map[string]interface{}{
+				agent.SectionKey: map[string]interface{}{
+					useDualStackEndpointKey: 1,
+				},
+			},
+			expectedEnv: map[string]string{},
+			contextSetup: func() {
+				context.CurrentContext().SetProxy(map[string]string{})
+				context.CurrentContext().SetSSL(map[string]string{})
+			},
+		},
+		{
+			name: "invalid dual-stack type nil",
+			input: map[string]interface{}{
+				agent.SectionKey: map[string]interface{}{
+					useDualStackEndpointKey: nil,
+				},
+			},
+			expectedEnv: map[string]string{},
+			contextSetup: func() {
+				context.CurrentContext().SetProxy(map[string]string{})
+				context.CurrentContext().SetSSL(map[string]string{})
+			},
+		},
+
+		{
 			name:    "proxy configuration",
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},

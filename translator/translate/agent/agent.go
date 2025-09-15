@@ -34,6 +34,7 @@ type Agent struct {
 	Role_arn              string
 	ServiceName           string
 	DeploymentEnvironment string
+	UseDualStackEndpoint  bool
 }
 
 var (
