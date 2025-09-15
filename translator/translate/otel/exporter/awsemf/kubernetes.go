@@ -38,7 +38,7 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getDaemonSetMetricDeclarations(conf)...)
 
 	// Setup namespace metrics
-	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getNamespaceMetricDeclarations()...)
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getNamespaceMetricDeclarations(conf)...)
 
 	// Setup cluster metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations(conf)...)
@@ -55,6 +55,8 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEFAMetricDeclarations(conf)...)
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEBSMetricDeclarations(conf)...)
+
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getVolumesMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
@@ -258,13 +260,18 @@ func getDaemonSetMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 	return daemonSetMetricDeclarations
 }
 
-func getNamespaceMetricDeclarations() []*awsemfexporter.MetricDeclaration {
+func getNamespaceMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	metricNameSelectors := []string{"namespace_number_of_running_pods"}
+
+	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
+	if enhancedContainerInsightsEnabled {
+		metricNameSelectors = append(metricNameSelectors, "namespace_ingress_count")
+	}
+
 	return []*awsemfexporter.MetricDeclaration{
 		{
-			Dimensions: [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
-			MetricNameSelectors: []string{
-				"namespace_number_of_running_pods",
-			},
+			Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
+			MetricNameSelectors: metricNameSelectors,
 		},
 	}
 }
@@ -679,6 +686,36 @@ func getEBSMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_diskio_ebs_ec2_instance_performance_exceeded_iops",
 					"node_diskio_ebs_ec2_instance_performance_exceeded_tp",
 					"node_diskio_ebs_volume_queue_length",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
+func getVolumesMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+					{"ClusterName", "Namespace", "PersistentVolumeClaimName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_claim_status_bound",
+					"persistent_volume_claim_status_lost",
+					"persistent_volume_claim_status_pending",
+					"persistent_volume_claim_count",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{
+					"persistent_volume_count",
 				},
 			},
 		}
