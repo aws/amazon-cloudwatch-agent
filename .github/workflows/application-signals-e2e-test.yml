@@ -223,6 +223,15 @@ jobs:
       test-cluster-name: 'e2e-cw-agent-test'
       caller-workflow-name: 'main-build'
 
+  dotnet-eks-e2e-windows-test:
+    needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-eks-windows-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-windows-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
   dotnet-k8s-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-k8s-test.yml@main
@@ -247,4 +256,4 @@ jobs:
   validate-all-tests-are-accounted-for:
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/validate-e2e-tests-are-accounted-for.yml@main
     with:
-      exclusions: dotnet-ec2-nuget-test.yml,dotnet-eks-windows-test.yml
+      exclusions: dotnet-ec2-nuget-test.yml
