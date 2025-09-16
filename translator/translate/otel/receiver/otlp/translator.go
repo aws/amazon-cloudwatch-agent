@@ -4,21 +4,25 @@
 package otlp
 
 import (
-	_ "embed"
 	"fmt"
-	"strconv"
+	"regexp"
+	"sync"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+type protocol string
+
 const (
+	http protocol = "http"
+	grpc protocol = "grpc"
+
 	defaultGrpcEndpoint           = "127.0.0.1:4317"
 	defaultHttpEndpoint           = "127.0.0.1:4318"
 	defaultAppSignalsGrpcEndpoint = "0.0.0.0:4315"
@@ -28,44 +32,48 @@ const (
 
 type translator struct {
 	common.NameProvider
-	common.IndexProvider
-	configKey string
-	signal    pipeline.Signal
-	factory   receiver.Factory
+	factory        receiver.Factory
+	endpointConfig EndpointConfig
+	pipelineName   string
 }
 
-// WithSignal determines where the translator should look to find
-// the configuration.
-func WithSignal(signal pipeline.Signal) common.TranslatorOption {
-	return func(target any) {
-		if t, ok := target.(*translator); ok {
-			t.signal = signal
-		}
-	}
+type EndpointConfig struct {
+	protocol protocol
+	endpoint string
+	certFile string
+	keyFile  string
+	err      error
 }
 
-func WithConfigKey(configKey string) common.TranslatorOption {
-	return func(target any) {
-		if t, ok := target.(*translator); ok {
-			t.configKey = configKey
-		}
-	}
+var (
+	configCache = make(map[EndpointConfig]component.Config)
+	cacheMutex  sync.RWMutex
+	epRegex     = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+)
+
+// ClearConfigCache clears the OTLP config cache.
+// this is intended for testing purposes only from in and out of package.
+func ClearConfigCache() {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+	configCache = make(map[EndpointConfig]component.Config)
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
-	t := &translator{factory: otlpreceiver.NewFactory()}
-	t.SetIndex(-1)
+func NewTranslator(epConfig EndpointConfig, opts ...common.TranslatorOption) common.ComponentTranslator {
+	t := &translator{
+		factory:        otlpreceiver.NewFactory(),
+		endpointConfig: epConfig,
+	}
 	for _, opt := range opts {
 		opt(t)
 	}
-	if t.Name() == "" && t.signal.String() != "" {
-		t.SetName(t.signal.String())
-		if t.Index() != -1 {
-			t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
-		}
-	}
+
+	t.pipelineName = t.Name()
+	// set name as "{type - http or grpc}" then appends an endpoint by replacing special chars with '_' eg. 'http_0_0_0_0_4316'
+	t.SetName(string(epConfig.protocol) + "_" + epRegex.ReplaceAllString(epConfig.endpoint, "_"))
+
 	return t
 }
 
@@ -73,55 +81,95 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	if t.endpointConfig.err != nil {
+		return nil, t.endpointConfig.err
+	}
+
+	// check and get existing receiver config in the cache
+	if existingCfg, exists := configCache[t.endpointConfig]; exists {
+		return existingCfg, nil
+	}
+
+	for cachedConfig := range configCache {
+		if cachedConfig.protocol == t.endpointConfig.protocol && cachedConfig.endpoint == t.endpointConfig.endpoint &&
+			(cachedConfig.certFile != t.endpointConfig.certFile || cachedConfig.keyFile != t.endpointConfig.keyFile) {
+			// ignores (missing) TLS conflict for application signals pipelines when one has TLS and the other doesn't
+			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Application_Signals.html
+			if t.pipelineName == common.AppSignals {
+				cachedHasTLS := cachedConfig.certFile != "" || cachedConfig.keyFile != ""
+				currentHasTLS := t.endpointConfig.certFile != "" || t.endpointConfig.keyFile != ""
+				if cachedHasTLS != currentHasTLS {
+					return configCache[cachedConfig], nil
+				}
+			}
+			return nil, fmt.Errorf("conflicting TLS configuration for %s endpoint %s", t.endpointConfig.protocol, t.endpointConfig.endpoint)
+		}
+	}
+
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
-	if t.Name() == common.PipelineNameJmx {
+	tlsSettings := &configtls.ServerConfig{}
+	if t.endpointConfig.certFile != "" || t.endpointConfig.keyFile != "" {
+		tlsSettings.CertFile = t.endpointConfig.certFile
+		tlsSettings.KeyFile = t.endpointConfig.keyFile
+	}
+
+	if t.endpointConfig.protocol == http {
 		cfg.GRPC = nil
-		cfg.HTTP.ServerConfig.Endpoint = defaultJMXHttpEndpoint
-		return cfg, nil
+		cfg.HTTP.ServerConfig.Endpoint = t.endpointConfig.endpoint
+		cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
+	} else {
+		cfg.HTTP = nil
+		cfg.GRPC.NetAddr.Endpoint = t.endpointConfig.endpoint
+		cfg.GRPC.TLSSetting = tlsSettings
 	}
 
-	// init default configuration
-	configKey := t.configKey
-	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
-	cfg.HTTP.ServerConfig.Endpoint = defaultHttpEndpoint
+	configCache[t.endpointConfig] = cfg
+	return cfg, nil
+}
 
-	if t.Name() == common.AppSignals {
-		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.signal]
-		if !ok {
-			return nil, fmt.Errorf("no application_signals config key defined for signal: %s", t.signal)
-		}
-		if conf.IsSet(appSignalsConfigKeys[0]) {
-			configKey = appSignalsConfigKeys[0]
-		} else {
-			configKey = appSignalsConfigKeys[1]
-		}
-		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
-		cfg.HTTP.ServerConfig.Endpoint = defaultAppSignalsHttpEndpoint
+func translateToEndpointConfig(conf *confmap.Conf, pipelineName string, configKey string, index int) []EndpointConfig {
+	if pipelineName == common.PipelineNameJmx {
+		return []EndpointConfig{{protocol: http, endpoint: defaultJMXHttpEndpoint}}
 	}
+
+	grpcDefault, httpDefault := defaultGrpcEndpoint, defaultHttpEndpoint
 
 	if conf == nil || !conf.IsSet(configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
+		pipelineType, _ := component.NewType(pipelineName)
+		return []EndpointConfig{{err: &common.MissingKeyError{ID: component.NewID(pipelineType), JsonKey: configKey}}}
 	}
 
-	otlpMap := common.GetIndexedMap(conf, configKey, t.Index())
-	var tlsSettings *configtls.ServerConfig
+	if pipelineName == common.AppSignals {
+		grpcDefault = defaultAppSignalsGrpcEndpoint
+		httpDefault = defaultAppSignalsHttpEndpoint
+	}
+
+	otlpMap := common.GetIndexedMap(conf, configKey, index)
+	certFile, keyFile := "", ""
 	if tls, ok := otlpMap["tls"].(map[string]interface{}); ok {
-		tlsSettings = &configtls.ServerConfig{}
-		tlsSettings.CertFile = tls["cert_file"].(string)
-		tlsSettings.KeyFile = tls["key_file"].(string)
+		certFile, _ = tls["cert_file"].(string)
+		keyFile, _ = tls["key_file"].(string)
 	}
-	cfg.GRPC.TLSSetting = tlsSettings
-	cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
 
-	grpcEndpoint, grpcOk := otlpMap["grpc_endpoint"]
-	httpEndpoint, httpOk := otlpMap["http_endpoint"]
-	if grpcOk {
-		cfg.GRPC.NetAddr.Endpoint = grpcEndpoint.(string)
+	var configs []EndpointConfig
+	if grpcEndpoint, ok := otlpMap["grpc_endpoint"].(string); ok && grpcEndpoint != "" {
+		configs = append(configs, EndpointConfig{grpc, grpcEndpoint, certFile, keyFile, nil})
 	}
-	if httpOk {
-		cfg.HTTP.ServerConfig.Endpoint = httpEndpoint.(string)
+	if httpEndpoint, ok := otlpMap["http_endpoint"].(string); ok && httpEndpoint != "" {
+		configs = append(configs, EndpointConfig{http, httpEndpoint, certFile, keyFile, nil})
 	}
-	return cfg, nil
+
+	if len(configs) == 0 {
+		configs = []EndpointConfig{
+			{grpc, grpcDefault, certFile, keyFile, nil},
+			{http, httpDefault, certFile, keyFile, nil},
+		}
+	}
+
+	return configs
 }

@@ -25,8 +25,7 @@ const (
 // Range represents a pair of offsets [start, end).
 type Range struct {
 	start, end uint64
-	// seq handles file truncation, when a file is truncated, we increase the seq
-	seq uint64
+	seq        uint64
 }
 
 var _ encoding.TextMarshaler = (*Range)(nil)
@@ -72,6 +71,11 @@ func (r Range) StartOffsetInt64() int64 {
 // EndOffsetInt64 is the int64 version of EndOffset. If end exceeds math.MaxInt64, returns 0.
 func (r Range) EndOffsetInt64() int64 {
 	return convertInt64(r.end)
+}
+
+// SequenceNumber handles file truncation detection. When a file is truncated, the sequence number will increase.
+func (r Range) SequenceNumber() uint64 {
+	return r.seq
 }
 
 // Shift moves the previous end to the start and sets the new end. If the new end is before the previous one, it resets

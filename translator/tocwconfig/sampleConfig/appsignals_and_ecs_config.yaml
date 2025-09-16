@@ -1320,7 +1320,7 @@ processors:
                     enabled: false
         timeout: 2s
 receivers:
-    otlp/application_signals:
+    otlp/grpc_0_0_0_0_4315:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:4315
@@ -1332,6 +1332,8 @@ receivers:
                     cert_file: path/to/cert.crt
                     key_file: path/to/key.key
                 transport: tcp
+    otlp/http_0_0_0_0_4316:
+        protocols:
             http:
                 cors: {}
                 endpoint: 0.0.0.0:4316
@@ -1359,7 +1361,8 @@ service:
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
-                - otlp/application_signals
+                - otlp/grpc_0_0_0_0_4315
+                - otlp/http_0_0_0_0_4316
         traces/application_signals:
             exporters:
                 - awsxray/application_signals
@@ -1367,7 +1370,8 @@ service:
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
-                - otlp/application_signals
+                - otlp/grpc_0_0_0_0_4315
+                - otlp/http_0_0_0_0_4316
     telemetry:
         logs:
             encoding: console

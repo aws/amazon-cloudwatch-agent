@@ -60,7 +60,7 @@ processors:
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
-    otlp/metrics:
+    otlp/grpc_0_0_0_0_1234:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:1234
@@ -72,6 +72,8 @@ receivers:
                     cert_file: /path/to/cert.pem
                     key_file: /path/to/key.pem
                 transport: tcp
+    otlp/http_0_0_0_0_2345:
+        protocols:
             http:
                 cors: {}
                 endpoint: 0.0.0.0:2345
@@ -100,7 +102,8 @@ service:
                 - ec2tagger
                 - awsentity/service/otlp
             receivers:
-                - otlp/metrics
+                - otlp/grpc_0_0_0_0_1234
+                - otlp/http_0_0_0_0_2345
     telemetry:
         logs:
             encoding: console
