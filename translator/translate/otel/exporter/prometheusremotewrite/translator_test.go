@@ -72,25 +72,25 @@ func TestTranslatorDualStackEndpoint(t *testing.T) {
 
 	testCases := map[string]struct {
 		region           string
-		workspaceId      string
+		workspaceID      string
 		useDualStack     bool
 		expectedEndpoint string
 	}{
 		"StandardEndpoint": {
 			region:           "us-east-1",
-			workspaceId:      "ws-12345678",
+			workspaceID:      "ws-12345678",
 			useDualStack:     false,
 			expectedEndpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345678/api/v1/remote_write",
 		},
 		"DualStackEndpoint": {
 			region:           "us-east-1",
-			workspaceId:      "ws-12345678",
+			workspaceID:      "ws-12345678",
 			useDualStack:     true,
 			expectedEndpoint: "https://aps-workspaces.us-east-1.api.aws/workspaces/ws-12345678/api/v1/remote_write",
 		},
 		"DualStackEndpointEuWest1": {
 			region:           "eu-west-1",
-			workspaceId:      "ws-abcdefgh",
+			workspaceID:      "ws-abcdefgh",
 			useDualStack:     true,
 			expectedEndpoint: "https://aps-workspaces.eu-west-1.api.aws/workspaces/ws-abcdefgh/api/v1/remote_write",
 		},
@@ -105,7 +105,7 @@ func TestTranslatorDualStackEndpoint(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_destinations": map[string]interface{}{
 						"amp": map[string]interface{}{
-							"workspace_id": testCase.workspaceId,
+							"workspace_id": testCase.workspaceID,
 						},
 					},
 				},

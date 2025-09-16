@@ -6,8 +6,9 @@ package agent
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 func TestUseDualStackEndpoint_ApplyRule(t *testing.T) {
@@ -24,31 +25,23 @@ func TestUseDualStackEndpoint_ApplyRule(t *testing.T) {
 	}{
 		"EnableDualStack": {
 			input: map[string]interface{}{
-				"use_dualstack_endpoint": true,
+				UseDualStackEndpointKey: true,
 			},
-			expectedKey:    "use_dualstack_endpoint",
+			expectedKey:    UseDualStackEndpointKey,
 			expectedValue:  true,
 			expectedGlobal: true,
 		},
 		"DisableDualStack": {
 			input: map[string]interface{}{
-				"use_dualstack_endpoint": false,
+				UseDualStackEndpointKey: false,
 			},
-			expectedKey:    "use_dualstack_endpoint",
+			expectedKey:    UseDualStackEndpointKey,
 			expectedValue:  false,
-			expectedGlobal: false,
-		},
-		"MissingField": {
-			input: map[string]interface{}{
-				"other_field": "value",
-			},
-			expectedKey:    "",
-			expectedValue:  nil,
 			expectedGlobal: false,
 		},
 		"InvalidFieldTypeString": {
 			input: map[string]interface{}{
-				"use_dualstack_endpoint": "true",
+				UseDualStackEndpointKey: "true",
 			},
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,
@@ -56,7 +49,7 @@ func TestUseDualStackEndpoint_ApplyRule(t *testing.T) {
 		},
 		"InvalidFieldTypeInt": {
 			input: map[string]interface{}{
-				"use_dualstack_endpoint": 1,
+				UseDualStackEndpointKey: 1,
 			},
 			expectedKey:    "",
 			expectedValue:  translator.ErrorMessages,

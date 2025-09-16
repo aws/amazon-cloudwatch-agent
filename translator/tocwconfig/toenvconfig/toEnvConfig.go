@@ -15,11 +15,10 @@ import (
 )
 
 const (
-	userAgentKey            = "user_agent"
-	debugKey                = "debug"
-	awsSdkLogLevelKey       = "aws_sdk_log_level"
-	usageDataKey            = "usage_data"
-	useDualStackEndpointKey = "use_dualstack_endpoint"
+	userAgentKey      = "user_agent"
+	debugKey          = "debug"
+	awsSdkLogLevelKey = "aws_sdk_log_level"
+	usageDataKey      = "usage_data"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -43,13 +42,12 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 			envVars[envconfig.CWAGENT_USAGE_DATA] = "FALSE"
 		}
 
-		if useDualStack, ok := agentMap[useDualStackEndpointKey].(bool); ok {
+		if useDualStack, ok := agentMap[agent.UseDualStackEndpointKey].(bool); ok {
 			if useDualStack {
-				envVars["AWS_USE_DUALSTACK_ENDPOINT"] = "true"
+				envVars[envconfig.AWS_USE_DUALSTACK_ENDPOINT] = "true"
 			} else {
-				envVars["AWS_USE_DUALSTACK_ENDPOINT"] = "false"
+				envVars[envconfig.AWS_USE_DUALSTACK_ENDPOINT] = "false"
 			}
-		} else {
 		}
 	}
 

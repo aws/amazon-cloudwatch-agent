@@ -16,6 +16,7 @@ import (
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -66,7 +67,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	util.SetSSLEnv(cc.SSLMap())
 
 	if useDualStack {
-		os.Setenv("AWS_USE_DUALSTACK_ENDPOINT", "true")
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "true")
 	}
 
 	// Validate required parameters

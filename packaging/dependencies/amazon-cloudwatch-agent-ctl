@@ -71,7 +71,7 @@ UsageString="
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
         -d: enable dual-stack endpoints for AWS API calls during config download
-            this parameter is used for 'fetch-config', 'append-config', 'remove-config' actions only.
+            this parameter is used for 'fetch-config', 'append-config' actions only.
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
@@ -421,7 +421,7 @@ main() {
      start) start_all "${mode}" ;;
      fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' "${use_dualstack}" ;;
      append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' "${use_dualstack}" ;;
-     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' "${use_dualstack}" ;;
+     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' ;;
      status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install

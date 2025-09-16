@@ -60,12 +60,12 @@ func TestToEnvConfig(t *testing.T) {
 			name: "agent section with dual-stack endpoint enabled",
 			input: map[string]interface{}{
 				agent.SectionKey: map[string]interface{}{
-					useDualStackEndpointKey: true,
+					agent.UseDualStackEndpointKey: true,
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				"AWS_USE_DUALSTACK_ENDPOINT": "true",
+				envconfig.AWS_USE_DUALSTACK_ENDPOINT: "true",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -76,12 +76,12 @@ func TestToEnvConfig(t *testing.T) {
 			name: "agent section with dual-stack endpoint disabled",
 			input: map[string]interface{}{
 				agent.SectionKey: map[string]interface{}{
-					useDualStackEndpointKey: false,
+					agent.UseDualStackEndpointKey: false,
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				"AWS_USE_DUALSTACK_ENDPOINT": "false",
+				envconfig.AWS_USE_DUALSTACK_ENDPOINT: "false",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{})
@@ -92,20 +92,20 @@ func TestToEnvConfig(t *testing.T) {
 			name: "combined configuration with dual-stack",
 			input: map[string]interface{}{
 				agent.SectionKey: map[string]interface{}{
-					userAgentKey:            "custom-agent",
-					debugKey:                true,
-					useDualStackEndpointKey: true,
-					awsSdkLogLevelKey:       "INFO",
+					userAgentKey:                  "custom-agent",
+					debugKey:                      true,
+					agent.UseDualStackEndpointKey: true,
+					awsSdkLogLevelKey:             "INFO",
 				},
 			},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.CWAGENT_USER_AGENT: "custom-agent",
-				envconfig.CWAGENT_LOG_LEVEL:  "DEBUG",
-				envconfig.AWS_SDK_LOG_LEVEL:  "INFO",
-				"AWS_USE_DUALSTACK_ENDPOINT": "true",
-				envconfig.HTTP_PROXY:         "http://proxy.test",
-				envconfig.AWS_CA_BUNDLE:      "/test/ca-bundle.pem",
+				envconfig.CWAGENT_USER_AGENT:         "custom-agent",
+				envconfig.CWAGENT_LOG_LEVEL:          "DEBUG",
+				envconfig.AWS_SDK_LOG_LEVEL:          "INFO",
+				envconfig.AWS_USE_DUALSTACK_ENDPOINT: "true",
+				envconfig.HTTP_PROXY:                 "http://proxy.test",
+				envconfig.AWS_CA_BUNDLE:              "/test/ca-bundle.pem",
 			},
 			contextSetup: func() {
 				context.CurrentContext().SetProxy(map[string]string{
@@ -120,7 +120,7 @@ func TestToEnvConfig(t *testing.T) {
 			name: "invalid dual-stack type string",
 			input: map[string]interface{}{
 				agent.SectionKey: map[string]interface{}{
-					useDualStackEndpointKey: "true",
+					agent.UseDualStackEndpointKey: "true",
 				},
 			},
 			expectedEnv: map[string]string{},
@@ -133,7 +133,7 @@ func TestToEnvConfig(t *testing.T) {
 			name: "invalid dual-stack type number",
 			input: map[string]interface{}{
 				agent.SectionKey: map[string]interface{}{
-					useDualStackEndpointKey: 1,
+					agent.UseDualStackEndpointKey: 1,
 				},
 			},
 			expectedEnv: map[string]string{},
@@ -146,7 +146,7 @@ func TestToEnvConfig(t *testing.T) {
 			name: "invalid dual-stack type nil",
 			input: map[string]interface{}{
 				agent.SectionKey: map[string]interface{}{
-					useDualStackEndpointKey: nil,
+					agent.UseDualStackEndpointKey: nil,
 				},
 			},
 			expectedEnv: map[string]string{},

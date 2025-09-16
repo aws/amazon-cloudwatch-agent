@@ -68,7 +68,7 @@ $UsageString = @"
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
         -d: enable dual-stack endpoints for AWS API calls during config download
-            this parameter is used for 'fetch-config', 'append-config', 'remove-config' actions only.
+            this parameter is used for 'fetch-config', 'append-config' actions only.
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
@@ -309,8 +309,8 @@ Function CWAConfig() {
     if ($ConfigLocation -eq $AllConfig) {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
-        $downloader_cmd = "${CWAProgramFiles}\config-downloader.exe --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`""
-        if ($d) {
+        $downloader_cmd = "`"${CWAProgramFiles}\config-downloader.exe`" --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`""
+        if ($d -and $multi_config -ne 'remove') {
             $downloader_cmd += " --dualstack"
         }
         & cmd /c $downloader_cmd

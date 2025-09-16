@@ -10,30 +10,26 @@ import (
 type UseDualStackEndpoint struct {
 }
 
-func (r *UseDualStackEndpoint) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (r *UseDualStackEndpoint) ApplyRule(input interface{}) (string, interface{}) {
 	agentMap, ok := input.(map[string]interface{})
 	if !ok {
-		returnKey, returnVal = "", translator.ErrorMessages
-		return
+		return "", translator.ErrorMessages
 	}
 
-	dualStackValue, exists := agentMap["use_dualstack_endpoint"]
+	dualStackValue, exists := agentMap[UseDualStackEndpointKey]
 	if !exists {
-		returnKey, returnVal = "", nil
-		return
+		return "", nil
 	}
 
 	val, ok := dualStackValue.(bool)
 	if !ok {
-		returnKey, returnVal = "", translator.ErrorMessages
-		return
+		return "", translator.ErrorMessages
 	}
 
 	Global_Config.UseDualStackEndpoint = val
-	returnKey, returnVal = "use_dualstack_endpoint", val
-	return
+	return UseDualStackEndpointKey, val
 }
 
 func init() {
-	RegisterRule("use_dualstack_endpoint", new(UseDualStackEndpoint))
+	RegisterRule(UseDualStackEndpointKey, new(UseDualStackEndpoint))
 }

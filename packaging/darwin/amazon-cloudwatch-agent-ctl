@@ -72,7 +72,7 @@ UsageString="
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
         -d: enable dual-stack endpoints for AWS API calls during config download
-            this parameter is used for 'fetch-config', 'append-config', 'remove-config' actions only.
+            this parameter is used for 'fetch-config', 'append-config' actions only.
 
 "
 
@@ -170,7 +170,7 @@ cwa_config() {
      restart="${2:-}"
      mode="${3:-}"
      multi_config="${4:-}"
-     use_dualstack="${5:-}"
+     use_dualstack="${5:-false}"
 
      mkdir -p "${CONFDIR}"
 
@@ -300,7 +300,7 @@ main() {
      start) cwa_start "${mode}" ;;
      fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' "${use_dualstack}" ;;
      append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' "${use_dualstack}" ;;
-     remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' "${use_dualstack}" ;;
+     remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' ;;
      status) cwa_status ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
