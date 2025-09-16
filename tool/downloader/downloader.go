@@ -37,7 +37,7 @@ func RunDownloaderFromFlags(flags map[string]*string) error {
 		*flags["output-dir"],
 		*flags["config"],
 		*flags["multi-config"],
-		*flags["d"] == "true",
+		*flags["dualstack"] == "true",
 	)
 }
 

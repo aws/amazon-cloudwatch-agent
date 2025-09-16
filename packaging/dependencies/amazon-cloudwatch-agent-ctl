@@ -273,7 +273,7 @@ cwa_config() {
      else
           downloader_cmd="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${cwa_config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
           if [ "${use_dualstack}" = 'true' ]; then
-               downloader_cmd="${downloader_cmd} -d"
+               downloader_cmd="${downloader_cmd} --dualstack"
           fi
           runDownloaderCommand=$(${downloader_cmd})
           echo "${runDownloaderCommand}" || return
