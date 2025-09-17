@@ -1318,21 +1318,13 @@ jobs:
 
           terraform init
           if terraform apply --auto-approve \
-            -var="beta=true" \
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=${{ inputs.build_id }}" \
             -var="ami_type=${{ matrix.arrays.ami }}" \
             -var="instance_type=${{ matrix.arrays.instanceType }}" \
             -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
             echo "Terraform apply successful."
-
-            # Capture the output
-            echo "Getting EKS cluster name"
-            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
-            echo "Cluster name is ${EKS_CLUSTER_NAME}"
-            kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml
-            kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ inputs.build_id }}}]'
-            # wait nvidia device plugin to be ready
-            sleep 10
-            kubectl apply -f ./gpuBurner.yaml
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -1353,7 +1345,7 @@ jobs:
             EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
             echo "Cluster name is ${EKS_CLUSTER_NAME}"
 
-            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia -useE2EMetrics; then
+            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
               echo "Tests passed"
             else
               echo "Tests failed"
