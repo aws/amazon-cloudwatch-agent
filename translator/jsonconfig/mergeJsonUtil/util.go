@@ -34,6 +34,9 @@ func mergeMap(sourceMap map[string]interface{}, resultMap map[string]interface{}
 	for key, value := range sourceMap {
 		if rule, ok := mergeRuleMap[key]; ok {
 			rule.Merge(sourceMap, resultMap)
+		} else if key == "jmx" {
+			// Special handling for JMX - treat as a list that should be appended
+			mergeJmxList(sourceMap, resultMap, key)
 		} else if existingValue, ok := resultMap[key]; !ok {
 			// only one defines the value
 			resultMap[key] = value
@@ -102,4 +105,33 @@ func GetSubList(sourceMap map[string]interface{}, subKey string) []interface{} {
 		return subList
 	}
 	return resultList
+}
+
+func mergeJmxList(sourceMap map[string]interface{}, resultMap map[string]interface{}, key string) {
+	sourceList := GetSubList(sourceMap, key)
+	if len(sourceList) == 0 {
+		return
+	}
+	
+	resultList := GetSubList(resultMap, key)
+	
+	// Append all source JMX configurations to the result
+	// Each JMX configuration can have different endpoints, so they should all be preserved
+	for _, sourceItem := range sourceList {
+		shouldAdd := true
+		
+		// Check if this exact configuration already exists to avoid duplicates
+		for _, resultItem := range resultList {
+			if reflect.DeepEqual(sourceItem, resultItem) {
+				shouldAdd = false
+				break
+			}
+		}
+		
+		if shouldAdd {
+			resultList = append(resultList, sourceItem)
+		}
+	}
+	
+	resultMap[key] = resultList
 }
