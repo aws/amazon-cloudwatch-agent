@@ -12,8 +12,9 @@ import (
 var ChildRule = map[string]translator.Rule{}
 
 const (
-	SectionKey = "agent"
-	Mode       = "mode"
+	SectionKey              = "agent"
+	Mode                    = "mode"
+	UseDualStackEndpointKey = "use_dualstack_endpoint"
 )
 
 func GetCurPath() string {
@@ -34,6 +35,7 @@ type Agent struct {
 	Role_arn              string
 	ServiceName           string
 	DeploymentEnvironment string
+	UseDualStackEndpoint  bool
 }
 
 var (
