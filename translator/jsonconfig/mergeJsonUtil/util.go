@@ -112,14 +112,14 @@ func mergeJmxList(sourceMap map[string]interface{}, resultMap map[string]interfa
 	if len(sourceList) == 0 {
 		return
 	}
-	
+
 	resultList := GetSubList(resultMap, key)
-	
+
 	// Append all source JMX configurations to the result
 	// Each JMX configuration can have different endpoints, so they should all be preserved
 	for _, sourceItem := range sourceList {
 		shouldAdd := true
-		
+
 		// Check if this exact configuration already exists to avoid duplicates
 		for _, resultItem := range resultList {
 			if reflect.DeepEqual(sourceItem, resultItem) {
@@ -127,11 +127,11 @@ func mergeJmxList(sourceMap map[string]interface{}, resultMap map[string]interfa
 				break
 			}
 		}
-		
+
 		if shouldAdd {
 			resultList = append(resultList, sourceItem)
 		}
 	}
-	
+
 	resultMap[key] = resultList
 }
