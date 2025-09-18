@@ -4,6 +4,7 @@
 package cloudwatch
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -1000,20 +1001,28 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 		},
 	}
 
+	// Since some of the values could be zero, we can't use InEpsilon (requires non-zero values to form relative error)
+	// We calculate the relative error directly and then use InDelta instead
+	const episilon = 0.0001
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(_ *testing.T) {
 			dps := convertOtelExponentialHistogramDataPoints(tc.histogramDPS, "foo", "none", 1, entity)
 
 			assert.Equal(t, 1, len(dps))
 			for i, expectedDP := range tc.expected {
-				assert.Equal(t, dps[i].distribution.Maximum(), *expectedDP.StatisticValues.Maximum, "datapoint Maximum mismatch at index %d", i)
-				assert.Equal(t, dps[i].distribution.Minimum(), *expectedDP.StatisticValues.Minimum, "datapoint Minimum mismatch at index %d", i)
-				assert.Equal(t, dps[i].distribution.Sum(), *expectedDP.StatisticValues.Sum, "datapoint Sum mismatch at index %d", i)
+				assert.InDelta(t, *expectedDP.StatisticValues.Maximum, dps[i].distribution.Maximum(), math.Abs(*expectedDP.StatisticValues.Maximum)*episilon, "datapoint Maximum mismatch at index %d", i)
+				assert.InDelta(t, *expectedDP.StatisticValues.Minimum, dps[i].distribution.Minimum(), math.Abs(*expectedDP.StatisticValues.Minimum)*episilon, "datapoint Minimum mismatch at index %d", i)
+				assert.InDelta(t, *expectedDP.StatisticValues.Sum, dps[i].distribution.Sum(), math.Abs(*expectedDP.StatisticValues.Sum)*episilon, "datapoint Sum mismatch at index %d", i)
 				assert.Equal(t, dps[i].distribution.SampleCount(), *expectedDP.StatisticValues.SampleCount, "datapoint Samplecount mismatch at index %d", i)
 
 				values, counts := dps[i].distribution.ValuesAndCounts()
-				assert.Equal(t, tc.expectedValues[i], values, "datapoint values mismatch at index %d", i)
-				assert.Equal(t, tc.expectedCounts[i], counts, "datapoint counts mismatch at index %d", i)
+				for j, expectedValue := range tc.expectedValues[i] {
+					assert.InDelta(t, expectedValue, values[j], math.Abs(expectedValue)*episilon, "datapoint values mismatch at index %d, value %d", i, j)
+				}
+				for j, expectedCount := range tc.expectedCounts[i] {
+					assert.InDelta(t, expectedCount, counts[j], math.Abs(expectedCount)*episilon, "datapoint counts mismatch at index %d, count %d", i, j)
+				}
 			}
 		})
 	}
