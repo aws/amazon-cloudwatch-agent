@@ -10,7 +10,7 @@ import (
 
 func TestMergeJmxList(t *testing.T) {
 	// Test merging JMX configurations from source into result
-	jvm1 := map[string]interface{}{
+	sourceMap := map[string]interface{}{
 		"jmx": []interface{}{
 			map[string]interface{}{
 				"endpoint": "localhost:9999",
@@ -24,7 +24,7 @@ func TestMergeJmxList(t *testing.T) {
 		},
 	}
 
-	jvm2 := map[string]interface{}{
+	resultMap := map[string]interface{}{
 		"jmx": []interface{}{
 			map[string]interface{}{
 				"endpoint": "localhost:1234",
@@ -61,9 +61,9 @@ func TestMergeJmxList(t *testing.T) {
 		},
 	}
 
-	mergeJmxList(jvm1, jvm2, "jmx")
+	MergeList(sourceMap, resultMap, "jmx")
 
 	if !reflect.DeepEqual(resultMap, expected) {
-		t.Errorf("mergeJmxList() = %v, want %v", resultMap, expected)
+		t.Errorf("MergeList() = %v, want %v", resultMap, expected)
 	}
 }
