@@ -56,10 +56,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Receivers.Set(awsxrayreceiver.NewTranslator())
 	}
 	if conf.IsSet(otlpKey) {
-		translators.Receivers.Set(otlp.NewTranslator(
-			otlp.WithSignal(pipeline.SignalTraces),
-			otlp.WithConfigKey(otlpKey)),
-		)
+		translators.Receivers.Merge(otlp.NewTranslators(conf, pipelineName, otlpKey))
 	}
 	return translators, nil
 }

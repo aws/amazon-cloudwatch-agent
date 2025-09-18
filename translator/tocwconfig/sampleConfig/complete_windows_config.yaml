@@ -167,7 +167,7 @@ receivers:
             tls:
                 insecure: true
         transport: udp
-    otlp/traces:
+    otlp/grpc_0_0_0_0_1111:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:1111
@@ -176,6 +176,8 @@ receivers:
                     server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
+    otlp/http_0_0_0_0_2222:
+        protocols:
             http:
                 cors: {}
                 endpoint: 0.0.0.0:2222
@@ -290,7 +292,8 @@ service:
                 - batch/xray
             receivers:
                 - awsxray
-                - otlp/traces
+                - otlp/grpc_0_0_0_0_1111
+                - otlp/http_0_0_0_0_2222
     telemetry:
         logs:
             encoding: console
