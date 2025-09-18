@@ -120,7 +120,7 @@ jobs:
           ref: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version: ~1.22.2
 
@@ -152,7 +152,7 @@ jobs:
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version: ~1.22.2
 
@@ -213,7 +213,7 @@ jobs:
           path: test
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v6
         with:
           go-version: ~1.22.2
 
