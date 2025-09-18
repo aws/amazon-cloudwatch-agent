@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "region": "us-west-2",
+    "use_dualstack_endpoint": true
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "ws-12345"
+      },
+      "cloudwatch": {
+      }
+    },
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "usage_active"
+        ]
+      }
+    }
+  }
+}

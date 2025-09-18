@@ -14,6 +14,8 @@ Param (
     [string]$Mode = 'ec2',
     [Parameter(Mandatory = $false)]
     [string]$LogLevel = '',
+    [Parameter(Mandatory = $false)]
+    [switch]$d = $false,
     [parameter(ValueFromRemainingArguments=$true)]
     $unsupportedVars
 )
@@ -29,6 +31,7 @@ $UsageString = @"
                 [-m ec2|onPremise|onPrem|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
+                [-d]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.
@@ -38,6 +41,8 @@ $UsageString = @"
             amazon-cloudwatch-agent-ctl.ps1 -a append-config -m onPremise -c file:c:\config.json -s
         3. query agent status:
             amazon-cloudwatch-agent-ctl.ps1 -a status
+        4. apply a SSM parameter store config with dual-stack endpoints:
+            amazon-cloudwatch-agent-ctl.ps1 -d -a fetch-config -m ec2 -c ssm:AmazonCloudWatch-Config.json -s
 
         -a: action
             stop:                                   stop amazon-cloudwatch-agent if running.
@@ -61,6 +66,9 @@ $UsageString = @"
 
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
+
+        -d: enable dual-stack endpoints for AWS API calls during config download
+            this parameter is used for 'fetch-config', 'append-config' actions only.
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
@@ -301,7 +309,11 @@ Function CWAConfig() {
     if ($ConfigLocation -eq $AllConfig) {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
-        & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}"
+        $downloader_cmd = "`"${CWAProgramFiles}\config-downloader.exe`" --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`""
+        if ($d -and $multi_config -ne 'remove') {
+            $downloader_cmd += " --dualstack"
+        }
+        & cmd /c $downloader_cmd
         CheckCMDResult
     }
 
