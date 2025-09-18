@@ -31,6 +31,7 @@ const (
 	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
 	ECS_SD_RESULT_FILE     = "sd_result_file"
 	defaultECSSDfileName   = "/tmp/cwagent_ecs_auto_sd.yaml"
+	defaultJobLabelName    = "job"
 )
 
 var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, "ecs_service_discovery")
@@ -198,8 +199,8 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_subnet_id"}, Action: relabel.Replace, TargetLabel: "SubnetId", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_source"}, Regex: relabel.MustNewRegexp("^arn:aws:ecs:.*:.*:task.*\\/(.*)$"), Action: relabel.Replace, TargetLabel: "TaskId"},
-		{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: prometheusreceiver.EscapedCaptureGroupOne},
 	}
+	defaultRelabelConfigs = appendDockerLabelRelabelConfigs(conf, defaultRelabelConfigs)
 
 	for _, scrapeConfig := range scrapeConfigs {
 		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
@@ -214,4 +215,57 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 			}
 		}
 	}
+}
+
+func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs []*relabel.Config) []*relabel.Config {
+	if hasJobLabelConfigured(conf) {
+		defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_job"}, Regex: relabel.MustNewRegexp(".*"), Action: relabel.Drop})
+	}
+	defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: prometheusreceiver.EscapedCaptureGroupOne})
+	return defaultRelabelConfigs
+}
+
+// hasJobConfigured checks if job is configured in any ECS observer configuration
+func hasJobLabelConfigured(conf *confmap.Conf) bool {
+	// docker_label configuration
+	dockerLabelKey := common.ConfigKey(ecsSDKey, "docker_label", "sd_job_name_label")
+	if conf.IsSet(dockerLabelKey) {
+		if jobLabelName, ok := conf.Get(dockerLabelKey).(string); ok && jobLabelName != "" && jobLabelName != defaultJobLabelName {
+			return true
+		}
+	}
+
+	// task_definition_list configuration
+	taskDefListKey := common.ConfigKey(ecsSDKey, "task_definition_list")
+	if conf.IsSet(taskDefListKey) {
+		if taskDefs, ok := conf.Get(taskDefListKey).([]interface{}); ok {
+			for _, td := range taskDefs {
+				if tdMap, ok := td.(map[string]interface{}); ok {
+					if jobName, exists := tdMap["sd_job_name"]; exists {
+						if jobStr, ok := jobName.(string); ok && jobStr != "" {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// service_name_list_for_tasks configuration
+	serviceListKey := common.ConfigKey(ecsSDKey, "service_name_list_for_tasks")
+	if conf.IsSet(serviceListKey) {
+		if services, ok := conf.Get(serviceListKey).([]interface{}); ok {
+			for _, svc := range services {
+				if svcMap, ok := svc.(map[string]interface{}); ok {
+					if jobName, exists := svcMap["sd_job_name"]; exists {
+						if jobStr, ok := jobName.(string); ok && jobStr != "" {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return false
 }
