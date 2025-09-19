@@ -34,6 +34,7 @@ replace (
 )
 
 replace (
+	github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms => github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.0.0-20250917183235-0067287f4d56
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20251120035228-2492d12f5d81
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20251120035228-2492d12f5d81
@@ -103,6 +104,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.124.0
+	github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.124.0
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.30.2
@@ -237,6 +239,8 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/klog/v2 v2.130.1
 )
+
+require github.com/shirou/gopsutil/v4 v4.25.3
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect
