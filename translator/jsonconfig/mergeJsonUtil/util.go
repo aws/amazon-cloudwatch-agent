@@ -112,6 +112,11 @@ func GetSubList(sourceMap map[string]interface{}, subKey string) []interface{} {
 }
 
 func mergeArrayOrObjectConfiguration(sourceMap map[string]interface{}, resultMap map[string]interface{}, key string, path string) {
+	sourceValue, sourceExists := sourceMap[key]
+	if !sourceExists {
+		return
+	}
+
 	resultValue, resultExists := resultMap[key]
 	if !resultExists {
 		resultMap[key] = sourceValue
@@ -125,7 +130,7 @@ func mergeArrayOrObjectConfiguration(sourceMap map[string]interface{}, resultMap
 		mergeObjectConfiguration(sourceValue, resultValue, resultMap, key, path)
 	default:
 		translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key),
-			fmt.Sprintf("Unsupported configuration type: %T", sourceValue))
+			fmt.Sprintf("Unsupported configuration source type: %T", sourceValue))
 	}
 }
 

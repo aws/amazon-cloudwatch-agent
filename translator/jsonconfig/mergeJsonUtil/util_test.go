@@ -6,9 +6,6 @@ package mergeJsonUtil
 import (
 	"reflect"
 	"testing"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 )
 
 func TestMergeArrayOrObjectConfiguration(t *testing.T) {
