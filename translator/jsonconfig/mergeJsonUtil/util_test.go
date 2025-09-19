@@ -246,6 +246,45 @@ func TestMergeArrayOrObjectConfiguration(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "merge JVM arrays with same endpoint but different measurements -> separate objects",
+			sourceMap: map[string]interface{}{
+				"jmx": []interface{}{
+					map[string]interface{}{
+						"endpoint": "localhost:9999",
+						"jvm": map[string]interface{}{
+							"measurement": []interface{}{"jvm.gc.collections.count"},
+						},
+					},
+				},
+			},
+			resultMap: map[string]interface{}{
+				"jmx": []interface{}{
+					map[string]interface{}{
+						"endpoint": "localhost:9999",
+						"jvm": map[string]interface{}{
+							"measurement": []interface{}{"jvm.classes.loaded"},
+						},
+					},
+				},
+			},
+			expected: map[string]interface{}{
+				"jmx": []interface{}{
+					map[string]interface{}{
+						"endpoint": "localhost:9999",
+						"jvm": map[string]interface{}{
+							"measurement": []interface{}{"jvm.classes.loaded"},
+						},
+					},
+					map[string]interface{}{
+						"endpoint": "localhost:9999",
+						"jvm": map[string]interface{}{
+							"measurement": []interface{}{"jvm.gc.collections.count"},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
