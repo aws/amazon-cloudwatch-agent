@@ -4,6 +4,9 @@
 package agent
 
 import (
+	"os"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
@@ -27,6 +30,10 @@ func (r *UseDualStackEndpoint) ApplyRule(input interface{}) (string, interface{}
 	}
 
 	Global_Config.UseDualStackEndpoint = val
+	if val {
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "true")
+	}
+
 	return UseDualStackEndpointKey, val
 }
 
