@@ -1,6 +1,6 @@
 module github.com/aws/amazon-cloudwatch-agent
 
-go 1.24.4
+go 1.25.0
 
 replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d
 
@@ -34,6 +34,7 @@ replace (
 )
 
 replace (
+	github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms => github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.0.0-20250917183235-0067287f4d56
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20250820144544-47895af7d372
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20250820144544-47895af7d372
@@ -103,6 +104,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.124.0
+	github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.124.0
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.30.2
@@ -174,7 +176,7 @@ require (
 	github.com/prometheus/prometheus v0.300.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/client v1.30.0
 	go.opentelemetry.io/collector/component v1.30.0

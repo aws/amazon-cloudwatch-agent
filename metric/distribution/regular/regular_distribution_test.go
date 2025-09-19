@@ -4,11 +4,14 @@
 package regular
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
@@ -86,6 +89,39 @@ func TestRegularDistribution(t *testing.T) {
 	assert.ErrorIs(t, anotherDist.AddEntry(math.Inf(-1), 1), distribution.ErrUnsupportedValue)
 	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MaxValue*1.001, 1), distribution.ErrUnsupportedValue)
 	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MinValue*1.001, 1), distribution.ErrUnsupportedValue)
+}
+
+func TestNewFromOtel(t *testing.T) {
+	//t.Skip("NYI")
+
+	for _, tc := range histograms.TestCases() {
+		t.Run(tc.Name, func(t *testing.T) {
+			dp := pmetric.NewHistogramDataPoint()
+			dp.SetCount(tc.Input.Count)
+			dp.SetSum(tc.Input.Sum)
+			if tc.Input.Min != nil {
+				dp.SetMin(*tc.Input.Min)
+			}
+			if tc.Input.Max != nil {
+				dp.SetMax(*tc.Input.Max)
+			}
+			dp.ExplicitBounds().FromRaw(tc.Input.Boundaries)
+			dp.BucketCounts().FromRaw(tc.Input.Counts)
+
+			dist := NewFromOtelExponentialMapping(dp, "")
+			fmt.Printf("%+v\n", dist)
+
+			if tc.Expected.Min != nil {
+				assert.Equal(t, *tc.Expected.Min, dist.Minimum(), "min does not match expected")
+			}
+			if tc.Expected.Max != nil {
+				assert.Equal(t, *tc.Expected.Max, dist.Maximum(), "max does not match expected")
+			}
+			assert.Equal(t, tc.Expected.Count, uint64(dist.SampleCount()), "samplecount does not match expected")
+			assert.Equal(t, tc.Expected.Sum, dist.Sum(), "sum does not match expected")
+		})
+	}
+
 }
 
 func cloneRegularDistribution(dist *RegularDistribution) *RegularDistribution {
