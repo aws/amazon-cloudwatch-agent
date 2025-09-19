@@ -35,6 +35,85 @@ func NewRegularDistribution() distribution.ClassicDistribution {
 	}
 }
 
+func NewFromOtel(dp pmetric.HistogramDataPoint, unit string) distribution.ClassicDistribution {
+	return NewFromOtelOriginal(dp, unit)
+}
+
+func NewFromOtelOriginal(dp pmetric.HistogramDataPoint, unit string) distribution.ClassicDistribution {
+	rd := &RegularDistribution{
+		maximum:     0, // negative number is not supported for now, so zero is the min value
+		minimum:     math.MaxFloat64,
+		sampleCount: 0,
+		sum:         0,
+		buckets:     map[float64]float64{},
+		unit:        "",
+	}
+	rd.maximum = dp.Max()
+	rd.minimum = dp.Min()
+	rd.sampleCount = float64(dp.Count())
+	rd.sum = dp.Sum()
+	rd.unit = unit
+	// This is incorrect as ExplicitBounds defined boundaries between buckets
+	//  len(dp.BucketCounts) = len(dp.ExplicitBounds) + 1
+	// This algorithm misses the last bucket count
+	for i := 0; i < dp.ExplicitBounds().Len(); i++ {
+		k := dp.ExplicitBounds().At(i)
+		v := dp.BucketCounts().At(i)
+		rd.buckets[k] = float64(v)
+	}
+	return rd
+}
+
+func NewFromOtelExponentialMapping(dp pmetric.HistogramDataPoint, unit string) distribution.ClassicDistribution {
+	rd := &RegularDistribution{
+		maximum:     0, // negative number is not supported for now, so zero is the min value
+		minimum:     math.MaxFloat64,
+		sampleCount: 0,
+		sum:         0,
+		buckets:     map[float64]float64{},
+		unit:        "",
+	}
+	rd.maximum = dp.Max()
+	rd.minimum = dp.Min()
+	rd.sampleCount = float64(dp.Count())
+	rd.sum = dp.Sum()
+	rd.unit = unit
+
+	values := make([]float64, 0)
+	counts := make([]float64, 0)
+	bounds := dp.ExplicitBounds()
+	bucketCounts := dp.BucketCounts()
+
+	// Handle the first bucket (min, bounds[0]]
+	if bucketCounts.Len() > 0 && bounds.Len() > 0 {
+		midpoint := (dp.Min() + bounds.At(0)) / 2
+		values = append(values, midpoint)
+		counts = append(counts, float64(bucketCounts.At(0)))
+	}
+
+	// Handle middle buckets (bounds[i-1], bounds[i]]
+	for i := 1; i < bounds.Len() && i < bucketCounts.Len(); i++ {
+		if bucketCounts.At(i) > 0 {
+			midpoint := (bounds.At(i-1) + bounds.At(i)) / 2
+			values = append(values, midpoint)
+			counts = append(counts, float64(bucketCounts.At(i)))
+		}
+	}
+
+	// Handle the last bucket (bounds[last], max)
+	if bounds.Len() > 0 && bounds.Len() < bucketCounts.Len() && bucketCounts.At(bucketCounts.Len()-1) > 0 {
+		midpoint := (bounds.At(bounds.Len()-1) + dp.Max()) / 2
+		values = append(values, midpoint)
+		counts = append(counts, float64(bucketCounts.At(bucketCounts.Len()-1)))
+	}
+
+	for i := range counts {
+		rd.buckets[values[i]] = counts[i]
+	}
+
+	return rd
+}
+
 func (regularDist *RegularDistribution) Maximum() float64 {
 	return regularDist.maximum
 }
@@ -163,16 +242,7 @@ func (rd *RegularDistribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
 }
 
 func (rd *RegularDistribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
-	rd.maximum = dp.Max()
-	rd.minimum = dp.Min()
-	rd.sampleCount = float64(dp.Count())
-	rd.sum = dp.Sum()
-	rd.unit = unit
-	for i := 0; i < dp.ExplicitBounds().Len(); i++ {
-		k := dp.ExplicitBounds().At(i)
-		v := dp.BucketCounts().At(i)
-		rd.buckets[k] = float64(v)
-	}
+
 }
 
 func (regularDist *RegularDistribution) Resize(listMaxSize int) []distribution.Distribution {
