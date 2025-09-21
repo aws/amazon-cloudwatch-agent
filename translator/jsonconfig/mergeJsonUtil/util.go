@@ -15,6 +15,7 @@ var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
 
 var ArrayOrObjectKeys = map[string]bool{
 	"jmx": true,
+	"otlp": true,
 }
 
 func MergeMap(source map[string]interface{}, result map[string]interface{}, sectionKey string,
