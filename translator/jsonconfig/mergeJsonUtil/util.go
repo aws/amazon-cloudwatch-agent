@@ -14,7 +14,7 @@ import (
 var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
 
 var ArrayOrObjectKeys = map[string]bool{
-	"jmx": true,
+	"jmx":  true,
 	"otlp": true,
 }
 

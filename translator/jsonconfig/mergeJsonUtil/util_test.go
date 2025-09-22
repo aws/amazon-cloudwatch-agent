@@ -282,14 +282,51 @@ func TestMergeArrayOrObjectConfiguration(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "merge OTLP objects with different endpoints -> array with both",
+			sourceMap: map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"endpoint": "http://localhost:4318",
+					"protocol": "grpc",
+				},
+			},
+			resultMap: map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"endpoint": "http://localhost:4317",
+					"protocol": "grpc",
+				},
+			},
+			expected: map[string]interface{}{
+				"otlp": []interface{}{
+					map[string]interface{}{
+						"endpoint": "http://localhost:4317",
+						"protocol": "grpc",
+					},
+					map[string]interface{}{
+						"endpoint": "http://localhost:4318",
+						"protocol": "grpc",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mergeArrayOrObjectConfiguration(tt.sourceMap, tt.resultMap, "jmx", "/test/path/")
+			// Determine the key to test based on the test data
+			key := "jmx"
+			if _, hasOtlp := tt.sourceMap["otlp"]; hasOtlp {
+				key = "otlp"
+			} else if _, hasOtlp := tt.resultMap["otlp"]; hasOtlp {
+				key = "otlp"
+			}
+			
+			mergeArrayOrObjectConfiguration(tt.sourceMap, tt.resultMap, key, "/test/path/")
 			if !reflect.DeepEqual(tt.resultMap, tt.expected) {
 				t.Errorf("mergeArrayOrObjectConfiguration() = %v, want %v", tt.resultMap, tt.expected)
 			}
 		})
 	}
 }
+
+
