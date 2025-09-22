@@ -4,8 +4,9 @@
 package mergeJsonUtil // nolint:revive
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMergeArrayOrObjectConfiguration(t *testing.T) {
@@ -322,9 +323,7 @@ func TestMergeArrayOrObjectConfiguration(t *testing.T) {
 			}
 
 			mergeArrayOrObjectConfiguration(tt.sourceMap, tt.resultMap, key, "/test/path/")
-			if !reflect.DeepEqual(tt.resultMap, tt.expected) {
-				t.Errorf("mergeArrayOrObjectConfiguration() = %v, want %v", tt.resultMap, tt.expected)
-			}
+			assert.Equal(t, tt.expected, tt.resultMap)
 		})
 	}
 }

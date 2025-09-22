@@ -37,19 +37,24 @@ func MergeMap(source map[string]interface{}, result map[string]interface{}, sect
 
 func mergeMap(sourceMap map[string]interface{}, resultMap map[string]interface{}, mergeRuleMap map[string]mergeJsonRule.MergeRule, path string) {
 	for key, value := range sourceMap {
-		if rule, ok := mergeRuleMap[key]; ok {
+		rule, hasRule := mergeRuleMap[key]
+		existingValue, hasExisting := resultMap[key]
+
+		switch {
+		case hasRule:
 			rule.Merge(sourceMap, resultMap)
-		} else if ArrayOrObjectKeys[key] {
+		case ArrayOrObjectKeys[key]:
 			// Special handling for configurations that can be array or object according to schema
 			mergeArrayOrObjectConfiguration(sourceMap, resultMap, key, path)
-		} else if existingValue, ok := resultMap[key]; !ok {
+		case !hasExisting:
 			// only one defines the value
 			resultMap[key] = value
-		} else if !reflect.DeepEqual(existingValue, value) {
+		case !reflect.DeepEqual(existingValue, value):
 			// fail if different values are defined
 			translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key), fmt.Sprintf("Different values are specified for %v", key))
+		default:
+			// the same value is defined by multiple sources - no action needed
 		}
-		// the same value is defined by multiple sources
 	}
 }
 
