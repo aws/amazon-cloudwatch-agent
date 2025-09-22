@@ -1,0 +1,45 @@
+collection_interval: 30s
+devices:
+  - nvme0n1
+  - nvme1n1
+metrics:
+  diskio_ebs_total_read_ops:
+    enabled: true
+  diskio_ebs_total_write_ops:
+    enabled: true
+  diskio_ebs_total_read_bytes:
+    enabled: true
+  diskio_ebs_total_write_bytes:
+    enabled: true
+  diskio_ebs_total_read_time:
+    enabled: true
+  diskio_ebs_total_write_time:
+    enabled: true
+  diskio_ebs_volume_queue_length:
+    enabled: true
+  diskio_ebs_volume_performance_exceeded_iops:
+    enabled: true
+  diskio_ebs_volume_performance_exceeded_tp:
+    enabled: true
+  diskio_ebs_ec2_instance_performance_exceeded_iops:
+    enabled: true
+  diskio_ebs_ec2_instance_performance_exceeded_tp:
+    enabled: true
+  diskio_instance_store_total_read_ops:
+    enabled: true
+  diskio_instance_store_total_write_ops:
+    enabled: true
+  diskio_instance_store_total_read_bytes:
+    enabled: true
+  diskio_instance_store_total_write_bytes:
+    enabled: true
+  diskio_instance_store_total_read_time:
+    enabled: true
+  diskio_instance_store_total_write_time:
+    enabled: true
+  diskio_instance_store_volume_queue_length:
+    enabled: true
+  diskio_instance_store_performance_exceeded_iops:
+    enabled: false
+  diskio_instance_store_performance_exceeded_tp:
+    enabled: false

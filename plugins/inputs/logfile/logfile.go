@@ -86,8 +86,8 @@ const sampleConfig = `
       ## Whether file is a named pipe
       pipe = false
       destination = "cloudwatchlogs"
-      ## Max size of each log event, defaults to 262144 (256KB)
-      max_event_size = 262144
+      ## Max size of each log event, defaults to 1048576 (1MB)
+      max_event_size = 1048576
       ## Suffix to be added to truncated logline to indicate its truncation, defaults to "[Truncated...]"
       truncate_suffix = "[Truncated...]"
 
@@ -203,8 +203,11 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}
 
+			var initialStateOffset int64
 			var gapsToRead state.RangeList
-			if !restored.OnlyUseMaxOffset() {
+			if restored.OnlyUseMaxOffset() {
+				initialStateOffset = restored.Last().EndOffsetInt64()
+			} else {
 				gapsToRead = state.InvertRanges(restored)
 			}
 			isutf16 := false
@@ -257,6 +260,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				groupName, streamName,
 				t.Destination,
 				stateManager,
+				initialStateOffset,
 				fileconfig.LogGroupClass,
 				fileconfig.FilePath,
 				tailer,
@@ -266,7 +270,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.timestampFromLogLine,
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
-				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
 				fileconfig.BackpressureMode,
 			)

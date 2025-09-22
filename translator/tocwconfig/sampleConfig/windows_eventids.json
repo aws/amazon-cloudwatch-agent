@@ -1,0 +1,30 @@
+{
+  "logs": {
+    "concurrency": 1,
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_ids": [
+              4562,
+              4589
+            ],
+            "log_group_name": "System",
+            "log_stream_name": "System"
+          },
+          {
+            "event_name": "Application",
+            "event_ids": [
+              1452,
+              9687
+            ],
+            "log_group_name": "Application",
+            "log_stream_name": "Application"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "log_stream_name"
+  }
+}

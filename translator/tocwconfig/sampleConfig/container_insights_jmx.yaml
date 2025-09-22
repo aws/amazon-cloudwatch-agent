@@ -478,11 +478,11 @@ processors:
         log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
             - context: metric
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - set(unit, "Bytes") where name == "jvm.memory.heap.used"
                 - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
@@ -515,6 +515,7 @@ receivers:
         certificate_file_path: ""
         cluster_name: TestCluster
         collection_interval: 1m0s
+        collection_role: ALL
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
@@ -537,7 +538,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-    otlp/jmx:
+    otlp/http_0_0_0_0_4314:
         protocols:
             http:
                 cors: {}
@@ -573,7 +574,7 @@ service:
                 - metricstransform/containerinsightsjmx
                 - cumulativetodelta/containerinsightsjmx
             receivers:
-                - otlp/jmx
+                - otlp/http_0_0_0_0_4314
     telemetry:
         logs:
             encoding: console

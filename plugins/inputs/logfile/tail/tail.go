@@ -18,6 +18,7 @@ import (
 	"gopkg.in/tomb.v1"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 )
 
@@ -34,11 +35,6 @@ type Line struct {
 	Time   time.Time
 	Err    error // Error from tail
 	Offset int64 // offset of current reader
-}
-
-// NewLine returns a Line with present time.
-func NewLine(text string, offset int64) *Line {
-	return &Line{text, time.Now(), nil, offset}
 }
 
 // SeekInfo represents arguments to `os.Seek`
@@ -77,8 +73,9 @@ type Tail struct {
 	Lines    chan *Line
 	Config
 
-	file   *os.File
-	reader *bufio.Reader
+	file           *os.File
+	reader         *bufio.Reader
+	useLargeBuffer bool
 
 	watcher watch.FileWatcher
 	changes *watch.FileChanges
@@ -90,6 +87,8 @@ type Tail struct {
 	lk sync.Mutex
 
 	FileDeletedCh chan struct{}
+
+	linePool sync.Pool
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -106,6 +105,9 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		Lines:         make(chan *Line),
 		Config:        config,
 		FileDeletedCh: make(chan struct{}),
+		linePool: sync.Pool{
+			New: func() any { return &Line{} },
+		},
 	}
 
 	// when Logger was not specified in config, create new one
@@ -306,8 +308,12 @@ func (tail *Tail) readlineUtf16() (string, error) {
 			}
 			cur = append(cur, nextByte)
 		}
-		// 262144 => 256KB
-		if resSize+len(cur) >= 262144 {
+		// Use MaxLineSize if configured, otherwise use DefaultMaxEventSize
+		maxSize := constants.DefaultMaxEventSize // Use the constant defined in constants package
+		if tail.MaxLineSize > 0 {
+			maxSize = tail.MaxLineSize
+		}
+		if resSize+len(cur) >= maxSize {
 			break
 		}
 		buf := make([]byte, len(cur))
@@ -413,7 +419,13 @@ func (tail *Tail) tailFileSync() {
 				// Wait a second before seeking till the end of
 				// file when rate limit is reached.
 				msg := "Too much log activity; waiting a second before resuming tailing"
-				tail.Lines <- &Line{msg, time.Now(), errors.New(msg), tail.curOffset}
+				// Warning: Make sure to release line once done!
+				lineObject := tail.linePool.Get().(*Line)
+				lineObject.Text = msg
+				lineObject.Time = time.Now()
+				lineObject.Err = errors.New(msg)
+				lineObject.Offset = tail.curOffset
+				tail.Lines <- lineObject
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
@@ -533,13 +545,50 @@ func (tail *Tail) waitForChanges() error {
 
 func (tail *Tail) openReader() {
 	tail.lk.Lock()
-	if tail.MaxLineSize > 0 {
-		// add 2 to account for newline characters
-		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize+2)
+	if tail.useLargeBuffer {
+		tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
 	} else {
-		tail.reader = bufio.NewReader(tail.file)
+		tail.reader = bufio.NewReaderSize(tail.file, constants.DefaultReaderBufferSize)
 	}
 	tail.lk.Unlock()
+}
+
+func (tail *Tail) readSlice(delim byte) ([]byte, error) {
+	// First try: normal ReadSlice
+	word, err := tail.reader.ReadSlice(delim)
+	if err != bufio.ErrBufferFull {
+		tail.curOffset += int64(len(word))
+		return word, err // fast path: no allocation
+	}
+
+	// Check if buffer already upgraded
+	if tail.reader.Size() == tail.MaxLineSize {
+		tail.curOffset += int64(len(word))
+		return word, bufio.ErrBufferFull
+	}
+
+	// Buffer was too small → allocate ONCE
+	buf := append([]byte(nil), word...)
+
+	// Copy any unread buffered data
+	unread := tail.reader.Buffered()
+	if unread > 0 {
+		peek, _ := tail.reader.Peek(unread)
+		buf = append(buf, peek...)
+		tail.reader.Discard(unread)
+	}
+
+	// Switch to a bigger buffer
+	tail.reader = bufio.NewReaderSize(tail.file, tail.MaxLineSize)
+	// In the event that the tail is re-opened, we don't want to have to do this
+	// re-sizing of the buffer again. The reader should just re-open with the larger buffer
+	tail.useLargeBuffer = true
+
+	word, err = tail.reader.ReadSlice(delim)
+	buf = append(buf, word...)
+	tail.curOffset += int64(len(buf))
+
+	return buf, err
 }
 
 func (tail *Tail) seekEnd() error {
@@ -570,12 +619,18 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 
 	for i, line := range lines {
 		// This select is to avoid blockage on the tail.Lines chan
+		// Warning: Make sure to release line once done!
+		lineObject := tail.linePool.Get().(*Line)
+		lineObject.Text = line
+		lineObject.Time = now
+		lineObject.Err = nil
+		lineObject.Offset = offset
 		select {
-		case tail.Lines <- &Line{line, now, nil, offset}:
+		case tail.Lines <- lineObject:
 		case <-tail.Dying():
 			if tail.Err() == errStopAtEOF {
 				// Try sending, even if it blocks.
-				tail.Lines <- &Line{line, now, nil, offset}
+				tail.Lines <- lineObject
 			} else {
 				tail.dropCnt += len(lines) - i
 				return true
@@ -602,13 +657,6 @@ func (tail *Tail) Cleanup() {
 	watch.Cleanup(tail.Filename)
 }
 
-// A wrapper of bufio ReadSlice
-func (tail *Tail) readSlice(delim byte) (line []byte, err error) {
-	line, err = tail.reader.ReadSlice(delim)
-	tail.curOffset += int64(len(line))
-	return
-}
-
 // A wrapper of bufio ReadByte
 func (tail *Tail) readByte() (b byte, err error) {
 	b, err = tail.reader.ReadByte()
@@ -621,6 +669,11 @@ func (tail *Tail) unreadByte() (err error) {
 	err = tail.reader.UnreadByte()
 	tail.curOffset -= 1
 	return
+}
+
+func (tail *Tail) ReleaseLine(line *Line) {
+	*line = Line{}
+	tail.linePool.Put(line)
 }
 
 // A wrapper of tomb Err()

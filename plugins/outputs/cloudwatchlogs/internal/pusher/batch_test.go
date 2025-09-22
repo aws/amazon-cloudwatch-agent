@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -50,6 +51,137 @@ func TestLogEvent(t *testing.T) {
 }
 
 func TestLogEventBatch(t *testing.T) {
+	t.Run("UpdateStateOnly", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		successCallbackCalled := false
+		successCallback := func() {
+			successCallbackCalled = true
+		}
+
+		stateCallbackCalled := false
+		stateCallback := func() {
+			stateCallbackCalled = true
+		}
+
+		batch.addDoneCallback(successCallback)
+		batch.addStateCallback(stateCallback)
+
+		batch.updateState()
+
+		assert.False(t, successCallbackCalled, "Success callback should not have been called")
+		assert.True(t, stateCallbackCalled, "State callback should have been called")
+	})
+
+	t.Run("UpdateStateOnly_WithMultipleCallbacks", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		successCallbacksCalled := make([]bool, 3)
+		successCallbacks := []func(){
+			func() { successCallbacksCalled[0] = true },
+			func() { successCallbacksCalled[1] = true },
+			func() { successCallbacksCalled[2] = true },
+		}
+
+		stateCallbacksCalled := make([]bool, 3)
+		stateCallbacks := []func(){
+			func() { stateCallbacksCalled[0] = true },
+			func() { stateCallbacksCalled[1] = true },
+			func() { stateCallbacksCalled[2] = true },
+		}
+
+		for _, cb := range successCallbacks {
+			batch.addDoneCallback(cb)
+		}
+		for _, cb := range stateCallbacks {
+			batch.addStateCallback(cb)
+		}
+
+		batch.updateState()
+
+		// Verify none of the success callbacks were called
+		for i, called := range successCallbacksCalled {
+			assert.False(t, called, "Success callback %d should not have been called", i)
+		}
+
+		// Verify all state callbacks were called
+		for i, called := range stateCallbacksCalled {
+			assert.True(t, called, "State callback %d should have been called", i)
+		}
+	})
+
+	t.Run("UpdateStateOnly_WithRangeQueueBatcher", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		mrq1 := &mockRangeQueue{}
+		mrq1.On("ID").Return("test1")
+		mrq1.On("Enqueue", state.NewRange(10, 20)).Once()
+
+		mrq2 := &mockRangeQueue{}
+		mrq2.On("ID").Return("test2")
+		mrq2.On("Enqueue", state.NewRange(30, 40)).Once()
+
+		event1 := newStatefulLogEvent(time.Now(), "Test1", nil, &logEventState{
+			r:     state.NewRange(10, 20),
+			queue: mrq1,
+		})
+		event2 := newStatefulLogEvent(time.Now(), "Test2", nil, &logEventState{
+			r:     state.NewRange(30, 40),
+			queue: mrq2,
+		})
+
+		successCallbackCalled := false
+		batch.addDoneCallback(func() {
+			successCallbackCalled = true
+		})
+
+		batch.append(event1)
+		batch.append(event2)
+
+		batch.updateState()
+
+		mrq1.AssertExpectations(t)
+		mrq2.AssertExpectations(t)
+
+		assert.False(t, successCallbackCalled, "Success callback should not have been called")
+	})
+
+	t.Run("UpdateStateWithDone", func(t *testing.T) {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+
+		mrq1 := &mockRangeQueue{}
+		mrq1.On("ID").Return("test1")
+		mrq1.On("Enqueue", state.NewRange(10, 20)).Once()
+
+		mrq2 := &mockRangeQueue{}
+		mrq2.On("ID").Return("test2")
+		mrq2.On("Enqueue", state.NewRange(30, 40)).Once()
+
+		event1 := newStatefulLogEvent(time.Now(), "Test1", nil, &logEventState{
+			r:     state.NewRange(10, 20),
+			queue: mrq1,
+		})
+		event2 := newStatefulLogEvent(time.Now(), "Test2", nil, &logEventState{
+			r:     state.NewRange(30, 40),
+			queue: mrq2,
+		})
+
+		stateCallbackCalled := false
+		batch.addStateCallback(func() {
+			stateCallbackCalled = true
+		})
+
+		batch.append(event1)
+		batch.append(event2)
+
+		batch.done()
+
+		mrq1.AssertExpectations(t)
+		mrq2.AssertExpectations(t)
+
+		assert.True(t, stateCallbackCalled, "State callback should have been called")
+	})
+
 	t.Run("Append", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 
@@ -79,20 +211,18 @@ func TestLogEventBatch(t *testing.T) {
 	t.Run("HasSpace", func(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 
-		event := newLogEvent(time.Now(), "Test message", nil)
-		maxEvents := reqSizeLimit / event.eventBytes
+		// Test with empty batch
+		assert.True(t, batch.hasSpace(reqSizeLimit))
+		assert.False(t, batch.hasSpace(reqSizeLimit+1))
 
-		// Add events until close to the limit
-		for i := 0; i < maxEvents-1; i++ {
-			batch.append(event)
-		}
+		// Add a small event
+		smallEvent := newLogEvent(time.Now(), "a", nil)
+		batch.append(smallEvent)
 
-		assert.True(t, batch.hasSpace(event.eventBytes))
-
-		// Add one more event to reach the limit
-		batch.append(event)
-
-		assert.False(t, batch.hasSpace(event.eventBytes))
+		// Test with batch containing one small event
+		remainingSpace := reqSizeLimit - smallEvent.eventBytes
+		assert.True(t, batch.hasSpace(remainingSpace))
+		assert.False(t, batch.hasSpace(remainingSpace+1))
 	})
 
 	t.Run("Build", func(t *testing.T) {
@@ -211,4 +341,66 @@ func TestLogEventBatch(t *testing.T) {
 		mdc1.AssertNotCalled(t, "Done")
 		mdc2.AssertExpectations(t)
 	})
+}
+
+func TestEventValidation_1MB(t *testing.T) {
+	// Test event at exactly the validation limit
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	largeMessage := strings.Repeat("a", maxMessageSize)
+
+	event := newStatefulLogEvent(time.Now(), largeMessage, nil, nil)
+	assert.Equal(t, largeMessage, event.message)
+	assert.Equal(t, maxMessageSize+perEventHeaderBytes, event.eventBytes)
+}
+
+func TestEventValidation_Over1MB(t *testing.T) {
+	// Test event over 1MB - should be truncated with truncation suffix
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	oversizeMessage := strings.Repeat("a", maxEventPayloadBytes+1000)
+
+	event := newStatefulLogEvent(time.Now(), oversizeMessage, nil, nil)
+	// The total length should still be maxMessageSize
+	assert.Equal(t, maxMessageSize, len(event.message))
+	assert.Equal(t, oversizeMessage[:maxMessageSize-len(defaultTruncationSuffix)]+defaultTruncationSuffix, event.message)
+}
+
+func TestEventValidation_Between256KBand1MB(t *testing.T) {
+	// Test event between 256KB and 1MB - should pass through unchanged
+	mediumMessage := strings.Repeat("a", 512*1024) // 512KB
+
+	event := newStatefulLogEvent(time.Now(), mediumMessage, nil, nil)
+	assert.Equal(t, mediumMessage, event.message)
+}
+
+func TestValidateAndTruncateMessage(t *testing.T) {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+
+	tests := []struct {
+		name           string
+		input          string
+		expectedOutput string
+	}{
+		{
+			name:           "Small message",
+			input:          "small message",
+			expectedOutput: "small message",
+		},
+		{
+			name:           "Exactly at limit",
+			input:          strings.Repeat("a", maxMessageSize),
+			expectedOutput: strings.Repeat("a", maxMessageSize),
+		},
+		{
+			name:           "Over limit",
+			input:          strings.Repeat("a", maxMessageSize+1000),
+			expectedOutput: strings.Repeat("a", maxMessageSize-len(defaultTruncationSuffix)) + defaultTruncationSuffix,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validateAndTruncateMessage(tt.input)
+			assert.Equal(t, tt.expectedOutput, result)
+		})
+	}
 }

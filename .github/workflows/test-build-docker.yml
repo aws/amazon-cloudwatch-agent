@@ -91,8 +91,8 @@ jobs:
         run: |
           mkdir amd64
           mkdir arm64
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb amd64/amazon-cloudwatch-agent.deb
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/arm64/amazon-cloudwatch-agent.deb arm64/amazon-cloudwatch-agent.deb
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.rpm amd64/amazon-cloudwatch-agent.rpm
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/arm64/amazon-cloudwatch-agent.rpm arm64/amazon-cloudwatch-agent.rpm
 
       - name: Get ECR Repo name
         id: repo_name
@@ -106,7 +106,7 @@ jobs:
         uses: docker/build-push-action@v6
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
         with:
-          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localal2/Dockerfile
           context: .
           push: true
           tags: |
@@ -118,7 +118,7 @@ jobs:
         uses: docker/build-push-action@v6
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
         with:
-          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localal2/Dockerfile
           context: .
           push: true
           tags: |
@@ -187,7 +187,7 @@ jobs:
 
   BuildMSI-2022:
     name: 'BuildMSI-2022'
-    runs-on: windows-latest
+    runs-on: windows-2022
     needs: [ MakeMSIZip ]
     permissions:
       id-token: write

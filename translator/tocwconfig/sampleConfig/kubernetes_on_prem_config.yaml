@@ -194,6 +194,7 @@ exporters:
                 - - ClusterName
               metric_name_selectors:
                 - namespace_number_of_running_pods
+                - namespace_ingress_count
             - dimensions:
                 - - ClusterName
               metric_name_selectors:
@@ -298,6 +299,22 @@ exporters:
                 - node_diskio_ebs_ec2_instance_performance_exceeded_iops
                 - node_diskio_ebs_ec2_instance_performance_exceeded_tp
                 - node_diskio_ebs_volume_queue_length
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
+                - - ClusterName
+                  - Namespace
+                  - PersistentVolumeClaimName
+              metric_name_selectors:
+                - persistent_volume_claim_status_bound
+                - persistent_volume_claim_status_lost
+                - persistent_volume_claim_status_pending
+                - persistent_volume_claim_count
+            - dimensions:
+                - - ClusterName
+              metric_name_selectors:
+                - persistent_volume_count
         metric_descriptors:
             - metric_name: apiserver_admission_controller_admission_duration_seconds
               overwrite: true
@@ -596,6 +613,7 @@ receivers:
         certificate_file_path: ""
         cluster_name: TestCluster
         collection_interval: 30s
+        collection_role: ALL
         container_orchestrator: eks
         enable_control_plane_metrics: true
         endpoint: ""

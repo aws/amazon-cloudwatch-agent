@@ -30,12 +30,13 @@ var metricDuplicateTypes = []string{
 }
 
 var renameMapForDcgm = map[string]string{
-	"DCGM_FI_DEV_GPU_UTIL":        containerinsightscommon.GpuUtilization,
-	"DCGM_FI_DEV_FB_USED_PERCENT": containerinsightscommon.GpuMemUtilization,
-	"DCGM_FI_DEV_FB_USED":         containerinsightscommon.GpuMemUsed,
-	"DCGM_FI_DEV_FB_TOTAL":        containerinsightscommon.GpuMemTotal,
-	"DCGM_FI_DEV_GPU_TEMP":        containerinsightscommon.GpuTemperature,
-	"DCGM_FI_DEV_POWER_USAGE":     containerinsightscommon.GpuPowerDraw,
+	"DCGM_FI_DEV_GPU_UTIL":            containerinsightscommon.GpuUtilization,
+	"DCGM_FI_DEV_FB_USED_PERCENT":     containerinsightscommon.GpuMemUtilization,
+	"DCGM_FI_DEV_FB_USED":             containerinsightscommon.GpuMemUsed,
+	"DCGM_FI_DEV_FB_TOTAL":            containerinsightscommon.GpuMemTotal,
+	"DCGM_FI_DEV_GPU_TEMP":            containerinsightscommon.GpuTemperature,
+	"DCGM_FI_DEV_POWER_USAGE":         containerinsightscommon.GpuPowerDraw,
+	"DCGM_FI_PROF_PIPE_TENSOR_ACTIVE": containerinsightscommon.GpuTensorCoreUtilization,
 }
 
 var renameMapForNeuronMonitor = map[string]string{

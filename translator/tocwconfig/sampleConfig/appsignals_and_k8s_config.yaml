@@ -1483,6 +1483,7 @@ receivers:
         certificate_file_path: ""
         cluster_name: TestCluster
         collection_interval: 30s
+        collection_role: ALL
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
@@ -1505,7 +1506,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-    otlp/application_signals:
+    otlp/grpc_0_0_0_0_4315:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:4315
@@ -1514,6 +1515,8 @@ receivers:
                     server_parameters: {}
                 read_buffer_size: 524288
                 transport: tcp
+    otlp/http_0_0_0_0_4316:
+        protocols:
             http:
                 cors: {}
                 endpoint: 0.0.0.0:4316
@@ -1542,7 +1545,8 @@ service:
                 - awsapplicationsignals
                 - awsentity/service/application_signals
             receivers:
-                - otlp/application_signals
+                - otlp/grpc_0_0_0_0_4315
+                - otlp/http_0_0_0_0_4316
         metrics/containerinsights:
             exporters:
                 - awsemf/containerinsights
@@ -1559,7 +1563,8 @@ service:
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
-                - otlp/application_signals
+                - otlp/grpc_0_0_0_0_4315
+                - otlp/http_0_0_0_0_4316
     telemetry:
         logs:
             encoding: console

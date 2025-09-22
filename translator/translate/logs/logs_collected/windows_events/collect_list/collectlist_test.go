@@ -15,7 +15,7 @@ import (
 
 func TestApplyRule(t *testing.T) {
 	c := new(CollectList)
-	var rawJsonString = `
+	var rawJSONString = `
 {
     "collect_list": [
       {
@@ -24,8 +24,13 @@ func TestApplyRule(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
+        "event_ids": [
+          100,
+          120,
+          300
+        ],
         "log_group_name": "System",
-		"log_group_class": "STANDARD"
+        "log_group_class": "STANDARD"
       },
       {
         "event_name": "Application",
@@ -33,6 +38,10 @@ func TestApplyRule(t *testing.T) {
           "INFORMATION",
           "VERBOSE",
           "ERROR"
+        ],
+        "event_ids": [
+         4625,
+         3568
         ],
         "event_format": "xml",
         "log_group_name": "Application",
@@ -47,6 +56,7 @@ func TestApplyRule(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
+			"event_ids":         []int{100, 120, 300},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": -1,
@@ -55,6 +65,7 @@ func TestApplyRule(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{4625, 3568},
 			"event_format":      "xml",
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,
@@ -65,7 +76,7 @@ func TestApplyRule(t *testing.T) {
 
 	var actual interface{}
 
-	err := json.Unmarshal([]byte(rawJsonString), &input)
+	err := json.Unmarshal([]byte(rawJSONString), &input)
 	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.Equal(t, expected, actual)
@@ -76,7 +87,7 @@ func TestApplyRule(t *testing.T) {
 
 func TestDuplicateRetention(t *testing.T) {
 	c := new(CollectList)
-	var rawJsonString = `
+	var rawJSONString = `
 {
     "collect_list": [
       {
@@ -84,6 +95,10 @@ func TestDuplicateRetention(t *testing.T) {
         "event_levels": [
           "INFORMATION",
           "CRITICAL"
+        ],
+        "event_ids": [
+          100,
+          120
         ],
         "log_group_name": "System",
 		"retention_in_days": 3,
@@ -95,6 +110,10 @@ func TestDuplicateRetention(t *testing.T) {
           "INFORMATION",
           "VERBOSE",
           "ERROR"
+        ],
+        "event_ids": [
+          100,
+          120
         ],
         "event_format": "xml",
         "log_group_name": "System",
@@ -107,6 +126,10 @@ func TestDuplicateRetention(t *testing.T) {
           "INFORMATION",
           "VERBOSE",
           "ERROR"
+        ],
+        "event_ids": [
+          100,
+          120
         ],
         "event_format": "xml",
         "log_group_name": "System",
@@ -122,6 +145,7 @@ func TestDuplicateRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
+			"event_ids":         []int{100, 120},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
@@ -130,6 +154,7 @@ func TestDuplicateRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{100, 120},
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
@@ -139,6 +164,7 @@ func TestDuplicateRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{100, 120},
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
@@ -149,19 +175,19 @@ func TestDuplicateRetention(t *testing.T) {
 
 	var actual interface{}
 
-	error := json.Unmarshal([]byte(rawJsonString), &input)
-	if error == nil {
+	err := json.Unmarshal([]byte(rawJSONString), &input)
+	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.Equal(t, 0, len(translator.ErrorMessages))
 		assert.Equal(t, expected, actual)
 	} else {
-		assert.Fail(t, error.Error())
+		assert.Fail(t, err.Error())
 	}
 }
 
 func TestConflictingRetention(t *testing.T) {
 	c := new(CollectList)
-	var rawJsonString = `
+	var rawJSONString = `
 {
     "collect_list": [
       {
@@ -170,8 +196,12 @@ func TestConflictingRetention(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
+        "event_ids": [
+          100,
+          120
+        ],
         "log_group_name": "System",
-		"retention_in_days": 3
+        "retention_in_days": 3
       },
       {
         "event_name": "Application",
@@ -180,9 +210,13 @@ func TestConflictingRetention(t *testing.T) {
           "VERBOSE",
           "ERROR"
         ],
+        "event_ids": [
+          100,
+          120
+        ],
         "event_format": "xml",
         "log_group_name": "System",
-		"retention_in_days": 1
+        "retention_in_days": 1
       }
     ]
 }
@@ -193,6 +227,7 @@ func TestConflictingRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "System",
 			"event_levels":      []interface{}{"4", "0", "1"},
+			"event_ids":         []int{100, 120},
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
@@ -201,6 +236,7 @@ func TestConflictingRetention(t *testing.T) {
 		map[string]interface{}{
 			"event_name":        "Application",
 			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_ids":         []int{100, 120},
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
@@ -211,13 +247,40 @@ func TestConflictingRetention(t *testing.T) {
 
 	var actual interface{}
 
-	error := json.Unmarshal([]byte(rawJsonString), &input)
-	if error == nil {
+	err := json.Unmarshal([]byte(rawJSONString), &input)
+	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.GreaterOrEqual(t, 1, len(translator.ErrorMessages))
 		assert.Equal(t, "Under path : /logs/logs_collected/windows_events/collect_list/ | Error : Different retention_in_days values can't be set for the same log group: system", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 		assert.Equal(t, expected, actual)
 	} else {
-		assert.Fail(t, error.Error())
+		assert.Fail(t, err.Error())
 	}
+}
+
+func TestEventID(t *testing.T) {
+	//Inputs
+	rawJSONString := `{
+		"collect_list": [{
+			"event_name": "System",
+			"event_ids": [100, 101, 102],
+			"event_levels": ["ERROR", "CRITICAL"]
+		}]
+		}`
+
+	var config interface{}
+	err := json.Unmarshal([]byte(rawJSONString), &config)
+	assert.NoError(t, err)
+
+	//process new configutation
+	c := new(CollectList)
+	_, val := c.ApplyRule(config)
+
+	// Verify event_ids in final configuration
+	result := val.([]interface{})[0].(map[string]interface{})
+
+	eventIDs, exists := result["event_ids"]
+	assert.True(t, exists, "event_ids should exist in final configuration")
+	assert.Equal(t, []int{100, 101, 102}, eventIDs)
+
 }

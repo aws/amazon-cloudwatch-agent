@@ -1,4 +1,53 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300060.0 (2025-09-17)
+========================================================================
+Features:
+* [Metrics] Adding NVME Instance Store metrics
+* [ContainerInsights] Added Ingress, PersistentVolume and PersistentVolumeClaim metrics
+
+Enhancements:
+* [Agent] RPM size reduction by optimizing helper binaries
+
+Bug Fixes:
+* [Logs] Fixed detection of truncated log files to prevent missing or duplicate log entries
+* [Prometheus] Fixed Prometheus metrics being sent to undefined log streams in EKS when configured alongside Kubernetes/ECS
+* [Processors] Fixed transform processor missing 'error mode' that cause silent failures during metric transformations
+* [OTLP] Fixed receiver port conflict issues
+* [ContainerInsights] Fixed duplicate metrics collection from Kueue controller by limiting to single collector pod
+
+========================================================================
+Amazon CloudWatch Agent 1.300059.0 (2025-08-15)
+========================================================================
+Features:
+* [Windows Events] Add windows event id filtering to CWAgent
+* [Windows Events] Add windows event regex filtering to CWAgent
+* [Host Metrics] Add mem_shared metric to CloudWatch Agent
+* [Host Metrics] Adding NVME Instance Store Metrics
+* [Container Insights] Add UltraServer support for CloudWatch agent
+* [Container Insights] Add new Tensor Core and GPU capacity metrics
+* [Container Insights] Add Neuron Core and EFA capacity metrics
+
+Enhancements:
+* [Logs] Zero-allocation optimization for sendLine and readLine
+* [Logs] Dynamic reader buffer for tail
+* [Logs] Update state when batch dropped
+* [Application Signals] Add aws.remote.resource.account.* attributes to Application Signals EMF logs
+
+Bug Fixes:
+* [Application Signals] Fix race conditions in applicationsignals processor
+* [Logs] Revert Add default log publishing concurrency
+
+========================================================================
+Amazon CloudWatch Agent 1.300058.0 (2025-07-17)
+========================================================================
+Enhancements:
+* [ContainerInsights] Added ability to set CollectionRole via environment variable
+* [ContainerInsights] Increased data cache TTL and cleanup interval to support metric collection intervals greater than 300s
+* [Logs] Set default concurrency for multi-threaded log processing
+* [Logs] Improved log state file handling for Windows event logs
+* [Logs] Increased maximum log event size to 1MB and improved handling of large log lines
+
+========================================================================
 Amazon CloudWatch Agent 1.300057.0 (2025-06-16)
 ========================================================================
 Features:

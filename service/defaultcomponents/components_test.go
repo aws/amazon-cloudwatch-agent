@@ -20,7 +20,7 @@ func TestComponents(t *testing.T) {
 		"awscontainerinsightreceiver",
 		"awscontainerinsightskueuereceiver",
 		"awsecscontainermetrics",
-		"awsebsnvmereceiver",
+		"awsnvmereceiver",
 		"awsxray",
 		"filelog",
 		"jaeger",

@@ -277,7 +277,7 @@ func TestParse_Timings(t *testing.T) {
 
 	s.Gather(acc)
 
-	dist := distribution.NewDistribution()
+	dist := distribution.NewClassicDistribution()
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(11, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
@@ -1038,14 +1038,14 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 	}
 	s.Gather(acc)
 
-	dist := distribution.NewDistribution()
+	dist := distribution.NewClassicDistribution()
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(11, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
 
-	dist2 := distribution.NewDistribution()
+	dist2 := distribution.NewClassicDistribution()
 	assert.NoError(t, dist2.AddEntry(2, 1))
 	assert.NoError(t, dist2.AddEntry(22, 1))
 	assert.NoError(t, dist2.AddEntry(2, 1))
@@ -1093,14 +1093,14 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 	}
 	s.Gather(acc)
 
-	dist := distribution.NewDistribution()
+	dist := distribution.NewClassicDistribution()
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(11, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
 	assert.NoError(t, dist.AddEntry(1, 1))
 
-	dist2 := distribution.NewDistribution()
+	dist2 := distribution.NewClassicDistribution()
 	assert.NoError(t, dist2.AddEntry(2, 1))
 	assert.NoError(t, dist2.AddEntry(22, 1))
 	assert.NoError(t, dist2.AddEntry(2, 1))
@@ -1480,5 +1480,5 @@ func test_validate_gauge(
 }
 
 func init() {
-	distribution.NewDistribution = seh1.NewSEH1Distribution
+	distribution.NewClassicDistribution = seh1.NewSEH1Distribution
 }

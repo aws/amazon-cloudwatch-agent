@@ -32,10 +32,12 @@ func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
-		env     map[string]string
-		input   map[string]any
-		want    map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
-		wantErr error
+		env            map[string]string
+		input          map[string]any
+		want           map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
+		wantErr        error
+		mockECS        bool
+		mockPrometheus bool
 	}{
 		"GenerateAwsEmfExporterConfigEcs": {
 			input: map[string]any{
@@ -76,6 +78,7 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockECS: true,
 		},
 		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
 			input: map[string]any{
@@ -118,6 +121,7 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockECS: true,
 		},
 		"GenerateAwsEmfExporterConfigKubernetes": {
 			input: map[string]any{
@@ -311,6 +315,8 @@ func TestTranslator(t *testing.T) {
 							"pod_container_status_waiting_reason_image_pull_error", "pod_container_status_waiting_reason_start_error", "pod_container_status_waiting_reason_create_container_error",
 							"pod_container_status_waiting_reason_create_container_config_error", "pod_container_status_terminated_reason_oom_killed",
 							"pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity",
+							"pod_neuroncore_request", "pod_neuroncore_limit", "pod_neuroncore_usage_total", "pod_neuroncore_reserved_capacity",
+							"pod_efa_request", "pod_efa_limit", "pod_efa_usage_total", "pod_efa_reserved_capacity",
 						},
 					},
 					{
@@ -319,8 +325,10 @@ func TestTranslator(t *testing.T) {
 							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
 							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
-							"node_status_capacity_pods", "node_status_allocatable_pods", "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity"},
+							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown", "node_status_capacity_pods", "node_status_allocatable_pods",
+							"node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity", "node_gpu_unreserved_capacity", "node_gpu_available_capacity",
+							"node_neuroncore_limit", "node_neuroncore_usage_total", "node_neuroncore_reserved_capacity", "node_neuroncore_unreserved_capacity", "node_neuroncore_available_capacity",
+							"node_efa_limit", "node_efa_usage_total", "node_efa_reserved_capacity", "node_efa_unreserved_capacity", "node_efa_available_capacity"},
 					},
 					{
 						Dimensions: [][]string{
@@ -352,7 +360,7 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+						MetricNameSelectors: []string{"namespace_number_of_running_pods", "namespace_ingress_count"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
@@ -405,19 +413,19 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
+							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature", "container_gpu_tensor_core_utilization",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
+							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature", "pod_gpu_tensor_core_utilization",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature",
+							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_tensor_core_utilization",
 						},
 					},
 					{
@@ -457,7 +465,7 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "UltraServer"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
 						MetricNameSelectors: []string{
 							"node_neuroncore_utilization",
 							"node_neuroncore_memory_usage_total",
@@ -469,7 +477,7 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "UltraServer"}, {"ClusterName", "InstanceId", "NodeName"}},
 						MetricNameSelectors: []string{
 							"node_neuron_execution_errors_total",
 							"node_neurondevice_runtime_memory_used_bytes",
@@ -477,7 +485,7 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "UltraServer"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
 						MetricNameSelectors: []string{
 							"node_neurondevice_hw_ecc_events_total",
 						},
@@ -506,6 +514,27 @@ func TestTranslator(t *testing.T) {
 							"node_diskio_ebs_total_read_ops", "node_diskio_ebs_total_write_ops", "node_diskio_ebs_total_read_bytes", "node_diskio_ebs_total_write_bytes",
 							"node_diskio_ebs_total_read_time", "node_diskio_ebs_total_write_time", "node_diskio_ebs_volume_performance_exceeded_iops", "node_diskio_ebs_volume_performance_exceeded_tp",
 							"node_diskio_ebs_ec2_instance_performance_exceeded_iops", "node_diskio_ebs_ec2_instance_performance_exceeded_tp", "node_diskio_ebs_volume_queue_length",
+						},
+					},
+					{
+						Dimensions: [][]string{
+							{"ClusterName"},
+							{"ClusterName", "Namespace"},
+							{"ClusterName", "Namespace", "PersistentVolumeClaimName"},
+						},
+						MetricNameSelectors: []string{
+							"persistent_volume_claim_status_bound",
+							"persistent_volume_claim_status_lost",
+							"persistent_volume_claim_status_pending",
+							"persistent_volume_claim_count",
+						},
+					},
+					{
+						Dimensions: [][]string{
+							{"ClusterName"},
+						},
+						MetricNameSelectors: []string{
+							"persistent_volume_count",
 						},
 					},
 				},
@@ -671,6 +700,7 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
+			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
 			input: map[string]any{
@@ -705,6 +735,7 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
 			input: map[string]any{
@@ -748,6 +779,7 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
+			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
 			input: map[string]any{
@@ -781,12 +813,110 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
+			mockPrometheus: true,
+		},
+		"GenerateAwsEmfExporterConfigPrometheusFromSeparateTest": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"log_group_name":  "/test/log/group",
+							"log_stream_name": "{LogStreamName}",
+							"emf_processor": map[string]any{
+								"metric_declaration": []any{
+									map[string]any{
+										"source_labels":    []string{"Service", "Namespace"},
+										"label_matcher":    "(.*node-exporter.*|.*kube-dns.*);kube-system$",
+										"dimensions":       [][]string{{"Service", "Namespace"}},
+										"metric_selectors": []string{"^coredns_dns_request_type_count_total$"},
+									},
+								},
+								"metric_unit": map[string]any{
+									"jvm_gc_collection_seconds_sum": "Milliseconds",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]any{
+				"namespace":                              "CWAgent/Prometheus",
+				"log_group_name":                         "/test/log/group",
+				"log_stream_name":                        "{JobName}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions:          [][]string{{"Service", "Namespace"}},
+						MetricNameSelectors: []string{"^coredns_dns_request_type_count_total$"},
+						LabelMatchers: []*awsemfexporter.LabelMatcher{
+							{
+								LabelNames: []string{"Service", "Namespace"},
+								Regex:      "(.*node-exporter.*|.*kube-dns.*);kube-system$",
+							},
+						},
+					},
+				},
+				"metric_descriptors": []awsemfexporter.MetricDescriptor{
+					{
+						MetricName: "jvm_gc_collection_seconds_sum",
+						Unit:       "Milliseconds",
+					},
+				},
+				"local_mode": false,
+			},
+			mockPrometheus: true,
+		},
+		"GenerateAwsEmfExporterConfigOTLP": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"otlp": map[string]any{},
+					},
+				},
+			},
+			want: map[string]any{
+				"namespace":                              "CWAgent",
+				"log_group_name":                         "/aws/cwagent",
+				"log_stream_name":                        "",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration(nil),
+				"metric_descriptors":  nilMetricDescriptorsSlice,
+				"local_mode":          false,
+				"add_entity":          true,
+			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			if testCase.mockECS {
+				originalIsEcsFunc := isEcsFunc
+				isEcsFunc = func() bool { return true }
+				defer func() { isEcsFunc = originalIsEcsFunc }()
+			}
+
+			translator := tt
+			if testCase.mockPrometheus {
+				translator = NewTranslatorWithName(common.PipelineNamePrometheus)
+			}
+
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf)
+			got, err := translator.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
 			if err == nil {
@@ -806,6 +936,9 @@ func TestTranslator(t *testing.T) {
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
 				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				if addEntity, exists := testCase.want["add_entity"]; exists {
+					assert.Equal(t, addEntity, gotCfg.AddEntity)
+				}
 				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)
@@ -906,6 +1039,9 @@ func TestTranslatorForKueue(t *testing.T) {
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
 				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				if addEntity, exists := testCase.want["add_entity"]; exists {
+					assert.Equal(t, addEntity, gotCfg.AddEntity)
+				}
 				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)

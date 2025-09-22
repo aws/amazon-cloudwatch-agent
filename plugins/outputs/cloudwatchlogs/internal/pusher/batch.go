@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -22,11 +23,28 @@ const (
 	reqSizeLimit = 1024 * 1024
 	// The maximum number of log events in a batch.
 	reqEventsLimit = 10000
-	// The bytes required for metadata for each log event.
+	// The bytes required for metadata for each log event
 	perEventHeaderBytes = 200
+	// Maximum size for individual log events (1MB)
+	maxEventPayloadBytes = constants.DefaultMaxEventSize
 	// A batch of log events in a single request cannot span more than 24 hours. Otherwise, the operation fails.
 	batchTimeRangeLimit = 24 * time.Hour
+	// Suffix to indicate that a message has been truncated
+	defaultTruncationSuffix = "[Truncated...]"
 )
+
+// validateAndTruncateMessage ensures events don't exceed limit before we send to CloudWatch
+func validateAndTruncateMessage(message string) string {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+
+	if len(message) <= maxMessageSize {
+		return message
+	}
+
+	// Truncate the message and add a suffix to indicate truncation
+	truncatedMessage := message[:maxMessageSize-len(defaultTruncationSuffix)] + defaultTruncationSuffix
+	return truncatedMessage
+}
 
 type logEventState struct {
 	r     state.Range
@@ -47,10 +65,13 @@ func newLogEvent(timestamp time.Time, message string, doneCallback func()) *logE
 }
 
 func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(), state *logEventState) *logEvent {
+	// Validate and truncate message if necessary
+	validatedMessage := validateAndTruncateMessage(message)
+
 	return &logEvent{
-		message:      message,
+		message:      validatedMessage,
 		timestamp:    timestamp,
-		eventBytes:   len(message) + perEventHeaderBytes,
+		eventBytes:   len(validatedMessage) + perEventHeaderBytes,
 		doneCallback: doneCallback,
 		state:        state,
 	}
@@ -77,7 +98,9 @@ type logEventBatch struct {
 	minT, maxT time.Time
 	// Callbacks to execute when batch is successfully sent.
 	doneCallbacks []func()
-	batchers      map[string]*state.RangeQueueBatcher
+	// Callbacks specifically for updating state
+	stateCallbacks []func()
+	batchers       map[string]*state.RangeQueueBatcher
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -130,7 +153,7 @@ func (b *logEventBatch) handleLogEventState(s *logEventState) {
 	batcher, ok := b.batchers[queueID]
 	if !ok {
 		batcher = state.NewRangeQueueBatcher(s.queue)
-		b.addDoneCallback(batcher.Done)
+		b.addStateCallback(batcher.Done)
 		b.batchers[queueID] = batcher
 	}
 	batcher.Merge(s.r)
@@ -143,11 +166,33 @@ func (b *logEventBatch) addDoneCallback(callback func()) {
 	}
 }
 
-// done runs all registered callbacks.
+// addStateCallback adds the callback to the state callbacks list.
+// State callbacks are specifically for updating the state file and are executed
+// even when a batch fails after exhausting all retry attempts.
+func (b *logEventBatch) addStateCallback(callback func()) {
+	if callback != nil {
+		b.stateCallbacks = append(b.stateCallbacks, callback)
+	}
+}
+
+// done runs all registered callbacks, including both success callbacks and state callbacks.
 func (b *logEventBatch) done() {
+	b.updateState()
+
 	for i := len(b.doneCallbacks) - 1; i >= 0; i-- {
 		done := b.doneCallbacks[i]
 		done()
+	}
+}
+
+// updateState runs only the state callbacks to update the state file
+// without executing other success-related callbacks. This is used when a batch
+// fails after exhausting all retry attempts to prevent reprocessing the same
+// batch after restart.
+func (b *logEventBatch) updateState() {
+	for i := len(b.stateCallbacks) - 1; i >= 0; i-- {
+		callback := b.stateCallbacks[i]
+		callback()
 	}
 }
 
