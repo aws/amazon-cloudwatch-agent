@@ -320,7 +320,7 @@ func TestMergeArrayOrObjectConfiguration(t *testing.T) {
 			} else if _, hasOtlp := tt.resultMap["otlp"]; hasOtlp {
 				key = "otlp"
 			}
-			
+
 			mergeArrayOrObjectConfiguration(tt.sourceMap, tt.resultMap, key, "/test/path/")
 			if !reflect.DeepEqual(tt.resultMap, tt.expected) {
 				t.Errorf("mergeArrayOrObjectConfiguration() = %v, want %v", tt.resultMap, tt.expected)
@@ -328,5 +328,3 @@ func TestMergeArrayOrObjectConfiguration(t *testing.T) {
 		})
 	}
 }
-
-
