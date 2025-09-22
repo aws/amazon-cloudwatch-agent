@@ -63,7 +63,7 @@ copy-version-file: create-version-file
 	mkdir -p build/bin/
 	cp CWAGENT_VERSION $(BUILD_SPACE)/bin/CWAGENT_VERSION
 
-amazon-cloudwatch-agent-linux: copy-version-file
+amazon-cloudwatch-agent-linux: copy-version-file workload-discovery-linux
 	@echo Building CloudWatchAgent for Linux,Debian with ARM64 and AMD64
 	$(LINUX_AMD64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
@@ -101,6 +101,10 @@ amazon-cloudwatch-agent-windows: copy-version-file
 	$(WIN_BUILD)/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(WIN_BUILD)/start-amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(WIN_BUILD)/amazon-cloudwatch-agent-config-wizard.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+
+workload-discovery-linux:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/linux_amd64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/linux_arm64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
 
 # A fast build that only builds amd64, we don't need wizard and config downloader
 build-for-docker: build-for-docker-amd64
