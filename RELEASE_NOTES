@@ -1,4 +1,21 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300060.0 (2025-09-17)
+========================================================================
+Features:
+* [Metrics] Adding NVME Instance Store metrics
+* [ContainerInsights] Added Ingress, PersistentVolume and PersistentVolumeClaim metrics
+
+Enhancements:
+* [Agent] RPM size reduction by optimizing helper binaries
+
+Bug Fixes:
+* [Logs] Fixed detection of truncated log files to prevent missing or duplicate log entries
+* [Prometheus] Fixed Prometheus metrics being sent to undefined log streams in EKS when configured alongside Kubernetes/ECS
+* [Processors] Fixed transform processor missing 'error mode' that cause silent failures during metric transformations
+* [OTLP] Fixed receiver port conflict issues
+* [ContainerInsights] Fixed duplicate metrics collection from Kueue controller by limiting to single collector pod
+
+========================================================================
 Amazon CloudWatch Agent 1.300059.0 (2025-08-15)
 ========================================================================
 Features:
