@@ -143,13 +143,14 @@ func mergeArrayOrObjectConfiguration(sourceMap map[string]interface{}, resultMap
 func mergeArrayConfiguration(sourceValue, resultValue interface{}, resultMap map[string]interface{}, key string, path string) {
 	sourceList := sourceValue.([]interface{})
 
-	if resultList, resultIsArray := resultValue.([]interface{}); resultIsArray {
+	switch rv := resultValue.(type) {
+	case []interface{}:
 		// Array + Array: use existing mergeList function
-		resultMap[key] = mergeList(sourceList, resultList)
-	} else if resultObj, resultIsObject := resultValue.(map[string]interface{}); resultIsObject {
+		resultMap[key] = mergeList(sourceList, rv)
+	case map[string]interface{}:
 		// Array + Object: convert object to array and merge
-		resultMap[key] = mergeList(sourceList, []interface{}{resultObj})
-	} else {
+		resultMap[key] = mergeList(sourceList, []interface{}{rv})
+	default:
 		translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key),
 			fmt.Sprintf("Unsupported configuration type: %T", resultValue))
 	}
@@ -158,13 +159,14 @@ func mergeArrayConfiguration(sourceValue, resultValue interface{}, resultMap map
 func mergeObjectConfiguration(sourceValue, resultValue interface{}, resultMap map[string]interface{}, key string, path string) {
 	sourceObj := sourceValue.(map[string]interface{})
 
-	if resultList, resultIsArray := resultValue.([]interface{}); resultIsArray {
+	switch rv := resultValue.(type) {
+	case []interface{}:
 		// Object + Array: use existing mergeList function with single-item array
-		resultMap[key] = mergeList([]interface{}{sourceObj}, resultList)
-	} else if resultObj, resultIsObject := resultValue.(map[string]interface{}); resultIsObject {
+		resultMap[key] = mergeList([]interface{}{sourceObj}, rv)
+	case map[string]interface{}:
 		// Object + Object: merge objects
-		resultMap[key] = mergeObjects(resultObj, sourceObj)
-	} else {
+		resultMap[key] = mergeObjects(rv, sourceObj)
+	default:
 		translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key),
 			fmt.Sprintf("Unsupported configuration type: %T", resultValue))
 	}
