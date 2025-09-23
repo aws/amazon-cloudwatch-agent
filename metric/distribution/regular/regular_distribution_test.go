@@ -4,11 +4,17 @@
 package regular
 
 import (
+	"encoding/csv"
 	"fmt"
 	"math"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms"
@@ -91,36 +97,117 @@ func TestRegularDistribution(t *testing.T) {
 	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MinValue*1.001, 1), distribution.ErrUnsupportedValue)
 }
 
-func TestNewFromOtel(t *testing.T) {
-	//t.Skip("NYI")
+func TestOriginal(t *testing.T) {
 
 	for _, tc := range histograms.TestCases() {
 		t.Run(tc.Name, func(t *testing.T) {
-			dp := pmetric.NewHistogramDataPoint()
-			dp.SetCount(tc.Input.Count)
-			dp.SetSum(tc.Input.Sum)
-			if tc.Input.Min != nil {
-				dp.SetMin(*tc.Input.Min)
-			}
-			if tc.Input.Max != nil {
-				dp.SetMax(*tc.Input.Max)
-			}
-			dp.ExplicitBounds().FromRaw(tc.Input.Boundaries)
-			dp.BucketCounts().FromRaw(tc.Input.Counts)
+			dp := setupDatapoint(tc.Input)
 
-			dist := NewFromOtelExponentialMapping(dp, "")
+			dist := NewFromOtelOriginal(dp)
 			fmt.Printf("%+v\n", dist)
 
-			if tc.Expected.Min != nil {
-				assert.Equal(t, *tc.Expected.Min, dist.Minimum(), "min does not match expected")
-			}
-			if tc.Expected.Max != nil {
-				assert.Equal(t, *tc.Expected.Max, dist.Maximum(), "max does not match expected")
-			}
-			assert.Equal(t, tc.Expected.Count, uint64(dist.SampleCount()), "samplecount does not match expected")
-			assert.Equal(t, tc.Expected.Sum, dist.Sum(), "sum does not match expected")
+			verifyDist(t, dist, tc.Expected)
 		})
 	}
+
+	t.Run("accuracy test - lognormal", func(t *testing.T) {
+		verifyDistAccuracy(t, NewFromOtelOriginal, "testdata/lognormal_10000.csv")
+	})
+
+	t.Run("accuracy test - weibull", func(t *testing.T) {
+		verifyDistAccuracy(t, NewFromOtelOriginal, "testdata/weibull_10000.csv")
+	})
+
+}
+
+func TestMiddlePointMapping(t *testing.T) {
+
+	for _, tc := range histograms.TestCases() {
+		t.Run(tc.Name, func(t *testing.T) {
+			dp := setupDatapoint(tc.Input)
+
+			dist := NewMidpointMappingFromOtel(dp)
+			fmt.Printf("%+v\n", dist)
+
+			verifyDist(t, dist, tc.Expected)
+		})
+	}
+
+	t.Run("accuracy test - lognormal", func(t *testing.T) {
+		verifyDistAccuracy(t, NewMidpointMappingFromOtel, "testdata/lognormal_10000.csv")
+	})
+
+	t.Run("accuracy test - weibull", func(t *testing.T) {
+		verifyDistAccuracy(t, NewMidpointMappingFromOtel, "testdata/weibull_10000.csv")
+	})
+
+}
+
+func TestEvenMapping(t *testing.T) {
+
+	for _, tc := range histograms.TestCases() {
+		t.Run(tc.Name, func(t *testing.T) {
+			dp := setupDatapoint(tc.Input)
+
+			dist := NewEvenMappingFromOtel(dp)
+			//fmt.Printf("%+v\n", dist)
+
+			verifyDist(t, dist, tc.Expected)
+		})
+	}
+
+	t.Run("accuracy test - lognormal", func(t *testing.T) {
+		verifyDistAccuracy(t, NewEvenMappingFromOtel, "testdata/lognormal_10000.csv")
+	})
+
+	t.Run("accuracy test - weibull", func(t *testing.T) {
+		verifyDistAccuracy(t, NewEvenMappingFromOtel, "testdata/weibull_10000.csv")
+	})
+
+}
+
+func TestExponentialMapping(t *testing.T) {
+
+	for _, tc := range histograms.TestCases() {
+		t.Run(tc.Name, func(t *testing.T) {
+			dp := setupDatapoint(tc.Input)
+
+			dist := NewExponentialMappingFromOtel(dp)
+			//fmt.Printf("%+v\n", dist)
+
+			verifyDist(t, dist, tc.Expected)
+		})
+	}
+
+	t.Run("accuracy test - lognormal", func(t *testing.T) {
+		verifyDistAccuracy(t, NewExponentialMappingFromOtel, "testdata/lognormal_10000.csv")
+	})
+
+	t.Run("accuracy test - weibull", func(t *testing.T) {
+		verifyDistAccuracy(t, NewExponentialMappingFromOtel, "testdata/weibull_10000.csv")
+	})
+}
+
+func TestExponentialMappingCW(t *testing.T) {
+
+	for _, tc := range histograms.TestCases() {
+		t.Run(tc.Name, func(t *testing.T) {
+			dp := setupDatapoint(tc.Input)
+
+			dist := NewExponentialMappingCWFromOtel(dp)
+			//fmt.Printf("%+v\n", dist)
+
+			verifyDist(t, dist, tc.Expected)
+		})
+	}
+
+	t.Run("accuracy test - lognormal", func(t *testing.T) {
+		verifyDistAccuracy(t, NewExponentialMappingCWFromOtel, "testdata/lognormal_10000.csv")
+	})
+
+	t.Run("accuracy test - weibull", func(t *testing.T) {
+		verifyDistAccuracy(t, NewExponentialMappingCWFromOtel, "testdata/weibull_10000.csv")
+	})
 
 }
 
@@ -137,4 +224,164 @@ func cloneRegularDistribution(dist *RegularDistribution) *RegularDistribution {
 		clonedDist.buckets[k] = v
 	}
 	return clonedDist
+}
+
+func setupDatapoint(input histograms.HistogramInput) pmetric.HistogramDataPoint {
+	dp := pmetric.NewHistogramDataPoint()
+	dp.SetCount(input.Count)
+	dp.SetSum(input.Sum)
+	if input.Min != nil {
+		dp.SetMin(*input.Min)
+	}
+	if input.Max != nil {
+		dp.SetMax(*input.Max)
+	}
+	dp.ExplicitBounds().FromRaw(input.Boundaries)
+	dp.BucketCounts().FromRaw(input.Counts)
+	return dp
+}
+
+func verifyDist(t *testing.T, dist ToCloudWatchValuesAndCounts, expected histograms.ExpectedMetrics) {
+
+	if expected.Min != nil {
+		assert.Equal(t, *expected.Min, dist.Minimum(), "min does not match expected")
+	}
+	if expected.Max != nil {
+		assert.Equal(t, *expected.Max, dist.Maximum(), "max does not match expected")
+	}
+	assert.Equal(t, int(expected.Count), int(dist.SampleCount()), "samplecount does not match expected")
+	assert.Equal(t, expected.Sum, dist.Sum(), "sum does not match expected")
+
+	values, counts := dist.ValuesAndCounts()
+
+	var calculatedCount uint64
+	for _, count := range counts {
+		calculatedCount += uint64(count)
+		//fmt.Printf("%7.2f = %4d (%d)\n", values[i], int(counts[i]), calculatedCount)
+	}
+	assert.Equal(t, int(expected.Count), int(calculatedCount), "calculated count does not match expected")
+
+	for p, r := range expected.PercentileRanges {
+		x := int(float64(dist.SampleCount()) * p)
+
+		soFar := 0
+		for i, count := range counts {
+			soFar += int(count)
+			if soFar > x {
+				//fmt.Printf("Found p%.f at bucket %0.2f. Expected range: %+v\n", p*100, values[i], r)
+				assert.GreaterOrEqual(t, values[i], r.Low, "percentile %0.2f", p)
+				assert.LessOrEqual(t, values[i], r.High, "percentile %0.2f", p)
+				break
+			}
+		}
+	}
+}
+
+func loadCsvData(filename string) ([]float64, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var data []float64
+	for _, value := range records[0] {
+		f, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, f)
+	}
+	return data, nil
+}
+
+func createHistogramFromData(data []float64, boundaries []float64) pmetric.HistogramDataPoint {
+	dp := pmetric.NewHistogramDataPoint()
+
+	// Calculate basic stats
+	var sum float64
+	min := math.Inf(1)
+	max := math.Inf(-1)
+
+	for _, v := range data {
+		sum += v
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
+		}
+	}
+
+	dp.SetCount(uint64(len(data)))
+	dp.SetSum(sum)
+	dp.SetMin(min)
+	dp.SetMax(max)
+
+	// Create bucket counts
+	bucketCounts := make([]uint64, len(boundaries)+1)
+
+	for _, v := range data {
+		bucket := sort.SearchFloat64s(boundaries, v)
+		bucketCounts[bucket]++
+	}
+
+	dp.ExplicitBounds().FromRaw(boundaries)
+	dp.BucketCounts().FromRaw(bucketCounts)
+
+	return dp
+}
+
+func verifyDistAccuracy(t *testing.T, newDistFunc func(pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts, filename string) {
+	percentiles := []float64{0.1, 0.25, 0.5, 0.75, 0.9, 0.99, 0.999}
+	boundaries := []float64{
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01,
+		0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019, 0.02,
+		0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03,
+		0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04,
+		0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05,
+		0.1, 0.2,
+	}
+
+	data, err := loadCsvData(filename)
+	require.NoError(t, err)
+	assert.Len(t, data, 10000)
+
+	dp := createHistogramFromData(data, boundaries)
+	assert.Equal(t, int(dp.Count()), 10000)
+	dist := newDistFunc(dp)
+
+	values, counts := dist.ValuesAndCounts()
+	var calculatedCount int
+	for _, count := range counts {
+		calculatedCount += int(count)
+		//fmt.Printf("%7.2f = %4d (%d)\n", values[i], int(counts[i]), calculatedCount)
+	}
+	assert.Equal(t, 10000, calculatedCount, "calculated count does not match expected")
+
+	for _, p := range percentiles {
+		x1 := int(float64(dp.Count()) * p)
+		x2 := int(float64(calculatedCount) * p)
+
+		exactPercentileValue := data[x1]
+
+		soFar := 0
+		for i, count := range counts {
+			soFar += int(count)
+			if soFar > x2 {
+				calculatedPercentileValue := values[i]
+				errorPercent := (exactPercentileValue - calculatedPercentileValue) / exactPercentileValue * 100
+				fmt.Printf("P%.1f: exact=%.6f, calculated=%.6f, error=%.2f%%\n", p*100, exactPercentileValue, calculatedPercentileValue, errorPercent)
+				break
+			}
+
+		}
+
+	}
 }

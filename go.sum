@@ -239,8 +239,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxrecei
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20250820144544-47895af7d372/go.mod h1:PacmcX7JY00BzJeU2dEprhYzIA23HrZlPZmvse2cWN8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250820144544-47895af7d372 h1:5CvVXUR05tqGVs4KmTiPpFPQpYAftfzCWWFZXrEJqww=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20250820144544-47895af7d372/go.mod h1:10JuU241np104JVNq6YmBz1noDNt38gm01ftuEn1e+0=
-github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.0.0-20250917183235-0067287f4d56 h1:ffIKqqfFnl5yqZZkQf+ODWA2TYB/lPEkBGpu+OotQDE=
-github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.0.0-20250917183235-0067287f4d56/go.mod h1:VKdOsci4PYIINqYHtth/PcZPn4ID+k38GcYAB3TLWuM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.0.0-20250919201151-69d0a49820a9 h1:FRf5fEG7zvnXnZ22lzDIGee4weoA4NFx5xGSJuSJLRo=
+github.com/amazon-contributing/opentelemetry-collector-contrib/share/testdata/histograms v0.0.0-20250919201151-69d0a49820a9/go.mod h1:VKdOsci4PYIINqYHtth/PcZPn4ID+k38GcYAB3TLWuM=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9/go.mod h1:eliMa/PW+RDr2QLWRmLH1R1ZA4RInpmvOzDDXtaIZkc=
 github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=
