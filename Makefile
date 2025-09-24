@@ -77,7 +77,7 @@ amazon-cloudwatch-agent-linux: copy-version-file workload-discovery-linux
 	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 
 
-amazon-cloudwatch-agent-darwin: copy-version-file
+amazon-cloudwatch-agent-darwin: copy-version-file workload-discovery-darwin
 ifneq ($(OS),Windows_NT)
 ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS with ARM64 and AMD64
@@ -94,7 +94,7 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
-amazon-cloudwatch-agent-windows: copy-version-file
+amazon-cloudwatch-agent-windows: copy-version-file workload-discovery-windows
 	@echo Building CloudWatchAgent for Windows with AMD64
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(WIN_BUILD)/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
@@ -105,6 +105,17 @@ amazon-cloudwatch-agent-windows: copy-version-file
 workload-discovery-linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/linux_amd64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/linux_arm64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+
+workload-discovery-darwin:
+ifneq ($(OS),Windows_NT)
+ifeq ($(shell uname -s),Darwin)
+	CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/darwin_amd64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+	CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/darwin_arm64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+endif
+endif
+
+workload-discovery-windows:
+	GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/windows_amd64/workload-discovery.exe github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
 
 # A fast build that only builds amd64, we don't need wizard and config downloader
 build-for-docker: build-for-docker-amd64
