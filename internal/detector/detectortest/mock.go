@@ -61,3 +61,18 @@ func (m *MockProcessDetector) Detect(ctx context.Context, process detector.Proce
 	}
 	return args.Get(0).(*detector.Metadata), args.Error(1)
 }
+
+type MockExtractor[T any] struct {
+	mock.Mock
+}
+
+var _ detector.Extractor[any] = (*MockExtractor[any])(nil)
+
+func (m *MockExtractor[T]) Extract(ctx context.Context, process detector.Process) (T, error) {
+	args := m.Called(ctx, process)
+	out, ok := args.Get(0).(T)
+	if !ok {
+		panic("Invalid return type for extractor")
+	}
+	return out, args.Error(1)
+}

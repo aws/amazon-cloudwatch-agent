@@ -189,32 +189,3 @@ func TestCachedProcess_EnvironWithContext(t *testing.T) {
 		})
 	}
 }
-
-func TestCachedProcess_WithContextError(t *testing.T) {
-	mp := new(detectortest.MockProcess)
-	cached := NewCachedProcess(mp)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	_, err := cached.ExeWithContext(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, context.Canceled, err)
-
-	_, err = cached.CwdWithContext(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, context.Canceled, err)
-
-	_, err = cached.CmdlineSliceWithContext(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, context.Canceled, err)
-
-	_, err = cached.EnvironWithContext(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, context.Canceled, err)
-
-	mp.AssertNotCalled(t, "ExeWithContext")
-	mp.AssertNotCalled(t, "CwdWithContext")
-	mp.AssertNotCalled(t, "CmdlineSliceWithContext")
-	mp.AssertNotCalled(t, "EnvironWithContext")
-}

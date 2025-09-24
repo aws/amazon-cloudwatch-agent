@@ -16,6 +16,7 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/java"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
 )
 
@@ -33,9 +34,11 @@ type Discoverer struct {
 
 func NewDiscoverer(cfg Config, logger *slog.Logger) *Discoverer {
 	return &Discoverer{
-		cfg:              cfg,
-		logger:           logger,
-		processDetectors: []detector.ProcessDetector{},
+		cfg:    cfg,
+		logger: logger,
+		processDetectors: []detector.ProcessDetector{
+			java.NewDetector(logger),
+		},
 	}
 }
 

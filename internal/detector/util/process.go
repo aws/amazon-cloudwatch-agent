@@ -40,9 +40,6 @@ func (p *CachedProcess) ExeWithContext(ctx context.Context) (string, error) {
 	if p.errExe != nil {
 		return "", p.errExe
 	}
-	if ctx.Err() != nil {
-		return "", ctx.Err()
-	}
 	p.exe, p.errExe = p.process.ExeWithContext(ctx)
 	return p.exe, p.errExe
 }
@@ -53,9 +50,6 @@ func (p *CachedProcess) CwdWithContext(ctx context.Context) (string, error) {
 	}
 	if p.errCwd != nil {
 		return "", p.errCwd
-	}
-	if ctx.Err() != nil {
-		return "", ctx.Err()
 	}
 	p.cwd, p.errCwd = p.process.CwdWithContext(ctx)
 	return p.cwd, p.errCwd
@@ -68,9 +62,6 @@ func (p *CachedProcess) CmdlineSliceWithContext(ctx context.Context) ([]string, 
 	if p.errCmdlineSlice != nil {
 		return nil, p.errCmdlineSlice
 	}
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
 	p.cmdlineSlice, p.errCmdlineSlice = p.process.CmdlineSliceWithContext(ctx)
 	return p.cmdlineSlice, p.errCmdlineSlice
 }
@@ -81,9 +72,6 @@ func (p *CachedProcess) EnvironWithContext(ctx context.Context) ([]string, error
 	}
 	if p.errEnviron != nil {
 		return nil, p.errEnviron
-	}
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
 	}
 	p.environ, p.errEnviron = p.process.EnvironWithContext(ctx)
 	return p.environ, p.errEnviron
