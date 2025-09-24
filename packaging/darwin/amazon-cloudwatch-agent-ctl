@@ -182,11 +182,11 @@ cwa_config() {
      if [ "${config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          downloader_cmd="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
           if [ "${use_dualstack}" = 'true' ]; then
-               downloader_cmd="${downloader_cmd} --dualstack"
+               runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config} --dualstack)
+          else
+               runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
           fi
-          runDownloaderCommand=$(${downloader_cmd})
           echo "${runDownloaderCommand}"
      fi
 
