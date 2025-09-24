@@ -20,11 +20,10 @@ func TestMetadata_RoundTrip(t *testing.T) {
 			input: Metadata{
 				Categories:    []Category{CategoryJVM, CategoryTomcat},
 				Name:          "test-app",
-				Version:       "1.0.0",
 				TelemetryPort: 8080,
 				Status:        StatusReady,
 			},
-			want: `{"categories":["JVM","Tomcat"],"name":"test-app","version":"1.0.0","telemetry_port":8080,"status":"READY"}`,
+			want: `{"categories":["JVM","Tomcat"],"name":"test-app","telemetry_port":8080,"status":"READY"}`,
 		},
 		"MinimalMetadata": {
 			input: Metadata{
