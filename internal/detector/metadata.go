@@ -10,8 +10,6 @@ type Metadata struct {
 	Categories []Category `json:"categories"`
 	// Name is the identifier of the resource.
 	Name string `json:"name,omitempty"`
-	// Version is the version the detector found for the category.
-	Version string `json:"version,omitempty"`
 	// TelemetryPort is the port for the resource that exposes telemetry.
 	TelemetryPort int `json:"telemetry_port,omitempty"`
 	// Status is the current status of telemetry availability for the resource.
