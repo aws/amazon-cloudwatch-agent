@@ -122,7 +122,7 @@ jobs:
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
-#            fi
+            fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
