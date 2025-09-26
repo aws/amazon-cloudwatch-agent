@@ -1,0 +1,13 @@
+{
+  "Count": 51,
+  "Sum": 1000,
+  "Min": 5,
+  "Max": 75,
+  "Boundaries": [],
+  "Counts": [
+    51
+  ],
+  "Attributes": {
+    "service.name": "auth-service"
+  }
+}
