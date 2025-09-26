@@ -18,8 +18,7 @@ type MockProcess struct {
 var _ detector.Process = (*MockProcess)(nil)
 
 func (m *MockProcess) PID() int32 {
-	args := m.Called()
-	return args.Get(0).(int32)
+	return 1234
 }
 
 func (m *MockProcess) ExeWithContext(ctx context.Context) (string, error) {

@@ -24,8 +24,7 @@ func TestPortExtractor(t *testing.T) {
 				mp.On("CmdlineSliceWithContext", context.Background()).
 					Return([]string{"java", "-Dcom.sun.management.jmxremote.port=1234"}, nil)
 			},
-			want:    1234,
-			wantErr: nil,
+			want: 1234,
 		},
 		"WithPort/Env": {
 			setup: func(mp *detectortest.MockProcess) {
@@ -34,8 +33,7 @@ func TestPortExtractor(t *testing.T) {
 				mp.On("EnvironWithContext", context.Background()).
 					Return([]string{"JMX_PORT=2345"}, nil)
 			},
-			want:    2345,
-			wantErr: nil,
+			want: 2345,
 		},
 		"WithNoPort": {
 			setup: func(mp *detectortest.MockProcess) {
@@ -73,7 +71,8 @@ func TestPortExtractor(t *testing.T) {
 			mp := new(detectortest.MockProcess)
 			testCase.setup(mp)
 
-			got, err := JmxPortExtractor.Extract(context.Background(), mp)
+			extractor := NewPortExtractor()
+			got, err := extractor.Extract(context.Background(), mp)
 			if testCase.wantErr != nil {
 				assert.Error(t, err)
 			} else {

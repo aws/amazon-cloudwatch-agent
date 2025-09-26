@@ -171,29 +171,52 @@ func TestArchiveManifestNameExtractor(t *testing.T) {
 		want    string
 		wantErr error
 	}{
-		"WithStartClass": {
+		"WithApplicationName": {
 			setup: func(t *testing.T, mp *detectortest.MockProcess) {
 				dir := t.TempDir()
 				jar := filepath.Join(dir, "app.jar")
 				createTestArchive(t, jar, map[string]string{
-					"Start-Class": "com.example.Application",
+					"Implementation-Title":   "Implementation Title",
+					"Implementation-Version": "1.0.0",
+					"Implementation-Vendor":  "Company",
+					"Application-Name":       "Application Name",
+					"Start-Class":            "com.example.Application",
+					"Main-Class":             "org.springframework.boot.loader.JarLauncher",
+					"Specification-Title":    "Specification Title",
+					"Specification-Version":  "1.1.1",
+					"Specification-Vendor":   "Other Company",
 				})
 				mp.On("CwdWithContext", context.Background()).Return(dir, nil)
 			},
 			arg:  "app.jar",
-			want: "com.example.Application",
+			want: "Application Name",
 		},
 		"WithImplementationTitle": {
 			setup: func(t *testing.T, mp *detectortest.MockProcess) {
 				dir := t.TempDir()
 				jar := filepath.Join(dir, "app.jar")
 				createTestArchive(t, jar, map[string]string{
-					"Implementation-Title": "example-application",
+					"Implementation-Title": "Implementation Title",
+					"Start-Class":          "com.example.Application",
+					"Main-Class":           "org.springframework.boot.loader.JarLauncher",
 				})
 				mp.On("CwdWithContext", context.Background()).Return(dir, nil)
 			},
 			arg:  "app.jar",
-			want: "example-application",
+			want: "Implementation Title",
+		},
+		"WithStartClass": {
+			setup: func(t *testing.T, mp *detectortest.MockProcess) {
+				dir := t.TempDir()
+				jar := filepath.Join(dir, "app.jar")
+				createTestArchive(t, jar, map[string]string{
+					"Start-Class": "com.example.Application",
+					"Main-Class":  "org.springframework.boot.loader.JarLauncher",
+				})
+				mp.On("CwdWithContext", context.Background()).Return(dir, nil)
+			},
+			arg:  "app.jar",
+			want: "com.example.Application",
 		},
 		"WithMainClass": {
 			setup: func(t *testing.T, mp *detectortest.MockProcess) {
@@ -207,19 +230,17 @@ func TestArchiveManifestNameExtractor(t *testing.T) {
 			arg:  "app.jar",
 			want: "com.example.Main",
 		},
-		"WithAllFields": {
+		"WithNoFields": {
 			setup: func(t *testing.T, mp *detectortest.MockProcess) {
 				dir := t.TempDir()
 				jar := filepath.Join(dir, "app.jar")
 				createTestArchive(t, jar, map[string]string{
-					"Start-Class":          "com.example.Application",
-					"Implementation-Title": "example-application",
-					"Main-Class":           "com.example.Main",
+					"Other": "Value",
 				})
 				mp.On("CwdWithContext", context.Background()).Return(dir, nil)
 			},
 			arg:  "app.jar",
-			want: "com.example.Application",
+			want: "app",
 		},
 		"WithNoManifest": {
 			setup: func(t *testing.T, mp *detectortest.MockProcess) {

@@ -20,10 +20,27 @@ const (
 	extJAR = ".jar"
 	extWAR = ".war"
 
-	metaManifestFile                = "META-INF/MANIFEST.MF"
-	metaManifestStartClass          = "Start-Class"
+	// metaManifestFile is the path to the Manifest in the Java archive.
+	metaManifestFile = "META-INF/MANIFEST.MF"
+	// metaManifestApplicationName is a non-standard, but explicit field that should be used if present.
+	metaManifestApplicationName = "Application-Name"
+	// metaManifestImplementationTitle is a standard field that is conventionally used to name the application.
 	metaManifestImplementationTitle = "Implementation-Title"
-	metaManifestMainClass           = "Main-Class"
+	// metaManifestStartClass is a Spring Boot specific field that should be used instead of Main-Class if present.
+	metaManifestStartClass = "Start-Class"
+	// metaManifestMainClass is the standard Java entry point. For frameworks like Spring Boot, this will point to the
+	// framework launcher.
+	metaManifestMainClass = "Main-Class"
+)
+
+var (
+	// defaultManifestFieldPriority defines the priority order of the manifest fields.
+	defaultManifestFieldPriority = []string{
+		metaManifestApplicationName,
+		metaManifestImplementationTitle,
+		metaManifestStartClass,
+		metaManifestMainClass,
+	}
 )
 
 type nameExtractor struct {
@@ -43,22 +60,23 @@ func NewNameExtractor(logger *slog.Logger, skipByName collections.Set[string]) d
 }
 
 func (e *nameExtractor) Extract(ctx context.Context, process detector.Process) (string, error) {
-	arg, err := e.extract(ctx, process)
+	name, err := e.extract(ctx, process)
 	if err != nil {
 		return "", err
 	}
-	if e.skipByName.Contains(arg) {
+	// fallback on extracted name argument
+	if e.skipByName.Contains(name) {
 		return "", detector.ErrSkipProcess
 	}
 	for _, extractor := range e.subExtractors {
-		var name string
-		name, err = extractor.Extract(ctx, process, arg)
-		if err == nil && name != "" {
-			return name, nil
+		var extractedName string
+		extractedName, err = extractor.Extract(ctx, process, name)
+		if err == nil && extractedName != "" {
+			name = extractedName
+			break
 		}
 	}
-	// fallback on extracted name argument
-	return arg, nil
+	return name, nil
 }
 
 // extract finds the first argument that looks like a name.
@@ -135,74 +153,90 @@ type argNameExtractor interface {
 }
 
 type archiveManifestNameExtractor struct {
-	logger *slog.Logger
+	logger        *slog.Logger
+	fieldPriority []string
+	fieldLookup   collections.Set[string]
 }
 
 var _ argNameExtractor = (*archiveManifestNameExtractor)(nil)
 
 func newArchiveManifestNameExtractor(logger *slog.Logger) argNameExtractor {
-	return &archiveManifestNameExtractor{logger: logger}
+	return &archiveManifestNameExtractor{
+		logger:        logger,
+		fieldPriority: defaultManifestFieldPriority,
+		fieldLookup:   collections.NewSet(defaultManifestFieldPriority...),
+	}
 }
 
+// Extract opens the archive and reads the manifest file. Tries to extract the name from values of specific keys in the
+// manifest. Prioritizes keys in the order defined in the extractor.
 func (e *archiveManifestNameExtractor) Extract(ctx context.Context, process detector.Process, arg string) (string, error) {
 	if !strings.HasSuffix(arg, extJAR) && !strings.HasSuffix(arg, extWAR) {
 		return "", detector.ErrIncompatibleExtractor
 	}
 	fallback := strings.TrimSuffix(filepath.Base(arg), filepath.Ext(arg))
 	path, err := absPath(ctx, process, arg)
-	e.logger.Debug("Trying to extract name from Java Archive", "path", path)
+	e.logger.Debug("Trying to extract name from Java Archive", "pid", process.PID(), "path", path)
 	if err != nil {
 		return fallback, nil
 	}
-	manifest, err := readManifest(path)
-	if err != nil {
+	var name string
+	if name, err = e.readManifest(path); err != nil {
 		return fallback, nil
 	}
-	name := nameFromManifest(manifest)
 	if name != "" {
 		return name, nil
 	}
 	return fallback, nil
 }
 
-func nameFromManifest(manifest map[string]string) string {
-	order := []string{metaManifestStartClass, metaManifestImplementationTitle, metaManifestMainClass}
-	for _, field := range order {
-		if name, ok := manifest[field]; ok && name != "" {
+func (e *archiveManifestNameExtractor) readManifest(jarPath string) (string, error) {
+	r, err := zip.OpenReader(jarPath)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+
+	var manifestFile *zip.File
+	for _, f := range r.File {
+		if f.Name == metaManifestFile {
+			manifestFile = f
+			break
+		}
+	}
+	if manifestFile == nil {
+		return "", detector.ErrIncompatibleExtractor
+	}
+	rc, err := manifestFile.Open()
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+	return e.parseManifest(rc), nil
+}
+
+func (e *archiveManifestNameExtractor) parseManifest(r io.Reader) string {
+	manifest := make(map[string]string, len(e.fieldPriority))
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
+			field := strings.TrimSpace(parts[0])
+			if e.fieldLookup.Contains(field) {
+				manifest[field] = strings.TrimSpace(parts[1])
+				// exit early if the highest priority field is found
+				if field == e.fieldPriority[0] && manifest[field] != "" {
+					return manifest[field]
+				}
+			}
+		}
+	}
+	for _, field := range e.fieldPriority {
+		if name := manifest[field]; name != "" {
 			return name
 		}
 	}
 	return ""
-}
-
-func readManifest(jarPath string) (map[string]string, error) {
-	r, err := zip.OpenReader(jarPath)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		if f.Name == metaManifestFile {
-			var rc io.ReadCloser
-			rc, err = f.Open()
-			if err != nil {
-				return nil, err
-			}
-			defer rc.Close()
-			manifest := make(map[string]string)
-			scanner := bufio.NewScanner(rc)
-			for scanner.Scan() {
-				line := scanner.Text()
-				if kv := strings.SplitN(line, ":", 2); len(kv) == 2 {
-					key := strings.TrimSpace(kv[0])
-					manifest[key] = strings.TrimSpace(kv[1])
-				}
-			}
-			return manifest, scanner.Err()
-		}
-	}
-	return nil, nil
 }
 
 func absPath(ctx context.Context, process detector.Process, path string) (string, error) {

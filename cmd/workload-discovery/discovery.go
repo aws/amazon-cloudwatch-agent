@@ -141,6 +141,7 @@ func (d *Discoverer) detectMetadataFromProcess(ctx context.Context, p detector.P
 			}
 			continue
 		}
+		d.logger.Debug("Detected supported workload(s) for process", "pid", p.PID(), "categories", md.Categories)
 		mds = append(mds, md)
 	}
 	return mds, nil

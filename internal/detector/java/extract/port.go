@@ -13,23 +13,24 @@ import (
 )
 
 const (
-	jmxPortSystemProperty = "-Dcom.sun.management.jmxremote.port="
-	jmxPortEnv            = "JMX_PORT="
+	jmxPortSystemProperty = "-Dcom.sun.management.jmxremote.port"
+	jmxPortEnv            = "JMX_PORT"
 
 	portNotFound = -1
 )
-
-// JmxPortExtractor is a singleton instance. It attempts to extract the JMX port from a given process by checking
-// command line arguments and environment variables.
-var JmxPortExtractor = newPortExtractor()
 
 type portExtractor struct {
 	subExtractors []detector.PortExtractor
 }
 
-func newPortExtractor() detector.PortExtractor {
+// NewPortExtractor attempts to extract the JMX port from a given process by checking command line arguments and
+// environment variables.
+func NewPortExtractor() detector.PortExtractor {
 	return &portExtractor{
-		subExtractors: []detector.PortExtractor{new(cmdlinePortExtractor), new(envPortExtractor)},
+		subExtractors: []detector.PortExtractor{
+			new(cmdlinePortExtractor),
+			new(envPortExtractor),
+		},
 	}
 }
 
@@ -58,7 +59,7 @@ func (d *cmdlinePortExtractor) Extract(ctx context.Context, process detector.Pro
 	if len(args) <= 1 {
 		return portNotFound, detector.ErrExtractPort
 	}
-	return extractPortFromSlice(args[1:], jmxPortSystemProperty)
+	return extractPort(args[1:], jmxPortSystemProperty)
 }
 
 type envPortExtractor struct {
@@ -71,14 +72,15 @@ func (d *envPortExtractor) Extract(ctx context.Context, process detector.Process
 	if err != nil {
 		return portNotFound, err
 	}
-	return extractPortFromSlice(env, jmxPortEnv)
+	return extractPort(env, jmxPortEnv)
 }
 
-func extractPortFromSlice(slice []string, prefix string) (int, error) {
+func extractPort(entries []string, key string) (int, error) {
 	var portStr string
-	for _, element := range slice {
-		if strings.HasPrefix(element, prefix) {
-			portStr = strings.TrimSpace(element[len(prefix):])
+	for _, entry := range entries {
+		parts := strings.Split(entry, "=")
+		if len(parts) == 2 && parts[0] == key {
+			portStr = strings.TrimSpace(parts[1])
 			break
 		}
 	}

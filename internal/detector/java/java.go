@@ -5,11 +5,11 @@ package java
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/java/extract"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/tomcat"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
@@ -28,15 +28,22 @@ type javaDetector struct {
 
 var _ detector.ProcessDetector = (*javaDetector)(nil)
 
+// NewDetector creates a new process detector that identifies Java applications. It uses specialized sub-detectors
+// for known applications to further classify them.
 func NewDetector(logger *slog.Logger) detector.ProcessDetector {
 	return &javaDetector{
-		logger:        logger,
-		subDetectors:  []detector.ProcessDetector{},
+		logger: logger,
+		subDetectors: []detector.ProcessDetector{
+			tomcat.NewDetector(logger),
+		},
 		nameExtractor: extract.NewNameExtractor(logger, collections.NewSet(paths.JMXJarName)),
-		portExtractor: extract.JmxPortExtractor,
+		portExtractor: extract.NewPortExtractor(),
 	}
 }
 
+// Detect identifies Java processes and attempts to further classify them using sub-detectors. If no sub-detector
+// matches, it falls back to generic Java process detection using JAR/class name extraction. All detected processes
+// are tagged with the JVM category and include JMX port detection.
 func (d *javaDetector) Detect(ctx context.Context, process detector.Process) (*detector.Metadata, error) {
 	exe, err := process.ExeWithContext(ctx)
 	if err != nil {
@@ -48,23 +55,22 @@ func (d *javaDetector) Detect(ctx context.Context, process detector.Process) (*d
 		return nil, detector.ErrIncompatibleDetector
 	}
 
+	md := &detector.Metadata{}
 	for _, sd := range d.subDetectors {
-		var md *detector.Metadata
-		md, err = sd.Detect(ctx, process)
-		if err != nil {
-			continue
+		var detected *detector.Metadata
+		detected, err = sd.Detect(ctx, process)
+		if err == nil && detected != nil {
+			md = detected
+			break
 		}
-		return md, nil
 	}
-
-	name, err := d.nameExtractor.Extract(ctx, process)
-	if err != nil {
-		d.logger.Debug(fmt.Sprintf("failed to extract java process name: %v", err))
-		return nil, err
-	}
-	md := &detector.Metadata{
-		Categories: []detector.Category{detector.CategoryJVM},
-		Name:       name,
+	md.Categories = append([]detector.Category{detector.CategoryJVM}, md.Categories...)
+	if md.Name == "" {
+		md.Name, err = d.nameExtractor.Extract(ctx, process)
+		if err != nil {
+			d.logger.Debug("Failed to extract Java process name", "pid", process.PID(), "err", err)
+			return nil, err
+		}
 	}
 	port, err := d.portExtractor.Extract(ctx, process)
 	if err != nil {
