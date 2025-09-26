@@ -1,0 +1,24 @@
+{
+  "Count": 101,
+  "Sum": 6000,
+  "Min": 10,
+  "Max": 200,
+  "Boundaries": [
+    25,
+    50,
+    75,
+    100,
+    150
+  ],
+  "Counts": [
+    21,
+    31,
+    25,
+    15,
+    7,
+    2
+  ],
+  "Attributes": {
+    "service.name": "payment-service"
+  }
+}
