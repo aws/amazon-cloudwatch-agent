@@ -1,0 +1,16 @@
+{
+  "Count": 31,
+  "Sum": 150,
+  "Min": 1,
+  "Max": 10,
+  "Boundaries": [
+    5
+  ],
+  "Counts": [
+    21,
+    10
+  ],
+  "Attributes": {
+    "service.name": "database"
+  }
+}
