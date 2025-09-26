@@ -40,8 +40,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
@@ -761,7 +761,7 @@ func TestTraceConfig(t *testing.T) {
 func TestAppendDimensionsHostMetrics(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	
+
 	// Setup mock metadata service for this test
 	cleanup := setupMockMetadataForAppendDimensions()
 	defer cleanup()

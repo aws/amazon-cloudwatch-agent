@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
-
 func TestFilterReservedKeys_EC2MetadataResolution(t *testing.T) {
 	tests := []struct {
 		name     string

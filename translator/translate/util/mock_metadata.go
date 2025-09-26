@@ -13,7 +13,7 @@ func SetupMockMetadataForTesting() func() {
 	// Store original functions
 	originalGetEC2Metadata := getEC2Metadata
 	originalGetEC2TagValue := getEC2TagValue
-	
+
 	// Setup mock metadata service with test data
 	getEC2Metadata = func() (ec2metadata.EC2InstanceIdentityDocument, error) {
 		return ec2metadata.EC2InstanceIdentityDocument{
@@ -30,7 +30,7 @@ func SetupMockMetadataForTesting() func() {
 		}
 		return mockTags[tagKey]
 	}
-	
+
 	// Return cleanup function
 	return func() {
 		getEC2Metadata = originalGetEC2Metadata
