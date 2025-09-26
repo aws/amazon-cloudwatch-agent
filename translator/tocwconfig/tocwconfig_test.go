@@ -41,6 +41,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
@@ -51,23 +52,14 @@ const (
 )
 
 // setupMockMetadataForAppendDimensions sets up mock metadata service for testing
-// This function demonstrates how AWS metadata variables would be resolved
-func setupMockMetadataForAppendDimensions() {
-	// Note: This is a demonstration of the mock setup pattern
-	// In a real implementation, this would inject mock functions into the util package
-	// The expected configuration files show what the output would look like
-	// with these mock values:
-	//
-	// Mock Instance Metadata:
+// This function actually mocks the metadata service to provide test values
+func setupMockMetadataForAppendDimensions() func() {
+	// Setup mock metadata service with test values:
 	// - InstanceID: "i-1234567890abcdef0"
 	// - InstanceType: "t3.medium"
 	// - ImageID: "ami-0abcdef1234567890"
-	// - Region: "us-west-2"
-	//
-	// Mock EC2 Tags:
 	// - AutoScalingGroupName: "production-web-asg"
-	// - Environment: "production"
-	// - Team: "backend-team"
+	return translateutil.SetupMockMetadataForTesting()
 }
 
 //go:embed sampleConfig/prometheus_ecs_config.yaml
@@ -773,14 +765,16 @@ func TestAppendDimensionsHostMetrics(t *testing.T) {
 	// Setup mock metadata service for this test
 	cleanup := setupMockMetadataForAppendDimensions()
 	defer cleanup()
-	
+
 	// Test that append_dimensions_host_metrics.json generates the correct .conf and .yaml files
-	// Expected .conf file should contain resolved AWS metadata values:
+	// Expected .conf file contains resolved AWS metadata values:
 	// [inputs.cpu.tags]
 	//   AutoScalingGroupName = "production-web-asg"
 	//   ImageId = "ami-0abcdef1234567890"
 	//   InstanceType = "t3.medium"
 	//   ServiceName = "MyServiceApplication"
+	//
+	// Expected .yaml file includes ec2tagger processor for InstanceId resolution
 	checkTranslation(t, "append_dimensions_host_metrics", "linux", nil, "")
 }
 
