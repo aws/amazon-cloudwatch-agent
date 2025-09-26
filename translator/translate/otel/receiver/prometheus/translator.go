@@ -172,6 +172,30 @@ func escapeStrings(node any) {
 	}
 }
 
+func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
+	// Check if cluster_name is set in prometheus config
+	clusterNameKey := common.ConfigKey(promConfigKey, common.ClusterNameKey)
+	if conf.IsSet(clusterNameKey) {
+		if clusterName, ok := conf.Get(clusterNameKey).(string); ok && clusterName != "" {
+			return clusterName
+		}
+	}
+
+	// Check environment variable
+	if envClusterName := os.Getenv("K8S_CLUSTER_NAME"); envClusterName != "" {
+		return envClusterName
+	}
+
+	// Try ECS metadata auto-detection
+	if ecsutil.GetECSUtilSingleton().IsECS() {
+		if ecsCluster := ecsutil.GetECSUtilSingleton().Cluster; ecsCluster != "" {
+			return ecsCluster
+		}
+	}
+
+	return ""
+}
+
 func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *confmap.Conf, promConfigKey string) {
 	// ECS Service Discovery Relabel Configs should only be added if enabled on ECS and configs are valid:
 	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
@@ -187,7 +211,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 	}
 
 	defaultRelabelConfigs := []*relabel.Config{
-		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "ClusterName", Regex: relabel.MustNewRegexp("(.*)")},
+		{Replacement: getClusterNameFromConfig(conf, promConfigKey), Action: relabel.Replace, TargetLabel: "ClusterName"},
 		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
