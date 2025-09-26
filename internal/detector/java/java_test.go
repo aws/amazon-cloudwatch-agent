@@ -6,6 +6,7 @@ package java
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -148,22 +149,8 @@ func TestJavaDetector_Actual(t *testing.T) {
 		"Process/Java/Port": {
 			setup: func(mp *detectortest.MockProcess) {
 				mp.On("ExeWithContext", ctx).Return("/usr/bin/java", nil)
-				mp.On("CmdlineSliceWithContext", ctx).Return([]string{
-					"java",
-					"-Dcom.sun.management.jmxremote",
-					"-Dcom.sun.management.jmxremote.port=2030",
-					"-Dserver.port=8090",
-					"-Dspring.application.admin.enabled=true",
-					"-Dserver.tomcat.mbeanregistry.enabled=true",
-					"-Dmanagement.endpoints.jmx.exposure.include=*",
-					"-verbose:gc",
-					"-jar",
-					"./spring-boot-web-starter-tomcat.jar",
-					">",
-					"./spring-boot-web-starter-tomcat-jar.txt",
-					"2>&1",
-					"&",
-				}, nil)
+				mp.On("CmdlineSliceWithContext", ctx).Return(
+					detectortest.CmdlineArgsFromFile(t, filepath.Join("testdata", "java_cmdline_1")), nil)
 				mp.On("CwdWithContext", ctx).Return("", assert.AnError)
 			},
 			want: &detector.Metadata{

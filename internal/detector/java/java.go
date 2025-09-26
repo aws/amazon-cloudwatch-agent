@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/java/extract"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/kafka"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/tomcat"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
@@ -35,6 +36,7 @@ func NewDetector(logger *slog.Logger) detector.ProcessDetector {
 		logger: logger,
 		subDetectors: []detector.ProcessDetector{
 			tomcat.NewDetector(logger),
+			kafka.NewDetector(logger),
 		},
 		nameExtractor: extract.NewNameExtractor(logger, collections.NewSet(paths.JMXJarName)),
 		portExtractor: extract.NewPortExtractor(),
