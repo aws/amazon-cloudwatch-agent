@@ -23,8 +23,9 @@ type MetadataSlice []*Metadata
 type Category string
 
 const (
-	CategoryJVM    Category = "JVM"
-	CategoryTomcat Category = "Tomcat"
+	CategoryJVM         Category = "JVM"
+	CategoryTomcat      Category = "Tomcat"
+	CategoryKafkaBroker Category = "Kafka/Broker"
 )
 
 // Status represents whether the resource requires more actions before telemetry is available.

@@ -6,6 +6,7 @@ package tomcat
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,27 +93,8 @@ func TestTomcatDetector_Actual(t *testing.T) {
 		},
 		"Process/Tomcat": {
 			setup: func(mp *detectortest.MockProcess) {
-				mp.On("CmdlineSliceWithContext", ctx).Return([]string{
-					"java",
-					"-Djava.util.logging.config.file=/opt/tomcat/latest/conf/logging.properties",
-					"-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager",
-					"-Djdk.tls.ephemeralDHKeySize=2048",
-					"-Djava.protocol.handler.pkgs=org.apache.catalina.webresources",
-					"-Dsun.io.useCanonCaches=false",
-					"-Dorg.apache.catalina.security.SecurityListener.UMASK=0027",
-					"-Dcom.sun.management.jmxremote",
-					"-Dcom.sun.management.jmxremote.port=1080",
-					"-Dcom.sun.management.jmxremote.ssl=false",
-					"-Dcom.sun.management.jmxremote.authenticate=false",
-					"-Dignore.endorsed.dirs=",
-					"-classpath",
-					"/opt/tomcat/latest/bin/bootstrap.jar:/opt/tomcat/latest/bin/tomcat-juli.jar",
-					"-Dcatalina.base=/opt/tomcat/latest",
-					"-Dcatalina.home=/opt/tomcat/latest",
-					"-Djava.io.tmpdir=/opt/tomcat/latest/temp",
-					"org.apache.catalina.startup.Bootstrap",
-					"start",
-				}, nil)
+				mp.On("CmdlineSliceWithContext", ctx).Return(
+					detectortest.CmdlineArgsFromFile(t, filepath.Join("testdata", "tomcat_cmdline")), nil)
 			},
 			want: &detector.Metadata{
 				Categories: []detector.Category{detector.CategoryTomcat},
