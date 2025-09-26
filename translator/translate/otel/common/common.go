@@ -128,7 +128,7 @@ const (
 )
 
 const (
-	DiskIOPrefix = "diskio_"
+	DiskIOPrefix   = "diskio_"
 	ClusterNameKey = "cluster_name"
 )
 
