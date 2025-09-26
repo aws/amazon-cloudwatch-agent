@@ -40,6 +40,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -49,6 +50,17 @@ const (
 	prometheusFileNameToken = "prometheusFileName"
 	ecsSdFileNameToken      = "ecsSdFileName"
 )
+
+// setupMockMetadataForAppendDimensions sets up mock metadata service for testing
+// This function actually mocks the metadata service to provide test values
+func setupMockMetadataForAppendDimensions() func() {
+	// Setup mock metadata service with test values:
+	// - InstanceID: "i-1234567890abcdef0"
+	// - InstanceType: "t3.medium"
+	// - ImageID: "ami-0abcdef1234567890"
+	// - AutoScalingGroupName: "production-web-asg"
+	return translateutil.SetupMockMetadataForTesting()
+}
 
 //go:embed sampleConfig/prometheus_ecs_config.yaml
 var ecsPrometheusConfig string
@@ -744,6 +756,26 @@ func TestTraceConfig(t *testing.T) {
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
+}
+
+func TestAppendDimensionsHostMetrics(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	// Setup mock metadata service for this test
+	cleanup := setupMockMetadataForAppendDimensions()
+	defer cleanup()
+
+	// Test that append_dimensions_host_metrics.json generates the correct .conf and .yaml files
+	// Expected .conf file contains resolved AWS metadata values:
+	// [inputs.cpu.tags]
+	//   AutoScalingGroupName = "production-web-asg"
+	//   ImageId = "ami-0abcdef1234567890"
+	//   InstanceType = "t3.medium"
+	//   ServiceName = "MyServiceApplication"
+	//
+	// Expected .yaml file includes ec2tagger processor for InstanceId resolution
+	checkTranslation(t, "append_dimensions_host_metrics", "linux", nil, "")
 }
 
 func TestConfigWithEnvironmentVariables(t *testing.T) {
