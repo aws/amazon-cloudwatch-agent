@@ -1,0 +1,24 @@
+{
+  "Count": 101,
+  "Sum": 17500,
+  "Min": null,
+  "Max": 750,
+  "Boundaries": [
+    100,
+    200,
+    300,
+    400,
+    500
+  ],
+  "Counts": [
+    21,
+    31,
+    24,
+    15,
+    5,
+    5
+  ],
+  "Attributes": {
+    "service.name": "api-gateway"
+  }
+}

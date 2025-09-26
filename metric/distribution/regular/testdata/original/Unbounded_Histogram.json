@@ -1,0 +1,13 @@
+{
+  "Count": 75,
+  "Sum": 3500,
+  "Min": null,
+  "Max": null,
+  "Boundaries": [],
+  "Counts": [
+    75
+  ],
+  "Attributes": {
+    "service.name": "unbounded-service"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "Count": 101,
+  "Sum": 200,
+  "Min": -100,
+  "Max": 60,
+  "Boundaries": [
+    0,
+    10,
+    20,
+    30,
+    40,
+    50
+  ],
+  "Counts": [
+    61,
+    10,
+    10,
+    10,
+    5,
+    4,
+    1
+  ],
+  "Attributes": {
+    "service.name": "temperature-service"
+  }
+}

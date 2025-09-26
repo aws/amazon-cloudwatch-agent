@@ -1,0 +1,20 @@
+{
+  "Count": 51,
+  "Sum": 4000,
+  "Min": 25,
+  "Max": null,
+  "Boundaries": [
+    50,
+    100,
+    150
+  ],
+  "Counts": [
+    11,
+    21,
+    14,
+    5
+  ],
+  "Attributes": {
+    "service.name": "queue-service"
+  }
+}
