@@ -692,6 +692,64 @@ func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeCo
 	}
 }
 
+func TestGetClusterNameFromConfig(t *testing.T) {
+	testCases := map[string]struct {
+		input    map[string]any
+		envVar   string
+		expected string
+	}{
+		"cluster_name_from_prometheus_config": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"cluster_name": "test-cluster-from-config",
+						},
+					},
+				},
+			},
+			expected: "test-cluster-from-config",
+		},
+		"cluster_name_from_env_var": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			envVar:   "test-cluster-from-env",
+			expected: "test-cluster-from-env",
+		},
+		"empty_cluster_name": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			expected: "",
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Set up environment variable if specified
+			if testCase.envVar != "" {
+				os.Setenv("K8S_CLUSTER_NAME", testCase.envVar)
+				defer os.Unsetenv("K8S_CLUSTER_NAME")
+			}
+
+			conf := confmap.NewFromStringMap(testCase.input)
+			promConfigKey := "logs::metrics_collected::prometheus"
+			
+			result := getClusterNameFromConfig(conf, promConfigKey)
+			assert.Equal(t, testCase.expected, result)
+		})
+	}
+}
+
 func TestEscapeStrings(t *testing.T) {
 	inputYAML := `
 scrape_configs:
