@@ -694,11 +694,11 @@ func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeCo
 
 func TestGetClusterNameFromConfig(t *testing.T) {
 	testCases := map[string]struct {
-		input    map[string]any
-		envVar   string
-		expected string
+		input      map[string]any
+		ecsCluster string
+		expected   string
 	}{
-		"cluster_name_from_prometheus_config": {
+		"cluster_name_from_config": {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -710,7 +710,7 @@ func TestGetClusterNameFromConfig(t *testing.T) {
 			},
 			expected: "test-cluster-from-config",
 		},
-		"cluster_name_from_env_var": {
+		"cluster_name_from_ecs": {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -718,8 +718,8 @@ func TestGetClusterNameFromConfig(t *testing.T) {
 					},
 				},
 			},
-			envVar:   "test-cluster-from-env",
-			expected: "test-cluster-from-env",
+			ecsCluster: "my-test-cluster",
+			expected:   "my-test-cluster",
 		},
 		"empty_cluster_name": {
 			input: map[string]any{
@@ -735,15 +735,19 @@ func TestGetClusterNameFromConfig(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// Set up environment variable if specified
-			if testCase.envVar != "" {
-				os.Setenv("K8S_CLUSTER_NAME", testCase.envVar)
-				defer os.Unsetenv("K8S_CLUSTER_NAME")
+			ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+			testClusterName := "my-test-cluster"
+
+			// Set up ECS cluster if specified
+			if testCase.ecsCluster != "" {
+				ecsutil.GetECSUtilSingleton().Cluster = testClusterName
+			} else {
+				ecsutil.GetECSUtilSingleton().Cluster = ""
 			}
 
 			conf := confmap.NewFromStringMap(testCase.input)
 			promConfigKey := "logs::metrics_collected::prometheus"
-			
+
 			result := getClusterNameFromConfig(conf, promConfigKey)
 			assert.Equal(t, testCase.expected, result)
 		})
