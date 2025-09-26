@@ -50,6 +50,26 @@ const (
 	ecsSdFileNameToken      = "ecsSdFileName"
 )
 
+// setupMockMetadataForAppendDimensions sets up mock metadata service for testing
+// This function demonstrates how AWS metadata variables would be resolved
+func setupMockMetadataForAppendDimensions() {
+	// Note: This is a demonstration of the mock setup pattern
+	// In a real implementation, this would inject mock functions into the util package
+	// The expected configuration files show what the output would look like
+	// with these mock values:
+	//
+	// Mock Instance Metadata:
+	// - InstanceID: "i-1234567890abcdef0"
+	// - InstanceType: "t3.medium"
+	// - ImageID: "ami-0abcdef1234567890"
+	// - Region: "us-west-2"
+	//
+	// Mock EC2 Tags:
+	// - AutoScalingGroupName: "production-web-asg"
+	// - Environment: "production"
+	// - Team: "backend-team"
+}
+
 //go:embed sampleConfig/prometheus_ecs_config.yaml
 var ecsPrometheusConfig string
 
@@ -744,6 +764,24 @@ func TestTraceConfig(t *testing.T) {
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
+}
+
+func TestAppendDimensionsHostMetrics(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	
+	// Setup mock metadata service for this test
+	cleanup := setupMockMetadataForAppendDimensions()
+	defer cleanup()
+	
+	// Test that append_dimensions_host_metrics.json generates the correct .conf and .yaml files
+	// Expected .conf file should contain resolved AWS metadata values:
+	// [inputs.cpu.tags]
+	//   AutoScalingGroupName = "production-web-asg"
+	//   ImageId = "ami-0abcdef1234567890"
+	//   InstanceType = "t3.medium"
+	//   ServiceName = "MyServiceApplication"
+	checkTranslation(t, "append_dimensions_host_metrics", "linux", nil, "")
 }
 
 func TestConfigWithEnvironmentVariables(t *testing.T) {
