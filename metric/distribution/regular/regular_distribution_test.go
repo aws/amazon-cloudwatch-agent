@@ -210,9 +210,6 @@ func TestExponentialMappingCW(t *testing.T) {
 
 	for _, tc := range histograms.TestCases() {
 		t.Run(tc.Name, func(t *testing.T) {
-			if tc.Name != "First bucket boundary equals minimum" {
-				return
-			}
 			dp := setupDatapoint(tc.Input)
 
 			dist := NewExponentialMappingCWFromOtel(dp)
@@ -220,6 +217,49 @@ func TestExponentialMappingCW(t *testing.T) {
 
 			verifyDist(t, dist, tc.Expected)
 			assert.NoError(t, writeValuesAndCountsToJson(dist, "testdata/exponentialcw/"+filenameReplacer.Replace(tc.Name)+".json"))
+		})
+	}
+
+	boundaries := []float64{
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01,
+		0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019, 0.02,
+		0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03,
+		0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04,
+		0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05,
+		0.1, 0.2,
+	}
+	tests := []struct {
+		name        string
+		filename    string
+		newDistFunc func(pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts
+	}{
+		{
+			name:        "lognormal",
+			filename:    "testdata/lognormal_10000.csv",
+			newDistFunc: NewExponentialMappingCWFromOtel,
+		},
+		{
+			name:        "weibull",
+			filename:    "testdata/weibull_10000.csv",
+			newDistFunc: NewExponentialMappingCWFromOtel,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := loadCsvData(tt.filename)
+			require.NoError(t, err)
+			assert.Len(t, data, 10000)
+
+			dp := createHistogramFromData(data, boundaries)
+			assert.Equal(t, int(dp.Count()), 10000)
+			calculatedTotal := 0
+			for _, count := range dp.BucketCounts().All() {
+				calculatedTotal += int(count)
+			}
+			assert.Equal(t, calculatedTotal, 10000)
+
+			dist := tt.newDistFunc(dp)
+			writeValuesAndCountsToJson(dist, "testdata/exponentialcw/"+filenameReplacer.Replace(tt.name)+".json")
 		})
 	}
 
