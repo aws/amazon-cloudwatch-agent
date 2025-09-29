@@ -48,7 +48,7 @@ def plot_original_histogram(data, ax, title: str, color: str):
             widths.append(right - left)
     
     ax.bar(left_edges, counts, width=widths, alpha=0.7, edgecolor='black', linewidth=0.8, color=color, align='edge')
-    ax.set_title(f'{title} (Sum: {total_count})')
+    ax.set_title(f'{title} (Count: {total_count})')
     ax.set_ylabel('Counts')
     ax.grid(True, alpha=0.3)
 
