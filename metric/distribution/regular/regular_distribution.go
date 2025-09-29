@@ -514,21 +514,25 @@ func (em *ExponentialMapping) Sum() float64 {
 }
 
 func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts {
+
+	// No validations - assuming valid input histogram
+
 	em := &ExponentialMappingCW{
-		maximum:     0,
-		minimum:     math.MaxFloat64,
+		maximum:     dp.Max(),
+		minimum:     dp.Min(),
 		sampleCount: float64(dp.Count()),
 		sum:         dp.Sum(),
 		values:      make([]float64, 0),
 		counts:      make([]float64, 0),
 	}
 
+	// bounds specifies the boundaries between buckets
+	// bucketCounts specifies the number of datapoints in each bucket
+	// there is always 1 more bucket count than there are boundaries
+	// len(bucketCounts) = len(bounds) + 1
 	bounds := dp.ExplicitBounds()
 	bucketCounts := dp.BucketCounts()
 
-	// No validations - assuming valid input histogram
-
-	em.minimum = dp.Min()
 	if !dp.HasMin() {
 		// No minimum implies open lower boundary on first bucket
 		// Cap lower bound to top end of first bucket.
@@ -539,7 +543,6 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		}
 	}
 
-	em.maximum = dp.Max()
 	if !dp.HasMax() {
 		// No maximum implies open upper boundary on last bucket
 		// Cap upper bound to lower end of last bucket.
@@ -554,13 +557,12 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	// Special case: no boundaries implies a single bucket
 	if bounds.Len() == 0 {
 		em.counts = append(em.counts, float64(bucketCounts.At(0)))
-		// if min and max aren't defined, then this is a useless measure.
 		if dp.HasMax() && dp.HasMin() {
 			em.values = append(em.values, dp.Min()+(dp.Max()-dp.Min())/2.0)
 		} else if dp.HasMax() {
-			em.values = append(em.values, dp.Max())
+			em.values = append(em.values, dp.Max()) // only data point we have is the maximum
 		} else if dp.HasMin() {
-			em.values = append(em.values, dp.Min())
+			em.values = append(em.values, dp.Min()) // only data point we have is the minimum
 		} else {
 			em.values = append(em.values, 0) // arbitrary value
 		}
@@ -572,24 +574,20 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	for i := 0; i < bucketCounts.Len(); i++ {
 		sampleCount := bucketCounts.At(i)
 		if sampleCount == 0 {
+			// No need to operate on a bucket with no samples
 			continue
 		}
 
-		// Determine bucket bounds
-		var lowerBound, upperBound float64
-		if i == 0 {
-			lowerBound = em.minimum
-		} else {
+		lowerBound := em.minimum
+		if i > 0 {
 			lowerBound = bounds.At(i - 1)
 		}
-
-		if i == bucketCounts.Len()-1 {
-			upperBound = em.maximum
-		} else {
+		upperBound := em.maximum
+		if i < bucketCounts.Len()-1 {
 			upperBound = bounds.At(i)
 		}
 
-		// Fix zero delta by using adjacent bucket width
+		// Ensure bucket has some width so that values can be spread
 		if upperBound == lowerBound {
 			if bounds.Len() > 1 {
 				// Use width of closest defined bucket
@@ -612,21 +610,43 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 			}
 		}
 
-		// Calculate magnitude for next bucket comparison
+		// This algorithm creates "inner buckets" between user-defined bucket based on the sample count, up to a
+		// maximum. A logarithmic ratio (named "magnitude") compares the density between the current bucket and the
+		// next bucket. This ratio is used to decide how to spread samples amongst inner buckets.
+		//
+		// case 1: magnitude < 0
+		//   * What this means: Current bucket is denser than the next bucket -> density is decreasing.
+		//   * What we do: Use inverse quadratic distribution to spread the samples. This allocates more samples towards
+		//     the lower bound of the bucket.
+		// case 2: 0 <= magnitude < 1
+		//   * What this means: Current bucket and next bucket has similar densities -> density is not changing much.
+		//   * What we do: Use inform distribution to spread the samples. Extra samples that can't be spread evenly are
+		//     (arbitrarily) allocated towards the start of the bucket.
+		// case 3: 1 <= magnitude
+		//   * What this means: Current bucket is less dense than the next bucket -> density is increasing.
+		//   * What we do: Use quadratic distribution to spread the samples. This allocates more samples toward the end
+		//     of the bucket.
 		magnitude := -1.0
 		if i < bucketCounts.Len()-1 {
 			nextSampleCount := bucketCounts.At(i + 1)
-			if nextSampleCount > 0 {
+			// If next bucket is empty, than density is surely decreasing
+			if nextSampleCount == 0 {
+				magnitude = -1.0
+			} else {
 				var nextUpperBound float64
 				if i+1 == bucketCounts.Len()-1 {
 					nextUpperBound = em.maximum
 				} else {
 					nextUpperBound = bounds.At(i + 1)
 				}
-				magnitude = math.Log(((upperBound - lowerBound) / float64(sampleCount)) / ((nextUpperBound - upperBound) / float64(nextSampleCount)))
+
+				currentBucketDensity := (upperBound - lowerBound) / float64(sampleCount)
+				nextBucketDensity := (nextUpperBound - upperBound) / float64(nextSampleCount)
+				magnitude = math.Log(currentBucketDensity / nextBucketDensity)
 			}
 		}
 
+		// innerBucketCount is how many "inner buckets" to spread the sample count amongst
 		innerBucketCount := int(min(sampleCount, 50))
 		delta := (upperBound - lowerBound) / float64(innerBucketCount)
 		innerHistogram := make(map[float64]float64)
@@ -686,7 +706,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 			// Distribute samples evenly with integer counts
 			baseCount := int(sampleCount) / innerBucketCount
 			remainder := int(sampleCount) % innerBucketCount
-			
+
 			for j := 1; j <= innerBucketCount; j++ {
 				k := lowerBound + delta*float64(j)
 				count := baseCount
