@@ -24,7 +24,7 @@ func SetupMockMetadataForTesting() func() {
 		}, nil
 	}
 
-	getEC2TagValue = func(instanceID, region, tagKey string) string {
+	getEC2TagValue = func(_, _, tagKey string) string {
 		mockTags := map[string]string{
 			"AutoScalingGroupName": "production-web-asg",
 		}

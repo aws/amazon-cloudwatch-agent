@@ -25,8 +25,8 @@ const (
 	Aggregation_Interval_Tag_Key = "aws:AggregationInterval"
 
 	// EC2 metadata keys (matching ec2tagger constants)
-	mdKeyInstanceId   = "InstanceId"
-	mdKeyImageId      = "ImageId"
+	mdKeyInstanceID   = "InstanceId"
+	mdKeyImageID      = "ImageId"
 	mdKeyInstanceType = "InstanceType"
 )
 
@@ -75,11 +75,11 @@ func resolveAWSMetadata(variable string) string {
 	// Handle special metadata keys that come from instance metadata (not tags)
 	// Use same constants as ec2tagger
 	switch tagKey {
-	case mdKeyInstanceId:
+	case mdKeyInstanceID:
 		return doc.InstanceID
 	case mdKeyInstanceType:
 		return doc.InstanceType
-	case mdKeyImageId:
+	case mdKeyImageID:
 		return doc.ImageID
 	default:
 		// For any other key, look it up as an EC2 tag

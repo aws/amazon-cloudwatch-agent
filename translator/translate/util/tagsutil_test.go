@@ -195,7 +195,7 @@ func TestFilterReservedKeys_EC2TagResolution(t *testing.T) {
 			originalGetEC2TagValue := getEC2TagValue
 			defer func() { getEC2TagValue = originalGetEC2TagValue }()
 
-			getEC2TagValue = func(instanceID, region, tagKey string) string {
+			getEC2TagValue = func(_, _, tagKey string) string {
 				if tt.mockTagsErr != nil {
 					return ""
 				}
@@ -302,7 +302,7 @@ func TestResolveAWSMetadata(t *testing.T) {
 			originalGetEC2TagValue := getEC2TagValue
 			defer func() { getEC2TagValue = originalGetEC2TagValue }()
 
-			getEC2TagValue = func(instanceID, region, tagKey string) string {
+			getEC2TagValue = func(_, _, tagKey string) string {
 				if value, exists := tt.mockTags[tagKey]; exists {
 					return value
 				}
@@ -333,7 +333,7 @@ func TestAppendDimensionsIntegration(t *testing.T) {
 	originalGetEC2TagValue := getEC2TagValue
 	defer func() { getEC2TagValue = originalGetEC2TagValue }()
 
-	getEC2TagValue = func(instanceID, region, tagKey string) string {
+	getEC2TagValue = func(_, _, tagKey string) string {
 		tags := map[string]string{
 			"AutoScalingGroupName": "my-asg-group",
 			"Environment":          "production",
