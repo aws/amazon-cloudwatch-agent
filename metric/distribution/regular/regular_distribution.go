@@ -557,9 +557,9 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 
 	// Special case: no boundaries implies a single bucket
 	if lenBounds == 0 {
-		em.counts = append(em.counts, float64(bucketCounts[0]))
+		em.counts = append(em.counts, float64(bucketCounts[0])) // recall that len(bucketCounts) = len(bounds)+1
 		if dp.HasMax() && dp.HasMin() {
-			em.values = append(em.values, em.minimum+(em.maximum-em.minimum)/2.0)
+			em.values = append(em.values, em.minimum/2.0+em.maximum/2.0) // overflow safe average calculation
 		} else if dp.HasMax() {
 			em.values = append(em.values, em.maximum) // only data point we have is the maximum
 		} else if dp.HasMin() {
