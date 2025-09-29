@@ -427,7 +427,7 @@ func NewExponentialMappingFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatchVa
 			epsilon := float64(sampleCount) / sigma
 
 			for j := 0; j < innerBucketCount; j++ {
-				innerBucketSampleCount := epsilon * math.Pow(float64(j-innerBucketCount), 2.0)
+				innerBucketSampleCount := epsilon * float64((j-innerBucketCount)*(j-innerBucketCount))
 				if j%2 == 0 {
 					innerBucketSampleCount = math.Ceil(innerBucketSampleCount)
 				} else {
@@ -447,7 +447,7 @@ func NewExponentialMappingFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatchVa
 			epsilon := float64(sampleCount) / sigma
 
 			for j := 0; j < innerBucketCount; j++ {
-				innerBucketSampleCount := epsilon * math.Pow(float64(j), 2.0)
+				innerBucketSampleCount := epsilon * float64(j*j)
 				if j%2 == 0 {
 					innerBucketSampleCount = math.Ceil(innerBucketSampleCount)
 				} else {
@@ -522,22 +522,22 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		minimum:     dp.Min(),
 		sampleCount: float64(dp.Count()),
 		sum:         dp.Sum(),
-		values:      make([]float64, 0),
-		counts:      make([]float64, 0),
 	}
 
 	// bounds specifies the boundaries between buckets
 	// bucketCounts specifies the number of datapoints in each bucket
 	// there is always 1 more bucket count than there are boundaries
 	// len(bucketCounts) = len(bounds) + 1
-	bounds := dp.ExplicitBounds()
-	bucketCounts := dp.BucketCounts()
+	bounds := dp.ExplicitBounds().AsRaw()
+	lenBounds := dp.ExplicitBounds().Len()
+	bucketCounts := dp.BucketCounts().AsRaw()
+	lenBucketCounts := dp.BucketCounts().Len()
 
 	if !dp.HasMin() {
 		// No minimum implies open lower boundary on first bucket
 		// Cap lower bound to top end of first bucket.
-		if bounds.Len() > 0 {
-			em.minimum = bounds.At(0)
+		if lenBounds > 0 {
+			em.minimum = bounds[0]
 		} else {
 			em.minimum = math.Inf(-1)
 		}
@@ -546,33 +546,46 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	if !dp.HasMax() {
 		// No maximum implies open upper boundary on last bucket
 		// Cap upper bound to lower end of last bucket.
-		if bounds.Len() > 0 {
-			em.maximum = bounds.At(bounds.Len() - 1)
+		if lenBounds > 0 {
+			em.maximum = bounds[lenBounds-1]
 		} else {
 			em.maximum = math.Inf(1)
 		}
-
 	}
 
 	// Special case: no boundaries implies a single bucket
-	if bounds.Len() == 0 {
-		em.counts = append(em.counts, float64(bucketCounts.At(0)))
+	if lenBounds == 0 {
+		em.counts = append(em.counts, float64(bucketCounts[0]))
 		if dp.HasMax() && dp.HasMin() {
-			em.values = append(em.values, dp.Min()+(dp.Max()-dp.Min())/2.0)
+			em.values = append(em.values, em.minimum+(em.maximum-em.minimum)/2.0)
 		} else if dp.HasMax() {
-			em.values = append(em.values, dp.Max()) // only data point we have is the maximum
+			em.values = append(em.values, em.maximum) // only data point we have is the maximum
 		} else if dp.HasMin() {
-			em.values = append(em.values, dp.Min()) // only data point we have is the minimum
+			em.values = append(em.values, em.minimum) // only data point we have is the minimum
 		} else {
 			em.values = append(em.values, 0) // arbitrary value
 		}
 		return em
 	}
 
-	naturalMapping := make(map[float64]float64)
+	// Pre-calculate total output size to avoid map growth
+	totalOutputSize := 0
+	for i := 0; i < lenBucketCounts; i++ {
+		sampleCount := bucketCounts[i]
+		if sampleCount > 0 {
+			totalOutputSize += int(min(sampleCount, 50))
+		}
+	}
 
-	for i := 0; i < bucketCounts.Len(); i++ {
-		sampleCount := bucketCounts.At(i)
+	// Use struct for better cache locality instead of map
+	type bucketEntry struct {
+		value float64
+		count int
+	}
+	entries := make([]bucketEntry, 0, totalOutputSize)
+
+	for i := 0; i < lenBucketCounts; i++ {
+		sampleCount := bucketCounts[i]
 		if sampleCount == 0 {
 			// No need to operate on a bucket with no samples
 			continue
@@ -580,24 +593,24 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 
 		lowerBound := em.minimum
 		if i > 0 {
-			lowerBound = bounds.At(i - 1)
+			lowerBound = bounds[i-1]
 		}
 		upperBound := em.maximum
-		if i < bucketCounts.Len()-1 {
-			upperBound = bounds.At(i)
+		if i < lenBucketCounts-1 {
+			upperBound = bounds[i]
 		}
 
 		// Ensure bucket has some width so that values can be spread
 		if upperBound == lowerBound {
-			if bounds.Len() > 1 {
+			if lenBounds > 1 {
 				// Use width of closest defined bucket
-				if i == 0 && bounds.Len() > 1 {
+				if i == 0 && lenBounds > 1 {
 					// First bucket: use width of second bucket
-					bucketWidth := bounds.At(1) - bounds.At(0)
+					bucketWidth := bounds[1] - bounds[0]
 					lowerBound = upperBound - bucketWidth
-				} else if i == bucketCounts.Len()-1 && bounds.Len() > 1 {
+				} else if i == lenBucketCounts-1 && lenBounds > 1 {
 					// Last bucket: use width of second-to-last bucket
-					bucketWidth := bounds.At(bounds.Len()-1) - bounds.At(bounds.Len()-2)
+					bucketWidth := bounds[lenBounds-1] - bounds[lenBounds-2]
 					upperBound = lowerBound + bucketWidth
 				}
 			} else {
@@ -627,17 +640,17 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		//   * What we do: Use quadratic distribution to spread the samples. This allocates more samples toward the end
 		//     of the bucket.
 		magnitude := -1.0
-		if i < bucketCounts.Len()-1 {
-			nextSampleCount := bucketCounts.At(i + 1)
+		if i < lenBucketCounts-1 {
+			nextSampleCount := bucketCounts[i+1]
 			// If next bucket is empty, than density is surely decreasing
 			if nextSampleCount == 0 {
 				magnitude = -1.0
 			} else {
 				var nextUpperBound float64
-				if i+1 == bucketCounts.Len()-1 {
+				if i+1 == lenBucketCounts-1 {
 					nextUpperBound = em.maximum
 				} else {
-					nextUpperBound = bounds.At(i + 1)
+					nextUpperBound = bounds[i+1]
 				}
 
 				currentBucketDensity := (upperBound - lowerBound) / float64(sampleCount)
@@ -649,7 +662,6 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		// innerBucketCount is how many "inner buckets" to spread the sample count amongst
 		innerBucketCount := int(min(sampleCount, 50))
 		delta := (upperBound - lowerBound) / float64(innerBucketCount)
-		innerHistogram := make(map[float64]float64)
 
 		if magnitude < 0 { // Use -yx^2
 			sigma := float64(innerBucketCount) * float64(innerBucketCount+1) * float64(2*innerBucketCount+1) / 6.0
@@ -695,15 +707,16 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				// Assign to histogram
 				for j := 0; j < innerBucketCount; j++ {
 					k := lowerBound + delta*float64(j+1)
-					if v, ok := innerHistogram[k]; ok {
-						fmt.Printf("DUPLICATE KEY: key=%.0f, old value=%.0f, new value=%.0f\n", k, v, float64(integerCounts[j]))
-					}
-					innerHistogram[k] = float64(integerCounts[j])
+					entries = append(entries, bucketEntry{
+						value: k,
+						count: integerCounts[j],
+					})
 				}
 			}
 
 		} else if magnitude < 1 { // Use x
 			// Distribute samples evenly with integer counts
+			// Distribute remainder to first few buckets
 			baseCount := int(sampleCount) / innerBucketCount
 			remainder := int(sampleCount) % innerBucketCount
 
@@ -711,12 +724,12 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				k := lowerBound + delta*float64(j)
 				count := baseCount
 				if j <= remainder {
-					count++ // Distribute remainder to first few buckets
+					count++
 				}
-				if v, ok := innerHistogram[k]; ok {
-					fmt.Printf("DUPLICATE KEY: key=%.0f, old value=%.0f, new value=%.0f\n", k, v, float64(count))
-				}
-				innerHistogram[k] = float64(count)
+				entries = append(entries, bucketEntry{
+					value: k,
+					count: count,
+				})
 			}
 
 		} else { // Use yx^2
@@ -764,69 +777,34 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				for j := 0; j < innerBucketCount; j++ {
 					if integerCounts[j] > 0 {
 						k := lowerBound + delta*float64(j+1)
-						if v, ok := innerHistogram[k]; ok {
-							fmt.Printf("DUPLICATE KEY: key=%.0f, old value=%.0f, new value=%.0f\n", k, v, float64(integerCounts[j]))
-						}
-						innerHistogram[k] = float64(integerCounts[j]) // when delta is 0, these all map to the same value
+						entries = append(entries, bucketEntry{
+							value: k,
+							count: integerCounts[j],
+						})
 					}
 				}
 			}
 
 		}
 
-		for k, v := range innerHistogram {
-			if vOld, ok := naturalMapping[k]; ok {
-				fmt.Printf("DUPLICATE KEY: key=%.0f, old value=%0.f, new value=%.0f\n", k, vOld, v)
-			}
-			naturalMapping[k] = v
-		}
-
-		// Validation: ensure total output matches input
-		outputTotal := 0.0
-		for _, count := range innerHistogram {
-			outputTotal += count
-		}
-		if math.Abs(float64(sampleCount)-outputTotal) > 1e-6 {
-			fmt.Printf("COUNT MISMATCH: input=%.0f, output=%.0f, diff=%.0f\n", float64(sampleCount), outputTotal, float64(sampleCount)-outputTotal)
-		}
 	}
 
-	// Move last entry to histogramMax
-	if dp.HasMax() {
-		if len(naturalMapping) > 0 {
-			var lastKey float64
-			var lastValue float64
-			for k, v := range naturalMapping {
-				if k > lastKey {
-					lastKey = k
-					lastValue = v
-				}
-			}
-			delete(naturalMapping, lastKey)
-			naturalMapping[em.maximum] = lastValue
-		}
+	// Sort entries by value (more cache-friendly than map iteration)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].value < entries[j].value
+	})
+
+	// Move last entry to maximum if needed
+	if dp.HasMax() && len(entries) > 0 {
+		lastIdx := len(entries) - 1
+		entries[lastIdx].value = em.maximum
 	}
 
-	keys := slices.Collect(maps.Keys(naturalMapping))
-	slices.Sort(keys)
-	em.values = make([]float64, len(keys))
-	em.counts = make([]float64, len(keys))
-	for i, k := range keys {
-		em.values[i] = k
-		em.counts[i] = naturalMapping[k]
-	}
-
-	// Validation: ensure total output matches input
-	inputTotal := float64(0)
-	for i := 0; i < bucketCounts.Len(); i++ {
-		inputTotal += float64(bucketCounts.At(i))
-	}
-	outputTotal := float64(0)
-	for _, count := range em.counts {
-		outputTotal += count
-	}
-	if math.Abs(inputTotal-outputTotal) > 1e-6 {
-		fmt.Printf("COUNT MISMATCH: input=%.0f, output=%.0f, diff=%.0f\n", inputTotal, outputTotal, inputTotal-outputTotal)
+	em.values = make([]float64, len(entries))
+	em.counts = make([]float64, len(entries))
+	for i, entry := range entries {
+		em.values[i] = entry.value
+		em.counts[i] = float64(entry.count)
 	}
 
 	return em
