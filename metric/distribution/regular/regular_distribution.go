@@ -671,7 +671,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 			rawTotal := 0.0
 
 			for j := 0; j < innerBucketCount; j++ {
-				rawValues[j] = epsilon * math.Pow(float64(j-innerBucketCount), 2.0)
+				rawValues[j] = epsilon * float64((j-innerBucketCount)*(j-innerBucketCount)) //math.Pow(float64(j-innerBucketCount), 2.0)
 				rawTotal += rawValues[j]
 			}
 
@@ -740,7 +740,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 			rawTotal := 0.0
 
 			for j := 0; j < innerBucketCount; j++ {
-				rawValues[j] = epsilon * math.Pow(float64(j), 2.0)
+				rawValues[j] = epsilon * float64(j*j)
 				rawTotal += rawValues[j]
 			}
 
