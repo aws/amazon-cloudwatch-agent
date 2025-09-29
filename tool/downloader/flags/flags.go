@@ -13,4 +13,5 @@ var DownloaderFlags = map[string]cmdwrapper.Flag{
 	"output-dir":      {DefaultValue: "", Description: "Path of output json config directory."},
 	"config":          {DefaultValue: "", Description: "Please provide the common-config file"},
 	"multi-config":    {DefaultValue: "default", Description: "valid values: default, append, remove"},
+	"dualstack":       {DefaultValue: "false", Description: "Use dual-stack endpoints for AWS API calls for config-downloader", IsBool: true},
 }
