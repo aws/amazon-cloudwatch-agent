@@ -560,6 +560,7 @@ func TestPrometheusEcsSdConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	ecsutil.GetECSUtilSingleton().Region = "us-west-2"
+	ecsutil.GetECSUtilSingleton().Cluster = "test-ecs-cluster-0123456789"
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
@@ -1002,6 +1003,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
@@ -1045,7 +1047,10 @@ scrape_configs:
     relabel_configs:
       - action: replace
         source_labels: [StartedBy]
-        target_label: CustomStartedBy`
+        target_label: CustomStartedBy
+      - action: replace
+        replacement: custom-ecs-cluster-name
+        target_label: ClusterName`
 
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)

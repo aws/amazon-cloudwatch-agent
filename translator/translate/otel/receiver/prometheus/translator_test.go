@@ -692,6 +692,69 @@ func validateRelabelFields(t *testing.T, scrapeConfigWithFileSD *config.ScrapeCo
 	}
 }
 
+func TestGetClusterNameFromConfig(t *testing.T) {
+	testCases := map[string]struct {
+		input      map[string]any
+		ecsCluster string
+		expected   string
+	}{
+		"cluster_name_from_config": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
+							"cluster_name": "test-cluster-from-config",
+						},
+					},
+				},
+			},
+			ecsCluster: "my-test-cluster",
+			expected:   "test-cluster-from-config", // clusterName from Config is highest priority
+		},
+		"cluster_name_from_ecs": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			ecsCluster: "my-test-cluster",
+			expected:   "my-test-cluster", // clusterName from ECS Metadata is fallback when not configured in json
+		},
+		"empty_cluster_name": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{},
+					},
+				},
+			},
+			expected: "",
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+			testClusterName := "my-test-cluster"
+
+			// Set up ECS cluster if specified
+			if testCase.ecsCluster != "" {
+				ecsutil.GetECSUtilSingleton().Cluster = testClusterName
+			} else {
+				ecsutil.GetECSUtilSingleton().Cluster = ""
+			}
+
+			conf := confmap.NewFromStringMap(testCase.input)
+			promConfigKey := "logs::metrics_collected::prometheus"
+
+			result := getClusterNameFromConfig(conf, promConfigKey)
+			assert.Equal(t, testCase.expected, result)
+		})
+	}
+}
+
 func TestEscapeStrings(t *testing.T) {
 	inputYAML := `
 scrape_configs:

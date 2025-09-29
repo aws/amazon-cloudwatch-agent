@@ -19,8 +19,9 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	translatorutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -81,7 +82,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	configPath, _ := common.GetString(conf, configPathKey)
-	processedConfigPath, err := util.GetConfigPath("prometheus.yaml", configPathKey, configPath, nil)
+	processedConfigPath, err := translatorutil.GetConfigPath("prometheus.yaml", configPathKey, configPath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to process prometheus config with given config: %w", err)
 	}
@@ -172,30 +173,6 @@ func escapeStrings(node any) {
 	}
 }
 
-func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
-	// Check if cluster_name is set in prometheus config
-	clusterNameKey := common.ConfigKey(promConfigKey, common.ClusterNameKey)
-	if conf.IsSet(clusterNameKey) {
-		if clusterName, ok := conf.Get(clusterNameKey).(string); ok && clusterName != "" {
-			return clusterName
-		}
-	}
-
-	// Check environment variable
-	if envClusterName := os.Getenv("K8S_CLUSTER_NAME"); envClusterName != "" {
-		return envClusterName
-	}
-
-	// Try ECS metadata auto-detection
-	if ecsutil.GetECSUtilSingleton().IsECS() {
-		if ecsCluster := ecsutil.GetECSUtilSingleton().Cluster; ecsCluster != "" {
-			return ecsCluster
-		}
-	}
-
-	return ""
-}
-
 func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *confmap.Conf, promConfigKey string) {
 	// ECS Service Discovery Relabel Configs should only be added if enabled on ECS and configs are valid:
 	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
@@ -211,7 +188,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 	}
 
 	defaultRelabelConfigs := []*relabel.Config{
-		{Replacement: getClusterNameFromConfig(conf, promConfigKey), Action: relabel.Replace, TargetLabel: "ClusterName"},
+		{Replacement: getClusterNameFromConfig(conf, promConfigKey), Action: relabel.Replace, Regex: relabel.MustNewRegexp("(.*)"), TargetLabel: "ClusterName"},
 		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
@@ -239,6 +216,30 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 			}
 		}
 	}
+}
+
+func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
+	// Get the prometheus config section
+	prometheusConfigInput := make(map[string]interface{})
+	if conf.IsSet(promConfigKey) {
+		if promConfig := conf.Get(promConfigKey); promConfig != nil {
+			if promConfigMap, ok := promConfig.(map[string]interface{}); ok {
+				prometheusConfigInput = promConfigMap
+			}
+		}
+	}
+
+	const clusterNameSectionKey = "cluster_name"
+
+	// Try EKS cluster name first (matches original ruleClusterName logic)
+	clusterName := util.GetEKSClusterName(clusterNameSectionKey, prometheusConfigInput)
+
+	if clusterName == "" {
+		// Try ECS cluster name if EKS returns empty
+		clusterName = util.GetECSClusterName(clusterNameSectionKey, prometheusConfigInput)
+	}
+
+	return clusterName
 }
 
 func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs []*relabel.Config) []*relabel.Config {

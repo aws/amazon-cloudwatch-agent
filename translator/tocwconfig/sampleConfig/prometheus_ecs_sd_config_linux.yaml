@@ -228,8 +228,7 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
-                      source_labels:
-                        - __meta_ecs_cluster_name
+                      replacement: test-ecs-cluster-0123456789
                       target_label: ClusterName
                     - action: replace
                       regex: (.*)
@@ -333,8 +332,7 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
-                      source_labels:
-                        - __meta_ecs_cluster_name
+                      replacement: test-ecs-cluster-0123456789
                       target_label: ClusterName
                     - action: replace
                       regex: (.*)
@@ -438,8 +436,7 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
-                      source_labels:
-                        - __meta_ecs_cluster_name
+                      replacement: TestCluster
                       target_label: ClusterName
                     - action: replace
                       regex: (.*)
