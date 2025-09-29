@@ -30,6 +30,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
+const testPrometheusConfigKey = "logs::metrics_collected::prometheus"
+
 func TestMetricsTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input   map[string]any
@@ -343,7 +345,7 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -384,7 +386,7 @@ func TestDontAddDefaultRelabelConfigs_notECS(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -417,7 +419,7 @@ func TestDontAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -454,7 +456,7 @@ func TestDontAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -480,7 +482,7 @@ func TestDontAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -521,7 +523,7 @@ func TestAppendCustomerRelabelConfigs(t *testing.T) {
 			},
 		},
 	})
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -566,7 +568,7 @@ func TestJobLabelPriority_DockerJobLabel(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -612,7 +614,7 @@ func TestJobLabelPriority_TaskDefinitionJobName(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -658,7 +660,7 @@ func TestJobLabelPriority_ServiceNameJobName(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
