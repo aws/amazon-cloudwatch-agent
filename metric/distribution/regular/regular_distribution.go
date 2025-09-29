@@ -664,54 +664,26 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		delta := (upperBound - lowerBound) / float64(innerBucketCount)
 
 		if magnitude < 0 { // Use -yx^2
-			sigma := float64(innerBucketCount) * float64(innerBucketCount+1) * float64(2*innerBucketCount+1) / 6.0
+			sigma := float64(innerBucketCount*(innerBucketCount+1)*(2*innerBucketCount+1)) / 6.0
 			epsilon := float64(sampleCount) / sigma
+			entryStart := len(entries)
 
-			rawValues := make([]float64, innerBucketCount)
-			rawTotal := 0.0
-
+			runningSum := 0
 			for j := 0; j < innerBucketCount; j++ {
-				rawValues[j] = epsilon * float64((j-innerBucketCount)*(j-innerBucketCount)) //math.Pow(float64(j-innerBucketCount), 2.0)
-				rawTotal += rawValues[j]
+				innerBucketSampleCount := epsilon * float64((j-innerBucketCount)*(j-innerBucketCount))
+				innerBucketSampleCountAdjusted := int(math.Floor(innerBucketSampleCount))
+				runningSum += innerBucketSampleCountAdjusted
+				entries = append(entries, bucketEntry{
+					value: lowerBound + delta*float64(j+1),
+					count: innerBucketSampleCountAdjusted,
+				})
 			}
 
-			if rawTotal > 0 {
-				// Distribute integer counts proportionally
-				integerCounts := make([]int, innerBucketCount)
-				totalAssigned := 0
-
-				// First pass: assign integer portions
-				for j := 0; j < innerBucketCount; j++ {
-					proportion := rawValues[j] / rawTotal
-					integerCounts[j] = int(proportion * float64(sampleCount))
-					totalAssigned += integerCounts[j]
-				}
-
-				// Second pass: distribute remaining samples
-				remaining := int(sampleCount) - totalAssigned
-				for r := 0; r < remaining; r++ {
-					bestIdx := 0
-					bestFraction := 0.0
-					for j := 0; j < innerBucketCount; j++ {
-						proportion := rawValues[j] / rawTotal
-						expected := proportion * float64(sampleCount)
-						fraction := expected - float64(integerCounts[j])
-						if fraction > bestFraction {
-							bestFraction = fraction
-							bestIdx = j
-						}
-					}
-					integerCounts[bestIdx]++
-				}
-
-				// Assign to histogram
-				for j := 0; j < innerBucketCount; j++ {
-					k := lowerBound + delta*float64(j+1)
-					entries = append(entries, bucketEntry{
-						value: k,
-						count: integerCounts[j],
-					})
-				}
+			// distribute the remainder towards the front
+			remainder := int(sampleCount) - runningSum
+			for j := 0; j < remainder; j++ {
+				entries[entryStart].count += 1
+				entryStart += 1
 			}
 
 		} else if magnitude < 1 { // Use x
@@ -733,56 +705,26 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 			}
 
 		} else { // Use yx^2
-			sigma := float64(innerBucketCount) * float64(innerBucketCount+1) * float64(2*innerBucketCount+1) / 6.0
+			sigma := float64(innerBucketCount*(innerBucketCount+1)*(2*innerBucketCount+1)) / 6.0
 			epsilon := float64(sampleCount) / sigma
 
-			rawValues := make([]float64, innerBucketCount)
-			rawTotal := 0.0
-
+			runningSum := 0
 			for j := 0; j < innerBucketCount; j++ {
-				rawValues[j] = epsilon * float64(j*j)
-				rawTotal += rawValues[j]
+				innerBucketSampleCount := epsilon * float64((j-innerBucketCount)*(j-innerBucketCount))
+				innerBucketSampleCountAdjusted := int(math.Floor(innerBucketSampleCount))
+				runningSum += innerBucketSampleCountAdjusted
+				entries = append(entries, bucketEntry{
+					value: lowerBound + delta*float64(j+1),
+					count: innerBucketSampleCountAdjusted,
+				})
 			}
 
-			if rawTotal > 0 {
-				// Distribute integer counts proportionally
-				integerCounts := make([]int, innerBucketCount)
-				totalAssigned := 0
-
-				// First pass: assign integer portions
-				for j := 0; j < innerBucketCount; j++ {
-					proportion := rawValues[j] / rawTotal
-					integerCounts[j] = int(proportion * float64(sampleCount))
-					totalAssigned += integerCounts[j]
-				}
-
-				// Second pass: distribute remaining samples
-				remaining := int(sampleCount) - totalAssigned
-				for r := 0; r < remaining; r++ {
-					bestIdx := 0
-					bestFraction := 0.0
-					for j := 0; j < innerBucketCount; j++ {
-						proportion := rawValues[j] / rawTotal
-						expected := proportion * float64(sampleCount)
-						fraction := expected - float64(integerCounts[j])
-						if fraction > bestFraction {
-							bestFraction = fraction
-							bestIdx = j
-						}
-					}
-					integerCounts[bestIdx]++
-				}
-
-				// Assign to histogram
-				for j := 0; j < innerBucketCount; j++ {
-					if integerCounts[j] > 0 {
-						k := lowerBound + delta*float64(j+1)
-						entries = append(entries, bucketEntry{
-							value: k,
-							count: integerCounts[j],
-						})
-					}
-				}
+			// distribute the remainder linearly, starting from the back
+			entryStart := len(entries) - 1
+			remainder := int(sampleCount) - runningSum
+			for j := 0; j < remainder; j++ {
+				entries[entryStart].count += 1
+				entryStart -= 1
 			}
 
 		}
