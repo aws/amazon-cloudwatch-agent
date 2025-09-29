@@ -90,14 +90,14 @@ jobs:
 
       - name: Cache binaries
         id: cached_binaries
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached-binaries-${{ runner.os }}-${{ inputs.BucketKey }}"
           path: go.mod
 
       - name: Cache pkg
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/Library/Caches/go-build
@@ -154,7 +154,7 @@ jobs:
 
       - name: Cache sig
         id: cached_sig
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached_sig_${{ github.sha }}"
           path: go.mod
