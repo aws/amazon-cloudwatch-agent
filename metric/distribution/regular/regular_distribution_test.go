@@ -125,6 +125,49 @@ func TestCWAgent(t *testing.T) {
 		})
 	}
 
+	boundaries := []float64{
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01,
+		0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019, 0.02,
+		0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03,
+		0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04,
+		0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05,
+		0.1, 0.2,
+	}
+	tests := []struct {
+		name        string
+		filename    string
+		newDistFunc func(pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts
+	}{
+		{
+			name:        "lognormal",
+			filename:    "testdata/lognormal_10000.csv",
+			newDistFunc: NewFromOtelCWAgent,
+		},
+		{
+			name:        "weibull",
+			filename:    "testdata/weibull_10000.csv",
+			newDistFunc: NewFromOtelCWAgent,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := loadCsvData(tt.filename)
+			require.NoError(t, err)
+			assert.Len(t, data, 10000)
+
+			dp := createHistogramFromData(data, boundaries)
+			assert.Equal(t, int(dp.Count()), 10000)
+			calculatedTotal := 0
+			for _, count := range dp.BucketCounts().All() {
+				calculatedTotal += int(count)
+			}
+			assert.Equal(t, calculatedTotal, 10000)
+
+			dist := tt.newDistFunc(dp)
+			writeValuesAndCountsToJson(dist, "testdata/cwagent/"+filenameReplacer.Replace(tt.name)+".json")
+		})
+	}
+
 	t.Run("accuracy test - lognormal", func(t *testing.T) {
 		verifyDistAccuracy(t, NewFromOtelCWAgent, "testdata/lognormal_10000.csv")
 	})
@@ -146,6 +189,49 @@ func TestMiddlePointMapping(t *testing.T) {
 
 			verifyDist(t, dist, tc.Expected)
 			writeValuesAndCountsToJson(dist, "testdata/middlepoint/"+filenameReplacer.Replace(tc.Name)+".json")
+		})
+	}
+
+	boundaries := []float64{
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01,
+		0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019, 0.02,
+		0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03,
+		0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04,
+		0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05,
+		0.1, 0.2,
+	}
+	tests := []struct {
+		name        string
+		filename    string
+		newDistFunc func(pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts
+	}{
+		{
+			name:        "lognormal",
+			filename:    "testdata/lognormal_10000.csv",
+			newDistFunc: NewMidpointMappingFromOtel,
+		},
+		{
+			name:        "weibull",
+			filename:    "testdata/weibull_10000.csv",
+			newDistFunc: NewMidpointMappingFromOtel,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := loadCsvData(tt.filename)
+			require.NoError(t, err)
+			assert.Len(t, data, 10000)
+
+			dp := createHistogramFromData(data, boundaries)
+			assert.Equal(t, int(dp.Count()), 10000)
+			calculatedTotal := 0
+			for _, count := range dp.BucketCounts().All() {
+				calculatedTotal += int(count)
+			}
+			assert.Equal(t, calculatedTotal, 10000)
+
+			dist := tt.newDistFunc(dp)
+			writeValuesAndCountsToJson(dist, "testdata/middlepoint/"+filenameReplacer.Replace(tt.name)+".json")
 		})
 	}
 
@@ -173,6 +259,49 @@ func TestEvenMapping(t *testing.T) {
 		})
 	}
 
+	boundaries := []float64{
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01,
+		0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019, 0.02,
+		0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03,
+		0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04,
+		0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05,
+		0.1, 0.2,
+	}
+	tests := []struct {
+		name        string
+		filename    string
+		newDistFunc func(pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts
+	}{
+		{
+			name:        "lognormal",
+			filename:    "testdata/lognormal_10000.csv",
+			newDistFunc: NewEvenMappingFromOtel,
+		},
+		{
+			name:        "weibull",
+			filename:    "testdata/weibull_10000.csv",
+			newDistFunc: NewEvenMappingFromOtel,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := loadCsvData(tt.filename)
+			require.NoError(t, err)
+			assert.Len(t, data, 10000)
+
+			dp := createHistogramFromData(data, boundaries)
+			assert.Equal(t, int(dp.Count()), 10000)
+			calculatedTotal := 0
+			for _, count := range dp.BucketCounts().All() {
+				calculatedTotal += int(count)
+			}
+			assert.Equal(t, calculatedTotal, 10000)
+
+			dist := tt.newDistFunc(dp)
+			writeValuesAndCountsToJson(dist, "testdata/even/"+filenameReplacer.Replace(tt.name)+".json")
+		})
+	}
+
 	t.Run("accuracy test - lognormal", func(t *testing.T) {
 		verifyDistAccuracy(t, NewEvenMappingFromOtel, "testdata/lognormal_10000.csv")
 	})
@@ -194,6 +323,49 @@ func TestExponentialMapping(t *testing.T) {
 
 			verifyDist(t, dist, tc.Expected)
 			assert.NoError(t, writeValuesAndCountsToJson(dist, "testdata/exponential/"+filenameReplacer.Replace(tc.Name)+".json"))
+		})
+	}
+
+	boundaries := []float64{
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01,
+		0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 0.019, 0.02,
+		0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03,
+		0.031, 0.032, 0.033, 0.034, 0.035, 0.036, 0.037, 0.038, 0.039, 0.04,
+		0.041, 0.042, 0.043, 0.044, 0.045, 0.046, 0.047, 0.048, 0.049, 0.05,
+		0.1, 0.2,
+	}
+	tests := []struct {
+		name        string
+		filename    string
+		newDistFunc func(pmetric.HistogramDataPoint) ToCloudWatchValuesAndCounts
+	}{
+		{
+			name:        "lognormal",
+			filename:    "testdata/lognormal_10000.csv",
+			newDistFunc: NewExponentialMappingFromOtel,
+		},
+		{
+			name:        "weibull",
+			filename:    "testdata/weibull_10000.csv",
+			newDistFunc: NewExponentialMappingFromOtel,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := loadCsvData(tt.filename)
+			require.NoError(t, err)
+			assert.Len(t, data, 10000)
+
+			dp := createHistogramFromData(data, boundaries)
+			assert.Equal(t, int(dp.Count()), 10000)
+			calculatedTotal := 0
+			for _, count := range dp.BucketCounts().All() {
+				calculatedTotal += int(count)
+			}
+			assert.Equal(t, calculatedTotal, 10000)
+
+			dist := tt.newDistFunc(dp)
+			writeValuesAndCountsToJson(dist, "testdata/exponential/"+filenameReplacer.Replace(tt.name)+".json")
 		})
 	}
 
@@ -300,9 +472,9 @@ func BenchmarkLogNormal(b *testing.B) {
 		}
 	})
 
-	b.Run("NewMidpointMappingFromOtel", func(b *testing.B) {
+	b.Run("NewExponentialMappingFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			dist := NewMidpointMappingFromOtel(dp)
+			dist := NewExponentialMappingFromOtel(dp)
 			values, counts := dist.ValuesAndCounts()
 			assert.NotNil(b, values)
 			assert.NotNil(b, counts)
@@ -312,6 +484,15 @@ func BenchmarkLogNormal(b *testing.B) {
 	b.Run("NewExponentialMappingCWFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			dist := NewExponentialMappingCWFromOtel(dp)
+			values, counts := dist.ValuesAndCounts()
+			assert.NotNil(b, values)
+			assert.NotNil(b, counts)
+		}
+	})
+
+	b.Run("NewExponentialMappingCWFromOtelOptimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			dist := NewExponentialMappingCWFromOtelOptimized(dp)
 			values, counts := dist.ValuesAndCounts()
 			assert.NotNil(b, values)
 			assert.NotNil(b, counts)
@@ -347,9 +528,9 @@ func BenchmarkWeibull(b *testing.B) {
 		}
 	})
 
-	b.Run("NewMidpointMappingFromOtel", func(b *testing.B) {
+	b.Run("NewExponentialMappingFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			dist := NewMidpointMappingFromOtel(dp)
+			dist := NewExponentialMappingFromOtel(dp)
 			values, counts := dist.ValuesAndCounts()
 			assert.NotNil(b, values)
 			assert.NotNil(b, counts)
@@ -359,6 +540,15 @@ func BenchmarkWeibull(b *testing.B) {
 	b.Run("NewExponentialMappingCWFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			dist := NewExponentialMappingCWFromOtel(dp)
+			values, counts := dist.ValuesAndCounts()
+			assert.NotNil(b, values)
+			assert.NotNil(b, counts)
+		}
+	})
+
+	b.Run("NewExponentialMappingCWFromOtelOptimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			dist := NewExponentialMappingCWFromOtelOptimized(dp)
 			values, counts := dist.ValuesAndCounts()
 			assert.NotNil(b, values)
 			assert.NotNil(b, counts)
