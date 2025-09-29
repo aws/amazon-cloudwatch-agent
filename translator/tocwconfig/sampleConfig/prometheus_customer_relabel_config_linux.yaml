@@ -177,7 +177,7 @@ receivers:
                   metrics_path: /metrics
                   relabel_configs:
                     - action: replace
-                      regex:
+                      regex: (.*)
                       replacement: myTestCluster
                       target_label: ClusterName
                     - action: replace
@@ -286,7 +286,7 @@ receivers:
                   metrics_path: /metrics
                   relabel_configs:
                     - action: replace
-                      regex: 
+                      regex: (.*)
                       replacement: myTestCluster
                       target_label: ClusterName
                     - action: replace
@@ -395,7 +395,7 @@ receivers:
                   metrics_path: /metrics
                   relabel_configs:
                     - action: replace
-                      regex:
+                      regex: (.*)
                       replacement: myTestCluster
                       target_label: ClusterName
                     - action: replace

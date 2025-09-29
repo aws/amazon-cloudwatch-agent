@@ -188,7 +188,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 	}
 
 	defaultRelabelConfigs := []*relabel.Config{
-		{Replacement: getClusterNameFromConfig(conf, promConfigKey), Action: relabel.Replace, TargetLabel: "ClusterName"},
+		{Replacement: getClusterNameFromConfig(conf, promConfigKey), Action: relabel.Replace, Regex: relabel.MustNewRegexp("(.*)"), TargetLabel: "ClusterName"},
 		{SourceLabels: model.LabelNames{"__meta_ecs_cluster_name"}, Action: relabel.Replace, TargetLabel: "TaskClusterName", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_container_name"}, Action: relabel.Replace, TargetLabel: "container_name", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_task_launch_type"}, Action: relabel.Replace, TargetLabel: "LaunchType", Regex: relabel.MustNewRegexp("(.*)")},
@@ -220,12 +220,11 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 
 func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
 	// Get the prometheus config section
-	var prometheusConfig map[string]interface{}
-	prometheusConfig = make(map[string]interface{})
+	prometheusConfigInput := make(map[string]interface{})
 	if conf.IsSet(promConfigKey) {
 		if promConfig := conf.Get(promConfigKey); promConfig != nil {
 			if promConfigMap, ok := promConfig.(map[string]interface{}); ok {
-				prometheusConfig = promConfigMap
+				prometheusConfigInput = promConfigMap
 			}
 		}
 	}
@@ -233,13 +232,13 @@ func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
 	const clusterNameSectionKey = "cluster_name"
 
 	// Try EKS cluster name first (matches original ruleClusterName logic)
-	clusterName := util.GetEKSClusterName(clusterNameSectionKey, prometheusConfig)
+	clusterName := util.GetEKSClusterName(clusterNameSectionKey, prometheusConfigInput)
 
 	if clusterName == "" {
 		// Try ECS cluster name if EKS returns empty
-		clusterName = util.GetECSClusterName(clusterNameSectionKey, prometheusConfig)
+		clusterName = util.GetECSClusterName(clusterNameSectionKey, prometheusConfigInput)
 	}
-	
+
 	return clusterName
 }
 

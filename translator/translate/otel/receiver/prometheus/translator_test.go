@@ -708,7 +708,8 @@ func TestGetClusterNameFromConfig(t *testing.T) {
 					},
 				},
 			},
-			expected: "test-cluster-from-config",
+			ecsCluster: "my-test-cluster",
+			expected:   "test-cluster-from-config", // clusterName from Config is highest priority
 		},
 		"cluster_name_from_ecs": {
 			input: map[string]any{
@@ -719,7 +720,7 @@ func TestGetClusterNameFromConfig(t *testing.T) {
 				},
 			},
 			ecsCluster: "my-test-cluster",
-			expected:   "my-test-cluster",
+			expected:   "my-test-cluster", // clusterName from ECS Metadata is fallback when not configured in json
 		},
 		"empty_cluster_name": {
 			input: map[string]any{
