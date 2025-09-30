@@ -140,27 +140,36 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 	for _, attr := range attributes {
 		if t.ec2TagCache != nil {
 			for k, v := range t.ec2TagCache {
-				attr.PutStr(k, v)
+				if _, exists := attr.Get(k); !exists {
+					attr.PutStr(k, v)
+				}
 			}
 		}
 		if t.ec2MetadataLookup.instanceId {
-			attr.PutStr(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
+			if _, exists := attr.Get(mdKeyInstanceId); !exists {
+				attr.PutStr(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
+			}
 		}
 		if t.ec2MetadataLookup.imageId {
-			attr.PutStr(mdKeyImageId, t.ec2MetadataRespond.imageId)
+			if _, exists := attr.Get(mdKeyImageId); !exists {
+				attr.PutStr(mdKeyImageId, t.ec2MetadataRespond.imageId)
+			}
 		}
 		if t.ec2MetadataLookup.instanceType {
-			attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
+			if _, exists := attr.Get(mdKeyInstanceType); !exists {
+				attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
+			}
 		}
 		if t.volumeSerialCache != nil {
 			if devName, found := attr.Get(t.DiskDeviceTagKey); found {
 				serial := t.volumeSerialCache.Serial(devName.Str())
 				if serial != "" {
-					attr.PutStr(AttributeVolumeId, serial)
+					if _, exists := attr.Get(AttributeVolumeId); !exists {
+						attr.PutStr(AttributeVolumeId, serial)
+					}
 				}
 			}
 		}
-		// If append_dimensions are applied, then remove the host dimension.
 		attr.Remove("host")
 	}
 }
