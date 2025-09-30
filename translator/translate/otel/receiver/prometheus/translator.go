@@ -252,7 +252,7 @@ func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs [
 // hasJobConfigured checks if job is configured in any ECS observer configuration
 func hasJobLabelConfigured(conf *confmap.Conf, promConfigKey string) bool {
 	ecsSDKey := common.ConfigKey(promConfigKey, common.ECSServiceDiscovery)
-	
+
 	// docker_label configuration
 	dockerLabelKey := common.ConfigKey(ecsSDKey, "docker_label", "sd_job_name_label")
 	if conf.IsSet(dockerLabelKey) {
