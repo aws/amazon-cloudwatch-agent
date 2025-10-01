@@ -612,7 +612,6 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		// This algorithm creates "inner buckets" between user-defined bucket based on the sample count, up to a
 		// maximum. A logarithmic ratio (named "magnitude") compares the density between the current bucket and the
 		// next bucket. This logarithmic ratio is used to decide how to spread samples amongst inner buckets.
-		// As a small optimization, we omit the logarithm invocation and change the thresholds.
 		//
 		// case 1: magnitude < 0
 		//   * What this means: Current bucket is denser than the next bucket -> density is decreasing.
@@ -626,6 +625,8 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		//   * What this means: Current bucket is less dense than the next bucket -> density is increasing.
 		//   * What we do: Use quadratic distribution to spread the samples. This allocates more samples toward the end
 		//     of the bucket.
+		//
+		// As a small optimization, we omit the logarithm invocation and change the thresholds.
 		ratio := 0.0
 		if i < lenBucketCounts-1 {
 			nextSampleCount := bucketCounts.At(i + 1)
@@ -643,7 +644,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				//currentBucketDensity := (upperBound - lowerBound) / float64(sampleCount)
 				//nextBucketDensity := (nextUpperBound - upperBound) / float64(nextSampleCount)
 				//magnitude = math.Log(currentBucketDensity / nextBucketDensity)
-				// the following calculations are the same but improves speed by ~1% benchmark tests
+				// the following calculations are the same but improves speed by ~1% in benchmark tests
 				numerator := (upperBound - lowerBound) * float64(nextSampleCount)
 				denom := (nextUpperBound - upperBound) * float64(sampleCount)
 				ratio = numerator / denom //math.Log(numerator / denom)
@@ -744,7 +745,7 @@ func (em *ExponentialMappingCW) Sum() float64 {
 	return em.sum
 }
 
-// sumOfSquares
+// sumOfSquares is a closed form calculation of Σx^2, for 1 to n
 func sumOfSquares(n int) int {
 	return n * (n + 1) * (2*n + 1) / 6
 }
