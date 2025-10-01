@@ -423,11 +423,15 @@ func NewExponentialMappingFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatchVa
 		innerHistogram := make(map[float64]float64)
 
 		if magnitude < 0 { // Use -yx^2
-			sigma := float64(innerBucketCount*(innerBucketCount+1)*(2*innerBucketCount+1)) / 6.0 // closed form of sum(x^2, 0, innerBucketCount)
+			sigma := 0.0
+			for j := 1; j <= innerBucketCount; j++ {
+				sigma += math.Pow(float64(j), 2.0)
+			}
+
 			epsilon := float64(sampleCount) / sigma
 
 			for j := 0; j < innerBucketCount; j++ {
-				innerBucketSampleCount := epsilon * float64((j-innerBucketCount)*(j-innerBucketCount))
+				innerBucketSampleCount := epsilon * math.Pow(float64(j-innerBucketCount), 2.0)
 				if j%2 == 0 {
 					innerBucketSampleCount = math.Ceil(innerBucketSampleCount)
 				} else {
@@ -443,11 +447,14 @@ func NewExponentialMappingFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatchVa
 				innerHistogram[prevBucket+delta*float64(j)] = float64(sampleCount) / float64(innerBucketCount)
 			}
 		} else { // Use yx^2
-			sigma := float64(innerBucketCount*(innerBucketCount+1)*(2*innerBucketCount+1)) / 6.0 // closed form of sum(x^2, 0, innerBucketCount)
+			sigma := 0.0
+			for j := 1; j <= innerBucketCount; j++ {
+				sigma += math.Pow(float64(j), 2.0)
+			}
 			epsilon := float64(sampleCount) / sigma
 
 			for j := 0; j < innerBucketCount; j++ {
-				innerBucketSampleCount := epsilon * float64(j*j)
+				innerBucketSampleCount := epsilon * math.Pow(float64(j), 2.0)
 				if j%2 == 0 {
 					innerBucketSampleCount = math.Ceil(innerBucketSampleCount)
 				} else {
@@ -530,16 +537,16 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	// bucketCounts specifies the number of datapoints in each bucket
 	// there is always 1 more bucket count than there is boundaries
 	// len(bucketCounts) = len(bounds) + 1
-	bounds := dp.ExplicitBounds().AsRaw()
-	lenBounds := dp.ExplicitBounds().Len()
-	bucketCounts := dp.BucketCounts().AsRaw()
-	lenBucketCounts := dp.BucketCounts().Len()
+	bounds := dp.ExplicitBounds()
+	lenBounds := bounds.Len()
+	bucketCounts := dp.BucketCounts()
+	lenBucketCounts := bucketCounts.Len()
 
 	if !dp.HasMin() {
 		// No minimum implies open lower boundary on first bucket
 		// Cap lower bound to top end of first bucket.
 		if lenBounds > 0 {
-			em.minimum = bounds[0]
+			em.minimum = bounds.At(0)
 		} else {
 			em.minimum = math.Inf(-1)
 		}
@@ -549,7 +556,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		// No maximum implies open upper boundary on last bucket
 		// Cap upper bound to lower end of last bucket.
 		if lenBounds > 0 {
-			em.maximum = bounds[lenBounds-1]
+			em.maximum = bounds.At(lenBounds - 1)
 		} else {
 			em.maximum = math.Inf(1)
 		}
@@ -557,7 +564,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 
 	// Special case: no boundaries implies a single bucket
 	if lenBounds == 0 {
-		em.counts = append(em.counts, float64(bucketCounts[0])) // recall that len(bucketCounts) = len(bounds)+1
+		em.counts = append(em.counts, float64(bucketCounts.At(0))) // recall that len(bucketCounts) = len(bounds)+1
 		if dp.HasMax() && dp.HasMin() {
 			em.values = append(em.values, em.minimum/2.0+em.maximum/2.0) // overflow safe average calculation
 		} else if dp.HasMax() {
@@ -573,7 +580,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	// Pre-calculate total output size to avoid dynamic growth
 	totalOutputSize := 0
 	for i := 0; i < lenBucketCounts; i++ {
-		sampleCount := bucketCounts[i]
+		sampleCount := bucketCounts.At(i)
 		if sampleCount > 0 {
 			totalOutputSize += int(min(sampleCount, 50))
 		}
@@ -587,7 +594,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	em.counts = make([]float64, 0, totalOutputSize)
 
 	for i := 0; i < lenBucketCounts; i++ {
-		sampleCount := bucketCounts[i]
+		sampleCount := int(bucketCounts.At(i))
 		if sampleCount == 0 {
 			// No need to operate on a bucket with no samples
 			continue
@@ -595,34 +602,11 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 
 		lowerBound := em.minimum
 		if i > 0 {
-			lowerBound = bounds[i-1]
+			lowerBound = bounds.At(i - 1)
 		}
 		upperBound := em.maximum
 		if i < lenBucketCounts-1 {
-			upperBound = bounds[i]
-		}
-
-		// Ensure bucket has some width so that values can be spread
-		if upperBound == lowerBound {
-			if lenBounds > 1 {
-				// Use width of closest defined bucket
-				if i == 0 && lenBounds > 1 {
-					// First bucket: use width of second bucket
-					bucketWidth := bounds[1] - bounds[0]
-					lowerBound = upperBound - bucketWidth
-				} else if i == lenBucketCounts-1 && lenBounds > 1 {
-					// Last bucket: use width of second-to-last bucket
-					bucketWidth := bounds[lenBounds-1] - bounds[lenBounds-2]
-					upperBound = lowerBound + bucketWidth
-				}
-			} else {
-				// Fallback: create minimal width
-				if i == 0 {
-					lowerBound = upperBound - 0.001
-				} else {
-					upperBound = lowerBound + 0.001
-				}
-			}
+			upperBound = bounds.At(i)
 		}
 
 		// This algorithm creates "inner buckets" between user-defined bucket based on the sample count, up to a
@@ -643,7 +627,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		//     of the bucket.
 		magnitude := -1.0
 		if i < lenBucketCounts-1 {
-			nextSampleCount := bucketCounts[i+1]
+			nextSampleCount := bucketCounts.At(i + 1)
 			// If next bucket is empty, than density is surely decreasing
 			if nextSampleCount == 0 {
 				magnitude = -1.0
@@ -652,17 +636,21 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				if i+1 == lenBucketCounts-1 {
 					nextUpperBound = em.maximum
 				} else {
-					nextUpperBound = bounds[i+1]
+					nextUpperBound = bounds.At(i + 1)
 				}
 
-				currentBucketDensity := (upperBound - lowerBound) / float64(sampleCount)
-				nextBucketDensity := (nextUpperBound - upperBound) / float64(nextSampleCount)
-				magnitude = math.Log(currentBucketDensity / nextBucketDensity)
+				//currentBucketDensity := (upperBound - lowerBound) / float64(sampleCount)
+				//nextBucketDensity := (nextUpperBound - upperBound) / float64(nextSampleCount)
+				//magnitude = math.Log(currentBucketDensity / nextBucketDensity)
+				// the following calculations are the same but improves speed by ~1% benchmark tests
+				numerator := (upperBound - lowerBound) * float64(nextSampleCount)
+				denom := (nextUpperBound - upperBound) * float64(sampleCount)
+				magnitude = math.Log(numerator / denom)
 			}
 		}
 
 		// innerBucketCount is how many "inner buckets" to spread the sample count amongst
-		innerBucketCount := int(min(sampleCount, 50))
+		innerBucketCount := min(sampleCount, 50)
 		delta := (upperBound - lowerBound) / float64(innerBucketCount)
 
 		if magnitude < 0 { // Use -yx^2
@@ -680,7 +668,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 			}
 
 			// distribute the remainder towards the front
-			remainder := int(sampleCount) - runningSum
+			remainder := sampleCount - runningSum
 			for j := 0; j < remainder; j++ {
 				em.counts[entryStart] += 1
 				entryStart += 1
@@ -689,8 +677,8 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		} else if magnitude < 1 { // Use x
 			// Distribute samples evenly with integer counts
 			// Distribute remainder to first few buckets
-			baseCount := int(sampleCount) / innerBucketCount
-			remainder := int(sampleCount) % innerBucketCount
+			baseCount := sampleCount / innerBucketCount
+			remainder := sampleCount % innerBucketCount
 
 			for j := 1; j <= innerBucketCount; j++ {
 				count := baseCount
@@ -716,7 +704,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 
 			// distribute the remainder towards the end
 			entryStart := len(em.counts) - 1
-			remainder := int(sampleCount) - runningSum
+			remainder := sampleCount - runningSum
 			for j := 0; j < remainder; j++ {
 				em.counts[entryStart] += 1
 				entryStart -= 1
