@@ -611,7 +611,8 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 
 		// This algorithm creates "inner buckets" between user-defined bucket based on the sample count, up to a
 		// maximum. A logarithmic ratio (named "magnitude") compares the density between the current bucket and the
-		// next bucket. This ratio is used to decide how to spread samples amongst inner buckets.
+		// next bucket. This logarithmic ratio is used to decide how to spread samples amongst inner buckets.
+		// As a small optimization, we omit the logarithm invocation and change the thresholds.
 		//
 		// case 1: magnitude < 0
 		//   * What this means: Current bucket is denser than the next bucket -> density is decreasing.
@@ -625,12 +626,12 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		//   * What this means: Current bucket is less dense than the next bucket -> density is increasing.
 		//   * What we do: Use quadratic distribution to spread the samples. This allocates more samples toward the end
 		//     of the bucket.
-		magnitude := -1.0
+		ratio := 0.0
 		if i < lenBucketCounts-1 {
 			nextSampleCount := bucketCounts.At(i + 1)
 			// If next bucket is empty, than density is surely decreasing
 			if nextSampleCount == 0 {
-				magnitude = -1.0
+				ratio = 0.0
 			} else {
 				var nextUpperBound float64
 				if i+1 == lenBucketCounts-1 {
@@ -645,7 +646,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				// the following calculations are the same but improves speed by ~1% benchmark tests
 				numerator := (upperBound - lowerBound) * float64(nextSampleCount)
 				denom := (nextUpperBound - upperBound) * float64(sampleCount)
-				magnitude = math.Log(numerator / denom)
+				ratio = numerator / denom //math.Log(numerator / denom)
 			}
 		}
 
@@ -653,7 +654,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 		innerBucketCount := min(sampleCount, 50)
 		delta := (upperBound - lowerBound) / float64(innerBucketCount)
 
-		if magnitude < 0 { // Use -yx^2
+		if ratio < 1 { // magnitude < 0: Use -yx^2 (inverse quadratic)
 			sigma := float64(sumOfSquares(innerBucketCount))
 			epsilon := float64(sampleCount) / sigma
 			entryStart := len(em.counts)
@@ -674,7 +675,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				entryStart += 1
 			}
 
-		} else if magnitude < 1 { // Use x
+		} else if ratio < math.E { // 0 <= magnitude < 1: Use uniform distribution
 			// Distribute samples evenly with integer counts
 			// Distribute remainder to first few buckets
 			baseCount := sampleCount / innerBucketCount
@@ -689,7 +690,7 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 				em.counts = append(em.counts, float64(count))
 			}
 
-		} else { // Use yx^2
+		} else { // magnitude >= 1: Use yx^2 (quadratic)
 			sigma := float64(sumOfSquares(innerBucketCount))
 			epsilon := float64(sampleCount) / sigma
 
