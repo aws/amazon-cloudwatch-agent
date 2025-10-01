@@ -501,10 +501,10 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	time.Sleep(time.Second)
 	// Create fresh metrics for the second processing to test updated cache values
 	freshMd := createTestMetrics([]map[string]string{
-		map[string]string{
+		{
 			"host": "example.org",
 		},
-		map[string]string{
+		{
 			"device": device2,
 		},
 	})
