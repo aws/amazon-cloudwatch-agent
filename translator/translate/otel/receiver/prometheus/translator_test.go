@@ -30,6 +30,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
+const testPrometheusConfigKey = "logs::metrics_collected::prometheus"
+
 func TestMetricsTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input   map[string]any
@@ -343,7 +345,7 @@ func TestAddDefaultECSRelabelConfigs_Success(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -384,7 +386,7 @@ func TestDontAddDefaultRelabelConfigs_notECS(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -417,7 +419,7 @@ func TestDontAddDefaultRelabelConfigs_noEcsSdConfig(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -454,11 +456,47 @@ func TestDontAddDefaultRelabelConfigs_mismatchEcsSdResultFile(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
 	assert.Len(t, scrapeConfigWithFileSD.RelabelConfigs, 0, "ScrapeConfig should have no relabel configs when sd_result_file doesn't match")
+}
+
+func TestTranslateMetricsPrometheusConfigKey(t *testing.T) {
+	ecsutil.GetECSUtilSingleton().Region = "us-test-2"
+	metricsConfigKey := "metrics::metrics_collected::prometheus"
+
+	scrapeConfigs := []*config.ScrapeConfig{
+		{
+			JobName: "ecs-job",
+			ServiceDiscoveryConfigs: discovery.Configs{
+				&file.SDConfig{
+					Files: []string{defaultECSSDfileName},
+				},
+			},
+		},
+	}
+
+	// ecs_service_discovery is configured in logs but we're using metrics config key
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{
+			"metrics_collected": map[string]any{
+				"prometheus": map[string]any{
+					"prometheus_config_path": "env:PROMETHEUS_CONFIG_CONTENT",
+					"ecs_service_discovery": map[string]any{
+						"sd_frequency":   "50s",
+						"sd_result_file": defaultECSSDfileName,
+					},
+				},
+			},
+		},
+	})
+
+	addDefaultECSRelabelConfigs(scrapeConfigs, conf, metricsConfigKey)
+
+	// Should not add any ECS relabel configs because config key doesn't match
+	assert.Len(t, scrapeConfigs[0].RelabelConfigs, 0, "Expected no relabel configs for metrics config key")
 }
 
 func TestDontAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
@@ -480,7 +518,7 @@ func TestDontAddDefaultRelabelConfigs_emptyScrapeConfigs(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -521,7 +559,7 @@ func TestAppendCustomerRelabelConfigs(t *testing.T) {
 			},
 		},
 	})
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -566,7 +604,7 @@ func TestJobLabelPriority_DockerJobLabel(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -612,7 +650,7 @@ func TestJobLabelPriority_TaskDefinitionJobName(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 
@@ -658,7 +696,7 @@ func TestJobLabelPriority_ServiceNameJobName(t *testing.T) {
 		},
 	})
 
-	configKey := "logs.metrics_collected.prometheus"
+	configKey := testPrometheusConfigKey
 
 	addDefaultECSRelabelConfigs(scrapeConfigs, conf, configKey)
 

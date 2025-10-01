@@ -35,8 +35,6 @@ const (
 	defaultJobLabelName    = "job"
 )
 
-var ecsSDKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey, "ecs_service_discovery")
-
 type translator struct {
 	name      string
 	configKey string // config key to prometheus, e.g. logs.metrics_collected.prometheus
@@ -175,6 +173,7 @@ func escapeStrings(node any) {
 
 func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *confmap.Conf, promConfigKey string) {
 	// ECS Service Discovery Relabel Configs should only be added if enabled on ECS and configs are valid:
+	ecsSDKey := common.ConfigKey(promConfigKey, common.ECSServiceDiscovery)
 	if !ecsutil.GetECSUtilSingleton().IsECS() || !conf.IsSet(ecsSDKey) || len(scrapeConfigs) == 0 {
 		return
 	}
@@ -201,7 +200,7 @@ func addDefaultECSRelabelConfigs(scrapeConfigs []*config.ScrapeConfig, conf *con
 		{SourceLabels: model.LabelNames{"__meta_ecs_ec2_vpc_id"}, Action: relabel.Replace, TargetLabel: "VpcId", Regex: relabel.MustNewRegexp("(.*)")},
 		{SourceLabels: model.LabelNames{"__meta_ecs_source"}, Regex: relabel.MustNewRegexp("^arn:aws:ecs:.*:.*:task.*\\/(.*)$"), Action: relabel.Replace, TargetLabel: "TaskId"},
 	}
-	defaultRelabelConfigs = appendDockerLabelRelabelConfigs(conf, defaultRelabelConfigs)
+	defaultRelabelConfigs = appendDockerLabelRelabelConfigs(conf, defaultRelabelConfigs, promConfigKey)
 
 	for _, scrapeConfig := range scrapeConfigs {
 		for _, sdConfig := range scrapeConfig.ServiceDiscoveryConfigs {
@@ -242,8 +241,8 @@ func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
 	return clusterName
 }
 
-func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs []*relabel.Config) []*relabel.Config {
-	if hasJobLabelConfigured(conf) {
+func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs []*relabel.Config, promConfigKey string) []*relabel.Config {
+	if hasJobLabelConfigured(conf, promConfigKey) {
 		defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{SourceLabels: model.LabelNames{"__meta_ecs_container_labels_job"}, Regex: relabel.MustNewRegexp(".*"), Action: relabel.Drop})
 	}
 	defaultRelabelConfigs = append(defaultRelabelConfigs, &relabel.Config{Regex: relabel.MustNewRegexp("^__meta_ecs_container_labels_(.+)$"), Action: relabel.LabelMap, Replacement: prometheusreceiver.EscapedCaptureGroupOne})
@@ -251,7 +250,9 @@ func appendDockerLabelRelabelConfigs(conf *confmap.Conf, defaultRelabelConfigs [
 }
 
 // hasJobConfigured checks if job is configured in any ECS observer configuration
-func hasJobLabelConfigured(conf *confmap.Conf) bool {
+func hasJobLabelConfigured(conf *confmap.Conf, promConfigKey string) bool {
+	ecsSDKey := common.ConfigKey(promConfigKey, common.ECSServiceDiscovery)
+
 	// docker_label configuration
 	dockerLabelKey := common.ConfigKey(ecsSDKey, "docker_label", "sd_job_name_label")
 	if conf.IsSet(dockerLabelKey) {
