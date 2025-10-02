@@ -27,7 +27,7 @@ $UsageString = @"
 
 
         usage:  amazon-cloudwatch-agent-ctl.ps1 -a
-                stop|start|status|fetch-config|append-config|remove-config|set-log-level
+                stop|start|status|status-with-workloads|fetch-config|append-config|remove-config|set-log-level
                 [-m ec2|onPremise|onPrem|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
@@ -48,6 +48,7 @@ $UsageString = @"
             stop:                                   stop amazon-cloudwatch-agent if running.
             start:                                  start amazon-cloudwatch-agent if configuration is available.
             status:                                 get the status of both agent processes.
+            status-with-workloads:                  get the status of both agent processes and runs workload discovery.
             fetch-config:                           apply config for agent, followed by -c. Target config can be based on location (ssm parameter store name, file name), or 'default'.
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
             remove-config:                          remove config for agent, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
@@ -93,6 +94,7 @@ $CWALogDirectory = "${CWAProgramData}\Logs"
 $CWARestartFile ="${CWAProgramData}\restart"
 $VersionFile ="${CWAProgramFiles}\CWAGENT_VERSION"
 $CVLogFile="${CWALogDirectory}\configuration-validation.log"
+$WORKLOAD_DISCOVERY="${CWAProgramFiles}\workload-discovery.exe"
 
 # The windows service registration assumes exactly this .toml file path and name
 $TOML="${CWAProgramData}\amazon-cloudwatch-agent.toml"
@@ -215,7 +217,12 @@ Function AgentPreun() {
     }
 }
 
-Function StatusAll() {
+Function CwaStatus() {
+    Param (
+        [Parameter(Mandatory = $false)]
+        [bool]$IncludeWorkloads = $false
+    )
+    
     $cwa_status = Runstatus -service_name ${CWAServiceName}
     $cwa_starttime = GetStarttime -service_name ${CWAServiceName}
     $cwa_config_status = 'configured'
@@ -229,7 +236,24 @@ Function StatusAll() {
     Write-Output "  `"status`": `"${cwa_status}`","
     Write-Output "  `"starttime`": `"${cwa_starttime}`","
     Write-Output "  `"configstatus`": `"${cwa_config_status}`","
-    Write-Output "  `"version`": `"${version}`""
+    
+    if ($IncludeWorkloads) {
+        $workloads_json = "[]"
+        $workload_discovery_path = $WORKLOAD_DISCOVERY
+        if (Test-Path -LiteralPath $workload_discovery_path) {
+            try {
+                $workloads_json = cmd /c "`"$workload_discovery_path`" 2>null"
+                if (-not $workloads_json) { $workloads_json = "[]" }
+            } catch {
+                $workloads_json = "[]"
+            }
+        }
+        Write-Output "  `"version`": `"${version}`","
+        Write-Output "  `"workloads`": ${workloads_json}"
+    } else {
+        Write-Output "  `"version`": `"${version}`""
+    }
+    
     Write-Output "}"
 }
 
@@ -449,7 +473,8 @@ Function main() {
         fetch-config { ConfigAll }
         append-config { ConfigAll -multi_config 'append' }
         remove-config { ConfigAll -multi_config 'remove' }
-        status { StatusAll }
+        status { CwaStatus -IncludeWorkloads $false }
+        status-with-workloads { CwaStatus -IncludeWorkloads $true }
         prep-restart { PrepRestartAll }
         cond-restart { CondRestartAll }
         preun { PreunAll }
@@ -459,6 +484,7 @@ Function main() {
            Exit 1
         }
     }
+    Exit 0
 }
 
 main
