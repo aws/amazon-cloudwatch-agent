@@ -130,8 +130,7 @@ func GetAWSMetadataInfo() map[string]string {
 	metadata := GetMetadataInfo(Ec2MetadataInfoProvider)
 
 	// Add EC2 tags that require API calls (like AutoScaling group name)
-	ec2 := ec2util.GetEC2UtilSingleton()
-	if asgName := ec2.GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
+	if asgName := GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
 		metadata[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
 	}
 

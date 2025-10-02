@@ -5,7 +5,6 @@ package ec2util
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
@@ -151,64 +149,4 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	}
 
 	return nil
-}
-
-// GetEC2TagValue retrieves any EC2 tag value by key for the current instance
-func (e *ec2Util) GetEC2TagValue(tagKey string) string {
-	if e.InstanceID == "" || e.Region == "" {
-		return ""
-	}
-
-	config := &aws.Config{
-		Region:                        aws.String(e.Region),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		LogLevel:                      configaws.SDKLogLevel(),
-		Logger:                        configaws.SDKLogger{},
-	}
-
-	sess, err := session.NewSession(config)
-	if err != nil {
-		log.Printf("Failed to create AWS session: %v", err)
-		return ""
-	}
-
-	ec2Client := ec2.New(sess)
-
-	input := &ec2.DescribeTagsInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("resource-type"),
-				Values: []*string{aws.String("instance")},
-			},
-			{
-				Name:   aws.String("resource-id"),
-				Values: []*string{aws.String(e.InstanceID)},
-			},
-			{
-				Name:   aws.String("key"),
-				Values: []*string{aws.String(tagKey)},
-			},
-		},
-	}
-
-	for {
-		result, err := ec2Client.DescribeTags(input)
-		if err != nil {
-			log.Printf("Failed to describe EC2 tag '%s': %v", tagKey, err)
-			return ""
-		}
-
-		for _, tag := range result.Tags {
-			if tag.Key != nil && tag.Value != nil && *tag.Key == tagKey {
-				return *tag.Value
-			}
-		}
-
-		if result.NextToken == nil {
-			break
-		}
-		input.SetNextToken(*result.NextToken)
-	}
-
-	return ""
 }

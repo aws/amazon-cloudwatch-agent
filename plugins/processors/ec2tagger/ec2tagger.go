@@ -161,10 +161,10 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 			}
 		}
 		if t.volumeSerialCache != nil {
-			if devName, found := attr.Get(t.DiskDeviceTagKey); found {
-				serial := t.volumeSerialCache.Serial(devName.Str())
-				if serial != "" {
-					if _, exists := attr.Get(AttributeVolumeId); !exists {
+			if _, exists := attr.Get(AttributeVolumeId); !exists {
+				if devName, found := attr.Get(t.DiskDeviceTagKey); found {
+					serial := t.volumeSerialCache.Serial(devName.Str())
+					if serial != "" {
 						attr.PutStr(AttributeVolumeId, serial)
 					}
 				}
