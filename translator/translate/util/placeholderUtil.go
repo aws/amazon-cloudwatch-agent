@@ -10,15 +10,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
 type Metadata struct {
-	InstanceID string
-	Hostname   string
-	PrivateIP  string
-	AccountID  string
+	InstanceID   string
+	Hostname     string
+	PrivateIP    string
+	AccountID    string
+	InstanceType string
+	ImageID      string
 }
 
 type MetadataInfoProvider func() *Metadata
@@ -26,10 +29,12 @@ type MetadataInfoProvider func() *Metadata
 var Ec2MetadataInfoProvider = func() *Metadata {
 	ec2 := ec2util.GetEC2UtilSingleton()
 	return &Metadata{
-		InstanceID: ec2.InstanceID,
-		Hostname:   ec2.Hostname,
-		PrivateIP:  ec2.PrivateIP,
-		AccountID:  ec2.AccountID,
+		InstanceID:   ec2.InstanceID,
+		Hostname:     ec2.Hostname,
+		PrivateIP:    ec2.PrivateIP,
+		AccountID:    ec2.AccountID,
+		InstanceType: ec2.InstanceType,
+		ImageID:      ec2.ImageID,
 	}
 }
 
@@ -42,11 +47,13 @@ const (
 	datePlaceholder          = "{date}"
 	accountIdPlaceholder     = "{account_id}"
 
-	unknownInstanceId = "i-UNKNOWN"
-	unknownHostname   = "UNKNOWN-HOST"
-	unknownIpAddress  = "UNKNOWN-IP"
-	unknownAwsRegion  = "UNKNOWN-REGION"
-	unknownAccountId  = "UNKNOWN-ACCOUNT"
+	unknownInstanceId   = "i-UNKNOWN"
+	unknownHostname     = "UNKNOWN-HOST"
+	unknownIpAddress    = "UNKNOWN-IP"
+	unknownAwsRegion    = "UNKNOWN-REGION"
+	unknownAccountId    = "UNKNOWN-ACCOUNT"
+	unknownInstanceType = "UNKNOWN-TYPE"
+	unknownImageId      = "UNKNOWN-AMI"
 )
 
 // resolve place holder for log group and log stream.
@@ -90,10 +97,45 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 		accountID = unknownAccountId
 	}
 
-	return map[string]string{instanceIdPlaceholder: instanceID, hostnamePlaceholder: hostname,
-		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion,
-		accountIdPlaceholder: accountID,
+	instanceType := provider().InstanceType
+	if instanceType == "" {
+		instanceType = unknownInstanceType
 	}
+
+	imageID := provider().ImageID
+	if imageID == "" {
+		imageID = unknownImageId
+	}
+
+	metadata := map[string]string{
+		instanceIdPlaceholder:    instanceID,
+		hostnamePlaceholder:      hostname,
+		localHostnamePlaceholder: localHostname,
+		ipAddressPlaceholder:     ipAddress,
+		awsRegionPlaceholder:     awsRegion,
+		accountIdPlaceholder:     accountID,
+	}
+
+	// Add AWS metadata placeholders
+	metadata[ec2tagger.SupportedAppendDimensions["InstanceId"]] = instanceID
+	metadata[ec2tagger.SupportedAppendDimensions["InstanceType"]] = instanceType
+	metadata[ec2tagger.SupportedAppendDimensions["ImageId"]] = imageID
+
+	return metadata
+}
+
+// GetAWSMetadataInfo returns AWS metadata using Ec2MetadataInfoProvider and EC2 Tags
+func GetAWSMetadataInfo() map[string]string {
+	// Start with the existing metadata pattern
+	metadata := GetMetadataInfo(Ec2MetadataInfoProvider)
+
+	// Add EC2 tags that require API calls (like AutoScaling group name)
+	ec2 := ec2util.GetEC2UtilSingleton()
+	if asgName := ec2.GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
+		metadata[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
+	}
+
+	return metadata
 }
 
 func getHostName() string {
@@ -117,4 +159,26 @@ func getIpAddress() string {
 		}
 	}
 	return unknownIpAddress
+}
+
+// ResolveAWSMetadataPlaceholders resolves AWS metadata variables like ${aws:InstanceId} to actual values
+func ResolveAWSMetadataPlaceholders(input any) any {
+	awsMetadata := GetAWSMetadataInfo()
+
+	result := map[string]any{}
+	for k, v := range input.(map[string]interface{}) {
+		if vStr, ok := v.(string); ok {
+			resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
+			if resolvedValue != vStr {
+				result[k] = resolvedValue
+			} else if !strings.Contains(vStr, "${aws:") {
+				// Keep non-AWS variables as-is
+				result[k] = v
+			}
+			// If AWS variable resolution fails, skip the dimension
+		} else {
+			result[k] = v
+		}
+	}
+	return result
 }
