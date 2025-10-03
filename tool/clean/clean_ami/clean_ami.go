@@ -29,6 +29,7 @@ var imagePrefixes = []string{
 	"cloudwatch-agent-integration-test-al2",
 	"cloudwatch-agent-integration-test-alma-linux-8",
 	"cloudwatch-agent-integration-test-alma-linux-9",
+	"cloudwatch-agent-integration-test-alma-linux-10",
 	"cloudwatch-agent-integration-test-arm64-al2",
 	"cloudwatch-agent-integration-test-debian-12-arm64",
 	"cloudwatch-agent-integration-test-nvidia-gpu-al2",
@@ -36,9 +37,9 @@ var imagePrefixes = []string{
 	"cloudwatch-agent-integration-test-ol9",
 	"cloudwatch-agent-integration-test-rocky-linux-8",
 	"cloudwatch-agent-integration-test-rocky-linux-9",
+	"cloudwatch-agent-integration-test-rocky-linux-10",
 	"cloudwatch-agent-integration-test-sles-15",
 	"cloudwatch-agent-integration-test-ubuntu-24",
-	"cloudwatch-agent-integration-test-ubuntu",
 	"cloudwatch-agent-integration-test-ubuntu-LTS-22",
 	"cloudwatch-agent-integration-test-ubuntu-25",
 	"cloudwatch-agent-integration-test-win-10",
@@ -49,6 +50,7 @@ var imagePrefixes = []string{
 	"cloudwatch-agent-integration-test-x86-al2023",
 	"cloudwatch-agent-integration-test-mac",
 	"cloudwatch-agent-integration-test-nvidia-gpu",
+	"cloudwatch-agent-integration-test-rhel9",
 	"cloudwatch-agent-integration-test-rhel10",
 }
 
