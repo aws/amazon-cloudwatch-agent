@@ -19,8 +19,8 @@ type IsEKSCache struct {
 
 var (
 	getInClusterConfig = func() (*rest.Config, error) { return rest.InClusterConfig() }
-	IsEKS = isEKS
-	NewDetector = isEKS 
+	IsEKS              = isEKS
+	NewDetector        = isEKS
 )
 
 // isEKS checks if the agent is running on EKS by extracting the "iss" field from the service account token and
