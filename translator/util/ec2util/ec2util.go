@@ -6,6 +6,7 @@ package ec2util
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,6 +28,7 @@ type ec2Util struct {
 	InstanceID string
 	Hostname   string
 	AccountID  string
+	Tags       map[string]string
 }
 
 var (
@@ -44,7 +46,11 @@ func GetEC2UtilSingleton() *ec2Util {
 }
 
 func initEC2UtilSingleton() (newInstance *ec2Util) {
-	newInstance = &ec2Util{Region: "", PrivateIP: ""}
+	newInstance = &ec2Util{
+		Region:    "",
+		PrivateIP: "",
+		Tags:      make(map[string]string),
+	}
 
 	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise) {
 		return
@@ -140,6 +146,19 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		} else {
 			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
 		}
+	}
+
+	// Instance tags: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-7
+	if tagKeys, err := md.GetMetadata("tags/instance"); err == nil {
+		for _, tagKey := range strings.Fields(tagKeys) {
+			if tagValue, err := md.GetMetadata("tags/instance/" + tagKey); err == nil {
+				e.Tags[tagKey] = tagValue
+			} else {
+				fmt.Printf("E! [EC2] Fetch instance tag %s from EC2 metadata fail:%v\n", tagKey, err)
+			}
+		}
+	} else {
+		fmt.Println("E! [EC2] Fetch instance tags from EC2 metadata fail:", err)
 	}
 
 	return nil
