@@ -19,8 +19,8 @@ type IsEKSCache struct {
 
 var (
 	getInClusterConfig = func() (*rest.Config, error) { return rest.InClusterConfig() }
+	// IsEKS is a function variable that can be overridden in tests
 	IsEKS = isEKS
-	NewDetector = isEKS 
 )
 
 // isEKS checks if the agent is running on EKS by extracting the "iss" field from the service account token and
