@@ -42,8 +42,13 @@ func FilterReservedKeys(input any) any {
 	return result
 }
 
-// GetEC2TagValue retrieves any EC2 tag value by key for the current instance
+var getEC2TagValueFunc = getEC2TagValue
+
 func GetEC2TagValue(tagKey string) string {
+	return getEC2TagValueFunc(tagKey)
+}
+
+func getEC2TagValue(tagKey string) string {
 	ec2Util := ec2util.GetEC2UtilSingleton()
 	if ec2Util.InstanceID == "" || ec2Util.Region == "" {
 		return ""

@@ -51,17 +51,6 @@ const (
 	ecsSdFileNameToken      = "ecsSdFileName"
 )
 
-// setupMockMetadataForAppendDimensions sets up mock metadata service for testing
-// This function actually mocks the metadata service to provide test values
-func setupMockMetadataForAppendDimensions() func() {
-	// Setup mock metadata service with test values:
-	// - InstanceID: "i-1234567890abcdef0"
-	// - InstanceType: "t3.medium"
-	// - ImageID: "ami-0abcdef1234567890"
-	// - AutoScalingGroupName: "production-web-asg"
-	return translateutil.SetupMockMetadataForTesting()
-}
-
 //go:embed sampleConfig/prometheus_ecs_config.yaml
 var ecsPrometheusConfig string
 
@@ -762,8 +751,20 @@ func TestAppendDimensionsHostMetrics(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 
-	// Setup mock metadata service for this test
-	cleanup := setupMockMetadataForAppendDimensions()
+	// Setup mock AWS metadata to get realistic values in the TOML output
+	cleanup := translateutil.MockCompleteAWSMetadata(
+		translateutil.MockAWSMetadata{
+			InstanceID:   "i-1234567890abcdef0",
+			InstanceType: "t3.medium",
+			ImageID:      "ami-0abcdef1234567890",
+			Hostname:     "test-hostname",
+			PrivateIP:    "10.0.1.100",
+			AccountID:    "123456789012",
+		},
+		map[string]string{
+			"aws:autoscaling:groupName": "production-web-asg",
+		},
+	)
 	defer cleanup()
 
 	// Test that append_dimensions_host_metrics.json generates the correct .conf and .yaml files

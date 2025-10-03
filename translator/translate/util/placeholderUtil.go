@@ -26,7 +26,13 @@ type Metadata struct {
 
 type MetadataInfoProvider func() *Metadata
 
+var ec2MetadataInfoProviderFunc = ec2MetadataInfoProvider
+
 var Ec2MetadataInfoProvider = func() *Metadata {
+	return ec2MetadataInfoProviderFunc()
+}
+
+func ec2MetadataInfoProvider() *Metadata {
 	ec2 := ec2util.GetEC2UtilSingleton()
 	return &Metadata{
 		InstanceID:   ec2.InstanceID,
@@ -47,13 +53,13 @@ const (
 	datePlaceholder          = "{date}"
 	accountIdPlaceholder     = "{account_id}"
 
-	unknownInstanceId   = "i-UNKNOWN"
+	unknownInstanceID   = "i-UNKNOWN"
 	unknownHostname     = "UNKNOWN-HOST"
-	unknownIpAddress    = "UNKNOWN-IP"
+	unknownIPAddress    = "UNKNOWN-IP"
 	unknownAwsRegion    = "UNKNOWN-REGION"
-	unknownAccountId    = "UNKNOWN-ACCOUNT"
+	unknownAccountID    = "UNKNOWN-ACCOUNT"
 	unknownInstanceType = "UNKNOWN-TYPE"
-	unknownImageId      = "UNKNOWN-AMI"
+	unknownImageID      = "UNKNOWN-AMI"
 )
 
 // resolve place holder for log group and log stream.
@@ -74,7 +80,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 
 	instanceID := provider().InstanceID
 	if instanceID == "" {
-		instanceID = unknownInstanceId
+		instanceID = unknownInstanceID
 	}
 
 	hostname := provider().Hostname
@@ -94,7 +100,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 
 	accountID := provider().AccountID
 	if accountID == "" {
-		accountID = unknownAccountId
+		accountID = unknownAccountID
 	}
 
 	instanceType := provider().InstanceType
@@ -104,7 +110,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 
 	imageID := provider().ImageID
 	if imageID == "" {
-		imageID = unknownImageId
+		imageID = unknownImageID
 	}
 
 	metadata := map[string]string{
@@ -150,14 +156,14 @@ func getIpAddress() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		log.Println("E! getIpAddress -> getInterfaceAddrs: ", err)
-		return unknownIpAddress
+		return unknownIPAddress
 	}
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
 			return ipnet.IP.String()
 		}
 	}
-	return unknownIpAddress
+	return unknownIPAddress
 }
 
 // ResolveAWSMetadataPlaceholders resolves AWS metadata variables like ${aws:InstanceId} to actual values
