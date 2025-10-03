@@ -26,7 +26,7 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
-		detector        func() (eksdetector.Detector, error)
+		detector        func() eksdetector.IsEKSCache
 		isEKSDataStore  func() eksdetector.IsEKSCache
 	}{
 		"WithValidConfig": {

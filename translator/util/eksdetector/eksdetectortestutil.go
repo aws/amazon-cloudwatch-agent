@@ -14,3 +14,13 @@ var (
 		return IsEKSCache{Value: false, Err: nil}
 	}
 )
+
+// TestEKSDetector is used for unit testing EKS route
+func TestEKSDetector() IsEKSCache {
+	return TestIsEKSCacheEKS()
+}
+
+// TestK8sDetector is used for unit testing k8s route
+func TestK8sDetector() IsEKSCache {
+	return TestIsEKSCacheK8s()
+}

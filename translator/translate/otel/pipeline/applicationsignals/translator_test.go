@@ -34,7 +34,7 @@ func TestTranslatorTraces(t *testing.T) {
 		input      map[string]interface{}
 		want       *want
 		wantErr    error
-		detector   func() (eksdetector.Detector, error)
+		detector   func() eksdetector.IsEKSCache
 		isEKSCache func() eksdetector.IsEKSCache
 	}{
 		"WithoutTracesCollectedKey": {
@@ -110,7 +110,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		input          map[string]interface{}
 		want           *want
 		wantErr        error
-		detector       func() (eksdetector.Detector, error)
+		detector       func() eksdetector.IsEKSCache
 		isEKSCache     func() eksdetector.IsEKSCache
 		kubernetesMode string
 	}{
@@ -211,7 +211,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		input      map[string]interface{}
 		want       *want
 		wantErr    error
-		detector   func() (eksdetector.Detector, error)
+		detector   func() eksdetector.IsEKSCache
 		isEKSCache func() eksdetector.IsEKSCache
 	}{
 		"WithoutMetricsCollectedKey": {
