@@ -1,0 +1,20 @@
+{
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "append_dimensions": {
+          "InstanceType": "${aws:InstanceType}",
+          "ImageId": "${aws:ImageId}",
+          "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+          "ServiceName": "MyServiceApplication"
+        },
+        "measurement": [
+          "cpu_usage_idle"
+        ]
+      }
+    }
+  }
+}
