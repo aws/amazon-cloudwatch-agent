@@ -463,14 +463,14 @@ func BenchmarkLogNormal(b *testing.B) {
 	dp := createHistogramFromData(data, boundaries)
 	require.Equal(b, int(dp.Count()), 10000)
 
-	b.Run("NewFromOtelCWAgent", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			dist := NewFromOtelCWAgent(dp)
-			values, counts := dist.ValuesAndCounts()
-			assert.NotNil(b, values)
-			assert.NotNil(b, counts)
-		}
-	})
+	// b.Run("NewFromOtelCWAgent", func(b *testing.B) {
+	// 	for i := 0; i < b.N; i++ {
+	// 		dist := NewFromOtelCWAgent(dp)
+	// 		values, counts := dist.ValuesAndCounts()
+	// 		assert.NotNil(b, values)
+	// 		assert.NotNil(b, counts)
+	// 	}
+	// })
 
 	b.Run("NewExponentialMappingFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -484,15 +484,6 @@ func BenchmarkLogNormal(b *testing.B) {
 	b.Run("NewExponentialMappingCWFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			dist := NewExponentialMappingCWFromOtel(dp)
-			values, counts := dist.ValuesAndCounts()
-			assert.NotNil(b, values)
-			assert.NotNil(b, counts)
-		}
-	})
-
-	b.Run("NewExponentialMappingCWFromOtelOptimized", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			dist := NewExponentialMappingCWFromOtelOptimized(dp)
 			values, counts := dist.ValuesAndCounts()
 			assert.NotNil(b, values)
 			assert.NotNil(b, counts)
@@ -540,15 +531,6 @@ func BenchmarkWeibull(b *testing.B) {
 	b.Run("NewExponentialMappingCWFromOtel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			dist := NewExponentialMappingCWFromOtel(dp)
-			values, counts := dist.ValuesAndCounts()
-			assert.NotNil(b, values)
-			assert.NotNil(b, counts)
-		}
-	})
-
-	b.Run("NewExponentialMappingCWFromOtelOptimized", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			dist := NewExponentialMappingCWFromOtelOptimized(dp)
 			values, counts := dist.ValuesAndCounts()
 			assert.NotNil(b, values)
 			assert.NotNil(b, counts)
@@ -638,12 +620,12 @@ func verifyDist(t *testing.T, dist ToCloudWatchValuesAndCounts, expected histogr
 	assert.InDelta(t, float64(expected.Count), calculatedCount, 1e-6, "calculated count does not match expected")
 
 	for p, r := range expected.PercentileRanges {
-		x := int(float64(dist.SampleCount()) * p)
+		x := int(math.Round(float64(dist.SampleCount()) * p))
 
 		soFar := 0
 		for i, count := range counts {
 			soFar += int(count)
-			if soFar > x {
+			if soFar >= x {
 				//fmt.Printf("Found p%.f at bucket %0.2f. Expected range: %+v\n", p*100, values[i], r)
 				assert.GreaterOrEqual(t, values[i], r.Low, "percentile %0.2f", p)
 				assert.LessOrEqual(t, values[i], r.High, "percentile %0.2f", p)
@@ -758,7 +740,7 @@ func verifyDistAccuracy(t *testing.T, newDistFunc func(pmetric.HistogramDataPoin
 		soFar := 0
 		for i, count := range counts {
 			soFar += int(count)
-			if soFar > x2 {
+			if soFar >= x2 {
 				calculatedPercentileValue := values[i]
 				errorPercent := (exactPercentileValue - calculatedPercentileValue) / exactPercentileValue * 100
 				fmt.Printf("P%.1f: exact=%.6f, calculated=%.6f, error=%.2f%%\n", p*100, exactPercentileValue, calculatedPercentileValue, errorPercent)

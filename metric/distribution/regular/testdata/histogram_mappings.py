@@ -1,3 +1,4 @@
+import argparse
 import json
 import math
 import matplotlib.pyplot as plt
@@ -91,7 +92,7 @@ def plot_cw_histogram_bars(histogram: Dict[float, float], histogram_min: float, 
         ax.bar(values, counts, width=widths, alpha=0.7, edgecolor='black', linewidth=0.8, color=color)
     
     ax.scatter(values, counts, color='red', s=50, zorder=5)
-    ax.set_title(f'{title} (Sum: {total_count})')
+    ax.set_title(f'{title} (Count: {total_count})')
     ax.set_ylabel('Counts')
     ax.grid(True, alpha=0.3)
 
@@ -139,19 +140,27 @@ def plot_all_folders_comparison(json_filename):
 
 # Example usage
 if __name__ == "__main__":
-    # Get all JSON files from original folder
+    parser = argparse.ArgumentParser(description='Process histogram mappings')
+    parser.add_argument('dataset', nargs='?', help='Optional dataset name to process')
+    args = parser.parse_args()
+    
     original_path = Path('./original')
     if original_path.exists():
-        json_files = [f.stem for f in original_path.iterdir() if f.suffix == '.json']
-        
-        # Plot comparison for each JSON file
-        for json_file in json_files:
-            print(f"Processing {json_file}...")
-            plot_all_folders_comparison(json_file)
+        if args.dataset:
+            # Process specific dataset if provided
+            dataset_file = original_path / f"{args.dataset}.json"
+            if dataset_file.exists():
+                print(f"Processing {args.dataset}...")
+                plot_all_folders_comparison(args.dataset)
+            else:
+                print(f"Dataset '{args.dataset}' not found in original folder.")
+        else:
+            # Process all datasets if no specific dataset provided
+            json_files = [f.stem for f in original_path.iterdir() if f.suffix == '.json']
+            for json_file in json_files:
+                print(f"Processing {json_file}...")
+                plot_all_folders_comparison(json_file)
     else:
-        print("Original folder not found. Using sample data.")
-        # Fallback to sample data
-        bounds = [0.3, 0.5, 0.7, 0.9, 1.1]
-        bucket_counts = [80, 120, 150, 130, 70]
-        histogram_min, histogram_max = 0.2, 1.2
-        visualize_all_mappings(bounds, bucket_counts, histogram_min, histogram_max)
+        print("Original folder not found.")
+
+    
