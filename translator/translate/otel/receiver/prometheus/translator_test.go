@@ -26,6 +26,8 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
@@ -813,6 +815,47 @@ scrape_configs:
 	output := string(outputBytes)
 
 	assert.Contains(t, output, "replacement: $$$$1")
+}
+
+func TestGetClusterNameFromConfig_ErrorLogging(t *testing.T) {
+	// Reset context and set containerized environment
+	context.ResetContext()
+	context.CurrentContext().SetRunInContainer(true)
+
+	// Clear any existing error messages
+	translator.ResetMessages()
+
+	// Test case where both EKS and ECS cluster name retrieval fail
+	input := map[string]any{
+		"logs": map[string]any{
+			"metrics_collected": map[string]any{
+				"prometheus": map[string]any{},
+			},
+		},
+	}
+
+	// Ensure no ECS cluster is set
+	ecsutil.GetECSUtilSingleton().Cluster = ""
+	ecsutil.GetECSUtilSingleton().Region = ""
+
+	conf := confmap.NewFromStringMap(input)
+	promConfigKey := "logs::metrics_collected::prometheus"
+
+	result := getClusterNameFromConfig(conf, promConfigKey)
+
+	// Should return empty string
+	assert.Equal(t, "", result)
+
+	// Should have logged error message
+	assert.Greater(t, len(translator.ErrorMessages), 0, "Should have error messages")
+	found := false
+	for _, msg := range translator.ErrorMessages {
+		if strings.Contains(msg, promConfigKey) && strings.Contains(msg, "ClusterName is not defined") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Should contain error message about ClusterName not defined")
 }
 
 func normalizeYAML(s string) string {

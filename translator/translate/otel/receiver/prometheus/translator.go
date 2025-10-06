@@ -19,6 +19,8 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	translatorutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -35,7 +37,7 @@ const (
 	defaultJobLabelName    = "job"
 )
 
-type translator struct {
+type prometheusTranslator struct {
 	name      string
 	configKey string // config key to prometheus, e.g. logs.metrics_collected.prometheus
 	factory   receiver.Factory
@@ -43,7 +45,7 @@ type translator struct {
 
 func WithConfigKey(configKey string) common.TranslatorOption {
 	return func(target any) {
-		if t, ok := target.(*translator); ok {
+		if t, ok := target.(*prometheusTranslator); ok {
 			t.configKey = configKey
 		}
 	}
@@ -51,27 +53,27 @@ func WithConfigKey(configKey string) common.TranslatorOption {
 
 func WithName(name string) common.TranslatorOption {
 	return func(target any) {
-		if t, ok := target.(*translator); ok {
+		if t, ok := target.(*prometheusTranslator); ok {
 			t.name = name
 		}
 	}
 }
 
-var _ common.ComponentTranslator = (*translator)(nil)
+var _ common.ComponentTranslator = (*prometheusTranslator)(nil)
 
 func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
-	t := &translator{factory: prometheusreceiver.NewFactory()}
+	t := &prometheusTranslator{factory: prometheusreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)
 	}
 	return t
 }
 
-func (t *translator) ID() component.ID {
+func (t *prometheusTranslator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *prometheusTranslator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
 	configPathKey := common.ConfigKey(t.configKey, common.PrometheusConfigPathKey)
 
@@ -236,6 +238,11 @@ func getClusterNameFromConfig(conf *confmap.Conf, promConfigKey string) string {
 	if clusterName == "" {
 		// Try ECS cluster name if EKS returns empty
 		clusterName = util.GetECSClusterName(clusterNameSectionKey, prometheusConfigInput)
+	}
+
+	// Cluster Name is mandatory for Containerized Workloads
+	if context.CurrentContext().RunInContainer() && clusterName == "" {
+		translator.AddErrorMessages(promConfigKey, "ClusterName is not defined")
 	}
 
 	return clusterName
