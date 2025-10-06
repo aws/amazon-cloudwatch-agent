@@ -28,13 +28,10 @@ func AddHighResolutionTag(tags interface{}) {
 	tagMap[High_Resolution_Tag_Key] = "true"
 }
 
-// FilterReservedKeys out reserved tag keys and resolves AWS metadata variables at translation time
+// FilterReservedKeys out reserved tag keys
 func FilterReservedKeys(input any) any {
-	resolved := ResolveAWSMetadataPlaceholders(input)
-
-	// Then filter out reserved keys
 	result := map[string]any{}
-	for k, v := range resolved.(map[string]interface{}) {
+	for k, v := range input.(map[string]interface{}) {
 		if !ReservedTagKeySet.Contains(k) {
 			result[k] = v
 		}
@@ -89,7 +86,7 @@ func getEC2TagValue(tagKey string) string {
 	for {
 		result, err := ec2Client.DescribeTags(input)
 		if err != nil {
-			log.Printf("Failed to describe EC2 tag '%s': %v", tagKey, err)
+			log.Printf("E! Failed to describe EC2 tag '%s': %v", tagKey, err)
 			return ""
 		}
 

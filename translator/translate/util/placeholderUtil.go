@@ -62,7 +62,6 @@ const (
 	unknownImageID      = "UNKNOWN-AMI"
 )
 
-// resolve place holder for log group and log stream.
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	tmpString := placeholder
 	if tmpString == "" {
@@ -75,7 +74,6 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	return tmpString
 }
 
-// defaultIfEmpty returns defaultValue if value is empty, otherwise returns value
 func defaultIfEmpty(value, defaultValue string) string {
 	if value == "" {
 		return defaultValue
@@ -92,35 +90,51 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	ipAddress := defaultIfEmpty(md.PrivateIP, getIpAddress())
 	awsRegion := defaultIfEmpty(agent.Global_Config.Region, unknownAwsRegion)
 	accountID := defaultIfEmpty(md.AccountID, unknownAccountID)
-	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
-	imageID := defaultIfEmpty(md.ImageID, unknownImageID)
 
 	return map[string]string{
-		// Standard placeholders
 		instanceIdPlaceholder:    instanceID,
 		hostnamePlaceholder:      hostname,
 		localHostnamePlaceholder: localHostname,
 		ipAddressPlaceholder:     ipAddress,
 		awsRegionPlaceholder:     awsRegion,
 		accountIdPlaceholder:     accountID,
+	}
+}
 
+func GetAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
+	md := provider()
+
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
+	imageID := defaultIfEmpty(md.ImageID, unknownImageID)
+
+	return map[string]string{
 		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceID]:   instanceID,
 		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceType]: instanceType,
 		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyImageID]:      imageID,
 	}
 }
 
-// GetAWSMetadataInfo returns AWS metadata using Ec2MetadataInfoProvider and EC2 Tags
-func GetAWSMetadataInfo() map[string]string {
-	// Start with the existing metadata pattern
-	metadata := GetMetadataInfo(Ec2MetadataInfoProvider)
+// Used for processing {aws: placeholders in append_dimensions
+func GetAWSMetadataPlaceholderInfo() map[string]string {
+	standardMetadata := GetMetadataInfo(Ec2MetadataInfoProvider)
+	awsMetadata := GetAWSMetadataInfo(Ec2MetadataInfoProvider)
 
-	// Add EC2 tags that require API calls (like AutoScaling group name)
-	if asgName := GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
-		metadata[ec2tagger.SupportedAppendDimensions[ec2tagger.CWDimensionASG]] = asgName
+	result := make(map[string]string, len(standardMetadata)+len(awsMetadata)+1)
+
+	for k, v := range standardMetadata {
+		result[k] = v
 	}
 
-	return metadata
+	for k, v := range awsMetadata {
+		result[k] = v
+	}
+
+	if asgName := GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
+		result[ec2tagger.SupportedAppendDimensions[ec2tagger.CWDimensionASG]] = asgName
+	}
+
+	return result
 }
 
 func getHostName() string {
@@ -146,25 +160,22 @@ func getIpAddress() string {
 	return unknownIPAddress
 }
 
-// ResolveAWSMetadataPlaceholders resolves AWS metadata variables like ${aws:InstanceId} to actual values
 func ResolveAWSMetadataPlaceholders(input any) any {
-	awsMetadata := GetAWSMetadataInfo()
 	inputMap := input.(map[string]interface{})
 	result := make(map[string]any, len(inputMap))
+	var awsMetadata map[string]string
 
 	for k, v := range inputMap {
-		vStr, isString := v.(string)
-		if !isString {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, "${aws:") {
+			// Cache AWS metadata on first use
+			if awsMetadata == nil {
+				awsMetadata = GetAWSMetadataPlaceholderInfo()
+			}
+			result[k] = ResolvePlaceholder(vStr, awsMetadata)
+		} else {
 			result[k] = v
-			continue
 		}
-
-		resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
-		// Include if resolved successfully or if it's not an AWS variable
-		if resolvedValue != vStr || !strings.Contains(vStr, "${aws:") {
-			result[k] = resolvedValue
-		}
-		// Skip AWS variables that failed to resolve
 	}
+
 	return result
 }
