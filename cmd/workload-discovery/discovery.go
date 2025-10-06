@@ -16,29 +16,35 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/filter"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/java"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 type Config struct {
-	LogLevel    slog.Level    `json:"log_level"`
-	Concurrency int           `json:"concurrency"`
-	Timeout     time.Duration `json:"timeout"`
+	LogLevel     slog.Level    `json:"log_level"`
+	Concurrency  int           `json:"concurrency"`
+	Timeout      time.Duration `json:"timeout"`
+	FilterConfig filter.Config `json:"filter_config"`
 }
 
 type Discoverer struct {
 	cfg              Config
 	logger           *slog.Logger
 	processDetectors []detector.ProcessDetector
+	filters          filter.Filters
 }
 
 func NewDiscoverer(cfg Config, logger *slog.Logger) *Discoverer {
+	filters := filter.FromConfig(logger, cfg.FilterConfig)
 	return &Discoverer{
 		cfg:    cfg,
 		logger: logger,
 		processDetectors: []detector.ProcessDetector{
-			java.NewDetector(logger),
+			java.NewDetector(logger, filters.Process.Name),
 		},
+		filters: filters,
 	}
 }
 
@@ -121,7 +127,12 @@ func (d *Discoverer) worker(ctx context.Context, jobs <-chan *process.Process, r
 			if !ok {
 				return
 			}
-			mds, err := d.detectMetadataFromProcess(ctx, util.NewCachedProcess(util.NewProcessWithPID(p)))
+			cachedProcess := util.NewCachedProcess(util.NewProcessWithPID(p))
+			if d.filters.Process.Pre != nil && !d.filters.Process.Pre.ShouldInclude(ctx, cachedProcess) {
+				d.logger.Debug("Process skipped due to pre-filter", "pid", cachedProcess.PID())
+				continue
+			}
+			mds, err := d.detectMetadataFromProcess(ctx, cachedProcess)
 			if err == nil && mds != nil {
 				for _, md := range mds {
 					results <- md
@@ -160,7 +171,13 @@ func main() {
 	cfg := Config{
 		Concurrency: runtime.NumCPU(),
 		LogLevel:    slog.LevelDebug,
-		Timeout:     100 * time.Millisecond,
+		Timeout:     500 * time.Millisecond,
+		FilterConfig: filter.Config{
+			Process: filter.ProcessConfig{
+				MinUptime:    10 * time.Second,
+				ExcludeNames: []string{paths.JMXJarName},
+			},
+		},
 	}
 
 	logger := buildLogger(cfg.LogLevel)
