@@ -34,4 +34,6 @@ type Process interface {
 	CmdlineSliceWithContext(ctx context.Context) ([]string, error)
 	// EnvironWithContext returns the environment variables of the process. Each entry follows a <NAME>=<VALUE> pattern.
 	EnvironWithContext(ctx context.Context) ([]string, error)
+	// CreateTimeWithContext returns the creation time of the process in milliseconds.
+	CreateTimeWithContext(ctx context.Context) (int64, error)
 }

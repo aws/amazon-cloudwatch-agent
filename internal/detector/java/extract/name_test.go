@@ -19,7 +19,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/detectortest"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 type mockArgNameExtractor struct {
@@ -36,6 +35,7 @@ func (m *mockArgNameExtractor) Extract(ctx context.Context, process detector.Pro
 func TestNameExtractor(t *testing.T) {
 	type mocks struct {
 		process      *detectortest.MockProcess
+		nameFilter   *detectortest.MockNameFilter
 		subExtractor *mockArgNameExtractor
 	}
 
@@ -57,15 +57,26 @@ func TestNameExtractor(t *testing.T) {
 			},
 			wantErr: detector.ErrExtractName,
 		},
-		"WithSkip": {
+		"WithNameFilter/BeforeSubExtractor": {
 			setup: func(m *mocks) {
 				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "skip.jar"}, nil)
+				m.nameFilter.On("ShouldInclude", "skip.jar").Return(false)
+			},
+			wantErr: detector.ErrSkipProcess,
+		},
+		"WithNameFilter/AfterSubExtractor": {
+			setup: func(m *mocks) {
+				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "test.jar"}, nil)
+				m.nameFilter.On("ShouldInclude", "test.jar").Return(true).Once()
+				m.subExtractor.On("Extract", ctx, m.process, "test.jar").Return("com.example.test.Test", nil)
+				m.nameFilter.On("ShouldInclude", "com.example.test.Test").Return(false).Once()
 			},
 			wantErr: detector.ErrSkipProcess,
 		},
 		"WithSimpleClass": {
 			setup: func(m *mocks) {
 				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "com.example.Main"}, nil)
+				m.nameFilter.On("ShouldInclude", "com.example.Main").Return(true)
 				m.subExtractor.On("Extract", ctx, m.process, "com.example.Main").Return("", assert.AnError)
 			},
 			want: "com.example.Main",
@@ -73,6 +84,7 @@ func TestNameExtractor(t *testing.T) {
 		"WithClassPath": {
 			setup: func(m *mocks) {
 				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "-cp", "lib/*", "com.example.Main"}, nil)
+				m.nameFilter.On("ShouldInclude", "com.example.Main").Return(true)
 				m.subExtractor.On("Extract", ctx, m.process, "com.example.Main").Return("", assert.AnError)
 			},
 			want: "com.example.Main",
@@ -80,6 +92,7 @@ func TestNameExtractor(t *testing.T) {
 		"WithApplicationArgs": {
 			setup: func(m *mocks) {
 				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "com.example.Main", "--version"}, nil)
+				m.nameFilter.On("ShouldInclude", "com.example.Main").Return(true)
 				m.subExtractor.On("Extract", ctx, m.process, "com.example.Main").Return("", assert.AnError)
 			},
 			want: "com.example.Main",
@@ -87,53 +100,18 @@ func TestNameExtractor(t *testing.T) {
 		"WithSubExtractor": {
 			setup: func(m *mocks) {
 				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "-Dcom.example.test.value=test", "test.jar"}, nil)
+				m.nameFilter.On("ShouldInclude", "test.jar").Return(true).Once()
 				m.subExtractor.On("Extract", ctx, m.process, "test.jar").Return("com.example.test.Test", nil)
+				m.nameFilter.On("ShouldInclude", "com.example.test.Test").Return(true).Once()
 			},
 			want: "com.example.test.Test",
 		},
-		"WithFlag": {
-			setup: func(m *mocks) {
-				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{
-					"java",
-					"-Dcom.sun.management.jmxremote",
-					"-Dcom.sun.management.jmxremote.port=2030",
-					"-Dserver.port=8090",
-					"-Dspring.application.admin.enabled=true",
-					"-Dserver.tomcat.mbeanregistry.enabled=true",
-					"-Dmanagement.endpoints.jmx.exposure.include=*",
-					"@./args.txt",
-					"-verbose:gc",
-					"-jar",
-					"./spring-boot-web-starter-tomcat.jar",
-					">",
-					"./spring-boot-web-starter-tomcat-jar.txt",
-					"2>&1",
-					"&",
-				}, nil)
-				m.subExtractor.On("Extract", ctx, m.process, "./spring-boot-web-starter-tomcat.jar").Return("spring-boot-web-starter-tomcat", nil)
-			},
-			want: "spring-boot-web-starter-tomcat",
-		},
 		"WithComplexArgs": {
 			setup: func(m *mocks) {
-				m.process.On("CmdlineSliceWithContext", ctx).Return([]string{
-					"java",
-					"-Dcom.sun.management.jmxremote",
-					"-Dcom.sun.management.jmxremote.port=2030",
-					"-Dserver.port=8090",
-					"-Dspring.application.admin.enabled=true",
-					"-Dserver.tomcat.mbeanregistry.enabled=true",
-					"-Dmanagement.endpoints.jmx.exposure.include=*",
-					"@./args.txt",
-					"-verbose:gc",
-					"-jar",
-					"./spring-boot-web-starter-tomcat.jar",
-					">",
-					"./spring-boot-web-starter-tomcat-jar.txt",
-					"2>&1",
-					"&",
-				}, nil)
+				m.process.On("CmdlineSliceWithContext", ctx).Return(detectortest.CmdlineArgsFromFile(t, filepath.Join("..", "testdata", "java_cmdline_1")), nil)
+				m.nameFilter.On("ShouldInclude", "spring-boot-web-starter-tomcat.jar").Return(true).Once()
 				m.subExtractor.On("Extract", ctx, m.process, "./spring-boot-web-starter-tomcat.jar").Return("spring-boot-web-starter-tomcat", nil)
+				m.nameFilter.On("ShouldInclude", "spring-boot-web-starter-tomcat").Return(true).Once()
 			},
 			want: "spring-boot-web-starter-tomcat",
 		},
@@ -142,11 +120,12 @@ func TestNameExtractor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			m := &mocks{
 				process:      new(detectortest.MockProcess),
+				nameFilter:   new(detectortest.MockNameFilter),
 				subExtractor: new(mockArgNameExtractor),
 			}
 			testCase.setup(m)
 
-			extractor := NewNameExtractor(slog.Default(), collections.NewSet("skip.jar"))
+			extractor := NewNameExtractor(slog.Default(), m.nameFilter)
 			ne, ok := extractor.(*nameExtractor)
 			require.True(t, ok)
 			ne.subExtractors = []argNameExtractor{m.subExtractor}

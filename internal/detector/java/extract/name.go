@@ -7,6 +7,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -45,28 +46,30 @@ var (
 
 type nameExtractor struct {
 	logger        *slog.Logger
-	skipByName    collections.Set[string]
+	filter        detector.NameFilter
 	subExtractors []argNameExtractor
 }
 
-func NewNameExtractor(logger *slog.Logger, skipByName collections.Set[string]) detector.NameExtractor {
+func NewNameExtractor(logger *slog.Logger, filter detector.NameFilter) detector.NameExtractor {
 	return &nameExtractor{
-		logger:     logger,
-		skipByName: skipByName,
+		logger: logger,
+		filter: filter,
 		subExtractors: []argNameExtractor{
 			newArchiveManifestNameExtractor(logger),
 		},
 	}
 }
 
+// Extract extracts the name argument from the process command-line and runs it through the sub-extractors. Attempts
+// to apply the filter before running the sub-extractors and again after.
 func (e *nameExtractor) Extract(ctx context.Context, process detector.Process) (string, error) {
 	name, err := e.extract(ctx, process)
 	if err != nil {
 		return "", err
 	}
 	// fallback on extracted name argument
-	if e.skipByName.Contains(name) {
-		return "", detector.ErrSkipProcess
+	if err = e.applyFilter(name); err != nil {
+		return "", err
 	}
 	for _, extractor := range e.subExtractors {
 		var extractedName string
@@ -76,7 +79,17 @@ func (e *nameExtractor) Extract(ctx context.Context, process detector.Process) (
 			break
 		}
 	}
-	return name, nil
+	return name, e.applyFilter(name)
+}
+
+func (e *nameExtractor) applyFilter(name string) error {
+	if e.filter != nil {
+		name = filepath.Base(name)
+		if !e.filter.ShouldInclude(name) {
+			return fmt.Errorf("%w due to filtered name: %s", detector.ErrSkipProcess, name)
+		}
+	}
+	return nil
 }
 
 // extract finds the first argument that looks like a name.
