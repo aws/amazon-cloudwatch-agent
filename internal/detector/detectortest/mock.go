@@ -47,6 +47,11 @@ func (m *MockProcess) EnvironWithContext(ctx context.Context) ([]string, error) 
 	return args.Get(0).([]string), args.Error(1)
 }
 
+func (m *MockProcess) CreateTimeWithContext(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return int64(args.Int(0)), args.Error(1)
+}
+
 type MockProcessDetector struct {
 	mock.Mock
 }
@@ -74,4 +79,26 @@ func (m *MockExtractor[T]) Extract(ctx context.Context, process detector.Process
 		panic("Invalid return type for extractor")
 	}
 	return out, args.Error(1)
+}
+
+type MockProcessFilter struct {
+	mock.Mock
+}
+
+var _ detector.ProcessFilter = (*MockProcessFilter)(nil)
+
+func (m *MockProcessFilter) ShouldInclude(ctx context.Context, process detector.Process) bool {
+	args := m.Called(ctx, process)
+	return args.Bool(0)
+}
+
+type MockNameFilter struct {
+	mock.Mock
+}
+
+var _ detector.NameFilter = (*MockNameFilter)(nil)
+
+func (m *MockNameFilter) ShouldInclude(name string) bool {
+	args := m.Called(name)
+	return args.Bool(0)
 }

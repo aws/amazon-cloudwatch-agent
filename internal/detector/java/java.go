@@ -5,6 +5,7 @@ package java
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
@@ -12,8 +13,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/kafka"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/tomcat"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
-	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
@@ -31,14 +30,14 @@ var _ detector.ProcessDetector = (*javaDetector)(nil)
 
 // NewDetector creates a new process detector that identifies Java applications. It uses specialized sub-detectors
 // for known applications to further classify them.
-func NewDetector(logger *slog.Logger) detector.ProcessDetector {
+func NewDetector(logger *slog.Logger, nameFilter detector.NameFilter) detector.ProcessDetector {
 	return &javaDetector{
 		logger: logger,
 		subDetectors: []detector.ProcessDetector{
 			tomcat.NewDetector(logger),
 			kafka.NewDetector(logger),
 		},
-		nameExtractor: extract.NewNameExtractor(logger, collections.NewSet(paths.JMXJarName)),
+		nameExtractor: extract.NewNameExtractor(logger, nameFilter),
 		portExtractor: extract.NewPortExtractor(),
 	}
 }
@@ -70,7 +69,11 @@ func (d *javaDetector) Detect(ctx context.Context, process detector.Process) (*d
 	if md.Name == "" {
 		md.Name, err = d.nameExtractor.Extract(ctx, process)
 		if err != nil {
-			d.logger.Debug("Failed to extract Java process name", "pid", process.PID(), "err", err)
+			if errors.Is(err, detector.ErrSkipProcess) {
+				d.logger.Debug("Java process skipped", "pid", process.PID(), "err", err)
+			} else {
+				d.logger.Debug("Failed to extract Java process name", "pid", process.PID(), "err", err)
+			}
 			return nil, err
 		}
 	}

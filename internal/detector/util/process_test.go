@@ -151,16 +151,16 @@ func TestCachedProcess_EnvironWithContext(t *testing.T) {
 	ctx := context.Background()
 
 	testCases := map[string]struct {
-		name             string
-		setupMock        func(*detectortest.MockProcess)
-		wantCmdlineSlice []string
-		wantErr          error
+		name        string
+		setupMock   func(*detectortest.MockProcess)
+		wantEnviron []string
+		wantErr     error
 	}{
 		"WithSuccess": {
 			setupMock: func(mp *detectortest.MockProcess) {
-				mp.On("EnvironWithContext", ctx).Return([]string{"cmd", "-arg1", "-arg2"}, nil).Once()
+				mp.On("EnvironWithContext", ctx).Return([]string{"KEY=VALUE", "K1=V1"}, nil).Once()
 			},
-			wantCmdlineSlice: []string{"cmd", "-arg1", "-arg2"},
+			wantEnviron: []string{"KEY=VALUE", "K1=V1"},
 		},
 		"WithError": {
 			setupMock: func(mp *detectortest.MockProcess) {
@@ -177,15 +177,58 @@ func TestCachedProcess_EnvironWithContext(t *testing.T) {
 			cached := NewCachedProcess(mp)
 
 			got, err := cached.EnvironWithContext(ctx)
-			assert.Equal(t, testCase.wantCmdlineSlice, got)
+			assert.Equal(t, testCase.wantEnviron, got)
 			assert.Equal(t, testCase.wantErr, err)
 
 			got, err = cached.EnvironWithContext(ctx)
-			assert.Equal(t, testCase.wantCmdlineSlice, got)
+			assert.Equal(t, testCase.wantEnviron, got)
 			assert.Equal(t, testCase.wantErr, err)
 
 			mp.AssertExpectations(t)
 			mp.AssertNumberOfCalls(t, "EnvironWithContext", 1)
+		})
+	}
+}
+
+func TestCachedProcess_CreateTimeWithContext(t *testing.T) {
+	ctx := context.Background()
+
+	testCases := map[string]struct {
+		name           string
+		setupMock      func(*detectortest.MockProcess)
+		wantCreateTime int64
+		wantErr        error
+	}{
+		"WithSuccess": {
+			setupMock: func(mp *detectortest.MockProcess) {
+				mp.On("CreateTimeWithContext", ctx).Return(1000, nil).Once()
+			},
+			wantCreateTime: int64(1000),
+		},
+		"WithError": {
+			setupMock: func(mp *detectortest.MockProcess) {
+				mp.On("CreateTimeWithContext", ctx).Return(0, assert.AnError).Once()
+			},
+			wantErr: assert.AnError,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			mp := new(detectortest.MockProcess)
+			testCase.setupMock(mp)
+
+			cached := NewCachedProcess(mp)
+
+			got, err := cached.CreateTimeWithContext(ctx)
+			assert.Equal(t, testCase.wantCreateTime, got)
+			assert.Equal(t, testCase.wantErr, err)
+
+			got, err = cached.CreateTimeWithContext(ctx)
+			assert.Equal(t, testCase.wantCreateTime, got)
+			assert.Equal(t, testCase.wantErr, err)
+
+			mp.AssertExpectations(t)
+			mp.AssertNumberOfCalls(t, "CreateTimeWithContext", 1)
 		})
 	}
 }

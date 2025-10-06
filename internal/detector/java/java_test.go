@@ -105,7 +105,7 @@ func TestJavaDetector_Mock(t *testing.T) {
 			}
 			testCase.setup(m)
 
-			d := NewDetector(slog.Default())
+			d := NewDetector(slog.Default(), nil)
 			jd, ok := d.(*javaDetector)
 			require.True(t, ok)
 			jd.subDetectors = []detector.ProcessDetector{m.subDetector}
@@ -181,7 +181,7 @@ func TestJavaDetector_Actual(t *testing.T) {
 			mp := new(detectortest.MockProcess)
 			testCase.setup(mp)
 
-			d := NewDetector(slog.Default())
+			d := NewDetector(slog.Default(), nil)
 			jd, ok := d.(*javaDetector)
 			require.True(t, ok)
 			jd.subDetectors = []detector.ProcessDetector{}

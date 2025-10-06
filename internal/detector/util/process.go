@@ -23,6 +23,8 @@ type CachedProcess struct {
 	errCmdlineSlice error
 	environ         []string
 	errEnviron      error
+	createTime      int64
+	errCreateTime   error
 }
 
 func NewCachedProcess(p detector.Process) detector.Process {
@@ -75,6 +77,17 @@ func (p *CachedProcess) EnvironWithContext(ctx context.Context) ([]string, error
 	}
 	p.environ, p.errEnviron = p.process.EnvironWithContext(ctx)
 	return p.environ, p.errEnviron
+}
+
+func (p *CachedProcess) CreateTimeWithContext(ctx context.Context) (int64, error) {
+	if p.createTime != 0 {
+		return p.createTime, nil
+	}
+	if p.errCreateTime != nil {
+		return 0, p.errCreateTime
+	}
+	p.createTime, p.errCreateTime = p.process.CreateTimeWithContext(ctx)
+	return p.createTime, p.errCreateTime
 }
 
 // ProcessWithPID provides a wrapper for the gopsutil process.Process to expose the PID.
