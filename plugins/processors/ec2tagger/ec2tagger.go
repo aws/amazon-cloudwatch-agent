@@ -146,18 +146,18 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 			}
 		}
 		if t.ec2MetadataLookup.instanceId {
-			if _, exists := attr.Get(mdKeyInstanceId); !exists {
-				attr.PutStr(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
+			if _, exists := attr.Get(MdKeyInstanceID); !exists {
+				attr.PutStr(MdKeyInstanceID, t.ec2MetadataRespond.instanceId)
 			}
 		}
 		if t.ec2MetadataLookup.imageId {
-			if _, exists := attr.Get(mdKeyImageId); !exists {
-				attr.PutStr(mdKeyImageId, t.ec2MetadataRespond.imageId)
+			if _, exists := attr.Get(MdKeyImageID); !exists {
+				attr.PutStr(MdKeyImageID, t.ec2MetadataRespond.imageId)
 			}
 		}
 		if t.ec2MetadataLookup.instanceType {
-			if _, exists := attr.Get(mdKeyInstanceType); !exists {
-				attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
+			if _, exists := attr.Get(MdKeyInstanceType); !exists {
+				attr.PutStr(MdKeyInstanceType, t.ec2MetadataRespond.instanceType)
 			}
 		}
 		if t.volumeSerialCache != nil {
@@ -468,11 +468,11 @@ For more information on IMDS, please follow this document https://docs.aws.amazo
 func (t *Tagger) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 	for _, tag := range t.EC2MetadataTags {
 		switch tag {
-		case mdKeyInstanceId:
+		case MdKeyInstanceID:
 			t.ec2MetadataLookup.instanceId = true
-		case mdKeyImageId:
+		case MdKeyImageID:
 			t.ec2MetadataLookup.imageId = true
-		case mdKeyInstanceType:
+		case MdKeyInstanceType:
 			t.ec2MetadataLookup.instanceType = true
 		default:
 			t.logger.Error("ec2tagger: Unsupported EC2 Metadata key", zap.String("mdKey", tag))

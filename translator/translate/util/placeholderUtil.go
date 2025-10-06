@@ -75,59 +75,39 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	return tmpString
 }
 
+// defaultIfEmpty returns defaultValue if value is empty, otherwise returns value
+func defaultIfEmpty(value, defaultValue string) string {
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
 func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
+	md := provider()
 	localHostname := getHostName()
 
-	instanceID := provider().InstanceID
-	if instanceID == "" {
-		instanceID = unknownInstanceID
-	}
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	hostname := defaultIfEmpty(md.Hostname, localHostname)
+	ipAddress := defaultIfEmpty(md.PrivateIP, getIpAddress())
+	awsRegion := defaultIfEmpty(agent.Global_Config.Region, unknownAwsRegion)
+	accountID := defaultIfEmpty(md.AccountID, unknownAccountID)
+	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
+	imageID := defaultIfEmpty(md.ImageID, unknownImageID)
 
-	hostname := provider().Hostname
-	if hostname == "" {
-		hostname = localHostname
-	}
-
-	ipAddress := provider().PrivateIP
-	if ipAddress == "" {
-		ipAddress = getIpAddress()
-	}
-
-	awsRegion := agent.Global_Config.Region
-	if awsRegion == "" {
-		awsRegion = unknownAwsRegion
-	}
-
-	accountID := provider().AccountID
-	if accountID == "" {
-		accountID = unknownAccountID
-	}
-
-	instanceType := provider().InstanceType
-	if instanceType == "" {
-		instanceType = unknownInstanceType
-	}
-
-	imageID := provider().ImageID
-	if imageID == "" {
-		imageID = unknownImageID
-	}
-
-	metadata := map[string]string{
+	return map[string]string{
+		// Standard placeholders
 		instanceIdPlaceholder:    instanceID,
 		hostnamePlaceholder:      hostname,
 		localHostnamePlaceholder: localHostname,
 		ipAddressPlaceholder:     ipAddress,
 		awsRegionPlaceholder:     awsRegion,
 		accountIdPlaceholder:     accountID,
+
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceID]:   instanceID,
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceType]: instanceType,
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyImageID]:      imageID,
 	}
-
-	// Add AWS metadata placeholders
-	metadata[ec2tagger.SupportedAppendDimensions["InstanceId"]] = instanceID
-	metadata[ec2tagger.SupportedAppendDimensions["InstanceType"]] = instanceType
-	metadata[ec2tagger.SupportedAppendDimensions["ImageId"]] = imageID
-
-	return metadata
 }
 
 // GetAWSMetadataInfo returns AWS metadata using Ec2MetadataInfoProvider and EC2 Tags
@@ -137,7 +117,7 @@ func GetAWSMetadataInfo() map[string]string {
 
 	// Add EC2 tags that require API calls (like AutoScaling group name)
 	if asgName := GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
-		metadata[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
+		metadata[ec2tagger.SupportedAppendDimensions[ec2tagger.CWDimensionASG]] = asgName
 	}
 
 	return metadata
@@ -169,21 +149,22 @@ func getIpAddress() string {
 // ResolveAWSMetadataPlaceholders resolves AWS metadata variables like ${aws:InstanceId} to actual values
 func ResolveAWSMetadataPlaceholders(input any) any {
 	awsMetadata := GetAWSMetadataInfo()
+	inputMap := input.(map[string]interface{})
+	result := make(map[string]any, len(inputMap))
 
-	result := map[string]any{}
-	for k, v := range input.(map[string]interface{}) {
-		if vStr, ok := v.(string); ok {
-			resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
-			if resolvedValue != vStr {
-				result[k] = resolvedValue
-			} else if !strings.Contains(vStr, "${aws:") {
-				// Keep non-AWS variables as-is
-				result[k] = v
-			}
-			// If AWS variable resolution fails, skip the dimension
-		} else {
+	for k, v := range inputMap {
+		vStr, isString := v.(string)
+		if !isString {
 			result[k] = v
+			continue
 		}
+
+		resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
+		// Include if resolved successfully or if it's not an AWS variable
+		if resolvedValue != vStr || !strings.Contains(vStr, "${aws:") {
+			result[k] = resolvedValue
+		}
+		// Skip AWS variables that failed to resolve
 	}
 	return result
 }

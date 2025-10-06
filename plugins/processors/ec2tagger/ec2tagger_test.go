@@ -285,7 +285,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
 	_, cancel := context.WithCancel(context.Background())
@@ -330,7 +330,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	//use millisecond rather than second to speed up test execution
 	cfg.RefreshTagsInterval = 20 * time.Millisecond
 	cfg.RefreshVolumesInterval = 20 * time.Millisecond
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
 	_, cancel := context.WithCancel(context.Background())
@@ -387,7 +387,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
 	_, cancel := context.WithCancel(context.Background())
@@ -432,7 +432,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	//use millisecond rather than second to speed up test execution
 	cfg.RefreshTagsInterval = 20 * time.Millisecond
 	cfg.RefreshVolumesInterval = 20 * time.Millisecond
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
 	cfg.DiskDeviceTagKey = "device"
@@ -536,7 +536,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Millisecond
 	cfg.RefreshVolumesInterval = 0 * time.Millisecond
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
 	_, cancel := context.WithCancel(context.Background())
@@ -602,7 +602,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
 	_, cancel := context.WithCancel(context.Background())
@@ -646,7 +646,7 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2}
 	cfg.EBSDeviceKeys = []string{device1}
 	cfg.DiskDeviceTagKey = "device"
@@ -711,7 +711,7 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	_, cancel := context.WithCancel(context.Background())
 
 	tagger := &Tagger{
