@@ -62,3 +62,151 @@ func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) fun
 		}
 	}
 }
+func TestResolveAWSMetadataPlaceholders(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "No AWS placeholders",
+			input: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			expected: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+		{
+			name: "Unresolved AWS placeholder should be omitted",
+			input: map[string]interface{}{
+				"InstanceType":         "t3.medium",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"ImageId":              "ami-12345",
+			},
+			expected: map[string]interface{}{
+				"InstanceType": "t3.medium",
+				"ImageId":      "ami-12345",
+				// AutoScalingGroupName should be omitted since it can't be resolved
+			},
+		},
+		{
+			name: "Mixed resolved and unresolved placeholders",
+			input: map[string]interface{}{
+				"InstanceType":         "${aws:InstanceType}",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"ImageId":              "${aws:ImageId}",
+				"RegularKey":           "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceType": unknownInstanceType, // Should be resolved to default
+				"ImageId":      unknownImageID,      // Should be resolved to default
+				"RegularKey":   "regular_value",
+				// AutoScalingGroupName should be omitted since it can't be resolved
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveAWSMetadataPlaceholders(tt.input)
+			resultMap := result.(map[string]interface{})
+
+			// Check that expected keys are present with correct values
+			for k, v := range tt.expected {
+				assert.Equal(t, v, resultMap[k], "Key %s should have value %v", k, v)
+			}
+
+			// Check that no unexpected keys are present
+			assert.Equal(t, len(tt.expected), len(resultMap), "Result should have exactly %d keys", len(tt.expected))
+		})
+	}
+}
+func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
+	// Setup mock AWS metadata and tags
+	mockMetadata := MockAWSMetadata{
+		InstanceID:   "i-1234567890abcdef0",
+		InstanceType: "t3.large",
+		ImageID:      "ami-0abcdef1234567890",
+		Hostname:     "test-hostname",
+		PrivateIP:    "10.0.1.100",
+		AccountID:    "123456789012",
+	}
+
+	mockTags := map[string]string{
+		"aws:autoscaling:groupName": "my-test-asg",
+	}
+
+	// Setup mocks and get cleanup function
+	cleanup := MockCompleteAWSMetadata(mockMetadata, mockTags)
+	defer cleanup()
+
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "All AWS placeholders resolved successfully",
+			input: map[string]interface{}{
+				"InstanceType":         "${aws:InstanceType}",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"ImageId":              "${aws:ImageId}",
+				"InstanceId":           "${aws:InstanceId}",
+				"RegularKey":           "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceType":         "t3.large",
+				"AutoScalingGroupName": "my-test-asg",
+				"ImageId":              "ami-0abcdef1234567890",
+				"InstanceId":           "i-1234567890abcdef0",
+				"RegularKey":           "regular_value",
+			},
+		},
+		{
+			name: "Mixed AWS placeholders with some unresolvable",
+			input: map[string]interface{}{
+				"InstanceType":         "${aws:InstanceType}",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"UnknownPlaceholder":   "${aws:SomeUnknownValue}",
+				"RegularKey":           "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceType":         "t3.large",
+				"AutoScalingGroupName": "my-test-asg",
+				"RegularKey":           "regular_value",
+				// UnknownPlaceholder should be omitted
+			},
+		},
+		{
+			name: "Ensure we do not resolve non-aws placeholders",
+			input: map[string]interface{}{
+				"InstanceId": "{instance_id}",
+				"Hostname":   "{hostname}",
+				"RegularKey": "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceId": "{instance_id}",
+				"Hostname":   "{hostname}",
+				"RegularKey": "regular_value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveAWSMetadataPlaceholders(tt.input)
+			resultMap := result.(map[string]interface{})
+
+			// Check that expected keys are present with correct values
+			for k, v := range tt.expected {
+				assert.Equal(t, v, resultMap[k], "Key %s should have value %v", k, v)
+			}
+
+			// Check that no unexpected keys are present
+			assert.Equal(t, len(tt.expected), len(resultMap), "Result should have exactly %d keys", len(tt.expected))
+		})
+	}
+}

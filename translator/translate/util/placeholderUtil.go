@@ -60,6 +60,8 @@ const (
 	unknownAccountID    = "UNKNOWN-ACCOUNT"
 	unknownInstanceType = "UNKNOWN-TYPE"
 	unknownImageID      = "UNKNOWN-AMI"
+
+	awsPlaceholderPrefix = "${aws:"
 )
 
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
@@ -166,12 +168,16 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 	var awsMetadata map[string]string
 
 	for k, v := range inputMap {
-		if vStr, ok := v.(string); ok && strings.Contains(vStr, "${aws:") {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
 			// Cache AWS metadata on first use
 			if awsMetadata == nil {
 				awsMetadata = GetAWSMetadataPlaceholderInfo()
 			}
-			result[k] = ResolvePlaceholder(vStr, awsMetadata)
+			resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
+			// Only include the key if the AWS placeholder was successfully resolved
+			if !strings.Contains(resolvedValue, awsPlaceholderPrefix) {
+				result[k] = resolvedValue
+			}
 		} else {
 			result[k] = v
 		}
