@@ -48,6 +48,35 @@ func TestPusher(t *testing.T) {
 	})
 }
 
+func TestPusherStop(t *testing.T) {
+	var wg sync.WaitGroup
+
+	s := &mockSender{}
+	s.On("Stop").Return()
+
+	logger := testutil.NewNopLogger()
+	target := Target{}
+	service := new(stubLogsService)
+	service.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	}
+	mockManager := new(mockTargetManager)
+	q := newQueue(logger, target, time.Second, nil, s, &wg)
+	pusher := &Pusher{
+		Target:         target,
+		Queue:          q,
+		Service:        service,
+		TargetManager:  mockManager,
+		EntityProvider: nil,
+		Sender:         s,
+	}
+
+	pusher.Stop()
+
+	s.AssertCalled(t, "Stop")
+
+}
+
 func generateEvents(t *testing.T, pusher *Pusher, completed *atomic.Int32) {
 	t.Helper()
 	for i := 0; i < eventCount; i++ {

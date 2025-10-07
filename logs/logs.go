@@ -146,8 +146,10 @@ func (l *LogAgent) Run(ctx context.Context) {
 }
 
 func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
+
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
+	defer dest.NotifySourceStopped()
 
 	closed := false
 	src.SetOutput(func(e LogEvent) {
@@ -174,9 +176,6 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 			return
 		}
 	}
-
-	// eventsCh has been closed meaning the src has been stopped
-	dest.NotifySourceStopped()
 }
 
 func (l *LogAgent) checkRetentionAlreadyAttempted(retention int, logGroup string) int {

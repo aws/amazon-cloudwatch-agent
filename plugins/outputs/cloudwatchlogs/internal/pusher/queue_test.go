@@ -87,7 +87,7 @@ func (m *mockSender) RetryDuration() time.Duration {
 }
 
 func (m *mockSender) Stop() {
-
+	m.Called()
 }
 
 func TestAddSingleEvent_WithAccountId(t *testing.T) {
