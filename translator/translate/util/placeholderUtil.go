@@ -119,24 +119,13 @@ func GetAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
 
 // Used for processing {aws: placeholders in append_dimensions
 func GetAWSMetadataPlaceholderInfo() map[string]string {
-	standardMetadata := GetMetadataInfo(Ec2MetadataInfoProvider)
 	awsMetadata := GetAWSMetadataInfo(Ec2MetadataInfoProvider)
 
-	result := make(map[string]string, len(standardMetadata)+len(awsMetadata)+1)
-
-	for k, v := range standardMetadata {
-		result[k] = v
-	}
-
-	for k, v := range awsMetadata {
-		result[k] = v
-	}
-
 	if asgName := GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
-		result[ec2tagger.SupportedAppendDimensions[ec2tagger.CWDimensionASG]] = asgName
+		awsMetadata[ec2tagger.SupportedAppendDimensions[ec2tagger.CWDimensionASG]] = asgName
 	}
 
-	return result
+	return awsMetadata
 }
 
 func getHostName() string {
