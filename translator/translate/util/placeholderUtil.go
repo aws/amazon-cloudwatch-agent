@@ -103,7 +103,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	}
 }
 
-func GetAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
+func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	md := provider()
 
 	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
@@ -115,17 +115,6 @@ func GetAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
 		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceType]: instanceType,
 		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyImageID]:      imageID,
 	}
-}
-
-// Used for processing {aws: placeholders in append_dimensions
-func GetAWSMetadataPlaceholderInfo() map[string]string {
-	awsMetadata := GetAWSMetadataInfo(Ec2MetadataInfoProvider)
-
-	if asgName := GetEC2TagValue(ec2tagger.Ec2InstanceTagKeyASG); asgName != "" {
-		awsMetadata[ec2tagger.SupportedAppendDimensions[ec2tagger.CWDimensionASG]] = asgName
-	}
-
-	return awsMetadata
 }
 
 func getHostName() string {
@@ -160,7 +149,7 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
 			// Cache AWS metadata on first use
 			if awsMetadata == nil {
-				awsMetadata = GetAWSMetadataPlaceholderInfo()
+				awsMetadata = getAWSMetadataInfo(Ec2MetadataInfoProvider)
 			}
 			resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
 			// Only include the key if the AWS placeholder was successfully resolved
