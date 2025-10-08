@@ -140,27 +140,36 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 	for _, attr := range attributes {
 		if t.ec2TagCache != nil {
 			for k, v := range t.ec2TagCache {
-				attr.PutStr(k, v)
-			}
-		}
-		if t.ec2MetadataLookup.instanceId {
-			attr.PutStr(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
-		}
-		if t.ec2MetadataLookup.imageId {
-			attr.PutStr(mdKeyImageId, t.ec2MetadataRespond.imageId)
-		}
-		if t.ec2MetadataLookup.instanceType {
-			attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
-		}
-		if t.volumeSerialCache != nil {
-			if devName, found := attr.Get(t.DiskDeviceTagKey); found {
-				serial := t.volumeSerialCache.Serial(devName.Str())
-				if serial != "" {
-					attr.PutStr(AttributeVolumeId, serial)
+				if _, exists := attr.Get(k); !exists {
+					attr.PutStr(k, v)
 				}
 			}
 		}
-		// If append_dimensions are applied, then remove the host dimension.
+		if t.ec2MetadataLookup.instanceId {
+			if _, exists := attr.Get(MdKeyInstanceID); !exists {
+				attr.PutStr(MdKeyInstanceID, t.ec2MetadataRespond.instanceId)
+			}
+		}
+		if t.ec2MetadataLookup.imageId {
+			if _, exists := attr.Get(MdKeyImageID); !exists {
+				attr.PutStr(MdKeyImageID, t.ec2MetadataRespond.imageId)
+			}
+		}
+		if t.ec2MetadataLookup.instanceType {
+			if _, exists := attr.Get(MdKeyInstanceType); !exists {
+				attr.PutStr(MdKeyInstanceType, t.ec2MetadataRespond.instanceType)
+			}
+		}
+		if t.volumeSerialCache != nil {
+			if _, exists := attr.Get(AttributeVolumeId); !exists {
+				if devName, found := attr.Get(t.DiskDeviceTagKey); found {
+					serial := t.volumeSerialCache.Serial(devName.Str())
+					if serial != "" {
+						attr.PutStr(AttributeVolumeId, serial)
+					}
+				}
+			}
+		}
 		attr.Remove("host")
 	}
 }
@@ -459,11 +468,11 @@ For more information on IMDS, please follow this document https://docs.aws.amazo
 func (t *Tagger) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 	for _, tag := range t.EC2MetadataTags {
 		switch tag {
-		case mdKeyInstanceId:
+		case MdKeyInstanceID:
 			t.ec2MetadataLookup.instanceId = true
-		case mdKeyImageId:
+		case MdKeyImageID:
 			t.ec2MetadataLookup.imageId = true
-		case mdKeyInstanceType:
+		case MdKeyInstanceType:
 			t.ec2MetadataLookup.instanceType = true
 		default:
 			t.logger.Error("ec2tagger: Unsupported EC2 Metadata key", zap.String("mdKey", tag))

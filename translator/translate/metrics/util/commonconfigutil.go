@@ -65,7 +65,8 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, result map[string]interface{}) {
 	// Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
-		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
+		filtered := util.FilterReservedKeys(val)
+		result[Append_Dimensions_Mapped_Key] = util.ResolveAWSMetadataPlaceholders(filtered)
 	}
 
 	// Apply any specific rules for the plugin
