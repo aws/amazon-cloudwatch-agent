@@ -36,16 +36,15 @@ func NewDetector(logger *slog.Logger) detector.ProcessDetector {
 }
 
 // Detect identifies Kafka broker processes by looking at the command-line arguments to find the Kafka main class
-// (`kafka.Kafka`). Returns metadata with the Kafka/Broker category and Kafka Broker as the name if detected.
+// (`kafka.Kafka`). Returns metadata with the KAFKA/BROKER category and Kafka Broker as the name if detected.
 func (d *kafkaDetector) Detect(ctx context.Context, process detector.Process) (*detector.Metadata, error) {
 	var md *detector.Metadata
 	for _, sd := range d.subDetectors {
 		var err error
 		md, err = sd.Detect(ctx, process)
-		if err != nil {
-			continue
+		if err == nil {
+			break
 		}
-		break
 	}
 
 	if md == nil {

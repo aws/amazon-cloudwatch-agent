@@ -21,6 +21,12 @@ type ProcessDetector interface {
 	Detect(ctx context.Context, process Process) (*Metadata, error)
 }
 
+// DeviceDetector defines an interface for detecting and categorizing devices.
+type DeviceDetector interface {
+	// Detect attempts to gather metadata for devices. Returns an error if the detection fails.
+	Detect() (*Metadata, error)
+}
+
 // Process defines an interface for interacting with system processes.
 type Process interface {
 	// PID returns the process ID.
