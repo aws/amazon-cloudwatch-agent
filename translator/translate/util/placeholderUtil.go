@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
@@ -20,7 +19,7 @@ import (
 const (
 	instanceIdPlaceholder    = "{instance_id}"
 	hostnamePlaceholder      = "{hostname}"
-	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
+	localHostnamePlaceholder = "{local_hostname}"
 	ipAddressPlaceholder     = "{ip_address}"
 	awsRegionPlaceholder     = "{aws_region}"
 	datePlaceholder          = "{date}"
@@ -37,8 +36,6 @@ const (
 	awsPlaceholderPrefix = "${aws:"
 )
 
-var tagKeysForPlaceholders = collections.NewSet(ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"])
-
 type Metadata struct {
 	InstanceID   string
 	Hostname     string
@@ -50,13 +47,7 @@ type Metadata struct {
 
 type MetadataInfoProvider func() *Metadata
 
-var ec2MetadataInfoProviderFunc = ec2MetadataInfoProvider
-
 var Ec2MetadataInfoProvider = func() *Metadata {
-	return ec2MetadataInfoProviderFunc()
-}
-
-func ec2MetadataInfoProvider() *Metadata {
 	ec2 := ec2util.GetEC2UtilSingleton()
 	return &Metadata{
 		InstanceID:   ec2.InstanceID,
@@ -107,8 +98,9 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	}
 }
 
-func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
-	md := provider()
+// Simple function to get AWS metadata placeholders
+func getAWSMetadata() map[string]string {
+	md := Ec2MetadataInfoProvider()
 
 	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
 	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
@@ -121,17 +113,28 @@ func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	}
 }
 
-// tagMetadataProvider allows injecting tag metadata for testing
-var tagMetadataProvider func() map[string]string = getDefaultTagMetadata
+// For testing - allows mocking tag metadata
+var tagMetadataProvider func() map[string]string
 
-func getDefaultTagMetadata() map[string]string {
-	// In a real implementation, this would call the EC2 API to get actual tag values
-	// For now, return empty map since we don't have real tag data
-	return map[string]string{}
-}
+// Simple function to get tag metadata when needed
+func getTagMetadata() map[string]string {
+	if tagMetadataProvider != nil {
+		return tagMetadataProvider()
+	}
 
-func getTagMetadataInfo() map[string]string {
-	return tagMetadataProvider()
+	md := Ec2MetadataInfoProvider()
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+
+	if instanceID == unknownInstanceID {
+		return map[string]string{}
+	}
+
+	result := make(map[string]string)
+	asgName := GetAutoScalingGroupName(instanceID)
+	if asgName != "" {
+		result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
+	}
+	return result
 }
 
 func getHostName() string {
@@ -157,53 +160,62 @@ func getIpAddress() string {
 	return unknownIPAddress
 }
 
-// Global cache for AWS metadata to avoid repeated IMDS calls
+// For caching metadata during translation time
 var (
-	cachedAWSMetadata map[string]string
-	awsMetadataOnce   sync.Once
+	cachedMetadata map[string]string
+	metadataOnce   sync.Once
 )
 
-// getCachedAWSMetadataInfo returns cached AWS metadata, fetching it only once
-func getCachedAWSMetadataInfo() map[string]string {
-	awsMetadataOnce.Do(func() {
-		awsMetadata := getAWSMetadataInfo(Ec2MetadataInfoProvider)
-		tagMetadata := getTagMetadataInfo()
+func getCachedMetadata(needsTags bool) map[string]string {
+	metadataOnce.Do(func() {
+		// Get basic AWS metadata
+		cachedMetadata = getAWSMetadata()
 
-		// Merge tag metadata into aws metadata
-		for k, v := range tagMetadata {
-			awsMetadata[k] = v
+		// Add tag metadata if needed
+		if needsTags {
+			tagMetadata := getTagMetadata()
+			for k, v := range tagMetadata {
+				cachedMetadata[k] = v
+			}
 		}
-
-		cachedAWSMetadata = awsMetadata
 	})
-	return cachedAWSMetadata
+	return cachedMetadata
 }
 
-// resetAWSMetadataCache resets the cached AWS metadata (for testing purposes)
-func resetAWSMetadataCache() {
-	cachedAWSMetadata = nil
-	awsMetadataOnce = sync.Once{}
-}
-
-// ResetAWSMetadataCache is exported for testing
 func ResetAWSMetadataCache() {
-	resetAWSMetadataCache()
+	cachedMetadata = nil
+	metadataOnce = sync.Once{}
 }
 
 func ResolveAWSMetadataPlaceholders(input any) any {
 	inputMap := input.(map[string]interface{})
 	result := make(map[string]any, len(inputMap))
 
-	// Get cached metadata
-	metadata := getCachedAWSMetadataInfo()
+	// Check if we need AWS metadata and if we need tags
+	hasAWSPlaceholders := false
+	needsTags := false
+
+	for _, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
+			hasAWSPlaceholders = true
+			if vStr == ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"] {
+				needsTags = true
+			}
+		}
+	}
+
+	// Only get metadata if we have AWS placeholders
+	var metadata map[string]string
+	if hasAWSPlaceholders {
+		metadata = getCachedMetadata(needsTags)
+	}
 
 	for k, v := range inputMap {
 		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
-			// Check if we have a replacement for this exact placeholder
 			if replacement, exists := metadata[vStr]; exists {
 				result[k] = replacement
 			}
-			// If no exact match, the placeholder remains unresolved and is omitted
+			// Unresolved placeholders are omitted
 		} else {
 			result[k] = v
 		}

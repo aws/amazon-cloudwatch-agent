@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
 
 const (
@@ -142,7 +144,7 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	originalTagProvider := tagMetadataProvider
 	tagMetadataProvider = func() map[string]string {
 		return map[string]string{
-			"${aws:AutoScalingGroupName}": "my-test-asg",
+			ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]: "my-test-asg",
 		}
 	}
 
