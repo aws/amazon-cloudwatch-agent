@@ -66,6 +66,20 @@ func (m *MockProcessDetector) Detect(ctx context.Context, process detector.Proce
 	return args.Get(0).(*detector.Metadata), args.Error(1)
 }
 
+type MockDeviceDetector struct {
+	mock.Mock
+}
+
+var _ detector.DeviceDetector = (*MockDeviceDetector)(nil)
+
+func (m *MockDeviceDetector) Detect() (*detector.Metadata, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*detector.Metadata), args.Error(1)
+}
+
 type MockExtractor[T any] struct {
 	mock.Mock
 }

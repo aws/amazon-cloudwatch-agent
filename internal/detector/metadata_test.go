@@ -23,7 +23,7 @@ func TestMetadata_RoundTrip(t *testing.T) {
 				TelemetryPort: 8080,
 				Status:        StatusReady,
 			},
-			want: `{"categories":["JVM","Tomcat"],"name":"test-app","telemetry_port":8080,"status":"READY"}`,
+			want: `{"categories":["JVM","TOMCAT"],"name":"test-app","telemetry_port":8080,"status":"READY"}`,
 		},
 		"MinimalMetadata": {
 			input: Metadata{
@@ -31,6 +31,13 @@ func TestMetadata_RoundTrip(t *testing.T) {
 				Status:     StatusNeedsSetupJmxPort,
 			},
 			want: `{"categories":["JVM"],"status":"NEEDS_SETUP/JMX_PORT"}`,
+		},
+		"NvidiaGPUMetadata": {
+			input: Metadata{
+				Categories: []Category{CategoryNvidiaGPU},
+				Status:     StatusNeedsSetupNvidiaDriver,
+			},
+			want: `{"categories":["NVIDIA_GPU"],"status":"NEEDS_SETUP/NVIDIA_DRIVER"}`,
 		},
 	}
 

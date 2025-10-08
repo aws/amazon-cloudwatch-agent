@@ -183,7 +183,7 @@ agent_preun() {
 
 cwa_status() {
      include_workloads="${1:-false}"
-     
+
      cwa_config_status='configured'
      if [ ! -f "${TOML}" ]; then
           cwa_config_status='not configured'
@@ -208,7 +208,7 @@ cwa_status() {
      else
           echo "  \"version\": \"${version}\""
      fi
-     
+
      echo "}"
 }
 

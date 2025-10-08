@@ -24,14 +24,16 @@ type Category string
 
 const (
 	CategoryJVM         Category = "JVM"
-	CategoryTomcat      Category = "Tomcat"
-	CategoryKafkaBroker Category = "Kafka/Broker"
+	CategoryTomcat      Category = "TOMCAT"
+	CategoryKafkaBroker Category = "KAFKA/BROKER"
+	CategoryNvidiaGPU   Category = "NVIDIA_GPU"
 )
 
 // Status represents whether the resource requires more actions before telemetry is available.
 type Status string
 
 var (
-	StatusReady             Status = "READY"
-	StatusNeedsSetupJmxPort Status = "NEEDS_SETUP/JMX_PORT"
+	StatusReady                  Status = "READY"
+	StatusNeedsSetupJmxPort      Status = "NEEDS_SETUP/JMX_PORT"
+	StatusNeedsSetupNvidiaDriver Status = "NEEDS_SETUP/NVIDIA_DRIVER"
 )
