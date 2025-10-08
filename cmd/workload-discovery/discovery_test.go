@@ -19,6 +19,52 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/detectortest"
 )
 
+func TestDiscoverer_detectMetadataFromDevices(t *testing.T) {
+	testCases := map[string]struct {
+		setupMock func(*detectortest.MockDeviceDetector)
+		want      []*detector.Metadata
+	}{
+		"SingleDevice": {
+			setupMock: func(md *detectortest.MockDeviceDetector) {
+				md.On("Detect", mock.Anything).Return(&detector.Metadata{
+					Categories: []detector.Category{detector.CategoryNvidiaGPU},
+					Status:     detector.StatusReady,
+				}, nil).Once()
+			},
+			want: []*detector.Metadata{
+				{
+					Categories: []detector.Category{detector.CategoryNvidiaGPU},
+					Status:     detector.StatusReady,
+				},
+			},
+		},
+		"IncompatibleDevice": {
+			setupMock: func(md *detectortest.MockDeviceDetector) {
+				md.On("Detect", mock.Anything).Return(nil, detector.ErrIncompatibleDetector).Once()
+			},
+			want: nil,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			md := new(detectortest.MockDeviceDetector)
+			testCase.setupMock(md)
+
+			cfg := Config{
+				LogLevel:    slog.LevelDebug,
+				Concurrency: 1,
+				Timeout:     time.Second,
+			}
+			d := NewDiscoverer(cfg, slog.Default())
+			d.deviceDetectors = []detector.DeviceDetector{md}
+
+			got := d.detectMetadataFromDevices()
+			assert.Equal(t, detector.MetadataSlice(testCase.want), got)
+			md.AssertExpectations(t)
+		})
+	}
+}
+
 func TestDiscoverer_detectMetadataFromProcesses(t *testing.T) {
 	testCases := map[string]struct {
 		setupMock func(*detectortest.MockProcessDetector)
@@ -67,6 +113,30 @@ func TestDiscoverer_detectMetadataFromProcesses(t *testing.T) {
 			md.AssertExpectations(t)
 		})
 	}
+}
+
+func TestDiscoverer_Discover_DeviceDetection(t *testing.T) {
+	deviceDetector := new(detectortest.MockDeviceDetector)
+
+	deviceDetector.On("Detect", mock.Anything).Return(&detector.Metadata{
+		Categories: []detector.Category{detector.CategoryNvidiaGPU},
+		Status:     detector.StatusReady,
+	}, nil).Once()
+
+	cfg := Config{
+		LogLevel:    slog.LevelDebug,
+		Concurrency: 1,
+		Timeout:     time.Second,
+	}
+	d := NewDiscoverer(cfg, slog.Default())
+	d.processDetectors = []detector.ProcessDetector{}
+	d.deviceDetectors = []detector.DeviceDetector{deviceDetector}
+
+	ctx := context.Background()
+	err := d.Discover(ctx)
+	require.NoError(t, err)
+
+	deviceDetector.AssertExpectations(t)
 }
 
 func TestDiscoverer_detectMetadataFromProcess(t *testing.T) {

@@ -16,7 +16,7 @@ The Kafka detector identifies Kafka broker instances by searching for the Kafka 
 ### Sample Metadata Result
 ```json
 {
-  "categories": ["Kafka/Broker"],
+  "categories": ["KAFKA/BROKER"],
   "name": "Kafka Broker"
 }
 ```

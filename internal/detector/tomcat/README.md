@@ -23,7 +23,7 @@ The detected directory is used as the metadata name.
 ### Sample Metadata Result
 ```json
 {
-  "categories": ["Tomcat"],
+  "categories": ["TOMCAT"],
   "name": "/opt/tomcat/instance1"
 }
 ```
