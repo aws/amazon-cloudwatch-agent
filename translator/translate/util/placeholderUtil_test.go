@@ -82,8 +82,9 @@ func TestResolveAWSMetadataPlaceholders(t *testing.T) {
 		{
 			name: "Unresolved AWS placeholder should be omitted",
 			input: map[string]interface{}{
-				"InstanceType": "t3.medium",
-				"ImageId":      "ami-12345",
+				"InstanceType":         "t3.medium",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"ImageId":              "ami-12345",
 			},
 			expected: map[string]interface{}{
 				"InstanceType": "t3.medium",
@@ -121,19 +122,35 @@ func TestResolveAWSMetadataPlaceholders(t *testing.T) {
 	}
 }
 func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
-	// Setup mock AWS metadata and tags
-	mockMetadata := MockAWSMetadata{
-		InstanceID:   "i-1234567890abcdef0",
-		InstanceType: "t3.large",
-		ImageID:      "ami-0abcdef1234567890",
-		Hostname:     "test-hostname",
-		PrivateIP:    "10.0.1.100",
-		AccountID:    "123456789012",
+	// Reset cache before test
+	ResetAWSMetadataCache()
+
+	// Mock the metadata provider for this test
+	originalProvider := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata {
+		return &Metadata{
+			InstanceID:   "i-1234567890abcdef0",
+			InstanceType: "t3.large",
+			ImageID:      "ami-0abcdef1234567890",
+			Hostname:     "test-hostname",
+			PrivateIP:    "10.0.1.100",
+			AccountID:    "123456789012",
+		}
 	}
 
-	// Setup mocks and get cleanup function
-	cleanup := MockCompleteAWSMetadata(mockMetadata, nil)
-	defer cleanup()
+	// Mock the tag metadata provider for this test
+	originalTagProvider := tagMetadataProvider
+	tagMetadataProvider = func() map[string]string {
+		return map[string]string{
+			"${aws:AutoScalingGroupName}": "my-test-asg",
+		}
+	}
+
+	defer func() {
+		Ec2MetadataInfoProvider = originalProvider
+		tagMetadataProvider = originalTagProvider
+		ResetAWSMetadataCache()
+	}()
 
 	tests := []struct {
 		name     string
@@ -150,11 +167,11 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 				"RegularKey":           "regular_value",
 			},
 			expected: map[string]interface{}{
-				"InstanceType": "t3.large",
-				// TODO: Resolve AutoScalingGroupName
-				"ImageId":    "ami-0abcdef1234567890",
-				"InstanceId": "i-1234567890abcdef0",
-				"RegularKey": "regular_value",
+				"InstanceType":         "t3.large",
+				"AutoScalingGroupName": "my-test-asg",
+				"ImageId":              "ami-0abcdef1234567890",
+				"InstanceId":           "i-1234567890abcdef0",
+				"RegularKey":           "regular_value",
 			},
 		},
 		{
@@ -166,9 +183,9 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 				"RegularKey":           "regular_value",
 			},
 			expected: map[string]interface{}{
-				"InstanceType": "t3.large",
-				// TODO: Resolve AutoScalingGroupName
-				"RegularKey": "regular_value",
+				"InstanceType":         "t3.large",
+				"AutoScalingGroupName": "my-test-asg",
+				"RegularKey":           "regular_value",
 				// UnknownPlaceholder should be omitted
 			},
 		},
@@ -201,4 +218,54 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 			assert.Equal(t, len(tt.expected), len(resultMap), "Result should have exactly %d keys", len(tt.expected))
 		})
 	}
+}
+func TestAWSMetadataCaching(t *testing.T) {
+
+	callCount := 0
+	originalProvider := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata {
+		callCount++
+		return &Metadata{
+			InstanceID:   "i-test123",
+			InstanceType: "t3.micro",
+			ImageID:      "ami-test123",
+		}
+	}
+	defer func() {
+		Ec2MetadataInfoProvider = originalProvider
+	}()
+
+	// First call should fetch metadata
+	input1 := map[string]interface{}{
+		"InstanceId": "${aws:InstanceId}",
+	}
+	result1 := ResolveAWSMetadataPlaceholders(input1)
+	assert.Equal(t, 1, callCount, "Metadata provider should be called once")
+
+	resultMap1 := result1.(map[string]interface{})
+	assert.Equal(t, "i-test123", resultMap1["InstanceId"])
+
+	// Second call should use cached metadata
+	input2 := map[string]interface{}{
+		"InstanceType": "${aws:InstanceType}",
+	}
+	result2 := ResolveAWSMetadataPlaceholders(input2)
+	assert.Equal(t, 1, callCount, "Metadata provider should still be called only once (cached)")
+
+	resultMap2 := result2.(map[string]interface{})
+	assert.Equal(t, "t3.micro", resultMap2["InstanceType"])
+
+	// Third call with multiple placeholders should still use cache
+	input3 := map[string]interface{}{
+		"InstanceId":   "${aws:InstanceId}",
+		"InstanceType": "${aws:InstanceType}",
+		"ImageId":      "${aws:ImageId}",
+	}
+	result3 := ResolveAWSMetadataPlaceholders(input3)
+	assert.Equal(t, 1, callCount, "Metadata provider should still be called only once (cached)")
+
+	resultMap3 := result3.(map[string]interface{})
+	assert.Equal(t, "i-test123", resultMap3["InstanceId"])
+	assert.Equal(t, "t3.micro", resultMap3["InstanceType"])
+	assert.Equal(t, "ami-test123", resultMap3["ImageId"])
 }

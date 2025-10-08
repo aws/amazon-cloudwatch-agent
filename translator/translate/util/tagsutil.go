@@ -4,103 +4,105 @@
 package util
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
-
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
-const (
-	High_Resolution_Tag_Key      = "aws:StorageResolution"
-	Aggregation_Interval_Tag_Key = "aws:AggregationInterval"
-)
-
-var ReservedTagKeySet = collections.NewSet[string](High_Resolution_Tag_Key, Aggregation_Interval_Tag_Key, ec2tagger.AttributeVolumeId)
-
-func AddHighResolutionTag(tags interface{}) {
-	tagMap := tags.(map[string]interface{})
-	tagMap[High_Resolution_Tag_Key] = "true"
+// EC2TagsClient interface for EC2 tags operations
+type EC2TagsClient interface {
+	DescribeTagsWithContext(ctx aws.Context, input *ec2.DescribeTagsInput, opts ...request.Option) (*ec2.DescribeTagsOutput, error)
 }
 
-// FilterReservedKeys out reserved tag keys
-func FilterReservedKeys(input any) any {
-	result := map[string]any{}
-	for k, v := range input.(map[string]interface{}) {
-		if !ReservedTagKeySet.Contains(k) {
-			result[k] = v
-		}
+// EC2APIProvider provides EC2 API client
+type EC2APIProvider func() EC2TagsClient
+
+// Default EC2 API provider
+var defaultEC2APIProvider = func() EC2TagsClient {
+	ec2CredentialConfig := &configaws.CredentialConfig{
+		Region: agent.Global_Config.Region,
 	}
-	return result
+	return ec2.New(
+		ec2CredentialConfig.Credentials(),
+		&aws.Config{
+			LogLevel: configaws.SDKLogLevel(),
+			Logger:   configaws.SDKLogger{},
+		})
 }
 
-var getEC2TagValueFunc = getEC2TagValue
+var ec2APIProvider EC2APIProvider = defaultEC2APIProvider
 
-func GetEC2TagValue(tagKey string) string {
-	return getEC2TagValueFunc(tagKey)
-}
-
-func getEC2TagValue(tagKey string) string {
-	ec2Util := ec2util.GetEC2UtilSingleton()
-	if ec2Util.InstanceID == "" || ec2Util.Region == "" {
+// getEC2TagValue fetches a specific tag value from EC2 tags for a given instance
+func getEC2TagValue(instanceID, tagKey string) string {
+	ec2API := ec2APIProvider()
+	if ec2API == nil {
+		log.Printf("W! getEC2TagValue: EC2 API client not available for tag %s", tagKey)
 		return ""
 	}
 
-	config := &aws.Config{
-		Region:                        aws.String(ec2Util.Region),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		LogLevel:                      configaws.SDKLogLevel(),
-		Logger:                        configaws.SDKLogger{},
-	}
-
-	sess, err := session.NewSession(config)
-	if err != nil {
-		log.Printf("Failed to create AWS session: %v", err)
-		return ""
-	}
-
-	ec2Client := ec2.New(sess)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	input := &ec2.DescribeTagsInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("resource-type"),
-				Values: []*string{aws.String("instance")},
+				Values: aws.StringSlice([]string{"instance"}),
 			},
 			{
 				Name:   aws.String("resource-id"),
-				Values: []*string{aws.String(ec2Util.InstanceID)},
+				Values: aws.StringSlice([]string{instanceID}),
 			},
 			{
 				Name:   aws.String("key"),
-				Values: []*string{aws.String(tagKey)},
+				Values: aws.StringSlice([]string{tagKey}),
 			},
 		},
 	}
 
-	for {
-		result, err := ec2Client.DescribeTags(input)
-		if err != nil {
-			log.Printf("E! Failed to describe EC2 tag '%s': %v", tagKey, err)
-			return ""
-		}
+	result, err := ec2API.DescribeTagsWithContext(ctx, input)
+	if err != nil {
+		log.Printf("W! getEC2TagValue: Failed to describe tags for instance %s, tag %s: %v", instanceID, tagKey, err)
+		return ""
+	}
 
-		for _, tag := range result.Tags {
-			if tag.Key != nil && tag.Value != nil && *tag.Key == tagKey {
-				return *tag.Value
-			}
+	for _, tag := range result.Tags {
+		if *tag.Key == tagKey {
+			return *tag.Value
 		}
-
-		if result.NextToken == nil {
-			break
-		}
-		input.SetNextToken(*result.NextToken)
 	}
 
 	return ""
+}
+
+// getAutoScalingGroupName fetches the AutoScalingGroupName from EC2 tags
+func getAutoScalingGroupName(instanceID string) string {
+	return getEC2TagValue(instanceID, ec2tagger.Ec2InstanceTagKeyASG)
+}
+
+// SetEC2APIProviderForTesting allows setting a custom EC2 API provider for testing
+func SetEC2APIProviderForTesting(provider EC2APIProvider) {
+	ec2APIProvider = provider
+}
+
+// ResetEC2APIProvider resets the EC2 API provider to default (for testing purposes)
+func ResetEC2APIProvider() {
+	ec2APIProvider = defaultEC2APIProvider
+}
+
+// GetEC2TagValue is exported for getting any EC2 tag value
+func GetEC2TagValue(instanceID, tagKey string) string {
+	return getEC2TagValue(instanceID, tagKey)
+}
+
+// GetAutoScalingGroupName is exported for testing
+func GetAutoScalingGroupName(instanceID string) string {
+	return getAutoScalingGroupName(instanceID)
 }
