@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"k8s.io/client-go/rest"
 )
@@ -21,18 +22,27 @@ var (
 	getInClusterConfig = func() (*rest.Config, error) { return rest.InClusterConfig() }
 	// IsEKS is a function variable that can be overridden in tests
 	IsEKS = isEKS
+
+	// Cache for the EKS detection result
+	eksCache      *IsEKSCache
+	eksCacheMutex sync.Once
 )
 
 // isEKS checks if the agent is running on EKS by extracting the "iss" field from the service account token and
-// checking if it contains "eks"
+// checking if it contains "eks". The result is cached to avoid repeated expensive operations.
 func isEKS() IsEKSCache {
-	issuer, err := getIssuer()
-	if err != nil {
-		return IsEKSCache{Value: false, Err: err}
-	}
+	eksCacheMutex.Do(func() {
+		issuer, err := getIssuer()
+		if err != nil {
+			eksCache = &IsEKSCache{Value: false, Err: err}
+			return
+		}
 
-	value := strings.Contains(strings.ToLower(issuer), "eks")
-	return IsEKSCache{Value: value, Err: nil}
+		value := strings.Contains(strings.ToLower(issuer), "eks")
+		eksCache = &IsEKSCache{Value: value, Err: nil}
+	})
+
+	return *eksCache
 }
 
 // getIssuer retrieves the issuer ("iss") from the service account token
@@ -68,4 +78,10 @@ func getIssuer() (string, error) {
 	}
 
 	return iss, nil
+}
+
+// resetCacheForTesting resets the EKS detection cache - only used in tests
+func resetCacheForTesting() {
+	eksCache = nil
+	eksCacheMutex = sync.Once{}
 }

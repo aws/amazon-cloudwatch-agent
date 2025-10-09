@@ -13,6 +13,8 @@ import (
 
 // Tests EKS resource detector running in EKS environment
 func TestEKS(t *testing.T) {
+	resetCacheForTesting() // Reset cache for consistency
+
 	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
 	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
 	dummyToken := "header." + encodedPayload + ".signature"
@@ -27,6 +29,8 @@ func TestEKS(t *testing.T) {
 }
 
 func TestNonEKS(t *testing.T) {
+	resetCacheForTesting()
+
 	payload := `{"iss":"https://kubernetes.default.svc.cluster.local"}`
 	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
 	dummyToken := "header." + encodedPayload + ".signature"
@@ -41,6 +45,8 @@ func TestNonEKS(t *testing.T) {
 }
 
 func TestEmptyToken(t *testing.T) {
+	resetCacheForTesting()
+
 	getInClusterConfig = func() (*rest.Config, error) {
 		return &rest.Config{BearerToken: ""}, nil
 	}
