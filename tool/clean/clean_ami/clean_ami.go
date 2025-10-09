@@ -50,6 +50,7 @@ var imagePrefixes = []string{
 	"cloudwatch-agent-integration-test-x86-al2023",
 	"cloudwatch-agent-integration-test-mac",
 	"cloudwatch-agent-integration-test-nvidia-gpu",
+	"cloudwatch-agent-integration-test-rhel8-base",
 	"cloudwatch-agent-integration-test-rhel9",
 	"cloudwatch-agent-integration-test-rhel10",
 }
