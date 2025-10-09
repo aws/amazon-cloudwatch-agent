@@ -24,25 +24,25 @@ var (
 	IsEKS = isEKS
 
 	// Cache for the EKS detection result
-	eksCache      *IsEKSCache
-	eksCacheMutex sync.Once
+	isEKSCacheSingleton IsEKSCache
+	once                sync.Once
 )
 
 // isEKS checks if the agent is running on EKS by extracting the "iss" field from the service account token and
 // checking if it contains "eks". The result is cached to avoid repeated expensive operations.
 func isEKS() IsEKSCache {
-	eksCacheMutex.Do(func() {
+	once.Do(func() {
 		issuer, err := getIssuer()
 		if err != nil {
-			eksCache = &IsEKSCache{Value: false, Err: err}
+			isEKSCacheSingleton = IsEKSCache{Value: false, Err: err}
 			return
 		}
 
 		value := strings.Contains(strings.ToLower(issuer), "eks")
-		eksCache = &IsEKSCache{Value: value, Err: nil}
+		isEKSCacheSingleton = IsEKSCache{Value: value, Err: nil}
 	})
 
-	return *eksCache
+	return isEKSCacheSingleton
 }
 
 // getIssuer retrieves the issuer ("iss") from the service account token
@@ -82,6 +82,6 @@ func getIssuer() (string, error) {
 
 // resetCacheForTesting resets the EKS detection cache - only used in tests
 func resetCacheForTesting() {
-	eksCache = nil
-	eksCacheMutex = sync.Once{}
+	isEKSCacheSingleton = IsEKSCache{}
+	once = sync.Once{}
 }

@@ -62,9 +62,9 @@ const sampleConfig = `
 const (
 	Ec2InstanceTagKeyASG = "aws:autoscaling:groupName"
 	CWDimensionASG       = "AutoScalingGroupName"
-	mdKeyInstanceId      = "InstanceId"
-	mdKeyImageId         = "ImageId"
-	mdKeyInstanceType    = "InstanceType"
+	MdKeyInstanceID      = "InstanceId"
+	MdKeyImageID         = "ImageId"
+	MdKeyInstanceType    = "InstanceType"
 )
 
 var (
