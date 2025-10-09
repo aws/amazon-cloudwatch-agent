@@ -285,7 +285,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
 	_, cancel := context.WithCancel(context.Background())
@@ -330,7 +330,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	//use millisecond rather than second to speed up test execution
 	cfg.RefreshTagsInterval = 20 * time.Millisecond
 	cfg.RefreshVolumesInterval = 20 * time.Millisecond
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
 	_, cancel := context.WithCancel(context.Background())
@@ -387,7 +387,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
 	_, cancel := context.WithCancel(context.Background())
@@ -432,7 +432,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	//use millisecond rather than second to speed up test execution
 	cfg.RefreshTagsInterval = 20 * time.Millisecond
 	cfg.RefreshVolumesInterval = 20 * time.Millisecond
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
 	cfg.EBSDeviceKeys = []string{device1, device2}
 	cfg.DiskDeviceTagKey = "device"
@@ -499,7 +499,16 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	//assume one second is long enough for the api to be called many times
 	//so that all tags/volumes are updated
 	time.Sleep(time.Second)
-	updatedOutput, err := tagger.processMetrics(context.Background(), md)
+	// Create fresh metrics for the second processing to test updated cache values
+	freshMd := createTestMetrics([]map[string]string{
+		{
+			"host": "example.org",
+		},
+		{
+			"device": device2,
+		},
+	})
+	updatedOutput, err := tagger.processMetrics(context.Background(), freshMd)
 	assert.Nil(t, err)
 	expectedUpdatedOutput := createTestMetrics([]map[string]string{
 		map[string]string{
@@ -527,7 +536,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Millisecond
 	cfg.RefreshVolumesInterval = 0 * time.Millisecond
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
 	_, cancel := context.WithCancel(context.Background())
@@ -593,7 +602,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	cfg.EC2InstanceTagKeys = []string{"*"}
 	cfg.EBSDeviceKeys = []string{"*"}
 	_, cancel := context.WithCancel(context.Background())
@@ -632,12 +641,77 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	close(inited)
 }
 
+// Test that existing attributes are not overwritten by ec2tagger
+func TestExistingAttributesNotOverwritten(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	cfg.RefreshTagsInterval = 0 * time.Second
+	cfg.RefreshVolumesInterval = 0 * time.Second
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2}
+	cfg.EBSDeviceKeys = []string{device1}
+	cfg.DiskDeviceTagKey = "device"
+	_, cancel := context.WithCancel(context.Background())
+	ec2Client := &mockEC2Client{
+		tagsCallCount:    0,
+		tagsFailLimit:    0,
+		tagsPartialLimit: 1,
+		UseUpdatedTags:   false,
+	}
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+		return ec2Client
+	}
+	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
+	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	defaultRefreshInterval = 50 * time.Millisecond
+	tagger := &Tagger{
+		Config:            cfg,
+		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:        cancel,
+		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:       ec2Provider,
+		volumeSerialCache: volumeCache,
+	}
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
+
+	// Wait for tags and volumes to be retrieved
+	time.Sleep(time.Second)
+
+	// Create metrics with existing attributes that should not be overwritten
+	md := createTestMetrics([]map[string]string{
+		{
+			"InstanceId":   "i-100000",       // This should NOT be overwritten
+			"InstanceType": "t2.micro",       // This should NOT be overwritten
+			tagKey1:        "existing-value", // This should NOT be overwritten
+			"device":       device1,
+		},
+	})
+
+	output, err := tagger.processMetrics(context.Background(), md)
+	assert.Nil(t, err)
+
+	// Expected output should preserve existing values and only add missing ones
+	expectedOutput := createTestMetrics([]map[string]string{
+		{
+			"InstanceId":   "i-100000",              // Original value preserved
+			"InstanceType": "t2.micro",              // Original value preserved
+			"ImageId":      "ami-09edd32d9b0990d49", // Added from metadata (not existing)
+			tagKey1:        "existing-value",        // Original value preserved
+			tagKey2:        tagVal2,                 // Added from EC2 tags (not existing)
+			"VolumeId":     volumeId1,               // Added from volume cache (not existing)
+			"device":       device1,
+		},
+	})
+
+	checkAttributes(t, expectedOutput, output)
+}
+
 // Test ec2tagger Start does not block for a long time
 func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
-	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2MetadataTags = []string{MdKeyInstanceID, MdKeyImageID, MdKeyInstanceType}
 	_, cancel := context.WithCancel(context.Background())
 
 	tagger := &Tagger{
