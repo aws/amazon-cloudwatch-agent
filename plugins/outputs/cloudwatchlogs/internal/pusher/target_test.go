@@ -460,12 +460,55 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		batch := make(map[string]Target)
 		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
 		batch["group-2"] = Target{Group: "group-2", Stream: "stream", Retention: 7}
-		tm.updateTargetBatch(batch)
+		tm.updateTargets(batch)
 
 		// Wait for ticker to fire (slightly longer than 5 seconds)
 		time.Sleep(5100 * time.Millisecond)
 
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
+	})
+
+	t.Run("FallbackToPrefix", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// First call with identifiers fails with unsupported error
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) > 0
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
+			awserr.New(cloudwatchlogs.ErrCodeInvalidParameterException, errMessageLogGroupIdentifierNotSupported, nil)).Once()
+
+		// Fallback calls with prefix for each group
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return input.LogGroupNamePrefix != nil && *input.LogGroupNamePrefix == "group-1"
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{LogGroupName: aws.String("group-1"), RetentionInDays: aws.Int64(1)},
+			},
+		}, nil).Once()
+
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return input.LogGroupNamePrefix != nil && *input.LogGroupNamePrefix == "group-2"
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []*cloudwatchlogs.LogGroup{
+				{LogGroupName: aws.String("group-2"), RetentionInDays: aws.Int64(7)},
+			},
+		}, nil).Once()
+
+		mockService.On("PutRetentionPolicy", mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
+			return *input.LogGroupName == "group-1" && *input.RetentionInDays == 7
+		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		batch := make(map[string]Target)
+		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
+		batch["group-2"] = Target{Group: "group-2", Stream: "stream", Retention: 7}
+
+		tm.updateTargets(batch)
+		time.Sleep(100 * time.Millisecond)
+
+		mockService.AssertExpectations(t)
 	})
 
 	t.Run("RetentionPolicyUpdate", func(t *testing.T) {
@@ -497,7 +540,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
 		batch["group-2"] = Target{Group: "group-2", Stream: "stream", Retention: 7}
 
-		tm.updateTargetBatch(batch)
+		tm.updateTargets(batch)
 		time.Sleep(100 * time.Millisecond)
 
 		mockService.AssertExpectations(t)
@@ -523,11 +566,36 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		batch := make(map[string]Target)
 		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
 
-		tm.updateTargetBatch(batch)
+		tm.updateTargets(batch)
 		// Sleep enough for retry
 		time.Sleep(2 * time.Second)
 
 		mockService.AssertExpectations(t)
+	})
+
+	t.Run("FallbackToPrefix/OtherError", func(t *testing.T) {
+		mockService := new(mockLogsService)
+
+		// First call with identifiers fails with different error (should not fallback)
+		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return len(input.LogGroupIdentifiers) > 0
+		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
+			awserr.New(cloudwatchlogs.ErrCodeInvalidParameterException, "Different error message", nil)).Times(numBackoffRetries)
+
+		manager := NewTargetManager(logger, mockService)
+		tm := manager.(*targetManager)
+
+		batch := make(map[string]Target)
+		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
+
+		tm.updateTargets(batch)
+		time.Sleep(2 * time.Second)
+
+		mockService.AssertExpectations(t)
+		// Should not call prefix-based DescribeLogGroups
+		mockService.AssertNotCalled(t, "DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+			return input.LogGroupNamePrefix != nil
+		}))
 	})
 
 }
