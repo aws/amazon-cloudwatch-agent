@@ -5,6 +5,7 @@ package eksdetector
 
 import (
 	"encoding/base64"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,4 +70,10 @@ func Test_getIssuer(t *testing.T) {
 	issuer, err := getIssuer()
 	assert.NoError(t, err)
 	assert.Equal(t, "https://oidc.eks.us-west-2.amazonaws.com/id/someid", issuer)
+}
+
+// resetCacheForTesting resets the EKS detection cache - only used in tests
+func resetCacheForTesting() {
+	isEKSCacheSingleton = IsEKSCache{}
+	once = sync.Once{}
 }

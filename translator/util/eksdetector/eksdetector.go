@@ -79,9 +79,3 @@ func getIssuer() (string, error) {
 
 	return iss, nil
 }
-
-// resetCacheForTesting resets the EKS detection cache - only used in tests
-func resetCacheForTesting() {
-	isEKSCacheSingleton = IsEKSCache{}
-	once = sync.Once{}
-}
