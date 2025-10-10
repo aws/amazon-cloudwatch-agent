@@ -4,34 +4,138 @@
 package util
 
 import (
+	"context"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
-const (
-	EKSClusterNameTagKeyPrefix = "kubernetes.io/cluster/"
-	defaultRetryCount          = 5
-	defaultBackoffDuration     = time.Duration(1 * time.Minute)
-)
+// EC2TagsClient interface for EC2 tags operations
+type EC2TagsClient interface {
+	DescribeTagsWithContext(ctx aws.Context, input *ec2.DescribeTagsInput, opts ...request.Option) (*ec2.DescribeTagsOutput, error)
+}
 
-var (
-	sleeps = []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800, time.Millisecond * 1600, time.Millisecond * 3200}
-)
+// EC2APIProvider provides EC2 API client
+type EC2APIProvider func() EC2TagsClient
 
-// For ASG case, the ec2 tag may be not ready as soon as the node is started up.
-// In this case, the translator will fail and then the pod will restart.
+// Default EC2 API provider for EKS
+var defaultEKSEC2APIProvider = func() EC2TagsClient {
+	ec2CredentialConfig := &configaws.CredentialConfig{
+		Region: agent.Global_Config.Region,
+	}
+	return ec2.New(
+		ec2CredentialConfig.Credentials(),
+		&aws.Config{
+			LogLevel: configaws.SDKLogLevel(),
+			Logger:   configaws.SDKLogger{},
+		})
+}
+
+var eksEC2APIProvider EC2APIProvider = defaultEKSEC2APIProvider
+
+// EKSTagsCache manages cached EC2 tags for EKS cluster name retrieval
+type EKSTagsCache struct {
+	instanceID string
+	tags       map[string]string
+	mu         sync.RWMutex
+	once       sync.Once
+}
+
+var eksTagsCache *EKSTagsCache
+var eksCacheOnce sync.Once
+
+// getEKSTagsCache returns the singleton instance for EKS tags management
+func getEKSTagsCache(instanceID string) *EKSTagsCache {
+	eksCacheOnce.Do(func() {
+		eksTagsCache = &EKSTagsCache{
+			instanceID: instanceID,
+			tags:       make(map[string]string),
+		}
+	})
+	return eksTagsCache
+}
+
+// loadAllTags fetches all tags for the instance and caches them
+func (etc *EKSTagsCache) loadAllTags() {
+	etc.once.Do(func() {
+		ec2API := eksEC2APIProvider()
+		if ec2API == nil {
+			log.Printf("W! loadAllTags: EC2 API client not available for instance %s", etc.instanceID)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		input := &ec2.DescribeTagsInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("resource-type"),
+					Values: aws.StringSlice([]string{"instance"}),
+				},
+				{
+					Name:   aws.String("resource-id"),
+					Values: aws.StringSlice([]string{etc.instanceID}),
+				},
+			},
+		}
+
+		result, err := ec2API.DescribeTagsWithContext(ctx, input)
+		if err != nil {
+			log.Printf("W! loadAllTags: Failed to describe tags for instance %s: %v", etc.instanceID, err)
+			return
+		}
+
+		etc.mu.Lock()
+		defer etc.mu.Unlock()
+
+		for _, tag := range result.Tags {
+			etc.tags[*tag.Key] = *tag.Value
+		}
+
+		log.Printf("D! loadAllTags: Loaded %d tags for instance %s", len(etc.tags), etc.instanceID)
+	})
+}
+
+// getEKSClusterName extracts EKS cluster name from kubernetes.io/cluster/* tags
+func (etc *EKSTagsCache) getEKSClusterName() string {
+	etc.loadAllTags()
+
+	etc.mu.RLock()
+	defer etc.mu.RUnlock()
+
+	// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"
+	for tagKey, tagValue := range etc.tags {
+		if strings.HasPrefix(tagKey, "kubernetes.io/cluster/") && tagValue == "owned" {
+			clusterName := strings.TrimPrefix(tagKey, "kubernetes.io/cluster/")
+			if clusterName != "" {
+				return clusterName
+			}
+		}
+	}
+
+	// Fallback to custom EKS cluster name tag if exists
+	if clusterName, exists := etc.tags["eks:cluster-name"]; exists {
+		return clusterName
+	}
+
+	return ""
+}
+
+// GetEKSClusterName gets the EKS cluster name from config or EC2 tags using the singleton
 func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 	var clusterName string
 	if val, ok := input[sectionKey]; ok {
-		//The key is in current input instance, use the value in JSON.
+		// The key is in current input instance, use the value in JSON
 		clusterName = val.(string)
 	}
 	if clusterName == "" {
@@ -40,87 +144,13 @@ func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 	return clusterName
 }
 
+// GetClusterNameFromEc2Tagger gets the EKS cluster name using the consolidated tags singleton
 func GetClusterNameFromEc2Tagger() string {
-	instanceId := ec2util.GetEC2UtilSingleton().InstanceID
-	region := ec2util.GetEC2UtilSingleton().Region
-
-	if instanceId == "" || region == "" {
+	instanceID := ec2util.GetEC2UtilSingleton().InstanceID
+	if instanceID == "" {
 		return ""
 	}
 
-	tagFilters := []*ec2.Filter{
-		{
-			Name:   aws.String("resource-type"),
-			Values: aws.StringSlice([]string{"instance"}),
-		},
-		{
-			Name:   aws.String("resource-id"),
-			Values: aws.StringSlice([]string{instanceId}),
-		},
-	}
-
-	config := &aws.Config{
-		Region:                        aws.String(region),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		LogLevel:                      configaws.SDKLogLevel(),
-		Logger:                        configaws.SDKLogger{},
-	}
-
-	input := &ec2.DescribeTagsInput{
-		Filters: tagFilters,
-	}
-
-	ses, err := session.NewSession(config)
-	if err != nil {
-		log.Println("E! getting new session info: ", err)
-		return ""
-	}
-	ec2 := ec2.New(ses)
-	for {
-		result, err := callFuncWithRetries(ec2.DescribeTags, input, "Describe EC2 Tag Fail.")
-		if err != nil {
-			log.Println("E! DescribeTags EC2 tagger failed: ", err)
-			return ""
-		}
-		for _, tag := range result.Tags {
-			key := *tag.Key
-			if strings.HasPrefix(key, EKSClusterNameTagKeyPrefix) && *tag.Value == "owned" {
-				clusterName := key[len(EKSClusterNameTagKeyPrefix):]
-				return clusterName
-			}
-		}
-		if nil == result.NextToken {
-			break
-		}
-		input.SetNextToken(*result.NextToken)
-	}
-	return ""
-}
-
-// encapsulate the retry logic in this separate method.
-func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error), input *ec2.DescribeTagsInput, errorMsg string) (result *ec2.DescribeTagsOutput, err error) {
-	for i := 0; i <= defaultRetryCount; i++ {
-		result, err = fn(input)
-		if err == nil {
-			return result, nil
-		}
-		log.Printf("%s Will retry the request: %s", errorMsg, err.Error())
-		backoffSleep(i)
-	}
-	return
-}
-
-// sleep some back off time before retries.
-func backoffSleep(i int) {
-	backoffDuration := getBackoffDuration(i)
-	log.Printf("W! It is the %v time, going to sleep %v before retrying.", i, backoffDuration)
-	time.Sleep(backoffDuration)
-}
-
-func getBackoffDuration(i int) time.Duration {
-	backoffDuration := defaultBackoffDuration
-	if i >= 0 && i < len(sleeps) {
-		backoffDuration = sleeps[i]
-	}
-	return backoffDuration
+	etc := getEKSTagsCache(instanceID)
+	return etc.getEKSClusterName()
 }
