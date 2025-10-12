@@ -19,15 +19,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
-// EC2TagsClient interface for EC2 tags operations
 type EC2TagsClient interface {
 	DescribeTagsWithContext(ctx aws.Context, input *ec2.DescribeTagsInput, opts ...request.Option) (*ec2.DescribeTagsOutput, error)
 }
 
-// EC2APIProvider provides EC2 API client
 type EC2APIProvider func() EC2TagsClient
 
-// Default EC2 API provider for EKS
 var defaultEKSEC2APIProvider = func() EC2TagsClient {
 	ec2CredentialConfig := &configaws.CredentialConfig{
 		Region: agent.Global_Config.Region,
@@ -42,7 +39,6 @@ var defaultEKSEC2APIProvider = func() EC2TagsClient {
 
 var eksEC2APIProvider EC2APIProvider = defaultEKSEC2APIProvider
 
-// EKSTagsCache manages cached EC2 tags for EKS cluster name retrieval
 type EKSTagsCache struct {
 	instanceID string
 	tags       map[string]string
@@ -53,7 +49,6 @@ type EKSTagsCache struct {
 var eksTagsCache *EKSTagsCache
 var eksCacheOnce sync.Once
 
-// getEKSTagsCache returns the singleton instance for EKS tags management
 func getEKSTagsCache(instanceID string) *EKSTagsCache {
 	eksCacheOnce.Do(func() {
 		eksTagsCache = &EKSTagsCache{
@@ -64,7 +59,6 @@ func getEKSTagsCache(instanceID string) *EKSTagsCache {
 	return eksTagsCache
 }
 
-// loadAllTags fetches all tags for the instance and caches them
 func (etc *EKSTagsCache) loadAllTags() {
 	etc.once.Do(func() {
 		ec2API := eksEC2APIProvider()
@@ -106,14 +100,12 @@ func (etc *EKSTagsCache) loadAllTags() {
 	})
 }
 
-// getEKSClusterName extracts EKS cluster name from kubernetes.io/cluster/* tags
 func (etc *EKSTagsCache) getEKSClusterName() string {
 	etc.loadAllTags()
 
 	etc.mu.RLock()
 	defer etc.mu.RUnlock()
 
-	// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"
 	for tagKey, tagValue := range etc.tags {
 		if strings.HasPrefix(tagKey, "kubernetes.io/cluster/") && tagValue == "owned" {
 			clusterName := strings.TrimPrefix(tagKey, "kubernetes.io/cluster/")
@@ -123,7 +115,6 @@ func (etc *EKSTagsCache) getEKSClusterName() string {
 		}
 	}
 
-	// Fallback to custom EKS cluster name tag if exists
 	if clusterName, exists := etc.tags["eks:cluster-name"]; exists {
 		return clusterName
 	}
@@ -131,11 +122,12 @@ func (etc *EKSTagsCache) getEKSClusterName() string {
 	return ""
 }
 
-// GetEKSClusterName gets the EKS cluster name from config or EC2 tags using the singleton
+// For ASG case, the ec2 tag may be not ready as soon as the node is started up.
+// In this case, the translator will fail and then the pod will restart.
 func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 	var clusterName string
 	if val, ok := input[sectionKey]; ok {
-		// The key is in current input instance, use the value in JSON
+		//The key is in current input instance, use the value in JSON.
 		clusterName = val.(string)
 	}
 	if clusterName == "" {
@@ -144,7 +136,6 @@ func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 	return clusterName
 }
 
-// GetClusterNameFromEc2Tagger gets the EKS cluster name using the consolidated tags singleton
 func GetClusterNameFromEc2Tagger() string {
 	instanceID := ec2util.GetEC2UtilSingleton().InstanceID
 	if instanceID == "" {

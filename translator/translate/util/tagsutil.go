@@ -26,15 +26,12 @@ const (
 
 var ReservedTagKeySet = collections.NewSet[string](High_Resolution_Tag_Key, Aggregation_Interval_Tag_Key, ec2tagger.AttributeVolumeId)
 
-// EC2TagsClient interface for EC2 tags operations
 type EC2TagsClient interface {
 	DescribeTagsWithContext(ctx aws.Context, input *ec2.DescribeTagsInput, opts ...request.Option) (*ec2.DescribeTagsOutput, error)
 }
 
-// EC2APIProvider provides EC2 API client
 type EC2APIProvider func() EC2TagsClient
 
-// Default EC2 API provider
 var defaultEC2APIProvider = func() EC2TagsClient {
 	ec2CredentialConfig := &configaws.CredentialConfig{
 		Region: agent.Global_Config.Region,
@@ -49,7 +46,6 @@ var defaultEC2APIProvider = func() EC2TagsClient {
 
 var ec2APIProvider EC2APIProvider = defaultEC2APIProvider
 
-// TagsSingleton manages cached EC2 tags for an instance
 type TagsSingleton struct {
 	instanceID string
 	tags       map[string]string
@@ -60,7 +56,6 @@ type TagsSingleton struct {
 var tagsSingleton *TagsSingleton
 var singletonOnce sync.Once
 
-// getTagsSingleton returns the singleton instance for tags management
 func getTagsSingleton(instanceID string) *TagsSingleton {
 	singletonOnce.Do(func() {
 		tagsSingleton = &TagsSingleton{
@@ -71,7 +66,6 @@ func getTagsSingleton(instanceID string) *TagsSingleton {
 	return tagsSingleton
 }
 
-// loadAllTags fetches all tags for the instance and caches them
 func (ts *TagsSingleton) loadAllTags() {
 	ts.once.Do(func() {
 		ec2API := ec2APIProvider()
@@ -113,7 +107,6 @@ func (ts *TagsSingleton) loadAllTags() {
 	})
 }
 
-// getTag returns a specific tag value, loading all tags if not already cached
 func (ts *TagsSingleton) getTag(tagKey string) string {
 	ts.loadAllTags()
 
@@ -123,46 +116,39 @@ func (ts *TagsSingleton) getTag(tagKey string) string {
 	return ts.tags[tagKey]
 }
 
-// getAutoScalingGroupName fetches the AutoScalingGroupName from EC2 tags using singleton
 func getAutoScalingGroupName(instanceID string) string {
 	ts := getTagsSingleton(instanceID)
 	return ts.getTag(ec2tagger.Ec2InstanceTagKeyASG)
 }
 
-// SetEC2APIProviderForTesting allows setting a custom EC2 API provider for testing
 func SetEC2APIProviderForTesting(provider EC2APIProvider) {
 	ec2APIProvider = provider
 }
 
-// ResetEC2APIProvider resets the EC2 API provider to default (for testing purposes)
 func ResetEC2APIProvider() {
 	ec2APIProvider = defaultEC2APIProvider
 }
 
-// ResetTagsSingleton resets the tags singleton (for testing purposes)
 func ResetTagsSingleton() {
 	singletonOnce = sync.Once{}
 	tagsSingleton = nil
 }
 
-// GetEC2TagValue is exported for getting any EC2 tag value using singleton
 func GetEC2TagValue(instanceID, tagKey string) string {
 	ts := getTagsSingleton(instanceID)
 	return ts.getTag(tagKey)
 }
 
-// GetAutoScalingGroupName is exported for testing
 func GetAutoScalingGroupName(instanceID string) string {
 	return getAutoScalingGroupName(instanceID)
 }
 
-// AddHighResolutionTag adds high resolution tag to the tags map
 func AddHighResolutionTag(tags interface{}) {
 	tagMap := tags.(map[string]interface{})
 	tagMap[High_Resolution_Tag_Key] = "true"
 }
 
-// FilterReservedKeys filters out reserved tag keys
+// FilterReservedKeys out reserved tag keys
 func FilterReservedKeys(input any) any {
 	result := map[string]any{}
 	for k, v := range input.(map[string]interface{}) {

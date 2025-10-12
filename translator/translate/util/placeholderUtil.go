@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
@@ -19,7 +18,7 @@ import (
 const (
 	instanceIdPlaceholder    = "{instance_id}"
 	hostnamePlaceholder      = "{hostname}"
-	localHostnamePlaceholder = "{local_hostname}"
+	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
 	ipAddressPlaceholder     = "{ip_address}"
 	awsRegionPlaceholder     = "{aws_region}"
 	datePlaceholder          = "{date}"
@@ -98,7 +97,6 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	}
 }
 
-// Simple function to get AWS metadata placeholders
 func getAWSMetadata() map[string]string {
 	md := Ec2MetadataInfoProvider()
 
@@ -113,10 +111,8 @@ func getAWSMetadata() map[string]string {
 	}
 }
 
-// For testing - allows mocking tag metadata
 var tagMetadataProvider func() map[string]string
 
-// Simple function to get tag metadata when needed
 func getTagMetadata() map[string]string {
 	if tagMetadataProvider != nil {
 		return tagMetadataProvider()
@@ -160,38 +156,23 @@ func getIpAddress() string {
 	return unknownIPAddress
 }
 
-// For caching metadata during translation time
-var (
-	cachedMetadata map[string]string
-	metadataOnce   sync.Once
-)
+func getAWSMetadataWithTags(needsTags bool) map[string]string {
+	metadata := getAWSMetadata()
 
-func getCachedMetadata(needsTags bool) map[string]string {
-	metadataOnce.Do(func() {
-		// Get basic AWS metadata
-		cachedMetadata = getAWSMetadata()
-
-		// Add tag metadata if needed
-		if needsTags {
-			tagMetadata := getTagMetadata()
-			for k, v := range tagMetadata {
-				cachedMetadata[k] = v
-			}
+	if needsTags {
+		tagMetadata := getTagMetadata()
+		for k, v := range tagMetadata {
+			metadata[k] = v
 		}
-	})
-	return cachedMetadata
-}
+	}
 
-func ResetAWSMetadataCache() {
-	cachedMetadata = nil
-	metadataOnce = sync.Once{}
+	return metadata
 }
 
 func ResolveAWSMetadataPlaceholders(input any) any {
 	inputMap := input.(map[string]interface{})
 	result := make(map[string]any, len(inputMap))
 
-	// Check if we need AWS metadata and if we need tags
 	hasAWSPlaceholders := false
 	needsTags := false
 
@@ -204,10 +185,9 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 		}
 	}
 
-	// Only get metadata if we have AWS placeholders
 	var metadata map[string]string
 	if hasAWSPlaceholders {
-		metadata = getCachedMetadata(needsTags)
+		metadata = getAWSMetadataWithTags(needsTags)
 	}
 
 	for k, v := range inputMap {
@@ -215,7 +195,6 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 			if replacement, exists := metadata[vStr]; exists {
 				result[k] = replacement
 			}
-			// Unresolved placeholders are omitted
 		} else {
 			result[k] = v
 		}

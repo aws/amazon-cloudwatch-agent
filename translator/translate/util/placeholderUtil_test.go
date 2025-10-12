@@ -125,7 +125,7 @@ func TestResolveAWSMetadataPlaceholders(t *testing.T) {
 }
 func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	// Reset cache before test
-	ResetAWSMetadataCache()
+	ResetTagsSingleton()
 
 	// Mock the metadata provider for this test
 	originalProvider := Ec2MetadataInfoProvider
@@ -151,7 +151,7 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	defer func() {
 		Ec2MetadataInfoProvider = originalProvider
 		tagMetadataProvider = originalTagProvider
-		ResetAWSMetadataCache()
+		ResetTagsSingleton()
 	}()
 
 	tests := []struct {
@@ -221,12 +221,12 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 		})
 	}
 }
-func TestAWSMetadataCaching(t *testing.T) {
+func TestAWSMetadataFunctionality(t *testing.T) {
+	// Test that AWS metadata placeholders are resolved correctly
+	// Note: We rely on ec2util.GetEC2UtilSingleton() for caching, not additional layers
 
-	callCount := 0
 	originalProvider := Ec2MetadataInfoProvider
 	Ec2MetadataInfoProvider = func() *Metadata {
-		callCount++
 		return &Metadata{
 			InstanceID:   "i-test123",
 			InstanceType: "t3.micro",
@@ -237,37 +237,23 @@ func TestAWSMetadataCaching(t *testing.T) {
 		Ec2MetadataInfoProvider = originalProvider
 	}()
 
-	// First call should fetch metadata
+	// Test single placeholder resolution
 	input1 := map[string]interface{}{
 		"InstanceId": "${aws:InstanceId}",
 	}
 	result1 := ResolveAWSMetadataPlaceholders(input1)
-	assert.Equal(t, 1, callCount, "Metadata provider should be called once")
-
 	resultMap1 := result1.(map[string]interface{})
 	assert.Equal(t, "i-test123", resultMap1["InstanceId"])
 
-	// Second call should use cached metadata
+	// Test multiple placeholder resolution
 	input2 := map[string]interface{}{
-		"InstanceType": "${aws:InstanceType}",
-	}
-	result2 := ResolveAWSMetadataPlaceholders(input2)
-	assert.Equal(t, 1, callCount, "Metadata provider should still be called only once (cached)")
-
-	resultMap2 := result2.(map[string]interface{})
-	assert.Equal(t, "t3.micro", resultMap2["InstanceType"])
-
-	// Third call with multiple placeholders should still use cache
-	input3 := map[string]interface{}{
 		"InstanceId":   "${aws:InstanceId}",
 		"InstanceType": "${aws:InstanceType}",
 		"ImageId":      "${aws:ImageId}",
 	}
-	result3 := ResolveAWSMetadataPlaceholders(input3)
-	assert.Equal(t, 1, callCount, "Metadata provider should still be called only once (cached)")
-
-	resultMap3 := result3.(map[string]interface{})
-	assert.Equal(t, "i-test123", resultMap3["InstanceId"])
-	assert.Equal(t, "t3.micro", resultMap3["InstanceType"])
-	assert.Equal(t, "ami-test123", resultMap3["ImageId"])
+	result2 := ResolveAWSMetadataPlaceholders(input2)
+	resultMap2 := result2.(map[string]interface{})
+	assert.Equal(t, "i-test123", resultMap2["InstanceId"])
+	assert.Equal(t, "t3.micro", resultMap2["InstanceType"])
+	assert.Equal(t, "ami-test123", resultMap2["ImageId"])
 }
