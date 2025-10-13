@@ -19,10 +19,12 @@ import (
 )
 
 const (
-	defaultRetryCount       = 5
-	defaultBackoffDuration  = time.Duration(1 * time.Minute)
-	eksClusterNameTagPrefix = "kubernetes.io/cluster/"
-	autoScalingGroupNameTag = "aws:autoscaling:groupName"
+	defaultRetryCount         = 5
+	defaultBackoffDuration    = time.Duration(1 * time.Minute)
+	eksClusterNameTagPrefix   = "kubernetes.io/cluster/"
+	autoScalingGroupNameTag   = "aws:autoscaling:groupName"
+	HighResolutionTagKey      = "aws:StorageResolution"
+	AggregationIntervalTagKey = "aws:AggregationInterval"
 )
 
 var (
@@ -198,4 +200,21 @@ func checkForEKSClusterInCache(tc *TagsCache) string {
 		return true
 	})
 	return clusterName
+}
+
+// AddHighResolutionTag adds the high resolution tag to the provided tags map
+func AddHighResolutionTag(tags interface{}) {
+	tagMap := tags.(map[string]interface{})
+	tagMap[HighResolutionTagKey] = "true"
+}
+
+// FilterReservedKeys filters out reserved tag keys from the input
+func FilterReservedKeys(input any) any {
+	result := map[string]any{}
+	for k, v := range input.(map[string]interface{}) {
+		if k != HighResolutionTagKey && k != AggregationIntervalTagKey {
+			result[k] = v
+		}
+	}
+	return result
 }

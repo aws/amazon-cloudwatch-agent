@@ -47,7 +47,13 @@ type Metadata struct {
 
 type MetadataInfoProvider func() *Metadata
 
+var ec2MetadataInfoProviderFunc = ec2MetadataInfoProvider
+
 var Ec2MetadataInfoProvider = func() *Metadata {
+	return ec2MetadataInfoProviderFunc()
+}
+
+func ec2MetadataInfoProvider() *Metadata {
 	ec2 := ec2util.GetEC2UtilSingleton()
 	return &Metadata{
 		InstanceID:   ec2.InstanceID,
@@ -98,8 +104,8 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	}
 }
 
-func getAWSMetadata() map[string]string {
-	md := Ec2MetadataInfoProvider()
+func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
+	md := provider()
 
 	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
 	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
@@ -155,6 +161,10 @@ func getIpAddress() string {
 		}
 	}
 	return unknownIPAddress
+}
+
+func getAWSMetadata() map[string]string {
+	return getAWSMetadataInfo(Ec2MetadataInfoProvider)
 }
 
 func getAWSMetadataWithTags(needsTags bool) map[string]string {
