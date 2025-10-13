@@ -6,12 +6,13 @@ package util
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 // MockEC2TagsClient is a mock implementation of EC2TagsClient for testing
@@ -25,6 +26,32 @@ func (m *MockEC2TagsClient) DescribeTagsWithContext(ctx aws.Context, input *ec2.
 }
 
 func TestGetEKSClusterName(t *testing.T) {
+	tests := []struct {
+		name           string
+		sectionKey     string
+		input          map[string]interface{}
+		expectedResult string
+	}{
+		{
+			name:       "Cluster name from config",
+			sectionKey: "cluster_name",
+			input: map[string]interface{}{
+				"cluster_name": "my-test-cluster",
+			},
+			expectedResult: "my-test-cluster",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetEKSClusterName(tt.sectionKey, tt.input)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}
+
+// TestTagutilGetEKSClusterName tests the tagutil.GetEKSClusterName function directly with mocked EC2 tags
+func TestTagutilGetEKSClusterName(t *testing.T) {
 	tests := []struct {
 		name           string
 		instanceID     string
@@ -142,4 +169,13 @@ func TestGetEKSClusterName(t *testing.T) {
 			}
 		})
 	}
+}
+func TestGetClusterNameFromEc2Tagger(t *testing.T) {
+	// This test cannot properly mock ec2util.GetEC2UtilSingleton().InstanceID
+	// so it will return empty results in test environment
+	// The actual functionality is tested in TestTagutilGetEKSClusterName
+	t.Run("Returns empty in test environment", func(t *testing.T) {
+		result := GetClusterNameFromEc2Tagger()
+		assert.Equal(t, "", result, "Expected empty result since ec2util cannot be mocked in test environment")
+	})
 }
