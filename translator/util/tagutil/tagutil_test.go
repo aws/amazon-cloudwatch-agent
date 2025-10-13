@@ -109,3 +109,46 @@ func TestGetAllTagsForInstance_EmptyResponse(t *testing.T) {
 	ResetEC2APIProvider()
 	ResetTagsCache()
 }
+func TestGetAllTagsForInstanceWithRetries(t *testing.T) {
+	// Reset the cache before test
+	ResetTagsCache()
+
+	// Create mock client
+	mockClient := &MockEC2TagsClient{}
+
+	// Set up mock response with tags
+	mockTags := []*ec2.TagDescription{
+		{
+			Key:   aws.String("kubernetes.io/cluster/my-cluster"),
+			Value: aws.String("owned"),
+		},
+	}
+
+	mockOutput := &ec2.DescribeTagsOutput{
+		Tags: mockTags,
+	}
+
+	mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
+
+	// Set the mock provider
+	SetEC2APIProviderForTesting(func() EC2TagsClient {
+		return mockClient
+	})
+
+	// Test the function
+	result := GetAllTagsForInstanceWithRetries("i-1234567890abcdef0")
+
+	// Verify results
+	expected := map[string]string{
+		"kubernetes.io/cluster/my-cluster": "owned",
+	}
+
+	assert.Equal(t, expected, result)
+
+	// Verify mock was called
+	mockClient.AssertExpectations(t)
+
+	// Clean up
+	ResetEC2APIProvider()
+	ResetTagsCache()
+}
