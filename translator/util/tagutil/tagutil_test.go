@@ -24,13 +24,9 @@ func (m *MockEC2TagsClient) DescribeTagsWithContext(ctx aws.Context, input *ec2.
 }
 
 func TestGetAutoScalingGroupName(t *testing.T) {
-	// Reset the cache before test
 	ResetTagsCache()
 
-	// Create mock client
 	mockClient := &MockEC2TagsClient{}
-
-	// Set up mock response with ASG tag
 	mockTags := []*ec2.TagDescription{
 		{
 			Key:   aws.String("aws:autoscaling:groupName"),
@@ -48,18 +44,12 @@ func TestGetAutoScalingGroupName(t *testing.T) {
 
 	mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
 
-	// Set the mock provider
 	SetEC2APIProviderForTesting(func() EC2TagsClient {
 		return mockClient
 	})
 
-	// Test the function
 	result := GetAutoScalingGroupName("i-1234567890abcdef0")
-
-	// Verify results
 	assert.Equal(t, "my-asg-group", result)
-
-	// Verify mock was called
 	mockClient.AssertExpectations(t)
 
 	// Clean up
@@ -68,13 +58,9 @@ func TestGetAutoScalingGroupName(t *testing.T) {
 }
 
 func TestGetEKSClusterName(t *testing.T) {
-	// Reset the cache before test
 	ResetTagsCache()
 
-	// Create mock client
 	mockClient := &MockEC2TagsClient{}
-
-	// Set up mock response with EKS cluster tag
 	mockTags := []*ec2.TagDescription{
 		{
 			Key:   aws.String("kubernetes.io/cluster/my-eks-cluster"),
@@ -92,18 +78,12 @@ func TestGetEKSClusterName(t *testing.T) {
 
 	mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
 
-	// Set the mock provider
 	SetEC2APIProviderForTesting(func() EC2TagsClient {
 		return mockClient
 	})
 
-	// Test the function
 	result := GetEKSClusterName("i-1234567890abcdef0")
-
-	// Verify results
 	assert.Equal(t, "my-eks-cluster", result)
-
-	// Verify mock was called
 	mockClient.AssertExpectations(t)
 
 	// Clean up
@@ -112,28 +92,19 @@ func TestGetEKSClusterName(t *testing.T) {
 }
 
 func TestGetEKSClusterName_EmptyResult(t *testing.T) {
-	// Reset the cache before test
 	ResetTagsCache()
 
-	// Create mock client
 	mockClient := &MockEC2TagsClient{}
-
-	// Set up empty mock response
 	mockOutput := &ec2.DescribeTagsOutput{
 		Tags: []*ec2.TagDescription{},
 	}
 
 	mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
-
-	// Set the mock provider
 	SetEC2APIProviderForTesting(func() EC2TagsClient {
 		return mockClient
 	})
 
-	// Test the function
 	result := GetEKSClusterName("i-1234567890abcdef0")
-
-	// Verify results
 	assert.Equal(t, "", result)
 
 	// Clean up
