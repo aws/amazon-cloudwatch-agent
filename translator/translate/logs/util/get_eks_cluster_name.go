@@ -4,14 +4,8 @@
 package util
 
 import (
-	"strings"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
-)
-
-const (
-	EKSClusterNameTagKeyPrefix = "kubernetes.io/cluster/"
 )
 
 // For ASG case, the ec2 tag may be not ready as soon as the node is started up.
@@ -30,19 +24,5 @@ func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 
 func GetClusterNameFromEc2Tagger() string {
 	instanceID := ec2util.GetEC2UtilSingleton().InstanceID
-	if instanceID == "" {
-		return ""
-	}
-
-	allTags := tagutil.GetAllTagsForInstanceWithRetries(instanceID)
-
-	// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"
-	for tagKey, tagValue := range allTags {
-		if strings.HasPrefix(tagKey, EKSClusterNameTagKeyPrefix) && tagValue == "owned" {
-			clusterName := tagKey[len(EKSClusterNameTagKeyPrefix):]
-			return clusterName
-		}
-	}
-
-	return ""
+	return tagutil.GetEKSClusterName(instanceID)
 }

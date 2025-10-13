@@ -6,6 +6,7 @@ package tagutil
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,8 +19,10 @@ import (
 )
 
 const (
-	defaultRetryCount      = 5
-	defaultBackoffDuration = time.Duration(1 * time.Minute)
+	defaultRetryCount       = 5
+	defaultBackoffDuration  = time.Duration(1 * time.Minute)
+	eksClusterNameTagPrefix = "kubernetes.io/cluster/"
+	autoScalingGroupNameTag = "aws:autoscaling:groupName"
 )
 
 var (
@@ -102,18 +105,6 @@ func (tc *TagsCache) loadAllTags() {
 	})
 }
 
-func GetAllTagsForInstance(instanceID string) map[string]string {
-	tc := getTagsCache(instanceID)
-	tc.loadAllTags()
-
-	result := make(map[string]string)
-	tc.tags.Range(func(key, value interface{}) bool {
-		result[key.(string)] = value.(string)
-		return true
-	})
-	return result
-}
-
 func SetEC2APIProviderForTesting(provider EC2APIProvider) {
 	ec2APIProvider = provider
 }
@@ -127,34 +118,10 @@ func ResetTagsCache() {
 	tagsCache = nil
 }
 
-// GetAllTagsForInstanceWithRetries gets all tags for an instance with retry logic and backoff
-func GetAllTagsForInstanceWithRetries(instanceID string) map[string]string {
-	for i := 0; i <= defaultRetryCount; i++ {
-		// Get all tags for the instance
-		allTags := GetAllTagsForInstance(instanceID)
-
-		// If we got some tags, return them
-		if len(allTags) > 0 {
-			return allTags
-		}
-
-		// If no tags found and we have more attempts, wait and retry
-		if i < defaultRetryCount {
-			log.Printf("No tags found for instance %s, will retry. Attempt %d/%d", instanceID, i+1, defaultRetryCount+1)
-			backoffSleep(i)
-			// Reset the tags cache to force a fresh fetch on next attempt
-			ResetTagsCache()
-		}
-	}
-
-	// Return empty map if no tags found after all retries
-	return make(map[string]string)
-}
-
 // sleep some back off time before retries.
 func backoffSleep(i int) {
 	backoffDuration := getBackoffDuration(i)
-	log.Printf("W! It is the %v time, going to sleep %v before retrying.", i, backoffDuration)
+	log.Printf("D! It is the %v time, going to sleep %v before retrying.", i, backoffDuration)
 	time.Sleep(backoffDuration)
 }
 
@@ -166,23 +133,69 @@ func getBackoffDuration(i int) time.Duration {
 	return backoffDuration
 }
 
-// GetEC2TagValue gets a specific tag value for an instance
-func GetEC2TagValue(instanceID, tagKey string) string {
+// GetAutoScalingGroupName gets the AutoScaling Group name for an instance
+func GetAutoScalingGroupName(instanceID string) string {
+	if instanceID == "" {
+		return ""
+	}
+
 	tc := getTagsCache(instanceID)
 	tc.loadAllTags()
 
-	var result string
+	var asgName string
 	tc.tags.Range(func(key, value interface{}) bool {
-		if key.(string) == tagKey {
-			result = value.(string)
-			return false // Stop iteration
+		if key.(string) == autoScalingGroupNameTag {
+			asgName = value.(string)
+			return false
 		}
-		return true // Continue iteration
+		return true
 	})
-	return result
+
+	return asgName
 }
 
-// GetAutoScalingGroupName gets the AutoScaling Group name for an instance
-func GetAutoScalingGroupName(instanceID string) string {
-	return GetEC2TagValue(instanceID, "aws:autoscaling:groupName")
+// GetEKSClusterName gets the EKS cluster name for an instance
+// Uses retry and backoff logic if the tag doesn't exist
+func GetEKSClusterName(instanceID string) string {
+	if instanceID == "" {
+		return ""
+	}
+
+	// Use retry logic for EKS cluster name
+	for i := 0; i <= defaultRetryCount; i++ {
+		tc := getTagsCache(instanceID)
+		tc.loadAllTags()
+
+		clusterName := checkForEKSClusterInCache(tc)
+		if clusterName != "" {
+			return clusterName
+		}
+
+		// If no cluster name found and we have more attempts, wait and retry
+		if i < defaultRetryCount {
+			log.Printf("D! EKS cluster name not found, will retry. Attempt %d/%d", i+1, defaultRetryCount+1)
+			backoffSleep(i)
+			// Reset the tags cache to force a fresh fetch on next attempt
+			ResetTagsCache()
+		}
+	}
+
+	return ""
+}
+
+// checkForEKSClusterInCache checks if EKS cluster tags exist in the cache
+func checkForEKSClusterInCache(tc *TagsCache) string {
+	var clusterName string
+	tc.tags.Range(func(key, value interface{}) bool {
+		keyStr := key.(string)
+		valueStr := value.(string)
+
+		// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"
+		if strings.HasPrefix(keyStr, eksClusterNameTagPrefix) && valueStr == "owned" {
+			clusterName = keyStr[len(eksClusterNameTagPrefix):]
+			return false
+		}
+		return true
+	})
+	return clusterName
 }

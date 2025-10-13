@@ -23,26 +23,22 @@ func (m *MockEC2TagsClient) DescribeTagsWithContext(ctx aws.Context, input *ec2.
 	return args.Get(0).(*ec2.DescribeTagsOutput), args.Error(1)
 }
 
-func TestGetAllTagsForInstance(t *testing.T) {
+func TestGetAutoScalingGroupName(t *testing.T) {
 	// Reset the cache before test
 	ResetTagsCache()
 
 	// Create mock client
 	mockClient := &MockEC2TagsClient{}
 
-	// Set up mock response
+	// Set up mock response with ASG tag
 	mockTags := []*ec2.TagDescription{
+		{
+			Key:   aws.String("aws:autoscaling:groupName"),
+			Value: aws.String("my-asg-group"),
+		},
 		{
 			Key:   aws.String("Name"),
 			Value: aws.String("test-instance"),
-		},
-		{
-			Key:   aws.String("Environment"),
-			Value: aws.String("test"),
-		},
-		{
-			Key:   aws.String("kubernetes.io/cluster/my-cluster"),
-			Value: aws.String("owned"),
 		},
 	}
 
@@ -58,16 +54,10 @@ func TestGetAllTagsForInstance(t *testing.T) {
 	})
 
 	// Test the function
-	result := GetAllTagsForInstance("i-1234567890abcdef0")
+	result := GetAutoScalingGroupName("i-1234567890abcdef0")
 
 	// Verify results
-	expected := map[string]string{
-		"Name":                             "test-instance",
-		"Environment":                      "test",
-		"kubernetes.io/cluster/my-cluster": "owned",
-	}
-
-	assert.Equal(t, expected, result)
+	assert.Equal(t, "my-asg-group", result)
 
 	// Verify mock was called
 	mockClient.AssertExpectations(t)
@@ -77,7 +67,51 @@ func TestGetAllTagsForInstance(t *testing.T) {
 	ResetTagsCache()
 }
 
-func TestGetAllTagsForInstance_EmptyResponse(t *testing.T) {
+func TestGetEKSClusterName(t *testing.T) {
+	// Reset the cache before test
+	ResetTagsCache()
+
+	// Create mock client
+	mockClient := &MockEC2TagsClient{}
+
+	// Set up mock response with EKS cluster tag
+	mockTags := []*ec2.TagDescription{
+		{
+			Key:   aws.String("kubernetes.io/cluster/my-eks-cluster"),
+			Value: aws.String("owned"),
+		},
+		{
+			Key:   aws.String("Name"),
+			Value: aws.String("test-instance"),
+		},
+	}
+
+	mockOutput := &ec2.DescribeTagsOutput{
+		Tags: mockTags,
+	}
+
+	mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
+
+	// Set the mock provider
+	SetEC2APIProviderForTesting(func() EC2TagsClient {
+		return mockClient
+	})
+
+	// Test the function
+	result := GetEKSClusterName("i-1234567890abcdef0")
+
+	// Verify results
+	assert.Equal(t, "my-eks-cluster", result)
+
+	// Verify mock was called
+	mockClient.AssertExpectations(t)
+
+	// Clean up
+	ResetEC2APIProvider()
+	ResetTagsCache()
+}
+
+func TestGetEKSClusterName_EmptyResult(t *testing.T) {
 	// Reset the cache before test
 	ResetTagsCache()
 
@@ -97,56 +131,10 @@ func TestGetAllTagsForInstance_EmptyResponse(t *testing.T) {
 	})
 
 	// Test the function
-	result := GetAllTagsForInstance("i-1234567890abcdef0")
+	result := GetEKSClusterName("i-1234567890abcdef0")
 
 	// Verify results
-	assert.Empty(t, result)
-
-	// Verify mock was called
-	mockClient.AssertExpectations(t)
-
-	// Clean up
-	ResetEC2APIProvider()
-	ResetTagsCache()
-}
-func TestGetAllTagsForInstanceWithRetries(t *testing.T) {
-	// Reset the cache before test
-	ResetTagsCache()
-
-	// Create mock client
-	mockClient := &MockEC2TagsClient{}
-
-	// Set up mock response with tags
-	mockTags := []*ec2.TagDescription{
-		{
-			Key:   aws.String("kubernetes.io/cluster/my-cluster"),
-			Value: aws.String("owned"),
-		},
-	}
-
-	mockOutput := &ec2.DescribeTagsOutput{
-		Tags: mockTags,
-	}
-
-	mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
-
-	// Set the mock provider
-	SetEC2APIProviderForTesting(func() EC2TagsClient {
-		return mockClient
-	})
-
-	// Test the function
-	result := GetAllTagsForInstanceWithRetries("i-1234567890abcdef0")
-
-	// Verify results
-	expected := map[string]string{
-		"kubernetes.io/cluster/my-cluster": "owned",
-	}
-
-	assert.Equal(t, expected, result)
-
-	// Verify mock was called
-	mockClient.AssertExpectations(t)
+	assert.Equal(t, "", result)
 
 	// Clean up
 	ResetEC2APIProvider()
