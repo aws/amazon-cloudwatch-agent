@@ -240,6 +240,18 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
 }
 
+func TestEmfAndKubernetesWithGpuHighFrequencyConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_high_frequency_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_high_frequency_config", "darwin", nil, "")
+}
+
 func TestEmfAndKubernetesWithKueueConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")

@@ -18,8 +18,9 @@ import (
 
 func TestTranslators(t *testing.T) {
 	type want struct {
-		receivers []string
-		exporters []string
+		receivers  []string
+		processors []string
+		exporters  []string
 	}
 	testCases := map[string]struct {
 		input map[string]any
@@ -37,8 +38,9 @@ func TestTranslators(t *testing.T) {
 			},
 			want: map[string]want{
 				"metrics/containerinsights": {
-					receivers: []string{"awscontainerinsightreceiver"},
-					exporters: []string{"awsemf/containerinsights"},
+					receivers:  []string{"awscontainerinsightreceiver"},
+					processors: []string{"batch/containerinsights", "filter/containerinsights", "awsentity/resource/containerinsights"},
+					exporters:  []string{"awsemf/containerinsights"},
 				},
 			},
 		},
@@ -55,8 +57,9 @@ func TestTranslators(t *testing.T) {
 			},
 			want: map[string]want{
 				"metrics/containerinsights": {
-					receivers: []string{"awscontainerinsightreceiver"},
-					exporters: []string{"awsemf/containerinsights"},
+					receivers:  []string{"awscontainerinsightreceiver"},
+					processors: []string{"batch/containerinsights", "filter/containerinsights", "awsentity/resource/containerinsights", "metricstransform/containerinsights", "gpuattributes/containerinsights"},
+					exporters:  []string{"awsemf/containerinsights"},
 				},
 			},
 		},
@@ -73,12 +76,35 @@ func TestTranslators(t *testing.T) {
 			},
 			want: map[string]want{
 				"metrics/containerinsights": {
-					receivers: []string{"awscontainerinsightreceiver"},
-					exporters: []string{"awsemf/containerinsights"},
+					receivers:  []string{"awscontainerinsightreceiver"},
+					processors: []string{"batch/containerinsights", "filter/containerinsights", "awsentity/resource/containerinsights"},
+					exporters:  []string{"awsemf/containerinsights"},
 				},
 				"metrics/kueueContainerInsights": {
-					receivers: []string{"awscontainerinsightskueuereceiver"},
-					exporters: []string{"awsemf/kueueContainerInsights"},
+					receivers:  []string{"awscontainerinsightskueuereceiver"},
+					processors: []string{"batch/kueueContainerInsights", "filter/kueueContainerInsights", "kueueattributes/kueueContainerInsights"},
+					exporters:  []string{"awsemf/kueueContainerInsights"},
+				},
+			},
+		},
+		"WithEnhancedContainerInsightsAndHighFrequencyGPUMetrics": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enhanced_container_insights":                         true,
+							"accelerated_compute_metrics":                         true,
+							"accelerated_compute_gpu_metrics_collection_interval": 30, // 30 seconds, less than default 60s
+							"cluster_name": "TestCluster",
+						},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/containerinsights": {
+					receivers:  []string{"awscontainerinsightreceiver"},
+					processors: []string{"batch/containerinsights", "filter/containerinsights", "groupbyattrs/containerinsights", "awsentity/resource/containerinsights", "metricstransform/containerinsights", "gpuattributes/containerinsights"},
+					exporters:  []string{"awsemf/containerinsights"},
 				},
 			},
 		},
@@ -98,6 +124,7 @@ func TestTranslators(t *testing.T) {
 					g, err := tr.Translate(conf)
 					assert.NoError(t, err)
 					assert.Equal(t, w.receivers, collections.MapSlice(g.Receivers.Keys(), component.ID.String))
+					assert.Equal(t, w.processors, collections.MapSlice(g.Processors.Keys(), component.ID.String))
 					assert.Equal(t, w.exporters, collections.MapSlice(g.Exporters.Keys(), component.ID.String))
 				})
 			}
