@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 const (
@@ -126,7 +127,7 @@ func getTagMetadata() map[string]string {
 	}
 
 	result := make(map[string]string)
-	asgName := GetAutoScalingGroupName(instanceID)
+	asgName := tagutil.GetAutoScalingGroupName(instanceID)
 	if asgName != "" {
 		result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
 	}

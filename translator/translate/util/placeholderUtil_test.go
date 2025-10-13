@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 const (
@@ -125,7 +126,7 @@ func TestResolveAWSMetadataPlaceholders(t *testing.T) {
 }
 func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	// Reset cache before test
-	ResetTagsSingleton()
+	tagutil.ResetTagsCache()
 
 	// Mock the metadata provider for this test
 	originalProvider := Ec2MetadataInfoProvider
@@ -151,7 +152,7 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	defer func() {
 		Ec2MetadataInfoProvider = originalProvider
 		tagMetadataProvider = originalTagProvider
-		ResetTagsSingleton()
+		tagutil.ResetTagsCache()
 	}()
 
 	tests := []struct {

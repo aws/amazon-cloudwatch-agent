@@ -34,7 +34,6 @@ func GetClusterNameFromEc2Tagger() string {
 		return ""
 	}
 
-	// Get all tags for the instance using the centralized tagutil with retries
 	allTags := tagutil.GetAllTagsForInstanceWithRetries(instanceID)
 
 	// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"

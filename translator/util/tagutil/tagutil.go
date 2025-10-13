@@ -48,8 +48,7 @@ var ec2APIProvider EC2APIProvider = defaultEC2APIProvider
 
 type TagsCache struct {
 	instanceID string
-	tags       map[string]string
-	mu         sync.RWMutex
+	tags       sync.Map
 	once       sync.Once
 }
 
@@ -60,7 +59,6 @@ func getTagsCache(instanceID string) *TagsCache {
 	cacheOnce.Do(func() {
 		tagsCache = &TagsCache{
 			instanceID: instanceID,
-			tags:       make(map[string]string),
 		}
 	})
 	return tagsCache
@@ -96,14 +94,11 @@ func (tc *TagsCache) loadAllTags() {
 			return
 		}
 
-		tc.mu.Lock()
-		defer tc.mu.Unlock()
-
 		for _, tag := range result.Tags {
-			tc.tags[*tag.Key] = *tag.Value
+			tc.tags.Store(*tag.Key, *tag.Value)
 		}
 
-		log.Printf("D! loadAllTags: Loaded %d tags for instance %s", len(tc.tags), tc.instanceID)
+		log.Printf("D! loadAllTags: Loaded %d tags for instance %s", len(result.Tags), tc.instanceID)
 	})
 }
 
@@ -111,13 +106,11 @@ func GetAllTagsForInstance(instanceID string) map[string]string {
 	tc := getTagsCache(instanceID)
 	tc.loadAllTags()
 
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
-
 	result := make(map[string]string)
-	for k, v := range tc.tags {
-		result[k] = v
-	}
+	tc.tags.Range(func(key, value interface{}) bool {
+		result[key.(string)] = value.(string)
+		return true
+	})
 	return result
 }
 
@@ -171,4 +164,25 @@ func getBackoffDuration(i int) time.Duration {
 		backoffDuration = sleeps[i]
 	}
 	return backoffDuration
+}
+
+// GetEC2TagValue gets a specific tag value for an instance
+func GetEC2TagValue(instanceID, tagKey string) string {
+	tc := getTagsCache(instanceID)
+	tc.loadAllTags()
+
+	var result string
+	tc.tags.Range(func(key, value interface{}) bool {
+		if key.(string) == tagKey {
+			result = value.(string)
+			return false // Stop iteration
+		}
+		return true // Continue iteration
+	})
+	return result
+}
+
+// GetAutoScalingGroupName gets the AutoScaling Group name for an instance
+func GetAutoScalingGroupName(instanceID string) string {
+	return GetEC2TagValue(instanceID, "aws:autoscaling:groupName")
 }
