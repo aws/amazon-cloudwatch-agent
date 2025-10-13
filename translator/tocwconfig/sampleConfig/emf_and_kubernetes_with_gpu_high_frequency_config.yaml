@@ -53,6 +53,28 @@ exporters:
         log_retention: 0
         log_stream_name: '{NodeName}'
         max_retries: 2
+        metric_as_distribution:
+            - container_gpu_utilization
+            - container_gpu_memory_utilization
+            - container_gpu_memory_total
+            - container_gpu_memory_used
+            - container_gpu_power_draw
+            - container_gpu_temperature
+            - container_gpu_tensor_core_utilization
+            - pod_gpu_utilization
+            - pod_gpu_memory_utilization
+            - pod_gpu_memory_total
+            - pod_gpu_memory_used
+            - pod_gpu_power_draw
+            - pod_gpu_temperature
+            - pod_gpu_tensor_core_utilization
+            - node_gpu_utilization
+            - node_gpu_memory_utilization
+            - node_gpu_memory_total
+            - node_gpu_memory_used
+            - node_gpu_power_draw
+            - node_gpu_temperature
+            - node_gpu_tensor_core_utilization
         metric_declarations:
             - dimensions:
                 - - ClusterName
@@ -766,7 +788,7 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 5s
+        timeout: 1m0s
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -787,6 +809,8 @@ processors:
         spans: {}
         traces: {}
     gpuattributes/containerinsights: {}
+    groupbyattrs/containerinsights:
+        keys: []
     metricstransform/containerinsights:
         transforms:
             - action: insert
@@ -796,6 +820,20 @@ processors:
               include: apiserver_request_total
               match_type: regexp
               new_name: apiserver_request_total_5xx
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -855,6 +893,48 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
+              include: aws_ebs_csi_read_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_time
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_exceeded_tp_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_volume_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
               include: aws_ebs_csi_write_seconds_total
               match_type: ""
               new_name: node_diskio_ebs_total_write_time
@@ -883,20 +963,6 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_exceeded_tp_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_volume_performance_exceeded_tp
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
               match_type: ""
               new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
@@ -908,90 +974,6 @@ processors:
                   label_value: ""
                   new_label: Type
                   new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_read_ops_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_read_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_read_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_read_time
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: container_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: ContainerGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: pod_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: PodGPU
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: node_gpu_power_draw
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeGPU
               submatch_case: ""
             - action: insert
               aggregation_type: ""
@@ -1268,6 +1250,48 @@ processors:
               submatch_case: ""
             - action: insert
               aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: container_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: pod_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_POWER_USAGE
+              match_type: ""
+              new_name: node_gpu_power_draw
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
               include: DCGM_FI_PROF_PIPE_TENSOR_ACTIVE
               match_type: ""
               new_name: container_gpu_tensor_core_utilization
@@ -1317,13 +1341,6 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuron_runtime_memory_used_bytes
-              match_type: ""
-              new_name: neurondevice_runtime_memory_used_bytes
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: neuroncore_memory_usage_constants
               match_type: ""
               new_name: neuroncore_memory_usage_constants
@@ -1341,6 +1358,13 @@ processors:
               include: neuroncore_memory_usage_model_shared_scratchpad
               match_type: ""
               new_name: neuroncore_memory_usage_model_shared_scratchpad
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_runtime_memory
+              match_type: ""
+              new_name: neuroncore_memory_usage_runtime_memory
               operations: []
               submatch_case: ""
             - action: update
@@ -1373,9 +1397,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuroncore_memory_usage_runtime_memory
+              include: neuron_runtime_memory_used_bytes
               match_type: ""
-              new_name: neuroncore_memory_usage_runtime_memory
+              new_name: neurondevice_runtime_memory_used_bytes
               operations: []
               submatch_case: ""
             - action: update
@@ -1408,8 +1432,8 @@ processors:
               submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_gpu_metrics_collection_interval: 1s
         accelerated_compute_metrics: true
-        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
@@ -1487,6 +1511,7 @@ service:
             processors:
                 - batch/containerinsights
                 - filter/containerinsights
+                - groupbyattrs/containerinsights
                 - awsentity/resource/containerinsights
                 - metricstransform/containerinsights
                 - gpuattributes/containerinsights

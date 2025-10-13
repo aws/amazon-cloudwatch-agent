@@ -661,6 +661,7 @@ processors:
               submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         accelerated_compute_metrics: false
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
