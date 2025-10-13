@@ -40,16 +40,9 @@ func GetClusterNameFromEc2Tagger() string {
 	// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"
 	for tagKey, tagValue := range allTags {
 		if strings.HasPrefix(tagKey, EKSClusterNameTagKeyPrefix) && tagValue == "owned" {
-			clusterName := strings.TrimPrefix(tagKey, EKSClusterNameTagKeyPrefix)
-			if clusterName != "" {
-				return clusterName
-			}
+			clusterName := tagKey[len(EKSClusterNameTagKeyPrefix):]
+			return clusterName
 		}
-	}
-
-	// Fallback to custom EKS cluster name tag if exists
-	if clusterName, exists := allTags["eks:cluster-name"]; exists {
-		return clusterName
 	}
 
 	return ""
