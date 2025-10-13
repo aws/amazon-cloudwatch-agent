@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -499,5 +499,5 @@ func GetClusterName(conf *confmap.Conf) string {
 		return envVarClusterName
 	}
 
-	return tagutil.GetEKSClusterName()
+	return util.GetClusterNameFromEc2Tagger()
 }
