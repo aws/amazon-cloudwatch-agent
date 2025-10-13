@@ -557,6 +557,8 @@ func NewExponentialMappingCWFromOtel(dp pmetric.HistogramDataPoint) ToCloudWatch
 	if !dp.HasMax() {
 		if lenBounds > 0 {
 			em.maximum = bounds.At(lenBounds - 1)
+		} else {
+			em.minimum = math.Inf(+1)
 		}
 	}
 
