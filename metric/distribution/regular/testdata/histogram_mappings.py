@@ -114,25 +114,58 @@ def plot_all_folders_comparison(json_filename):
     folders = ['original', 'cwagent', 'even', 'middlepoint', 'exponential', 'exponentialcw']
     colors = ['black', 'green', 'orange', 'red', 'purple', 'blue']
     
-    fig, ax = plt.subplots(len(folders), 1, figsize=(12, 20))
+    # First pass: collect all data and calculate global x-axis range
+    all_data = []
+    global_min, global_max = float('inf'), float('-inf')
     
-    i = -1
-    for folder, color in zip(folders, colors):
-        i += 1
+    for folder in folders:
         filepath = base_path / folder / (json_filename+".json")
         if filepath.exists():
             try:
                 if folder == 'original':
                     data = load_original_histogram(filepath)
-                    plot_original_histogram(data, ax[i], f'{folder.capitalize()} Mapping', color)
+                    boundaries = data.get('Boundaries', [])
+                    min_val = data.get('Min')
+                    max_val = data.get('Max')
+                    
+                    if min_val is not None:
+                        global_min = min(global_min, min_val)
+                    if max_val is not None:
+                        global_max = max(global_max, max_val)
+                    if boundaries:
+                        global_min = min(global_min, min(boundaries))
+                        global_max = max(global_max, max(boundaries))
+                    
+                    all_data.append((folder, data, None, None))
                 else:
                     values, counts = load_json_data(filepath)
-                    if not values:  # Skip if no values
-                        continue
-                    hist = {values[j]: counts[j] for j in range(len(values))}
-                    plot_cw_histogram_bars(hist, min(values), max(values), ax[i], f'{folder.capitalize()} Mapping', color)
+                    if values:
+                        global_min = min(global_min, min(values))
+                        global_max = max(global_max, max(values))
+                        hist = {values[j]: counts[j] for j in range(len(values))}
+                        all_data.append((folder, None, hist, (min(values), max(values))))
             except Exception as e:
                 print(f"Error processing {filepath}: {e}")
+    
+    # Add 5% padding to the global range
+    if global_min != float('inf') and global_max != float('-inf'):
+        range_padding = (global_max - global_min) * 0.05
+        global_min -= range_padding
+        global_max += range_padding
+    
+    fig, ax = plt.subplots(len(all_data), 1, figsize=(12, 20))
+    
+    # Second pass: plot with shared x-axis
+    for i, (folder, orig_data, hist_data, hist_range) in enumerate(all_data):
+        color = colors[folders.index(folder)]
+        
+        if orig_data is not None:
+            plot_original_histogram(orig_data, ax[i], f'{folder.capitalize()} Mapping', color)
+        else:
+            plot_cw_histogram_bars(hist_data, hist_range[0], hist_range[1], ax[i], f'{folder.capitalize()} Mapping', color)
+        
+        # Set shared x-axis limits
+        ax[i].set_xlim(global_min, global_max)
     
     plt.tight_layout()
     plt.savefig(f"comparisons/{json_filename}.png", dpi=300, bbox_inches='tight')
