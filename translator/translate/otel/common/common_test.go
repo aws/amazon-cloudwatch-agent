@@ -31,6 +31,8 @@ func (t testTranslator) ID() component.ID {
 
 func TestConfigKeys(t *testing.T) {
 	require.Equal(t, "1::2", ConfigKey("1", "2"))
+	require.Equal(t, "logs::metrics_collected::kubernetes::accelerated_compute_gpu_metrics_collection_interval",
+		ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, AcceleratedComputeGPUMetricsCollectionInterval))
 }
 
 func TestGetString(t *testing.T) {

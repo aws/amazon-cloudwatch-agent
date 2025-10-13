@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/groupbyattrsprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/kueue"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
@@ -58,13 +59,24 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 
+	highFrequencyGPUMetricsEnabled := t.pipelineName == ciPipelineName && awscontainerinsight.IsHighFrequencyGPUMetricsEnabled(conf)
+	batchprocessorTelemetryKey := common.LogsKey
+	// Use 60s batch period for batch processor if high-frequency GPU metrics are enabled, otherwise use 5s
+	if highFrequencyGPUMetricsEnabled {
+		batchprocessorTelemetryKey = common.MetricsKey
+	}
 	// create processor map with
 	// - default batch processor
 	// - filter processor to drop prometheus metadata
 	processors := common.NewTranslatorMap(
-		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
+		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, batchprocessorTelemetryKey),
 		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
 	)
+
+	if highFrequencyGPUMetricsEnabled {
+		processors.Set(groupbyattrsprocessor.NewTranslatorWithName(t.pipelineName))
+	}
+
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name
