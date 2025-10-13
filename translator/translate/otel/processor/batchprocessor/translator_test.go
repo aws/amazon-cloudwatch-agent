@@ -77,6 +77,41 @@ func TestTranslator(t *testing.T) {
 				SendBatchMaxSize: 0,
 			},
 		},
+		"TimeoutOverrideMetricsSection": {
+			translator: NewTranslatorWithNameSectionAndTimeout("test", common.MetricsKey, 45*time.Second),
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"force_flush_interval": 30,
+				},
+			},
+			want: &batchprocessor.Config{
+				Timeout:          45 * time.Second,
+				SendBatchSize:    8192,
+				SendBatchMaxSize: 0,
+			},
+		},
+		"TimeoutOverrideLogsSection": {
+			translator: NewTranslatorWithNameSectionAndTimeout("test", common.LogsKey, 15*time.Second),
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+			want: &batchprocessor.Config{
+				Timeout:          15 * time.Second,
+				SendBatchSize:    8192,
+				SendBatchMaxSize: 0,
+			},
+		},
+		"TimeoutOverrideNotConfiguredSection": {
+			translator: NewTranslatorWithNameSectionAndTimeout("test", common.TracesKey, 25*time.Second),
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{},
+			},
+			want: &batchprocessor.Config{
+				Timeout:          25 * time.Second,
+				SendBatchSize:    8192,
+				SendBatchMaxSize: 0,
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

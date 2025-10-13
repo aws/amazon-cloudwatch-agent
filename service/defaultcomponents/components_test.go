@@ -54,6 +54,7 @@ func TestComponents(t *testing.T) {
 		"gpuattributes",
 		"kueueattributes",
 		"groupbytrace",
+		"groupbyattrs",
 		"k8sattributes",
 		"memory_limiter",
 		"metricstransform",
