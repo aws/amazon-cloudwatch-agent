@@ -160,12 +160,12 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-#          echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
-#          echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
-#          echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+#          echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+#          echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+#          echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 #          echo "ec2_performance_matrix=$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 #          echo "ec2_windows_performance_matrix=$(echo $(cat generator/resources/ec2_windows_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 #          echo "ec2_stress_matrix=$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
