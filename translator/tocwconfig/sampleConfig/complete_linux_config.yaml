@@ -306,6 +306,7 @@ receivers:
                 insecure: true
         transport: udp
     jmx/0:
+        aggregate_across_mbeans: true
         collection_interval: 1m0s
         endpoint: localhost:12345
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
@@ -323,6 +324,7 @@ receivers:
         truststore_type: PKCS12
         username: cwagent
     jmx/1:
+        aggregate_across_mbeans: true
         collection_interval: 1m0s
         endpoint: localhost:4567
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar

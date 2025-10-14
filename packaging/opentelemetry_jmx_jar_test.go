@@ -16,11 +16,11 @@ type supportedJar struct {
 	version string
 }
 
-func TestOpentelemetryJMXMetricsJarSHA(t *testing.T) {
+func TestOpenTelemetryJmxMetricsJarSHA(t *testing.T) {
 	var jmxMetricsGathererVersions = map[string]supportedJar{
-		"14f28b1c45e6ad91faa7f25462bfd96e6ab3b6980afe5534f92b8a4973895cbb": {
-			version: "1.37.0-fix",
-			jar:     "JMX metrics gatherer w/ Tomcat metrics fix",
+		"0ef4abb0da557fc424867bcd55d73459cf9f6374842775fa2e64a9fcc0fe232c": {
+			version: "1.50.0-alpha",
+			jar:     "JMX metrics gatherer",
 		},
 	}
 	hash, _ := hashFile("opentelemetry-jmx-metrics.jar")
