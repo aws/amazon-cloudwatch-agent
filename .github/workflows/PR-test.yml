@@ -225,11 +225,11 @@ jobs:
           fi
 
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" != "true" ]]; then
-            echo "Missing 'ready for testing label'. Please add before merging."
+            echo "Missing 'ready for testing' label. Please add before merging."
             exit 1
           fi
 
-          echo "`ready for testing label found!`"
+          echo "'ready for testing' label found!"
 
   verify-all:
     name: Verify All PR Test Jobs
