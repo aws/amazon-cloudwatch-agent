@@ -211,7 +211,7 @@ func (m *targetManager) updateTargetBatch(targets map[string]Target) {
 	for attempt := 0; attempt < numBackoffRetries; attempt++ {
 		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
 		if err != nil {
-			m.logger.Errorf("failed to describe log group retention for targets %v: %v", targets, err)
+			m.logger.Errorf("test failed to describe log group retention for targets %v: %v", targets, err)
 			time.Sleep(m.calculateBackoff(attempt))
 			continue
 		}
