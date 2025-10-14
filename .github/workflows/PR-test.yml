@@ -214,7 +214,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   IntegrationTestGate:
-    name: Require ready for testing label
+    name: Check ready for testing label
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
@@ -223,16 +223,16 @@ jobs:
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
             echo "'ready for testing' label found!"
           else
-            echo "Missing 'ready for testing label'"
+            echo "Missing 'ready for testing label'. Please run the tests before merging."
             exit 1
           fi
 
 
   verify-all:
     name: Verify All PR Test Jobs
-    needs: [CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
+    needs: [IntegrationTestGate, CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
             GenerateTestMatrix, EC2LinuxIntegrationTest, EC2SELinuxIntegrationTest,
-            StopLocalStack, IntegrationTestGate]
+            StopLocalStack]
     runs-on: ubuntu-latest
     if: always()
     steps:
