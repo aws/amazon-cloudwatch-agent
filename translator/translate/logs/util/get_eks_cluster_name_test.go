@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,8 +19,8 @@ type MockEC2TagsClient struct {
 	mock.Mock
 }
 
-func (m *MockEC2TagsClient) DescribeTagsWithContext(ctx aws.Context, input *ec2.DescribeTagsInput, opts ...request.Option) (*ec2.DescribeTagsOutput, error) {
-	args := m.Called(ctx, input, opts)
+func (m *MockEC2TagsClient) DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
+	args := m.Called(input)
 	return args.Get(0).(*ec2.DescribeTagsOutput), args.Error(1)
 }
 
@@ -147,7 +146,7 @@ func TestTagutilGetEKSClusterName(t *testing.T) {
 				mockOutput := &ec2.DescribeTagsOutput{
 					Tags: tt.mockTags,
 				}
-				mockClient.On("DescribeTagsWithContext", mock.Anything, mock.Anything, mock.Anything).Return(mockOutput, nil)
+				mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
 
 				tagutil.SetEC2APIProviderForTesting(func() tagutil.EC2TagsClient {
 					return mockClient
