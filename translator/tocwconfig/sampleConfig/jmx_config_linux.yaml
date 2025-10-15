@@ -146,6 +146,7 @@ processors:
         trace_statements: []
 receivers:
     jmx:
+        aggregate_across_mbeans: true
         collection_interval: 1m0s
         endpoint: localhost:8080
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
