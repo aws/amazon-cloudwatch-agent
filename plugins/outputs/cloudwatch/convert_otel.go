@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
@@ -137,10 +136,7 @@ func convertOtelHistogramDataPoints(
 			aggregationInterval: aggregationInterval,
 			entity:              entity,
 		}
-		// Assume function pointer is valid.
-		classic := distribution.NewClassicDistribution()
-		classic.ConvertFromOtel(dp, unit)
-		ad.distribution = classic
+		ad.histogram = &dp
 		datums = append(datums, &ad)
 	}
 	return datums

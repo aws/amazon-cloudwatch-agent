@@ -34,6 +34,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws/cloudwatch/histograms"
 )
 
 const (
@@ -443,7 +444,9 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 	var datums []*cloudwatch.MetricDatum
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
 
-	if metric.distribution != nil {
+	if metric.histogram != nil {
+		datums = c.buildMetricDatumHist(metric, dimensionsList)
+	} else if metric.distribution != nil {
 		datums = c.buildMetricDatumDist(metric, dimensionsList)
 	} else {
 		for index, dimensions := range dimensionsList {
@@ -489,7 +492,6 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 		metric.SetUnit(metric.distribution.Unit())
 	}
 	distList := metric.distribution.Resize(c.config.MaxValuesPerDatum)
-
 	for _, dist := range distList {
 		values, counts := dist.ValuesAndCounts()
 
@@ -538,6 +540,87 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 				Counts:            aws.Float64Slice(counts),
 				StatisticValues:   &s,
 			}
+			datums = append(datums, datum)
+		}
+	}
+	return datums
+}
+
+func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
+	datums := []*cloudwatch.MetricDatum{}
+
+	if metric.histogram.Count() == 0 {
+		log.Printf("E! metric has a histogram with no entries, %s", *metric.MetricName)
+		return datums
+	}
+	cwhist := histograms.ConvertOTelToCloudWatch(*metric.histogram)
+	log.Printf("D! metric has a histogram with min: %f, max: %f, sum: %f, %s", cwhist.Minimum(), cwhist.Maximum(), cwhist.Sum(), *metric.MetricName)
+	values, counts := cwhist.ValuesAndCounts()
+	if len(values) != len(counts) {
+		log.Printf("E! metric has a distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
+		return datums
+	}
+	log.Printf("D! metric has a histogram with values: %v counts: %v", values, counts)
+
+	s := cloudwatch.StatisticSet{}
+	s.SetMaximum(cwhist.Maximum())
+	s.SetMinimum(cwhist.Minimum())
+	s.SetSampleCount(cwhist.SampleCount())
+	s.SetSum(cwhist.Sum())
+
+	// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
+	// This can happen for cumulative histograms that were converted to delta histograms, or whenever
+	// the datasource does not provide a minimum and maximum value
+	if cwhist.Maximum() == 0 && cwhist.Minimum() == 0 {
+		distMin, distMax := minAndMax(values)
+		s.SetMinimum(distMin)
+		s.SetMaximum(distMax)
+	}
+
+	for i := 0; i < len(values); i += c.config.MaxValuesPerDatum {
+		end := i + c.config.MaxValuesPerDatum
+		if end > len(values) {
+			end = len(values)
+		}
+		batchValues := values[i:end]
+		batchCounts := counts[i:end]
+
+		for index, dimensions := range dimensionsList {
+			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
+			//metric datum
+			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+				continue
+			}
+
+			s := cloudwatch.StatisticSet{}
+			s.SetMaximum(cwhist.Maximum())
+			s.SetMinimum(cwhist.Minimum())
+			s.SetSum(0.0)
+			// Only assign `Sum` if this is the first split to make sure the total sum of the datapoints after aggregation is correct.
+			if i == 0 {
+				s.SetSum(cwhist.Sum())
+			}
+			count := 0.0
+			for _, c := range batchCounts {
+				count += c
+			}
+			s.SetSampleCount(count)
+
+			// Beware there may be many datums sharing pointers to the same
+			// strings for metric names, dimensions, etc.
+			// It is fine since at this point the values will not change.
+			datum := &cloudwatch.MetricDatum{
+				MetricName:        metric.MetricName,
+				Dimensions:        dimensions,
+				Timestamp:         metric.Timestamp,
+				Unit:              metric.Unit,
+				StorageResolution: metric.StorageResolution,
+				Values:            aws.Float64Slice(batchValues),
+				Counts:            aws.Float64Slice(batchCounts),
+				StatisticValues:   &s,
+			}
+			log.Printf("D! new datum with min %f, max %f, sum %f, count %f, %s", *s.Minimum, *s.Maximum, *s.Sum, *s.SampleCount, *metric.MetricName)
+
 			datums = append(datums, datum)
 		}
 	}
