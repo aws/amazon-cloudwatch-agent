@@ -34,7 +34,7 @@ replace (
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws => /local/home/dricross/workplace/classichistograms/opentelemetry-collector-contrib/pkg/aws
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/aws v0.0.0-20251015164328-822ab63e4a7d
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20251120035228-2492d12f5d81
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20251120035228-2492d12f5d81

@@ -7,12 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
 const (
@@ -28,6 +30,7 @@ type aggregationDatum struct {
 	cloudwatch.MetricDatum
 	aggregationInterval time.Duration
 	distribution        distribution.Distribution
+	histogram           *pmetric.HistogramDataPoint
 	entity              cloudwatch.Entity
 }
 
@@ -140,7 +143,7 @@ func (durationAgg *durationAggregator) aggregating() {
 			if !ok {
 				// First entry. Initialize it.
 				durationAgg.metricMap[metricMapKey] = m
-				if m.distribution == nil {
+				if m.histogram == nil && m.distribution == nil { // histograms are accumulated separately
 					// Assume function pointer is always valid.
 					m.distribution = distribution.NewClassicDistribution()
 					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
@@ -155,7 +158,13 @@ func (durationAgg *durationAggregator) aggregating() {
 				// Else the first entry has a distribution, so do nothing.
 			} else {
 				// Update an existing entry.
-				if m.distribution != nil {
+				if m.histogram != nil {
+					if aggregatedMetric.histogram == nil {
+						log.Printf("E! received histogram metric but aggregated metric is not a histogram")
+					} else {
+						AddHistograms(*aggregatedMetric.histogram, *m.histogram)
+					}
+				} else if m.distribution != nil {
 					aggregatedMetric.distribution.AddDistribution(m.distribution)
 				} else {
 					err := aggregatedMetric.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
@@ -185,4 +194,60 @@ func (durationAgg *durationAggregator) flush() {
 		durationAgg.metricChan <- v
 	}
 	durationAgg.metricMap = make(map[string]*aggregationDatum)
+}
+
+func AddHistograms(state, dp pmetric.HistogramDataPoint) error {
+	// bounds different: no way to merge, so reset observation to new boundaries
+	if !Equal(state.ExplicitBounds(), dp.ExplicitBounds()) {
+		dp.CopyTo(state)
+		return nil
+	}
+
+	// spec requires len(BucketCounts) == len(ExplicitBounds)+1.
+	// given we have limited error handling at this stage (and already verified boundaries are correct),
+	// doing a best-effort add of whatever we have appears reasonable.
+	n := min(state.BucketCounts().Len(), dp.BucketCounts().Len())
+	for i := range n {
+		sum := state.BucketCounts().At(i) + dp.BucketCounts().At(i)
+		state.BucketCounts().SetAt(i, sum)
+	}
+
+	state.SetCount(state.Count() + dp.Count())
+
+	if state.HasSum() && dp.HasSum() {
+		state.SetSum(state.Sum() + dp.Sum())
+	} else {
+		state.RemoveSum()
+	}
+
+	if state.HasMin() && dp.HasMin() {
+		state.SetMin(math.Min(state.Min(), dp.Min()))
+	} else {
+		state.RemoveMin()
+	}
+
+	if state.HasMax() && dp.HasMax() {
+		state.SetMax(math.Max(state.Max(), dp.Max()))
+	} else {
+		state.RemoveMax()
+	}
+
+	return nil
+}
+
+type Slice[E any] interface {
+	At(int) E
+	Len() int
+}
+
+func Equal[E comparable, S Slice[E]](a, b S) bool {
+	if a.Len() != b.Len() {
+		return false
+	}
+	for i := 0; i < a.Len(); i++ {
+		if a.At(i) != b.At(i) {
+			return false
+		}
+	}
+	return true
 }

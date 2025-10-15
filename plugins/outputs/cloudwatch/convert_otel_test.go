@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws/cloudwatch/histograms"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -196,6 +197,15 @@ func checkDatum(
 		// Refer to how createTestHistogram() sets them.
 		assert.Equal(t, values[0], counts[0])
 		assert.Equal(t, values[1], counts[1])
+	} else if d.histogram != nil {
+		// Verify histogram
+		assert.Equal(t, float64(histogramMax), d.histogram.Max())
+		assert.Equal(t, float64(histogramMin), d.histogram.Min())
+		assert.Equal(t, float64(histogramSum), d.histogram.Sum())
+		assert.Equal(t, uint64(histogramCount), d.histogram.Count())
+		cwhist := histograms.ConvertOTelToCloudWatch(*d.histogram)
+		values, counts := cwhist.ValuesAndCounts()
+		assert.Equal(t, len(values), len(counts))
 	} else {
 		// Verify single metric value.
 		assert.Equal(t, metricValue, *d.Value)
@@ -239,7 +249,7 @@ func TestConvertOtelMetrics_Histogram(t *testing.T) {
 
 		// Verify dimensions per metric.
 		for _, d := range datums {
-			assert.Equal(t, 0, len(d.Dimensions))
+			assert.Len(t, d.Dimensions, 0)
 			checkDatum(t, d, "Bytes", i)
 		}
 	}
