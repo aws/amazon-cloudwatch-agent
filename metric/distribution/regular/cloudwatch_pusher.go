@@ -54,11 +54,11 @@ func main() {
 			fileName := strings.TrimSuffix(filepath.Base(path), ".json")
 			metricName := fmt.Sprintf("HistogramDistribution_%s", mappingType)
 			metrics = append(metrics, MetricInfo{fileName, mappingType, metricName})
-			//return nil
-			if err := pushDistributionToCloudWatch(ctx, cw, path, mappingType); err != nil {
-				fmt.Printf("Error pushing %s: %v\n", path, err)
-			}
 			return nil
+			// if err := pushDistributionToCloudWatch(ctx, cw, path, mappingType); err != nil {
+			// 	fmt.Printf("Error pushing %s: %v\n", path, err)
+			// }
+			// return nil
 		})
 
 		if err != nil {

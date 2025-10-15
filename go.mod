@@ -34,9 +34,9 @@ replace (
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws => /local/home/dricross/workplace/classichistograms/opentelemetry-collector-contrib/pkg/aws
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/aws v0.0.0-20251015164328-822ab63e4a7d
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20250916235509-415059d978ca
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20251014214051-9115f69b2d24
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20250916235509-415059d978ca
 	// Replace with contrib to revert upstream change https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/20519
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20250916235509-415059d978ca

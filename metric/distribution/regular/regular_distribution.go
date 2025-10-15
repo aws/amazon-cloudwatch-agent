@@ -15,7 +15,62 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws/cloudwatch/histograms"
 )
+
+type RegularDistribution2 struct {
+	dp   pmetric.HistogramDataPoint
+	unit string
+}
+
+func (regularDist *RegularDistribution2) Maximum() float64 {
+	return regularDist.dp.Max()
+}
+
+func (regularDist *RegularDistribution2) Minimum() float64 {
+	return regularDist.dp.Min()
+}
+
+func (regularDist *RegularDistribution2) SampleCount() float64 {
+	return float64(regularDist.dp.Count())
+}
+
+func (regularDist *RegularDistribution2) Sum() float64 {
+	return regularDist.dp.Sum()
+}
+
+func (regularDist *RegularDistribution2) ValuesAndCounts() (values []float64, counts []float64) {
+	return histograms.ConvertOTelToCloudWatch(regularDist.dp).ValuesAndCounts()
+}
+
+func (regularDist *RegularDistribution2) Unit() string {
+	return regularDist.unit
+}
+
+func (regularDist *RegularDistribution2) Size() int {
+	return regularDist.dp.BucketCounts().Len()
+}
+
+func (regularDist *RegularDistribution2) AddEntry(value float64, weight float64) error {
+	return regularDist.AddEntryWithUnit(value, weight, regularDist.unit)
+}
+func (regularDist *RegularDistribution2) AddEntryWithUnit(value float64, weight float64, unit string) error {
+	return fmt.Errorf("not implemented")
+}
+func (regularDist *RegularDistribution2) AddDistribution(distribution distribution.Distribution) {
+
+}
+func (regularDist *RegularDistribution2) AddDistributionWithWeight(distribution distribution.Distribution, weight float64) {
+}
+func (rd *RegularDistribution2) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
+}
+func (rd *RegularDistribution2) ConvertToOtel(dp pmetric.HistogramDataPoint) {
+}
+func (rd *RegularDistribution2) Resize(int) []distribution.Distribution {
+	return []distribution.Distribution{rd}
+}
+
+var _ (distribution.ClassicDistribution) = (*RegularDistribution2)(nil)
 
 type RegularDistribution struct {
 	maximum     float64
