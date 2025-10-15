@@ -148,7 +148,9 @@ func TestTagutilGetEKSClusterName(t *testing.T) {
 				}
 				mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
 
-				tagutil.SetEC2APIProviderForTesting(func() tagutil.EC2TagsClient {
+				tagutil.SetEC2APIProviderForTesting(func() interface {
+					DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+				} {
 					return mockClient
 				})
 

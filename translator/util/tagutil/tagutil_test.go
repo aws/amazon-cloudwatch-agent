@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockEC2TagsClient is a mock implementation of EC2TagsClient for testing
+// MockEC2TagsClient is a mock implementation for testing
 type MockEC2TagsClient struct {
 	mock.Mock
 }
@@ -43,7 +43,9 @@ func TestGetAutoScalingGroupName(t *testing.T) {
 
 	mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
 
-	SetEC2APIProviderForTesting(func() EC2TagsClient {
+	SetEC2APIProviderForTesting(func() interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	} {
 		return mockClient
 	})
 
@@ -77,7 +79,9 @@ func TestGetEKSClusterName(t *testing.T) {
 
 	mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
 
-	SetEC2APIProviderForTesting(func() EC2TagsClient {
+	SetEC2APIProviderForTesting(func() interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	} {
 		return mockClient
 	})
 
@@ -99,7 +103,9 @@ func TestGetEKSClusterName_EmptyResult(t *testing.T) {
 	}
 
 	mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
-	SetEC2APIProviderForTesting(func() EC2TagsClient {
+	SetEC2APIProviderForTesting(func() interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	} {
 		return mockClient
 	})
 
@@ -120,7 +126,9 @@ func TestLoadAllTagsWithPagination(t *testing.T) {
 	paginatedClient := &MockEC2TagsClientWithPagination{}
 
 	// Set the mock provider with our custom client
-	SetEC2APIProviderForTesting(func() EC2TagsClient {
+	SetEC2APIProviderForTesting(func() interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	} {
 		return paginatedClient
 	})
 

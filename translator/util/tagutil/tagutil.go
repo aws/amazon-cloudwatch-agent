@@ -30,14 +30,6 @@ var (
 	sleeps = []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800, time.Millisecond * 1600, time.Millisecond * 3200}
 )
 
-type EC2TagsClient interface {
-	DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-}
-
-type EC2APIProvider func() EC2TagsClient
-
-var ec2APIProvider EC2APIProvider
-
 // TagsCache holds the cached tags for an instance
 type TagsCache struct {
 	instanceID string
@@ -86,12 +78,39 @@ func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTag
 	return nil, nil
 }
 
+var ec2ClientFactory = func(_ string) (interface {
+	DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+}, error) {
+	region := ec2util.GetEC2UtilSingleton().Region
+	if region == "" {
+		return nil, nil
+	}
+
+	config := &aws.Config{
+		Region:                        aws.String(region),
+		CredentialsChainVerboseErrors: aws.Bool(true),
+		LogLevel:                      configaws.SDKLogLevel(),
+		Logger:                        configaws.SDKLogger{},
+	}
+
+	ses, err := session.NewSession(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return ec2.New(ses), nil
+}
+
 // loadAllTags loads all tags for the instance using retry logic
 func (tc *TagsCache) loadAllTags() {
 	tc.once.Do(func() {
-		region := ec2util.GetEC2UtilSingleton().Region
-		if region == "" && ec2APIProvider == nil {
-			log.Printf("W! loadAllTags: No region available and no test provider for instance %s", tc.instanceID)
+		ec2Client, err := ec2ClientFactory(tc.instanceID)
+		if err != nil {
+			log.Printf("E! loadAllTags: Failed to create EC2 client: %v", err)
+			return
+		}
+		if ec2Client == nil {
+			log.Printf("W! loadAllTags: No region available for instance %s", tc.instanceID)
 			return
 		}
 
@@ -106,38 +125,15 @@ func (tc *TagsCache) loadAllTags() {
 			},
 		}
 
-		config := &aws.Config{
-			Region:                        aws.String(region),
-			CredentialsChainVerboseErrors: aws.Bool(true),
-			LogLevel:                      configaws.SDKLogLevel(),
-			Logger:                        configaws.SDKLogger{},
-		}
-
 		input := &ec2.DescribeTagsInput{
 			Filters: tagFilters,
-		}
-
-		var ec2Client EC2TagsClient
-		if ec2APIProvider != nil {
-			ec2Client = ec2APIProvider()
-		} else {
-			if region == "" {
-				log.Printf("W! loadAllTags: No region available for instance %s", tc.instanceID)
-				return
-			}
-			ses, err := session.NewSession(config)
-			if err != nil {
-				log.Printf("E! loadAllTags: Failed to create session for instance %s: %v", tc.instanceID, err)
-				return
-			}
-			ec2Client = ec2.New(ses)
 		}
 
 		totalTags := 0
 		for {
 			result, err := callFuncWithRetries(ec2Client.DescribeTags, input, "Describe EC2 Tag Fail.")
 			if err != nil {
-				log.Printf("E! loadAllTags: DescribeTags failed for instance %s: %v", tc.instanceID, err)
+				log.Printf("E! loadAllTags: DescribeTags failed: %v", err)
 				return
 			}
 
@@ -156,7 +152,7 @@ func (tc *TagsCache) loadAllTags() {
 			input.SetNextToken(*result.NextToken)
 		}
 
-		log.Printf("D! loadAllTags: Loaded %d tags for instance %s", totalTags, tc.instanceID)
+		log.Printf("D! loadAllTags: Loaded %d tags", totalTags)
 	})
 }
 
@@ -208,12 +204,40 @@ func FilterReservedKeys(input any) any {
 	return result
 }
 
-func SetEC2APIProviderForTesting(provider EC2APIProvider) {
-	ec2APIProvider = provider
+// Test functions
+func SetEC2APIProviderForTesting(provider func() interface {
+	DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+}) {
+	ec2ClientFactory = func(_ string) (interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	}, error) {
+		return provider(), nil
+	}
 }
 
 func ResetEC2APIProvider() {
-	ec2APIProvider = nil
+	ec2ClientFactory = func(_ string) (interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	}, error) {
+		region := ec2util.GetEC2UtilSingleton().Region
+		if region == "" {
+			return nil, nil
+		}
+
+		config := &aws.Config{
+			Region:                        aws.String(region),
+			CredentialsChainVerboseErrors: aws.Bool(true),
+			LogLevel:                      configaws.SDKLogLevel(),
+			Logger:                        configaws.SDKLogger{},
+		}
+
+		ses, err := session.NewSession(config)
+		if err != nil {
+			return nil, err
+		}
+
+		return ec2.New(ses), nil
+	}
 }
 
 func ResetTagsCache() {
