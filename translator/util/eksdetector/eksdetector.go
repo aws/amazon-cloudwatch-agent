@@ -32,16 +32,14 @@ var (
 // checking if it contains "eks". The result is cached to avoid repeated expensive operations.
 func isEKS() IsEKSCache {
 	once.Do(func() {
+		var err error
+		var value bool
 		issuer, err := getIssuer()
-		if err != nil {
-			isEKSCacheSingleton = IsEKSCache{Value: false, Err: err}
-			return
+		if len(issuer) > 0 && err == nil {
+			value = strings.Contains(strings.ToLower(issuer), "eks")
 		}
-
-		value := strings.Contains(strings.ToLower(issuer), "eks")
-		isEKSCacheSingleton = IsEKSCache{Value: value, Err: nil}
+		isEKSCacheSingleton = IsEKSCache{Value: value, Err: err}
 	})
-
 	return isEKSCacheSingleton
 }
 
