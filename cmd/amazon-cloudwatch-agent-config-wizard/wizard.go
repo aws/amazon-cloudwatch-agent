@@ -4,7 +4,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
@@ -12,10 +12,14 @@ import (
 )
 
 func main() {
-	log.Printf("Starting config-wizard, this will map back to a call to amazon-cloudwatch-agent")
+	fmt.Println("Starting config-wizard, this will map back to a call to amazon-cloudwatch-agent")
 
 	fs, wizardFlags := cmdwrapper.CreateFlagSet(flags.Command, flags.WizardFlags)
 	fs.Parse(os.Args[1:]) // Skip program name only
 
-	_ = cmdwrapper.ExecuteSubcommand(flags.Command, wizardFlags)
+	err := cmdwrapper.ExecuteSubcommand(flags.Command, wizardFlags)
+	if err != nil {
+		fmt.Printf(err.Error())
+		os.Exit(1)
+	}
 }
