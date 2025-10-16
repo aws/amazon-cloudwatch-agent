@@ -7,6 +7,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 const (
@@ -21,7 +24,7 @@ func TestHostName(t *testing.T) {
 }
 
 func TestIpAddress(t *testing.T) {
-	assert.True(t, getIpAddress() != unknownIpAddress)
+	assert.True(t, getIpAddress() != unknownIPAddress)
 }
 
 func TestGetMetadataInfo(t *testing.T) {
@@ -34,7 +37,7 @@ func TestGetMetadataInfo(t *testing.T) {
 
 func TestGetMetadataInfoEmptyInstanceId(t *testing.T) {
 	m := GetMetadataInfo(mockMetadataProvider("", dummyHostName, dummyPrivateIp, dummyAccountId))
-	assert.Equal(t, unknownInstanceId, m[instanceIdPlaceholder])
+	assert.Equal(t, unknownInstanceID, m[instanceIdPlaceholder])
 }
 
 func TestGetMetadataInfoUsesLocalHostname(t *testing.T) {
@@ -49,7 +52,7 @@ func TestGetMetadataInfoDerivesIpAddress(t *testing.T) {
 
 func TestGetMetadataInfoEmptyAccountId(t *testing.T) {
 	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, dummyPrivateIp, ""))
-	assert.Equal(t, unknownAccountId, m[accountIdPlaceholder])
+	assert.Equal(t, unknownAccountID, m[accountIdPlaceholder])
 }
 
 func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) func() *Metadata {
@@ -61,4 +64,197 @@ func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) fun
 			AccountID:  accountId,
 		}
 	}
+}
+func TestResolveAWSMetadataPlaceholders(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "No AWS placeholders",
+			input: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			expected: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+		{
+			name: "Unresolved AWS placeholder should be omitted",
+			input: map[string]interface{}{
+				"InstanceType":         "t3.medium",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"ImageId":              "ami-12345",
+			},
+			expected: map[string]interface{}{
+				"InstanceType": "t3.medium",
+				"ImageId":      "ami-12345",
+			},
+		},
+		{
+			name: "Mixed resolved and unresolved placeholders",
+			input: map[string]interface{}{
+				"InstanceType": "${aws:InstanceType}",
+				"ImageId":      "${aws:ImageId}",
+				"RegularKey":   "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceType": unknownInstanceType, // Should be resolved to default
+				"ImageId":      unknownImageID,      // Should be resolved to default
+				"RegularKey":   "regular_value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveAWSMetadataPlaceholders(tt.input)
+			resultMap := result.(map[string]interface{})
+
+			// Check that expected keys are present with correct values
+			for k, v := range tt.expected {
+				assert.Equal(t, v, resultMap[k], "Key %s should have value %v", k, v)
+			}
+
+			// Check that no unexpected keys are present
+			assert.Equal(t, len(tt.expected), len(resultMap), "Result should have exactly %d keys", len(tt.expected))
+		})
+	}
+}
+func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
+	// Reset cache before test
+	tagutil.ResetTagsCache()
+
+	// Mock the metadata provider for this test
+	originalProvider := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata {
+		return &Metadata{
+			InstanceID:   "i-1234567890abcdef0",
+			InstanceType: "t3.large",
+			ImageID:      "ami-0abcdef1234567890",
+			Hostname:     "test-hostname",
+			PrivateIP:    "10.0.1.100",
+			AccountID:    "123456789012",
+		}
+	}
+
+	// Mock the tag metadata provider for this test
+	originalTagProvider := tagMetadataProvider
+	tagMetadataProvider = func() map[string]string {
+		return map[string]string{
+			ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]: "my-test-asg",
+		}
+	}
+
+	defer func() {
+		Ec2MetadataInfoProvider = originalProvider
+		tagMetadataProvider = originalTagProvider
+		tagutil.ResetTagsCache()
+	}()
+
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "All AWS placeholders resolved successfully",
+			input: map[string]interface{}{
+				"InstanceType":         "${aws:InstanceType}",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"ImageId":              "${aws:ImageId}",
+				"InstanceId":           "${aws:InstanceId}",
+				"RegularKey":           "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceType":         "t3.large",
+				"AutoScalingGroupName": "my-test-asg",
+				"ImageId":              "ami-0abcdef1234567890",
+				"InstanceId":           "i-1234567890abcdef0",
+				"RegularKey":           "regular_value",
+			},
+		},
+		{
+			name: "Mixed AWS placeholders with some unresolvable",
+			input: map[string]interface{}{
+				"InstanceType":         "${aws:InstanceType}",
+				"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+				"UnknownPlaceholder":   "${aws:SomeUnknownValue}",
+				"RegularKey":           "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceType":         "t3.large",
+				"AutoScalingGroupName": "my-test-asg",
+				"RegularKey":           "regular_value",
+				// UnknownPlaceholder should be omitted
+			},
+		},
+		{
+			name: "Ensure we do not resolve non-aws placeholders",
+			input: map[string]interface{}{
+				"InstanceId": "{instance_id}",
+				"Hostname":   "{hostname}",
+				"RegularKey": "regular_value",
+			},
+			expected: map[string]interface{}{
+				"InstanceId": "{instance_id}",
+				"Hostname":   "{hostname}",
+				"RegularKey": "regular_value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveAWSMetadataPlaceholders(tt.input)
+			resultMap := result.(map[string]interface{})
+
+			// Check that expected keys are present with correct values
+			for k, v := range tt.expected {
+				assert.Equal(t, v, resultMap[k], "Key %s should have value %v", k, v)
+			}
+
+			// Check that no unexpected keys are present
+			assert.Equal(t, len(tt.expected), len(resultMap), "Result should have exactly %d keys", len(tt.expected))
+		})
+	}
+}
+func TestAWSMetadataFunctionality(t *testing.T) {
+	// Test that AWS metadata placeholders are resolved correctly
+	// Note: We rely on ec2util.GetEC2UtilSingleton() for caching, not additional layers
+
+	originalProvider := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata {
+		return &Metadata{
+			InstanceID:   "i-test123",
+			InstanceType: "t3.micro",
+			ImageID:      "ami-test123",
+		}
+	}
+	defer func() {
+		Ec2MetadataInfoProvider = originalProvider
+	}()
+
+	// Test single placeholder resolution
+	input1 := map[string]interface{}{
+		"InstanceId": "${aws:InstanceId}",
+	}
+	result1 := ResolveAWSMetadataPlaceholders(input1)
+	resultMap1 := result1.(map[string]interface{})
+	assert.Equal(t, "i-test123", resultMap1["InstanceId"])
+
+	// Test multiple placeholder resolution
+	input2 := map[string]interface{}{
+		"InstanceId":   "${aws:InstanceId}",
+		"InstanceType": "${aws:InstanceType}",
+		"ImageId":      "${aws:ImageId}",
+	}
+	result2 := ResolveAWSMetadataPlaceholders(input2)
+	resultMap2 := result2.(map[string]interface{})
+	assert.Equal(t, "i-test123", resultMap2["InstanceId"])
+	assert.Equal(t, "t3.micro", resultMap2["InstanceType"])
+	assert.Equal(t, "ami-test123", resultMap2["ImageId"])
 }
