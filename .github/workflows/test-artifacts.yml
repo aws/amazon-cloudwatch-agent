@@ -248,7 +248,6 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-      # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'linux' }}
         uses: nick-fields/retry@v2
@@ -270,7 +269,7 @@ jobs:
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${{inputs.build_id}}" \
               -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-              -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
+              -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
@@ -287,12 +286,13 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'window' }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 30
+          timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
             if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
@@ -303,18 +303,19 @@ jobs:
 
             terraform init
             if terraform apply --auto-approve \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="ssh_key_value=${PRIVATE_KEY}" \
               -var="ssh_key_name=${KEY_NAME}" \
-              -var="cwa_github_sha=${{ inputs.build_id }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="cwa_github_sha=${{ inputs.build_id }}"  \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
-      #This is here just in case workflow cancel
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) && matrix.arrays.family == 'linux' }}
         uses: nick-fields/retry@v2
@@ -330,6 +331,7 @@ jobs:
             fi
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) && matrix.arrays.family == 'window' }}
         uses: nick-fields/retry@v2
