@@ -554,28 +554,17 @@ func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsLi
 		return datums
 	}
 	cwhist := histograms.ConvertOTelToCloudWatch(*metric.histogram)
-	log.Printf("D! metric has a histogram with min: %f, max: %f, sum: %f, %s", cwhist.Minimum(), cwhist.Maximum(), cwhist.Sum(), *metric.MetricName)
 	values, counts := cwhist.ValuesAndCounts()
 	if len(values) != len(counts) {
 		log.Printf("E! metric has a distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
 		return datums
 	}
-	log.Printf("D! metric has a histogram with values: %v counts: %v", values, counts)
 
 	s := cloudwatch.StatisticSet{}
 	s.SetMaximum(cwhist.Maximum())
 	s.SetMinimum(cwhist.Minimum())
 	s.SetSampleCount(cwhist.SampleCount())
 	s.SetSum(cwhist.Sum())
-
-	// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
-	// This can happen for cumulative histograms that were converted to delta histograms, or whenever
-	// the datasource does not provide a minimum and maximum value
-	if cwhist.Maximum() == 0 && cwhist.Minimum() == 0 {
-		distMin, distMax := minAndMax(values)
-		s.SetMinimum(distMin)
-		s.SetMaximum(distMax)
-	}
 
 	for i := 0; i < len(values); i += c.config.MaxValuesPerDatum {
 		end := i + c.config.MaxValuesPerDatum
@@ -619,7 +608,6 @@ func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsLi
 				Counts:            aws.Float64Slice(batchCounts),
 				StatisticValues:   &s,
 			}
-			log.Printf("D! new datum with min %f, max %f, sum %f, count %f, %s", *s.Minimum, *s.Maximum, *s.Sum, *s.SampleCount, *metric.MetricName)
 
 			datums = append(datums, datum)
 		}
