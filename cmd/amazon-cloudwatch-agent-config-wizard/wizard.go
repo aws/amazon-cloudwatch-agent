@@ -19,7 +19,7 @@ func main() {
 
 	err := cmdwrapper.ExecuteSubcommand(flags.Command, wizardFlags)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }
