@@ -4,6 +4,9 @@
 package agenthealth
 
 import (
+	"maps"
+	"slices"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
@@ -12,6 +15,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/metadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -22,7 +27,8 @@ const (
 	OperationPutLogEvents     = "PutLogEvents"
 	OperationPutTraceSegments = "PutTraceSegments"
 
-	usageDataKey = "usage_data"
+	usageDataKey     = "usage_data"
+	usageMetadataKey = "usage_metadata"
 )
 
 var (
@@ -80,6 +86,22 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.IsUsageDataEnabled = t.isUsageDataEnabled
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
+	}
+	usageMetadata := common.GetArray[map[string]any](conf, common.ConfigKey(common.AgentKey, usageMetadataKey))
+	usageMetadataSet := collections.NewSet[string]()
+	for _, umd := range usageMetadata {
+		for k, v := range umd {
+			valueStr, ok := v.(string)
+			if !ok {
+				continue
+			}
+			if md := metadata.Build(k, valueStr); metadata.IsSupported(md) {
+				usageMetadataSet.Add(md)
+			}
+		}
+	}
+	if len(usageMetadataSet) > 0 {
+		cfg.UsageMetadata = slices.Sorted(maps.Keys(usageMetadataSet))
 	}
 	cfg.IsStatusCodeEnabled = t.isStatusCodeEnabled
 	cfg.Stats = &agent.StatsConfig{
