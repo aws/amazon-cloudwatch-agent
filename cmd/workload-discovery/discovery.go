@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math"
 	"os"
 	"runtime"
 	"sync"
@@ -123,18 +124,16 @@ func (d *Discoverer) detectMetadataFromProcesses(ctx context.Context, processes 
 		}
 	}()
 
-	selfPID := int32(os.Getpid()) // nolint:gosec
+	selfPID, err := convertToPid32(os.Getpid())
 	for _, p := range processes {
 		// skip the workload discovery process
-		if p.Pid == selfPID {
+		if err == nil && p.Pid == selfPID {
 			continue
 		}
 		select {
 		case jobs <- p:
 		case <-ctx.Done():
-			close(jobs)
-			workerWg.Wait()
-			return nil, ctx.Err()
+			break
 		}
 	}
 	close(jobs)
@@ -142,6 +141,9 @@ func (d *Discoverer) detectMetadataFromProcesses(ctx context.Context, processes 
 	close(results)
 	collectorWg.Wait()
 
+	if err = ctx.Err(); err != nil {
+		return nil, err
+	}
 	return mds, nil
 }
 
@@ -206,6 +208,13 @@ func buildLogger(level slog.Level) *slog.Logger {
 	}
 	handler := slog.NewTextHandler(os.Stderr, opts)
 	return slog.New(handler)
+}
+
+func convertToPid32(pid int) (int32, error) {
+	if pid < 0 || pid > math.MaxInt32 {
+		return 0, errors.New("pid out of range")
+	}
+	return int32(pid), nil
 }
 
 func main() {

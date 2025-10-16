@@ -10,10 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/metadata"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -33,6 +35,10 @@ func TestLoadConfig(t *testing.T) {
 			id:   component.NewIDWithName(TypeStr, "2"),
 			want: &Config{IsUsageDataEnabled: true, Stats: &agent.StatsConfig{Operations: []string{"ListBuckets"}}},
 		},
+		{
+			id:   component.NewIDWithName(TypeStr, "3"),
+			want: &Config{IsUsageDataEnabled: true, UsageMetadata: []metadata.Metadata{"obs_jvm", "obs_tomcat"}},
+		},
 	}
 	for _, testCase := range testCases {
 		conf, err := confmaptest.LoadConf(filepath.Join("testdata", "config.yaml"))
@@ -44,5 +50,55 @@ func TestLoadConfig(t *testing.T) {
 
 		assert.NoError(t, xconfmap.Validate(cfg))
 		assert.Equal(t, testCase.want, cfg)
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	testCases := map[string]struct {
+		cfg     component.Config
+		wantErr bool
+	}{
+		"WithEmptyConfig": {
+			cfg: &Config{},
+		},
+		"WithUsageMetadata/Unsupported": {
+			cfg: &Config{
+				IsUsageDataEnabled: true,
+				UsageMetadata: []metadata.Metadata{
+					"unsupported_metadata",
+				},
+			},
+			wantErr: true,
+		},
+		"WithUsageMetadata/Mixed": {
+			cfg: &Config{
+				IsUsageDataEnabled: true,
+				UsageMetadata: []metadata.Metadata{
+					"obs_jvm",
+					"unsupported_metadata",
+				},
+			},
+			wantErr: true,
+		},
+		"WithUsageMetadata/Supported": {
+			cfg: &Config{
+				IsUsageDataEnabled: true,
+				UsageMetadata: []metadata.Metadata{
+					"obs_jvm",
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert.NoError(t, confmap.New().Unmarshal(testCase.cfg))
+			err := testCase.cfg.(*Config).Validate()
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }

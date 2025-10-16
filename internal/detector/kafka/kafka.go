@@ -42,10 +42,9 @@ func (d *kafkaDetector) Detect(ctx context.Context, process detector.Process) (*
 	for _, sd := range d.subDetectors {
 		var err error
 		md, err = sd.Detect(ctx, process)
-		if err != nil {
-			continue
+		if err == nil {
+			break
 		}
-		break
 	}
 
 	if md == nil {
