@@ -13,8 +13,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	collectd "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/collectd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/customizedmetrics"
@@ -30,9 +28,7 @@ const (
 )
 
 var (
-	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet     = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
 	multipleInputSet = collections.NewSet[string](procstat.SectionKey)
 	// Order by PidFile, ExeKey, Pattern Key according to the public documents
 	// if multiple configuration is specified
@@ -55,10 +51,8 @@ var (
 	// aliasMap contains mappings for all input plugins that use another
 	// name in Telegraf.
 	aliasMap = map[string]string{
-		collectd.SectionKey:       collectd.SectionMappedKey,
-		files.SectionKey:          files.SectionMappedKey,
-		gpu.SectionKey:            gpu.SectionMappedKey,
-		windows_events.SectionKey: windows_events.SectionMappedKey,
+		collectd.SectionKey: collectd.SectionMappedKey,
+		gpu.SectionKey:      gpu.SectionMappedKey,
 	}
 	// defaultCollectionIntervalMap contains all input plugins that have a
 	// different default interval.
@@ -71,13 +65,13 @@ var (
 	otelReceivers = collections.NewSet[string](common.OtlpKey, common.JmxKey, common.PrometheusKey)
 )
 
-// FindReceiversInConfig looks in the metrics and logs sections to determine which
-// plugins require adapter translators. Logs is processed first, so any
-// colliding metrics translators will override them. This follows the rule
-// setup.
+// FindReceiversInConfig looks in the metrics section to determine which
+// plugins require adapter translators. Log plugins are not processed here
+// as they have their own dedicated OTEL pipelines.
 func FindReceiversInConfig(conf *confmap.Conf, os string) (common.TranslatorMap[component.Config, component.ID], error) {
 	translators := common.NewTranslatorMap[component.Config, component.ID]()
-	translators.Merge(fromLogs(conf))
+	// Only process metrics section. Log plugins (files, windows_events) have
+	// their own dedicated OTEL pipelines and should not be processed here.
 	metricTranslators, err := fromMetrics(conf, os)
 	translators.Merge(metricTranslators)
 	return translators, err
@@ -136,22 +130,11 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 	return translators
 }
 
-// fromLogs creates a translator for each subsection within logs::logs_collected
-// along with a socket listener translator if "emf" or "structuredlog" are present
-// within the logs:metrics_collected section.
-func fromLogs(conf *confmap.Conf) common.TranslatorMap[component.Config, component.ID] {
-	return fromInputs(conf, nil, logKey)
-}
-
 // fromInputs converts all the keys in the section into adapter translators.
 func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string) common.TranslatorMap[component.Config, component.ID] {
 	translators := common.NewTranslatorMap[component.Config, component.ID]()
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
-			if skipInputSet.Contains(inputName) {
-				// logs agent is separate from otel agent
-				continue
-			}
 			if validInputs != nil {
 				if otelReceivers.Contains(inputName) {
 					continue
