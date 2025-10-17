@@ -1,8 +1,19 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300061.0 (2025-09-20)
+========================================================================
+Enchancements: 
+ *[Agent] Add support for EC2 metadata as dimensions for host metrics 
+ *[Agent] Add support fro AutoScalingGroup as an append_dimension for host metrics 
+ *[Agent] Add support for usuage_metadata field in agent section of config 
+ 
+Bug Fixes: 
+ *[BugFix] Fixed merging logic to append multiple jvm/otlp configurations 
+ *[BugFix] Fixes goroutine leak with dynamically determined log destinations *[BugFix] Fixed agent startup issue on windows due to config-downloader binaries
+
+========================================================================
 Amazon CloudWatch Agent 1.300060.0 (2025-09-17)
 ========================================================================
 Features:
-* [Metrics] Adding NVME Instance Store metrics
 * [ContainerInsights] Added Ingress, PersistentVolume and PersistentVolumeClaim metrics
 
 Enhancements:
