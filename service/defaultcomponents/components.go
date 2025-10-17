@@ -19,6 +19,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatorateprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyattrsprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbytraceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricsgenerationprocessor"
@@ -107,6 +108,7 @@ func Factories() (otelcol.Factories, error) {
 		gpuattributes.NewFactory(),
 		kueueattributes.NewFactory(),
 		groupbytraceprocessor.NewFactory(),
+		groupbyattrsprocessor.NewFactory(),
 		k8sattributesprocessor.NewFactory(),
 		memorylimiterprocessor.NewFactory(),
 		metricsgenerationprocessor.NewFactory(),

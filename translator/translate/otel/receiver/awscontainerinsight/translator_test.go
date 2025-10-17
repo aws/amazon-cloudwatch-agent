@@ -46,6 +46,7 @@ func TestTranslator(t *testing.T) {
 				CollectionInterval:    time.Minute,
 				LeaderLockName:        "otel-container-insight-clusterleader",
 				TagService:            true,
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithECS/WithAgentInterval": {
@@ -64,6 +65,7 @@ func TestTranslator(t *testing.T) {
 				CollectionInterval:    20 * time.Second,
 				LeaderLockName:        "otel-container-insight-clusterleader",
 				TagService:            true,
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithECS/WithSectionInterval": {
@@ -84,6 +86,7 @@ func TestTranslator(t *testing.T) {
 				CollectionInterval:    10 * time.Second,
 				LeaderLockName:        "otel-container-insight-clusterleader",
 				TagService:            true,
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes": {
@@ -105,6 +108,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockUsingConfigMapOnly: true,
 				TagService:                   true,
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithoutClusterName": {
@@ -136,6 +140,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithCollectionRoleLeader": {
@@ -160,6 +165,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithCollectionRoleNode": {
@@ -184,6 +190,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithEnhancedContainerInsights": {
@@ -209,6 +216,7 @@ func TestTranslator(t *testing.T) {
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithLevel1Granularity": {
@@ -233,6 +241,7 @@ func TestTranslator(t *testing.T) {
 				AddFullPodNameMetricLabel:    false,
 				AddContainerNameMetricLabel:  false,
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithLevel2Granularity": {
@@ -258,6 +267,7 @@ func TestTranslator(t *testing.T) {
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithKubernetes/WithLevel3Granularity": {
@@ -283,6 +293,7 @@ func TestTranslator(t *testing.T) {
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
 				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithECSAndKubernetes": {
@@ -304,6 +315,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockName:               "otel-container-insight-clusterleader",
 				LeaderLockUsingConfigMapOnly: false,
 				TagService:                   true,
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
 		"WithEKSAndCustomKubeConfigPathHostDetails": {
@@ -332,6 +344,36 @@ func TestTranslator(t *testing.T) {
 				HostName:                     "test-hostname",
 				HostIP:                       "1.2.3.4",
 				RunOnSystemd:                 true,
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
+			},
+		},
+		"WithKubernetes/WithEnhancedContainerInsights/WithHighFrequencyGPUMetrics": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enhanced_container_insights":                         true,
+							"accelerated_compute_metrics":                         true,
+							"accelerated_compute_gpu_metrics_collection_interval": 30, // 30 seconds, less than default 60s
+							"cluster_name": "TestCluster",
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:                          eks,
+				CollectionInterval:                             60 * time.Second,
+				PrefFullPodName:                                true,
+				LeaderLockName:                                 defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly:                   true,
+				ClusterName:                                    "TestCluster",
+				TagService:                                     true,
+				EnableControlPlaneMetrics:                      true,
+				AddFullPodNameMetricLabel:                      true,
+				AddContainerNameMetricLabel:                    true,
+				KubeConfigPath:                                 "",
+				EnableAcceleratedComputeMetrics:                true,
+				AcceleratedComputeGPUMetricsCollectionInterval: 30 * time.Second, // Custom value
 			},
 		},
 	}
@@ -364,6 +406,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.HostName, gotCfg.HostName)
 				require.Equal(t, testCase.want.HostIP, gotCfg.HostIP)
 				require.Equal(t, testCase.want.RunOnSystemd, gotCfg.RunOnSystemd)
+				require.Equal(t, testCase.want.AcceleratedComputeGPUMetricsCollectionInterval, gotCfg.AcceleratedComputeGPUMetricsCollectionInterval)
 			}
 		})
 	}
