@@ -5,7 +5,6 @@ package cloudwatch
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"reflect"
 	"sort"
@@ -16,7 +15,6 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -28,6 +26,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -82,9 +81,6 @@ type CloudWatch struct {
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
 	lastRequestBytes       int
-	mu                     sync.RWMutex
-	featureList            map[string]struct{}
-	prebuiltFeature        string
 }
 
 // Compile time interface check.
@@ -125,28 +121,10 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv1(&svc.Handlers))
 	}
 
-	svc.Handlers.Build.PushFrontNamed(request.NamedHandler{
-		Name: "FeatureUserAgent",
-		Fn: func(r *request.Request) {
-			if r.Operation.Name == opPutMetricData {
-				c.mu.RLock()
-				f := c.prebuiltFeature
-				c.mu.RUnlock()
-				if f != "" {
-					currentUA := r.HTTPRequest.Header.Get("User-Agent")
-					if !strings.Contains(currentUA, f) {
-						request.AddToUserAgent(r, f)
-					}
-				}
-			}
-		},
-	})
-
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
 	c.retryer = logThrottleRetryer
-	c.featureList = make(map[string]struct{})
 	c.startRoutines()
 	return nil
 }
@@ -204,6 +182,9 @@ func (c *CloudWatch) pushMetricDatum() {
 	for {
 		select {
 		case metric := <-c.metricChan:
+			if metric.MetricName != nil {
+				c.handleMetricName(*metric.MetricName)
+			}
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
 			/* We currently do not account for entity information as a part of the payload size.
@@ -240,6 +221,14 @@ func (c *CloudWatch) pushMetricDatum() {
 		case <-c.shutdownChan:
 			return
 		}
+	}
+}
+
+func (c *CloudWatch) handleMetricName(name string) {
+	if strings.HasPrefix(name, metricPrefixEBS) {
+		useragent.Get().AddFeatureFlags(featureFlagNvmeEBS)
+	} else if strings.HasPrefix(name, metricPrefixInstanceStore) {
+		useragent.Get().AddFeatureFlags(featureFlagNvmeIS)
 	}
 }
 
@@ -451,29 +440,6 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
-	if metric.MetricName != nil {
-		name := *metric.MetricName
-		c.mu.Lock()
-		changed := false
-		if _, exists := c.featureList[featureFlagNvmeEBS]; !exists && strings.HasPrefix(name, metricPrefixEBS) {
-			c.featureList[featureFlagNvmeEBS] = struct{}{}
-			changed = true
-		}
-		if _, exists := c.featureList[featureFlagNvmeIS]; !exists && strings.HasPrefix(name, metricPrefixInstanceStore) {
-			c.featureList[featureFlagNvmeIS] = struct{}{}
-			changed = true
-		}
-		if changed {
-			var features []string
-			for f := range c.featureList {
-				features = append(features, f)
-			}
-			sort.Strings(features)
-			c.prebuiltFeature = fmt.Sprintf(" feature:(%s)", strings.Join(features, " "))
-		}
-		c.mu.Unlock()
-	}
-
 	var datums []*cloudwatch.MetricDatum
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
 

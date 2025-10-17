@@ -120,7 +120,7 @@ func TestAppSignalsAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -135,7 +135,7 @@ func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -150,7 +150,7 @@ func TestStatsDAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_statsd_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -179,7 +179,7 @@ func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 

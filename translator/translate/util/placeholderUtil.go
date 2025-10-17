@@ -13,6 +13,27 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
+)
+
+const (
+	instanceIdPlaceholder    = "{instance_id}"
+	hostnamePlaceholder      = "{hostname}"
+	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
+	ipAddressPlaceholder     = "{ip_address}"
+	awsRegionPlaceholder     = "{aws_region}"
+	datePlaceholder          = "{date}"
+	accountIdPlaceholder     = "{account_id}"
+
+	unknownInstanceID   = "i-UNKNOWN"
+	unknownHostname     = "UNKNOWN-HOST"
+	unknownIPAddress    = "UNKNOWN-IP"
+	unknownAwsRegion    = "UNKNOWN-REGION"
+	unknownAccountID    = "UNKNOWN-ACCOUNT"
+	unknownInstanceType = "UNKNOWN-TYPE"
+	unknownImageID      = "UNKNOWN-AMI"
+
+	awsPlaceholderPrefix = "${aws:"
 )
 
 type Metadata struct {
@@ -43,26 +64,6 @@ func ec2MetadataInfoProvider() *Metadata {
 		ImageID:      ec2.ImageID,
 	}
 }
-
-const (
-	instanceIdPlaceholder    = "{instance_id}"
-	hostnamePlaceholder      = "{hostname}"
-	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
-	ipAddressPlaceholder     = "{ip_address}"
-	awsRegionPlaceholder     = "{aws_region}"
-	datePlaceholder          = "{date}"
-	accountIdPlaceholder     = "{account_id}"
-
-	unknownInstanceID   = "i-UNKNOWN"
-	unknownHostname     = "UNKNOWN-HOST"
-	unknownIPAddress    = "UNKNOWN-IP"
-	unknownAwsRegion    = "UNKNOWN-REGION"
-	unknownAccountID    = "UNKNOWN-ACCOUNT"
-	unknownInstanceType = "UNKNOWN-TYPE"
-	unknownImageID      = "UNKNOWN-AMI"
-
-	awsPlaceholderPrefix = "${aws:"
-)
 
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	tmpString := placeholder
@@ -117,6 +118,28 @@ func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	}
 }
 
+var tagMetadataProvider func() map[string]string
+
+func getTagMetadata() map[string]string {
+	if tagMetadataProvider != nil {
+		return tagMetadataProvider()
+	}
+
+	md := Ec2MetadataInfoProvider()
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+
+	if instanceID == unknownInstanceID {
+		return map[string]string{}
+	}
+
+	result := make(map[string]string)
+	asgName := tagutil.GetAutoScalingGroupName(instanceID)
+	if asgName != "" {
+		result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
+	}
+	return result
+}
+
 func getHostName() string {
 	if hostname, err := os.Hostname(); err == nil {
 		return hostname
@@ -140,26 +163,52 @@ func getIpAddress() string {
 	return unknownIPAddress
 }
 
+func getAWSMetadata() map[string]string {
+	return getAWSMetadataInfo(Ec2MetadataInfoProvider)
+}
+
+func getAWSMetadataWithTags(needsTags bool) map[string]string {
+	metadata := getAWSMetadata()
+
+	if needsTags {
+		tagMetadata := getTagMetadata()
+		for k, v := range tagMetadata {
+			metadata[k] = v
+		}
+	}
+
+	return metadata
+}
+
 func ResolveAWSMetadataPlaceholders(input any) any {
 	inputMap := input.(map[string]interface{})
 	result := make(map[string]any, len(inputMap))
-	var awsMetadata map[string]string
+
+	hasAWSPlaceholders := false
+	needsTags := false
+
+	for _, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
+			hasAWSPlaceholders = true
+			if vStr == ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"] {
+				needsTags = true
+			}
+		}
+	}
+
+	var metadata map[string]string
+	if hasAWSPlaceholders {
+		metadata = getAWSMetadataWithTags(needsTags)
+	}
 
 	for k, v := range inputMap {
 		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
-			// Cache AWS metadata on first use
-			if awsMetadata == nil {
-				awsMetadata = getAWSMetadataInfo(Ec2MetadataInfoProvider)
-			}
-			resolvedValue := ResolvePlaceholder(vStr, awsMetadata)
-			// Only include the key if the AWS placeholder was successfully resolved
-			if !strings.Contains(resolvedValue, awsPlaceholderPrefix) {
-				result[k] = resolvedValue
+			if replacement, exists := metadata[vStr]; exists {
+				result[k] = replacement
 			}
 		} else {
 			result[k] = v
 		}
 	}
-
 	return result
 }

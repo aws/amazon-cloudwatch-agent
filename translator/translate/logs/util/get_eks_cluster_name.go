@@ -4,26 +4,8 @@
 package util
 
 import (
-	"log"
-	"strings"
-	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
-)
-
-const (
-	EKSClusterNameTagKeyPrefix = "kubernetes.io/cluster/"
-	defaultRetryCount          = 5
-	defaultBackoffDuration     = time.Duration(1 * time.Minute)
-)
-
-var (
-	sleeps = []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800, time.Millisecond * 1600, time.Millisecond * 3200}
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 // For ASG case, the ec2 tag may be not ready as soon as the node is started up.
@@ -41,86 +23,6 @@ func GetEKSClusterName(sectionKey string, input map[string]interface{}) string {
 }
 
 func GetClusterNameFromEc2Tagger() string {
-	instanceId := ec2util.GetEC2UtilSingleton().InstanceID
-	region := ec2util.GetEC2UtilSingleton().Region
-
-	if instanceId == "" || region == "" {
-		return ""
-	}
-
-	tagFilters := []*ec2.Filter{
-		{
-			Name:   aws.String("resource-type"),
-			Values: aws.StringSlice([]string{"instance"}),
-		},
-		{
-			Name:   aws.String("resource-id"),
-			Values: aws.StringSlice([]string{instanceId}),
-		},
-	}
-
-	config := &aws.Config{
-		Region:                        aws.String(region),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		LogLevel:                      configaws.SDKLogLevel(),
-		Logger:                        configaws.SDKLogger{},
-	}
-
-	input := &ec2.DescribeTagsInput{
-		Filters: tagFilters,
-	}
-
-	ses, err := session.NewSession(config)
-	if err != nil {
-		log.Println("E! getting new session info: ", err)
-		return ""
-	}
-	ec2 := ec2.New(ses)
-	for {
-		result, err := callFuncWithRetries(ec2.DescribeTags, input, "Describe EC2 Tag Fail.")
-		if err != nil {
-			log.Println("E! DescribeTags EC2 tagger failed: ", err)
-			return ""
-		}
-		for _, tag := range result.Tags {
-			key := *tag.Key
-			if strings.HasPrefix(key, EKSClusterNameTagKeyPrefix) && *tag.Value == "owned" {
-				clusterName := key[len(EKSClusterNameTagKeyPrefix):]
-				return clusterName
-			}
-		}
-		if nil == result.NextToken {
-			break
-		}
-		input.SetNextToken(*result.NextToken)
-	}
-	return ""
-}
-
-// encapsulate the retry logic in this separate method.
-func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error), input *ec2.DescribeTagsInput, errorMsg string) (result *ec2.DescribeTagsOutput, err error) {
-	for i := 0; i <= defaultRetryCount; i++ {
-		result, err = fn(input)
-		if err == nil {
-			return result, nil
-		}
-		log.Printf("%s Will retry the request: %s", errorMsg, err.Error())
-		backoffSleep(i)
-	}
-	return
-}
-
-// sleep some back off time before retries.
-func backoffSleep(i int) {
-	backoffDuration := getBackoffDuration(i)
-	log.Printf("W! It is the %v time, going to sleep %v before retrying.", i, backoffDuration)
-	time.Sleep(backoffDuration)
-}
-
-func getBackoffDuration(i int) time.Duration {
-	backoffDuration := defaultBackoffDuration
-	if i >= 0 && i < len(sleeps) {
-		backoffDuration = sleeps[i]
-	}
-	return backoffDuration
+	instanceID := ec2util.GetEC2UtilSingleton().InstanceID
+	return tagutil.GetEKSClusterName(instanceID)
 }

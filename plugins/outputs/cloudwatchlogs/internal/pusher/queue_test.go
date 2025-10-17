@@ -86,6 +86,10 @@ func (m *mockSender) RetryDuration() time.Duration {
 	return args.Get(0).(time.Duration)
 }
 
+func (m *mockSender) Stop() {
+	m.Called()
+}
+
 func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup
@@ -119,7 +123,7 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	}
 
 	ep := newMockEntityProvider(expectedEntity)
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 	require.False(t, called.Load(), "PutLogEvents has been called too fast, it should wait until FlushTimeout.")
 
@@ -130,7 +134,8 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	time.Sleep(time.Second)
 	require.True(t, called.Load(), "PutLogEvents has not been called after FlushTimeout has been reached.")
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -155,7 +160,7 @@ func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
 	}
 
 	ep := newMockEntityProvider(nil)
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 	require.False(t, called.Load(), "PutLogEvents has been called too fast, it should wait until FlushTimeout.")
 
@@ -166,7 +171,8 @@ func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	require.True(t, called.Load(), "PutLogEvents has not been called after FlushTimeout has been reached.")
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -184,14 +190,15 @@ func TestStopQueueWouldDoFinalSend(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 
 	time.Sleep(10 * time.Millisecond)
 
 	require.False(t, called.Load(), "PutLogEvents has been called too fast, it should wait until FlushTimeout.")
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 
 	require.True(t, called.Load(), "PutLogEvents has not been called after FlushTimeout has been reached.")
@@ -207,13 +214,14 @@ func TestStopPusherWouldStopRetries(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	stop, q := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 	time.Sleep(10 * time.Millisecond)
 
 	triggerSend(t, q)
 	// stop should try flushing the remaining events with retry disabled
-	close(stop)
+	q.Stop()
+	sender.Stop()
 
 	time.Sleep(50 * time.Millisecond)
 	wg.Wait()
@@ -248,11 +256,12 @@ func TestLongMessageHandling(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent(longMsg, time.Now()))
 
 	triggerSend(t, q)
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -276,14 +285,15 @@ func TestRequestIsLessThan1MB(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	for i := 0; i < 8; i++ {
 		q.AddEvent(newStubLogEvent(longMsg, time.Now()))
 	}
 	time.Sleep(10 * time.Millisecond)
 	triggerSend(t, q)
 	triggerSend(t, q)
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -301,7 +311,7 @@ func TestRequestIsLessThan10kEvents(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	for i := 0; i < 30000; i++ {
 		q.AddEvent(newStubLogEvent(msg, time.Now()))
 	}
@@ -309,7 +319,8 @@ func TestRequestIsLessThan10kEvents(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		triggerSend(t, q)
 	}
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -326,7 +337,7 @@ func TestTimestampPopulation(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	for i := 0; i < 3; i++ {
 		q.AddEvent(newStubLogEvent("msg", time.Time{}))
 	}
@@ -334,7 +345,8 @@ func TestTimestampPopulation(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		triggerSend(t, q)
 	}
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -349,7 +361,7 @@ func TestIgnoreOutOfTimeRangeEvent(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	stop, q := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now().Add(-15*24*time.Hour)))
 	q.AddEventNonBlocking(newStubLogEvent("MSG", time.Now().Add(2*time.Hour+1*time.Minute)))
 
@@ -362,7 +374,8 @@ func TestIgnoreOutOfTimeRangeEvent(t *testing.T) {
 	}
 
 	time.Sleep(20 * time.Millisecond)
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -401,7 +414,7 @@ func TestAddMultipleEvents(t *testing.T) {
 		))
 	}
 	evts[10], evts[90] = evts[90], evts[10] // make events out of order
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	for _, e := range evts {
 		q.AddEvent(e)
 	}
@@ -412,7 +425,8 @@ func TestAddMultipleEvents(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -452,7 +466,7 @@ func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {
 		return nil, nil
 	}
 
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG 25hrs ago", time.Now().Add(-25*time.Hour)))
 	q.AddEvent(newStubLogEvent("MSG 24hrs ago", time.Now().Add(-24*time.Hour)))
 	q.AddEvent(newStubLogEvent("MSG 23hrs ago", time.Now().Add(-23*time.Hour)))
@@ -461,7 +475,8 @@ func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	q.resetFlushTimer()
 	time.Sleep(20 * time.Millisecond)
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -481,7 +496,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	stop, q := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("msg", time.Now()))
 	time.Sleep(2 * time.Second)
 
@@ -489,7 +504,8 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	require.True(t, strings.Contains(logLine, "E!"), fmt.Sprintf("Expecting error log with unhandled error, but received '%s' in the log", logLine))
 	require.True(t, strings.Contains(logLine, "unhandled error"), fmt.Sprintf("Expecting error log with unhandled error, but received '%s' in the log", logLine))
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 	require.EqualValues(t, 1, cnt.Load(), fmt.Sprintf("Expecting pusher to call send 1 time, but %d times called", cnt.Load()))
 }
@@ -526,7 +542,7 @@ func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	stop, q := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	var eventWG sync.WaitGroup
 	eventWG.Add(1)
 	q.AddEvent(&stubLogEvent{message: "msg", timestamp: time.Now(), done: eventWG.Done})
@@ -544,7 +560,8 @@ func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 
 	require.True(t, foundUnknownErr, fmt.Sprintf("Expecting error log with unknown error, but received '%s' in the log", logSink))
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -563,7 +580,7 @@ func TestLogRejectedLogEntryInfo(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	stop, q := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	var eventWG sync.WaitGroup
 	eventWG.Add(1)
 	q.AddEvent(&stubLogEvent{message: "msg", timestamp: time.Now(), done: eventWG.Done})
@@ -586,7 +603,8 @@ func TestLogRejectedLogEntryInfo(t *testing.T) {
 	require.True(t, strings.Contains(logLine, "W!"), fmt.Sprintf("Expecting error log events too expired, but received '%s' in the log", logSink.String()))
 	require.True(t, strings.Contains(logLine, "300"), fmt.Sprintf("Expecting error log events too expired, but received '%s' in the log", logSink.String()))
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -612,7 +630,7 @@ func TestAddEventNonBlocking(t *testing.T) {
 			start.Add(time.Duration(i)*time.Millisecond),
 		))
 	}
-	stop, q := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
 	time.Sleep(200 * time.Millisecond) // Wait until pusher started, merge channel is blocked
 
 	for _, e := range evts {
@@ -623,7 +641,8 @@ func TestAddEventNonBlocking(t *testing.T) {
 	triggerSend(t, q)
 	time.Sleep(20 * time.Millisecond)
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -639,7 +658,7 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	stop, q := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, time.Second, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, time.Second, nil, &wg)
 	q.AddEvent(newStubLogEvent("msg", time.Now()))
 	time.Sleep(2 * time.Second)
 
@@ -648,7 +667,8 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 	expected := fmt.Sprintf("All %v retries to G/S failed for PutLogEvents, request dropped.", cnt.Load()-1)
 	require.True(t, strings.HasSuffix(lastLine, expected), fmt.Sprintf("Expecting error log to end with request dropped, but received '%s' in the log", logSink.String()))
 
-	close(stop)
+	q.Stop()
+	sender.Stop()
 	wg.Wait()
 }
 
@@ -667,7 +687,7 @@ func testPreparation(
 	retryDuration time.Duration,
 	entityProvider logs.LogEntityProvider,
 	wg *sync.WaitGroup,
-) (chan struct{}, *queue) {
+) (*queue, Sender) {
 	return testPreparationWithLogger(
 		t,
 		testutil.NewNopLogger(),
@@ -689,21 +709,19 @@ func testPreparationWithLogger(
 	retryDuration time.Duration,
 	entityProvider logs.LogEntityProvider,
 	wg *sync.WaitGroup,
-) (chan struct{}, *queue) {
+) (*queue, Sender) {
 	t.Helper()
-	stop := make(chan struct{})
 	tm := NewTargetManager(logger, service)
-	s := newSender(logger, service, tm, retryDuration, stop)
+	s := newSender(logger, service, tm, retryDuration)
 	q := newQueue(
 		logger,
 		Target{"G", "S", util.StandardLogGroupClass, retention},
 		flushTimeout,
 		entityProvider,
 		s,
-		stop,
 		wg,
 	)
-	return stop, q.(*queue)
+	return q.(*queue), s
 }
 
 func TestQueueCallbackRegistration(t *testing.T) {
@@ -729,7 +747,6 @@ func TestQueueCallbackRegistration(t *testing.T) {
 		}).Return()
 
 		logger := testutil.NewNopLogger()
-		stop := make(chan struct{})
 		q := &queue{
 			target:          Target{"G", "S", util.StandardLogGroupClass, -1},
 			logger:          logger,
@@ -740,7 +757,6 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushCh:         make(chan struct{}),
 			resetTimerCh:    make(chan struct{}),
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
-			stop:            stop,
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
 		}
@@ -773,7 +789,6 @@ func TestQueueCallbackRegistration(t *testing.T) {
 		}).Return()
 
 		logger := testutil.NewNopLogger()
-		stop := make(chan struct{})
 		q := &queue{
 			target:          Target{"G", "S", util.StandardLogGroupClass, -1},
 			logger:          logger,
@@ -784,7 +799,6 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushCh:         make(chan struct{}),
 			resetTimerCh:    make(chan struct{}),
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
-			stop:            stop,
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
 		}

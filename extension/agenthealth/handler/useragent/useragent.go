@@ -38,6 +38,7 @@ const (
 	typeInputs     = "inputs"
 	typeProcessors = "processors"
 	typeOutputs    = "outputs"
+	typeFeature    = "feature"
 )
 
 var (
@@ -48,8 +49,10 @@ var (
 type UserAgent interface {
 	SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config)
 	SetContainerInsightsFlag()
+	AddFeatureFlags(features ...string)
 	Header(isUsageDataEnabled bool) string
 	Listen(listener func())
+	Reset()
 }
 
 type userAgent struct {
@@ -63,15 +66,19 @@ type userAgent struct {
 	inputs     collections.Set[string]
 	processors collections.Set[string]
 	outputs    collections.Set[string]
+	feature    collections.Set[string]
 
 	inputsStr     atomic.String
 	processorsStr atomic.String
 	outputsStr    atomic.String
+	featureStr    atomic.String
 }
 
 var _ UserAgent = (*userAgent)(nil)
 
 func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config) {
+	ua.dataLock.Lock()
+	defer ua.dataLock.Unlock()
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
 	}
@@ -145,6 +152,37 @@ func (ua *userAgent) SetContainerInsightsFlag() {
 	}
 }
 
+func (ua *userAgent) AddFeatureFlags(features ...string) {
+	ua.dataLock.Lock()
+	defer ua.dataLock.Unlock()
+	featureCount := len(ua.feature)
+	for _, feature := range features {
+		if feature != "" {
+			ua.feature.Add(feature)
+		}
+	}
+	if len(ua.feature) > featureCount {
+		ua.featureStr.Store(componentsStr(typeFeature, ua.feature))
+		ua.notify()
+	}
+}
+
+// Reset allows tests to reset the user agent.
+func (ua *userAgent) Reset() {
+	ua.dataLock.Lock()
+	defer ua.dataLock.Unlock()
+	ua.inputs = collections.NewSet[string]()
+	ua.processors = collections.NewSet[string]()
+	ua.outputs = collections.NewSet[string]()
+	ua.feature = collections.NewSet[string]()
+
+	ua.inputsStr.Store("")
+	ua.processorsStr.Store("")
+	ua.outputsStr.Store("")
+	ua.featureStr.Store("")
+	ua.notify()
+}
+
 func (ua *userAgent) Listen(listener func()) {
 	ua.listenerLock.Lock()
 	defer ua.listenerLock.Unlock()
@@ -180,6 +218,10 @@ func (ua *userAgent) Header(isUsageDataEnabled bool) string {
 	if outputs != "" {
 		components = append(components, outputs)
 	}
+	feature := ua.featureStr.Load()
+	if feature != "" {
+		components = append(components, feature)
+	}
 
 	return strings.TrimSpace(fmt.Sprintf("%s ID/%s %s", version.Full(), ua.id, strings.Join(components, separator)))
 }
@@ -204,6 +246,7 @@ func newUserAgent() *userAgent {
 		inputs:     collections.NewSet[string](),
 		processors: collections.NewSet[string](),
 		outputs:    collections.NewSet[string](),
+		feature:    collections.NewSet[string](),
 	}
 }
 

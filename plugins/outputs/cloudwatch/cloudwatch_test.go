@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
@@ -752,31 +753,17 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 				config: &Config{
 					ForceFlushInterval: time.Second,
 				},
-				logger:      zap.NewNop(),
-				featureList: make(map[string]struct{}),
+				logger: zap.NewNop(),
 			}
 
-			realSvc.Handlers.Build.PushFrontNamed(request.NamedHandler{
-				Name: "FeatureUserAgent",
-				Fn: func(r *request.Request) {
-					if r.Operation.Name == opPutMetricData {
-						cw.mu.RLock()
-						f := cw.prebuiltFeature
-						cw.mu.RUnlock()
-						if f != "" {
-							request.AddToUserAgent(r, f)
-						}
-					}
-				},
-			})
+			useragent.Get().Reset()
+			handler := useragent.NewHandler(true)
+			configurer := awsmiddleware.NewConfigurer([]awsmiddleware.RequestHandler{handler}, nil)
+			require.NoError(t, configurer.Configure(awsmiddleware.SDKv1(&realSvc.Handlers)))
 
 			// Process metrics to trigger detection
 			for _, name := range tc.metricNames {
-				_, _ = cw.BuildMetricDatum(&aggregationDatum{
-					MetricDatum: cloudwatch.MetricDatum{
-						MetricName: aws.String(name),
-					},
-				})
+				cw.handleMetricName(name)
 			}
 
 			// Create a test request and run the Build handlers

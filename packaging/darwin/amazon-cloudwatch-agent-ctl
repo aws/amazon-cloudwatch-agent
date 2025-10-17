@@ -24,6 +24,7 @@ readonly RESTART_FILE="${CONFDIR}/restart"
 readonly VERSION_FILE="${CMDDIR}/CWAGENT_VERSION"
 readonly AGENT_LAUNCHD_NAME="com.amazon.cloudwatch.agent"
 readonly AGENT_LAUNCHD_CONFIG="/Library/LaunchDaemons/${AGENT_LAUNCHD_NAME}.plist"
+readonly WORKLOAD_DISCOVERY="${CMDDIR}/workload-discovery"
 
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
 readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
@@ -37,7 +38,7 @@ readonly ALL_CONFIG='all'
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|onPrem|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s] [-d]
+        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|status-with-workloads|fetch-config|append-config|remove-config [-m ec2|onPremise|onPrem|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s] [-d]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -53,6 +54,7 @@ UsageString="
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
+            status-with-workloads:                  get the status of the agent process and runs workload discovery.
             fetch-config:                           use this json config as the agent's only configuration.
             append-config:                          append json config with the existing json configs if any.
             remove-config:                          remove json config based on the location (ssm parameter store name, file name)
@@ -119,6 +121,8 @@ cwa_preun() {
 }
 
 cwa_status() {
+     include_workloads="${1:-false}"
+
      cwa_config_status='configured'
      if [ ! -f "${TOML}" ]; then
           cwa_config_status='not configured'
@@ -139,7 +143,20 @@ cwa_status() {
      echo "  \"status\": \"$(cwa_runstatus)\","
      echo "  \"starttime\": \"${starttime_fmt}\","
      echo "  \"configstatus\": \"${cwa_config_status}\","
-     echo "  \"version\": \"${version}\""
+     if [ "${include_workloads}" = "true" ]; then
+          workloads_json="[]"
+          if [ -x "${WORKLOAD_DISCOVERY}" ]; then
+               workloads_json="$(${WORKLOAD_DISCOVERY} 2>/dev/null || echo '[]')"
+               if [ -z "${workloads_json}" ]; then
+                    workloads_json="[]"
+               fi
+          fi
+          echo "  \"version\": \"${version}\","
+          echo "  \"workloads\": ${workloads_json}"
+     else
+          echo "  \"version\": \"${version}\""
+     fi
+
      echo "}"
 }
 
@@ -301,7 +318,8 @@ main() {
      fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' "${use_dualstack}" ;;
      append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' "${use_dualstack}" ;;
      remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' ;;
-     status) cwa_status ;;
+     status) cwa_status "false" ;;
+     status-with-workloads) cwa_status "true" ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
      prep-restart) cwa_prep_restart ;;
@@ -312,6 +330,7 @@ main() {
           exit 1
           ;;
      esac
+     exit 0
 }
 
 main "$@"

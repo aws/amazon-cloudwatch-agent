@@ -213,9 +213,27 @@ jobs:
       github_sha: ${{ github.sha }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
+  IntegrationTestGate:
+    name: Check ready for testing label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for ready for testing label
+        run: |
+          if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
+            echo "Draft PR - skipping label check."
+            exit 0
+          fi
+
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" != "true" ]]; then
+            echo "Missing 'ready for testing' label. Please add before merging."
+            exit 1
+          fi
+
+          echo "'ready for testing' label found!"
+
   verify-all:
     name: Verify All PR Test Jobs
-    needs: [CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
+    needs: [IntegrationTestGate, CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
             GenerateTestMatrix, EC2LinuxIntegrationTest, EC2SELinuxIntegrationTest,
             StopLocalStack]
     runs-on: ubuntu-latest
