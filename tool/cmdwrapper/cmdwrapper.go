@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +84,7 @@ func ExecuteSubcommand(command string, flags map[string]*string) error {
 		// Handle error appropriately
 		return err
 	}
-	log.Printf("Executing %s with arguments: %v", paths.AgentBinaryPath, args)
+	fmt.Printf("Executing %s with arguments: %v", paths.AgentBinaryPath, args)
 	// Use execCommand instead of exec.Command directly
 	cmd := execCommand(agentPath, args...)
 	cmd.Stdout = os.Stdout
@@ -95,9 +94,9 @@ func ExecuteSubcommand(command string, flags map[string]*string) error {
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			log.Fatalf("E! %s process exited with non-zero status: %d", command, exitErr.ExitCode())
+			return fmt.Errorf("E! %s process exited with non-zero status: %d", command, exitErr.ExitCode())
 		}
-		log.Fatalf("E! %s failed. Error: %v", command, err)
+		return fmt.Errorf("E! %s failed. Error: %v", command, err)
 	}
 
 	return nil
