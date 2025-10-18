@@ -219,14 +219,14 @@ jobs:
       github_sha: ${{ inputs.build_id }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  EC2NvidiaGPUIntegrationTest:
+  EC2NvidiaNVIDIALinuxIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(format('[{0},{1}]', needs.GenerateTestMatrix.outputs.ec2_linux_nvidia_matrix, needs.GenerateTestMatrix.outputs.ec2_windows_nvidia_matrix)) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_nvidia_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -293,6 +293,57 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) && matrix.arrays.family == 'linux' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2NvidiaNVIDIAWindowsIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_nvidia_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'window' }}
         uses: nick-fields/retry@v2
@@ -321,22 +372,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
-      - name: Terraform destroy
-        if: ${{ (cancelled() || failure()) && matrix.arrays.family == 'linux' }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd terraform/ec2/linux
-            fi
-
-            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) && matrix.arrays.family == 'window' }}
