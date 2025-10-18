@@ -130,8 +130,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
+      ec2_linux_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_linux_nvidia_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
       ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+      ec2_windows_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_windows_nvidia_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
@@ -162,8 +164,10 @@ jobs:
           go run --tags=generator generator/test_case_generator.go
           echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_nvidia_matrix=$(echo $(cat generator/resources/ec2_linux_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_nvidia_matrix=$(echo $(cat generator/resources/ec2_windows_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_performance_matrix=$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
@@ -181,8 +185,10 @@ jobs:
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
+          echo "ec2_linux_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_linux_nvidia_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
           echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
+          echo "ec2_windows_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_windows_nvidia_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
@@ -220,7 +226,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_gpu_matrix) }}
+        arrays: ${{ fromJson(format('[{0},{1}]', needs.GenerateTestMatrix.outputs.ec2_linux_nvidia_matrix, needs.GenerateTestMatrix.outputs.ec2_windows_nvidia_matrix)) }}
     permissions:
       id-token: write
       contents: read
