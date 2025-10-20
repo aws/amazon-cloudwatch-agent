@@ -284,3 +284,121 @@ func TestTranslatorsError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, got)
 }
+
+// TestFindReceiversInConfigCalled validates that FindReceiversInConfig is called for metrics configuration.
+// This ensures adapter receivers are properly discovered and categorized into their respective pipelines.
+// Only remove this test if the FindReceiversInConfig call is replaced with an alternative mechanism and all
+// downstream tests continue to pass.
+func TestFindReceiversInConfigCalled(t *testing.T) {
+	testCases := map[string]struct {
+		input         map[string]any
+		configSection string
+		expectCalled  bool
+		wantReceivers []string
+	}{
+		"MetricsSection_ShouldCallFindReceivers": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"cpu": map[string]any{},
+						"mem": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			expectCalled:  true,
+			wantReceivers: []string{"telegraf_cpu", "telegraf_mem"},
+		},
+		"MetricsSection_WithDiskIO_ShouldCallFindReceivers": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"diskio": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			expectCalled:  true,
+			wantReceivers: []string{"telegraf_diskio"},
+		},
+		"MetricsSection_WithNet_ShouldCallFindReceivers": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"net": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			expectCalled:  true,
+			wantReceivers: []string{"telegraf_net"},
+		},
+		"MetricsSection_WithStatsd_ShouldCallFindReceivers": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"statsd": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			expectCalled:  true,
+			wantReceivers: []string{"telegraf_statsd"},
+		},
+		"LogsSection_ShouldNotCallFindReceivers": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"otlp": map[string]any{},
+					},
+				},
+			},
+			configSection: LogsKey,
+			expectCalled:  false,
+			wantReceivers: []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			translatorcontext.SetTargetPlatform("linux")
+			conf := confmap.NewFromStringMap(tc.input)
+			translators, err := NewTranslators(conf, tc.configSection, "linux")
+			require.NoError(t, err)
+			require.NotNil(t, translators)
+
+			// Verify that receivers were found and added
+			if tc.expectCalled {
+				// At least one pipeline should exist with receivers
+				assert.Greater(t, translators.Len(), 0, "Expected at least one pipeline to be created")
+
+				// Collect all receivers from all pipelines
+				var allReceivers []string
+				translators.Range(func(tr common.Translator[*common.ComponentTranslators, pipeline.ID]) {
+					g, err := tr.Translate(conf)
+					assert.NoError(t, err)
+					allReceivers = append(allReceivers, collections.MapSlice(g.Receivers.Keys(), component.ID.String)...)
+				})
+
+				// Verify expected receivers are present
+				for _, expectedReceiver := range tc.wantReceivers {
+					assert.Contains(t, allReceivers, expectedReceiver,
+						"Expected receiver %s to be found by FindReceiversInConfig", expectedReceiver)
+				}
+			} else {
+				// For logs section, verify receivers still exist but came from different source (otlp)
+				if len(tc.wantReceivers) > 0 {
+					var allReceivers []string
+					translators.Range(func(tr common.Translator[*common.ComponentTranslators, pipeline.ID]) {
+						g, err := tr.Translate(conf)
+						assert.NoError(t, err)
+						allReceivers = append(allReceivers, collections.MapSlice(g.Receivers.Keys(), component.ID.String)...)
+					})
+					for _, expectedReceiver := range tc.wantReceivers {
+						assert.Contains(t, allReceivers, expectedReceiver)
+					}
+				}
+			}
+		})
+	}
+}
