@@ -65,13 +65,13 @@ type LogBackend interface {
 // e.g. a particular log stream in cloudwatchlogs.
 type LogDest interface {
 	Publish(events []LogEvent) error
+	NotifySourceStopped()
 }
 
 // LogAgent is the agent handles pure log pipelines
 type LogAgent struct {
 	Config                    *config.Config
 	backends                  map[string]LogBackend
-	destNames                 map[LogDest]string
 	collections               []LogCollection
 	retentionAlreadyAttempted map[string]bool
 }
@@ -80,7 +80,6 @@ func NewLogAgent(c *config.Config) *LogAgent {
 	return &LogAgent{
 		Config:                    c,
 		backends:                  make(map[string]LogBackend),
-		destNames:                 make(map[LogDest]string),
 		retentionAlreadyAttempted: make(map[string]bool),
 	}
 }
@@ -136,7 +135,6 @@ func (l *LogAgent) Run(ctx context.Context) {
 					}
 					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
 					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
-					l.destNames[dest] = dname
 					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)
 				}
@@ -148,8 +146,10 @@ func (l *LogAgent) Run(ctx context.Context) {
 }
 
 func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
+
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
+	defer dest.NotifySourceStopped()
 
 	closed := false
 	src.SetOutput(func(e LogEvent) {
@@ -168,11 +168,11 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	for e := range eventsCh {
 		err := dest.Publish([]LogEvent{e})
 		if err == ErrOutputStopped {
-			log.Printf("I! [logagent] Log destination %v has stopped, finalizing %v/%v", l.destNames[dest], src.Group(), src.Stream())
+			log.Printf("I! [logagent] Log destination %v has stopped, finalizing %v/%v", src.Destination(), src.Group(), src.Stream())
 			return
 		}
 		if err != nil {
-			log.Printf("E! [logagent] Failed to publish log to %v, error: %v", l.destNames[dest], err)
+			log.Printf("E! [logagent] Failed to publish log to %v, error: %v", src.Destination(), err)
 			return
 		}
 	}

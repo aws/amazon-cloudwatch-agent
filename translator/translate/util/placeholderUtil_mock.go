@@ -3,26 +3,9 @@
 
 package util
 
-// MockEC2TagValue sets up a mock for GetEC2TagValue function for testing
-func MockEC2TagValue(mockFunc func(string) string) func() {
-	original := getEC2TagValueFunc
-	getEC2TagValueFunc = mockFunc
-
-	// Return cleanup function
-	return func() {
-		getEC2TagValueFunc = original
-	}
-}
-
-// MockEC2TagValueWithMap sets up a mock that returns values from a map
-func MockEC2TagValueWithMap(tagMap map[string]string) func() {
-	return MockEC2TagValue(func(tagKey string) string {
-		if value, exists := tagMap[tagKey]; exists {
-			return value
-		}
-		return ""
-	})
-}
+import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+)
 
 // MockEC2MetadataInfoProvider sets up a mock for the EC2 metadata provider
 func MockEC2MetadataInfoProvider(mockFunc func() *Metadata) func() {
@@ -49,6 +32,35 @@ func MockEC2MetadataInfoProviderWithValues(instanceID, instanceType, imageID, ho
 	})
 }
 
+// MockTagMetadataProvider sets up a mock for the tag metadata provider
+func MockTagMetadataProvider(mockFunc func() map[string]string) func() {
+	original := tagMetadataProvider
+	tagMetadataProvider = mockFunc
+
+	// Return cleanup function
+	return func() {
+		tagMetadataProvider = original
+	}
+}
+
+// MockTagMetadataProviderWithMap sets up a mock that returns values from a map
+func MockTagMetadataProviderWithMap(tagMap map[string]string) func() {
+	return MockTagMetadataProvider(func() map[string]string {
+		result := make(map[string]string)
+		for k, v := range tagMap {
+			// Map tag keys to their append_dimensions equivalents
+			switch k {
+			case "aws:autoscaling:groupName":
+				result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = v
+			default:
+				// For other tags, use them as-is
+				result[k] = v
+			}
+		}
+		return result
+	})
+}
+
 // MockAWSMetadata represents the AWS metadata values for mocking
 type MockAWSMetadata struct {
 	InstanceID   string
@@ -72,7 +84,7 @@ func MockCompleteAWSMetadata(metadata MockAWSMetadata, tagMap map[string]string)
 	)
 
 	// Setup EC2 tags mock
-	tagsCleanup := MockEC2TagValueWithMap(tagMap)
+	tagsCleanup := MockTagMetadataProviderWithMap(tagMap)
 
 	// Return combined cleanup function
 	return func() {

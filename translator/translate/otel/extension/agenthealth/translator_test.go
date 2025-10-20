@@ -4,6 +4,7 @@
 package agenthealth
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/metadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -25,12 +28,12 @@ func TestTranslate(t *testing.T) {
 		agent.FlagRegionType: config.RegionTypeNotFound,
 	}
 	testCases := map[string]struct {
-		input          map[string]interface{}
+		input          map[string]any
 		isEnvUsageData bool
 		want           *agenthealth.Config
 	}{
 		"WithUsageData/NotInConfig": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{}},
+			input:          map[string]any{"agent": map[string]any{}},
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: true,
@@ -41,7 +44,7 @@ func TestTranslate(t *testing.T) {
 			},
 		},
 		"WithUsageData/FalseInConfig": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{"usage_data": false}},
+			input:          map[string]any{"agent": map[string]any{"usage_data": false}},
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: false,
@@ -52,7 +55,7 @@ func TestTranslate(t *testing.T) {
 			},
 		},
 		"WithUsageData/FalseInEnv": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{"usage_data": true}},
+			input:          map[string]any{"agent": map[string]any{"usage_data": true}},
 			isEnvUsageData: false,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: false,
@@ -63,7 +66,7 @@ func TestTranslate(t *testing.T) {
 			},
 		},
 		"WithUsageData/BothTrue": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{"usage_data": true}},
+			input:          map[string]any{"agent": map[string]any{"usage_data": true}},
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: true,
@@ -71,6 +74,62 @@ func TestTranslate(t *testing.T) {
 					Operations: operations,
 					UsageFlags: usageFlags,
 				},
+			},
+		},
+		"WithUsageMetadata/OnlyUnsupported": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{map[string]any{
+						"unsupported_key": "unsupported_value",
+					},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+			},
+		},
+		"WithUsageMetadata/Mixed": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{
+						map[string]any{
+							"ObservabilitySolution": "jvm",
+							"test":                  "value",
+						},
+						map[string]any{
+							"unsupported_key": "unsupported_value",
+						},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{"obs_jvm"},
+			},
+		},
+		"WithUsageMetadata/Supported": {
+			input:          testutil.GetJson(t, filepath.Join("testdata", "config.json")),
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{"obs_jvm"},
 			},
 		},
 	}
