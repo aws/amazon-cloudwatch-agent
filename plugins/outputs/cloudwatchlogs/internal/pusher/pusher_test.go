@@ -20,23 +20,21 @@ const eventCount = 100000
 func TestPusher(t *testing.T) {
 	t.Run("WithSender", func(t *testing.T) {
 		t.Parallel()
-		stop := make(chan struct{})
 		var wg sync.WaitGroup
-		pusher := setupPusher(t, nil, stop, &wg)
+		pusher := setupPusher(t, nil, &wg)
 
 		var completed atomic.Int32
 		generateEvents(t, pusher, &completed)
 
-		close(stop)
+		pusher.Stop()
 		wg.Wait()
 	})
 
 	t.Run("WithSenderPool", func(t *testing.T) {
 		t.Parallel()
-		stop := make(chan struct{})
 		var wg sync.WaitGroup
 		wp := NewWorkerPool(5)
-		pusher := setupPusher(t, wp, stop, &wg)
+		pusher := setupPusher(t, wp, &wg)
 
 		_, isSenderPool := pusher.Sender.(*senderPool)
 		assert.True(t, isSenderPool)
@@ -44,10 +42,39 @@ func TestPusher(t *testing.T) {
 		var completed atomic.Int32
 		generateEvents(t, pusher, &completed)
 
-		close(stop)
+		pusher.Stop()
 		wg.Wait()
 		wp.Stop()
 	})
+}
+
+func TestPusherStop(t *testing.T) {
+	var wg sync.WaitGroup
+
+	s := &mockSender{}
+	s.On("Stop").Return()
+
+	logger := testutil.NewNopLogger()
+	target := Target{}
+	service := new(stubLogsService)
+	service.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	}
+	mockManager := new(mockTargetManager)
+	q := newQueue(logger, target, time.Second, nil, s, &wg)
+	pusher := &Pusher{
+		Target:         target,
+		Queue:          q,
+		Service:        service,
+		TargetManager:  mockManager,
+		EntityProvider: nil,
+		Sender:         s,
+	}
+
+	pusher.Stop()
+
+	s.AssertCalled(t, "Stop")
+
 }
 
 func generateEvents(t *testing.T, pusher *Pusher, completed *atomic.Int32) {
@@ -63,7 +90,7 @@ func generateEvents(t *testing.T, pusher *Pusher, completed *atomic.Int32) {
 	}
 }
 
-func setupPusher(t *testing.T, workerPool WorkerPool, stop chan struct{}, wg *sync.WaitGroup) *Pusher {
+func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pusher {
 	t.Helper()
 	logger := testutil.NewNopLogger()
 	target := Target{Group: "G", Stream: "S", Retention: 7}
@@ -85,7 +112,6 @@ func setupPusher(t *testing.T, workerPool WorkerPool, stop chan struct{}, wg *sy
 		workerPool,
 		time.Second,
 		time.Minute,
-		stop,
 		wg,
 	)
 

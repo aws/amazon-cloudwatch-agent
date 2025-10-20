@@ -1,0 +1,8 @@
+{
+  "agent": {
+    "usage_metadata": [
+      {"ObservabilitySolution": "TOMCAT"},
+      {"ObservabilitySolution": "EC2_HEALTH"}
+    ]
+  }
+}

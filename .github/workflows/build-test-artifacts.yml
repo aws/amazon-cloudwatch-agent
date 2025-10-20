@@ -23,11 +23,19 @@ on:
         description: "Run Test on the new container image"
         default: true
         type: boolean
+      build-distributor:
+        description: "Whether to build an SSM distributor"
+        default: false
+        type: boolean
   workflow_call:
     inputs:
       test-image-before-upload:
         description: "Run Test on the new container image"
         default: true
+        type: boolean
+      build-distributor:
+        description: "Whether to build an SSM distributor"
+        default: false
         type: boolean
 
 concurrency:
@@ -71,6 +79,20 @@ jobs:
       ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+
+  BuildDistributor:
+    needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
+    uses: ./.github/workflows/test-build-distributor.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      DistributorName: ${{ vars.SSM_TEST_DISTRIBUTOR_NAME }}
 
   BuildAndUploadITAR:
     uses: ./.github/workflows/test-build.yml
