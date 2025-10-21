@@ -214,7 +214,7 @@ lint: install-golangci-lint simple-lint
 	${LINTER} run ./...
 
 test:
-	CGO_ENABLED=0 go test -timeout 15m -coverprofile coverage.txt -failfast ./...
+	CGO_ENABLED=0 go test -timeout 10m -parallel 4 -coverprofile coverage.txt -failfast ./...
 
 # List of existing packages with data races
 # TODO: Fix each
@@ -229,7 +229,7 @@ PKG_WITH_DATA_RACE += plugins/outputs/cloudwatch$$
 PKG_WITH_DATA_RACE += plugins/processors/ec2tagger
 PKG_WITH_DATA_RACE_PATTERN := $(shell echo '$(PKG_WITH_DATA_RACE)' | tr ' ' '|')
 test-data-race:
-	CGO_ENABLED=1 go test -timeout 15m -race -parallel 4 $(shell go list ./... | grep -v -E '$(PKG_WITH_DATA_RACE_PATTERN)')
+	CGO_ENABLED=1 go test -timeout 10m -race -parallel 4 $(shell go list ./... | grep -v -E '$(PKG_WITH_DATA_RACE_PATTERN)')
 
 clean::
 	rm -rf release/ build/
