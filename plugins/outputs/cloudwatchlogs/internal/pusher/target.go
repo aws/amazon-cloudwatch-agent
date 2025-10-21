@@ -24,6 +24,8 @@ const (
 	baseRetryDelay      = 1 * time.Second
 	maxRetryDelayTarget = 10 * time.Second
 	numBackoffRetries   = 5
+
+	errMessageLogGroupIdentifierNotSupported = "Input filter on Log group identifiers is not supported."
 )
 
 type Target struct {
@@ -185,13 +187,13 @@ func (m *targetManager) processDescribeLogGroup() {
 		case target := <-m.dlg:
 			batch[target.Group] = target
 			if len(batch) == logGroupIdentifierLimit {
-				m.updateTargetBatch(batch)
+				m.updateTargets(batch)
 				// Reset batch
 				batch = make(map[string]Target, logGroupIdentifierLimit)
 			}
 		case <-t.C:
 			if len(batch) > 0 {
-				m.updateTargetBatch(batch)
+				m.updateTargets(batch)
 				// Reset batch
 				batch = make(map[string]Target, logGroupIdentifierLimit)
 			}
@@ -199,7 +201,17 @@ func (m *targetManager) processDescribeLogGroup() {
 	}
 }
 
-func (m *targetManager) updateTargetBatch(targets map[string]Target) {
+func (m *targetManager) updateTargets(targets map[string]Target) {
+	err := m.updateTargetsBatch(targets)
+	if err != nil {
+		m.logger.Debug("falling back to describing log groups by prefix")
+		m.updateTargetsIteratively(targets)
+	}
+}
+
+// updateTargetsBatch will call DLG for the entire batch (single call). Will return an error if
+// DLG by identifiers is not supported.
+func (m *targetManager) updateTargetsBatch(targets map[string]Target) error {
 	identifiers := make([]*string, 0, len(targets))
 	for logGroup := range targets {
 		identifiers = append(identifiers, aws.String(logGroup))
@@ -211,7 +223,11 @@ func (m *targetManager) updateTargetBatch(targets map[string]Target) {
 	for attempt := 0; attempt < numBackoffRetries; attempt++ {
 		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
 		if err != nil {
-			m.logger.Errorf("failed to describe log group retention for targets %v: %v", targets, err)
+			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == cloudwatchlogs.ErrCodeInvalidParameterException && aerr.Message() == errMessageLogGroupIdentifierNotSupported {
+				return err
+			}
+
+			m.logger.Errorf("failed to batch describe log group retention for targets %v: %v", targets, err)
 			time.Sleep(m.calculateBackoff(attempt))
 			continue
 		}
@@ -225,6 +241,49 @@ func (m *targetManager) updateTargetBatch(targets map[string]Target) {
 		}
 		break
 	}
+	return nil
+}
+
+// updateTargetsIteratively will iterate through the targets and call DLG for each target.
+func (m *targetManager) updateTargetsIteratively(targets map[string]Target) {
+	for _, target := range targets {
+		for attempt := 0; attempt < numBackoffRetries; attempt++ {
+			currentRetention, err := m.getRetention(target)
+			if err != nil {
+				m.logger.Errorf("failed to describe log group retention for target %v: %v", target, err)
+				time.Sleep(m.calculateBackoff(attempt))
+				continue
+			}
+
+			if currentRetention != target.Retention && target.Retention > 0 {
+				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
+				m.prp <- target
+			}
+			break // no change in retention
+		}
+	}
+}
+
+func (m *targetManager) getRetention(target Target) (int, error) {
+	input := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: aws.String(target.Group),
+	}
+
+	output, err := m.service.DescribeLogGroups(input)
+	if err != nil {
+		return 0, fmt.Errorf("describe log groups failed: %w", err)
+	}
+
+	for _, group := range output.LogGroups {
+		if *group.LogGroupName == target.Group {
+			if group.RetentionInDays == nil {
+				return 0, nil
+			}
+			return int(*group.RetentionInDays), nil
+		}
+	}
+
+	return 0, fmt.Errorf("log group %v not found", target.Group)
 }
 
 func (m *targetManager) processPutRetentionPolicy() {
