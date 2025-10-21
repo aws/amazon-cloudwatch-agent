@@ -1,0 +1,360 @@
+name: Build And Upload Distributor
+env:
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CHECKOUT_ROOT_DIR: "test"
+on:
+  workflow_dispatch:
+    inputs:
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: true
+        type: string
+      Bucket:
+        description: "Bucket to upload the artifacts to"
+        required: true
+        type: string
+      DistributorName:
+        description: "SSM Distributor document name"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: true
+        type: string
+      Bucket:
+        description: "Bucket to upload the artifacts to"
+        required: true
+        type: string
+      DistributorName:
+        description: "SSM Distributor document name"
+        required: true
+        type: string
+
+jobs:
+  AgentVersion:
+    name: 'AgentVersion'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      agent-version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+      - name: Agent Version
+        id: version
+        run: |
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/CWAGENT_VERSION .
+          echo "version=$(cat CWAGENT_VERSION)" >> "$GITHUB_OUTPUT"
+
+  PackageLinux:
+    name: 'PackageLinux'
+    runs-on: ubuntu-latest
+    needs: [AgentVersion]
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    env:
+      SOURCE_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/linux/${{ matrix.arch }}
+      DESTINATION_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/linux/${{ matrix.arch }}/${{ needs.AgentVersion.outputs.agent-version }}
+      WORKING_DIRECTORY: distributor/linux/${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          path: ${{ env.CHECKOUT_ROOT_DIR }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+
+      - name: Prepare Linux package
+        run: |
+          mkdir -p ${{ env.WORKING_DIRECTORY }}
+          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.rpm ${{ env.WORKING_DIRECTORY }}/
+          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.deb ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/install.sh ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/uninstall.sh ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/detect-system.sh ${{ env.WORKING_DIRECTORY }}/
+
+      - name: Create manifest JSON
+        run: |
+          cat > ${{ env.WORKING_DIRECTORY }}/manifest.json << EOF
+          {
+            "name": "${{ inputs.DistributorName }}",
+            "platform": "linux",
+            "architecture": "${{ matrix.arch }}",
+            "version": "${{ needs.AgentVersion.outputs.agent-version }}"
+          }
+          EOF
+
+      - name: Zip
+        run: zip -j AmazonCloudWatchAgent.zip ${{ env.WORKING_DIRECTORY }}/*
+
+      - name: Upload zip
+        run: aws s3 cp AmazonCloudWatchAgent.zip ${{ env.DESTINATION_S3_PATH }}/AmazonCloudWatchAgent.zip
+
+      - name: Calculate checksum
+        run: echo "$(sha256sum AmazonCloudWatchAgent.zip | cut -d' ' -f1)" > checksum.txt
+
+      - name: Upload checksum
+        run: aws s3 cp checksum.txt ${{ env.DESTINATION_S3_PATH }}/checksum.txt
+
+  PackageDarwin:
+    name: 'PackageDarwin'
+    runs-on: ubuntu-latest
+    needs: [AgentVersion]
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    env:
+      SOURCE_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/${{ matrix.arch }}
+      DESTINATION_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/darwin/${{ matrix.arch }}/${{ needs.AgentVersion.outputs.agent-version }}
+      WORKING_DIRECTORY: distributor/darwin/${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          path: ${{ env.CHECKOUT_ROOT_DIR }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+
+      - name: Prepare macOS package
+        run: |
+          mkdir -p ${{ env.WORKING_DIRECTORY }}
+          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.pkg ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/darwin/install.sh ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/darwin/uninstall.sh ${{ env.WORKING_DIRECTORY }}/
+
+      - name: Create manifest JSON
+        run: |
+          cat > ${{ env.WORKING_DIRECTORY }}/manifest.json << EOF
+          {
+            "name": "${{ inputs.DistributorName }}",
+            "platform": "mac_os_x",
+            "architecture": "${{ matrix.arch }}",
+            "version": "${{ needs.AgentVersion.outputs.agent-version }}"
+          }
+          EOF
+
+      - name: Zip
+        run: zip -j AmazonCloudWatchAgent.zip ${{ env.WORKING_DIRECTORY }}/*
+
+      - name: Upload zip
+        run: aws s3 cp AmazonCloudWatchAgent.zip ${{ env.DESTINATION_S3_PATH }}/AmazonCloudWatchAgent.zip
+
+      - name: Calculate checksum
+        run: echo "$(sha256sum AmazonCloudWatchAgent.zip | cut -d' ' -f1)" > checksum.txt
+
+      - name: Upload checksum
+        run: aws s3 cp checksum.txt ${{ env.DESTINATION_S3_PATH }}/checksum.txt
+
+  PackageWindows:
+    name: 'PackageWindows'
+    runs-on: ubuntu-latest
+    needs: [AgentVersion]
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      SOURCE_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}
+      DESTINATION_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/windows/amd64/${{ needs.AgentVersion.outputs.agent-version }}
+      WORKING_DIRECTORY: distributor/windows/amd64
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          path: ${{ env.CHECKOUT_ROOT_DIR }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+
+      - name: Prepare Windows package
+        run: |
+          mkdir -p ${{ env.WORKING_DIRECTORY }}
+          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.msi ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/windows/install.ps1 ${{ env.WORKING_DIRECTORY }}/
+          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/windows/uninstall.ps1 ${{ env.WORKING_DIRECTORY }}/
+
+      - name: Create manifest JSON
+        run: |
+          cat > ${{ env.WORKING_DIRECTORY }}/manifest.json << EOF
+          {
+            "name": "${{ inputs.DistributorName }}",
+            "platform": "windows",
+            "architecture": "amd64",
+            "version": "${{ needs.AgentVersion.outputs.agent-version }}"
+          }
+          EOF
+
+      - name: Zip
+        run: zip -j AmazonCloudWatchAgent.zip ${{ env.WORKING_DIRECTORY }}/*
+
+      - name: Upload zip
+        run: aws s3 cp AmazonCloudWatchAgent.zip ${{ env.DESTINATION_S3_PATH }}/AmazonCloudWatchAgent.zip
+
+      - name: Calculate checksum
+        run: echo "$(sha256sum AmazonCloudWatchAgent.zip | cut -d' ' -f1)" > checksum.txt
+
+      - name: Upload checksum
+        run: aws s3 cp checksum.txt ${{ env.DESTINATION_S3_PATH }}/checksum.txt
+
+  UploadDistributor:
+    name: 'UploadDistributor'
+    runs-on: ubuntu-latest
+    needs: [AgentVersion, PackageLinux, PackageDarwin, PackageWindows]
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
+      S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          path: ${{ env.CHECKOUT_ROOT_DIR }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+
+      - name: Download checksums
+        run: |
+          mkdir -p checksum/{windows/amd64,linux/{amd64,arm64},darwin/{amd64,arm64}}
+          aws s3 cp ${{ env.S3_PATH }}/windows/amd64/${{ env.AGENT_VERSION }}/checksum.txt checksum/windows/amd64/
+          aws s3 cp ${{ env.S3_PATH }}/linux/amd64/${{ env.AGENT_VERSION }}/checksum.txt checksum/linux/amd64/
+          aws s3 cp ${{ env.S3_PATH }}/linux/arm64/${{ env.AGENT_VERSION }}/checksum.txt checksum/linux/arm64/
+          aws s3 cp ${{ env.S3_PATH }}/darwin/amd64/${{ env.AGENT_VERSION }}/checksum.txt checksum/darwin/amd64/
+          aws s3 cp ${{ env.S3_PATH }}/darwin/arm64/${{ env.AGENT_VERSION }}/checksum.txt checksum/darwin/arm64/
+
+      - name: Create manifest JSON
+        run: |
+          export WINDOWS_AMD64_SHA=$(cat checksum/windows/amd64/checksum.txt)
+          export LINUX_AMD64_SHA=$(cat checksum/linux/amd64/checksum.txt)
+          export LINUX_ARM64_SHA=$(cat checksum/linux/arm64/checksum.txt)
+          export DARWIN_AMD64_SHA=$(cat checksum/darwin/amd64/checksum.txt)
+          export DARWIN_ARM64_SHA=$(cat checksum/darwin/arm64/checksum.txt)
+          
+          envsubst < ${{ env.CHECKOUT_ROOT_DIR }}/packaging/manifest.json > manifest.json
+
+      - name: Upload manifest JSON to S3
+        run: aws s3 cp manifest.json ${{ env.S3_PATH }}/manifest.json
+
+      - name: Check if distributor exists
+        id: check-distributor
+        run: |
+          if aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create distributor
+        if: steps.check-distributor.outputs.exists == 'false'
+        run: |
+          aws ssm create-document \
+            --name "${{ inputs.DistributorName }}" \
+            --content file://manifest.json \
+            --attachments Key="SourceUrl",Values="${{ env.S3_PATH }}" \
+            --version-name "${{ needs.AgentVersion.outputs.agent-version }}" \
+            --document-type Package \
+            --region ${{ inputs.Region }}
+
+      - name: Update distributor
+        if: steps.check-distributor.outputs.exists == 'true'
+        run: |
+          aws ssm update-document \
+            --name "${{ inputs.DistributorName }}" \
+            --content file://manifest.json \
+            --attachments Key="SourceUrl",Values="${{ env.S3_PATH }}" \
+            --version-name "${{ needs.AgentVersion.outputs.agent-version }}" \
+            --document-version "\$LATEST" \
+            --region ${{ inputs.Region }}
+
+      - name: Verify distributor
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 6
+          timeout_minutes: 5
+          retry_wait_seconds: 10
+          command: |
+            STATUS=$(aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --query 'Document.Status' --output text)
+            if [ "$STATUS" != "Active" ]; then
+              echo "Error: Document status is $STATUS, expected Active"
+              exit 1
+            fi
+            echo "Document is Active"
+
+      - name: Update default version
+        run: |
+          CURRENT_DEFAULT=$(aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --query 'Document.DefaultVersion' --output text)
+          LATEST_VERSION=$(aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --query 'Document.LatestVersion' --output text)
+          if [ "$CURRENT_DEFAULT" != "$LATEST_DEFAULT" ]; then
+            aws ssm update-document-default-version \
+              --name "${{ inputs.DistributorName }}" \
+              --document-version "$LATEST_VERSION" \
+              --region ${{ inputs.Region }}
+          else
+            echo "Default version already matches latest version"
+          fi

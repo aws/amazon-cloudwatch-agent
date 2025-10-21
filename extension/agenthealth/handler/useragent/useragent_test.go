@@ -4,6 +4,7 @@
 package useragent
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -206,6 +207,67 @@ func TestJmx(t *testing.T) {
 	assert.Equal(t, "inputs:(jmx jmx-jvm jmx-kafka jmx-tomcat run_as_user)", ua.inputsStr.Load())
 	assert.Equal(t, "", ua.processorsStr.Load())
 	assert.Equal(t, "outputs:(nop)", ua.outputsStr.Load())
+}
+
+func TestAddFeatureFlags(t *testing.T) {
+	ua := newUserAgent()
+
+	ua.AddFeatureFlags("feature1")
+	assert.Len(t, ua.feature, 1)
+	assert.Equal(t, "feature:(feature1)", ua.featureStr.Load())
+
+	ua.AddFeatureFlags("feature1", "feature2", "feature3")
+	assert.Len(t, ua.feature, 3)
+	assert.Equal(t, "feature:(feature1 feature2 feature3)", ua.featureStr.Load())
+
+	ua.AddFeatureFlags("")
+	assert.Len(t, ua.feature, 3)
+	assert.Equal(t, "feature:(feature1 feature2 feature3)", ua.featureStr.Load())
+	assert.Contains(t, ua.Header(true), "feature:(feature1 feature2 feature3)")
+}
+
+func TestAddFeatureFlags_Concurrent(t *testing.T) {
+	ua := newUserAgent()
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			ua.AddFeatureFlags(fmt.Sprintf("feature%d", i))
+		}(i)
+	}
+	wg.Wait()
+	assert.Len(t, ua.feature, 50)
+}
+
+func TestReset(t *testing.T) {
+	ua := newUserAgent()
+
+	ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+	ua.SetContainerInsightsFlag()
+	ua.AddFeatureFlags("test")
+
+	assert.Len(t, ua.inputs, 1)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 1)
+	assert.Len(t, ua.feature, 1)
+
+	assert.Equal(t, "inputs:(run_as_user)", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "outputs:(container_insights)", ua.outputsStr.Load())
+	assert.Equal(t, "feature:(test)", ua.featureStr.Load())
+
+	ua.Reset()
+
+	assert.Len(t, ua.inputs, 0)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 0)
+	assert.Len(t, ua.feature, 0)
+
+	assert.Equal(t, "", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "", ua.outputsStr.Load())
+	assert.Equal(t, "", ua.featureStr.Load())
 }
 
 func TestSingleton(t *testing.T) {
