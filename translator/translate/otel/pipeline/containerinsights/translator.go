@@ -5,6 +5,7 @@ package containerinsights
 
 import (
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/groupbyattrsprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/kueue"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
@@ -58,13 +60,29 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 
+	highFrequencyGPUMetricsEnabled := t.pipelineName == ciPipelineName && awscontainerinsight.IsHighFrequencyGPUMetricsEnabled(conf)
+
 	// create processor map with
-	// - default batch processor
+	// - batch processor (with timeout override if high-frequency GPU metrics are enabled)
 	// - filter processor to drop prometheus metadata
+	var batchTranslator common.ComponentTranslator
+	if highFrequencyGPUMetricsEnabled {
+		// Use 1 minute timeout directly for high-frequency GPU metrics
+		batchTranslator = batchprocessor.NewTranslatorWithNameSectionAndTimeout(t.pipelineName, common.LogsKey, time.Minute)
+	} else {
+		// Use default timeout based on telemetry section
+		batchTranslator = batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey)
+	}
+
 	processors := common.NewTranslatorMap(
-		batchprocessor.NewTranslatorWithNameAndSection(t.pipelineName, common.LogsKey),
+		batchTranslator,
 		filterprocessor.NewTranslator(common.WithName(t.pipelineName)),
 	)
+
+	if highFrequencyGPUMetricsEnabled {
+		processors.Set(groupbyattrsprocessor.NewTranslatorWithName(t.pipelineName))
+	}
+
 	// create exporter map with default emf exporter based on pipeline name
 	exporters := common.NewTranslatorMap(awsemf.NewTranslatorWithName(t.pipelineName))
 	// create extensions map based on pipeline name

@@ -7,6 +7,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
@@ -60,7 +61,7 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
-
+	cfg.GaugeMetricsToCompact = getGaugeMetricsToCompact(conf)
 	return nil
 }
 
@@ -721,4 +722,34 @@ func getVolumesMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDe
 		}
 	}
 	return metricDeclarations
+}
+
+func getGaugeMetricsToCompact(conf *confmap.Conf) []string {
+	var metricsToHistogram []string
+	if awscontainerinsight.IsHighFrequencyGPUMetricsEnabled(conf) {
+		var gpuMetricTypes = []string{
+			containerinsightscommon.TypeGpuContainer,
+			containerinsightscommon.TypeGpuPod,
+			containerinsightscommon.TypeGpuNode,
+		}
+
+		// GPU metrics to be compacted to values and counts
+		gpuMetrics := []string{
+			containerinsightscommon.GpuUtilization,
+			containerinsightscommon.GpuMemUtilization,
+			containerinsightscommon.GpuMemTotal,
+			containerinsightscommon.GpuMemUsed,
+			containerinsightscommon.GpuPowerDraw,
+			containerinsightscommon.GpuTemperature,
+			containerinsightscommon.GpuTensorCoreUtilization,
+		}
+
+		// Generate metric names by looping through types and metrics
+		for _, t := range gpuMetricTypes {
+			for _, m := range gpuMetrics {
+				metricsToHistogram = append(metricsToHistogram, containerinsightscommon.MetricName(t, m))
+			}
+		}
+	}
+	return metricsToHistogram
 }
