@@ -12,9 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/collector/pdata/pmetric"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
-	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
 const (
