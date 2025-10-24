@@ -54,8 +54,7 @@ func (regularDist *RegularDistribution) Sum() float64 {
 func (regularDist *RegularDistribution) ValuesAndCounts() (values []float64, counts []float64) {
 	values = []float64{}
 	counts = []float64{}
-	for _, value := range regularDist.buckets {
-		counter := regularDist.buckets[value]
+	for value, counter := range regularDist.buckets {
 		values = append(values, value)
 		counts = append(counts, counter)
 	}
