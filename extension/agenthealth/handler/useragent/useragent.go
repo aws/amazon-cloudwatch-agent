@@ -42,7 +42,7 @@ const (
 	typeProcessors = "processors"
 	typeOutputs    = "outputs"
 	typeFeature    = "feature"
-	
+
 	pluginWindowsEventLog = "windows_event_log"
 )
 
