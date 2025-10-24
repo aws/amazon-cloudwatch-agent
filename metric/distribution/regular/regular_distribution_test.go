@@ -87,3 +87,18 @@ func TestRegularDistribution(t *testing.T) {
 	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MaxValue*1.001, 1), distribution.ErrUnsupportedValue)
 	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MinValue*1.001, 1), distribution.ErrUnsupportedValue)
 }
+
+func cloneRegularDistribution(dist *RegularDistribution) *RegularDistribution {
+	clonedDist := &RegularDistribution{
+		maximum:     dist.maximum,
+		minimum:     dist.minimum,
+		sampleCount: dist.sampleCount,
+		sum:         dist.sum,
+		buckets:     map[float64]float64{},
+		unit:        dist.unit,
+	}
+	for k, v := range dist.buckets {
+		clonedDist.buckets[k] = v
+	}
+	return clonedDist
+}
