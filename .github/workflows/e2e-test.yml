@@ -1,141 +1,85 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run E2E Tests
+name: Run WD Integration Tests
 env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
+  CWA_GITHUB_TEST_REPO_BRANCH: "feature/workload-discovery-optimization"
 
 on:
-  schedule:
-    - cron: '0 17 * * 1'
   workflow_dispatch:
     inputs:
-      region:
-        required: false
+      build_run_id:
+        description: 'The ID of the build-test-artifacts workflow run'
+        type: number
+        required: true
+      build_sha:
+        description: 'The SHA of the build-test-artifacts workflow run'
         type: string
-        description: 'AWS Region to run tests in'
-        default: 'us-west-2'
-      operator-branch:
-        required: false
+        required: true
+      test_repo_branch:
+        description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
-        description: 'Branch of the operator to test'
-        default: 'main'
-      helm-charts-branch:
-        required: false
-        type: string
-        description: 'Branch of the helm charts to test'
-        default: 'main'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-parent
-  cancel-in-progress: true
 
 jobs:
-  GetLatestOperatorCommitSHA:
+  CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
-    outputs:
-      operator_commit_sha: ${{steps.get_latest_sha.outputs.operator_sha}}
-      operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
     steps:
-      - name: Checkout the target repo
-        uses: actions/checkout@v3
-        with:
-          repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
-          ref: ${{ inputs.operator-branch || 'main' }}
-          path: operator-repo
-
-      - name: Get latest commit SHA
-        id: get_latest_sha
-        run: |
-          cd operator-repo
-          latest_sha=$(git rev-parse HEAD)
-          echo "::set-output name=operator_sha::$latest_sha"
-
-  BuildAgent:
-    uses: ./.github/workflows/build-test-artifacts.yml
-    concurrency:
-      group: "Build-Test-Artifacts-${{github.ref_name}}"
-      cancel-in-progress: true
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      test-image-before-upload: false
-
-  BuildOperator:
-    needs: [GetLatestOperatorCommitSHA]
-    uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
-    concurrency:
-      group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
-      cancel-in-progress: true
-    secrets: inherit
-    with:
-      tag: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      target-sha: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha}}
-      repository: ${{needs.GetLatestOperatorCommitSHA.outputs.operator_repo_name}}
-      test-image-before-upload: false
+      - run: |-
+          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
+            echo "Build SHA matches test SHA"
+          else
+            echo "Build SHA does not match test SHA"
+            exit 1
+          fi
+      - run: |-
+          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+          if [[ $conclusion == "success" ]]; then
+            echo "Run succeeded"
+          else
+            echo "Run failed"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   OutputEnvVariables:
-    needs: [ BuildAgent, BuildOperator ]
     name: 'OutputEnvVariables'
+    needs: [CheckBuildTestArtifacts]
     runs-on: ubuntu-latest
     outputs:
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
       CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
-      ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
-      ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.22.2
-
       - name: SetOutputs
         id: set-outputs
-        run: |
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "::set-output name=ECR_INTEGRATION_TEST_REPO::cwagent-integration-test"
-          echo "::set-output name=ECR_OPERATOR_REPO::$(echo "${{ vars.ECR_OPERATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
-          echo "::set-output name=ECR_TARGET_ALLOCATOR_REPO::$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
-
-      - name: Echo test variables
-        run: |
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
-          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
-          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
+        run: |-
+          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
+          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
   GenerateTestMatrix:
-    needs: [BuildAgent, BuildOperator]
     name: 'GenerateTestMatrix'
+    needs: [OutputEnvVariables]
     runs-on: ubuntu-latest
     outputs:
-      eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
+      ec2_linux_wd_matrix: ${{ steps.set-matrix.outputs.ec2_linux_wd_matrix }}
+      ec2_linux_wd_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_linux_wd_nvidia_matrix }}
+      ec2_windows_wd_matrix: ${{ steps.set-matrix.outputs.ec2_windows_wd_matrix }}
+      ec2_windows_wd_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_windows_wd_nvidia_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
@@ -144,149 +88,373 @@ jobs:
 
       - name: Generate matrix
         id: set-matrix
-        run: |
-          go run generator/test_case_generator.go -e2e
-          echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
+        run: |-
+          go run --tags=generator generator/test_case_generator.go
+          echo "ec2_linux_wd_matrix=$(echo $(cat generator/resources/ec2_linux_wd_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_wd_nvidia_matrix=$(echo $(cat generator/resources/ec2_linux_wd_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_wd_matrix=$(echo $(cat generator/resources/ec2_windows_wd_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_wd_nvidia_matrix=$(echo $(cat generator/resources/ec2_windows_wd_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 
-      - name: Echo test plan matrix
-        run: |
-          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
-
-  EKSE2EJVMTomcatTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jvm-tomcat-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "HELM_CHART"
+  StartLocalStack:
+    name: 'StartLocalStack'
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
-
-  EKSE2EJVMTomcatTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJVMTomcatTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jvm-tomcat-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+      region: us-west-2
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/jvm_tomcat.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{ inputs.build_sha }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  EKSE2EKafkaTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
+  EC2LinuxWDIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_wd_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
+              -var="github_test_repo=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{inputs.build_sha}}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
+              -var="ssh_key_name=${{env.KEY_NAME}}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2WindowsWDIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_wd_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{ inputs.build_sha }}"  \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2NvidiaLinuxWDIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_wd_nvidia_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
+              -var="github_test_repo=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{inputs.build_sha}}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
+              -var="ssh_key_name=${{env.KEY_NAME}}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2NvidiaWindowsWDIntegrationTest:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_wd_nvidia_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{ inputs.build_sha }}"  \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
+    needs: [ StartLocalStack, EC2LinuxWDIntegrationTest, EC2WindowsWDIntegrationTest, EC2NvidiaLinuxWDIntegrationTest, EC2NvidiaWindowsWDIntegrationTest, OutputEnvVariables ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
     with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
+      region: us-west-2
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EKafkaTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EKafkaTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-kafka-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/kafka.json
-      sample_app: resources/sample_apps/kafka.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTestHelm:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTestHelm'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test-helm
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/containerinsights.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "HELM_CHART"
-    secrets: inherit
-
-  EKSE2EJMXContainerInsightsTestAddon:
-    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EKSE2EJMXContainerInsightsTestAddon'
-    uses: ./.github/workflows/eks-e2e-test.yml
-    with:
-      terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-jmx-containerinsights-test-addon
-      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_jmx_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
-      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
-      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
-      region: ${{ inputs.region || 'us-west-2' }}
-      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_eks_addon/containerinsights.json
-      sample_app: resources/sample_apps/tomcat.yaml
-      eks_installation_type: "EKS_ADDON"
-    secrets: inherit
-
+      github_sha: ${{inputs.build_sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
