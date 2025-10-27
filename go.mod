@@ -34,7 +34,7 @@ replace (
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/aws v0.0.0-20251024201210-4dff397492f8
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/aws v0.0.0-20251027190804-3b43f3b3b3ef
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20251120035228-2492d12f5d81
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20251120035228-2492d12f5d81
