@@ -119,15 +119,13 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="user=${{ matrix.arrays.username }}"; then
-              echo "Test completed successfully - skipping terraform destroy for debugging"
-              # terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+              echo "Test passed - destroying terraform resources"
+              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
-              echo "Test failed - skipping terraform destroy for debugging"
-              # terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+              echo "Test failed - keeping instance alive for debugging. Remember to manually destroy resources!"
               exit 1
             fi
-      #This is here just in case workflow cancel
-      # TEMPORARILY DISABLED: Terraform destroy commented out for debugging ca_bundle flaky test
+      #This is here just in case workflow cancel - keeping instance alive for debugging
       # - name: Terraform destroy
       #   if: ${{ cancelled() || failure() }}
       #   uses: nick-fields/retry@v2
