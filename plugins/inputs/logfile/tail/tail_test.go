@@ -377,6 +377,7 @@ func TestConcurrentLinePoolAccess(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer close(linesChan)
 		for i := 0; i < numLines; i++ {
 			select {
 			case line := <-tail.Lines:
@@ -386,7 +387,6 @@ func TestConcurrentLinePoolAccess(t *testing.T) {
 				return
 			}
 		}
-		close(linesChan)
 	}()
 
 	numWorkers := 5
