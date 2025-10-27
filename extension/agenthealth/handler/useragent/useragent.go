@@ -42,8 +42,6 @@ const (
 	typeProcessors = "processors"
 	typeOutputs    = "outputs"
 	typeFeature    = "feature"
-
-	pluginWindowsEventLog = "windows_event_log"
 )
 
 var (
@@ -85,15 +83,8 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	ua.dataLock.Lock()
 	defer ua.dataLock.Unlock()
 
-	winFeatures := collections.NewSet[string]()
-
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
-		ua.detectWindowsEventLogFeatures(input, winFeatures)
-	}
-
-	if len(winFeatures) > 0 {
-		ua.AddFeatureFlags(maps.Keys(winFeatures)...)
 	}
 
 	for _, output := range telegrafCfg.Outputs {
