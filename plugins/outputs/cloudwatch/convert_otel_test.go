@@ -116,10 +116,8 @@ func createTestHistogram(
 		for j := 0; j < numDatapoints; j++ {
 			dp := m.Histogram().DataPoints().AppendEmpty()
 			// Make the values match the count so it is easy to verify.
-			dp.ExplicitBounds().Append(float64(1 + i))
-			dp.ExplicitBounds().Append(float64(2 + 2*i))
-			dp.BucketCounts().Append(uint64(1 + i))
-			dp.BucketCounts().Append(uint64(2 + 2*i))
+			dp.ExplicitBounds().FromRaw([]float64{5, 10})
+			dp.BucketCounts().FromRaw([]uint64{600, 10, 387})
 			dp.SetMax(histogramMax)
 			dp.SetMin(histogramMin)
 			dp.SetSum(histogramSum)
