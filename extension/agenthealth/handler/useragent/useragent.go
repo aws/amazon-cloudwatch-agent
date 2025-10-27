@@ -33,6 +33,9 @@ const (
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
+	FlagWindowsEventIDs           = "win_event_ids"
+	FlagWindowsEventFilters       = "win_event_filters"
+	FlagWindowsEventLevels        = "win_event_levels"
 	separator                     = " "
 
 	typeInputs     = "inputs"
@@ -79,9 +82,11 @@ var _ UserAgent = (*userAgent)(nil)
 func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config) {
 	ua.dataLock.Lock()
 	defer ua.dataLock.Unlock()
+
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
 	}
+
 	for _, output := range telegrafCfg.Outputs {
 		ua.outputs.Add(output.Config.Name)
 	}
