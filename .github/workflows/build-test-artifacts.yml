@@ -82,6 +82,7 @@ jobs:
 
   BuildDistributor:
     needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
+    if: ${{ github.event_name == 'push' || inputs.build-distributor }}
     uses: ./.github/workflows/test-build-distributor.yml
     secrets: inherit
     permissions:
