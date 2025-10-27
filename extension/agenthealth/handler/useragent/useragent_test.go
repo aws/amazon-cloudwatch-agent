@@ -288,13 +288,13 @@ func TestListen(t *testing.T) {
 func TestWindowsEventLogAdoptionMetrics(t *testing.T) {
 	ua := newUserAgent()
 
-	ua.AddFeatureFlags(FlagWindowsEventIDs, FlagWindowsEventFilters, FlagWindowsEventLevels)
+	ua.AddFeatureFlags(flagWindowsEventIDs, flagWindowsEventFilters, flagWindowsEventLevels)
 
 	assert.Len(t, ua.feature, 3)
 	assert.Equal(t, "feature:(win_event_filters win_event_ids win_event_levels)", ua.featureStr.Load())
 
 	header := ua.Header(true)
-	assert.Contains(t, header, FlagWindowsEventIDs)
-	assert.Contains(t, header, FlagWindowsEventFilters)
-	assert.Contains(t, header, FlagWindowsEventLevels)
+	assert.Contains(t, header, flagWindowsEventIDs)
+	assert.Contains(t, header, flagWindowsEventFilters)
+	assert.Contains(t, header, flagWindowsEventLevels)
 }

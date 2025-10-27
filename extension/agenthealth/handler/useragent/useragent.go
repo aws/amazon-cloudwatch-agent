@@ -33,9 +33,9 @@ const (
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
-	FlagWindowsEventIDs           = "win_event_ids"
-	FlagWindowsEventFilters       = "win_event_filters"
-	FlagWindowsEventLevels        = "win_event_levels"
+	flagWindowsEventIDs           = "win_event_ids"
+	flagWindowsEventFilters       = "win_event_filters"
+	flagWindowsEventLevels        = "win_event_levels"
 	separator                     = " "
 
 	typeInputs     = "inputs"
@@ -85,15 +85,9 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	ua.dataLock.Lock()
 	defer ua.dataLock.Unlock()
 
-	winFeatures := collections.NewSet[string]()
-
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
-		ua.detectWindowsEventLogFeatures(input, winFeatures)
-	}
-
-	if len(winFeatures) > 0 {
-		ua.AddFeatureFlags(maps.Keys(winFeatures)...)
+		ua.setWindowsEventLogFeatureFlags(input)
 	}
 
 	for _, output := range telegrafCfg.Outputs {
@@ -153,6 +147,8 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	ua.inputsStr.Store(componentsStr(typeInputs, ua.inputs))
 	ua.processorsStr.Store(componentsStr(typeProcessors, ua.processors))
 	ua.outputsStr.Store(componentsStr(typeOutputs, ua.outputs))
+	ua.featureStr.Store(componentsStr(typeFeature, ua.feature))
+
 	ua.notify()
 }
 

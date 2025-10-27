@@ -7,10 +7,8 @@ package useragent
 
 import (
 	"github.com/influxdata/telegraf/models"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
-func (ua *userAgent) detectWindowsEventLogFeatures(input *models.RunningInput, winFeatures collections.Set[string]) {
+func (ua *userAgent) setWindowsEventLogFeatureFlags(input *models.RunningInput) {
 	// No-op on non-Windows platforms
 }
