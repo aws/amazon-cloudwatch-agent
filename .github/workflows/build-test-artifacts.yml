@@ -139,7 +139,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  StartWDIntegrationTests:
+  StartWorkloadDiscoveryIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildDocker ]
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest

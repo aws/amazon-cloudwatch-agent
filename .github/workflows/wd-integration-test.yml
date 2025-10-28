@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run WD Integration Tests
+name: Run Workload Discovery Integration Tests
 permissions:
   contents: read
 env:
@@ -103,8 +103,8 @@ jobs:
           echo "ec2_windows_wd_matrix=$(echo $(cat generator/resources/ec2_windows_wd_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_wd_nvidia_matrix=$(echo $(cat generator/resources/ec2_windows_wd_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 
-  StartLocalStack:
-    name: 'StartLocalStack'
+  StartWorkloadDiscoveryIntegrationTests:
+    name: 'StartWorkloadDiscoveryIntegrationTests'
     needs: [OutputEnvVariables]
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
@@ -120,8 +120,8 @@ jobs:
       github_sha: ${{ inputs.build_sha }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  EC2LinuxWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2LinuxWorkloadDiscoveryIntegrationTest:
+    needs: [ StartWorkloadDiscoveryIntegrationTests, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -182,7 +182,7 @@ jobs:
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="local_stack_host_name=${{ needs.StartWorkloadDiscoveryIntegrationTests.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
@@ -206,8 +206,8 @@ jobs:
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
-  EC2WindowsWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2WindowsWorkloadDiscoveryIntegrationTest:
+    needs: [ StartWorkloadDiscoveryIntegrationTests, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -285,8 +285,8 @@ jobs:
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
-  EC2NvidiaLinuxWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2NvidiaLinuxWorkloadDiscoveryIntegrationTest:
+    needs: [ StartWorkloadDiscoveryIntegrationTests, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -347,7 +347,7 @@ jobs:
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="local_stack_host_name=${{ needs.StartWorkloadDiscoveryIntegrationTests.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
@@ -371,8 +371,8 @@ jobs:
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
-  EC2NvidiaWindowsWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2NvidiaWindowsWorkloadDiscoveryIntegrationTest:
+    needs: [ StartWorkloadDiscoveryIntegrationTests, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -452,8 +452,8 @@ jobs:
 
   StopLocalStack:
     name: 'StopLocalStack'
-    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxWDIntegrationTest, EC2WindowsWDIntegrationTest, EC2NvidiaLinuxWDIntegrationTest, EC2NvidiaWindowsWDIntegrationTest, OutputEnvVariables ]
+    if: ${{ always() && needs.StartWorkloadDiscoveryIntegrationTests.result == 'success' }}
+    needs: [ StartWorkloadDiscoveryIntegrationTests, EC2LinuxWorkloadDiscoveryIntegrationTest, EC2WindowsWorkloadDiscoveryIntegrationTest, EC2NvidiaLinuxWorkloadDiscoveryIntegrationTest, EC2NvidiaWindowsWorkloadDiscoveryIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
