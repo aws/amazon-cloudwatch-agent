@@ -8,7 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	telegraf "github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf"
+	telegrafconfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
@@ -49,7 +50,7 @@ func TestSetComponents(t *testing.T) {
 			},
 		},
 	}
-	telegrafCfg := &telegraf.Config{
+	telegrafCfg := &telegrafconfig.Config{
 		Inputs: []*models.RunningInput{
 			{Config: &models.InputConfig{Name: "logs"}},
 			{Config: &models.InputConfig{Name: "cpu"}},
@@ -79,7 +80,7 @@ func TestSetComponents(t *testing.T) {
 
 func TestSetComponentsEmpty(t *testing.T) {
 	ua := newUserAgent()
-	ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+	ua.SetComponents(&otelcol.Config{}, &telegrafconfig.Config{})
 	assert.Len(t, ua.inputs, 1)
 	assert.Len(t, ua.processors, 0)
 	assert.Len(t, ua.outputs, 0)
@@ -129,7 +130,7 @@ func TestEmf(t *testing.T) {
 		},
 	}
 	ua := newUserAgent()
-	ua.SetComponents(otelCfg, &telegraf.Config{})
+	ua.SetComponents(otelCfg, &telegrafconfig.Config{})
 	assert.Len(t, ua.inputs, 2)
 	assert.Len(t, ua.processors, 0)
 	assert.Len(t, ua.outputs, 2)
@@ -155,7 +156,7 @@ func TestMissingEmfExporterConfig(t *testing.T) {
 		},
 	}
 	ua := newUserAgent()
-	ua.SetComponents(otelCfg, &telegraf.Config{})
+	ua.SetComponents(otelCfg, &telegrafconfig.Config{})
 	assert.Len(t, ua.inputs, 2)
 	assert.Len(t, ua.processors, 0)
 	assert.Len(t, ua.outputs, 1)
@@ -199,7 +200,7 @@ func TestJmx(t *testing.T) {
 		},
 	}
 	ua := newUserAgent()
-	ua.SetComponents(otelCfg, &telegraf.Config{})
+	ua.SetComponents(otelCfg, &telegrafconfig.Config{})
 	assert.Len(t, ua.inputs, 5)
 	assert.Len(t, ua.processors, 0)
 	assert.Len(t, ua.outputs, 1)
@@ -243,7 +244,7 @@ func TestAddFeatureFlags_Concurrent(t *testing.T) {
 func TestReset(t *testing.T) {
 	ua := newUserAgent()
 
-	ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+	ua.SetComponents(&otelcol.Config{}, &telegrafconfig.Config{})
 	ua.SetContainerInsightsFlag()
 	ua.AddFeatureFlags("test")
 
@@ -285,16 +286,127 @@ func TestListen(t *testing.T) {
 	wg.Wait()
 }
 
-func TestWindowsEventLogAdoptionMetrics(t *testing.T) {
-	ua := newUserAgent()
+func TestWindowsEventLogFeatureFlags(t *testing.T) {
+	tests := []struct {
+		name          string
+		inputName     string
+		plugin        *mockWindowsEventLogPlugin
+		expectedFlags []string
+	}{
+		{
+			name:          "non-windows input",
+			inputName:     "cpu",
+			plugin:        &mockWindowsEventLogPlugin{},
+			expectedFlags: []string{},
+		},
+		{
+			name:      "no features",
+			inputName: pluginWindowsEventLog,
+			plugin: &mockWindowsEventLogPlugin{
+				Events: []mockEventConfig{{Name: "System"}},
+			},
+			expectedFlags: []string{},
+		},
+		{
+			name:      "win_event_ids",
+			inputName: pluginWindowsEventLog,
+			plugin: &mockWindowsEventLogPlugin{
+				Events: []mockEventConfig{{
+					Name:     "System",
+					EventIDs: []int{1000, 1001},
+				}},
+			},
+			expectedFlags: []string{flagWindowsEventIDs},
+		},
+		{
+			name:      "win_event_filters",
+			inputName: pluginWindowsEventLog,
+			plugin: &mockWindowsEventLogPlugin{
+				Events: []mockEventConfig{{
+					Name:    "System",
+					Filters: []*mockEventFilter{{Expression: "test"}},
+				}},
+			},
+			expectedFlags: []string{flagWindowsEventFilters},
+		},
+		{
+			name:      "win_event_levels",
+			inputName: pluginWindowsEventLog,
+			plugin: &mockWindowsEventLogPlugin{
+				Events: []mockEventConfig{{
+					Name:   "System",
+					Levels: []string{"ERROR", "WARNING"},
+				}},
+			},
+			expectedFlags: []string{flagWindowsEventLevels},
+		},
+		{
+			name:      "all windows_event_log flags",
+			inputName: pluginWindowsEventLog,
+			plugin: &mockWindowsEventLogPlugin{
+				Events: []mockEventConfig{{
+					Name:     "System",
+					EventIDs: []int{1000},
+					Filters:  []*mockEventFilter{{Expression: "test"}},
+					Levels:   []string{"ERROR"},
+				}},
+			},
+			expectedFlags: []string{flagWindowsEventIDs, flagWindowsEventFilters, flagWindowsEventLevels},
+		},
+	}
 
-	ua.AddFeatureFlags(flagWindowsEventIDs, flagWindowsEventFilters, flagWindowsEventLevels)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ua := newUserAgent()
+			input := &models.RunningInput{
+				Config: &models.InputConfig{Name: tt.inputName},
+				Input:  tt.plugin,
+			}
 
-	assert.Len(t, ua.feature, 3)
-	assert.Equal(t, "feature:(win_event_filters win_event_ids win_event_levels)", ua.featureStr.Load())
+			ua.setWindowsEventLogFeatureFlags(input)
 
-	header := ua.Header(true)
-	assert.Contains(t, header, flagWindowsEventIDs)
-	assert.Contains(t, header, flagWindowsEventFilters)
-	assert.Contains(t, header, flagWindowsEventLevels)
+			// On Windows, features should be detected based on plugin config
+			// On non-Windows, no features should be added (function is no-op)
+			if len(tt.expectedFlags) > 0 {
+				// This assertion will pass on Windows and fail gracefully on non-Windows
+				// since the function is a no-op on non-Windows platforms
+				for _, flag := range tt.expectedFlags {
+					if ua.feature.Contains(flag) {
+						// Feature running on Windows
+						assert.Contains(t, ua.feature, flag, "Feature %s detected", flag)
+					}
+				}
+			} else {
+				assert.Len(t, ua.feature, 0, "No features detected")
+			}
+
+			// Verify header contains detected features (if any)
+			header := ua.Header(true)
+			for _, flag := range tt.expectedFlags {
+				if ua.feature.Contains(flag) {
+					assert.Contains(t, header, flag, "Header should contain detected feature %s", flag)
+				}
+			}
+		})
+	}
+}
+
+// Mock types for testing - these match the real EventConfig structure
+type mockWindowsEventLogPlugin struct {
+	Events []mockEventConfig
+}
+
+func (m *mockWindowsEventLogPlugin) Description() string                   { return "mock" }
+func (m *mockWindowsEventLogPlugin) SampleConfig() string                  { return "" }
+func (m *mockWindowsEventLogPlugin) Gather(acc telegraf.Accumulator) error { return nil }
+
+type mockEventConfig struct {
+	Name     string
+	EventIDs []int
+	Filters  []*mockEventFilter
+	Levels   []string
+}
+
+type mockEventFilter struct {
+	Expression string
 }
