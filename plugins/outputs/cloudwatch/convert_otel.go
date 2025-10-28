@@ -30,6 +30,10 @@ func ConvertOtelDimensions(attributes pcommon.Map) []*cloudwatch.Dimension {
 		if strings.HasPrefix(k, entityattributes.AWSEntityPrefix) {
 			return true
 		}
+		// we don't want to export the adapter receiver attribute
+		if k == constants.AdapterReceiverAttribute {
+			return true
+		}
 		mTags[k] = v.AsString()
 		return true
 	})
