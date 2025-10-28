@@ -163,7 +163,7 @@ func TestAddHistogram(t *testing.T) {
 		as.Equal("banana_peel", m.Name())
 	}
 	dp := m.Histogram().DataPoints().At(0)
-	as.Equal(1, dp.Attributes().Len())
+	as.Equal(2, dp.Attributes().Len())
 	as.Equal(dist.Minimum(), dp.Min())
 	as.Equal(dist.Maximum(), dp.Max())
 	as.Equal(dist.Sum(), dp.Sum())
