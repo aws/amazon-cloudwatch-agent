@@ -553,6 +553,7 @@ func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsLi
 		log.Printf("E! metric has a histogram with no entries, %s", *metric.MetricName)
 		return datums
 	}
+
 	cwhist := histograms.ConvertOTelToCloudWatch(*metric.histogram)
 	values, counts := cwhist.ValuesAndCounts()
 	if len(values) != len(counts) {

@@ -14,6 +14,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
@@ -122,9 +124,15 @@ func convertOtelHistogramDataPoints(
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
-		if err := histograms.CheckValidity(dp); err != nil {
-			log.Printf("W! dropping invalid histogram datapoint for metric %s: %v", name, err)
-			continue
+
+		// If histogram metric is coming from adapter receiver, we handle it differently. The adapter receiver emits
+		// histogram metrics with equal length boundaries and counts as a way to propagate a series of value/count pairs
+		// through the metric pipeline. This use does not fit the OTel histogram format but still needs to be accepted.
+		if _, ok := dp.Attributes().Get(constants.AdapterReceiverAttribute); !ok {
+			if err := histograms.CheckValidity(dp); err != nil {
+				log.Printf("W! dropping invalid histogram datapoint for metric %s: %v", name, err)
+				continue
+			}
 		}
 
 		attrs := dp.Attributes()
@@ -142,7 +150,17 @@ func convertOtelHistogramDataPoints(
 			aggregationInterval: aggregationInterval,
 			entity:              entity,
 		}
-		ad.histogram = &dp
+
+		// Normal histograms are accumulated using the histogram datapoint. Adapter receiver histograms are accumulated
+		// using a classic distribution to preserve values/counts.
+		if _, ok := dp.Attributes().Get(constants.AdapterReceiverAttribute); !ok {
+			ad.histogram = &dp
+		} else {
+			classic := distribution.NewClassicDistribution()
+			classic.ConvertFromOtel(dp, unit)
+			ad.distribution = classic
+		}
+
 		datums = append(datums, &ad)
 	}
 	return datums
