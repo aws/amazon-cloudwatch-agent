@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws/cloudwatch/histograms"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
@@ -26,6 +28,10 @@ func ConvertOtelDimensions(attributes pcommon.Map) []*cloudwatch.Dimension {
 	attributes.Range(func(k string, v pcommon.Value) bool {
 		// we don't want to export entity related attributes as dimensions, so we skip these
 		if strings.HasPrefix(k, entityattributes.AWSEntityPrefix) {
+			return true
+		}
+		// we don't want to export the adapter receiver attribute
+		if k == constants.AdapterReceiverAttribute {
 			return true
 		}
 		mTags[k] = v.AsString()
@@ -122,6 +128,17 @@ func convertOtelHistogramDataPoints(
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
 		dp := dataPoints.At(i)
+
+		// If histogram metric is coming from adapter receiver, we handle it differently. The adapter receiver emits
+		// histogram metrics with equal length boundaries and counts as a way to propagate a series of value/count pairs
+		// through the metric pipeline. This use does not fit the OTel histogram format but still needs to be accepted.
+		if _, ok := dp.Attributes().Get(constants.AdapterReceiverAttribute); !ok {
+			if err := histograms.CheckValidity(dp); err != nil {
+				log.Printf("W! dropping invalid histogram datapoint for metric %s: %v", name, err)
+				continue
+			}
+		}
+
 		attrs := dp.Attributes()
 		storageResolution := checkHighResolution(&attrs)
 		aggregationInterval := getAggregationInterval(&attrs)
@@ -137,10 +154,17 @@ func convertOtelHistogramDataPoints(
 			aggregationInterval: aggregationInterval,
 			entity:              entity,
 		}
-		// Assume function pointer is valid.
-		classic := distribution.NewClassicDistribution()
-		classic.ConvertFromOtel(dp, unit)
-		ad.distribution = classic
+
+		// Normal histograms are accumulated using the histogram datapoint. Adapter receiver histograms are accumulated
+		// using a classic distribution to preserve values/counts.
+		if _, ok := dp.Attributes().Get(constants.AdapterReceiverAttribute); !ok {
+			ad.histogram = &dp
+		} else {
+			classic := distribution.NewClassicDistribution()
+			classic.ConvertFromOtel(dp, unit)
+			ad.distribution = classic
+		}
+
 		datums = append(datums, &ad)
 	}
 	return datums
