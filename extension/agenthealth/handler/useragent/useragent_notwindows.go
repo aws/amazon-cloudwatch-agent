@@ -9,6 +9,6 @@ import (
 	"github.com/influxdata/telegraf/models"
 )
 
-func (ua *userAgent) setWindowsEventLogFeatureFlags(input *models.RunningInput) {
+func (ua *userAgent) setWindowsEventLogFeatureFlags(_ *models.RunningInput) {
 	// No-op on non-Windows platforms
 }

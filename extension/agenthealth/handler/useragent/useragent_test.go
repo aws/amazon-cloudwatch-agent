@@ -396,9 +396,9 @@ type mockWindowsEventLogPlugin struct {
 	Events []mockEventConfig
 }
 
-func (m *mockWindowsEventLogPlugin) Description() string                   { return "mock" }
-func (m *mockWindowsEventLogPlugin) SampleConfig() string                  { return "" }
-func (m *mockWindowsEventLogPlugin) Gather(acc telegraf.Accumulator) error { return nil }
+func (m *mockWindowsEventLogPlugin) Description() string                 { return "mock" }
+func (m *mockWindowsEventLogPlugin) SampleConfig() string                { return "" }
+func (m *mockWindowsEventLogPlugin) Gather(_ telegraf.Accumulator) error { return nil }
 
 type mockEventConfig struct {
 	Name     string
