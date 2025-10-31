@@ -649,6 +649,7 @@ processors:
 receivers:
     awscontainerinsightreceiver:
         accelerated_compute_metrics: false
+        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
