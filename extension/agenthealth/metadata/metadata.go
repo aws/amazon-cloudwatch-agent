@@ -17,6 +17,8 @@ const (
 	ValueJVM                  = "jvm"
 	ValueTomcat               = "tomcat"
 	ValueKafkaBroker          = "kafka_broker"
+	ValueKafkaConsumer        = "kafka_consumer"
+	ValueKafkaProducer        = "kafka_producer"
 	ValueNVIDIA               = "nvidia_gpu"
 
 	shortKeyObservabilitySolutions = "obs"
@@ -29,6 +31,8 @@ var (
 		Build(KeyObservabilitySolutions, ValueJVM),
 		Build(KeyObservabilitySolutions, ValueTomcat),
 		Build(KeyObservabilitySolutions, ValueKafkaBroker),
+		Build(KeyObservabilitySolutions, ValueKafkaConsumer),
+		Build(KeyObservabilitySolutions, ValueKafkaProducer),
 		Build(KeyObservabilitySolutions, ValueNVIDIA),
 	)
 	shortKeyMapping = map[string]string{

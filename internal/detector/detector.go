@@ -6,6 +6,8 @@ package detector
 import (
 	"context"
 	"errors"
+
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 var (
@@ -27,6 +29,8 @@ type DeviceDetector interface {
 	Detect() (*Metadata, error)
 }
 
+type OpenFilesStat = process.OpenFilesStat
+
 // Process defines an interface for interacting with system processes.
 type Process interface {
 	// PID returns the process ID.
@@ -42,4 +46,6 @@ type Process interface {
 	EnvironWithContext(ctx context.Context) ([]string, error)
 	// CreateTimeWithContext returns the creation time of the process in milliseconds.
 	CreateTimeWithContext(ctx context.Context) (int64, error)
+	// OpenFilesWithContext returns the open file descriptors of the process.
+	OpenFilesWithContext(context.Context) ([]OpenFilesStat, error)
 }
