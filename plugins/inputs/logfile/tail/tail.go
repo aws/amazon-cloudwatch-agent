@@ -398,9 +398,12 @@ func (tail *Tail) tailFileSync() {
 		}
 	}
 
-	if err := tail.watchChanges(); err != nil {
-		tail.Killf("Error watching for changes on %s: %s", tail.Filename, err)
-		return
+	// Only set up file watchers if we're following the file
+	if tail.Follow {
+		if err := tail.watchChanges(); err != nil {
+			tail.Killf("Error watching for changes on %s: %s", tail.Filename, err)
+			return
+		}
 	}
 
 	var backupOffset int64
