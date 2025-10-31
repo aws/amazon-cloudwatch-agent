@@ -33,17 +33,12 @@ const (
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
-	flagWindowsEventIDs           = "win_event_ids"
-	flagWindowsEventFilters       = "win_event_filters"
-	flagWindowsEventLevels        = "win_event_levels"
 	separator                     = " "
 
 	typeInputs     = "inputs"
 	typeProcessors = "processors"
 	typeOutputs    = "outputs"
 	typeFeature    = "feature"
-
-	pluginWindowsEventLog = "windows_event_log"
 )
 
 var (

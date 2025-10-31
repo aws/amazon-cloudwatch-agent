@@ -11,6 +11,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log"
 )
 
+const (
+	flagWindowsEventIDs     = "win_event_ids"
+	flagWindowsEventFilters = "win_event_filters"
+	flagWindowsEventLevels  = "win_event_levels"
+	pluginWindowsEventLog   = "windows_event_log"
+)
+
 func (ua *userAgent) setWindowsEventLogFeatureFlags(input *models.RunningInput) {
 	if input.Config.Name == pluginWindowsEventLog {
 		if plugin, ok := input.Input.(*windows_event_log.Plugin); ok {
