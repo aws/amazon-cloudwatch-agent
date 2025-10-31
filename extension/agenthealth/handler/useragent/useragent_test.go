@@ -5,6 +5,7 @@ package useragent
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -283,4 +284,47 @@ func TestListen(t *testing.T) {
 	}
 	ua.SetContainerInsightsFlag()
 	wg.Wait()
+}
+
+func TestSetComponents_WithDualStackEndpoint(t *testing.T) {
+	// Save original env var
+	originalEnv := os.Getenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT)
+	defer func() {
+		if originalEnv == "" {
+			os.Unsetenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT)
+		} else {
+			os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, originalEnv)
+		}
+	}()
+
+	t.Run("ipv6_feature_added_when_dualstack_enabled", func(t *testing.T) {
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "true")
+		ua := newUserAgent()
+		ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+
+		assert.Contains(t, ua.feature, "ipv6")
+		assert.Contains(t, ua.featureStr.Load(), "ipv6")
+		header := ua.Header(true)
+		assert.Contains(t, header, "feature:(ipv6)")
+	})
+
+	t.Run("ipv6_feature_not_added_when_dualstack_disabled", func(t *testing.T) {
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "false")
+		ua := newUserAgent()
+		ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+
+		assert.NotContains(t, ua.feature, "ipv6")
+		header := ua.Header(true)
+		assert.NotContains(t, header, "ipv6")
+	})
+
+	t.Run("ipv6_feature_not_added_when_dualstack_not_set", func(t *testing.T) {
+		os.Unsetenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT)
+		ua := newUserAgent()
+		ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+
+		assert.NotContains(t, ua.feature, "ipv6")
+		header := ua.Header(true)
+		assert.NotContains(t, header, "ipv6")
+	})
 }
