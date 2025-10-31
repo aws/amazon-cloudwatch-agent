@@ -141,9 +141,15 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 		ua.inputs.Add(flagRunAsUser)
 	}
 
+	// Add ipv6 feature flag if dualstack endpoint is enabled
+	if os.Getenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT) == "true" {
+		ua.feature.Add("ipv6")
+	}
+
 	ua.inputsStr.Store(componentsStr(typeInputs, ua.inputs))
 	ua.processorsStr.Store(componentsStr(typeProcessors, ua.processors))
 	ua.outputsStr.Store(componentsStr(typeOutputs, ua.outputs))
+	ua.featureStr.Store(componentsStr(typeFeature, ua.feature))
 	ua.notify()
 }
 
