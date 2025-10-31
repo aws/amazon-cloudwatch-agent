@@ -25,6 +25,8 @@ type CachedProcess struct {
 	errEnviron      error
 	createTime      int64
 	errCreateTime   error
+	openFiles       []detector.OpenFilesStat
+	errOpenFiles    error
 }
 
 func NewCachedProcess(p detector.Process) detector.Process {
@@ -90,12 +92,23 @@ func (p *CachedProcess) CreateTimeWithContext(ctx context.Context) (int64, error
 	return p.createTime, p.errCreateTime
 }
 
+func (p *CachedProcess) OpenFilesWithContext(ctx context.Context) ([]detector.OpenFilesStat, error) {
+	if len(p.openFiles) != 0 {
+		return p.openFiles, nil
+	}
+	if p.errOpenFiles != nil {
+		return nil, p.errOpenFiles
+	}
+	p.openFiles, p.errOpenFiles = p.process.OpenFilesWithContext(ctx)
+	return p.openFiles, p.errOpenFiles
+}
+
 // ProcessWithPID provides a wrapper for the gopsutil process.Process to expose the PID.
 type ProcessWithPID struct {
 	*process.Process
 }
 
-func NewProcessWithPID(process *process.Process) *ProcessWithPID {
+func NewProcessWithPID(process *process.Process) detector.Process {
 	return &ProcessWithPID{Process: process}
 }
 

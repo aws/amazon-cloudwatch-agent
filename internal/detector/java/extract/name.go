@@ -14,13 +14,11 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/common"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 const (
-	extJAR = ".jar"
-	extWAR = ".war"
-
 	// metaManifestFile is the path to the Manifest in the Java archive.
 	metaManifestFile = "META-INF/MANIFEST.MF"
 	// metaManifestApplicationName is a non-standard, but explicit field that should be used if present.
@@ -184,7 +182,7 @@ func newArchiveManifestNameExtractor(logger *slog.Logger) argNameExtractor {
 // Extract opens the archive and reads the manifest file. Tries to extract the name from values of specific keys in the
 // manifest. Prioritizes keys in the order defined in the extractor.
 func (e *archiveManifestNameExtractor) Extract(ctx context.Context, process detector.Process, arg string) (string, error) {
-	if !strings.HasSuffix(arg, extJAR) && !strings.HasSuffix(arg, extWAR) {
+	if !strings.HasSuffix(arg, common.ExtJAR) && !strings.HasSuffix(arg, common.ExtWAR) {
 		return "", detector.ErrIncompatibleExtractor
 	}
 	fallback := strings.TrimSuffix(filepath.Base(arg), filepath.Ext(arg))
