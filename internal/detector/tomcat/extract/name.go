@@ -37,7 +37,7 @@ type tomcatDirectories struct {
 }
 
 // trySetBase is used to store the base on a first-in basis. This allows multiple tomcatDirectories to be combined
-// together without needing to check the fields beforehand.
+// without needing to check the fields beforehand.
 func (d *tomcatDirectories) trySetBase(base string) {
 	if d.base == "" {
 		d.base = base
@@ -45,7 +45,7 @@ func (d *tomcatDirectories) trySetBase(base string) {
 }
 
 // trySetHome is used to store the home on a first-in basis. This allows multiple tomcatDirectories to be combined
-// // together without needing to check the fields beforehand.
+// without needing to check the fields beforehand.
 func (d *tomcatDirectories) trySetHome(home string) {
 	if d.home == "" {
 		d.home = home
