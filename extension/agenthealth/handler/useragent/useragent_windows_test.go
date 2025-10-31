@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log/wineventlog"
 )
 
 func TestSetWindowsEventLogFeatureFlags(t *testing.T) {
@@ -52,7 +53,7 @@ func TestSetWindowsEventLogFeatureFlags(t *testing.T) {
 			plugin: &windows_event_log.Plugin{
 				Events: []windows_event_log.EventConfig{{
 					Name:    "System",
-					Filters: []*windows_event_log.EventFilter{{Expression: "test"}},
+					Filters: []*wineventlog.EventFilter{{Expression: "test"}},
 				}},
 			},
 			expectedFlags: []string{flagWindowsEventFilters},
@@ -75,7 +76,7 @@ func TestSetWindowsEventLogFeatureFlags(t *testing.T) {
 				Events: []windows_event_log.EventConfig{{
 					Name:     "System",
 					EventIDs: []int{1000},
-					Filters:  []*windows_event_log.EventFilter{{Expression: "test"}},
+					Filters:  []*wineventlog.EventFilter{{Expression: "test"}},
 					Levels:   []string{"ERROR"},
 				}},
 			},
