@@ -6,7 +6,7 @@ set -e
 
 # restart agent after upgrade
 if [ "$1" = "configure" ]; then
-     if [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
+     if ([ "$(/sbin/init --version 2>/dev/null | grep -c upstart)" = 1 ] || [ "$(systemctl | grep -c -E '\-\.mount\s')" = 1 ]) && [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
           /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a cond-restart
      fi
 fi
