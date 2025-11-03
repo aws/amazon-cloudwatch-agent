@@ -73,165 +73,13 @@ jobs:
 
   build:
     needs: [lint, changes]
-    name: Build ${{ matrix.os }}${{ matrix.run && format(' (run {0})', matrix.run) || '' }}
+    name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-15]
-        run: [1]
+        os: [ubuntu-latest, windows-2022, windows-latest, macos-15]
         include:
-          # Run windows-2022 25 times to test for flakiness
-          - os: windows-2022
-            family: windows
-            run: 1
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 2
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 3
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 4
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 5
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 6
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 7
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 8
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 9
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 10
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 11
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 12
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 13
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 14
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 15
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 16
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 17
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 18
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 19
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 20
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 21
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 22
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 23
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 24
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
-          - os: windows-2022
-            family: windows
-            run: 25
-            cache-path: |
-              ~\AppData\Local\go-build
-              ~\go\pkg\mod
           - os: ubuntu-latest
             family: linux
             cache-path: |
@@ -242,6 +90,11 @@ jobs:
             cache-path: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
+          - os: windows-2022
+            family: windows
+            cache-path: |
+              ~\AppData\Local\go-build
+              ~\go\pkg\mod
           - os: windows-latest
             family: windows
             cache-path: |
