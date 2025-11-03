@@ -39,6 +39,7 @@ func (d *kafkaClientDetector) Detect(ctx context.Context, process detector.Proce
 			return detected, nil
 		}
 	}
+	d.logger.Debug("Kafka client not detected for process", "pid", process.PID())
 	return nil, detector.ErrIncompatibleDetector
 }
 

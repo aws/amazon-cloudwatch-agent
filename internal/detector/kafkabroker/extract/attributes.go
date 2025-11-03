@@ -6,6 +6,7 @@ package extract
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -127,6 +128,7 @@ func (e *attributesExtractor) extractAttributesFromMetaProperties(ctx context.Co
 			case propertyClusterID:
 				attributes[key] = value
 			}
+			// stop scanning the properties once both attributes have been set
 			return len(attributes) < 2
 		})
 		if err != nil {
@@ -170,7 +172,7 @@ func (e *attributesExtractor) parseArgs(args []string) (*brokerInfo, error) {
 	}
 
 	if info == nil {
-		return nil, detector.ErrIncompatibleExtractor
+		return nil, fmt.Errorf("%w: Class (%s) not found in command-line", detector.ErrIncompatibleExtractor, brokerClassName)
 	}
 	return info, nil
 }
@@ -215,7 +217,7 @@ func (e *attributesExtractor) parsePropertiesFile(path string, fn func(key, valu
 	}
 	defer file.Close()
 
-	err = util.ReadProperties(file, propertiesSeparator, fn)
+	err = util.ScanProperties(file, propertiesSeparator, fn)
 	if err != nil && !errors.Is(err, util.ErrLineLimitExceeded) {
 		return err
 	}

@@ -230,11 +230,12 @@ func (e *archiveManifestNameExtractor) readManifest(jarPath string) (string, err
 
 func parseManifest(r io.Reader, fieldPriority []string, fieldLookup collections.Set[string]) string {
 	manifest := make(map[string]string, len(fieldPriority))
-	_ = util.ReadProperties(r, metaManifestSeparator, func(key, value string) bool {
+	_ = util.ScanProperties(r, metaManifestSeparator, func(key, value string) bool {
 		if !fieldLookup.Contains(key) || value == "" {
 			return true
 		}
 		manifest[key] = value
+		// stop scanning if the highest priority field is found.
 		return key != fieldPriority[0]
 	})
 	for _, field := range fieldPriority {

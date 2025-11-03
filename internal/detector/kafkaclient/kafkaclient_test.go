@@ -60,6 +60,20 @@ func TestKafkaClientDetector(t *testing.T) {
 				Categories: []detector.Category{detector.CategoryKafkaClient},
 			},
 		},
+		"Process/KafkaClient/LoadedJarsDeleted": {
+			setup: func(mp *detectortest.MockProcess) {
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "test.jar"}, nil)
+				mp.On("OpenFilesWithContext", ctx).Return([]detector.OpenFilesStat{
+					{Path: "test.jar"},
+					{Path: "config/client.properties"},
+					{Path: "kafka-metadata.jar"},
+					{Path: "kafka-clients.jar (deleted)"},
+				}, nil)
+			},
+			want: &detector.Metadata{
+				Categories: []detector.Category{detector.CategoryKafkaClient},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
