@@ -165,7 +165,9 @@ func (tail *Tail) Tell() (offset int64, err error) {
 // Stop stops the tailing activity.
 func (tail *Tail) Stop() error {
 	tail.Kill(nil)
-	return tail.Wait()
+	err := tail.Wait()
+	tail.Cleanup()
+	return err
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached.
@@ -398,12 +400,9 @@ func (tail *Tail) tailFileSync() {
 		}
 	}
 
-	// Only set up file watchers if we're following the file
-	if tail.Follow {
-		if err := tail.watchChanges(); err != nil {
-			tail.Killf("Error watching for changes on %s: %s", tail.Filename, err)
-			return
-		}
+	if err := tail.watchChanges(); err != nil {
+		tail.Killf("Error watching for changes on %s: %s", tail.Filename, err)
+		return
 	}
 
 	var backupOffset int64
