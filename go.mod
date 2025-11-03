@@ -174,6 +174,7 @@ require (
 	github.com/prometheus/prometheus v0.300.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/shirou/gopsutil/v4 v4.25.3
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/client v1.30.0
@@ -497,7 +498,6 @@ require (
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1 // indirect
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.32 // indirect
-	github.com/shirou/gopsutil/v4 v4.25.3 // indirect
 	github.com/shurcooL/httpfs v0.0.0-20230704072500-f1e31cf0ba5c // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sleepinggenius2/gosmi v0.4.4 // indirect

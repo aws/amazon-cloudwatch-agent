@@ -10,6 +10,8 @@ type Metadata struct {
 	Categories []Category `json:"categories"`
 	// Name is the identifier of the resource.
 	Name string `json:"name,omitempty"`
+	// Attributes can be used to supply additional optional information.
+	Attributes map[string]string `json:"attributes,omitempty"`
 	// TelemetryPort is the port for the resource that exposes telemetry.
 	TelemetryPort int `json:"telemetry_port,omitempty"`
 	// Status is the current status of telemetry availability for the resource.
