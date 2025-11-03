@@ -29,17 +29,16 @@ func TestTranslator(t *testing.T) {
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
-	tt := NewTranslator()
-	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
-		env            map[string]string
-		input          map[string]any
-		want           map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
-		wantErr        error
-		mockECS        bool
-		mockPrometheus bool
+		translator common.ComponentTranslator
+		env        map[string]string
+		input      map[string]any
+		want       map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
+		wantErr    error
+		mockECS    bool
 	}{
 		"GenerateAwsEmfExporterConfigEcs": {
+			translator: NewTranslator(),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -81,6 +80,7 @@ func TestTranslator(t *testing.T) {
 			mockECS: true,
 		},
 		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
+			translator: NewTranslator(),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -124,6 +124,7 @@ func TestTranslator(t *testing.T) {
 			mockECS: true,
 		},
 		"GenerateAwsEmfExporterConfigKubernetes": {
+			translator: NewTranslatorWithName(common.PipelineNameContainerInsights),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -191,6 +192,7 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesDisableMetricExtraction": {
+			translator: NewTranslatorWithName(common.PipelineNameContainerInsights),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -260,6 +262,7 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesWithEnableFullPodAndContainerMetrics": {
+			translator: NewTranslatorWithName(common.PipelineNameContainerInsights),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -644,6 +647,7 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheus": {
+			translator: NewTranslatorWithName(common.PipelineNamePrometheus),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -700,9 +704,9 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
-			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
+			translator: NewTranslatorWithName(common.PipelineNamePrometheus),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -735,9 +739,9 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
-			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
+			translator: NewTranslatorWithName(common.PipelineNamePrometheus),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -779,9 +783,9 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
-			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
+			translator: NewTranslatorWithName(common.PipelineNamePrometheus),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -813,9 +817,9 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 				"local_mode":         false,
 			},
-			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigPrometheusFromSeparateTest": {
+			translator: NewTranslatorWithName(common.PipelineNamePrometheus),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -872,9 +876,9 @@ func TestTranslator(t *testing.T) {
 				},
 				"local_mode": false,
 			},
-			mockPrometheus: true,
 		},
 		"GenerateAwsEmfExporterConfigOTLP": {
+			translator: NewTranslator(),
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
@@ -910,13 +914,10 @@ func TestTranslator(t *testing.T) {
 				defer func() { isEcsFunc = originalIsEcsFunc }()
 			}
 
-			translator := tt
-			if testCase.mockPrometheus {
-				translator = NewTranslatorWithName(common.PipelineNamePrometheus)
-			}
+			tt := testCase.translator
 
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := translator.Translate(conf)
+			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
 			if err == nil {
