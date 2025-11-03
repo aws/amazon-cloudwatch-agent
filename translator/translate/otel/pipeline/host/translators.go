@@ -29,6 +29,8 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	deltaReceivers := common.NewTranslatorMap[component.Config, component.ID]()
 	otlpReceivers := common.NewTranslatorMap[component.Config, component.ID]()
 
+
+	// When updating this condition, ensure downstream tests continue to pass.
 	// Gather adapter receivers
 	if configSection == MetricsKey {
 		adapterReceivers, err := adaptertranslator.FindReceiversInConfig(conf, os)
