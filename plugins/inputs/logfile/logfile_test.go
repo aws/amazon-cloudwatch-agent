@@ -193,28 +193,36 @@ func TestCompressedFile(t *testing.T) {
 
 func TestMultipleFilesForSameConfig(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfile1, err := createTempFile("", "tmp1_")
+
+	// Use a unique prefix to avoid matching other temp files
+	uniquePrefix := fmt.Sprintf("TestMultipleFiles_%d_", time.Now().UnixNano())
+
+	tmpfile1, err := createTempFile("", uniquePrefix+"tmp1_")
 	defer os.Remove(tmpfile1.Name())
 	require.NoError(t, err)
 
 	_, err = tmpfile1.WriteString("1\n")
 	require.NoError(t, err)
+	tmpfile1.Sync() // Ensure file is flushed to disk
+	tmpfile1.Close()
 
 	//make file stat reflect the diff of file ModTime
 	time.Sleep(time.Second * 2)
 
-	tmpfile2, err := createTempFile("", "tmp2_")
+	tmpfile2, err := createTempFile("", uniquePrefix+"tmp2_")
 	defer os.Remove(tmpfile2.Name())
 	require.NoError(t, err)
 
 	_, err = tmpfile2.WriteString("2\n")
 	require.NoError(t, err)
+	tmpfile2.Sync() // Ensure file is flushed to disk
+	tmpfile2.Close()
 
 	logGroupName := "SomeLogGroupName"
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
 	tt.FileConfig = []FileConfig{{
-		FilePath:      filepath.Dir(tmpfile1.Name()) + string(filepath.Separator) + "*",
+		FilePath:      filepath.Dir(tmpfile1.Name()) + string(filepath.Separator) + uniquePrefix + "*",
 		FromBeginning: true,
 		LogGroupName:  logGroupName,
 	}}
