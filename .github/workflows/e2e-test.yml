@@ -2,9 +2,6 @@
 # SPDX-License-Identifier: MIT
 
 name: Run Workload Discovery Integration Tests
-permissions:
-  id-token: write
-  contents: read
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -33,9 +30,6 @@ on:
 jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - run: |-
           if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
@@ -57,9 +51,6 @@ jobs:
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
-    permissions:
-      id-token: write
-      contents: read
     needs: [CheckBuildTestArtifacts]
     runs-on: ubuntu-latest
     outputs:
