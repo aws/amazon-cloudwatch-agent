@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -92,6 +93,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 		return nil
 	}
 
+	s.detectFeatures()
 	monitor := newServiceMonitor()
 	for _, eventConfig := range s.Events {
 		// Assume no 2 EventConfigs have the same combination of:
@@ -155,4 +157,19 @@ func (s *Plugin) Stop() {
 
 func init() {
 	inputs.Add("windows_event_log", func() telegraf.Input { return &Plugin{} })
+}
+func (s *Plugin) detectFeatures() {
+	if ua := useragent.Get(); ua != nil {
+		for _, eventConfig := range s.Events {
+			if len(eventConfig.EventIDs) > 0 {
+				ua.AddFeatureFlags(useragent.FlagWindowsEventIDs)
+			}
+			if len(eventConfig.Filters) > 0 {
+				ua.AddFeatureFlags(useragent.FlagWindowsEventFilters)
+			}
+			if len(eventConfig.Levels) > 0 {
+				ua.AddFeatureFlags(useragent.FlagWindowsEventLevels)
+			}
+		}
+	}
 }
