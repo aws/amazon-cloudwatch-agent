@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package kafka
+package kafkaclient
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/detectortest"
 )
 
-func TestKafkaDetector(t *testing.T) {
+func TestKafkaClientDetector(t *testing.T) {
 	ctx := context.Background()
 	testCases := map[string]struct {
 		setup   func(*detectortest.MockProcess)
@@ -26,47 +26,55 @@ func TestKafkaDetector(t *testing.T) {
 		"Process/Error": {
 			setup: func(mp *detectortest.MockProcess) {
 				mp.On("CmdlineSliceWithContext", ctx).Return(nil, assert.AnError)
+				mp.On("OpenFilesWithContext", ctx).Return(nil, assert.AnError)
 			},
 			wantErr: detector.ErrIncompatibleDetector,
 		},
-		"Process/NotKafka": {
+		"Process/NoKafkaClients": {
 			setup: func(mp *detectortest.MockProcess) {
-				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"/usr/bin/python"}, nil)
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"java"}, nil)
+				mp.On("OpenFilesWithContext", ctx).Return([]detector.OpenFilesStat{}, nil)
 			},
 			wantErr: detector.ErrIncompatibleDetector,
 		},
-		"Process/NotKafkaBroker": {
+		"Process/KafkaClient/ClassPath": {
 			setup: func(mp *detectortest.MockProcess) {
 				mp.On("CmdlineSliceWithContext", ctx).Return(
-					detectortest.CmdlineArgsFromFile(t, filepath.Join("testdata", "zookeeper_cmdline")), nil)
+					detectortest.CmdlineArgsFromFile(t, filepath.Join("testdata", "kafka_client_cmdline")), nil)
 			},
-			wantErr: detector.ErrIncompatibleDetector,
+			want: &detector.Metadata{
+				Categories: []detector.Category{detector.CategoryKafkaClient},
+			},
 		},
-		"Process/KafkaBroker/SimpleCmdline": {
+		"Process/KafkaClient/LoadedJars": {
 			setup: func(mp *detectortest.MockProcess) {
-				mp.On("CmdlineSliceWithContext", ctx).Return([]string{
-					"java",
-					"kafka.Kafka",
-					"config/server.properties",
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "test.jar"}, nil)
+				mp.On("OpenFilesWithContext", ctx).Return([]detector.OpenFilesStat{
+					{Path: "test.jar"},
+					{Path: "config/client.properties"},
+					{Path: "kafka-metadata.jar"},
+					{Path: "kafka-clients.jar"},
 				}, nil)
 			},
 			want: &detector.Metadata{
-				Categories: []detector.Category{detector.CategoryKafkaBroker},
-				Name:       "Kafka Broker",
+				Categories: []detector.Category{detector.CategoryKafkaClient},
 			},
 		},
-		"Process/KafkaBroker/ComplexCmdline": {
+		"Process/KafkaClient/LoadedJarsDeleted": {
 			setup: func(mp *detectortest.MockProcess) {
-				mp.On("CmdlineSliceWithContext", ctx).Return(
-					detectortest.CmdlineArgsFromFile(t, filepath.Join("testdata", "kafka_broker_cmdline")), nil)
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"java", "test.jar"}, nil)
+				mp.On("OpenFilesWithContext", ctx).Return([]detector.OpenFilesStat{
+					{Path: "test.jar"},
+					{Path: "config/client.properties"},
+					{Path: "kafka-metadata.jar"},
+					{Path: "kafka-clients.jar (deleted)"},
+				}, nil)
 			},
 			want: &detector.Metadata{
-				Categories: []detector.Category{detector.CategoryKafkaBroker},
-				Name:       "Kafka Broker",
+				Categories: []detector.Category{detector.CategoryKafkaClient},
 			},
 		},
 	}
-
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			mp := new(detectortest.MockProcess)

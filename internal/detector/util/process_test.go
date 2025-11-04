@@ -10,6 +10,7 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/detectortest"
 )
 
@@ -229,6 +230,55 @@ func TestCachedProcess_CreateTimeWithContext(t *testing.T) {
 
 			mp.AssertExpectations(t)
 			mp.AssertNumberOfCalls(t, "CreateTimeWithContext", 1)
+		})
+	}
+}
+
+func TestCachedProcess_OpenFilesWithContext(t *testing.T) {
+	ctx := context.Background()
+
+	testCases := map[string]struct {
+		name          string
+		setupMock     func(*detectortest.MockProcess)
+		wantOpenFiles []detector.OpenFilesStat
+		wantErr       error
+	}{
+		"WithSuccess": {
+			setupMock: func(mp *detectortest.MockProcess) {
+				mp.On("OpenFilesWithContext", ctx).Return([]detector.OpenFilesStat{{
+					Path: "/some/file/path",
+					Fd:   10,
+				}}, nil).Once()
+			},
+			wantOpenFiles: []detector.OpenFilesStat{{
+				Path: "/some/file/path",
+				Fd:   10,
+			}},
+		},
+		"WithError": {
+			setupMock: func(mp *detectortest.MockProcess) {
+				mp.On("OpenFilesWithContext", ctx).Return(nil, assert.AnError).Once()
+			},
+			wantErr: assert.AnError,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			mp := new(detectortest.MockProcess)
+			testCase.setupMock(mp)
+
+			cached := NewCachedProcess(mp)
+
+			got, err := cached.OpenFilesWithContext(ctx)
+			assert.Equal(t, testCase.wantOpenFiles, got)
+			assert.Equal(t, testCase.wantErr, err)
+
+			got, err = cached.OpenFilesWithContext(ctx)
+			assert.Equal(t, testCase.wantOpenFiles, got)
+			assert.Equal(t, testCase.wantErr, err)
+
+			mp.AssertExpectations(t)
+			mp.AssertNumberOfCalls(t, "OpenFilesWithContext", 1)
 		})
 	}
 }
