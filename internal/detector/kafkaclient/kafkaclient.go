@@ -6,11 +6,11 @@ package kafkaclient
 import (
 	"context"
 	"log/slog"
-	"path/filepath"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/common"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
 )
 
 const (
@@ -80,11 +80,11 @@ func (d *loadedJarDetector) Detect(ctx context.Context, process detector.Process
 		return nil, err
 	}
 	for _, fd := range fds {
-		path := strings.TrimSuffix(fd.Path, " (deleted)")
-		if !strings.HasSuffix(path, common.ExtJAR) {
+		base := util.BaseName(fd.Path)
+		if !strings.HasSuffix(base, common.ExtJAR) {
 			continue
 		}
-		if strings.Contains(filepath.Base(path), kafkaClientsLibraryName) {
+		if strings.Contains(base, kafkaClientsLibraryName) {
 			return &detector.Metadata{Categories: []detector.Category{detector.CategoryKafkaClient}}, nil
 		}
 	}
