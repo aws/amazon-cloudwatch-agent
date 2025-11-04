@@ -144,6 +144,7 @@ jobs:
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       contents: read
     steps:
       - run: gh workflow run e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}

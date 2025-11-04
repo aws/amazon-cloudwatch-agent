@@ -3,6 +3,7 @@
 
 name: Run Workload Discovery Integration Tests
 permissions:
+  id-token: write
   contents: read
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
@@ -33,6 +34,7 @@ jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       contents: read
     steps:
       - run: |-
@@ -56,6 +58,7 @@ jobs:
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     permissions:
+      id-token: write
       contents: read
     needs: [CheckBuildTestArtifacts]
     runs-on: ubuntu-latest
