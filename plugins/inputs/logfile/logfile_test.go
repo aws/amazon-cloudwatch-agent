@@ -22,11 +22,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
-const (
-	rawLogLine     = "raw_log_line"
-	stringDateType = "string"
-)
-
 type TestLogger struct {
 	t *testing.T
 }
@@ -45,22 +40,24 @@ func (tl TestLogger) Infof(format string, args ...interface{})  { log.Printf(for
 func (tl TestLogger) Info(args ...interface{})                  { log.Println(args...) }
 
 func TestLogs(t *testing.T) {
+	tmpDir := t.TempDir()
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "cpu,mytag=foo usage_idle=100"
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpFile, err := createTempFile(tmpDir, "")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	require.NoError(t, err)
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	filename := tmpfile.Name()
+	filename := tmpFile.Name()
 	tt.FileConfig = []FileConfig{{FilePath: filename, FromBeginning: true, ServiceName: "test-service-name", Environment: "ec2:test-environment"}}
 	tt.FileConfig[0].init()
 	tt.started = true
@@ -92,20 +89,21 @@ func TestLogs(t *testing.T) {
 }
 
 func TestLogsEncoding(t *testing.T) {
+	tmpDir := t.TempDir()
 	multilineWaitPeriod = 10 * time.Millisecond
 	//2 * rune_len when it is coded in gbk encoding.
 	logEntryString := "测试"
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tempFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tempFile.Name())
 
-	writer := transform.NewWriter(tmpfile, simplifiedchinese.GBK.NewEncoder())
+	writer := transform.NewWriter(tempFile, simplifiedchinese.GBK.NewEncoder())
 	_, err = writer.Write([]byte(logEntryString + "\n"))
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), Encoding: "gbk", FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tempFile.Name(), Encoding: "gbk", FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -133,10 +131,11 @@ func TestLogsEncoding(t *testing.T) {
 }
 
 func TestLogsEncodingUtf16(t *testing.T) {
+	tmpDir := t.TempDir()
 	multilineWaitPeriod = 10 * time.Millisecond
-	f, err := createTempFile("", "")
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
-	defer os.Remove(f.Name())
+	defer os.Remove(tmpFile.Name())
 	inputBytesArray := []byte{
 		// 'A' 00, 'B' 00, '\n' 00
 		'\u0061', '\u0000', '\u0062', '\u0000', '\u000a', '\u0000',
@@ -148,12 +147,12 @@ func TestLogsEncodingUtf16(t *testing.T) {
 		'\u0063', '\u0000', '\u000d', '\u0000', '\u000a', '\u0000',
 		// D 00 '\r' 00 0a 66 '\n' 00
 		'\u0064', '\u0000', '\u000d', '\u0000', '\u000a', '\u0066', '\u000a', '\u0000'}
-	f.Write(inputBytesArray)
-	f.Sync()
+	tmpFile.Write(inputBytesArray)
+	tmpFile.Sync()
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: f.Name(), Encoding: "utf-16le", FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), Encoding: "utf-16le", FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -178,43 +177,43 @@ func TestLogsEncodingUtf16(t *testing.T) {
 
 	lsrc.Stop()
 	tt.Stop()
-
 }
 
 func TestCompressedFile(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	filepath := "/tmp/logfile.log"
-	compressed := isCompressedFile(filepath)
+	filePath := "/tmp/logfile.log"
+	compressed := isCompressedFile(filePath)
 	assert.False(t, compressed, "This should not be a compressed file.")
-	filepath = "/tmp/logfile.log.gz"
-	compressed = isCompressedFile(filepath)
+	filePath = "/tmp/logfile.log.gz"
+	compressed = isCompressedFile(filePath)
 	assert.True(t, compressed, "This should be a compressed file.")
 }
 
 func TestMultipleFilesForSameConfig(t *testing.T) {
+	tmpDir := t.TempDir()
 	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfile1, err := createTempFile("", "tmp1_")
-	defer os.Remove(tmpfile1.Name())
+	tmpFile1, err := createTempFile(tmpDir, "tmp1_")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile1.Name())
 
-	_, err = tmpfile1.WriteString("1\n")
+	_, err = tmpFile1.WriteString("1\n")
 	require.NoError(t, err)
 
 	//make file stat reflect the diff of file ModTime
 	time.Sleep(time.Second * 2)
 
-	tmpfile2, err := createTempFile("", "tmp2_")
-	defer os.Remove(tmpfile2.Name())
+	tmpFile2, err := createTempFile(tmpDir, "tmp2_")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile2.Name())
 
-	_, err = tmpfile2.WriteString("2\n")
+	_, err = tmpFile2.WriteString("2\n")
 	require.NoError(t, err)
 
 	logGroupName := "SomeLogGroupName"
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
 	tt.FileConfig = []FileConfig{{
-		FilePath:      filepath.Dir(tmpfile1.Name()) + string(filepath.Separator) + "*",
+		FilePath:      filepath.Join(tmpDir, "*"),
 		FromBeginning: true,
 		LogGroupName:  logGroupName,
 	}}
@@ -246,18 +245,19 @@ func TestMultipleFilesForSameConfig(t *testing.T) {
 }
 
 func TestLogsMultilineEvent(t *testing.T) {
+	tmpDir := t.TempDir()
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "multiline begin1\n append line1\nmultiline begin2\n append line2"
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -291,18 +291,19 @@ func TestLogsMultilineEvent(t *testing.T) {
 
 // When file is removed, the related tail routing should exit
 func TestLogsFileRemove(t *testing.T) {
+	tmpDir := t.TempDir()
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -316,8 +317,8 @@ func TestLogsFileRemove(t *testing.T) {
 
 	go func() {
 		time.Sleep(500 * time.Millisecond)
-		if err := os.Remove(tmpfile.Name()); err != nil {
-			t.Errorf("Failed to remove tmp file '%v': %v", tmpfile.Name(), err)
+		if err = os.Remove(tmpFile.Name()); err != nil {
+			t.Errorf("Failed to remove tmp file '%v': %v", tmpFile.Name(), err)
 		}
 	}()
 
@@ -337,6 +338,7 @@ func TestLogsFileRemove(t *testing.T) {
 }
 
 func setupLogFileForTest(t *testing.T, monitorPath string) *LogFile {
+	t.Helper()
 	logFile := NewLogFile()
 	logFile.Log = TestLogger{t}
 	t.Logf("create LogFile with FilePath = %s", monitorPath)
@@ -351,15 +353,17 @@ func setupLogFileForTest(t *testing.T, monitorPath string) *LogFile {
 }
 
 func makeTempFile(t *testing.T, prefix string) *os.File {
+	t.Helper()
 	file, err := createTempFile("", prefix)
-	t.Logf("Created temp file, %s\n", file.Name())
 	require.NoError(t, err)
+	t.Logf("Created temp file, %s\n", file.Name())
 	return file
 }
 
 // getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
 // Verifies 1 and only 1 LogSrc is discovered.
 func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
+	t.Helper()
 	start := time.Now()
 	logSources := logFile.FindLogSrc()
 	duration := time.Since(start)
@@ -377,6 +381,7 @@ func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent
 }
 
 func writeLines(t *testing.T, file *os.File, numLines int, msg string) {
+	t.Helper()
 	t.Logf("start writing, %s", file.Name())
 	for i := 0; i < numLines; i++ {
 		_, err := file.WriteString(msg + "\n")
@@ -389,6 +394,7 @@ func writeLines(t *testing.T, file *os.File, numLines int, msg string) {
 // are received. If isParent is true, then spawn a 2nd goroutine for createWriteRead.
 // Closes "done" when complete to let caller know it was successful.
 func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bool, isParent bool) {
+	t.Helper()
 	// Let caller know when the goroutine is done.
 	defer close(done)
 	// done2 is only passed to child if this is the parent.
@@ -467,17 +473,18 @@ func TestLogsTimestampAsMultilineStarter(t *testing.T) {
 append line
 multiline starter is not in beginning 15:04:06 18 Nov 2
 append line`
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
 	tt.FileConfig = []FileConfig{{
-		FilePath:              tmpfile.Name(),
+		FilePath:              tmpFile.Name(),
 		FromBeginning:         true,
 		TimestampRegex:        "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		TimestampLayout:       []string{"15:04:05 06 Jan 2"},
@@ -524,13 +531,14 @@ func TestLogsMultilineTimeout(t *testing.T) {
  append line`
 	logEntryString2 := " append line"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -546,12 +554,12 @@ func TestLogsMultilineTimeout(t *testing.T) {
 	})
 
 	go func() {
-		_, err = tmpfile.WriteString(logEntryString1 + "\n")
+		_, err = tmpFile.WriteString(logEntryString1 + "\n")
 		require.NoError(t, err)
 
 		// sleep 5 second for multiline timeout
 		time.Sleep(5 * time.Second)
-		_, err = tmpfile.WriteString(logEntryString2 + "\n")
+		_, err = tmpFile.WriteString(logEntryString2 + "\n")
 		require.NoError(t, err)
 	}()
 
@@ -574,13 +582,14 @@ func TestLogsFileTruncate(t *testing.T) {
 	lineBeforeFileTruncate := "lineBeforeFileTruncate"
 	lineAfterFileTruncate := "afterTruncate"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -604,17 +613,17 @@ func TestLogsFileTruncate(t *testing.T) {
 	})
 
 	go func() {
-		_, err = tmpfile.WriteString(lineBeforeFileTruncate + "\n")
+		_, err = tmpFile.WriteString(lineBeforeFileTruncate + "\n")
 		require.NoError(t, err)
 		time.Sleep(1 * time.Second)
 
 		// Truncate the file
-		err = os.Truncate(tmpfile.Name(), 0)
-		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR, 0600)
+		err = os.Truncate(tmpFile.Name(), 0)
+		tmpFile, err = os.OpenFile(tmpFile.Name(), os.O_RDWR, 0600)
 		require.NoError(t, err)
-		_, err = tmpfile.WriteString(lineAfterFileTruncate + "\n")
+		_, err = tmpFile.WriteString(lineAfterFileTruncate + "\n")
 		require.NoError(t, err)
-
+		require.NoError(t, tmpFile.Close())
 	}()
 
 	e := <-evts
@@ -640,29 +649,31 @@ func TestLogsFileTruncateRestart(t *testing.T) {
 	logEntryString := "postTruncateRestart"
 	multilineWaitPeriod = 10 * time.Millisecond
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
 	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	defer os.Remove(stateFileName)
 
 	_, err = stateFile.WriteString("1000")
 	require.NoError(t, err)
+	require.NoError(t, stateFile.Close())
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -702,27 +713,31 @@ func TestLogsFileWithOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	stateDir, err := os.MkdirTemp("", "state")
+	stateDir, err := os.MkdirTemp(tmpDir, "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
-	_, err = stateFile.WriteString("10")
 	defer os.Remove(stateFileName)
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = stateFile.WriteString("10")
+	require.NoError(t, err)
+	require.NoError(t, stateFile.Close())
+
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -752,28 +767,30 @@ func TestLogsFileWithRangeNoGaps(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	stateDir, err := os.MkdirTemp("", "state")
+	stateDir, err := os.MkdirTemp(tmpDir, "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
+	defer os.Remove(stateFileName)
 	// The ranges here are to mimic log lines that have already been sent
 	stateFile.WriteString("19\ntest\n0-19")
-	defer os.Remove(stateFileName)
+	require.NoError(t, stateFile.Close())
 
-	_, err = tmpfile.WriteString(logEntryString)
+	_, err = tmpFile.WriteString(logEntryString)
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 	tt.MaxPersistState = 2
@@ -804,28 +821,30 @@ func TestLogsFileWithRangeGaps(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	stateDir, err := os.MkdirTemp("", "state")
+	stateDir, err := os.MkdirTemp(tmpDir, "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
+	defer os.Remove(stateFileName)
 	// The ranges here are to mimic log lines that have already been sent
 	stateFile.WriteString("19\ntest\n0-6,14-19")
-	defer os.Remove(stateFileName)
+	require.NoError(t, stateFile.Close())
 
-	_, err = tmpfile.WriteString(logEntryString)
+	_, err = tmpFile.WriteString(logEntryString)
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 	tt.MaxPersistState = 2
@@ -873,29 +892,31 @@ func TestLogsFileWithEOFRangeGaps(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "aaaaa\nContent\nbbbbb\nRange\n"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	stateDir, err := os.MkdirTemp("", "state")
+	stateDir, err := os.MkdirTemp(tmpDir, "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
+	defer os.Remove(stateFileName)
 	// The ranges here are to mimic log lines that have already been sent
 	// along with an invalid range
 	stateFile.WriteString("200\ntest\n0-6,100-200")
-	defer os.Remove(stateFileName)
+	require.NoError(t, stateFile.Close())
 
-	_, err = tmpfile.WriteString(logEntryString)
+	_, err = tmpFile.WriteString(logEntryString)
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 	tt.MaxPersistState = 2
@@ -944,27 +965,31 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
-	stateDir, err := os.MkdirTemp("", "state")
+	stateDir, err := os.MkdirTemp(tmpDir, "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
-	_, err = stateFile.WriteString("100")
 	defer os.Remove(stateFileName)
 
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = stateFile.WriteString("100")
+	require.NoError(t, err)
+	require.NoError(t, stateFile.Close())
+
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 	tt.MaxPersistState = 2
@@ -999,17 +1024,18 @@ func TestLogsFileRecreate(t *testing.T) {
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
+	defer os.Remove(tmpFile.Name())
 	require.NoError(t, err)
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpFile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
-	stateDir, err := os.MkdirTemp("", "state")
+	stateDir, err := os.MkdirTemp(tmpDir, "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := state.FilePath(stateDir, tmpfile.Name())
+	stateFileName := state.FilePath(stateDir, tmpFile.Name())
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
@@ -1021,7 +1047,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -1042,15 +1068,15 @@ func TestLogsFileRecreate(t *testing.T) {
 		time.Sleep(1 * time.Second)
 
 		// recreate file
-		err = os.Remove(tmpfile.Name())
+		err = os.Remove(tmpFile.Name())
 		require.NoError(t, err)
-		require.NoError(t, tmpfile.Close())
+		require.NoError(t, tmpFile.Close())
 		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
 		time.Sleep(time.Second * 1)
-		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		tmpFile, err = os.OpenFile(tmpFile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		require.NoError(t, err)
 
-		_, err = tmpfile.WriteString(logEntryString + "\n")
+		_, err = tmpFile.WriteString(logEntryString + "\n")
 		require.NoError(t, err)
 
 	}()
@@ -1095,13 +1121,14 @@ func TestLogsPartialLineReading(t *testing.T) {
 	logEntryPartialLine := "hello "
 	logEntryComplish := " world"
 
-	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	tmpDir := t.TempDir()
+	tmpFile, err := createTempFile(tmpDir, "")
 	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpFile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -1118,13 +1145,13 @@ func TestLogsPartialLineReading(t *testing.T) {
 
 	go func() {
 		// Write partial line
-		_, err = tmpfile.WriteString(logEntryPartialLine)
+		_, err = tmpFile.WriteString(logEntryPartialLine)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Second)
 
 		// complete the line now
-		_, err = tmpfile.WriteString(logEntryComplish + "\n")
+		_, err = tmpFile.WriteString(logEntryComplish + "\n")
 		require.NoError(t, err)
 	}()
 
@@ -1140,19 +1167,19 @@ func TestLogsPartialLineReading(t *testing.T) {
 func TestLogFileMultiLogsReading(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-	dir, e := os.MkdirTemp("", "test")
+	tmpDir := t.TempDir()
+	dir, e := os.MkdirTemp(tmpDir, "test")
 	require.NoError(t, e)
 	defer os.Remove(dir)
 	agentLog, err := createTempFile(dir, "test_agent.log")
-	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
+	defer os.Remove(agentLog.Name())
 
 	_, err = agentLog.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
-	os.Remove(os.TempDir() + string(os.PathListSeparator) + "test_service.log*")
 	serviceLog, err := createTempFile(dir, "test_service.log")
-	defer os.Remove(serviceLog.Name())
 	require.NoError(t, err)
+	defer os.Remove(serviceLog.Name())
 
 	logEntryString = "This is from Service log"
 	_, err = serviceLog.WriteString(logEntryString + "\n")
@@ -1203,13 +1230,14 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-	dir, e := os.MkdirTemp("", "test")
+	tmpDir := t.TempDir()
+	dir, e := os.MkdirTemp(tmpDir, "test")
 	require.NoError(t, e)
 	defer os.Remove(dir)
 
 	agentLog, err := createTempFile(dir, "test_agent.log")
-	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
+	defer os.Remove(agentLog.Name())
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
@@ -1280,9 +1308,10 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
 
-	agentLog, err := createTempFile("", "test_agent.log")
-	defer os.Remove(agentLog.Name())
+	tmpDir := t.TempDir()
+	agentLog, err := createTempFile(tmpDir, "test_agent.log")
 	require.NoError(t, err)
+	defer os.Remove(agentLog.Name())
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
@@ -1307,7 +1336,7 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 
 		time.Sleep(2 * time.Second)
 
-		serviceLog, err = createTempFile("", "test_service.log")
+		serviceLog, err = createTempFile(tmpDir, "test_service.log")
 		require.NoError(t, err)
 
 		logEntryString = "This is from Service log"
