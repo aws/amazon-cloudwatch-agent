@@ -1,7 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run WD Integration Tests
+name: Run Workload Discovery Integration Tests
+permissions:
+  contents: read
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -10,7 +12,7 @@ env:
   KEY_NAME: ${{ secrets.KEY_NAME }}
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "feature/workload-discovery-optimization"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
   workflow_dispatch:
@@ -30,6 +32,8 @@ on:
 jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - run: |-
           if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
@@ -49,26 +53,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  OutputEnvVariables:
-    name: 'OutputEnvVariables'
-    needs: [CheckBuildTestArtifacts]
-    runs-on: ubuntu-latest
-    outputs:
-      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-    steps:
-      - name: SetOutputs
-        id: set-outputs
-        run: |-
-          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
-          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
-          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
-
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
-    needs: [OutputEnvVariables]
+    permissions:
+      contents: read
+    needs: [CheckBuildTestArtifacts]
     runs-on: ubuntu-latest
     outputs:
       ec2_linux_wd_matrix: ${{ steps.set-matrix.outputs.ec2_linux_wd_matrix }}
@@ -78,8 +67,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
@@ -95,25 +84,8 @@ jobs:
           echo "ec2_windows_wd_matrix=$(echo $(cat generator/resources/ec2_windows_wd_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_wd_nvidia_matrix=$(echo $(cat generator/resources/ec2_windows_wd_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 
-  StartLocalStack:
-    name: 'StartLocalStack'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-west-2
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{ inputs.build_sha }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
-  EC2LinuxWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2LinuxWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -126,8 +98,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -163,18 +135,18 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
-              -var="github_test_repo=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}" \
+              -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${{inputs.build_sha}}" \
               -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-              -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+              -var="github_test_repo_branch=${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="local_stack_host_name=${{ needs.StartWorkloadDiscoveryIntegrationTests.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
@@ -198,8 +170,8 @@ jobs:
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
-  EC2WindowsWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2WindowsWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -212,8 +184,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -277,8 +249,8 @@ jobs:
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
-  EC2NvidiaLinuxWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2NvidiaLinuxWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -291,8 +263,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -328,18 +300,18 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
-              -var="github_test_repo=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}" \
+              -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${{inputs.build_sha}}" \
               -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-              -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+              -var="github_test_repo_branch=${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="local_stack_host_name=${{ needs.StartWorkloadDiscoveryIntegrationTests.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
@@ -363,8 +335,8 @@ jobs:
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
 
-  EC2NvidiaWindowsWDIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+  EC2NvidiaWindowsWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -377,8 +349,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -441,20 +413,3 @@ jobs:
             fi
 
             terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
-
-  StopLocalStack:
-    name: 'StopLocalStack'
-    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxWDIntegrationTest, EC2WindowsWDIntegrationTest, EC2NvidiaLinuxWDIntegrationTest, EC2NvidiaWindowsWDIntegrationTest, OutputEnvVariables ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-west-2
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      github_sha: ${{inputs.build_sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
