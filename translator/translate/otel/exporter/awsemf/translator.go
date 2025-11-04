@@ -96,7 +96,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultKubernetesKueueConfig
 	} else if isPrometheus(c, t.name) {
 		defaultConfig = defaultPrometheusConfig
-	} else if isKubernetes(c) {
+	} else if isKubernetes(c, t.name) {
 		defaultConfig = defaultKubernetesConfig
 	}
 
@@ -154,7 +154,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setPrometheusFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if isKubernetes(c) {
+	} else if isKubernetes(c, t.name) {
 		if err := setKubernetesFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -166,20 +166,20 @@ func (t *translator) isAppSignals(conf *confmap.Conf) bool {
 	return (t.name == common.AppSignals || t.name == common.AppSignalsFallback) && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsMetricsFallback) || conf.IsSet(common.AppSignalsTracesFallback))
 }
 func (t *translator) isCiJMX(conf *confmap.Conf) bool {
-	return (t.name == common.PipelineNameContainerInsightsJmx) && (conf.IsSet(common.ContainerInsightsConfigKey))
+	return t.name == common.PipelineNameContainerInsightsJmx && conf.IsSet(common.ContainerInsightsConfigKey)
 }
 
 func isEcs(conf *confmap.Conf) bool {
 	return conf.IsSet(ecsBasePathKey) && isEcsFunc()
 }
 
-func isKubernetes(conf *confmap.Conf) bool {
-	return conf.IsSet(kubernetesBasePathKey)
+func isKubernetes(conf *confmap.Conf, pipelineName string) bool {
+	return pipelineName == common.PipelineNameContainerInsights && conf.IsSet(kubernetesBasePathKey)
 }
 
 // `kueue_container_insights` is a child of `kubernetes` in config spec.
 func isKubernetesKueue(conf *confmap.Conf, pipelineName string) bool {
-	return isKubernetes(conf) && pipelineName == common.PipelineNameKueue && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
+	return pipelineName == common.PipelineNameKueue && common.GetOrDefaultBool(conf, kubernetesKueueBasePathKey, false)
 }
 
 func isPrometheus(conf *confmap.Conf, pipelineName string) bool {

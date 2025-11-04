@@ -33,6 +33,9 @@ const (
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
+	FlagWindowsEventIDs           = "win_event_ids"
+	FlagWindowsEventFilters       = "win_event_filters"
+	FlagWindowsEventLevels        = "win_event_levels"
 	separator                     = " "
 
 	typeInputs     = "inputs"
@@ -79,9 +82,11 @@ var _ UserAgent = (*userAgent)(nil)
 func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config) {
 	ua.dataLock.Lock()
 	defer ua.dataLock.Unlock()
+
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
 	}
+
 	for _, output := range telegrafCfg.Outputs {
 		ua.outputs.Add(output.Config.Name)
 	}
@@ -136,9 +141,15 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 		ua.inputs.Add(flagRunAsUser)
 	}
 
+	// Add ipv6 feature flag if dualstack endpoint is enabled
+	if os.Getenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT) == "true" {
+		ua.feature.Add("ipv6")
+	}
+
 	ua.inputsStr.Store(componentsStr(typeInputs, ua.inputs))
 	ua.processorsStr.Store(componentsStr(typeProcessors, ua.processors))
 	ua.outputsStr.Store(componentsStr(typeOutputs, ua.outputs))
+	ua.featureStr.Store(componentsStr(typeFeature, ua.feature))
 	ua.notify()
 }
 
