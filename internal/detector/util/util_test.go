@@ -15,21 +15,60 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/detectortest"
 )
 
+func TestBaseName(t *testing.T) {
+	testCases := map[string]struct {
+		path string
+		want string
+	}{
+		"WithEmptyPath": {
+			path: "",
+			want: "",
+		},
+		"WithSimplePath": {
+			path: filepath.Join("usr", "bin", "test.jar"),
+			want: "test.jar",
+		},
+		"WithQuotedPath": {
+			path: fmt.Sprintf("%q", filepath.Join("usr", "bin", "TEST.jar")),
+			want: "TEST.jar",
+		},
+		"WithDeleted": {
+			path: filepath.Join("usr", "bin", "test.jar (deleted)"),
+			want: "test.jar",
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := BaseName(testCase.path)
+			assert.Equal(t, testCase.want, got)
+		})
+	}
+}
+
 func TestBaseExe(t *testing.T) {
 	testCases := map[string]struct {
 		exe  string
 		want string
 	}{
-		"EmptyString": {
+		"WithEmptyPath": {
 			exe:  "",
 			want: "",
 		},
-		"SimpleExe": {
+		"WithSimplePath": {
 			exe:  filepath.Join("usr", "bin", "java"),
 			want: "java",
 		},
-		"QuotedPath": {
-			exe:  fmt.Sprintf("%q", filepath.Join("usr", "bin", "java")),
+		"WithQuotedPath": {
+			exe:  fmt.Sprintf("%q", filepath.Join("usr", "bin", "Java")),
+			want: "java",
+		},
+		"WithExtension": {
+			exe:  filepath.Join("usr", "bin", "java.exe"),
+			want: "java",
+		},
+		"WithDeleted": {
+			exe:  filepath.Join("usr", "bin", "java.exe (deleted)"),
 			want: "java",
 		},
 	}
