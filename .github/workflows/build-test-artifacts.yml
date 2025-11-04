@@ -80,6 +80,20 @@ jobs:
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
 
+  BuildDistributor:
+    needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
+    uses: ./.github/workflows/test-build-distributor.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      DistributorName: ${{ vars.SSM_TEST_DISTRIBUTOR_NAME }}
+
   BuildAndUploadITAR:
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
