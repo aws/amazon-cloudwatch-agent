@@ -28,6 +28,7 @@ const (
 	CategoryJVM         Category = "JVM"
 	CategoryTomcat      Category = "TOMCAT"
 	CategoryKafkaBroker Category = "KAFKA/BROKER"
+	CategoryKafkaClient Category = "KAFKA/CLIENT"
 	CategoryNvidiaGPU   Category = "NVIDIA_GPU"
 )
 

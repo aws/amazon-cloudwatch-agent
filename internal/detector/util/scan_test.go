@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReadProperties(t *testing.T) {
+func TestScanProperties(t *testing.T) {
 	testCases := map[string]struct {
 		input     string
 		separator rune
@@ -64,7 +64,7 @@ func TestReadProperties(t *testing.T) {
 			reader := strings.NewReader(testCase.input)
 			got := make(map[string]string)
 
-			err := ReadProperties(reader, testCase.separator, func(key, value string) bool {
+			err := ScanProperties(reader, testCase.separator, func(key, value string) bool {
 				got[key] = value
 				return true
 			})
@@ -80,12 +80,12 @@ func TestReadProperties(t *testing.T) {
 	}
 }
 
-func TestReadProperties_EarlyReturn(t *testing.T) {
+func TestScanProperties_EarlyReturn(t *testing.T) {
 	input := "key1=value1\nkey2=value2\nkey3=value3\n"
 	reader := strings.NewReader(input)
 	got := make(map[string]string)
 
-	err := ReadProperties(reader, '=', func(key, value string) bool {
+	err := ScanProperties(reader, '=', func(key, value string) bool {
 		got[key] = value
 		return key != "key2" // Stop after key2
 	})
@@ -94,7 +94,7 @@ func TestReadProperties_EarlyReturn(t *testing.T) {
 	assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, got)
 }
 
-func TestReadProperties_LineLimit(t *testing.T) {
+func TestScanProperties_LineLimit(t *testing.T) {
 	testCases := map[string]struct {
 		input     string
 		separator rune
@@ -135,7 +135,7 @@ func TestReadProperties_LineLimit(t *testing.T) {
 			reader := strings.NewReader(testCase.input)
 			got := make(map[string]string)
 
-			err := readPropertiesWithLimit(reader, testCase.separator, testCase.lineLimit, func(key, value string) bool {
+			err := scanPropertiesWithLimit(reader, testCase.separator, testCase.lineLimit, func(key, value string) bool {
 				got[key] = value
 				return true
 			})

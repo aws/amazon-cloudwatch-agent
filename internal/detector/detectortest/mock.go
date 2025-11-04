@@ -52,6 +52,14 @@ func (m *MockProcess) CreateTimeWithContext(ctx context.Context) (int64, error) 
 	return int64(args.Int(0)), args.Error(1)
 }
 
+func (m *MockProcess) OpenFilesWithContext(ctx context.Context) ([]detector.OpenFilesStat, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]detector.OpenFilesStat), args.Error(1)
+}
+
 type MockProcessDetector struct {
 	mock.Mock
 }
