@@ -41,6 +41,14 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		if usageData, ok := agentMap[usageDataKey].(bool); ok && !usageData {
 			envVars[envconfig.CWAGENT_USAGE_DATA] = "FALSE"
 		}
+
+		if useDualStack, ok := agentMap[agent.UseDualStackEndpointKey].(bool); ok {
+			if useDualStack {
+				envVars[envconfig.AWS_USE_DUALSTACK_ENDPOINT] = "true"
+			} else {
+				envVars[envconfig.AWS_USE_DUALSTACK_ENDPOINT] = "false"
+			}
+		}
 	}
 
 	proxy := util.GetHttpProxy(context.CurrentContext().Proxy())

@@ -40,6 +40,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -119,7 +120,7 @@ func TestAppSignalsAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -134,7 +135,7 @@ func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -149,7 +150,7 @@ func TestStatsDAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_statsd_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -178,7 +179,7 @@ func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -237,6 +238,18 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
+}
+
+func TestEmfAndKubernetesWithGpuHighFrequencyConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_high_frequency_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_high_frequency_config", "darwin", nil, "")
 }
 
 func TestEmfAndKubernetesWithKueueConfig(t *testing.T) {
@@ -744,6 +757,38 @@ func TestTraceConfig(t *testing.T) {
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
+}
+
+func TestAppendDimensionsHostMetrics(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	// Setup mock AWS metadata to get realistic values in the TOML output
+	cleanup := translateutil.MockCompleteAWSMetadata(
+		translateutil.MockAWSMetadata{
+			InstanceID:   "i-1234567890abcdef0",
+			InstanceType: "t3.medium",
+			ImageID:      "ami-0abcdef1234567890",
+			Hostname:     "test-hostname",
+			PrivateIP:    "10.0.1.100",
+			AccountID:    "123456789012",
+		},
+		map[string]string{
+			"aws:autoscaling:groupName": "production-web-asg",
+		},
+	)
+	defer cleanup()
+
+	// Test that append_dimensions_host_metrics.json generates the correct .conf and .yaml files
+	// Expected .conf file contains resolved AWS metadata values:
+	// [inputs.cpu.tags]
+	//   AutoScalingGroupName = "production-web-asg"
+	//   ImageId = "ami-0abcdef1234567890"
+	//   InstanceType = "t3.medium"
+	//   ServiceName = "MyServiceApplication"
+	//
+	// Expected .yaml file includes ec2tagger processor for InstanceId resolution
+	checkTranslation(t, "append_dimensions_host_metrics", "linux", nil, "")
 }
 
 func TestConfigWithEnvironmentVariables(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -37,10 +38,11 @@ func RunDownloaderFromFlags(flags map[string]*string) error {
 		*flags["output-dir"],
 		*flags["config"],
 		*flags["multi-config"],
+		*flags["dualstack"] == "true",
 	)
 }
 
-func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string) (err error) {
+func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string, useDualStack bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("Fail to fetch the config")
@@ -63,6 +65,10 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	// Set proxy and SSL environment
 	util.SetProxyEnv(cc.ProxyMap())
 	util.SetSSLEnv(cc.SSLMap())
+
+	if useDualStack {
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "true")
+	}
 
 	// Validate required parameters
 	if downloadLocation == "" || outputDir == "" {

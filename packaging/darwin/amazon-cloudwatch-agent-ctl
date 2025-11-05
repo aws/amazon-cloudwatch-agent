@@ -24,6 +24,7 @@ readonly RESTART_FILE="${CONFDIR}/restart"
 readonly VERSION_FILE="${CMDDIR}/CWAGENT_VERSION"
 readonly AGENT_LAUNCHD_NAME="com.amazon.cloudwatch.agent"
 readonly AGENT_LAUNCHD_CONFIG="/Library/LaunchDaemons/${AGENT_LAUNCHD_NAME}.plist"
+readonly WORKLOAD_DISCOVERY="${CMDDIR}/workload-discovery"
 
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
 readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
@@ -37,7 +38,7 @@ readonly ALL_CONFIG='all'
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|onPrem|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
+        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|status-with-workloads|fetch-config|append-config|remove-config [-m ec2|onPremise|onPrem|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s] [-d]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -46,11 +47,14 @@ UsageString="
             amazon-cloudwatch-agent-ctl -a append-config -m onPremise -c file:/tmp/config.json -s
         3. query agent status:
             amazon-cloudwatch-agent-ctl -a status
+        4. apply a SSM parameter store config with dual-stack endpoints:
+            amazon-cloudwatch-agent-ctl -d -a fetch-config -m ec2 -c ssm:AmazonCloudWatch-Config.json -s
 
         -a: action
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
+            status-with-workloads:                  get the status of the agent process and runs workload discovery.
             fetch-config:                           use this json config as the agent's only configuration.
             append-config:                          append json config with the existing json configs if any.
             remove-config:                          remove json config based on the location (ssm parameter store name, file name)
@@ -69,6 +73,9 @@ UsageString="
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
+        -d: enable dual-stack endpoints for AWS API calls during config download
+            this parameter is used for 'fetch-config', 'append-config' actions only.
+
 "
 
 cwa_start() {
@@ -80,7 +87,7 @@ cwa_start() {
 
      if [ ! -f "${TOML}" ]; then
           echo "amazon-cloudwatch-agent is not configured. Applying default configuration before starting it."
-          cwa_config 'default' 'false' "${mode}" 'default'
+          cwa_config 'default' 'false' "${mode}" 'default' 'false'
      fi
 
      launchctl load $AGENT_LAUNCHD_CONFIG
@@ -114,6 +121,8 @@ cwa_preun() {
 }
 
 cwa_status() {
+     include_workloads="${1:-false}"
+
      cwa_config_status='configured'
      if [ ! -f "${TOML}" ]; then
           cwa_config_status='not configured'
@@ -134,7 +143,20 @@ cwa_status() {
      echo "  \"status\": \"$(cwa_runstatus)\","
      echo "  \"starttime\": \"${starttime_fmt}\","
      echo "  \"configstatus\": \"${cwa_config_status}\","
-     echo "  \"version\": \"${version}\""
+     if [ "${include_workloads}" = "true" ]; then
+          workloads_json="[]"
+          if [ -x "${WORKLOAD_DISCOVERY}" ]; then
+               workloads_json="$(${WORKLOAD_DISCOVERY} 2>/dev/null || echo '[]')"
+               if [ -z "${workloads_json}" ]; then
+                    workloads_json="[]"
+               fi
+          fi
+          echo "  \"version\": \"${version}\","
+          echo "  \"workloads\": ${workloads_json}"
+     else
+          echo "  \"version\": \"${version}\""
+     fi
+
      echo "}"
 }
 
@@ -165,6 +187,7 @@ cwa_config() {
      restart="${2:-}"
      mode="${3:-}"
      multi_config="${4:-}"
+     use_dualstack="${5:-false}"
 
      mkdir -p "${CONFDIR}"
 
@@ -176,7 +199,11 @@ cwa_config() {
      if [ "${config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
+          if [ "${use_dualstack}" = 'true' ]; then
+               runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config} --dualstack)
+          else
+               runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
+          fi
           echo "${runDownloaderCommand}"
      fi
 
@@ -243,9 +270,10 @@ main() {
      config_location='default'
      restart='false'
      mode='auto'
+     use_dualstack='false'
 
      OPTIND=1
-     while getopts ":hsa:r:c:m:" opt; do
+     while getopts ":hsa:r:c:m:d" opt; do
           case "${opt}" in
           h)
                echo "${UsageString}"
@@ -255,6 +283,7 @@ main() {
           a) action="${OPTARG}" ;;
           c) config_location="${OPTARG}" ;;
           m) mode="${OPTARG}" ;;
+          d) use_dualstack='true' ;;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
                ;;
@@ -286,10 +315,11 @@ main() {
      case "${action}" in
      stop) cwa_stop ;;
      start) cwa_start "${mode}" ;;
-     fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' ;;
-     append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' ;;
+     fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' "${use_dualstack}" ;;
+     append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' "${use_dualstack}" ;;
      remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' ;;
-     status) cwa_status ;;
+     status) cwa_status "false" ;;
+     status-with-workloads) cwa_status "true" ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
      prep-restart) cwa_prep_restart ;;
@@ -300,6 +330,7 @@ main() {
           exit 1
           ;;
      esac
+     exit 0
 }
 
 main "$@"

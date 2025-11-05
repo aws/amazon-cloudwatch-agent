@@ -23,11 +23,19 @@ on:
         description: "Run Test on the new container image"
         default: true
         type: boolean
+      build-distributor:
+        description: "Whether to build an SSM distributor"
+        default: false
+        type: boolean
   workflow_call:
     inputs:
       test-image-before-upload:
         description: "Run Test on the new container image"
         default: true
+        type: boolean
+      build-distributor:
+        description: "Whether to build an SSM distributor"
+        default: false
         type: boolean
 
 concurrency:
@@ -72,6 +80,21 @@ jobs:
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
 
+  BuildDistributor:
+    needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
+    if: ${{ github.event_name == 'push' || inputs.build-distributor }}
+    uses: ./.github/workflows/test-build-distributor.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      DistributorName: ${{ vars.SSM_TEST_DISTRIBUTOR_NAME }}
+
   BuildAndUploadITAR:
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
@@ -99,7 +122,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   StartIntegrationTests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
     steps:
@@ -108,11 +131,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartApplicationSignalsE2ETests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
     # Workflow only runs against main
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  StartWorkloadDiscoveryIntegrationTests:
+    needs: [ BuildAndUploadPackages, BuildDocker ]
+    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run wd-integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

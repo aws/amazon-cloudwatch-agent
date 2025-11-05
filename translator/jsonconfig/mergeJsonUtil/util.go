@@ -13,6 +13,11 @@ import (
 
 var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
 
+var ArrayOrObjectKeys = map[string]bool{
+	"jmx":  true,
+	"otlp": true,
+}
+
 func MergeMap(source map[string]interface{}, result map[string]interface{}, sectionKey string,
 	mergeRuleMap map[string]mergeJsonRule.MergeRule, path string) {
 	subMapSource, exists := GetSubMap(source, sectionKey)
@@ -32,16 +37,24 @@ func MergeMap(source map[string]interface{}, result map[string]interface{}, sect
 
 func mergeMap(sourceMap map[string]interface{}, resultMap map[string]interface{}, mergeRuleMap map[string]mergeJsonRule.MergeRule, path string) {
 	for key, value := range sourceMap {
-		if rule, ok := mergeRuleMap[key]; ok {
+		rule, hasRule := mergeRuleMap[key]
+		existingValue, hasExisting := resultMap[key]
+
+		switch {
+		case hasRule:
 			rule.Merge(sourceMap, resultMap)
-		} else if existingValue, ok := resultMap[key]; !ok {
+		case ArrayOrObjectKeys[key]:
+			// Special handling for configurations that can be array or object according to schema
+			mergeArrayOrObjectConfiguration(sourceMap, resultMap, key, path)
+		case !hasExisting:
 			// only one defines the value
 			resultMap[key] = value
-		} else if !reflect.DeepEqual(existingValue, value) {
+		case !reflect.DeepEqual(existingValue, value):
 			// fail if different values are defined
 			translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key), fmt.Sprintf("Different values are specified for %v", key))
+		default:
+			// the same value is defined by multiple sources - no action needed
 		}
-		// the same value is defined by multiple sources
 	}
 }
 
@@ -102,4 +115,67 @@ func GetSubList(sourceMap map[string]interface{}, subKey string) []interface{} {
 		return subList
 	}
 	return resultList
+}
+
+func mergeArrayOrObjectConfiguration(sourceMap map[string]interface{}, resultMap map[string]interface{}, key string, path string) {
+	sourceValue, sourceExists := sourceMap[key]
+	if !sourceExists {
+		return
+	}
+
+	resultValue, resultExists := resultMap[key]
+	if !resultExists {
+		resultMap[key] = sourceValue
+		return
+	}
+
+	switch sourceValue.(type) {
+	case []interface{}:
+		mergeArrayConfiguration(sourceValue, resultValue, resultMap, key, path)
+	case map[string]interface{}:
+		mergeObjectConfiguration(sourceValue, resultValue, resultMap, key, path)
+	default:
+		translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key),
+			fmt.Sprintf("Unsupported configuration source type: %T", sourceValue))
+	}
+}
+
+func mergeArrayConfiguration(sourceValue, resultValue interface{}, resultMap map[string]interface{}, key string, path string) {
+	sourceList := sourceValue.([]interface{})
+
+	switch rv := resultValue.(type) {
+	case []interface{}:
+		// Array + Array: use existing mergeList function
+		resultMap[key] = mergeList(sourceList, rv)
+	case map[string]interface{}:
+		// Array + Object: convert object to array and merge
+		resultMap[key] = mergeList(sourceList, []interface{}{rv})
+	default:
+		translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key),
+			fmt.Sprintf("Unsupported configuration type: %T", resultValue))
+	}
+}
+
+func mergeObjectConfiguration(sourceValue, resultValue interface{}, resultMap map[string]interface{}, key string, path string) {
+	sourceObj := sourceValue.(map[string]interface{})
+
+	switch rv := resultValue.(type) {
+	case []interface{}:
+		// Object + Array: use existing mergeList function with single-item array
+		resultMap[key] = mergeList([]interface{}{sourceObj}, rv)
+	case map[string]interface{}:
+		// Object + Object: merge objects
+		resultMap[key] = mergeObjects(rv, sourceObj)
+	default:
+		translator.AddErrorMessages(fmt.Sprintf("%s%s", path, key),
+			fmt.Sprintf("Unsupported configuration type: %T", resultValue))
+	}
+}
+
+// mergeObjects merges two objects, converting to array if they differ
+func mergeObjects(result, source map[string]interface{}) interface{} {
+	if reflect.DeepEqual(result, source) {
+		return result
+	}
+	return []interface{}{result, source}
 }
