@@ -146,6 +146,34 @@ docker-build-amd64: build-for-docker-amd64
 docker-build-arm64: build-for-docker-arm64
 	docker buildx build --platform linux/arm64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t $(IMAGE) --load
 
+# Build multi-arch image and push to registry
+docker-build-and-push: build-for-docker-amd64 build-for-docker-arm64
+	docker buildx build --platform linux/amd64,linux/arm64 \
+		-f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile \
+		-t $(IMAGE) \
+		--push \
+		.
+
+# Build multi-arch image with custom tags and push
+docker-build-multiarch: build-for-docker-amd64 build-for-docker-arm64
+	@echo "Building multi-arch image: $(IMAGE)"
+	docker buildx build --platform linux/amd64,linux/arm64 \
+		-f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile \
+		-t $(IMAGE) \
+		-t $(IMAGE_REGISTRY)/$(IMAGE_REPO):latest \
+		--push \
+		.
+
+# Create and use buildx builder for multi-arch builds
+docker-buildx-setup:
+	@echo "Setting up Docker buildx for multi-arch builds..."
+	-docker buildx create --name multiarch-builder --use
+	docker buildx inspect --bootstrap
+
+# Remove buildx builder
+docker-buildx-cleanup:
+	-docker buildx rm multiarch-builder
+
 docker-push:
 	docker push $(IMAGE)
 
