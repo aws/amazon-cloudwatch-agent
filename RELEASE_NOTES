@@ -6,7 +6,7 @@ Features:
 
 Enhancements:
 * [Logs] Fallback to iterative DescribeLogGroups if batch API not supported in region
-* [ContainerInsights] Update OTel contrib dependencies to add enhanced CI checks and nil checks for neuron decorators
+* [ContainerInsights] Add enhanced CI checks and nil checks for neuron decorators to prevent panics
 
 Bug Fixes:
 * [OTLP] Fix OTLP pipeline configuration when used with EKS/ContainerInsights to prevent blocking custom metrics
