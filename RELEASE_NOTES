@@ -1,4 +1,18 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300062.0 (2025-11-05)
+========================================================================
+Features:
+* [ContainerInsights] Enable opt-in for high frequency GPU metrics collection with configurable intervals for ML inference workloads
+
+Enhancements:
+* [Logs] Fallback to iterative DescribeLogGroups if batch API not supported in region
+* [ContainerInsights] Add enhanced CI checks and nil checks for neuron decorators to prevent panics
+
+Bug Fixes:
+* [OTLP] Fix OTLP pipeline configuration when used with EKS/ContainerInsights to prevent blocking custom metrics
+* [Agent] Fix postinst failure for Debian package when init system is not available in Docker or chroot environments
+
+========================================================================
 Amazon CloudWatch Agent 1.300061.0 (2025-10-20)
 ========================================================================
 Enchancements: 
