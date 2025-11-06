@@ -14,8 +14,6 @@ env:
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 on:
-  schedule:
-    - cron: '0 17 * * 1'
   workflow_dispatch:
     inputs:
       region:
@@ -23,6 +21,10 @@ on:
         type: string
         description: 'AWS Region to run tests in'
         default: 'us-west-2'
+      build_sha:
+        description: 'The SHA of the build-test-artifacts workflow run'
+        type: string
+        required: false
       operator-branch:
         required: false
         type: string
@@ -60,6 +62,7 @@ jobs:
           echo "::set-output name=operator_sha::$latest_sha"
 
   BuildAgent:
+    if: ${{ !inputs.build_sha }}
     uses: ./.github/workflows/build-test-artifacts.yml
     concurrency:
       group: "Build-Test-Artifacts-${{github.ref_name}}"
@@ -86,6 +89,7 @@ jobs:
 
   OutputEnvVariables:
     needs: [ BuildAgent, BuildOperator ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
@@ -127,6 +131,7 @@ jobs:
 
   GenerateTestMatrix:
     needs: [BuildAgent, BuildOperator]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
@@ -154,6 +159,7 @@ jobs:
 
   EKSE2EJVMTomcatTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJVMTomcatTestHelm'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -164,7 +170,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
@@ -177,6 +183,7 @@ jobs:
 
   EKSE2EJVMTomcatTestAddon:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJVMTomcatTestAddon'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -187,7 +194,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
@@ -200,6 +207,7 @@ jobs:
 
   EKSE2EKafkaTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EKafkaTestHelm'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -210,7 +218,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
@@ -223,6 +231,7 @@ jobs:
 
   EKSE2EKafkaTestAddon:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EKafkaTestAddon'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -233,7 +242,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
@@ -246,6 +255,7 @@ jobs:
 
   EKSE2EJMXContainerInsightsTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJMXContainerInsightsTestHelm'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -256,7 +266,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
@@ -269,6 +279,7 @@ jobs:
 
   EKSE2EJMXContainerInsightsTestAddon:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJMXContainerInsightsTestAddon'
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
@@ -279,7 +290,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
-      cloudwatch_agent_tag: ${{ github.sha }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
       cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
       cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
       region: ${{ inputs.region || 'us-west-2' }}
