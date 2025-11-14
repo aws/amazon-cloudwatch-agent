@@ -25,11 +25,14 @@ func TestToEnvConfig(t *testing.T) {
 		contextSetup func()
 	}{
 		{
-			name:        "empty config",
-			input:       map[string]interface{}{},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
+			name:    "empty config",
+			input:   map[string]interface{}{},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2", // Default mode
+			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -50,8 +53,10 @@ func TestToEnvConfig(t *testing.T) {
 				envconfig.CWAGENT_LOG_LEVEL:  "DEBUG",
 				envconfig.AWS_SDK_LOG_LEVEL:  "DEBUG",
 				envconfig.CWAGENT_USAGE_DATA: "FALSE",
+				envconfig.CWAGENT_MODE:       "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -66,8 +71,10 @@ func TestToEnvConfig(t *testing.T) {
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
 				envconfig.AWS_USE_DUALSTACK_ENDPOINT: "true",
+				envconfig.CWAGENT_MODE:               "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -82,8 +89,10 @@ func TestToEnvConfig(t *testing.T) {
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
 				envconfig.AWS_USE_DUALSTACK_ENDPOINT: "false",
+				envconfig.CWAGENT_MODE:               "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -106,8 +115,10 @@ func TestToEnvConfig(t *testing.T) {
 				envconfig.AWS_USE_DUALSTACK_ENDPOINT: "true",
 				envconfig.HTTP_PROXY:                 "http://proxy.test",
 				envconfig.AWS_CA_BUNDLE:              "/test/ca-bundle.pem",
+				envconfig.CWAGENT_MODE:               "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{
 					"http_proxy": "http://proxy.test",
 				})
@@ -123,8 +134,11 @@ func TestToEnvConfig(t *testing.T) {
 					agent.UseDualStackEndpointKey: "true",
 				},
 			},
-			expectedEnv: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -136,8 +150,11 @@ func TestToEnvConfig(t *testing.T) {
 					agent.UseDualStackEndpointKey: 1,
 				},
 			},
-			expectedEnv: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -149,8 +166,11 @@ func TestToEnvConfig(t *testing.T) {
 					agent.UseDualStackEndpointKey: nil,
 				},
 			},
-			expectedEnv: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -161,11 +181,13 @@ func TestToEnvConfig(t *testing.T) {
 			input:   map[string]interface{}{},
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
-				envconfig.HTTP_PROXY:  "http://proxy.example.com",
-				envconfig.HTTPS_PROXY: "https://proxy.example.com",
-				envconfig.NO_PROXY:    "localhost,127.0.0.1",
+				envconfig.HTTP_PROXY:   "http://proxy.example.com",
+				envconfig.HTTPS_PROXY:  "https://proxy.example.com",
+				envconfig.NO_PROXY:     "localhost,127.0.0.1",
+				envconfig.CWAGENT_MODE: "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{
 					"http_proxy":  "http://proxy.example.com",
 					"https_proxy": "https://proxy.example.com",
@@ -180,8 +202,10 @@ func TestToEnvConfig(t *testing.T) {
 			envVars: map[string]string{},
 			expectedEnv: map[string]string{
 				envconfig.AWS_CA_BUNDLE: "/path/to/ca-bundle.pem",
+				envconfig.CWAGENT_MODE:  "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{
 					"ca_bundle_path": "/path/to/ca-bundle.pem",
@@ -196,8 +220,10 @@ func TestToEnvConfig(t *testing.T) {
 			},
 			expectedEnv: map[string]string{
 				envconfig.CWAgentLogsBackpressureMode: "fd_release",
+				envconfig.CWAGENT_MODE:                "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{})
 				context.CurrentContext().SetSSL(map[string]string{})
 			},
@@ -216,14 +242,30 @@ func TestToEnvConfig(t *testing.T) {
 				envconfig.CWAGENT_LOG_LEVEL:  "DEBUG",
 				envconfig.HTTP_PROXY:         "http://proxy.test",
 				envconfig.AWS_CA_BUNDLE:      "/test/ca-bundle.pem",
+				envconfig.CWAGENT_MODE:       "ec2",
 			},
 			contextSetup: func() {
+				context.ResetContext()
 				context.CurrentContext().SetProxy(map[string]string{
 					"http_proxy": "http://proxy.test",
 				})
 				context.CurrentContext().SetSSL(map[string]string{
 					"ca_bundle_path": "/test/ca-bundle.pem",
 				})
+			},
+		},
+		{
+			name:    "mode persistence",
+			input:   map[string]interface{}{},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "onPremise",
+			},
+			contextSetup: func() {
+				context.ResetContext()
+				context.CurrentContext().SetMode("onPremise")
+				context.CurrentContext().SetProxy(map[string]string{})
+				context.CurrentContext().SetSSL(map[string]string{})
 			},
 		},
 	}
@@ -262,8 +304,10 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			input: map[string]interface{}{
 				agent.SectionKey: "invalid",
 			},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 		},
 		{
 			name: "invalid user_agent type",
@@ -272,8 +316,10 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 					userAgentKey: 123,
 				},
 			},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 		},
 		{
 			name: "invalid debug type",
@@ -282,16 +328,20 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 					debugKey: "true",
 				},
 			},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 		},
 		{
 			name: "invalid logs section type",
 			input: map[string]interface{}{
 				logs.SectionKey: "invalid",
 			},
-			envVars:     map[string]string{},
-			expectedEnv: map[string]string{},
+			envVars: map[string]string{},
+			expectedEnv: map[string]string{
+				envconfig.CWAGENT_MODE: "ec2",
+			},
 		},
 	}
 
@@ -307,6 +357,7 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 				}
 			}()
 
+			context.ResetContext()
 			context.CurrentContext().SetProxy(map[string]string{})
 			context.CurrentContext().SetSSL(map[string]string{})
 			result := ToEnvConfig(tt.input)
