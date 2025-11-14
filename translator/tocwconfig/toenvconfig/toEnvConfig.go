@@ -19,6 +19,7 @@ const (
 	debugKey          = "debug"
 	awsSdkLogLevelKey = "aws_sdk_log_level"
 	usageDataKey      = "usage_data"
+	modeKey           = "mode"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -74,6 +75,12 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	backpressureMode := envconfig.GetLogsBackpressureMode()
 	if backpressureMode != "" {
 		envVars[envconfig.CWAgentLogsBackpressureMode] = backpressureMode
+	}
+
+	// Persist the agent mode so it can be used when the agent starts
+	mode := context.CurrentContext().Mode()
+	if mode != "" {
+		envVars[envconfig.CWAGENT_MODE] = mode
 	}
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")

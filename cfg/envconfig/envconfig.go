@@ -20,6 +20,7 @@ const (
 	AWS_USE_DUALSTACK_ENDPOINT  = "AWS_USE_DUALSTACK_ENDPOINT" //nolint:revive
 	CWAGENT_USER_AGENT          = "CWAGENT_USER_AGENT"         //nolint:revive
 	CWAGENT_LOG_LEVEL           = "CWAGENT_LOG_LEVEL"          //nolint:revive
+	CWAGENT_MODE                = "CWAGENT_MODE"               //nolint:revive
 	CWAGENT_ROLE                = "CWAGENT_ROLE"               //nolint:revive
 	CWAGENT_USAGE_DATA          = "CWAGENT_USAGE_DATA"         //nolint:revive
 	IMDS_NUMBER_RETRY           = "IMDS_NUMBER_RETRY"          //nolint:revive
