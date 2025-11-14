@@ -73,6 +73,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/etc/test/ca_bundle.pem")
 	expectedEnvVars := map[string]string{
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
+		"CWAGENT_MODE":  "ec2",
 	}
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
@@ -1039,7 +1040,21 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 		var actualEnvVars = make(map[string]string)
 		err := json.Unmarshal(envVarsBytes, &actualEnvVars)
 		assert.NoError(t, err)
-		assert.Equal(t, expectedEnvVars, actualEnvVars, "Expect to be equal")
+
+		// Automatically add the current mode to expected values since it's now always persisted
+		expectedWithMode := make(map[string]string)
+		for k, v := range expectedEnvVars {
+			expectedWithMode[k] = v
+		}
+		// Add the mode from context if not already specified in expected values
+		if _, exists := expectedWithMode[envconfig.CWAGENT_MODE]; !exists {
+			currentMode := context.CurrentContext().Mode()
+			if currentMode != "" {
+				expectedWithMode[envconfig.CWAGENT_MODE] = currentMode
+			}
+		}
+
+		assert.Equal(t, expectedWithMode, actualEnvVars, "Expect to be equal")
 	} else {
 		t.Logf("Got error %v", err)
 		t.Fail()
