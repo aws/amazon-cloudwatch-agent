@@ -92,13 +92,14 @@ func (ctx *Context) SetOutputTomlFilePath(outputTomlFilePath string) {
 func (ctx *Context) Mode() string {
 	if ctx.mode == "" {
 		// Try to read mode from environment variable first (set by env-config.json)
+		// This is used when the agent starts up and reads the persisted mode
 		envMode := os.Getenv(envconfig.CWAGENT_MODE)
 		if envMode != "" {
-			ctx.mode = envMode
-		} else {
-			// Default to EC2 mode if not set
-			ctx.mode = config.ModeEC2
+			return envMode
 		}
+		// Default to EC2 mode if not set
+		// Note: We return directly without caching to allow SetMode() to override later
+		return config.ModeEC2
 	}
 	return ctx.mode
 }
