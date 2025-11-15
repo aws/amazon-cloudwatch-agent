@@ -229,8 +229,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulat
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20251103165826-c3d3976f1fa0/go.mod h1:YTEg21QFJQ1HP9c+w1qnORKd0cLjFqlNONO4GE4RJz4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20251103165826-c3d3976f1fa0 h1:1kIHdREhYTBeyky8bO8x5NbJrKJde8fVxqBqhJjU3VA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20251103165826-c3d3976f1fa0/go.mod h1:I41hi6XJwoAAauMtkaCQBtn0Fom+HE2KbIZjxauVavU=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20251103165826-c3d3976f1fa0 h1:ilnKHpWWn6SQTaf3AcrdqHvBfeALeXBXIUFcKtmM8Jo=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20251103165826-c3d3976f1fa0/go.mod h1:Yjm9Vh3sLSFKA7o28PAidnlioTWOyHvpQ9rsDR4lwNM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20251115014544-13916bbd3c49 h1:cv8q01lwK6iibGxDuZeFRP6dm6sL3+Wi2onV0dSlp9s=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20251115014544-13916bbd3c49/go.mod h1:Yjm9Vh3sLSFKA7o28PAidnlioTWOyHvpQ9rsDR4lwNM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20251103165826-c3d3976f1fa0 h1:Xcw5Yqe8+k6b1OXpmzLGpExqEg31mVWgdgvBFUt5v+s=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20251103165826-c3d3976f1fa0/go.mod h1:dnhJ7NI0b85XA4yBAHgkTqnC7x4LDeAIjg6I435n0Jc=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20251103165826-c3d3976f1fa0 h1:YJs26pfBCDMOcAfSRBTGUgFhr5gJNHPQGBlwfOxY714=
