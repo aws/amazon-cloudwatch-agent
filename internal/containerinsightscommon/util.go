@@ -38,7 +38,7 @@ func MetricName(mType string, name string) string {
 		prefix = instancePrefix
 	case TypeInstanceNet:
 		prefix = instanceNetPrefix
-	case TypeNode, TypeNodeFS, TypeNodeDiskIO, TypeGpuNode:
+	case TypeNode, TypeNodeFS, TypeNodeDiskIO, TypeGpuNode, TypeNodeEBS, TypeNodeInstanceStore:
 		prefix = nodePrefix
 	case TypeNodeNet:
 		prefix = nodeNetPrefix
