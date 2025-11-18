@@ -526,7 +526,7 @@ func TestTranslator(t *testing.T) {
 							"node_diskio_instance_store_total_read_time", "node_diskio_instance_store_total_write_time", "node_diskio_instance_store_ec2_instance_performance_exceeded_iops", "node_diskio_instance_store_ec2_instance_performance_exceeded_tp",
 							"node_diskio_instance_store_volume_queue_length",
 						},
-					},					{
+					}, {
 						Dimensions: [][]string{
 							{"ClusterName"},
 							{"ClusterName", "Namespace"},
@@ -1184,7 +1184,7 @@ func TestTranslator(t *testing.T) {
 							"node_diskio_instance_store_total_read_time", "node_diskio_instance_store_total_write_time", "node_diskio_instance_store_ec2_instance_performance_exceeded_iops", "node_diskio_instance_store_ec2_instance_performance_exceeded_tp",
 							"node_diskio_instance_store_volume_queue_length",
 						},
-					},					{
+					}, {
 						Dimensions: [][]string{
 							{"ClusterName"},
 							{"ClusterName", "Namespace"},
