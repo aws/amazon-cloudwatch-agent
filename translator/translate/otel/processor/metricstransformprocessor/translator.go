@@ -69,6 +69,18 @@ var renameMapForNvme = map[string]string{
 	"aws_ebs_csi_volume_queue_length":             containerinsightscommon.NvmeVolumeQueueLength,
 }
 
+var renameMapForNvmeInstanceStore = map[string]string{
+	"aws_ec2_instance_store_csi_read_ops_total":                  containerinsightscommon.NvmeInstanceStoreReadOpsTotal,
+	"aws_ec2_instance_store_csi_write_ops_total":                 containerinsightscommon.NvmeInstanceStoreWriteOpsTotal,
+	"aws_ec2_instance_store_csi_read_bytes_total":                containerinsightscommon.NvmeInstanceStoreReadBytesTotal,
+	"aws_ec2_instance_store_csi_write_bytes_total":               containerinsightscommon.NvmeInstanceStoreWriteBytesTotal,
+	"aws_ec2_instance_store_csi_read_seconds_total":              containerinsightscommon.NvmeInstanceStoreReadTime,
+	"aws_ec2_instance_store_csi_write_seconds_total":             containerinsightscommon.NvmeInstanceStoreWriteTime,
+	"aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total": containerinsightscommon.NvmeInstanceStoreExceededEC2IOPSTime,
+	"aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total":   containerinsightscommon.NvmeInstanceStoreExceededEC2TPTime,
+	"aws_ec2_instance_store_csi_volume_queue_length":             containerinsightscommon.NvmeInstanceStoreVolumeQueueLength,
+}
+
 type translator struct {
 	name    string
 	factory processor.Factory
@@ -114,6 +126,19 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 						"action":    "add_label",
 						"new_label": containerinsightscommon.MetricType,
 						"new_value": containerinsightscommon.TypeNodeEBS,
+					}},
+				})
+			}
+
+			for oldNvmeInstanceStoreMetric, newNvmeInstanceStoreMetric := range renameMapForNvmeInstanceStore {
+				transformRules = append(transformRules, map[string]interface{}{
+					"include":  oldNvmeInstanceStoreMetric,
+					"action":   "update",
+					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeNode, newNvmeInstanceStoreMetric),
+					"operations": []map[string]interface{}{{
+						"action":    "add_label",
+						"new_label": containerinsightscommon.MetricType,
+						"new_value": containerinsightscommon.TypeNodeInstanceStore,
 					}},
 				})
 			}
