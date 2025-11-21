@@ -69,12 +69,13 @@ func TestCreateDestination(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			c := &CloudWatchLogs{
-				Log:           testutil.Logger{Name: "test"},
-				LogGroupName:  "G1",
-				LogStreamName: "S1",
-				AccessKey:     "access_key",
-				SecretKey:     "secret_key",
-				cwDests:       sync.Map{},
+				Log:            testutil.Logger{Name: "test"},
+				LogGroupName:   "G1",
+				LogStreamName:  "S1",
+				AccessKey:      "access_key",
+				SecretKey:      "secret_key",
+				pusherStopChan: make(chan struct{}),
+				cwDests:        sync.Map{},
 			}
 			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, testCase.cfgLogClass, testCase.cfgTailerSrc).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
@@ -88,10 +89,11 @@ func TestCreateDestination(t *testing.T) {
 
 func TestDuplicateDestination(t *testing.T) {
 	c := &CloudWatchLogs{
-		Log:       testutil.Logger{Name: "test"},
-		AccessKey: "access_key",
-		SecretKey: "secret_key",
-		cwDests:   sync.Map{},
+		Log:            testutil.Logger{Name: "test"},
+		AccessKey:      "access_key",
+		SecretKey:      "secret_key",
+		cwDests:        sync.Map{},
+		pusherStopChan: make(chan struct{}),
 	}
 	// Given the same log group, log stream, same retention, and logClass
 	d1 := c.CreateDest("FILENAME", "", -1, util.InfrequentAccessLogGroupClass, nil)
