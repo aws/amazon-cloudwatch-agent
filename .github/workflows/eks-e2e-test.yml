@@ -68,10 +68,6 @@ on:
       eks_installation_type:
         required: true
         type: string
-      vpc_name:
-        required: false
-        type: string
-        default: ""
       ip_family:
         required: false
         type: string
@@ -127,28 +123,36 @@ jobs:
             fi
 
             terraform init
-            if terraform apply --auto-approve \
-              -var="region=${{ inputs.region }}" \
-              -var="k8s_version=${{ matrix.arrays.k8sVersion }}" \
-              -var="nodes=${{ matrix.arrays.nodes }}" \
-              -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
-              -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
-              -var="cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}" \
-              -var="cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}" \
-              -var="cloudwatch_agent_operator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
-              -var="cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}" \
-              -var="cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
-              -var="cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}" \
-              -var="cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}" \
-              -var="cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}" \
-              -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="agent_config=${{ inputs.agent_config }}" \
-              -var="prometheus_config=${{ inputs.prometheus_config }}" \
-              -var="otel_config=${{ inputs.otel_config }}" \
-              -var="sample_app=${{ inputs.sample_app }}" \
-              -var="eks_installation_type=${{ inputs.eks_installation_type }}" \
-              -var="vpc_name=${{ inputs.vpc_name }}" \
-              -var="ip_family=${{ inputs.ip_family }}"; then
+            
+            # Build terraform command with base variables
+            TERRAFORM_CMD="terraform apply --auto-approve \
+              -var=\"region=${{ inputs.region }}\" \
+              -var=\"k8s_version=${{ matrix.arrays.k8sVersion }}\" \
+              -var=\"nodes=${{ matrix.arrays.nodes }}\" \
+              -var=\"helm_charts_branch=${{ inputs.helm_charts_branch }}\" \
+              -var=\"cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}\" \
+              -var=\"cloudwatch_agent_repository=${{ inputs.cloudwatch_agent_repository }}\" \
+              -var=\"cloudwatch_agent_tag=${{ inputs.cloudwatch_agent_tag }}\" \
+              -var=\"cloudwatch_agent_operator_repository_url=${{ steps.login-ecr.outputs.registry }}\" \
+              -var=\"cloudwatch_agent_operator_repository=${{ inputs.cloudwatch_agent_operator_repository }}\" \
+              -var=\"cloudwatch_agent_operator_tag=${{ inputs.cloudwatch_agent_operator_tag }}\" \
+              -var=\"cloudwatch_agent_target_allocator_repository_url=${{ steps.login-ecr.outputs.registry }}\" \
+              -var=\"cloudwatch_agent_target_allocator_repository=${{ inputs.cloudwatch_agent_target_allocator_repository }}\" \
+              -var=\"cloudwatch_agent_target_allocator_tag=${{ inputs.cloudwatch_agent_operator_tag }}\" \
+              -var=\"test_dir=${{ matrix.arrays.test_dir }}\" \
+              -var=\"agent_config=${{ inputs.agent_config }}\" \
+              -var=\"prometheus_config=${{ inputs.prometheus_config }}\" \
+              -var=\"otel_config=${{ inputs.otel_config }}\" \
+              -var=\"sample_app=${{ inputs.sample_app }}\" \
+              -var=\"eks_installation_type=${{ inputs.eks_installation_type }}\""
+            
+            # Add IPv6-specific variables only if ip_family is ipv6
+            if [ "${{ inputs.ip_family }}" != "ipv4" ]; then
+              TERRAFORM_CMD="$TERRAFORM_CMD -var=\"vpc_name=eksctl-ipv6-eks-nodes-cluster/VPC\""
+              TERRAFORM_CMD="$TERRAFORM_CMD -var=\"ip_family=${{ inputs.ip_family }}\""
+            fi
+            
+            if eval $TERRAFORM_CMD; then
               terraform destroy --auto-approve
             else
               terraform destroy --auto-approve && exit 1

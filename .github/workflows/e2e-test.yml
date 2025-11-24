@@ -330,7 +330,6 @@ jobs:
       agent_config: resources/cwagent_configs_helm_chart/jvm_tomcat.json
       sample_app: resources/sample_apps/tomcat.yaml
       eks_installation_type: "HELM_CHART"
-      vpc_name: "eksctl-ipv6-eks-nodes-cluster/VPC"
       ip_family: "ipv6"
     secrets: inherit
 
@@ -356,7 +355,6 @@ jobs:
       agent_config: resources/cwagent_configs_eks_addon/jvm_tomcat.json
       sample_app: resources/sample_apps/tomcat.yaml
       eks_installation_type: "EKS_ADDON"
-      vpc_name: "eksctl-ipv6-eks-nodes-cluster/VPC"
       ip_family: "ipv6"
     secrets: inherit
 
@@ -382,7 +380,6 @@ jobs:
       agent_config: resources/cwagent_configs_helm_chart/kafka.json
       sample_app: resources/sample_apps/kafka.yaml
       eks_installation_type: "HELM_CHART"
-      vpc_name: "eksctl-ipv6-eks-nodes-cluster/VPC"
       ip_family: "ipv6"
     secrets: inherit
 
@@ -408,7 +405,6 @@ jobs:
       agent_config: resources/cwagent_configs_eks_addon/kafka.json
       sample_app: resources/sample_apps/kafka.yaml
       eks_installation_type: "EKS_ADDON"
-      vpc_name: "eksctl-ipv6-eks-nodes-cluster/VPC"
       ip_family: "ipv6"
     secrets: inherit
 
@@ -434,7 +430,6 @@ jobs:
       agent_config: resources/cwagent_configs_helm_chart/containerinsights.json
       sample_app: resources/sample_apps/tomcat.yaml
       eks_installation_type: "HELM_CHART"
-      vpc_name: "eksctl-ipv6-eks-nodes-cluster/VPC"
       ip_family: "ipv6"
     secrets: inherit
 
@@ -460,6 +455,5 @@ jobs:
       agent_config: resources/cwagent_configs_eks_addon/containerinsights.json
       sample_app: resources/sample_apps/tomcat.yaml
       eks_installation_type: "EKS_ADDON"
-      vpc_name: "eksctl-ipv6-eks-nodes-cluster/VPC"
       ip_family: "ipv6"
     secrets: inherit
