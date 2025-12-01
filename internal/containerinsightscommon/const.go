@@ -110,7 +110,7 @@ const (
 	NeuronHardware                              = "neuron_hardware"
 	NeuronExecutionLatency                      = "neuron_execution_latency"
 
-	// Converted metrics for NVME metrics
+	// Converted metrics for NVME EBS metrics
 	NvmeReadOpsTotal        = "diskio_ebs_total_read_ops"
 	NvmeWriteOpsTotal       = "diskio_ebs_total_write_ops"
 	NvmeReadBytesTotal      = "diskio_ebs_total_read_bytes"
@@ -122,6 +122,17 @@ const (
 	NvmeExceededEC2IOPSTime = "diskio_ebs_ec2_instance_performance_exceeded_iops"
 	NvmeExceededEC2TPTime   = "diskio_ebs_ec2_instance_performance_exceeded_tp"
 	NvmeVolumeQueueLength   = "diskio_ebs_volume_queue_length"
+
+	// Converted metrics for NVME Instance Store metrics
+	NvmeInstanceStoreReadOpsTotal        = "diskio_instance_store_total_read_ops"
+	NvmeInstanceStoreWriteOpsTotal       = "diskio_instance_store_total_write_ops"
+	NvmeInstanceStoreReadBytesTotal      = "diskio_instance_store_total_read_bytes"
+	NvmeInstanceStoreWriteBytesTotal     = "diskio_instance_store_total_write_bytes"
+	NvmeInstanceStoreReadTime            = "diskio_instance_store_total_read_time"
+	NvmeInstanceStoreWriteTime           = "diskio_instance_store_total_write_time"
+	NvmeInstanceStoreExceededEC2IOPSTime = "diskio_instance_store_ec2_instance_performance_exceeded_iops"
+	NvmeInstanceStoreExceededEC2TPTime   = "diskio_instance_store_ec2_instance_performance_exceeded_tp"
+	NvmeInstanceStoreVolumeQueueLength   = "diskio_instance_store_volume_queue_length"
 
 	KueuePendingWorkloads          = "kueue_pending_workloads"
 	KueueEvictedWorkloadsTotal     = "kueue_evicted_workloads_total"
@@ -136,19 +147,20 @@ const (
 	TypeClusterQueue     = "ClusterQueue"
 
 	// Both TypeInstance and TypeNode mean EC2 Instance, they are used in ECS and EKS separately
-	TypeInstance       = "Instance"
-	TypeNode           = "Node"
-	TypeInstanceFS     = "InstanceFS"
-	TypeNodeFS         = "NodeFS"
-	TypeInstanceNet    = "InstanceNet"
-	TypeNodeNet        = "NodeNet"
-	TypeInstanceDiskIO = "InstanceDiskIO"
-	TypeNodeDiskIO     = "NodeDiskIO"
-	TypeGpuContainer   = "ContainerGPU"
-	TypeGpuPod         = "PodGPU"
-	TypeGpuNode        = "NodeGPU"
-	TypeGpuCluster     = "ClusterGPU"
-	TypeNodeEBS        = "NodeEBS"
+	TypeInstance          = "Instance"
+	TypeNode              = "Node"
+	TypeInstanceFS        = "InstanceFS"
+	TypeNodeFS            = "NodeFS"
+	TypeInstanceNet       = "InstanceNet"
+	TypeNodeNet           = "NodeNet"
+	TypeInstanceDiskIO    = "InstanceDiskIO"
+	TypeNodeDiskIO        = "NodeDiskIO"
+	TypeGpuContainer      = "ContainerGPU"
+	TypeGpuPod            = "PodGPU"
+	TypeGpuNode           = "NodeGPU"
+	TypeGpuCluster        = "ClusterGPU"
+	TypeNodeEBS           = "NodeEBS"
+	TypeNodeInstanceStore = "NodeInstanceStore"
 
 	TypePod             = "Pod"
 	TypePodNet          = "PodNet"
