@@ -33,9 +33,6 @@ const (
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 	flagSELinux                   = "selinux"
 	flagROSA                      = "rosa"
-	FlagWindowsEventIDs           = "win_event_ids"
-	FlagWindowsEventFilters       = "win_event_filters"
-	FlagWindowsEventLevels        = "win_event_levels"
 	separator                     = " "
 
 	typeInputs     = "inputs"
@@ -85,6 +82,7 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
+		ua.setWindowsEventLogFeatureFlags(input)
 	}
 
 	for _, output := range telegrafCfg.Outputs {

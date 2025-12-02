@@ -18,15 +18,15 @@ var (
 	ErrLineLimitExceeded = errors.New("line limit exceeded")
 )
 
-// ReadProperties parses key-value pairs from a reader and passes them to the fn. Returns early if fn returns false,
+// ScanProperties parses key-value pairs from a reader and passes them to the fn. Returns early if fn returns false,
 // the line limit is reached, or if the scanner has an error. Uses the defaultLineLimit.
-func ReadProperties(r io.Reader, separator rune, fn func(key, value string) bool) error {
-	return readPropertiesWithLimit(r, separator, defaultLineLimit, fn)
+func ScanProperties(r io.Reader, separator rune, fn func(key, value string) bool) error {
+	return scanPropertiesWithLimit(r, separator, defaultLineLimit, fn)
 }
 
-// readPropertiesWithLimit parses key-value pairs from a reader and passes them to the fn. Returns early if fn returns false,
-// the line limit is reached, or if the scanner has an error. A line limit of 0 means there is no limit.
-func readPropertiesWithLimit(r io.Reader, separator rune, lineLimit int, fn func(key, value string) bool) error {
+// scanPropertiesWithLimit parses key-value pairs from a reader and passes them to the fn. Returns early if fn returns
+// false, the line limit is reached, or if the scanner has an error. A line limit of 0 means there is no limit.
+func scanPropertiesWithLimit(r io.Reader, separator rune, lineLimit int, fn func(key, value string) bool) error {
 	scanner := bufio.NewScanner(r)
 	lineCount := 0
 	for scanner.Scan() {

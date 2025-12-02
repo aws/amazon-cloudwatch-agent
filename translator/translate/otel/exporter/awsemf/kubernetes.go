@@ -7,6 +7,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
@@ -56,11 +57,13 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEBSMetricDeclarations(conf)...)
 
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getInstanceStoreMetricDeclarations(conf)...)
+
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getVolumesMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
-
+	cfg.MetricAsDistribution = getMetricAsDistribution(conf)
 	return nil
 }
 
@@ -693,6 +696,33 @@ func getEBSMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 	return metricDeclarations
 }
 
+func getInstanceStoreMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "NodeName", "InstanceId"},
+					{"ClusterName", "NodeName", "InstanceId", "VolumeId"},
+				},
+				MetricNameSelectors: []string{
+					"node_diskio_instance_store_total_read_ops",
+					"node_diskio_instance_store_total_write_ops",
+					"node_diskio_instance_store_total_read_bytes",
+					"node_diskio_instance_store_total_write_bytes",
+					"node_diskio_instance_store_total_read_time",
+					"node_diskio_instance_store_total_write_time",
+					"node_diskio_instance_store_ec2_instance_performance_exceeded_iops",
+					"node_diskio_instance_store_ec2_instance_performance_exceeded_tp",
+					"node_diskio_instance_store_volume_queue_length",
+				},
+			},
+		}
+	}
+	return metricDeclarations
+}
+
 func getVolumesMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var metricDeclarations []*awsemfexporter.MetricDeclaration
 	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
@@ -721,4 +751,34 @@ func getVolumesMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDe
 		}
 	}
 	return metricDeclarations
+}
+
+func getMetricAsDistribution(conf *confmap.Conf) []string {
+	var metricsAsDistribution []string
+	if awscontainerinsight.IsHighFrequencyGPUMetricsEnabled(conf) {
+		var gpuMetricTypes = []string{
+			containerinsightscommon.TypeGpuContainer,
+			containerinsightscommon.TypeGpuPod,
+			containerinsightscommon.TypeGpuNode,
+		}
+
+		// GPU metrics to be compacted to distribution representantion in values and counts
+		gpuMetrics := []string{
+			containerinsightscommon.GpuUtilization,
+			containerinsightscommon.GpuMemUtilization,
+			containerinsightscommon.GpuMemTotal,
+			containerinsightscommon.GpuMemUsed,
+			containerinsightscommon.GpuPowerDraw,
+			containerinsightscommon.GpuTemperature,
+			containerinsightscommon.GpuTensorCoreUtilization,
+		}
+
+		// Generate metric names by looping through types and metrics
+		for _, t := range gpuMetricTypes {
+			for _, m := range gpuMetrics {
+				metricsAsDistribution = append(metricsAsDistribution, containerinsightscommon.MetricName(t, m))
+			}
+		}
+	}
+	return metricsAsDistribution
 }

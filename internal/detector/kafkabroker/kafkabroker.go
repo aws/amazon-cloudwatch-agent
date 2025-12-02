@@ -35,11 +35,9 @@ func NewDetector(logger *slog.Logger) detector.ProcessDetector {
 func (d *kafkaBrokerDetector) Detect(ctx context.Context, process detector.Process) (*detector.Metadata, error) {
 	attributes, err := d.attributesExtractor.Extract(ctx, process)
 	if err != nil {
-		d.logger.Debug("Kafka Broker not detected for process", "pid", process.PID(), "error", err)
+		d.logger.Debug("Kafka broker not detected for process", "pid", process.PID(), "error", err)
 		return nil, detector.ErrIncompatibleDetector
 	}
-
-	d.logger.Debug("Detected Kafka Broker", "pid", process.PID())
 
 	md := &detector.Metadata{
 		Categories: []detector.Category{detector.CategoryKafkaBroker},
