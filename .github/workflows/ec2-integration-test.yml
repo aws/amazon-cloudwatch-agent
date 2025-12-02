@@ -95,7 +95,7 @@ jobs:
             fi
 
             terraform init
-            if terraform apply --auto-approve \
+            terraform apply --auto-approve \
               -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
@@ -118,24 +118,20 @@ jobs:
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="user=${{ matrix.arrays.username }}"; then
-              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
-            else
-              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
-            fi
+              -var="user=${{ matrix.arrays.username }}"
       #This is here just in case workflow cancel
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 2
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd ${{inputs.test_dir}}
-            fi
+      # - name: Terraform destroy
+      #   if: ${{ cancelled() || failure() }}
+      #   uses: nick-fields/retry@v2
+      #   with:
+      #     max_attempts: 2
+      #     timeout_minutes: 8
+      #     retry_wait_seconds: 5
+      #     command: |
+      #       if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+      #         cd "${{ matrix.arrays.terraform_dir }}"
+      #       else
+      #         cd ${{inputs.test_dir}}
+      #       fi
 
-            terraform destroy -lock-timeout=5m -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+      #       terraform destroy -lock-timeout=5m -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
