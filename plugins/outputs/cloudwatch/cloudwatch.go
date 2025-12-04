@@ -163,7 +163,7 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// ConsumeMetrics queues metrics to be published to CW.
+// ConsumeMetrics queues metrics to be published to CW.588
 // The actual publishing will occur in a long running goroutine.
 // This method can block when publishing is backed up.
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
@@ -520,28 +520,7 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 			s.SetMaximum(distMax)
 		}
 
-		for index, dimensions := range dimensionsList {
-			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
-			//metric datum
-			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
-				continue
-			}
-
-			// Beware there may be many datums sharing pointers to the same
-			// strings for metric names, dimensions, etc.
-			// It is fine since at this point the values will not change.
-			datum := &cloudwatch.MetricDatum{
-				MetricName:        metric.MetricName,
-				Dimensions:        dimensions,
-				Timestamp:         metric.Timestamp,
-				Unit:              metric.Unit,
-				StorageResolution: metric.StorageResolution,
-				Values:            aws.Float64Slice(values),
-				Counts:            aws.Float64Slice(counts),
-				StatisticValues:   &s,
-			}
-			datums = append(datums, datum)
-		}
+		datums = append(datums, c.expandDimensionsValuesAndCounts(metric, dimensionsList, s, values, counts)...)
 	}
 	return datums
 }
@@ -561,12 +540,6 @@ func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsLi
 		return datums
 	}
 
-	s := cloudwatch.StatisticSet{}
-	s.SetMaximum(cwhist.Maximum())
-	s.SetMinimum(cwhist.Minimum())
-	s.SetSampleCount(cwhist.SampleCount())
-	s.SetSum(cwhist.Sum())
-
 	for i := 0; i < len(values); i += c.config.MaxValuesPerDatum {
 		end := i + c.config.MaxValuesPerDatum
 		if end > len(values) {
@@ -575,44 +548,52 @@ func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsLi
 		batchValues := values[i:end]
 		batchCounts := counts[i:end]
 
-		for index, dimensions := range dimensionsList {
-			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
-			//metric datum
-			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
-				continue
-			}
-
-			s := cloudwatch.StatisticSet{}
-			s.SetMaximum(cwhist.Maximum())
-			s.SetMinimum(cwhist.Minimum())
-			s.SetSum(0.0)
-			// Only assign `Sum` if this is the first split to make sure the total sum of the datapoints after aggregation is correct.
-			if i == 0 {
-				s.SetSum(cwhist.Sum())
-			}
-			count := 0.0
-			for _, c := range batchCounts {
-				count += c
-			}
-			s.SetSampleCount(count)
-
-			// Beware there may be many datums sharing pointers to the same
-			// strings for metric names, dimensions, etc.
-			// It is fine since at this point the values will not change.
-			datum := &cloudwatch.MetricDatum{
-				MetricName:        metric.MetricName,
-				Dimensions:        dimensions,
-				Timestamp:         metric.Timestamp,
-				Unit:              metric.Unit,
-				StorageResolution: metric.StorageResolution,
-				Values:            aws.Float64Slice(batchValues),
-				Counts:            aws.Float64Slice(batchCounts),
-				StatisticValues:   &s,
-			}
-
-			datums = append(datums, datum)
+		s := cloudwatch.StatisticSet{}
+		s.SetMaximum(cwhist.Maximum())
+		s.SetMinimum(cwhist.Minimum())
+		s.SetSum(0.0)
+		// Only assign `Sum` if this is the first split to make sure the total sum of the datapoints after aggregation is correct.
+		if i == 0 {
+			s.SetSum(cwhist.Sum())
 		}
+		count := 0.0
+		for _, c := range batchCounts {
+			count += c
+		}
+		s.SetSampleCount(count)
+
+		datums = append(datums, c.expandDimensionsValuesAndCounts(metric, dimensionsList, s, batchValues, batchCounts)...)
 	}
+	return datums
+}
+
+func (c *CloudWatch) expandDimensionsValuesAndCounts(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension, s cloudwatch.StatisticSet, values []float64, counts []float64) []*cloudwatch.MetricDatum {
+	datums := []*cloudwatch.MetricDatum{}
+
+	for index, dimensions := range dimensionsList {
+		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
+		//metric datum
+		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+			continue
+		}
+
+		// Beware there may be many datums sharing pointers to the same
+		// strings for metric names, dimensions, etc.
+		// It is fine since at this point the values will not change.
+		datum := &cloudwatch.MetricDatum{
+			MetricName:        metric.MetricName,
+			Dimensions:        dimensions,
+			Timestamp:         metric.Timestamp,
+			Unit:              metric.Unit,
+			StorageResolution: metric.StorageResolution,
+			Values:            aws.Float64Slice(values),
+			Counts:            aws.Float64Slice(counts),
+			StatisticValues:   &s,
+		}
+
+		datums = append(datums, datum)
+	}
+
 	return datums
 }
 
