@@ -3,7 +3,7 @@
 
 name: Test Artifacts
 env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
@@ -250,7 +250,9 @@ jobs:
     name: 'StartLocalStackITAR'
     needs: [OutputEnvVariables]
     uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
+    secrets:
+      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
     permissions:
       id-token: write
       contents: read
@@ -267,7 +269,9 @@ jobs:
     name: 'StartLocalStackCN'
     needs: [ OutputEnvVariables, UploadDependenciesCN ]
     uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
+    secrets:
+      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
     permissions:
       id-token: write
       contents: read
@@ -450,7 +454,9 @@ jobs:
       region: us-gov-east-1
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-    secrets: inherit
+    secrets:
+      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
 
   EC2LinuxIntegrationTestCN:
     needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
@@ -468,7 +474,9 @@ jobs:
       region: cn-north-1
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
-    secrets: inherit
+    secrets:
+      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
 
   EC2SELinuxIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
@@ -669,7 +677,9 @@ jobs:
     if: ${{ always() && needs.StartLocalStackITAR.result == 'success' }}
     needs: [ StartLocalStackITAR, EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
+    secrets:
+      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
     permissions:
       id-token: write
       contents: read
@@ -686,7 +696,9 @@ jobs:
     if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
     needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN, OutputEnvVariables]
     uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
+    secrets:
+      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
     permissions:
       id-token: write
       contents: read
