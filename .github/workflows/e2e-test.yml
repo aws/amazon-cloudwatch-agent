@@ -9,8 +9,6 @@ env:
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 on:

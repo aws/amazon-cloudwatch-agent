@@ -21,7 +21,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old ami
@@ -40,7 +40,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old file system
@@ -59,7 +59,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old dedicated host
@@ -171,7 +171,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old ecs resources
@@ -190,7 +190,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old eks cluster
@@ -208,7 +208,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old unused ebs volumes
@@ -227,7 +227,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old asg
@@ -246,7 +246,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old launch configuration
@@ -264,7 +264,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old IAM roles
@@ -282,7 +282,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old Log Groups
@@ -300,7 +300,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean Old Security Groups
