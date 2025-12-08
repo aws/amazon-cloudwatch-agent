@@ -100,9 +100,18 @@ replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api
 // forces version bump to support log group classes
 replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.48.6
 
-replace go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.35.0
-
-replace go.opentelemetry.io/collector/pdata => go.opentelemetry.io/collector/pdata v1.30.0
+// We are pinned to the following OTel versions:
+// - OTel: v1.35.0
+// - OTel Collector (experimental/stable): v0.124.1 / v1.30.0
+replace (
+	go.opentelemetry.io/collector/featuregate => go.opentelemetry.io/collector/featuregate v1.30.0
+	go.opentelemetry.io/collector/service => go.opentelemetry.io/collector/service v0.124.0
+	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.35.0
+	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.35.0
+	go.opentelemetry.io/otel/sdk/metric => go.opentelemetry.io/otel/sdk/metric v1.35.0
+	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.35.0
+)
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -183,7 +192,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/shirou/gopsutil/v4 v4.25.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/client v1.30.0
 	go.opentelemetry.io/collector/component v1.30.0
@@ -244,8 +253,6 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/klog/v2 v2.130.1
 )
-
-require github.com/shirou/gopsutil/v4 v4.25.3
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect
@@ -559,7 +566,7 @@ require (
 	go.opentelemetry.io/collector/extension/extensionauth v1.30.0 // indirect
 	go.opentelemetry.io/collector/extension/extensioncapabilities v0.124.0 // indirect
 	go.opentelemetry.io/collector/extension/xextension v0.124.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.43.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.30.0 // indirect
 	go.opentelemetry.io/collector/internal/fanoutconsumer v0.124.0 // indirect
 	go.opentelemetry.io/collector/internal/memorylimiter v0.124.0 // indirect
 	go.opentelemetry.io/collector/internal/sharedcomponent v0.124.0 // indirect
