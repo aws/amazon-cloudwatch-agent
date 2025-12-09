@@ -83,6 +83,9 @@ jobs:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
 
+      - name: Free up disk space
+        run: .github/scripts/free-disk-space.sh
+
       - name: Agent Version
         id: version
         run: |
