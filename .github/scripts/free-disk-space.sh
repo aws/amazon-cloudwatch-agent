@@ -9,7 +9,6 @@ sudo rm -rf /usr/share/dotnet
 sudo rm -rf /usr/local/share/powershell
 sudo rm -rf /usr/local/lib/android
 sudo rm -rf /opt/ghc
-sudo rm -rf /opt/hostedtoolcache/CodeQL
 sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
 echo "=== Disk usage after cleanup ==="
