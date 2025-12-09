@@ -97,7 +97,7 @@ jobs:
   StartLocalStack:
     name: 'StartLocalStack'
     needs: [ CheckLabel, OutputEnvVariables ]
-    if: needs.CheckLabel.outputs.should_run == 'true'
+    if: needs.CheckLabel.outputs.should_run == 'true' || github.run_attempt > 1
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
