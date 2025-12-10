@@ -71,7 +71,7 @@ jobs:
       - name: Checkout agent repository for commit date
         uses: actions/checkout@v3
         with:
-          repository: aws/amazon-cloudwatch-agent`
+          repository: aws/amazon-cloudwatch-agent
           fetch-depth: 0
           path: agent-repo
 
