@@ -576,6 +576,11 @@ exporters:
                 - container_efa_rdma_read_bytes
                 - container_efa_rdma_write_bytes
                 - container_efa_rdma_write_recv_bytes
+                - container_efa_retrans_bytes
+                - container_efa_retrans_pkts
+                - container_efa_retrans_timeout_events
+                - container_efa_impaired_remote_conn_events
+                - container_efa_unresponsive_remote_events
             - dimensions:
                 - - ClusterName
                 - - ClusterName
