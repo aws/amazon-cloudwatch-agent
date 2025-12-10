@@ -131,6 +131,7 @@ jobs:
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
       ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
@@ -163,6 +164,7 @@ jobs:
           echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_onprem_matrix=$(echo $(cat generator/resources/ec2_linux_onprem_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
@@ -182,6 +184,7 @@ jobs:
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}"
           echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
