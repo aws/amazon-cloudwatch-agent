@@ -5,7 +5,6 @@ package extract
 
 import (
 	"archive/zip"
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -14,15 +13,16 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/common"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 const (
-	extJAR = ".jar"
-	extWAR = ".war"
-
 	// metaManifestFile is the path to the Manifest in the Java archive.
 	metaManifestFile = "META-INF/MANIFEST.MF"
+	// metaManifestSeparator is the separator of the key/value pairs in the file.
+	metaManifestSeparator = ':'
 	// metaManifestApplicationName is a non-standard, but explicit field that should be used if present.
 	metaManifestApplicationName = "Application-Name"
 	// metaManifestImplementationTitle is a standard field that is conventionally used to name the application.
@@ -184,11 +184,11 @@ func newArchiveManifestNameExtractor(logger *slog.Logger) argNameExtractor {
 // Extract opens the archive and reads the manifest file. Tries to extract the name from values of specific keys in the
 // manifest. Prioritizes keys in the order defined in the extractor.
 func (e *archiveManifestNameExtractor) Extract(ctx context.Context, process detector.Process, arg string) (string, error) {
-	if !strings.HasSuffix(arg, extJAR) && !strings.HasSuffix(arg, extWAR) {
+	if !strings.HasSuffix(arg, common.ExtJAR) && !strings.HasSuffix(arg, common.ExtWAR) {
 		return "", detector.ErrIncompatibleExtractor
 	}
 	fallback := strings.TrimSuffix(filepath.Base(arg), filepath.Ext(arg))
-	path, err := absPath(ctx, process, arg)
+	path, err := util.AbsPath(ctx, process, arg)
 	e.logger.Debug("Trying to extract name from Java Archive", "pid", process.PID(), "path", path)
 	if err != nil {
 		return fallback, nil
@@ -225,40 +225,23 @@ func (e *archiveManifestNameExtractor) readManifest(jarPath string) (string, err
 		return "", err
 	}
 	defer rc.Close()
-	return e.parseManifest(rc), nil
+	return parseManifest(rc, e.fieldPriority, e.fieldLookup), nil
 }
 
-func (e *archiveManifestNameExtractor) parseManifest(r io.Reader) string {
-	manifest := make(map[string]string, len(e.fieldPriority))
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
-			field := strings.TrimSpace(parts[0])
-			if e.fieldLookup.Contains(field) {
-				manifest[field] = strings.TrimSpace(parts[1])
-				// exit early if the highest priority field is found
-				if field == e.fieldPriority[0] && manifest[field] != "" {
-					return manifest[field]
-				}
-			}
+func parseManifest(r io.Reader, fieldPriority []string, fieldLookup collections.Set[string]) string {
+	manifest := make(map[string]string, len(fieldPriority))
+	_ = util.ScanProperties(r, metaManifestSeparator, func(key, value string) bool {
+		if !fieldLookup.Contains(key) || value == "" {
+			return true
 		}
-	}
-	for _, field := range e.fieldPriority {
+		manifest[key] = value
+		// stop scanning if the highest priority field is found.
+		return key != fieldPriority[0]
+	})
+	for _, field := range fieldPriority {
 		if name := manifest[field]; name != "" {
 			return name
 		}
 	}
 	return ""
-}
-
-func absPath(ctx context.Context, process detector.Process, path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return path, nil
-	}
-	cwd, err := process.CwdWithContext(ctx)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(cwd, path), nil
 }

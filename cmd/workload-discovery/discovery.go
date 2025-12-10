@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"log/slog"
 	"math"
 	"os"
@@ -218,9 +219,13 @@ func convertToPid32(pid int) (int32, error) {
 }
 
 func main() {
+	var debug bool
+	flag.BoolVar(&debug, "debug", false, "enable debug logging")
+	flag.Parse()
+
 	cfg := Config{
 		Concurrency: runtime.NumCPU(),
-		LogLevel:    slog.LevelDebug,
+		LogLevel:    slog.LevelInfo,
 		Timeout:     500 * time.Millisecond,
 		FilterConfig: filter.Config{
 			Process: filter.ProcessConfig{
@@ -228,6 +233,9 @@ func main() {
 				ExcludeNames: []string{paths.JMXJarName},
 			},
 		},
+	}
+	if debug {
+		cfg.LogLevel = slog.LevelDebug
 	}
 
 	logger := buildLogger(cfg.LogLevel)

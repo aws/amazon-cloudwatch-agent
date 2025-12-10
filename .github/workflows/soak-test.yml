@@ -3,8 +3,6 @@
 
 name: Soak Test
 env:
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
@@ -70,13 +68,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Install Terraform
@@ -98,16 +96,16 @@ jobs:
             cd terraform/ec2/linux
             terraform init
             terraform apply --auto-approve \
-              -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
-              -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="cwa_github_sha=${{ github.sha }}" \
               -var="user=ec2-user" \
               -var="ami=cloudwatch-agent-integration-test-al2*" \
               -var="arc=amd64" \
               -var="binary_name=amazon-cloudwatch-agent.rpm" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="ssh_key_name=${KEY_NAME}" \
-              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
+              -var="ssh_key_name=${{ env.KEY_NAME }}" \
+              -var="ssh_key_value=${{ env.PRIVATE_KEY }}" \
               -var="test_name=SoakTest" \
               -var="test_dir=./test/soak -run TestSoakHigh"
 

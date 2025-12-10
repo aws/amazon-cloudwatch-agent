@@ -1,0 +1,409 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Run Workload Discovery Integration Tests
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'The ID of the build-test-artifacts workflow run'
+        type: number
+        required: true
+      build_sha:
+        description: 'The SHA of the build-test-artifacts workflow run'
+        type: string
+        required: true
+      test_repo_branch:
+        description: 'Override for the GitHub test repository branch to use (default is main)'
+        type: string
+
+jobs:
+  CheckBuildTestArtifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |-
+          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
+            echo "Build SHA matches test SHA"
+          else
+            echo "Build SHA does not match test SHA"
+            exit 1
+          fi
+      - run: |-
+          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+          if [[ $conclusion == "success" ]]; then
+            echo "Run succeeded"
+          else
+            echo "Run failed"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  GenerateTestMatrix:
+    name: 'GenerateTestMatrix'
+    needs: [CheckBuildTestArtifacts]
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_wd_matrix: ${{ steps.set-matrix.outputs.ec2_linux_wd_matrix }}
+      ec2_linux_wd_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_linux_wd_nvidia_matrix }}
+      ec2_windows_wd_matrix: ${{ steps.set-matrix.outputs.ec2_windows_wd_matrix }}
+      ec2_windows_wd_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_windows_wd_nvidia_matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |-
+          go run --tags=generator generator/test_case_generator.go
+          echo "ec2_linux_wd_matrix=$(echo $(cat generator/resources/ec2_linux_wd_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_wd_nvidia_matrix=$(echo $(cat generator/resources/ec2_linux_wd_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_wd_matrix=$(echo $(cat generator/resources/ec2_windows_wd_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_wd_nvidia_matrix=$(echo $(cat generator/resources/ec2_windows_wd_nvidia_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+
+  EC2LinuxWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_wd_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
+              -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{inputs.build_sha}}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartWorkloadDiscoveryIntegrationTests.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
+              -var="ssh_key_name=${{env.KEY_NAME}}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2WindowsWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_wd_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{ inputs.build_sha }}"  \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2NvidiaLinuxWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_wd_nvidia_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
+              -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{inputs.build_sha}}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartWorkloadDiscoveryIntegrationTests.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${{ vars.S3_INTEGRATION_BUCKET }}" \
+              -var="ssh_key_name=${{env.KEY_NAME}}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+
+  EC2NvidiaWindowsWorkloadDiscoveryIntegrationTest:
+    needs: [ GenerateTestMatrix ]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_wd_nvidia_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{ inputs.build_sha }}"  \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ (cancelled() || failure()) }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |-
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+
+            terraform destroy -lock-timeout=5m -var="ami=${{ matrix.arrays.ami }}" --auto-approve
