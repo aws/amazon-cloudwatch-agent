@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -19,8 +20,26 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
+// getPersistedMode reads the mode from the persisted mode file.
+// Returns "auto" if the file doesn't exist or contains an invalid mode.
+func getPersistedMode() string {
+	data, err := os.ReadFile(paths.ModeFilePath)
+	if err != nil {
+		return "auto"
+	}
+	mode := strings.TrimSpace(string(data))
+	// Validate the mode
+	switch mode {
+	case "ec2", "onPremise", "onPrem", "auto":
+		return mode
+	default:
+		return "auto"
+	}
+}
+
 func translateConfig() error {
-	args := []string{"--output", paths.TomlConfigPath, "--mode", "auto"}
+	mode := getPersistedMode()
+	args := []string{"--output", paths.TomlConfigPath, "--mode", mode}
 	if envconfig.IsRunningInContainer() {
 		args = append(args, "--input-dir", paths.CONFIG_DIR_IN_CONTAINER)
 	} else {

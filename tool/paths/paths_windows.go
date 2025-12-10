@@ -53,4 +53,5 @@ func init() {
 	TranslatorBinaryPath = filepath.Join(AgentRootDir, TranslatorBinaryName)
 	AgentBinaryPath = filepath.Join(AgentRootDir, AgentBinaryName)
 	JMXJarPath = filepath.Join(AgentRootDir, JMXJarName)
+	ModeFilePath = filepath.Join(AgentConfigDir, MODE_FILE)
 }
