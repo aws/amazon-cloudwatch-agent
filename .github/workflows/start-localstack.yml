@@ -31,6 +31,11 @@ on:
     outputs:
       local_stack_host_name:
         value: ${{ jobs.StartLocalStack.outputs.local_stack_host_name }}
+    secrets:
+      AWS_PRIVATE_KEY:
+        required: false
+      KEY_NAME:
+        required: false
 
 
 jobs:
