@@ -21,10 +21,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws/cloudwatch/histograms"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
@@ -777,4 +780,271 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 			assert.Contains(t, gotUA, tc.expectedFeatureStr)
 		})
 	}
+}
+
+func TestBuildMetricDatumHist(t *testing.T) {
+	testCases := histograms.TestCases()
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			// Create CloudWatch client
+			svc := new(mockCloudWatchClient)
+			cw := newCloudWatchClient(svc, time.Second)
+			cw.config.MaxValuesPerDatum = 150
+
+			// Create histogram datapoint from test case
+			dp := createHistogramDataPoint(tc.Input)
+
+			// Create aggregation datum
+			metric := &aggregationDatum{
+				MetricDatum: cloudwatch.MetricDatum{
+					MetricName:        aws.String("test_histogram"),
+					Unit:              aws.String("ms"),
+					Timestamp:         aws.Time(time.Now()),
+					StorageResolution: aws.Int64(60),
+				},
+				histogram: &dp,
+			}
+
+			// Create dimensions list
+			dimensions := []*cloudwatch.Dimension{
+				{Name: aws.String("service"), Value: aws.String("test")},
+			}
+			dimensionsList := [][]*cloudwatch.Dimension{dimensions}
+
+			// Call buildMetricDatumHist
+			datums := cw.buildMetricDatumHist(metric, dimensionsList)
+
+			// Verify results
+			assert.NotEmpty(t, datums, "Should produce at least one datum")
+
+			// Verify all datums have required fields
+			totalCount := uint64(0)
+			for i, datum := range datums {
+				assert.NotNil(t, datum.MetricName)
+				assert.Equal(t, "test_histogram", *datum.MetricName)
+				assert.NotNil(t, datum.Unit)
+				assert.Equal(t, "ms", *datum.Unit)
+				assert.NotNil(t, datum.Timestamp)
+				assert.NotNil(t, datum.StorageResolution)
+				assert.Equal(t, int64(60), *datum.StorageResolution)
+				assert.NotNil(t, datum.Dimensions)
+				assert.NotNil(t, datum.StatisticValues)
+				assert.NotNil(t, datum.Values)
+				assert.NotNil(t, datum.Counts)
+
+				// Verify values and counts have same length
+				assert.Equal(t, len(datum.Values), len(datum.Counts))
+				assert.LessOrEqual(t, len(datum.Values), cw.config.MaxValuesPerDatum)
+
+				// Verify statistic values
+				if i == 0 {
+					// Sum is only assigned on the first datum
+					assert.NotNil(t, datum.StatisticValues.Sum)
+					assert.InDelta(t, tc.Expected.Sum, *datum.StatisticValues.Sum, 0.01)
+				} else {
+					assert.NotNil(t, datum.StatisticValues.Sum)
+					assert.Zero(t, *datum.StatisticValues.Sum)
+				}
+				// Count can vary based on splitting
+				totalCount += uint64(*datum.StatisticValues.SampleCount)
+				if tc.Expected.Min != nil {
+					assert.InDelta(t, *tc.Expected.Min, *datum.StatisticValues.Minimum, 0.01)
+				}
+				if tc.Expected.Max != nil {
+					assert.InDelta(t, *tc.Expected.Max, *datum.StatisticValues.Maximum, 0.01)
+				}
+			}
+			assert.Equal(t, tc.Expected.Count, totalCount)
+		})
+	}
+}
+
+func TestBuildMetricDatumHistEmptyHistogram(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+
+	// Create empty histogram
+	dp := pmetric.NewHistogramDataPoint()
+	dp.SetCount(0)
+	dp.SetSum(0)
+	dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
+
+	metric := &aggregationDatum{
+		MetricDatum: cloudwatch.MetricDatum{
+			MetricName: aws.String("empty_histogram"),
+		},
+		histogram: &dp,
+	}
+
+	dimensions := [][]*cloudwatch.Dimension{{}}
+	datums := cw.buildMetricDatumHist(metric, dimensions)
+
+	assert.Empty(t, datums, "Empty histogram should produce no datums")
+}
+
+func TestBuildMetricDatumHistMaxValuesPerDatum(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.config.MaxValuesPerDatum = 10 // Small limit to test splitting
+
+	// Create histogram with many buckets
+	input := histograms.HistogramInput{
+		Count:      220, // 22 buckets * 10 items each
+		Sum:        11000,
+		Min:        aws.Float64(5.0),
+		Max:        aws.Float64(225.0),
+		Boundaries: make([]float64, 21),
+		Counts:     make([]uint64, 22),
+	}
+
+	for i := 0; i < 21; i++ {
+		input.Boundaries[i] = float64(i+1) * 10
+		input.Counts[i] = 10
+	}
+	input.Counts[21] = 10
+
+	dp := createHistogramDataPoint(input)
+
+	metric := &aggregationDatum{
+		MetricDatum: cloudwatch.MetricDatum{
+			MetricName: aws.String("large_histogram"),
+		},
+		histogram: &dp,
+	}
+
+	dimensions := [][]*cloudwatch.Dimension{{}}
+	datums := cw.buildMetricDatumHist(metric, dimensions)
+
+	// Should split into multiple datums due to MaxValuesPerDatum limit
+	assert.Greater(t, len(datums), 1, "Large histogram should be split into multiple datums")
+
+	// Verify each datum respects the limit
+	for _, datum := range datums {
+		assert.LessOrEqual(t, len(datum.Values), cw.config.MaxValuesPerDatum)
+		assert.LessOrEqual(t, len(datum.Counts), cw.config.MaxValuesPerDatum)
+	}
+
+	// Verify only first datum has sum
+	assert.Greater(t, *datums[0].StatisticValues.Sum, 0.0)
+	for i := 1; i < len(datums); i++ {
+		assert.Zero(t, *datums[i].StatisticValues.Sum)
+	}
+}
+
+func TestBuildMetricDatumHistDropOriginalMetrics(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.config.DropOriginalConfigs = map[string]bool{
+		"dropped_histogram": true,
+	}
+
+	// Create test histogram
+	input := histograms.HistogramInput{
+		Count:      100,
+		Sum:        5000,
+		Min:        aws.Float64(10.0),
+		Max:        aws.Float64(200.0),
+		Boundaries: []float64{25, 50, 75, 100, 150},
+		Counts:     []uint64{20, 30, 25, 15, 8, 2},
+	}
+
+	dp := createHistogramDataPoint(input)
+
+	metric := &aggregationDatum{
+		MetricDatum: cloudwatch.MetricDatum{
+			MetricName: aws.String("dropped_histogram"),
+		},
+		histogram: &dp,
+	}
+
+	// First dimension set (index 0) should be dropped
+	dimensions := [][]*cloudwatch.Dimension{
+		{{Name: aws.String("original"), Value: aws.String("true")}},
+		{{Name: aws.String("rollup"), Value: aws.String("true")}},
+	}
+
+	datums := cw.buildMetricDatumHist(metric, dimensions)
+
+	// Should only have datums for rollup dimensions (not original)
+	assert.Equal(t, 1, len(datums))
+	assert.Equal(t, "true", *datums[0].Dimensions[0].Value)
+}
+
+func TestBuildMetricDatumHistMultipleDimensions(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+
+	// Create test histogram
+	input := histograms.HistogramInput{
+		Count:      50,
+		Sum:        2500,
+		Min:        aws.Float64(10.0),
+		Max:        aws.Float64(100.0),
+		Boundaries: []float64{25, 50, 75},
+		Counts:     []uint64{10, 15, 15, 10},
+	}
+
+	dp := createHistogramDataPoint(input)
+
+	metric := &aggregationDatum{
+		MetricDatum: cloudwatch.MetricDatum{
+			MetricName: aws.String("multi_dim_histogram"),
+		},
+		histogram: &dp,
+	}
+
+	// Multiple dimension sets
+	dimensions := [][]*cloudwatch.Dimension{
+		{{Name: aws.String("service"), Value: aws.String("api")}},
+		{{Name: aws.String("service"), Value: aws.String("api")}, {Name: aws.String("env"), Value: aws.String("prod")}},
+		{},
+	}
+
+	datums := cw.buildMetricDatumHist(metric, dimensions)
+
+	// Should have one datum per dimension set
+	assert.Equal(t, 3, len(datums))
+
+	// Verify dimensions
+	assert.Equal(t, 1, len(datums[0].Dimensions))
+	assert.Equal(t, 2, len(datums[1].Dimensions))
+	assert.Equal(t, 0, len(datums[2].Dimensions))
+}
+
+// Helper function to create histogram datapoint from test input
+func createHistogramDataPoint(input histograms.HistogramInput) pmetric.HistogramDataPoint {
+	dp := pmetric.NewHistogramDataPoint()
+	dp.SetCount(input.Count)
+	dp.SetSum(input.Sum)
+	dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
+
+	if input.Min != nil {
+		dp.SetMin(*input.Min)
+	}
+	if input.Max != nil {
+		dp.SetMax(*input.Max)
+	}
+
+	// Set boundaries
+	bounds := dp.ExplicitBounds()
+	bounds.EnsureCapacity(len(input.Boundaries))
+	for _, boundary := range input.Boundaries {
+		bounds.Append(boundary)
+	}
+
+	// Set bucket counts
+	bucketCounts := dp.BucketCounts()
+	bucketCounts.EnsureCapacity(len(input.Counts))
+	for _, count := range input.Counts {
+		bucketCounts.Append(count)
+	}
+
+	// Set attributes
+	attrs := dp.Attributes()
+	for k, v := range input.Attributes {
+		attrs.PutStr(k, v)
+	}
+
+	return dp
 }

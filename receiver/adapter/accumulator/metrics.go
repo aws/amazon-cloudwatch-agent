@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
@@ -125,6 +126,9 @@ func populateDataPointsForHistogram(
 		h.SetTimestamp(timestamp)
 		d.ConvertToOtel(h)
 		addTagsToAttributes(h.Attributes(), tags)
+
+		// add special attribute to tell the exporter to handle this histogram datapoint differently
+		h.Attributes().PutStr(constants.AdapterReceiverAttribute, "")
 	}
 }
 

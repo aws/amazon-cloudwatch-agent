@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/aws/cloudwatch/histograms"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
@@ -162,7 +163,7 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// ConsumeMetrics queues metrics to be published to CW.
+// ConsumeMetrics queues metrics to be published to CW.588
 // The actual publishing will occur in a long running goroutine.
 // This method can block when publishing is backed up.
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
@@ -443,7 +444,9 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 	var datums []*cloudwatch.MetricDatum
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
 
-	if metric.distribution != nil {
+	if metric.histogram != nil {
+		datums = c.buildMetricDatumHist(metric, dimensionsList)
+	} else if metric.distribution != nil {
 		datums = c.buildMetricDatumDist(metric, dimensionsList)
 	} else {
 		for index, dimensions := range dimensionsList {
@@ -489,7 +492,6 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 		metric.SetUnit(metric.distribution.Unit())
 	}
 	distList := metric.distribution.Resize(c.config.MaxValuesPerDatum)
-
 	for _, dist := range distList {
 		values, counts := dist.ValuesAndCounts()
 
@@ -518,29 +520,80 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 			s.SetMaximum(distMax)
 		}
 
-		for index, dimensions := range dimensionsList {
-			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
-			//metric datum
-			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
-				continue
-			}
-
-			// Beware there may be many datums sharing pointers to the same
-			// strings for metric names, dimensions, etc.
-			// It is fine since at this point the values will not change.
-			datum := &cloudwatch.MetricDatum{
-				MetricName:        metric.MetricName,
-				Dimensions:        dimensions,
-				Timestamp:         metric.Timestamp,
-				Unit:              metric.Unit,
-				StorageResolution: metric.StorageResolution,
-				Values:            aws.Float64Slice(values),
-				Counts:            aws.Float64Slice(counts),
-				StatisticValues:   &s,
-			}
-			datums = append(datums, datum)
-		}
+		datums = append(datums, c.expandDimensionsValuesAndCounts(metric, dimensionsList, s, values, counts)...)
 	}
+	return datums
+}
+
+func (c *CloudWatch) buildMetricDatumHist(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
+	datums := []*cloudwatch.MetricDatum{}
+
+	if metric.histogram.Count() == 0 {
+		log.Printf("E! metric has a histogram with no entries, %s", *metric.MetricName)
+		return datums
+	}
+
+	cwhist := histograms.ConvertOTelToCloudWatch(*metric.histogram)
+	values, counts := cwhist.ValuesAndCounts()
+	if len(values) != len(counts) {
+		log.Printf("E! metric has a distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
+		return datums
+	}
+
+	for i := 0; i < len(values); i += c.config.MaxValuesPerDatum {
+		end := i + c.config.MaxValuesPerDatum
+		if end > len(values) {
+			end = len(values)
+		}
+		batchValues := values[i:end]
+		batchCounts := counts[i:end]
+
+		s := cloudwatch.StatisticSet{}
+		s.SetMaximum(cwhist.Maximum())
+		s.SetMinimum(cwhist.Minimum())
+		s.SetSum(0.0)
+		// Only assign `Sum` if this is the first split to make sure the total sum of the datapoints after aggregation is correct.
+		if i == 0 {
+			s.SetSum(cwhist.Sum())
+		}
+		count := 0.0
+		for _, c := range batchCounts {
+			count += c
+		}
+		s.SetSampleCount(count)
+
+		datums = append(datums, c.expandDimensionsValuesAndCounts(metric, dimensionsList, s, batchValues, batchCounts)...)
+	}
+	return datums
+}
+
+func (c *CloudWatch) expandDimensionsValuesAndCounts(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension, s cloudwatch.StatisticSet, values []float64, counts []float64) []*cloudwatch.MetricDatum {
+	datums := []*cloudwatch.MetricDatum{}
+
+	for index, dimensions := range dimensionsList {
+		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
+		//metric datum
+		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+			continue
+		}
+
+		// Beware there may be many datums sharing pointers to the same
+		// strings for metric names, dimensions, etc.
+		// It is fine since at this point the values will not change.
+		datum := &cloudwatch.MetricDatum{
+			MetricName:        metric.MetricName,
+			Dimensions:        dimensions,
+			Timestamp:         metric.Timestamp,
+			Unit:              metric.Unit,
+			StorageResolution: metric.StorageResolution,
+			Values:            aws.Float64Slice(values),
+			Counts:            aws.Float64Slice(counts),
+			StatisticValues:   &s,
+		}
+
+		datums = append(datums, datum)
+	}
+
 	return datums
 }
 
