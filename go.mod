@@ -175,11 +175,7 @@ require (
 	github.com/prometheus/prometheus v0.300.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
-<<<<<<< HEAD
 	github.com/shirou/gopsutil/v4 v4.25.3
-=======
-	github.com/shirou/gopsutil/v4 v4.25.3 // indirect
->>>>>>> 3f075564 (Fix TestConvertOtelExponentialHistogram floating-point precision issue)
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/client v1.30.0
