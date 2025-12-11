@@ -359,7 +359,10 @@ package-darwin: package-prepare-darwin-tar
 update-otel-deps:
 	scripts/update-otel-deps.sh
 
-.PHONY: fmt fmt-sh build test clean update-otel-deps
+update-otel-deps:
+	scripts/update-otel-deps.sh
+
+.PHONY: fmt fmt-sh build test clean update-otel-deps update-otel-deps
 
 .PHONY: dockerized-build dockerized-build-vendor
 dockerized-build:
