@@ -112,6 +112,10 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         uses: actions/checkout@v3
 
+      - name: Free up disk space
+        if: needs.changes.outputs.build == 'true' && matrix.family == 'linux'
+        run: .github/scripts/free-disk-space.sh
+
       - name: Cache binaries
         id: cached_binaries
         if: needs.changes.outputs.build == 'true'
