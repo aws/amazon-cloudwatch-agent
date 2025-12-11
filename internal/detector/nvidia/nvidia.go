@@ -9,7 +9,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector"
 )
 
-const nvidiaSMI = "nvidia-smi"
+const nvidiaSMI = "nvidia-smi" //nolint:unused // Used in platform-specific files
 
 // nvidiaDetector implements logging and checker for NVIDIA GPU
 type nvidiaDetector struct {
