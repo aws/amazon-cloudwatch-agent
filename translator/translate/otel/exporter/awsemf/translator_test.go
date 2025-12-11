@@ -1157,19 +1157,19 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
-							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes",
+							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes", "container_efa_retrans_bytes", "container_efa_retrans_pkts", "container_efa_retrans_timeout_events", "container_efa_impaired_remote_conn_events", "container_efa_unresponsive_remote_events",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
-							"pod_efa_rx_bytes", "pod_efa_tx_bytes", "pod_efa_rx_dropped", "pod_efa_rdma_read_bytes", "pod_efa_rdma_write_bytes", "pod_efa_rdma_write_recv_bytes",
+							"pod_efa_rx_bytes", "pod_efa_tx_bytes", "pod_efa_rx_dropped", "pod_efa_rdma_read_bytes", "pod_efa_rdma_write_bytes", "pod_efa_rdma_write_recv_bytes", "pod_efa_retrans_bytes", "pod_efa_retrans_pkts", "pod_efa_retrans_timeout_events", "pod_efa_impaired_remote_conn_events", "pod_efa_unresponsive_remote_events",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "NetworkInterfaceId"}},
 						MetricNameSelectors: []string{
-							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
+							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes", "node_efa_retrans_bytes", "node_efa_retrans_pkts", "node_efa_retrans_timeout_events", "node_efa_impaired_remote_conn_events", "node_efa_unresponsive_remote_events",
 						},
 					},
 					{
