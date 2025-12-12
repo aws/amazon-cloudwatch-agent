@@ -124,7 +124,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/kardianos/service v1.2.1 // Keep this pinned to v1.2.1. v1.2.2 causes the agent to not register as a service on Windows
 	github.com/knadh/koanf v1.5.0
-	github.com/knadh/koanf/v2 v2.2.0
+	github.com/knadh/koanf/v2 v2.3.0
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/oklog/run v1.1.0
@@ -176,7 +176,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/shirou/gopsutil/v4 v4.25.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/client v1.30.0
 	go.opentelemetry.io/collector/component v1.30.0
@@ -186,9 +186,9 @@ require (
 	go.opentelemetry.io/collector/config/configopaque v1.30.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.124.0
 	go.opentelemetry.io/collector/config/configtls v1.30.0
-	go.opentelemetry.io/collector/confmap v1.30.0
+	go.opentelemetry.io/collector/confmap v1.46.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.113.0
-	go.opentelemetry.io/collector/confmap/provider/envprovider v1.30.0
+	go.opentelemetry.io/collector/confmap/provider/envprovider v1.46.0
 	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.30.0
 	go.opentelemetry.io/collector/confmap/xconfmap v0.124.0
 	go.opentelemetry.io/collector/consumer v1.30.0
@@ -551,7 +551,7 @@ require (
 	go.opentelemetry.io/collector/extension/extensionauth v1.30.0 // indirect
 	go.opentelemetry.io/collector/extension/extensioncapabilities v0.124.0 // indirect
 	go.opentelemetry.io/collector/extension/xextension v0.124.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.30.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.46.0 // indirect
 	go.opentelemetry.io/collector/internal/fanoutconsumer v0.124.0 // indirect
 	go.opentelemetry.io/collector/internal/memorylimiter v0.124.0 // indirect
 	go.opentelemetry.io/collector/internal/sharedcomponent v0.124.0 // indirect
@@ -591,6 +591,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
