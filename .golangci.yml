@@ -38,22 +38,6 @@ linters:
         - revive
         path: 'translator/translate/util/*'
         text: 'var-naming: avoid meaningless package names'
-      - linters:
-        - revive
-        path: 'translator/translate/logs/logs_collected/files/collect_list/*'
-        text: 'var-naming: avoid meaningless package names'
-      - linters:
-        - revive
-        path: 'translator/jsonconfig/mergeJsonUtil/*'
-        text: 'var-naming: don''t use MixedCaps in package names'
-      - linters:
-        - revive
-        path: 'cfg/envconfig/envconfig.go'
-        text: 'var-naming: don''t use ALL_CAPS in Go names'
-      - linters:
-        - revive
-        path: 'translator/translate/otel/common/common.go'
-        text: 'var-naming: don''t use MixedCaps in Go names'
 issues:
   new-from-rev: 9af4477
 formatters:

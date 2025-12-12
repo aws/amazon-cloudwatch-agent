@@ -43,7 +43,7 @@ const (
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
 	JmxKey                                         = "jmx"
-	TLSKey                                         = "tls"
+	TLSKey                                         = "tls" //nolint:revive
 	Endpoint                                       = "endpoint"
 	EndpointOverrideKey                            = "endpoint_override"
 	RegionOverrideKey                              = "region_override"
