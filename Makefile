@@ -356,7 +356,10 @@ package-darwin: package-prepare-darwin-tar
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
 	ARCH=arm64 TARGET_SUPPORTED_ARCH=aarch64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
 
-.PHONY: fmt fmt-sh build test clean
+update-otel-deps:
+	scripts/update-otel-deps.sh
+
+.PHONY: fmt fmt-sh build test clean update-otel-deps
 
 .PHONY: dockerized-build dockerized-build-vendor
 dockerized-build:
