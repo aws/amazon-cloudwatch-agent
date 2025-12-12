@@ -363,8 +363,8 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
 		if client, ok := t.ec2API.(*ec2.EC2); ok {
-			if t.Config.MiddlewareID != nil {
-				awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
+			if t.MiddlewareID != nil {
+				awsmiddleware.TryConfigure(t.logger, host, *t.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
 			}
 		}
 
@@ -393,7 +393,7 @@ func (t *Tagger) refreshLoopToUpdateTags() {
 		//are fetched successfully because initial retrieval might not get all of them.
 		//When the specified key is "*", there is no way for us to check if all
 		//tags are fetched. So there is no need to do refresh in this case.
-		needRefresh = !(len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*")
+		needRefresh = len(t.EC2InstanceTagKeys) != 1 || t.EC2InstanceTagKeys[0] != "*"
 
 		stopAfterFirstSuccess = true
 		refreshInterval = defaultRefreshInterval
@@ -418,7 +418,7 @@ func (t *Tagger) refreshLoopToUpdateVolumes() {
 
 	refreshInterval := t.RefreshVolumesInterval
 	if refreshInterval.Seconds() == 0 {
-		needRefresh = !(len(t.EBSDeviceKeys) == 1 && t.EBSDeviceKeys[0] == "*")
+		needRefresh = len(t.EBSDeviceKeys) != 1 || t.EBSDeviceKeys[0] != "*"
 
 		stopAfterFirstSuccess = true
 		refreshInterval = defaultRefreshInterval

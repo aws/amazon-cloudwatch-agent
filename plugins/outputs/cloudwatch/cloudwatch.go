@@ -449,7 +449,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 			//metric datum
-			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+			if index == 0 && c.IsDropping(*metric.MetricName) {
 				continue
 			}
 
@@ -521,7 +521,7 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 			//metric datum
-			if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+			if index == 0 && c.IsDropping(*metric.MetricName) {
 				continue
 			}
 

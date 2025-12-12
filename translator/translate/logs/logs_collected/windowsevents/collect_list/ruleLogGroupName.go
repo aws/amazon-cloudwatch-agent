@@ -14,14 +14,16 @@ const LogGroupNameSectionKey = "log_group_name"
 type LogGroupName struct {
 }
 
-func (l *LogGroupName) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (l *LogGroupName) ApplyRule(input interface{}) (string, interface{}) {
+	var returnKey string
+	var returnVal interface{}
 	_, returnVal = translator.DefaultCase(LogGroupNameSectionKey, "", input)
 	if returnVal == "" {
-		return
+		return returnKey, returnVal
 	}
 	returnKey = "log_group_name"
 	returnVal = util.ResolvePlaceholder(returnVal.(string), logs.GlobalLogConfig.MetadataInfo)
-	return
+	return returnKey, returnVal
 }
 
 func init() {

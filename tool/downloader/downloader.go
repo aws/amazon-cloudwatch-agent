@@ -20,7 +20,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-	sdkutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (
@@ -45,7 +44,7 @@ func RunDownloaderFromFlags(flags map[string]*string) error {
 func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig string, useDualStack bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("Fail to fetch the config")
+			err = fmt.Errorf("fail to fetch the config")
 		}
 	}()
 
@@ -81,7 +80,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	}
 
 	// Detect agent mode and region
-	mode = sdkutil.DetectAgentMode(mode)
+	mode = util.DetectAgentMode(mode)
 	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
 	if region == "" && downloadLocation != locationDefault {
 		if mode == config.ModeEC2 {
@@ -187,9 +186,9 @@ func readFromFile(filePath string) (string, error) {
 
 func EscapeFilePath(filePath string) string {
 	escapedFilePath := filepath.ToSlash(filePath)
-	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
+	escapedFilePath = strings.ReplaceAll(escapedFilePath, "/", "_")
+	escapedFilePath = strings.ReplaceAll(escapedFilePath, " ", "_")
+	escapedFilePath = strings.ReplaceAll(escapedFilePath, ":", "_")
 	return escapedFilePath
 }
 

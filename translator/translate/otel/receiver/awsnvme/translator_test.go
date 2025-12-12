@@ -122,54 +122,54 @@ func compareConfigsIgnoringEnabledSetByUser(t *testing.T, want, got *awsnvmerece
 	assert.ElementsMatch(t, want.Devices, got.Devices)
 
 	// Compare metrics enabled state for EBS
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadBytes.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadBytes.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadOps.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadTime.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalReadTime.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteBytes.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteBytes.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteOps.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteOps.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteTime.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsTotalWriteTime.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioEbsVolumeQueueLength.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled,
+		got.Metrics.DiskioEbsEc2InstancePerformanceExceededIops.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled,
+		got.Metrics.DiskioEbsEc2InstancePerformanceExceededTp.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsTotalReadBytes.Enabled,
+		got.Metrics.DiskioEbsTotalReadBytes.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsTotalReadOps.Enabled,
+		got.Metrics.DiskioEbsTotalReadOps.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsTotalReadTime.Enabled,
+		got.Metrics.DiskioEbsTotalReadTime.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsTotalWriteBytes.Enabled,
+		got.Metrics.DiskioEbsTotalWriteBytes.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsTotalWriteOps.Enabled,
+		got.Metrics.DiskioEbsTotalWriteOps.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsTotalWriteTime.Enabled,
+		got.Metrics.DiskioEbsTotalWriteTime.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled,
+		got.Metrics.DiskioEbsVolumePerformanceExceededIops.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled,
+		got.Metrics.DiskioEbsVolumePerformanceExceededTp.Enabled)
+	assert.Equal(t, want.Metrics.DiskioEbsVolumeQueueLength.Enabled,
+		got.Metrics.DiskioEbsVolumeQueueLength.Enabled)
 
 	// Compare metrics enabled state for Instance Store
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadOps.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadOps.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadTime.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalReadTime.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled,
-		got.MetricsBuilderConfig.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled,
+		got.Metrics.DiskioInstanceStorePerformanceExceededIops.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled,
+		got.Metrics.DiskioInstanceStorePerformanceExceededTp.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled,
+		got.Metrics.DiskioInstanceStoreTotalReadBytes.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreTotalReadOps.Enabled,
+		got.Metrics.DiskioInstanceStoreTotalReadOps.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreTotalReadTime.Enabled,
+		got.Metrics.DiskioInstanceStoreTotalReadTime.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled,
+		got.Metrics.DiskioInstanceStoreTotalWriteBytes.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled,
+		got.Metrics.DiskioInstanceStoreTotalWriteOps.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled,
+		got.Metrics.DiskioInstanceStoreTotalWriteTime.Enabled)
+	assert.Equal(t, want.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled,
+		got.Metrics.DiskioInstanceStoreVolumeQueueLength.Enabled)
 
 	// Compare resource attributes
-	assert.Equal(t, want.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled,
-		got.MetricsBuilderConfig.ResourceAttributes.VolumeID.Enabled)
-	assert.Equal(t, want.MetricsBuilderConfig.ResourceAttributes.SerialID.Enabled,
-		got.MetricsBuilderConfig.ResourceAttributes.SerialID.Enabled)
+	assert.Equal(t, want.ResourceAttributes.VolumeID.Enabled,
+		got.ResourceAttributes.VolumeID.Enabled)
+	assert.Equal(t, want.ResourceAttributes.SerialID.Enabled,
+		got.ResourceAttributes.SerialID.Enabled)
 }
 
 func TestNewTranslator(t *testing.T) {

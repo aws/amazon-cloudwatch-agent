@@ -12,10 +12,11 @@ const RetentionInDaysSectionKey = "retention_in_days"
 type RetentionInDays struct {
 }
 
-func (f *RetentionInDays) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (f *RetentionInDays) ApplyRule(input interface{}) (string, interface{}) {
+	var returnVal interface{}
 	_, returnVal = translator.DefaultRetentionInDaysCase(RetentionInDaysSectionKey, float64(-1), input)
-	returnKey = RetentionInDaysSectionKey
-	return
+	returnKey := RetentionInDaysSectionKey
+	return returnKey, returnVal
 }
 
 func init() {

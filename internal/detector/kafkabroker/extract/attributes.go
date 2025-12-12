@@ -50,7 +50,7 @@ type brokerInfo struct {
 
 // ShouldParseProperties returns true if the properties file should be read to extract the log directories or broker ID.
 func (i *brokerInfo) ShouldParseProperties() bool {
-	return len(i.serverProperties) != 0 && !(i.HasLogDirs() && i.HasBrokerID())
+	return len(i.serverProperties) != 0 && (!i.HasLogDirs() || !i.HasBrokerID())
 }
 
 func (i *brokerInfo) HasLogDirs() bool {
@@ -206,7 +206,7 @@ func (e *attributesExtractor) parseServerPropertiesFile(ctx context.Context, pro
 		} else if key == propertyLogDirs && !info.HasLogDirs() {
 			info.logDirs = value
 		}
-		return !(info.HasBrokerID() && info.HasLogDirs())
+		return !info.HasBrokerID() || !info.HasLogDirs()
 	})
 }
 

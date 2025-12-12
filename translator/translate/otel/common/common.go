@@ -43,7 +43,7 @@ const (
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
 	JmxKey                                         = "jmx"
-	TLSKey                                         = "tls"
+	TLSKey                                         = "tls" //nolint:revive
 	Endpoint                                       = "endpoint"
 	EndpointOverrideKey                            = "endpoint_override"
 	RegionOverrideKey                              = "region_override"
@@ -76,7 +76,6 @@ const (
 	ServiceAddress                                 = "service_address"
 	UDP                                            = "udp"
 	TCP                                            = "tcp"
-	TlsKey                                         = "tls" //nolint:revive
 	Tags                                           = "tags"
 	Region                                         = "region"
 	LogGroupName                                   = "log_group_name"

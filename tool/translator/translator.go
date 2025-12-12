@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	exitErrorMessage   = "Configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version.\n"
+	exitErrorMessage   = "configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version"
 	exitSuccessMessage = "Configuration validation first phase succeeded"
 	version            = "1.0"
 	envConfigFileName  = "env-config.json"

@@ -386,10 +386,11 @@ func (t *multiRangeTracker) collapseOldest() {
 	var first, second *Range
 	var count int
 	t.tree.Ascend(func(item Range) bool {
-		if count == 0 {
+		switch count {
+		case 0:
 			first = new(Range)
 			*first = item
-		} else if count == 1 {
+		case 1:
 			second = new(Range)
 			*second = item
 			return false

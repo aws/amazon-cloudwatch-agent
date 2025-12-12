@@ -12,10 +12,12 @@ const LogGroupClassSectionKey = "log_group_class"
 type LogGroupClass struct {
 }
 
-func (f *LogGroupClass) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (f *LogGroupClass) ApplyRule(input interface{}) (string, interface{}) {
+	var returnKey string
+	var returnVal interface{}
 	_, returnVal = translator.DefaultLogGroupClassCase(LogGroupClassSectionKey, "", input)
 	returnKey = LogGroupClassSectionKey
-	return
+	return returnKey, returnVal
 }
 
 func init() {
