@@ -232,22 +232,22 @@ jobs:
   #         cd test/test/cloudformation
   #         go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
 
-  StartLocalStack:
-    name: 'StartLocalStack'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-west-2
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{ inputs.build_id }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+  # StartLocalStack:
+  #   name: 'StartLocalStack'
+  #   needs: [OutputEnvVariables]
+  #   uses: ./.github/workflows/start-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: us-west-2
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+  #     github_sha: ${{ inputs.build_id }}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   # StartLocalStackITAR:
   #   name: 'StartLocalStackITAR'
@@ -441,7 +441,7 @@ jobs:
   #   secrets: inherit
 
   LinuxOnPremIntegrationTest:
-    needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
+    needs: [GenerateTestMatrix, OutputEnvVariables]
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -677,23 +677,22 @@ jobs:
   #           fi
   #           terraform destroy --auto-approve
 
-  StopLocalStack:
-    name: 'StopLocalStack'
-    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    # needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
-    needs: [ StartLocalStack, LinuxOnPremIntegrationTest, OutputEnvVariables ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-west-2
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      github_sha: ${{inputs.build_id}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+  # StopLocalStack:
+  #   name: 'StopLocalStack'
+  #   if: ${{ always() && needs.StartLocalStack.result == 'success' }}
+  #   needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+  #   uses: ./.github/workflows/stop-localstack.yml
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   with:
+  #     region: us-west-2
+  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  #     github_sha: ${{inputs.build_id}}
+  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   # StopLocalStackITAR:
   #   name: 'StopLocalStackITAR'
