@@ -76,7 +76,6 @@ const (
 	ServiceAddress                                 = "service_address"
 	UDP                                            = "udp"
 	TCP                                            = "tcp"
-	TlsKey                                         = "tls" //nolint:revive
 	Tags                                           = "tags"
 	Region                                         = "region"
 	LogGroupName                                   = "log_group_name"

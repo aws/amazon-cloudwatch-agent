@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package collect_list //nolint:revive
+package collect_list
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
