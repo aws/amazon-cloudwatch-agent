@@ -3,10 +3,6 @@
 
 name: Upload Dependencies and Test Repo to S3
 
-env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  KEY_NAME: ${{ secrets.KEY_NAME }}
-
 on:
   workflow_call:
     inputs:

@@ -42,6 +42,11 @@ on:
         type: boolean
       s3_integration_bucket:
         type: string
+    secrets:
+      AWS_PRIVATE_KEY:
+        required: false
+      KEY_NAME:
+        required: false
 
 jobs:
   EC2IntegrationTest:
