@@ -6,8 +6,6 @@ package volume
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -40,25 +38,21 @@ type Cache interface {
 type cache struct {
 	sync.RWMutex
 	// device name to serial mapping
-	cache          map[string]string
-	provider       Provider
-	fetchBlockName func(string) string
+	cache    map[string]string
+	provider Provider
 }
 
 func NewCache(provider Provider) Cache {
 	return &cache{
-		cache:          make(map[string]string),
-		provider:       provider,
-		fetchBlockName: findNvmeBlockNameIfPresent,
+		cache:    make(map[string]string),
+		provider: provider,
 	}
 }
 
 func (c *cache) add(devName, serial string) {
-	normalizedName := c.normalizeName(devName)
-
 	c.Lock()
 	defer c.Unlock()
-	c.cache[normalizedName] = serial
+	c.cache[devName] = serial
 }
 
 func (c *cache) reset() {
@@ -104,42 +98,4 @@ func (c *cache) Devices() []string {
 	c.RLock()
 	defer c.RUnlock()
 	return maps.Keys(c.cache)
-}
-
-func (c *cache) normalizeName(devName string) string {
-	normalized := c.fetchBlockName(devName)
-	if normalized == "" {
-		normalized = devName
-	}
-
-	// to match the disk device tag
-	return strings.ReplaceAll(normalized, "/dev/", "")
-}
-
-// find nvme block name by symlink, if symlink doesn't exist, return ""
-func findNvmeBlockNameIfPresent(devName string) string {
-	// for nvme(ssd), there is a symlink from devName to nvme block name, i.e. /dev/xvda -> /dev/nvme0n1
-	// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html
-	hasRootFs := true
-	if _, err := os.Lstat("/rootfs/proc"); os.IsNotExist(err) {
-		hasRootFs = false
-	}
-	nvmeName := ""
-
-	if hasRootFs {
-		devName = "/rootfs" + devName
-	}
-
-	if info, err := os.Lstat(devName); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			if path, err := filepath.EvalSymlinks(devName); err == nil {
-				nvmeName = path
-			}
-		}
-	}
-
-	if nvmeName != "" && hasRootFs {
-		nvmeName = strings.TrimPrefix(nvmeName, "/rootfs")
-	}
-	return nvmeName
 }
