@@ -94,9 +94,9 @@ func ExecuteSubcommand(command string, flags map[string]*string) error {
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			return fmt.Errorf("e! %s process exited with non-zero status: %d", command, exitErr.ExitCode())
+			return fmt.Errorf("E! %s process exited with non-zero status: %d", command, exitErr.ExitCode())
 		}
-		return fmt.Errorf("e! %s failed. Error: %v", command, err)
+		return fmt.Errorf("E! %s failed. Error: %v", command, err)
 	}
 
 	return nil

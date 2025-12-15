@@ -38,6 +38,9 @@ linters:
         - revive
         path: 'translator/translate/util/*'
         text: 'var-naming: avoid meaningless package names'
+      - linters:
+        - staticcheck
+        text: 'ST1005: error strings should not be capitalized'
 issues:
   new-from-rev: 9af4477
 formatters:
