@@ -38,7 +38,7 @@ jobs:
           git config --global user.name 'Github Action'
           git config --global user.email 'action@github.com'
           git checkout -b otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
-          scripts/update-otel-deps.sh
+          scripts/update-otel-deps.sh ${{ steps.get-latest-commit.outputs.sha }}
           git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
           git push -u origin HEAD
           git config --global --unset user.name
