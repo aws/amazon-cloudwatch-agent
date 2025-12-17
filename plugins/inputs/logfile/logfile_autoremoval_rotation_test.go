@@ -36,7 +36,7 @@ func TestAutoRemovalWithLogRotation(t *testing.T) {
 	logPath := filepath.Join(tmpDir, "app.log")
 
 	// Write initial content
-	err := os.WriteFile(logPath, []byte("line1\nline2\n"), 0644)
+	err := os.WriteFile(logPath, []byte("line1\nline2\n"), 0600)
 	require.NoError(t, err)
 
 	// Setup LogFile with auto_removal enabled
@@ -73,7 +73,7 @@ func TestAutoRemovalWithLogRotation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create new log file with fresh content
-	err = os.WriteFile(logPath, []byte("new_line1\n"), 0644)
+	err = os.WriteFile(logPath, []byte("new_line1\n"), 0600)
 	require.NoError(t, err)
 
 	// Give time for file watcher to detect deletion and for cleanUp() to execute
