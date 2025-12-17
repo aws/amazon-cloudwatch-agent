@@ -28,13 +28,13 @@ func getInodeInfo(fi os.FileInfo) *inodeInfo {
 // findFileByInode searches for a file with the given inode in the same directory
 func findFileByInode(originalPath string, inode, dev uint64) string {
 	dir := filepath.Dir(originalPath)
-	
+
 	// Check files in the same directory
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return ""
 	}
-	
+
 	for _, entry := range entries {
 		fullPath := filepath.Join(dir, entry.Name())
 		if fi, err := os.Stat(fullPath); err == nil {
@@ -45,6 +45,6 @@ func findFileByInode(originalPath string, inode, dev uint64) string {
 			}
 		}
 	}
-	
+
 	return ""
 }

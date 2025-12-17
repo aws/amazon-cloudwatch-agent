@@ -33,7 +33,7 @@ func TestAutoRemovalWithLogRotation(t *testing.T) {
 	// Create initial log file
 	tmpDir := t.TempDir()
 	logPath := filepath.Join(tmpDir, "app.log")
-	
+
 	// Write initial content
 	err := os.WriteFile(logPath, []byte("line1\nline2\n"), 0644)
 	require.NoError(t, err)
@@ -80,11 +80,11 @@ func TestAutoRemovalWithLogRotation(t *testing.T) {
 
 	// EXPECTED BEHAVIOR: The NEW app.log should still exist
 	_, err = os.Stat(logPath)
-	assert.NoError(t, err, 
+	assert.NoError(t, err,
 		"New app.log should still exist after rotation")
 
 	// EXPECTED BEHAVIOR: The rotated file should be deleted by auto_removal
 	_, err = os.Stat(rotatedPath)
-	assert.True(t, os.IsNotExist(err), 
+	assert.True(t, os.IsNotExist(err),
 		"Rotated file app.log.1 should be deleted by auto_removal, not the fresh log")
 }

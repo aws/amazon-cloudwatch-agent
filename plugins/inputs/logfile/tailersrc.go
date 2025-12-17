@@ -366,7 +366,7 @@ func (ts *tailerSrc) runSender() {
 func (ts *tailerSrc) cleanUp() {
 	if ts.autoRemoval {
 		fileToRemove := ts.tailer.Filename
-		
+
 		// If we have inode info, try to find the actual file by inode
 		// This handles the case where the file was rotated
 		if ts.fileInode != 0 {
@@ -374,7 +374,7 @@ func (ts *tailerSrc) cleanUp() {
 				fileToRemove = actualPath
 			}
 		}
-		
+
 		if err := os.Remove(fileToRemove); err != nil {
 			log.Printf("W! [logfile] Failed to auto remove file %v: %v", fileToRemove, err)
 		} else {
