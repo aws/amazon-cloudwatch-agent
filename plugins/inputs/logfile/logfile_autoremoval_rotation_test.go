@@ -9,9 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 // TestAutoRemovalWithLogRotation verifies that auto_removal correctly handles
