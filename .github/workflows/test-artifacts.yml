@@ -441,25 +441,25 @@ jobs:
   #     is_onprem_test: false
   #   secrets: inherit
 
-  # LinuxOnPremIntegrationTest:
-  #   needs: [GenerateTestMatrix, OutputEnvVariables]
-  #   name: 'OnpremLinux'
-  #   uses: ./.github/workflows/ec2-integration-test.yml
-  #   with:
-  #     build_id: ${{ inputs.build_id }}
-  #     test_dir: terraform/ec2/linux
-  #     job_id: linux-onprem-integration-test
-  #     test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
-  #     test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-  #     test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-  #     test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-  #     localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
-  #     region: us-west-2
-  #     terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-  #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-  #     is_selinux_test: false
-  #     is_onprem_test: true
-  #   secrets: inherit
+  LinuxOnPremIntegrationTest:
+    needs: [GenerateTestMatrix, OutputEnvVariables]
+    name: 'OnpremLinux'
+    uses: ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: linux-onprem-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: true
+    secrets: inherit
 
 
   # EC2LinuxIntegrationTestITAR:
@@ -520,85 +520,85 @@ jobs:
   #     s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
   #     is_selinux_test: true
 
-  EC2WinIntegrationTest:
-    needs: [OutputEnvVariables, GenerateTestMatrix]
-    name:  ${{matrix.arrays.testName}}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+  # EC2WinIntegrationTest:
+  #   needs: [OutputEnvVariables, GenerateTestMatrix]
+  #   name:  ${{matrix.arrays.testName}}
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+  #         ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+  #         aws-region: us-west-2
+  #         role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-      - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
+  #     - name: Echo Test Info
+  #       run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
 
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
+  #     - name: Install Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: 1.12.0
 
-      - name: Verify Terraform version
-        run: terraform --version
+  #     - name: Verify Terraform version
+  #       run: terraform --version
 
-        # nick-fields/retry@v2 starts at base dir
-      - name: Terraform apply
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 60
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd terraform/ec2/win
-            fi
+  #       # nick-fields/retry@v2 starts at base dir
+  #     - name: Terraform apply
+  #       uses: nick-fields/retry@v2
+  #       with:
+  #         max_attempts: 3
+  #         timeout_minutes: 60
+  #         retry_wait_seconds: 5
+  #         command: |
+  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+  #             cd "${{ matrix.arrays.terraform_dir }}"
+  #           else
+  #             cd terraform/ec2/win
+  #           fi
 
-            terraform init
-            if terraform apply --auto-approve \
-              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="ssh_key_value=${PRIVATE_KEY}" \
-              -var="ssh_key_name=${KEY_NAME}" \
-              -var="test_name=${{ matrix.arrays.os }}" \
-              -var="cwa_github_sha=${{ inputs.build_id }}"  \
-              -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="ami=${{ matrix.arrays.ami }}" \
-              -var="use_ssm=${{ matrix.arrays.useSSM }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
-              terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
-      #This is here just in case workflow cancel
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd terraform/ec2/win
-            fi
-            terraform destroy --auto-approve
+  #           terraform init
+  #           if terraform apply --auto-approve \
+  #             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+  #             -var="ssh_key_value=${PRIVATE_KEY}" \
+  #             -var="ssh_key_name=${KEY_NAME}" \
+  #             -var="test_name=${{ matrix.arrays.os }}" \
+  #             -var="cwa_github_sha=${{ inputs.build_id }}"  \
+  #             -var="test_dir=${{ matrix.arrays.test_dir }}" \
+  #             -var="ami=${{ matrix.arrays.ami }}" \
+  #             -var="use_ssm=${{ matrix.arrays.useSSM }}" \
+  #             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+  #             terraform destroy -auto-approve
+  #           else
+  #             terraform destroy -auto-approve && exit 1
+  #           fi
+  #     #This is here just in case workflow cancel
+  #     - name: Terraform destroy
+  #       if: ${{ cancelled() || failure() }}
+  #       uses: nick-fields/retry@v2
+  #       with:
+  #         max_attempts: 3
+  #         timeout_minutes: 8
+  #         retry_wait_seconds: 5
+  #         command: |
+  #           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+  #             cd "${{ matrix.arrays.terraform_dir }}"
+  #           else
+  #             cd terraform/ec2/win
+  #           fi
+  #           terraform destroy --auto-approve
   # EC2DarwinIntegrationTest:
   #   needs: [GenerateTestMatrix, OutputEnvVariables]
   #   name: ${{matrix.arrays.testName}}
