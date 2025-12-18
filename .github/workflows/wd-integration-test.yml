@@ -65,9 +65,9 @@ jobs:
           ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
-          go-version: ~1.22.2
+          go-version: 'oldstable'
 
       - name: Generate matrix
         id: set-matrix

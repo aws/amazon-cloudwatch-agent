@@ -78,9 +78,9 @@ jobs:
           path: test
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
-          go-version: ~1.22.2
+          go-version: 'oldstable'
 
       - name: Free up disk space
         working-directory: cwa
