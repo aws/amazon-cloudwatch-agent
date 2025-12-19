@@ -77,11 +77,18 @@ jobs:
       agent-version: ${{ steps.version.outputs.version }}
       should-build: ${{ steps.check.outputs.should-build }}
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
+
+      - name: Free up disk space
+        run: .github/scripts/free-disk-space.sh
 
       - name: Agent Version
         id: version

@@ -78,6 +78,9 @@ jobs:
           go-version: ~1.22.2
           cache: false
 
+      - name: Free up disk space
+        run: .github/scripts/free-disk-space.sh
+
       - name: Install rpm
         run: sudo apt install rpm
 
