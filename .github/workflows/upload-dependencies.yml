@@ -42,7 +42,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: 'oldstable'
+          go-version: '1.24.11'
 
       - name: Upload Dependencies and Test Repo
         run: |
