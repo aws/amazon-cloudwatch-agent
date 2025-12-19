@@ -92,7 +92,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -130,7 +130,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
       - name: Install jq
         run: sudo apt-get install -y jq

@@ -185,7 +185,7 @@ func newScraper(cfg *Config,
 	allowedDevices collections.Set[string],
 ) *nvmeScraper {
 	scraper := &nvmeScraper{
-		logger:         settings.TelemetrySettings.Logger,
+		logger:         settings.Logger,
 		mb:             metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
 		nvme:           nvmeInfo,
 		allowedDevices: allowedDevices,
@@ -198,7 +198,7 @@ func newScraper(cfg *Config,
 
 	scraper.enabledScrapers = make(map[string]nvme.DeviceTypeScraper)
 	for _, ts := range allScrapers {
-		if ts.IsEnabled(&cfg.MetricsBuilderConfig.Metrics) {
+		if ts.IsEnabled(&cfg.Metrics) {
 			scraper.enabledScrapers[ts.Model()] = ts
 		}
 	}
