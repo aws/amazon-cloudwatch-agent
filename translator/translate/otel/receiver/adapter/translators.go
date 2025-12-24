@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windowsevents"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	collectd "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/collectd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/customizedmetrics"
@@ -32,7 +32,7 @@ const (
 var (
 	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet     = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
+	skipInputSet     = collections.NewSet[string](files.SectionKey, windowsevents.SectionKey)
 	multipleInputSet = collections.NewSet[string](procstat.SectionKey)
 	// Order by PidFile, ExeKey, Pattern Key according to the public documents
 	// if multiple configuration is specified
@@ -55,10 +55,10 @@ var (
 	// aliasMap contains mappings for all input plugins that use another
 	// name in Telegraf.
 	aliasMap = map[string]string{
-		collectd.SectionKey:       collectd.SectionMappedKey,
-		files.SectionKey:          files.SectionMappedKey,
-		gpu.SectionKey:            gpu.SectionMappedKey,
-		windows_events.SectionKey: windows_events.SectionMappedKey,
+		collectd.SectionKey:      collectd.SectionMappedKey,
+		files.SectionKey:         files.SectionMappedKey,
+		gpu.SectionKey:           gpu.SectionMappedKey,
+		windowsevents.SectionKey: windowsevents.SectionMappedKey,
 	}
 	// defaultCollectionIntervalMap contains all input plugins that have a
 	// different default interval.

@@ -9,7 +9,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windowsevents"
 	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
@@ -35,20 +35,13 @@ type CollectList struct {
 }
 
 var customizedJSONConfigKeys = []string{"event_name", EventLevelsKey}
-var eventLevelMapping = map[string]string{
-	"VERBOSE":     "5",
-	"INFORMATION": "4",
-	"WARNING":     "3",
-	"ERROR":       "2",
-	"CRITICAL":    "1",
-}
 
 func GetCurPath() string {
 	curPath := parent.GetCurPath() + SectionKey + "/"
 	return curPath
 }
 
-func (c *CollectList) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (c *CollectList) ApplyRule(input interface{}) (string, interface{}) {
 	im := input.(map[string]interface{})
 	result := []interface{}{}
 
@@ -79,7 +72,7 @@ func getTransformedConfig(input interface{}) interface{} {
 	// Extract customer specified config
 	util.SetWithSameKeyIfFound(input, customizedJSONConfigKeys, result)
 	// Set Fixed config
-	addFixedJsonConfig(result)
+	addFixedJSONConfig(result)
 
 	for _, rule := range ChildRule {
 		key, val := rule.ApplyRule(input)
@@ -91,7 +84,7 @@ func getTransformedConfig(input interface{}) interface{} {
 	return result
 }
 
-func addFixedJsonConfig(result map[string]interface{}) {
+func addFixedJSONConfig(result map[string]interface{}) {
 	result[BatchReadSizeKey] = BatchReadSizeValue
 
 	var inputEventLevels []interface{}
