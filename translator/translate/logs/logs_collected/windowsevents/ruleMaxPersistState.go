@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package windows_events
+package windowsevents
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
