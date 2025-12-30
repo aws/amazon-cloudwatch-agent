@@ -30,12 +30,12 @@ type Sender interface {
 }
 
 type sender struct {
-	service           cloudWatchLogsService
-	retryDuration     atomic.Value
-	targetManager     TargetManager
-	logger            telegraf.Logger
-	stopCh            chan struct{}
-	stopped           bool
+	service            cloudWatchLogsService
+	retryDuration      atomic.Value
+	targetManager      TargetManager
+	logger             telegraf.Logger
+	stopCh             chan struct{}
+	stopped            bool
 	concurrencyEnabled bool
 }
 
@@ -124,19 +124,10 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		}
 
-		select {
-		case <-s.stopCh:
-			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
-			batch.updateState()
-			return
-		default:
-		}
-
 		// If concurrency enabled, notify failure (will handle RetryHeap push) and return
 		// Otherwise, continue with existing busy-wait retry behavior
 		if s.isConcurrencyEnabled() {
 			batch.fail()
-			return
 		}
 
 		// Calculate wait time until next retry (synchronous mode)

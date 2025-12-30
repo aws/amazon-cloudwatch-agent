@@ -113,6 +113,7 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 		time.Second,
 		time.Minute,
 		wg,
+		1, // concurrency
 	)
 
 	assert.NotNil(t, pusher)

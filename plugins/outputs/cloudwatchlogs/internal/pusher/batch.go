@@ -102,7 +102,7 @@ type logEventBatch struct {
 	stateCallbacks []func()
 	// Callbacks to execute when batch fails (for circuit breaker notification)
 	failCallbacks []func()
-	batchers       map[string]*state.RangeQueueBatcher
+	batchers      map[string]*state.RangeQueueBatcher
 
 	// Retry metadata
 	retryCountShort int       // Number of retries using short delay strategy
