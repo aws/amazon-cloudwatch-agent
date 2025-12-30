@@ -101,6 +101,13 @@ type logEventBatch struct {
 	// Callbacks specifically for updating state
 	stateCallbacks []func()
 	batchers       map[string]*state.RangeQueueBatcher
+
+	// Retry metadata
+	retryCountShort    int       // Number of retries using short delay strategy
+	retryCountLong     int       // Number of retries using long delay strategy
+	startTime          time.Time // Time of first request (for max retry duration calculation)
+	nextRetryTime      time.Time // When this batch should be retried next
+	lastError          error     // Last error encountered
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -225,4 +232,56 @@ func (t byTimestamp) Swap(i, j int) {
 
 func (t byTimestamp) Less(i, j int) bool {
 	return *t[i].Timestamp < *t[j].Timestamp
+}
+
+// initializeStartTime sets the start time if not already set.
+func (b *logEventBatch) initializeStartTime() {
+	if b.startTime.IsZero() {
+		b.startTime = time.Now()
+	}
+}
+
+// updateRetryMetadata updates the retry metadata after a failed send attempt.
+// It increments the appropriate retry counter based on the error type and calculates the next retry time.
+func (b *logEventBatch) updateRetryMetadata(err error) {
+	// Store the error
+	b.lastError = err
+
+	// Determine retry strategy and increment counter
+	var wait time.Duration
+	if chooseRetryWaitStrategy(err) == retryLong {
+		wait = retryWaitLong(b.retryCountLong)
+		b.retryCountLong++
+	} else {
+		wait = retryWaitShort(b.retryCountShort)
+		b.retryCountShort++
+	}
+
+	// Calculate next retry time (honest timestamp, not capped)
+	b.nextRetryTime = time.Now().Add(wait)
+}
+
+// isExpired checks if the batch has exceeded the maximum retry duration (14 days).
+func (b *logEventBatch) isExpired(maxRetryDuration time.Duration) bool {
+	if b.startTime.IsZero() {
+		return false
+	}
+	return time.Since(b.startTime) > maxRetryDuration
+}
+
+// isReadyForRetry checks if enough time has passed since the last failure to retry this batch.
+func (b *logEventBatch) isReadyForRetry() bool {
+	if b.nextRetryTime.IsZero() {
+		return true // Never failed, ready to send
+	}
+	return time.Now().After(b.nextRetryTime)
+}
+
+// resetRetryMetadata resets all retry-related fields after a successful send.
+func (b *logEventBatch) resetRetryMetadata() {
+	b.retryCountShort = 0
+	b.retryCountLong = 0
+	b.startTime = time.Time{}
+	b.nextRetryTime = time.Time{}
+	b.lastError = nil
 }

@@ -63,11 +63,11 @@ func (s *sender) Send(batch *logEventBatch) {
 	if len(batch.events) == 0 {
 		return
 	}
+	
+	// Initialize start time before build()
+	batch.initializeStartTime()
 	input := batch.build()
-	startTime := time.Now()
 
-	retryCountShort := 0
-	retryCountLong := 0
 	for {
 		output, err := s.service.PutLogEvents(input)
 		if err == nil {
@@ -83,8 +83,9 @@ func (s *sender) Send(batch *logEventBatch) {
 					s.logger.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, batch.Group, batch.Stream)
 				}
 			}
+			// Success - call done callbacks
 			batch.done()
-			s.logger.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(batch.events), batch.Group, batch.Stream, batch.bufferedSize/1024, time.Since(startTime))
+			s.logger.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(batch.events), batch.Group, batch.Stream, batch.bufferedSize/1024, time.Since(batch.startTime))
 			return
 		}
 
@@ -110,27 +111,29 @@ func (s *sender) Send(batch *logEventBatch) {
 			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, awsErr)
 		}
 
-		// retry wait strategy depends on the type of error returned
-		var wait time.Duration
-		if chooseRetryWaitStrategy(err) == retryLong {
-			wait = retryWaitLong(retryCountLong)
-			retryCountLong++
-		} else {
-			wait = retryWaitShort(retryCountShort)
-			retryCountShort++
-		}
+		// Update retry metadata in the batch
+		batch.updateRetryMetadata(err)
 
-		if time.Since(startTime)+wait > s.RetryDuration() {
-			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
+		// Check if the next retry time would exceed the max retry duration
+		// This prevents us from sleeping and then making another doomed API call
+		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
+		if batch.isExpired(s.RetryDuration()) || batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		}
 
-		s.logger.Warnf("Retried %v time, going to sleep %v before retrying.", retryCountShort+retryCountLong-1, wait)
+		// Calculate wait time until next retry
+		wait := batch.nextRetryTime.Sub(time.Now())
+		if wait < 0 {
+			wait = 0
+		}
+
+		s.logger.Warnf("Retried %v time, going to sleep %v before retrying.", totalRetries, wait)
 
 		select {
 		case <-s.stopCh:
-			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
+			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		case <-time.After(wait):
