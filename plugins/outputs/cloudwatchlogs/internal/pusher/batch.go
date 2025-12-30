@@ -276,12 +276,3 @@ func (b *logEventBatch) isReadyForRetry() bool {
 	}
 	return time.Now().After(b.nextRetryTime)
 }
-
-// resetRetryMetadata resets all retry-related fields after a successful send.
-func (b *logEventBatch) resetRetryMetadata() {
-	b.retryCountShort = 0
-	b.retryCountLong = 0
-	b.startTime = time.Time{}
-	b.nextRetryTime = time.Time{}
-	b.lastError = nil
-}
