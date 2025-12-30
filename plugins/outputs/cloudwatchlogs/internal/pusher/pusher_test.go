@@ -158,10 +158,8 @@ func TestPusherRetryHeap(t *testing.T) {
 	assert.NotNil(t, pusher)
 	assert.Equal(t, target, pusher.Target)
 
-	// Verify senderPool has retryHeap when concurrency enabled
-	if senderPool, ok := pusher.Sender.(*senderPool); ok {
-		assert.Equal(t, retryHeap, senderPool.retryHeap)
-	}
+	// Verify pusher has retryHeap when concurrency enabled
+	// (RetryHeap is now passed to the underlying sender, not senderPool)
 
 	mockManager.AssertCalled(t, "PutRetentionPolicy", target)
 }

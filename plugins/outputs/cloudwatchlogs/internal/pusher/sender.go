@@ -37,6 +37,7 @@ type sender struct {
 	stopCh             chan struct{}
 	stopped            bool
 	concurrencyEnabled bool
+	retryHeap          RetryHeap
 }
 
 var _ (Sender) = (*sender)(nil)
@@ -47,6 +48,7 @@ func newSender(
 	targetManager TargetManager,
 	retryDuration time.Duration,
 	concurrencyEnabled bool,
+	retryHeap RetryHeap,
 ) Sender {
 	s := &sender{
 		logger:             logger,
@@ -55,6 +57,7 @@ func newSender(
 		stopCh:             make(chan struct{}),
 		stopped:            false,
 		concurrencyEnabled: concurrencyEnabled,
+		retryHeap:          retryHeap,
 	}
 	s.retryDuration.Store(retryDuration)
 	return s
@@ -124,10 +127,12 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		}
 
-		// If concurrency enabled, notify failure (will handle RetryHeap push) and return
+		// If concurrency enabled, push to RetryHeap and return
 		// Otherwise, continue with existing busy-wait retry behavior
 		if s.isConcurrencyEnabled() {
+			s.retryHeap.Push(batch)
 			batch.fail()
+			return
 		}
 
 		// Calculate wait time until next retry (synchronous mode)
@@ -166,7 +171,7 @@ func (s *sender) RetryDuration() time.Duration {
 	return s.retryDuration.Load().(time.Duration)
 }
 
-// isConcurrencyEnabled returns whether concurrency mode is enabled for this sender.
+// isConcurrencyEnabled returns whether concurrency mode is enabled and RetryHeap is available.
 func (s *sender) isConcurrencyEnabled() bool {
-	return s.concurrencyEnabled
+	return s.concurrencyEnabled && s.retryHeap != nil
 }

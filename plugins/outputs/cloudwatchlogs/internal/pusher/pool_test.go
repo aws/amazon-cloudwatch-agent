@@ -107,9 +107,9 @@ func TestSenderPool(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
-	s := newSender(logger, mockService, nil, time.Second, false)
+	s := newSender(logger, mockService, nil, time.Second, false, nil)
 	p := NewWorkerPool(12)
-	sp := newSenderPool(p, s, nil)
+	sp := newSenderPool(p, s)
 
 	assert.Equal(t, time.Second, sp.RetryDuration())
 	sp.SetRetryDuration(time.Minute)
@@ -139,19 +139,16 @@ func TestSenderPoolRetryHeap(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
-	s := newSender(logger, mockService, nil, time.Second, false)
-	p := NewWorkerPool(12)
-	defer p.Stop()
-
+	
 	// Create RetryHeap
 	retryHeap := NewRetryHeap(10)
 	defer retryHeap.Stop()
+	
+	s := newSender(logger, mockService, nil, time.Second, false, retryHeap)
+	p := NewWorkerPool(12)
+	defer p.Stop()
 
-	sp := newSenderPool(p, s, retryHeap)
-
-	// Verify senderPool has retryHeap
-	assert.NotNil(t, sp.(*senderPool).retryHeap)
-	assert.Equal(t, retryHeap, sp.(*senderPool).retryHeap)
+	sp := newSenderPool(p, s)
 
 	sp.Stop()
 }

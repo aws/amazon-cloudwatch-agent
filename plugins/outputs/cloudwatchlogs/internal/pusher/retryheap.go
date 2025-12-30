@@ -127,8 +127,10 @@ type RetryHeapProcessor struct {
 // NewRetryHeapProcessor creates a new retry heap processor
 func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
-	sender := newSender(logger, service, targetManager, maxRetryDuration, true)
-	senderPool := newSenderPool(workerPool, sender, retryHeap)
+	// Note: Pass nil for retryHeap to prevent infinite retry loops - 
+	// batches from RetryHeap that fail again use synchronous retry behavior
+	sender := newSender(logger, service, targetManager, maxRetryDuration, true, nil)
+	senderPool := newSenderPool(workerPool, sender)
 
 	return &RetryHeapProcessor{
 		retryHeap:        retryHeap,
