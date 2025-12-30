@@ -81,7 +81,7 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -104,7 +104,7 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -123,7 +123,7 @@ func TestSender(t *testing.T) {
 		mockManager.On("InitTarget", mock.Anything).Return(nil).Once()
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -150,7 +150,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.InvalidParameterException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -178,7 +178,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.DataAlreadyAcceptedException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -206,7 +206,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, errors.New("test")).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -226,7 +226,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -252,7 +252,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		s := newSender(logger, mockService, mockManager, 100*time.Millisecond, false)
+		s := newSender(logger, mockService, mockManager, 100*time.Millisecond, false, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -280,7 +280,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, false)
+		s := newSender(logger, mockService, mockManager, time.Second, false, nil)
 
 		go func() {
 			time.Sleep(50 * time.Millisecond)
@@ -306,8 +306,10 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{}).Once()
 
-		// Enable concurrency with 1 hour retry duration
-		s := newSender(logger, mockService, mockManager, time.Hour, true)
+		// Enable concurrency with 1 hour retry duration and RetryHeap
+		retryHeap := NewRetryHeap(10)
+		defer retryHeap.Stop()
+		s := newSender(logger, mockService, mockManager, time.Hour, true, retryHeap)
 
 		// Track if fail callback was called
 		failCalled := false

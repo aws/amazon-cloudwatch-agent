@@ -68,9 +68,9 @@ func createSender(
 	concurrencyEnabled bool,
 	retryHeap RetryHeap,
 ) Sender {
-	s := newSender(logger, service, targetManager, retryDuration, concurrencyEnabled)
+	s := newSender(logger, service, targetManager, retryDuration, concurrencyEnabled, retryHeap)
 	if workerPool == nil {
 		return s
 	}
-	return newSenderPool(workerPool, s, retryHeap)
+	return newSenderPool(workerPool, s)
 }
