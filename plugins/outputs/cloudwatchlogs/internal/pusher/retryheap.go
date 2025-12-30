@@ -44,45 +44,34 @@ type RetryHeap interface {
 }
 
 type retryHeap struct {
-	heap    retryHeapImpl
-	mutex   sync.RWMutex
-	pushCh  chan *logEventBatch
-	stopCh  chan struct{}
-	maxSize int
+	heap      retryHeapImpl
+	mutex     sync.RWMutex
+	semaphore chan struct{} // Size enforcer
+	stopCh    chan struct{}
+	maxSize   int
 }
 
 // NewRetryHeap creates a new retry heap with the specified maximum size
 func NewRetryHeap(maxSize int) RetryHeap {
 	rh := &retryHeap{
-		heap:    make(retryHeapImpl, 0),
-		maxSize: maxSize,
-		pushCh:  make(chan *logEventBatch, maxSize),
-		stopCh:  make(chan struct{}),
+		heap:      make(retryHeapImpl, 0),
+		maxSize:   maxSize,
+		semaphore: make(chan struct{}, maxSize), // Semaphore for size enforcement
+		stopCh:    make(chan struct{}),
 	}
 	heap.Init(&rh.heap)
-	go rh.pushToHeapWorker()
 	return rh
 }
 
-// pushToHeapWorker moves batches from the blocking channel to the time-ordered heap
-// This bridges channel-based blocking (like sender queue) with heap-based time ordering
-func (rh *retryHeap) pushToHeapWorker() {
-	for {
-		select {
-		case batch := <-rh.pushCh:
-			rh.mutex.Lock()
-			heap.Push(&rh.heap, batch)
-			rh.mutex.Unlock()
-		case <-rh.stopCh:
-			return
-		}
-	}
-}
-
-// Push adds a batch to the heap, blocking if full (same as sender queue)
+// Push adds a batch to the heap, blocking if full
 func (rh *retryHeap) Push(batch *logEventBatch) error {
+	// Acquire semaphore slot (blocks if at maxSize capacity)
 	select {
-	case rh.pushCh <- batch:
+	case rh.semaphore <- struct{}{}:
+		// add batch to heap with mutex protection
+		rh.mutex.Lock()
+		heap.Push(&rh.heap, batch)
+		rh.mutex.Unlock()
 		return nil
 	case <-rh.stopCh:
 		return errors.New("retry heap stopped")
@@ -101,16 +90,18 @@ func (rh *retryHeap) PopReady() []*logEventBatch {
 	for len(rh.heap) > 0 && !rh.heap[0].nextRetryTime.After(now) {
 		batch := heap.Pop(&rh.heap).(*logEventBatch)
 		ready = append(ready, batch)
+		// Release semaphore slot for each popped batch
+		<-rh.semaphore
 	}
 
 	return ready
 }
 
-// Size returns the current number of batches in the heap and pending channel
+// Size returns the current number of batches in the heap
 func (rh *retryHeap) Size() int {
 	rh.mutex.RLock()
 	defer rh.mutex.RUnlock()
-	return len(rh.heap) + len(rh.pushCh)
+	return len(rh.heap)
 }
 
 // Stop stops the retry heap
