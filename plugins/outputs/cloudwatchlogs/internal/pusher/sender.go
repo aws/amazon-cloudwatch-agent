@@ -30,12 +30,13 @@ type Sender interface {
 }
 
 type sender struct {
-	service       cloudWatchLogsService
-	retryDuration atomic.Value
-	targetManager TargetManager
-	logger        telegraf.Logger
-	stopCh        chan struct{}
-	stopped       bool
+	service           cloudWatchLogsService
+	retryDuration     atomic.Value
+	targetManager     TargetManager
+	logger            telegraf.Logger
+	stopCh            chan struct{}
+	stopped           bool
+	concurrencyEnabled bool
 }
 
 var _ (Sender) = (*sender)(nil)
@@ -45,13 +46,15 @@ func newSender(
 	service cloudWatchLogsService,
 	targetManager TargetManager,
 	retryDuration time.Duration,
+	concurrencyEnabled bool,
 ) Sender {
 	s := &sender{
-		logger:        logger,
-		service:       service,
-		targetManager: targetManager,
-		stopCh:        make(chan struct{}),
-		stopped:       false,
+		logger:             logger,
+		service:            service,
+		targetManager:      targetManager,
+		stopCh:             make(chan struct{}),
+		stopped:            false,
+		concurrencyEnabled: concurrencyEnabled,
 	}
 	s.retryDuration.Store(retryDuration)
 	return s
@@ -121,7 +124,22 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		}
 
-		// Calculate wait time until next retry
+		select {
+		case <-s.stopCh:
+			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
+			batch.updateState()
+			return
+		default:
+		}
+
+		// If concurrency enabled, notify failure (will handle RetryHeap push) and return
+		// Otherwise, continue with existing busy-wait retry behavior
+		if s.isConcurrencyEnabled() {
+			batch.fail()
+			return
+		}
+
+		// Calculate wait time until next retry (synchronous mode)
 		wait := time.Until(batch.nextRetryTime)
 		if wait < 0 {
 			wait = 0
@@ -155,4 +173,9 @@ func (s *sender) SetRetryDuration(retryDuration time.Duration) {
 // RetryDuration returns the current maximum retry duration.
 func (s *sender) RetryDuration() time.Duration {
 	return s.retryDuration.Load().(time.Duration)
+}
+
+// isConcurrencyEnabled returns whether concurrency mode is enabled for this sender.
+func (s *sender) isConcurrencyEnabled() bool {
+	return s.concurrencyEnabled
 }
