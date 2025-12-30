@@ -134,3 +134,24 @@ func TestSenderPool(t *testing.T) {
 	s.Stop()
 	assert.Equal(t, int32(200), completed.Load())
 }
+
+func TestSenderPoolRetryHeap(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	mockService := new(mockLogsService)
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
+	s := newSender(logger, mockService, nil, time.Second, false)
+	p := NewWorkerPool(12)
+	defer p.Stop()
+
+	// Create RetryHeap
+	retryHeap := NewRetryHeap(10)
+	defer retryHeap.Stop()
+
+	sp := newSenderPool(p, s, retryHeap)
+
+	// Verify senderPool has retryHeap
+	assert.NotNil(t, sp.(*senderPool).retryHeap)
+	assert.Equal(t, retryHeap, sp.(*senderPool).retryHeap)
+
+	sp.Stop()
+}
