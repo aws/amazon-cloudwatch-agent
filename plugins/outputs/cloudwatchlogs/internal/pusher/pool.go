@@ -91,14 +91,16 @@ func (p *workerPool) Stop() {
 type senderPool struct {
 	workerPool WorkerPool
 	sender     Sender
+	retryHeap  RetryHeap
 }
 
 var _ Sender = (*senderPool)(nil)
 
-func newSenderPool(workerPool WorkerPool, sender Sender) Sender {
+func newSenderPool(workerPool WorkerPool, sender Sender, retryHeap RetryHeap) Sender {
 	return &senderPool{
 		workerPool: workerPool,
 		sender:     sender,
+		retryHeap:  retryHeap,
 	}
 }
 

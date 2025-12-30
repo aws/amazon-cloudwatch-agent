@@ -125,7 +125,11 @@ type RetryHeapProcessor struct {
 }
 
 // NewRetryHeapProcessor creates a new retry heap processor
-func NewRetryHeapProcessor(retryHeap RetryHeap, senderPool Sender, logger telegraf.Logger, maxRetryDuration time.Duration) *RetryHeapProcessor {
+func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration) *RetryHeapProcessor {
+	// Create processor's own sender and senderPool
+	sender := newSender(logger, service, targetManager, maxRetryDuration, true)
+	senderPool := newSenderPool(workerPool, sender, retryHeap)
+
 	return &RetryHeapProcessor{
 		retryHeap:        retryHeap,
 		senderPool:       senderPool,
