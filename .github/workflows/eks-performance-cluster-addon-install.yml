@@ -175,9 +175,11 @@ jobs:
 
       # TODO: Revert to using main helm branch when changes from leader-election are merged in
       - name: Clone Helm Charts Repository
+        env:
+          HELM_CHARTS_BRANCH: ${{ inputs.helm-charts-branch || 'sky333999/leader-election' }}
         run: |
           rm -rf ./helm-charts
-          git clone -b ${{ inputs.helm-charts-branch || 'sky333999/leader-election' }} https://github.com/aws-observability/helm-charts.git ./helm-charts
+          git clone -b "$HELM_CHARTS_BRANCH" https://github.com/aws-observability/helm-charts.git ./helm-charts
 
       - name: Clone Test Repo
         uses: actions/checkout@v4
@@ -195,6 +197,16 @@ jobs:
 
       # TODO: Revert to using workflow built agent image once required changes are made on main branch
       - name: Check node count and manage Helm chart
+        env:
+          INPUT_CLUSTER_NAME: ${{ inputs.cluster_name }}
+          INPUT_REGION: ${{ inputs.region }}
+          INPUT_AGENT_REPO: ${{ inputs.cloudwatch_agent_repository }}
+          INPUT_AGENT_TAG: ${{ inputs.cloudwatch_agent_tag }}
+          INPUT_OPERATOR_REPO: ${{ inputs.cloudwatch_agent_operator_repository }}
+          INPUT_OPERATOR_TAG: ${{ inputs.cloudwatch_agent_operator_tag }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          OPERATOR_SHA: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
         run: |
           NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
 
@@ -204,28 +216,36 @@ jobs:
           else
             echo "Node count is $NODE_COUNT, installing/updating Helm chart"
           
+            # Set variables with defaults
+            HELM_CLUSTER_NAME="${INPUT_CLUSTER_NAME:-$CLUSTER_NAME}"
+            HELM_REGION="${INPUT_REGION:-$AWS_REGION}"
+            HELM_AGENT_REPO="${INPUT_AGENT_REPO:-$AGENT_ECR_TEST_REPO}"
+            HELM_AGENT_TAG="${INPUT_AGENT_TAG:-$GITHUB_SHA_VAL}"
+            HELM_OPERATOR_REPO="${INPUT_OPERATOR_REPO:-$OPERATOR_ECR_TEST_REPO}"
+            HELM_OPERATOR_TAG="${INPUT_OPERATOR_TAG:-$OPERATOR_SHA}"
+          
             # Echo all variables being passed to helm
-            echo "CLUSTER_NAME: ${{ inputs.cluster_name ||env.CLUSTER_NAME }}"
-            echo "REGION: ${{ inputs.region || env.AWS_REGION }}"
-            echo "AGENT_REPOSITORY: ${{ inputs.cloudwatch_agent_repository || env.AGENT_ECR_TEST_REPO }}"
-            echo "AGENT_TAG: ${{ inputs.cloudwatch_agent_tag || github.sha }}"
-            echo "AGENT_REPOSITORY_DOMAIN: ${{ steps.login-ecr.outputs.registry }}"
-            echo "MANAGER_REPOSITORY: ${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }}"
-            echo "MANAGER_TAG: ${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}"
-            echo "MANAGER_REPOSITORY_DOMAIN: ${{ steps.login-ecr.outputs.registry }}"
+            echo "CLUSTER_NAME: $HELM_CLUSTER_NAME"
+            echo "REGION: $HELM_REGION"
+            echo "AGENT_REPOSITORY: $HELM_AGENT_REPO"
+            echo "AGENT_TAG: $HELM_AGENT_TAG"
+            echo "AGENT_REPOSITORY_DOMAIN: $ECR_REGISTRY"
+            echo "MANAGER_REPOSITORY: $HELM_OPERATOR_REPO"
+            echo "MANAGER_TAG: $HELM_OPERATOR_TAG"
+            echo "MANAGER_REPOSITORY_DOMAIN: $ECR_REGISTRY"
           
             helm upgrade --install --wait amazon-cloudwatch-observability \
               ./helm-charts/charts/amazon-cloudwatch-observability \
               --namespace amazon-cloudwatch \
               --create-namespace \
-              --set clusterName=${{ inputs.cluster_name ||env.CLUSTER_NAME }} \
-              --set region=${{ inputs.region || env.AWS_REGION }} \
+              --set clusterName="$HELM_CLUSTER_NAME" \
+              --set region="$HELM_REGION" \
               --set agent.image.repository="cloudwatch-agent" \
               --set agent.image.tag="latest" \
               --set agent.image.repositoryDomainMap.public="public.ecr.aws/q4e2d9n7" \
-              --set manager.image.repository=${{ inputs.cloudwatch_agent_operator_repository || env.OPERATOR_ECR_TEST_REPO }} \
-              --set manager.image.tag=${{ inputs.cloudwatch_agent_operator_tag || needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }} \
-              --set manager.image.repositoryDomainMap.public=${{ steps.login-ecr.outputs.registry }} \
+              --set manager.image.repository="$HELM_OPERATOR_REPO" \
+              --set manager.image.tag="$HELM_OPERATOR_TAG" \
+              --set manager.image.repositoryDomainMap.public="$ECR_REGISTRY" \
               --values ./test-repo/test/performance/eks/resources/leader_election_overrides/base-overrides.yml
           fi
 
