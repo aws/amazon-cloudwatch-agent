@@ -103,11 +103,11 @@ type logEventBatch struct {
 	batchers       map[string]*state.RangeQueueBatcher
 
 	// Retry metadata
-	retryCountShort    int       // Number of retries using short delay strategy
-	retryCountLong     int       // Number of retries using long delay strategy
-	startTime          time.Time // Time of first request (for max retry duration calculation)
-	nextRetryTime      time.Time // When this batch should be retried next
-	lastError          error     // Last error encountered
+	retryCountShort int       // Number of retries using short delay strategy
+	retryCountLong  int       // Number of retries using long delay strategy
+	startTime       time.Time // Time of first request (for max retry duration calculation)
+	nextRetryTime   time.Time // When this batch should be retried next
+	lastError       error     // Last error encountered
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -257,11 +257,11 @@ func (b *logEventBatch) updateRetryMetadata(err error) {
 		b.retryCountShort++
 	}
 
-	// Calculate next retry time (honest timestamp, not capped)
+	// Calculate next retry time
 	b.nextRetryTime = time.Now().Add(wait)
 }
 
-// isExpired checks if the batch has exceeded the maximum retry duration (14 days).
+// isExpired checks if the batch has exceeded the maximum retry duration.
 func (b *logEventBatch) isExpired(maxRetryDuration time.Duration) bool {
 	if b.startTime.IsZero() {
 		return false
@@ -272,7 +272,7 @@ func (b *logEventBatch) isExpired(maxRetryDuration time.Duration) bool {
 // isReadyForRetry checks if enough time has passed since the last failure to retry this batch.
 func (b *logEventBatch) isReadyForRetry() bool {
 	if b.nextRetryTime.IsZero() {
-		return true // Never failed, ready to send
+		return true
 	}
 	return time.Now().After(b.nextRetryTime)
 }

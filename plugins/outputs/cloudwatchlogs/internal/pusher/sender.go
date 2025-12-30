@@ -63,7 +63,7 @@ func (s *sender) Send(batch *logEventBatch) {
 	if len(batch.events) == 0 {
 		return
 	}
-	
+
 	// Initialize start time before build()
 	batch.initializeStartTime()
 	input := batch.build()
@@ -83,7 +83,6 @@ func (s *sender) Send(batch *logEventBatch) {
 					s.logger.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, batch.Group, batch.Stream)
 				}
 			}
-			// Success - call done callbacks
 			batch.done()
 			s.logger.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(batch.events), batch.Group, batch.Stream, batch.bufferedSize/1024, time.Since(batch.startTime))
 			return
@@ -114,8 +113,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		// Update retry metadata in the batch
 		batch.updateRetryMetadata(err)
 
-		// Check if the next retry time would exceed the max retry duration
-		// This prevents us from sleeping and then making another doomed API call
+		// Check if retry would exceed max duration
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
 		if batch.isExpired(s.RetryDuration()) || batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
@@ -124,7 +122,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		}
 
 		// Calculate wait time until next retry
-		wait := batch.nextRetryTime.Sub(time.Now())
+		wait := time.Until(batch.nextRetryTime)
 		if wait < 0 {
 			wait = 0
 		}

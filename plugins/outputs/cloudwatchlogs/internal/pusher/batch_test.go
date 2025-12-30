@@ -416,7 +416,7 @@ func TestBatchRetryMetadata(t *testing.T) {
 	// Test initializeStartTime
 	batch.initializeStartTime()
 	assert.False(t, batch.startTime.IsZero())
-	
+
 	// Test updateRetryMetadata
 	err := assert.AnError
 	batch.updateRetryMetadata(err)
