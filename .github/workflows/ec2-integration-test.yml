@@ -40,6 +40,8 @@ on:
         type: string
       is_selinux_test:
         type: boolean
+      is_onprem_test:
+        type: boolean
       s3_integration_bucket:
         type: string
     secrets:
@@ -123,6 +125,7 @@ jobs:
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
+              -var="is_onprem=${{ inputs.is_onprem_test }}" \
               -var="user=${{ matrix.arrays.username }}"; then
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else

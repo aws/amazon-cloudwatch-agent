@@ -1,68 +1,61 @@
+version: "2"
 run:
-  # The default concurrency value is the number of available CPU.
   concurrency: 4
-
-  # Timeout for analysis, e.g. 30s, 5m, default is 1m
-  timeout: 20m
-
-  # Exit code when at least one issue was found, default is 1
-  issues-exit-code: 1
-
-  # Include test files or not, default is true
-  tests: true
-
-  # If invoked with -mod=readonly, the go command is disallowed from the implicit
-  # automatic updating of go.mod described above. Instead, it fails when any changes
-  # to go.mod are needed. This setting is most useful to check that go.mod does
-  # not need updates, such as in a continuous integration and testing system.
   modules-download-mode: readonly
-
+  issues-exit-code: 1
+  tests: true
 output:
-  # colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
-  formats: colored-line-number
-
-  # print lines of code with issue, default is true
-  print-issued-lines: true
-
-  # print linter name in the end of issue text, default is true
-  print-linter-name: true
-
-# All available settings of specific linters
-linters-settings:
-  gofmt:
-    # Simplify code: gofmt with `-s` option, true by default
-    simplify: true
-  goimports:
-    # Put imports beginning with prefix after 3rd-party packages.
-    # It's a comma-separated list of prefixes.
-    local-prefixes: github.com/aws/amazon-cloudwatch-agent
-  misspell:
-    # Correct spellings using locale preferences for US or UK.
-    # Default is to use a neutral variety of English.
-    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
-    ignore-words:
-      - performancetest
-    
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
 linters:
+  enable:
+    - gosec
+    - misspell
+    - nonamedreturns
+    - revive
   disable:
     - errcheck
+  settings:
+    misspell:
+      ignore-rules:
+        - performancetest
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+    rules:
+      - linters:
+        - revive
+        path: 'translator/translate/util/*'
+        text: 'var-naming: avoid meaningless package names'
+      - linters:
+        - staticcheck
+        text: 'ST1005: error strings should not be capitalized'
+issues:
+  new-from-rev: 9af4477
+formatters:
   enable:
     - gofmt
     - goimports
-    - gosec
-    - gosimple
-    - ineffassign
-    - misspell
-    - revive
-    - unused
-    - nonamedreturns
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/aws/amazon-cloudwatch-agent
   exclusions:
-    rules:
-      # Package name based on field in JSON
-      - path: 'translator/translate/logs/logs_collected/windows_events'
-        text: "var-naming: don't use an underscore in package name"
-        linters:
-          - revive
-
-issues:
-  new-from-rev: 9af4477
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
