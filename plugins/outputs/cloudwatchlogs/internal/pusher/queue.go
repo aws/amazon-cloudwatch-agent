@@ -182,10 +182,10 @@ func (q *queue) send() {
 	if len(q.batch.events) > 0 {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
 		q.batch.addFailCallback(q.onFailCallback())
-		
+
 		// Wait if halted (circuit breaker)
 		q.waitIfHalted()
-		
+
 		q.sender.Send(q.batch)
 		q.batch = newLogEventBatch(q.target, q.entityProvider)
 	}

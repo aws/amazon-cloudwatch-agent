@@ -820,7 +820,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 }
 func TestQueueHaltResume(t *testing.T) {
 	logger := testutil.NewNopLogger()
-	
+
 	var sendCount atomic.Int32
 	mockSender := &mockSender{}
 	mockSender.On("Send", mock.Anything).Run(func(args mock.Arguments) {
@@ -840,16 +840,16 @@ func TestQueueHaltResume(t *testing.T) {
 
 	// Add first event - should trigger send and halt
 	q.AddEvent(newStubLogEvent("first message", time.Now()))
-	
+
 	// Wait a bit for the first send to complete and halt
 	time.Sleep(50 * time.Millisecond)
-	
+
 	// Add second event - should be queued but not sent due to halt
 	q.AddEvent(newStubLogEvent("second message", time.Now()))
-	
+
 	// Verify only one send happened (queue is halted)
 	assert.Equal(t, int32(1), sendCount.Load(), "Should have only one send due to halt")
-	
+
 	// Trigger flush to force send of second batch - this should block until resumed
 	done := make(chan bool)
 	go func() {
@@ -862,7 +862,7 @@ func TestQueueHaltResume(t *testing.T) {
 		dummyBatch.done()
 		done <- true
 	}()
-	
+
 	// This should eventually complete when the queue is resumed
 	select {
 	case <-done:
@@ -870,6 +870,6 @@ func TestQueueHaltResume(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Test timed out - queue may be permanently halted")
 	}
-	
+
 	mockSender.AssertExpectations(t)
 }

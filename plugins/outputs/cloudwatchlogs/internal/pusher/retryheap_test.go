@@ -143,18 +143,6 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	assert.Equal(t, 0, heap.Size()) // Batch should be removed from heap
 }
 
-// Mock senderPool for testing
-type mockSenderPool struct {
-	sendCount int
-}
-
-func (m *mockSenderPool) Send(_ *logEventBatch) {
-	m.sendCount++
-}
-
-func (m *mockSenderPool) Stop()                          {}
-func (m *mockSenderPool) SetRetryDuration(time.Duration) {}
-func (m *mockSenderPool) RetryDuration() time.Duration   { return time.Hour }
 func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
 	heap := NewRetryHeap(2) // maxSize = 2
 	defer heap.Stop()
