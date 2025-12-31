@@ -42,6 +42,10 @@ type queue struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+
+	// Circuit breaker halt/resume functionality
+	haltCond *sync.Cond
+	halted   bool
 }
 
 var _ (Queue) = (*queue)(nil)
@@ -67,6 +71,8 @@ func newQueue(
 		stopCh:          make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		haltCond:        sync.NewCond(&sync.Mutex{}),
+		halted:          false,
 	}
 	q.flushTimeout.Store(flushTimeout)
 	q.wg.Add(1)
@@ -175,6 +181,11 @@ func (q *queue) merge(mergeChan chan logs.LogEvent) {
 func (q *queue) send() {
 	if len(q.batch.events) > 0 {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
+		q.batch.addFailCallback(q.onFailCallback())
+
+		// Wait if halted (circuit breaker)
+		q.waitIfHalted()
+
 		q.sender.Send(q.batch)
 		q.batch = newLogEventBatch(q.target, q.entityProvider)
 	}
@@ -183,6 +194,7 @@ func (q *queue) send() {
 // onSuccessCallback returns a callback function to be executed after a successful send.
 func (q *queue) onSuccessCallback(bufferedSize int) func() {
 	return func() {
+		q.resume() // Resume queue on success
 		q.lastSentTime.Store(time.Now())
 		go q.addStats("rawSize", float64(bufferedSize))
 		q.resetFlushTimer()
@@ -244,4 +256,35 @@ func hasValidTime(e logs.LogEvent) bool {
 		}
 	}
 	return true
+}
+
+// waitIfHalted blocks until the queue is unhalted (circuit breaker functionality)
+func (q *queue) waitIfHalted() {
+	q.haltCond.L.Lock()
+	for q.halted {
+		q.haltCond.Wait()
+	}
+	q.haltCond.L.Unlock()
+}
+
+// halt stops the queue from sending batches (called on failure)
+func (q *queue) halt() {
+	q.haltCond.L.Lock()
+	q.halted = true
+	q.haltCond.L.Unlock()
+}
+
+// resume allows the queue to send batches again (called on success)
+func (q *queue) resume() {
+	q.haltCond.L.Lock()
+	q.halted = false
+	q.haltCond.Broadcast()
+	q.haltCond.L.Unlock()
+}
+
+// onFailCallback returns a callback function to be executed after a failed send
+func (q *queue) onFailCallback() func() {
+	return func() {
+		q.halt()
+	}
 }
