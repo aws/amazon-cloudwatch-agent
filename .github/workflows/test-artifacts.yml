@@ -61,8 +61,10 @@ jobs:
     steps:
       - name: SetOutputs
         id: set-outputs
+        env:
+          TEST_REPO_BRANCH: ${{ inputs.test_repo_branch }}
         run: |
-          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
+          CWA_GITHUB_TEST_REPO_BRANCH="$TEST_REPO_BRANCH"
 
           echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
@@ -77,18 +79,20 @@ jobs:
 
       - name: Get commit date
         id: get-commit-date
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
           cd agent-repo  # Navigate to agent repo checkout
           echo "Extracting commit date from agent repository..."
           
           # Get commit date as Unix timestamp, fallback to 0 for easier backfilling
-          if [[ "${{ inputs.build_id }}" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ "$BUILD_ID" =~ ^[0-9a-f]{40}$ ]]; then
             # Full SHA - get date from git log
-            echo "Full SHA detected: ${{ inputs.build_id }}"
-            COMMIT_DATE=$(git log -1 --format=%ct ${{ inputs.build_id }} 2>/dev/null || echo "0")
-          elif [[ "${{ inputs.build_id }}" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
+            echo "Full SHA detected: $BUILD_ID"
+            COMMIT_DATE=$(git log -1 --format=%ct "$BUILD_ID" 2>/dev/null || echo "0")
+          elif [[ "$BUILD_ID" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
             # Version format like 1.300057.1b1168 - extract SHA and get date
-            SHA_PART=$(echo "${{ inputs.build_id }}" | sed 's/.*\.//')
+            SHA_PART=$(echo "$BUILD_ID" | sed 's/.*\.//')
             echo "Version format detected, extracted SHA: $SHA_PART"
             COMMIT_DATE=$(git log -1 --format=%ct --grep="$SHA_PART" 2>/dev/null || echo "0")
           else
@@ -98,7 +102,7 @@ jobs:
           fi
           
           echo "commit_date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
-          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: ${{ inputs.build_id }}"
+          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: $BUILD_ID"
           
           if [[ "$COMMIT_DATE" != "0" ]]; then
             echo "SUCCESS: Found commit date ${COMMIT_DATE}"

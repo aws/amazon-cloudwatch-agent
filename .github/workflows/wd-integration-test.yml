@@ -31,8 +31,11 @@ jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
     steps:
-      - run: |-
-          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
+      - env:
+          BUILD_SHA: ${{ inputs.build_sha }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
+        run: |-
+          if [[ "$BUILD_SHA" == "$GITHUB_SHA_VAL" ]]; then
             echo "Build SHA matches test SHA"
           else
             echo "Build SHA does not match test SHA"
