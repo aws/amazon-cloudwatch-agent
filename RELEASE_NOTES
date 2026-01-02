@@ -1,4 +1,11 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300063.0 (2025-12-15)
+========================================================================
+Features:
+* [ContainerInsights] Add Instance Store NVME metrics translation for EKS environments
+* [ContainerInsights] Add EFA Metrics to Container Insights for EKS environments
+
+========================================================================
 Amazon CloudWatch Agent 1.300062.0 (2025-11-05)
 ========================================================================
 Features:

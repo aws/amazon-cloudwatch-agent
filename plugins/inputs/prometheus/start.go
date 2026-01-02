@@ -36,7 +36,6 @@ import (
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
-	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	_ "github.com/prometheus/prometheus/discovery/install"
 	"github.com/prometheus/prometheus/model/relabel"
@@ -399,7 +398,7 @@ func reloadConfig(filename string, logger *slog.Logger, taManager *TargetAllocat
 
 	for _, sc := range scrapeConfigs {
 		if sc.ScrapeFallbackProtocol == "" {
-			sc.ScrapeFallbackProtocol = promconfig.PrometheusText0_0_4
+			sc.ScrapeFallbackProtocol = config.PrometheusText0_0_4
 		}
 	}
 

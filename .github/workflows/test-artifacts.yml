@@ -61,8 +61,10 @@ jobs:
     steps:
       - name: SetOutputs
         id: set-outputs
+        env:
+          TEST_REPO_BRANCH: ${{ inputs.test_repo_branch }}
         run: |
-          CWA_GITHUB_TEST_REPO_BRANCH=${{ inputs.test_repo_branch }}
+          CWA_GITHUB_TEST_REPO_BRANCH="$TEST_REPO_BRANCH"
 
           echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
@@ -77,18 +79,20 @@ jobs:
 
       - name: Get commit date
         id: get-commit-date
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
           cd agent-repo  # Navigate to agent repo checkout
           echo "Extracting commit date from agent repository..."
           
           # Get commit date as Unix timestamp, fallback to 0 for easier backfilling
-          if [[ "${{ inputs.build_id }}" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ "$BUILD_ID" =~ ^[0-9a-f]{40}$ ]]; then
             # Full SHA - get date from git log
-            echo "Full SHA detected: ${{ inputs.build_id }}"
-            COMMIT_DATE=$(git log -1 --format=%ct ${{ inputs.build_id }} 2>/dev/null || echo "0")
-          elif [[ "${{ inputs.build_id }}" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
+            echo "Full SHA detected: $BUILD_ID"
+            COMMIT_DATE=$(git log -1 --format=%ct "$BUILD_ID" 2>/dev/null || echo "0")
+          elif [[ "$BUILD_ID" =~ ^[0-9]+\.[0-9]+\.[0-9a-f]+$ ]]; then
             # Version format like 1.300057.1b1168 - extract SHA and get date
-            SHA_PART=$(echo "${{ inputs.build_id }}" | sed 's/.*\.//')
+            SHA_PART=$(echo "$BUILD_ID" | sed 's/.*\.//')
             echo "Version format detected, extracted SHA: $SHA_PART"
             COMMIT_DATE=$(git log -1 --format=%ct --grep="$SHA_PART" 2>/dev/null || echo "0")
           else
@@ -98,7 +102,7 @@ jobs:
           fi
           
           echo "commit_date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
-          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: ${{ inputs.build_id }}"
+          echo "Retrieved commit date: ${COMMIT_DATE} for build_id: $BUILD_ID"
           
           if [[ "$COMMIT_DATE" != "0" ]]; then
             echo "SUCCESS: Found commit date ${COMMIT_DATE}"
@@ -122,7 +126,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -131,6 +135,7 @@ jobs:
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
       ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
@@ -154,7 +159,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
       - name: Generate matrix
         id: set-matrix
@@ -163,6 +168,7 @@ jobs:
           echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_onprem_matrix=$(echo $(cat generator/resources/ec2_linux_onprem_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
@@ -182,6 +188,7 @@ jobs:
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}"
           echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
@@ -215,7 +222,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -435,6 +442,27 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  LinuxOnPremIntegrationTest:
+    needs: [GenerateTestMatrix, OutputEnvVariables]
+    name: 'OnpremLinux'
+    uses: ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: linux-onprem-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: true
     secrets: inherit
 
 

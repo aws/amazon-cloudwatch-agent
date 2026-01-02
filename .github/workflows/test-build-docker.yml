@@ -65,6 +65,9 @@ jobs:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
+      - name: Free up disk space
+        run: .github/scripts/free-disk-space.sh
+
       - name: Cache container
         id: cached_container
         uses: actions/cache@v3
@@ -140,7 +143,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

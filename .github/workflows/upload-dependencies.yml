@@ -42,12 +42,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
       - name: Upload Dependencies and Test Repo
+        env:
+          S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          GITHUB_SHA_INPUT: ${{ inputs.github_sha }}
         run: |
           go mod tidy
           go mod vendor
           mkdir test-repo
           tar -czf ./test-repo/amazon-cloudwatch-agent-test.tar.gz --exclude='test-repo' .
-          aws s3 cp ./test-repo/amazon-cloudwatch-agent-test.tar.gz s3://${{ inputs.s3_integration_bucket }}/integration-test/cloudwatch-agent-test-repo/${{ inputs.github_sha }}.tar.gz --quiet
+          aws s3 cp ./test-repo/amazon-cloudwatch-agent-test.tar.gz "s3://${S3_BUCKET}/integration-test/cloudwatch-agent-test-repo/${GITHUB_SHA_INPUT}.tar.gz" --quiet

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package windows_events
+package windowsevents
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -28,7 +28,7 @@ func RegisterRule(ruleName string, r translator.Rule) {
 	ChildRule[ruleName] = r
 }
 
-func (w *WindowsEvent) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (w *WindowsEvent) ApplyRule(input interface{}) (string, interface{}) {
 	im := input.(map[string]interface{})
 	windowsEventConfig := map[string]interface{}{
 		"destination": "cloudwatchlogs",
@@ -45,10 +45,10 @@ func (w *WindowsEvent) ApplyRule(input interface{}) (returnKey string, returnVal
 		return "inputs", map[string]interface{}{
 			SectionMappedKey: []interface{}{windowsEventConfig},
 		}
-	} else {
-		translator.AddInfoMessages("", "No windows event log configuration found.")
-		return "", '"'
 	}
+
+	translator.AddInfoMessages("", "No windows event log configuration found.")
+	return "", '"'
 }
 
 var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
