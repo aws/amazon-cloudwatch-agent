@@ -126,8 +126,11 @@ jobs:
       - name: Upload to s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         # Copy the RPM to .../amazon_linux/... because BETA customers expect it there.
+        env:
+          S3_BUCKET: ${{ inputs.Bucket }}
+          BUCKET_KEY: ${{ inputs.BucketKey }}
         run: |
-          echo "BucketKey: ${{ inputs.Bucket }} ${{ inputs.BucketKey }}"
-          aws s3 cp build/bin s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }} --recursive
-          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
+          echo "BucketKey: ${S3_BUCKET} ${BUCKET_KEY}"
+          aws s3 cp build/bin "s3://${S3_BUCKET}/${BUCKET_KEY}" --recursive
+          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm "s3://${S3_BUCKET}/${BUCKET_KEY}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm"
+          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm "s3://${S3_BUCKET}/${BUCKET_KEY}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm"
