@@ -40,50 +40,54 @@ jobs:
 
       - name: Download Artifacts
         id: download-artifacts
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
           mkdir -p windows/amd64/
-          aws s3 cp --no-progress s3://${{ env.S3_RELEASE_BUCKET }}/windows/amd64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./windows/amd64/
+          aws s3 cp --no-progress "s3://${{ env.S3_RELEASE_BUCKET }}/windows/amd64/${BUILD_ID}/AmazonCloudWatchAgent.zip" ./windows/amd64/
 
           mkdir -p linux/amd64
-          aws s3 cp --no-progress s3://${{ env.S3_RELEASE_BUCKET }}/linux/amd64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./linux/amd64
+          aws s3 cp --no-progress "s3://${{ env.S3_RELEASE_BUCKET }}/linux/amd64/${BUILD_ID}/AmazonCloudWatchAgent.zip" ./linux/amd64
 
           mkdir -p linux/arm64
-          aws s3 cp --no-progress s3://${{ env.S3_RELEASE_BUCKET }}/linux/arm64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./linux/arm64
+          aws s3 cp --no-progress "s3://${{ env.S3_RELEASE_BUCKET }}/linux/arm64/${BUILD_ID}/AmazonCloudWatchAgent.zip" ./linux/arm64
 
           mkdir -p darwin/amd64
-          aws s3 cp --no-progress s3://${{ env.S3_RELEASE_BUCKET }}/darwin/amd64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./darwin/amd64
+          aws s3 cp --no-progress "s3://${{ env.S3_RELEASE_BUCKET }}/darwin/amd64/${BUILD_ID}/AmazonCloudWatchAgent.zip" ./darwin/amd64
 
           mkdir -p darwin/arm64
-          aws s3 cp --no-progress s3://${{ env.S3_RELEASE_BUCKET }}/darwin/arm64/${{ inputs.build_id }}/AmazonCloudWatchAgent.zip ./darwin/arm64
+          aws s3 cp --no-progress "s3://${{ env.S3_RELEASE_BUCKET }}/darwin/arm64/${BUILD_ID}/AmazonCloudWatchAgent.zip" ./darwin/arm64
 
       - name: Re-upload Artifacts
         id: upload-artifacts
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
           pushd windows/amd64/
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.msi s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/amazon-cloudwatch-agent.msi
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.msi "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${BUILD_ID}/amazon-cloudwatch-agent.msi"
           popd
 
           pushd linux/amd64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.rpm"
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.deb"
           popd
 
           pushd linux/arm64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.rpm "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${BUILD_ID}/linux/arm64/amazon-cloudwatch-agent.rpm"
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.deb "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${BUILD_ID}/linux/arm64/amazon-cloudwatch-agent.deb"
           popd
 
           pushd darwin/amd64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/amd64/amazon-cloudwatch-agent.pkg
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${BUILD_ID}/amd64/amazon-cloudwatch-agent.pkg"
           popd
 
           pushd darwin/arm64
           unzip AmazonCloudWatchAgent.zip
-          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp --no-progress ./amazon-cloudwatch-agent.pkg "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${BUILD_ID}/arm64/amazon-cloudwatch-agent.pkg"
           popd
 
       - name: Configure AWS Credentials (CN)
@@ -95,15 +99,17 @@ jobs:
 
       - name: Re-upload Artifacts (CN)
         id: upload-artifacts-cn
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
           pushd linux/amd64
-          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
-          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm "s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.rpm"
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb "s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.deb"
           popd
 
           pushd linux/arm64
-          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
-          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm "s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${BUILD_ID}/linux/arm64/amazon-cloudwatch-agent.rpm"
+          aws --region cn-north-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb "s3://${{ env.S3_INTEGRATION_BUCKET_CN }}/integration-test/binary/${BUILD_ID}/linux/arm64/amazon-cloudwatch-agent.deb"
           popd
 
       - name: Configure AWS Credentials (ITAR)
@@ -115,15 +121,17 @@ jobs:
 
       - name: Re-upload Artifacts (ITAR)
         id: upload-artifacts-itar
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
           pushd linux/amd64
-          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm
-          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm "s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.rpm"
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb "s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.deb"
           popd
 
           pushd linux/arm64
-          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.rpm
-          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${{ inputs.build_id }}/linux/arm64/amazon-cloudwatch-agent.deb
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.rpm "s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${BUILD_ID}/linux/arm64/amazon-cloudwatch-agent.rpm"
+          aws --region us-gov-east-1 s3 cp --no-progress ./amazon-cloudwatch-agent.deb "s3://${{ env.S3_INTEGRATION_BUCKET_ITAR }}/integration-test/binary/${BUILD_ID}/linux/arm64/amazon-cloudwatch-agent.deb"
           popd
 
   RepackageECRImage:
