@@ -71,6 +71,16 @@ jobs:
         if: needs.changes.outputs.lint == 'true'
         run: make lint
 
+      - name: Check AWS SDK partition data
+        if: needs.changes.outputs.lint == 'true'
+        run: |
+          make copy-aws-sdk-partition
+          if [ ! -z "`git status --porcelain`" ]; then
+            echo "make copy-aws-sdk-partition changed files"
+            git status
+            exit 1
+          fi
+
   build:
     needs: [lint, changes]
     name: Build ${{ matrix.os }}
