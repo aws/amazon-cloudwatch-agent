@@ -130,6 +130,9 @@ func TestEmf(t *testing.T) {
 		},
 	}
 	ua := newUserAgent()
+	if len(ua.inputs) == 0 {
+		ua.isRoot = false
+	}
 	ua.SetComponents(otelCfg, &telegraf.Config{})
 	assert.Len(t, ua.inputs, 2)
 	assert.Len(t, ua.processors, 0)
@@ -156,6 +159,9 @@ func TestMissingEmfExporterConfig(t *testing.T) {
 		},
 	}
 	ua := newUserAgent()
+	if len(ua.inputs) == 0 {
+		ua.isRoot = false
+	}
 	ua.SetComponents(otelCfg, &telegraf.Config{})
 	assert.Len(t, ua.inputs, 2)
 	assert.Len(t, ua.processors, 0)
@@ -200,6 +206,9 @@ func TestJmx(t *testing.T) {
 		},
 	}
 	ua := newUserAgent()
+	if len(ua.inputs) == 0 {
+		ua.isRoot = false
+    }
 	ua.SetComponents(otelCfg, &telegraf.Config{})
 	assert.Len(t, ua.inputs, 5)
 	assert.Len(t, ua.processors, 0)
