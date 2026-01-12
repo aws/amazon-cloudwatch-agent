@@ -141,7 +141,7 @@ jobs:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           go-version: ~1.25
 
