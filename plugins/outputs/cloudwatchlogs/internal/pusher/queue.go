@@ -17,7 +17,6 @@ import (
 type Queue interface {
 	AddEvent(e logs.LogEvent)
 	AddEventNonBlocking(e logs.LogEvent)
-	Stop()
 }
 
 type queue struct {
@@ -35,8 +34,7 @@ type queue struct {
 	resetTimerCh chan struct{}
 	flushTimer   *time.Timer
 	flushTimeout atomic.Value
-	stopCh       chan struct{}
-	stopped      bool
+	stop         <-chan struct{}
 	lastSentTime atomic.Value
 
 	initNonBlockingChOnce sync.Once
@@ -44,14 +42,13 @@ type queue struct {
 	wg                    *sync.WaitGroup
 }
 
-var _ (Queue) = (*queue)(nil)
-
 func newQueue(
 	logger telegraf.Logger,
 	target Target,
 	flushTimeout time.Duration,
 	entityProvider logs.LogEntityProvider,
 	sender Sender,
+	stop <-chan struct{},
 	wg *sync.WaitGroup,
 ) Queue {
 	q := &queue{
@@ -64,7 +61,7 @@ func newQueue(
 		flushCh:         make(chan struct{}),
 		resetTimerCh:    make(chan struct{}),
 		flushTimer:      time.NewTimer(flushTimeout),
-		stopCh:          make(chan struct{}),
+		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
 	}
@@ -108,30 +105,33 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 	}
 }
 
-// Stop stops all goroutines associated with this queue instance.
-func (q *queue) Stop() {
-	if q.stopped {
-		return
-	}
-	close(q.stopCh)
-	q.stopped = true
-}
-
 // start is the main loop for processing events and managing the queue.
 func (q *queue) start() {
 	defer q.wg.Done()
 	mergeChan := make(chan logs.LogEvent)
 
-	go q.merge(mergeChan)
+	// Merge events from both blocking and non-blocking channel
+	go func() {
+		var nonBlockingEventsCh <-chan logs.LogEvent
+		for {
+			select {
+			case e := <-q.eventsCh:
+				mergeChan <- e
+			case e := <-nonBlockingEventsCh:
+				mergeChan <- e
+			case <-q.startNonBlockCh:
+				nonBlockingEventsCh = q.nonBlockingEventsCh
+			case <-q.stop:
+				return
+			}
+		}
+	}()
+
 	go q.manageFlushTimer()
 
 	for {
 		select {
-		case e, ok := <-mergeChan:
-			if !ok {
-				q.send()
-				return
-			}
+		case e := <-mergeChan:
 			// Start timer when first event of the batch is added (happens after a flush timer timeout)
 			if len(q.batch.events) == 0 {
 				q.resetFlushTimer()
@@ -149,23 +149,10 @@ func (q *queue) start() {
 			} else {
 				q.resetFlushTimer()
 			}
-		}
-	}
-}
-
-// merge merges events from both blocking and non-blocking channel
-func (q *queue) merge(mergeChan chan logs.LogEvent) {
-	defer close(mergeChan)
-	var nonBlockingEventsCh <-chan logs.LogEvent
-	for {
-		select {
-		case e := <-q.eventsCh:
-			mergeChan <- e
-		case e := <-nonBlockingEventsCh:
-			mergeChan <- e
-		case <-q.startNonBlockCh:
-			nonBlockingEventsCh = q.nonBlockingEventsCh
-		case <-q.stopCh:
+		case <-q.stop:
+			if len(q.batch.events) > 0 {
+				q.send()
+			}
 			return
 		}
 	}
@@ -207,7 +194,7 @@ func (q *queue) manageFlushTimer() {
 			if flushTimeout, ok := q.flushTimeout.Load().(time.Duration); ok {
 				q.flushTimer.Reset(flushTimeout)
 			}
-		case <-q.stopCh:
+		case <-q.stop:
 			q.stopFlushTimer()
 			return
 		}

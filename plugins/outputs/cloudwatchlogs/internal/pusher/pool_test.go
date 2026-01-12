@@ -105,9 +105,10 @@ func TestWorkerPool(t *testing.T) {
 
 func TestSenderPool(t *testing.T) {
 	logger := testutil.NewNopLogger()
+	stop := make(chan struct{})
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
-	s := newSender(logger, mockService, nil, time.Second)
+	s := newSender(logger, mockService, nil, time.Second, stop)
 	p := NewWorkerPool(12)
 	sp := newSenderPool(p, s)
 
@@ -131,6 +132,5 @@ func TestSenderPool(t *testing.T) {
 	}
 
 	p.Stop()
-	s.Stop()
 	assert.Equal(t, int32(200), completed.Load())
 }
