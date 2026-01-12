@@ -107,7 +107,6 @@ type logEventBatch struct {
 	retryCountLong  int       // Number of retries using long delay strategy
 	startTime       time.Time // Time of first request (for max retry duration calculation)
 	nextRetryTime   time.Time // When this batch should be retried next
-	lastError       error     // Last error encountered
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -244,9 +243,6 @@ func (b *logEventBatch) initializeStartTime() {
 // updateRetryMetadata updates the retry metadata after a failed send attempt.
 // It increments the appropriate retry counter based on the error type and calculates the next retry time.
 func (b *logEventBatch) updateRetryMetadata(err error) {
-	// Store the error
-	b.lastError = err
-
 	// Determine retry strategy and increment counter
 	var wait time.Duration
 	if chooseRetryWaitStrategy(err) == retryLong {

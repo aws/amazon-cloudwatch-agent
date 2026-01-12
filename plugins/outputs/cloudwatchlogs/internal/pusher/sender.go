@@ -115,7 +115,7 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		// Check if retry would exceed max duration
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
-		if batch.isExpired(s.RetryDuration()) || batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+		if batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return

@@ -422,8 +422,14 @@ func TestBatchRetryMetadata(t *testing.T) {
 	batch.updateRetryMetadata(err)
 	assert.Equal(t, 1, batch.retryCountShort)
 	assert.Equal(t, 0, batch.retryCountLong)
-	assert.Equal(t, err, batch.lastError)
 	assert.False(t, batch.nextRetryTime.IsZero())
+
+	// Test isReadyForRetry - should be false immediately after retry metadata update
+	assert.False(t, batch.isReadyForRetry())
+
+	// Test isReadyForRetry - should be true after nextRetryTime passes
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second) // Set to past time
+	assert.True(t, batch.isReadyForRetry())
 
 	// Test isExpired
 	batch.startTime = time.Now().Add(-25 * time.Hour)
