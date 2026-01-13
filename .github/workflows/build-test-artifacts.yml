@@ -134,7 +134,7 @@ jobs:
       - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
   StartEKSE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
     if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
