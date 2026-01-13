@@ -6,7 +6,6 @@ package aws
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 
@@ -14,10 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go-v2/service/sts/types"
-	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
+	smithymiddleware "github.com/aws/smithy-go/middleware"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/middleware"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/endpoints/awsrulesfn"
 )
 
@@ -68,27 +67,6 @@ func newStsCredentialsProvider(cfg aws.Config, roleARN string, region string) aw
 	}
 }
 
-type withHeaders struct {
-	headers map[string]string
-}
-
-var _ middleware.FinalizeMiddleware = (*withHeaders)(nil)
-
-func (w *withHeaders) ID() string {
-	return "withHeaders"
-}
-
-func (w *withHeaders) HandleFinalize(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (middleware.FinalizeOutput, middleware.Metadata, error) {
-	req, ok := in.Request.(*smithyhttp.Request)
-	if !ok {
-		return middleware.FinalizeOutput{}, middleware.Metadata{}, fmt.Errorf("unrecognized transport type %T", in.Request)
-	}
-	for k, v := range w.headers {
-		req.Header.Set(k, v)
-	}
-	return next.HandleFinalize(ctx, in)
-}
-
 const (
 	SourceArnHeaderKey     = "x-amz-source-arn"
 	SourceAccountHeaderKey = "x-amz-source-account"
@@ -102,13 +80,14 @@ func newStsClient(cfg aws.Config) stscreds.AssumeRoleAPIClient {
 	sourceArn := os.Getenv(envconfig.AmzSourceArn)
 	if sourceAccount != "" && sourceArn != "" {
 		options = append(options, func(o *sts.Options) {
-			o.APIOptions = append(o.APIOptions, func(s *middleware.Stack) error {
-				return s.Finalize.Add(&withHeaders{
-					headers: map[string]string{
+			o.APIOptions = append(o.APIOptions, func(s *smithymiddleware.Stack) error {
+				return s.Finalize.Add(&middleware.CustomHeaderFinalizeMiddleware{
+					Name: "ConfusedDeputyHeaders",
+					Headers: map[string]string{
 						SourceArnHeaderKey:     sourceArn,
 						SourceAccountHeaderKey: sourceAccount,
 					},
-				}, middleware.Before)
+				}, smithymiddleware.Before)
 			})
 		})
 	}

@@ -30,20 +30,20 @@ type CredentialsConfig struct {
 
 func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) {
 	if c.RoleARN != "" {
-		return c.assumeCredentials(ctx)
+		return c.assumeRoleConfig(ctx)
 	}
-	return c.rootCredentials(ctx)
+	return c.rootConfig(ctx)
 }
 
-func (c *CredentialsConfig) assumeCredentials(ctx context.Context) (aws.Config, error) {
-	cfg, err := c.rootCredentials(ctx)
+func (c *CredentialsConfig) assumeRoleConfig(ctx context.Context) (aws.Config, error) {
+	cfg, err := c.rootConfig(ctx)
 	if err != nil {
 		return aws.Config{}, err
 	}
 	return c.loadConfig(ctx, aws.NewCredentialsCache(newStsCredentialsProvider(cfg, c.RoleARN, c.Region)))
 }
 
-func (c *CredentialsConfig) rootCredentials(ctx context.Context) (aws.Config, error) {
+func (c *CredentialsConfig) rootConfig(ctx context.Context) (aws.Config, error) {
 	return c.loadConfig(ctx, c.fromChain())
 }
 
