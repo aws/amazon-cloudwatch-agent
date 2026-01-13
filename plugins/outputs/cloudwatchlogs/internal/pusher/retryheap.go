@@ -33,7 +33,7 @@ func (h *retryHeapImpl) Pop() interface{} {
 	old := *h
 	n := len(old)
 	item := old[n-1]
-	old[n-1] = nil     // don't stop the GC from reclaiming the item eventually
+	old[n-1] = nil // don't stop the GC from reclaiming the item eventually
 	*h = old[0 : n-1]
 	return item
 }
@@ -151,10 +151,10 @@ func (p *RetryHeapProcessor) Stop() {
 	if p.ticker != nil {
 		p.ticker.Stop()
 	}
-	
+
 	// Process any remaining batches before stopping
 	p.processReadyMessages()
-	
+
 	close(p.stopCh)
 	p.stopped = true
 }

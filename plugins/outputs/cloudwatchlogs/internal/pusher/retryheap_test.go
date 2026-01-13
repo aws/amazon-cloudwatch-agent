@@ -26,7 +26,7 @@ func TestRetryHeap(t *testing.T) {
 	batch1.nextRetryTime = time.Now().Add(1 * time.Second)
 
 	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = time.Now().Add(-1 * time.Second) // Ready now
+	batch2.nextRetryTime = time.Now().Add(-1 * time.Second)
 
 	// Push batches
 	err := heap.Push(batch1)
@@ -36,7 +36,6 @@ func TestRetryHeap(t *testing.T) {
 
 	assert.Equal(t, 2, heap.Size())
 
-	// Pop ready batches
 	ready = heap.PopReady()
 	assert.Len(t, ready, 1)
 	assert.Equal(t, batch2, ready[0])
@@ -120,10 +119,10 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	mockSenderPool := &mockSenderPool{}
 	processor := NewRetryHeapProcessor(heap, mockSenderPool, &testutil.Logger{}, time.Hour)
 
-	// Create ready batch
+	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
-	batch.nextRetryTime = time.Now().Add(-1 * time.Second) // Ready now
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
 
 	heap.Push(batch)
 
@@ -131,6 +130,79 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	processor.processReadyMessages()
 	assert.Equal(t, 0, heap.Size())
 	assert.Equal(t, 1, mockSenderPool.sendCount)
+}
+
+func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
+	heap := NewRetryHeap(2) // maxSize = 2
+	defer heap.Stop()
+
+	// Fill heap to capacity with expired batches
+	target := Target{Group: "group", Stream: "stream"}
+	batch1 := newLogEventBatch(target, nil)
+	batch1.nextRetryTime = time.Now().Add(-1 * time.Hour)
+	batch2 := newLogEventBatch(target, nil)
+	batch2.nextRetryTime = time.Now().Add(-1 * time.Hour)
+
+	heap.Push(batch1)
+	heap.Push(batch2)
+
+	// Verify heap is at capacity
+	if heap.Size() != 2 {
+		t.Fatalf("Expected size 2, got %d", heap.Size())
+	}
+
+	// Test that semaphore is actually blocking by trying to push in a goroutine
+	pushResult := make(chan error, 1)
+
+	go func() {
+		batch3 := newLogEventBatch(target, nil)
+		batch3.nextRetryTime = time.Now().Add(-1 * time.Hour)
+		err := heap.Push(batch3) // This should block on semaphore
+		pushResult <- err
+	}()
+
+	// Verify the push is blocked (expects no result in channel)
+	select {
+	case <-pushResult:
+		t.Fatal("Unexpected push, heap should be blocked")
+	case <-time.After(100 * time.Millisecond):
+		// Push is successfully blocked when at capacity
+	}
+
+	// Pop ready batches to release semaphore slots
+	readyBatches := heap.PopReady()
+	assert.Len(t, readyBatches, 2, "Should pop exactly 2 ready batches")
+
+	for _, batch := range readyBatches {
+		assert.Equal(t, "group", batch.Group)
+		assert.Equal(t, "stream", batch.Stream)
+	}
+
+	// Expects push to now be unblocked
+	select {
+	case err := <-pushResult:
+		assert.NoError(t, err, "Push should succeed after PopReady")
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Unexpected timeout, heap should be unblocked")
+	}
+
+	// Verify 1 item remaining in heap (2 popped, 1 pushed)
+	if heap.Size() != 1 {
+		t.Fatalf("Expected size 1 after pop/push cycle, got %d", heap.Size())
+	}
+}
+
+func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
+	heap := NewRetryHeap(10)
+	defer heap.Stop()
+
+	logger := &testutil.Logger{}
+	processor := NewRetryHeapProcessor(heap, nil, logger, time.Hour)
+
+	// Process with empty heap - should not panic
+	processor.processReadyMessages()
+
+	assert.Equal(t, 0, heap.Size())
 }
 
 // Mock senderPool for testing
@@ -145,63 +217,3 @@ func (m *mockSenderPool) Send(_ *logEventBatch) {
 func (m *mockSenderPool) Stop()                          {}
 func (m *mockSenderPool) SetRetryDuration(time.Duration) {}
 func (m *mockSenderPool) RetryDuration() time.Duration   { return time.Hour }
-func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
-	heap := NewRetryHeap(2) // maxSize = 2
-	defer heap.Stop()
-
-	// Fill heap to capacity with batches that will be ready in 3 seconds
-	target := Target{Group: "group", Stream: "stream"}
-	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = time.Now().Add(3 * time.Second)
-	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = time.Now().Add(3 * time.Second)
-
-	heap.Push(batch1)
-	heap.Push(batch2)
-
-	// Verify heap is at capacity
-	if heap.Size() != 2 {
-		t.Fatalf("Expected size 2, got %d", heap.Size())
-	}
-
-	// Try to push third item - should block
-	var pushCompleted bool
-
-	go func() {
-		batch3 := newLogEventBatch(target, nil)
-		batch3.nextRetryTime = time.Now().Add(time.Hour) // Future time, won't be popped
-		heap.Push(batch3)                                // This should block
-		pushCompleted = true
-	}()
-
-	// Give goroutine time to hit the semaphore block
-	time.Sleep(100 * time.Millisecond)
-
-	if pushCompleted {
-		t.Fatal("Push should be blocked by semaphore")
-	}
-
-	// Wait for batches to become ready, then pop to release semaphore
-	time.Sleep(4 * time.Second)
-	readyBatches := heap.PopReady()
-
-	// Validate that the correct batches were taken off the heap
-	assert.Len(t, readyBatches, 2, "Should pop exactly 2 ready batches")
-	
-	for _, batch := range readyBatches {
-		assert.Equal(t, "group", batch.Group)
-		assert.Equal(t, "stream", batch.Stream)
-	}
-
-	// Give time for push to unblock
-	time.Sleep(100 * time.Millisecond)
-
-	if !pushCompleted {
-		t.Fatal("Push should be unblocked after PopReady")
-	}
-
-	// Verify final state - should have 1 item (2 popped, 1 pushed)
-	if heap.Size() != 1 {
-		t.Fatalf("Expected size 1 after pop/push cycle, got %d", heap.Size())
-	}
-}
