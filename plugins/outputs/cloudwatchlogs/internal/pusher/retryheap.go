@@ -15,6 +15,8 @@ import (
 // retryHeapImpl implements heap.Interface for logEventBatch sorted by nextRetryTime
 type retryHeapImpl []*logEventBatch
 
+var _ heap.Interface = (*retryHeapImpl)(nil)
+
 func (h retryHeapImpl) Len() int { return len(h) }
 
 func (h retryHeapImpl) Less(i, j int) bool {
@@ -31,6 +33,7 @@ func (h *retryHeapImpl) Pop() interface{} {
 	old := *h
 	n := len(old)
 	item := old[n-1]
+	old[n-1] = nil     // don't stop the GC from reclaiming the item eventually
 	*h = old[0 : n-1]
 	return item
 }
@@ -51,10 +54,12 @@ type retryHeap struct {
 	maxSize   int
 }
 
+var _ RetryHeap = (*retryHeap)(nil)
+
 // NewRetryHeap creates a new retry heap with the specified maximum size
 func NewRetryHeap(maxSize int) RetryHeap {
 	rh := &retryHeap{
-		heap:      make(retryHeapImpl, 0),
+		heap:      make(retryHeapImpl, 0, maxSize),
 		maxSize:   maxSize,
 		semaphore: make(chan struct{}, maxSize), // Semaphore for size enforcement
 		stopCh:    make(chan struct{}),
@@ -146,6 +151,10 @@ func (p *RetryHeapProcessor) Stop() {
 	if p.ticker != nil {
 		p.ticker.Stop()
 	}
+	
+	// Process any remaining batches before stopping
+	p.processReadyMessages()
+	
 	close(p.stopCh)
 	p.stopped = true
 }
@@ -169,14 +178,14 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 	for _, batch := range readyBatches {
 		// Check if batch has expired
 		if batch.isExpired(p.maxRetryDuration) {
-			p.logger.Debugf("Dropping expired batch for %s/%s", batch.Group, batch.Stream)
+			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
 			batch.updateState()
 			continue
 		}
 
 		// Submit the batch back to the sender pool (blocks if full)
 		p.senderPool.Send(batch)
-		p.logger.Debugf("Moved batch from retry heap back to sender pool for %s/%s",
+		p.logger.Debugf("Moved batch from retry heap back to sender pool for %v/%v",
 			batch.Group, batch.Stream)
 	}
 }

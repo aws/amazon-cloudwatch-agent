@@ -183,7 +183,15 @@ func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
 
 	// Wait for batches to become ready, then pop to release semaphore
 	time.Sleep(4 * time.Second)
-	heap.PopReady()
+	readyBatches := heap.PopReady()
+
+	// Validate that the correct batches were taken off the heap
+	assert.Len(t, readyBatches, 2, "Should pop exactly 2 ready batches")
+	
+	for _, batch := range readyBatches {
+		assert.Equal(t, "group", batch.Group)
+		assert.Equal(t, "stream", batch.Stream)
+	}
 
 	// Give time for push to unblock
 	time.Sleep(100 * time.Millisecond)
