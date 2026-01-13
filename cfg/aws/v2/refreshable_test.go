@@ -17,9 +17,11 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpFile, err := os.CreateTemp(tmpDir, "credential")
 	require.NoError(t, err)
+	tmpFilename := tmpFile.Name()
+	require.NoError(t, tmpFile.Close())
 
 	provider := &RefreshableSharedCredentialsProvider{
-		Filename:     tmpFile.Name(),
+		Filename:     tmpFilename,
 		Profile:      testProfile,
 		ExpiryWindow: 500 * time.Millisecond,
 	}
@@ -32,7 +34,7 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	// Write initial credentials
 	content, err := os.ReadFile("../testdata/credential_original")
 	require.NoError(t, err)
-	err = os.WriteFile(tmpFile.Name(), content, 0600)
+	err = os.WriteFile(tmpFilename, content, 0600)
 	require.NoError(t, err)
 
 	// First retrieval
