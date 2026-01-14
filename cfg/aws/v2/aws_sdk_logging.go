@@ -13,8 +13,6 @@ import (
 )
 
 // Hard coded strings that match actual variable names in the AWS SDK.
-// I don't expect these names to change, or their meaning to change.
-// Update this map if/when AWS SDK adds more levels (unlikely).
 var stringToLevelMap = map[string]aws.ClientLogMode{
 	// AWS SDK v2 Levels
 	"LogRequest":              aws.LogRequest,
@@ -47,6 +45,9 @@ func SetSDKLogLevel(sdkLogLevelString string) {
 	levels := strings.Split(sdkLogLevelString, "|")
 	for _, v := range levels {
 		trimmed := strings.TrimSpace(v)
+		if trimmed == "LogDebugWithRequestErrors" {
+			log.Println(`W! AWS SDK log level "LogDebugWithRequestErrors" is no longer supported. This will be evaluated as the equivalent of "LogDebug".`)
+		}
 		// If v not in map, then OR with 0 is harmless.
 		temp |= stringToLevelMap[trimmed]
 	}

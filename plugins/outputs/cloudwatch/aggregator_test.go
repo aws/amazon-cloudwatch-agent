@@ -9,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 var wg sync.WaitGroup
@@ -48,7 +49,7 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 	d := distribution.NewClassicDistribution()
-	d.AddEntryWithUnit(1, 1, "Percent")
+	assert.NoError(t, d.AddEntryWithUnit(1, 1, "Percent"))
 	want := map[string]distribution.Distribution{"mname": d}
 	testCheckMetrics(t, metricChan, 3*aggregationInterval, want)
 	assertNoMetricsInChan(t, metricChan)
@@ -81,19 +82,19 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	assertNoMetricsInChan(t, metricChan)
 	// Expect just 1 datum at the 1 second interval.
 	d := distribution.NewClassicDistribution()
-	d.AddEntryWithUnit(1, 1, "Percent")
-	d.AddEntryWithUnit(2, 1, "Percent")
-	d.AddEntryWithUnit(3, 1, "Percent")
+	assert.NoError(t, d.AddEntryWithUnit(1, 1, "Percent"))
+	assert.NoError(t, d.AddEntryWithUnit(2, 1, "Percent"))
+	assert.NoError(t, d.AddEntryWithUnit(3, 1, "Percent"))
 	want := map[string]distribution.Distribution{"mytrick": d}
 	testCheckMetrics(t, metricChan, 4*time.Second, want)
 	assertNoMetricsInChan(t, metricChan)
 	// Expect 2 datums at the 2 second interval.
 	d = distribution.NewClassicDistribution()
-	d.AddEntryWithUnit(4, 1, "Percent")
-	d.AddEntryWithUnit(5, 1, "Percent")
+	assert.NoError(t, d.AddEntryWithUnit(4, 1, "Percent"))
+	assert.NoError(t, d.AddEntryWithUnit(5, 1, "Percent"))
 	d2 := distribution.NewClassicDistribution()
-	d2.AddEntryWithUnit(1, 1, "Percent")
-	d2.AddEntryWithUnit(2, 1, "Percent")
+	assert.NoError(t, d2.AddEntryWithUnit(1, 1, "Percent"))
+	assert.NoError(t, d2.AddEntryWithUnit(2, 1, "Percent"))
 	want = map[string]distribution.Distribution{"mytrick": d, "metrique": d2}
 	testCheckMetrics(t, metricChan, 4*time.Second, want)
 	assertNoMetricsInChan(t, metricChan)
@@ -115,7 +116,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	// And there is a delay when each new durationAggregator begins.
 	// So submit a metric and wait for the first aggregation to occur.
 	d := distribution.NewClassicDistribution()
-	d.AddEntryWithUnit(1, 1, "Percent")
+	assert.NoError(t, d.AddEntryWithUnit(1, 1, "Percent"))
 	want := map[string]distribution.Distribution{"mname1": d}
 	testCheckMetrics(t, metricChan, 3*aggregationInterval, want)
 	assertNoMetricsInChan(t, metricChan)
@@ -192,21 +193,25 @@ func makeTestMetric(
 	unit string,
 ) *aggregationDatum {
 	sortedKeys := sortedTagKeys(tags)
-	dims := []*cloudwatch.Dimension{}
+	dims := []types.Dimension{}
 	for _, k := range sortedKeys {
 		v := tags[k]
-		d := cloudwatch.Dimension{}
-		d.SetName(k)
-		d.SetValue(v)
-		dims = append(dims, &d)
+		d := types.Dimension{
+			Name:  aws.String(k),
+			Value: aws.String(v),
+		}
+		dims = append(dims, d)
 	}
-	ag := aggregationDatum{}
-	ag.SetMetricName(name)
-	ag.SetValue(value)
-	ag.SetTimestamp(ts)
-	ag.SetDimensions(dims)
-	ag.SetUnit(unit)
-	ag.aggregationInterval = aggregationInterval
+	ag := aggregationDatum{
+		MetricDatum: types.MetricDatum{
+			MetricName: aws.String(name),
+			Value:      aws.Float64(value),
+			Timestamp:  aws.Time(ts),
+			Dimensions: dims,
+			Unit:       types.StandardUnit(unit),
+		},
+		aggregationInterval: aggregationInterval,
+	}
 	return &ag
 }
 
@@ -218,7 +223,7 @@ func testCheckMetrics(
 	metricMaxWait time.Duration,
 	want map[string]distribution.Distribution,
 ) {
-	for _, _ = range want {
+	for range want {
 		var got *aggregationDatum
 		t.Log("Waiting for metric.")
 		select {
