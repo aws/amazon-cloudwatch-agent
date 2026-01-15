@@ -85,7 +85,6 @@ func TestRetryHeapProcessor(t *testing.T) {
 
 	// Test start/stop
 	processor.Start()
-	assert.NotNil(t, processor.ticker)
 
 	processor.Stop()
 	assert.True(t, processor.stopped)

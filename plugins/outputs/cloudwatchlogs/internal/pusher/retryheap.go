@@ -118,7 +118,6 @@ func (rh *retryHeap) Stop() {
 type RetryHeapProcessor struct {
 	retryHeap        RetryHeap
 	senderPool       Sender
-	ticker           *time.Ticker
 	stopCh           chan struct{}
 	logger           telegraf.Logger
 	stopped          bool
@@ -139,7 +138,6 @@ func NewRetryHeapProcessor(retryHeap RetryHeap, senderPool Sender, logger telegr
 
 // Start begins processing the retry heap every 100ms
 func (p *RetryHeapProcessor) Start() {
-	p.ticker = time.NewTicker(100 * time.Millisecond)
 	go p.processLoop()
 }
 
@@ -147,9 +145,6 @@ func (p *RetryHeapProcessor) Start() {
 func (p *RetryHeapProcessor) Stop() {
 	if p.stopped {
 		return
-	}
-	if p.ticker != nil {
-		p.ticker.Stop()
 	}
 
 	// Process any remaining batches before stopping
@@ -161,9 +156,12 @@ func (p *RetryHeapProcessor) Stop() {
 
 // processLoop runs the main processing loop
 func (p *RetryHeapProcessor) processLoop() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-p.ticker.C:
+		case <-ticker.C:
 			p.processReadyMessages()
 		case <-p.stopCh:
 			return
