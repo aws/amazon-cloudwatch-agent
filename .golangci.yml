@@ -33,6 +33,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - sdk/
     rules:
       - linters:
         - revive
