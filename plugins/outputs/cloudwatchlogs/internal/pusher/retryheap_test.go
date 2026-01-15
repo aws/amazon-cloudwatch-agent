@@ -23,7 +23,7 @@ func TestRetryHeap(t *testing.T) {
 	// Create test batches
 	target := Target{Group: "group", Stream: "stream"}
 	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = time.Now().Add(1 * time.Second)
+	batch1.nextRetryTime = time.Now().Add(1 * time.Hour)
 
 	batch2 := newLogEventBatch(target, nil)
 	batch2.nextRetryTime = time.Now().Add(-1 * time.Second)
@@ -51,21 +51,18 @@ func TestRetryHeapOrdering(t *testing.T) {
 
 	// Create batches with different retry times (not in order)
 	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = now.Add(3 * time.Second)
+	batch1.nextRetryTime = now.Add(-1 * time.Second)
 
 	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = now.Add(1 * time.Second)
+	batch2.nextRetryTime = now.Add(-3 * time.Second)
 
 	batch3 := newLogEventBatch(target, nil)
-	batch3.nextRetryTime = now.Add(2 * time.Second)
+	batch3.nextRetryTime = now.Add(-2 * time.Second)
 
 	// Push in random order
 	heap.Push(batch1)
 	heap.Push(batch2)
 	heap.Push(batch3)
-
-	// Wait for all to be ready
-	time.Sleep(4 * time.Second)
 
 	// Pop ready batches - should come out in order
 	ready := heap.PopReady()
