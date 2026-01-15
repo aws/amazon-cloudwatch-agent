@@ -1,0 +1,40 @@
+name: Slack Notifications
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send issue notification to Slack
+        if: github.event_name == 'issues'
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_ISSUE }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "action": "${{ github.event.action }}",
+              "url": "${{ github.event.issue.html_url }}",
+              "title": "${{ github.event.issue.title }}"
+            }
+
+      - name: Send pull request notification to Slack
+        if: github.event_name == 'pull_request_target'
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL_PR }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "action": "${{ github.event.action }}",
+              "url": "${{ github.event.pull_request.html_url }}"
+              "title": "${{ github.event.pull_request.title }}"
+            }
