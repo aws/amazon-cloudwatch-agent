@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestRetryHeap(t *testing.T) {
@@ -51,18 +52,21 @@ func TestRetryHeapOrdering(t *testing.T) {
 
 	// Create batches with different retry times (not in order)
 	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = now.Add(-1 * time.Second)
+	batch1.nextRetryTime = now.Add(30 * time.Millisecond)
 
 	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = now.Add(-3 * time.Second)
+	batch2.nextRetryTime = now.Add(10 * time.Millisecond)
 
 	batch3 := newLogEventBatch(target, nil)
-	batch3.nextRetryTime = now.Add(-2 * time.Second)
+	batch3.nextRetryTime = now.Add(20 * time.Millisecond)
 
 	// Push in random order
 	heap.Push(batch1)
 	heap.Push(batch2)
 	heap.Push(batch3)
+
+	// Wait for all to be ready
+	time.Sleep(100 * time.Millisecond)
 
 	// Pop ready batches - should come out in order
 	ready := heap.PopReady()
@@ -75,9 +79,8 @@ func TestRetryHeapProcessor(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	// Create mock senderPool
-	mockSenderPool := &mockSenderPool{}
-	processor := NewRetryHeapProcessor(heap, mockSenderPool, &testutil.Logger{}, time.Hour)
+	// Create mock sender
+	processor := NewRetryHeapProcessor(heap, newMockSender(), &testutil.Logger{}, time.Hour)
 	defer processor.Stop()
 
 	// Test start/stop
@@ -92,8 +95,8 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockSenderPool := &mockSenderPool{}
-	processor := NewRetryHeapProcessor(heap, mockSenderPool, &testutil.Logger{}, 1*time.Millisecond) // Very short expiry
+	mockSender := newMockSender()
+	processor := NewRetryHeapProcessor(heap, mockSender, &testutil.Logger{}, 1*time.Millisecond) // Very short expiry
 
 	// Create expired batch
 	target := Target{Group: "group", Stream: "stream"}
@@ -106,15 +109,15 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	// Process should drop expired batch
 	processor.processReadyMessages()
 	assert.Equal(t, 0, heap.Size())
-	assert.Equal(t, 0, mockSenderPool.sendCount) // Should not send expired batch
+	mockSender.AssertNotCalled(t, "Send") // Should not send expired batch
 }
 
 func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockSenderPool := &mockSenderPool{}
-	processor := NewRetryHeapProcessor(heap, mockSenderPool, &testutil.Logger{}, time.Hour)
+	mockSender := newMockSender()
+	processor := NewRetryHeapProcessor(heap, mockSender, &testutil.Logger{}, time.Hour)
 
 	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
@@ -126,7 +129,7 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	// Process should send batch
 	processor.processReadyMessages()
 	assert.Equal(t, 0, heap.Size())
-	assert.Equal(t, 1, mockSenderPool.sendCount)
+	mockSender.AssertCalled(t, "Send", mock.AnythingOfType("*pusher.logEventBatch"))
 }
 
 func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
@@ -202,15 +205,9 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	assert.Equal(t, 0, heap.Size())
 }
 
-// Mock senderPool for testing
-type mockSenderPool struct {
-	sendCount int
+// newMockSender creates a mock sender with common expectations
+func newMockSender() *mockSender {
+	m := &mockSender{}
+	m.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Return()
+	return m
 }
-
-func (m *mockSenderPool) Send(_ *logEventBatch) {
-	m.sendCount++
-}
-
-func (m *mockSenderPool) Stop()                          {}
-func (m *mockSenderPool) SetRetryDuration(time.Duration) {}
-func (m *mockSenderPool) RetryDuration() time.Duration   { return time.Hour }
