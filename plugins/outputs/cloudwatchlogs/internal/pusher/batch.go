@@ -100,7 +100,9 @@ type logEventBatch struct {
 	doneCallbacks []func()
 	// Callbacks specifically for updating state
 	stateCallbacks []func()
-	batchers       map[string]*state.RangeQueueBatcher
+	// Callbacks to execute when batch fails (for circuit breaker notification)
+	failCallbacks []func()
+	batchers      map[string]*state.RangeQueueBatcher
 
 	// Retry metadata
 	retryCountShort int       // Number of retries using short delay strategy
@@ -181,6 +183,13 @@ func (b *logEventBatch) addStateCallback(callback func()) {
 	}
 }
 
+// addFailCallback adds the callback to the end of the registered fail callbacks.
+func (b *logEventBatch) addFailCallback(callback func()) {
+	if callback != nil {
+		b.failCallbacks = append(b.failCallbacks, callback)
+	}
+}
+
 // done runs all registered callbacks, including both success callbacks and state callbacks.
 func (b *logEventBatch) done() {
 	b.updateState()
@@ -198,6 +207,15 @@ func (b *logEventBatch) done() {
 func (b *logEventBatch) updateState() {
 	for i := len(b.stateCallbacks) - 1; i >= 0; i-- {
 		callback := b.stateCallbacks[i]
+		callback()
+	}
+}
+
+// fail runs fail callbacks to notify upstream components of batch failure.
+// This is used for circuit breaker notification when a batch fails.
+func (b *logEventBatch) fail() {
+	for i := len(b.failCallbacks) - 1; i >= 0; i-- {
+		callback := b.failCallbacks[i]
 		callback()
 	}
 }
