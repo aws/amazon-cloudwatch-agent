@@ -81,13 +81,10 @@ func newStsClient(cfg aws.Config) stscreds.AssumeRoleAPIClient {
 	if sourceAccount != "" && sourceArn != "" {
 		options = append(options, func(o *sts.Options) {
 			o.APIOptions = append(o.APIOptions, func(s *smithymiddleware.Stack) error {
-				return s.Finalize.Add(&middleware.CustomHeaderFinalizeMiddleware{
-					Name: "ConfusedDeputyHeaders",
-					Headers: map[string]string{
-						SourceArnHeaderKey:     sourceArn,
-						SourceAccountHeaderKey: sourceAccount,
-					},
-				}, smithymiddleware.Before)
+				return s.Build.Add(middleware.NewCustomHeaderMiddleware("ConfusedDeputyHeaders", map[string]string{
+					SourceArnHeaderKey:     sourceArn,
+					SourceAccountHeaderKey: sourceAccount,
+				}), smithymiddleware.Before)
 			})
 		})
 	}

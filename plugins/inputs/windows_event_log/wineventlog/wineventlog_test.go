@@ -30,17 +30,17 @@ var (
 	// common inputs for creating an EventLog.
 	NAME = "Application"
 	// 2 is ERROR
-	LEVELS          = []string{"2"}
-	EVENTIDS        = []int{777}
-	FILTERS         = []*EventFilter{}
-	GROUP_NAME      = "fake"
-	STREAM_NAME     = "fake"
-	RENDER_FMT      = FormatPlainText
-	DEST            = "fake"
-	STATE_FILE_PATH = "fake"
-	BATCH_SIZE      = 99
-	RETENTION       = 42
-	LOG_GROUP_CLASS = "standard"
+	LEVELS                = []string{"2"}
+	EVENTIDS              = []int{777}
+	FILTERS               = []*EventFilter{}
+	GROUP_NAME            = "fake"
+	STREAM_NAME           = "fake"
+	RENDER_FMT            = FormatPlainText
+	DEST                  = "fake"
+	STATE_FILE_PATH       = "fake"
+	BATCH_SIZE            = 99
+	RETENTION       int32 = 42
+	LOG_GROUP_CLASS       = "standard"
 )
 
 // TestNewEventLog verifies constructor's default values.

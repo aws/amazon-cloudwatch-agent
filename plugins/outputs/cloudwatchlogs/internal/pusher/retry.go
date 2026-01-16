@@ -10,9 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/smithy-go"
 )
 
 const (
@@ -76,31 +75,41 @@ func withJitter(d time.Duration) time.Duration {
 //   - Connection Timeout
 //   - Throttling
 func chooseRetryWaitStrategy(err error) retryWaitStrategy {
-	if isErrConnectionTimeout(err) || isErrConnectionReset(err) || isErrConnectionRefused(err) || request.IsErrorThrottle(err) {
+	if isErrConnectionTimeout(err) || isErrConnectionReset(err) || isErrConnectionRefused(err) {
 		return retryLong
 	}
 
-	// Check AWS Error codes if available
-	var awsErr awserr.Error
-	if errors.As(err, &awsErr) {
-		switch awsErr.Code() {
-		case
-			cloudwatchlogs.ErrCodeServiceUnavailableException,
-			cloudwatchlogs.ErrCodeThrottlingException,
-			"RequestTimeout",
-			request.ErrCodeResponseTimeout:
+	// Check for throttling errors using v2 types
+	var throttlingErr *types.ThrottlingException
+	if errors.As(err, &throttlingErr) {
+		return retryLong
+	}
+
+	// Check for service unavailable using v2 types
+	var serviceUnavailableErr *types.ServiceUnavailableException
+	if errors.As(err, &serviceUnavailableErr) {
+		return retryLong
+	}
+
+	// Check error code using smithy.APIError
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "ServiceUnavailableException",
+			"ThrottlingException",
+			"RequestTimeout":
 			return retryLong
 		}
+	}
 
-		// Check HTTP status codes if available
-		var requestFailure awserr.RequestFailure
-		if errors.As(err, &requestFailure) {
-			switch requestFailure.StatusCode() {
-			case
-				500, // internal failure
-				503: // service unavailable
-				return retryLong
-			}
+	// Check HTTP status codes using smithy HTTPResponse
+	var httpErr interface{ HTTPStatusCode() int }
+	if errors.As(err, &httpErr) {
+		switch httpErr.HTTPStatusCode() {
+		case
+			500, // internal failure
+			503: // service unavailable
+			return retryLong
 		}
 	}
 

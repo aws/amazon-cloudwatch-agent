@@ -4,22 +4,23 @@
 package pusher
 
 import (
+	"context"
 	"errors"
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/smithy-go"
 	"github.com/influxdata/telegraf"
-
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 type cloudWatchLogsService interface {
-	PutLogEvents(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
-	CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
-	CreateLogGroup(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
-	PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
-	DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
+	PutLogEvents(ctx context.Context, input *cloudwatchlogs.PutLogEventsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error)
+	CreateLogStream(ctx context.Context, input *cloudwatchlogs.CreateLogStreamInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error)
+	CreateLogGroup(ctx context.Context, input *cloudwatchlogs.CreateLogGroupInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogGroupOutput, error)
+	PutRetentionPolicy(ctx context.Context, input *cloudwatchlogs.PutRetentionPolicyInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
+	DescribeLogGroups(ctx context.Context, input *cloudwatchlogs.DescribeLogGroupsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
 }
 
 type Sender interface {
@@ -68,8 +69,9 @@ func (s *sender) Send(batch *logEventBatch) {
 
 	retryCountShort := 0
 	retryCountLong := 0
+	ctx := context.Background()
 	for {
-		output, err := s.service.PutLogEvents(input)
+		output, err := s.service.PutLogEvents(ctx, input)
 		if err == nil {
 			if output.RejectedLogEventsInfo != nil {
 				info := output.RejectedLogEventsInfo
@@ -88,26 +90,27 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		}
 
-		var awsErr awserr.Error
-		if !errors.As(err, &awsErr) {
-			s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
-			batch.updateState()
-			return
-		}
-
-		switch e := awsErr.(type) {
-		case *cloudwatchlogs.ResourceNotFoundException:
+		var resourceNotFound *types.ResourceNotFoundException
+		if errors.As(err, &resourceNotFound) {
 			if targetErr := s.targetManager.InitTarget(batch.Target); targetErr != nil {
 				s.logger.Errorf("Unable to create log stream %v/%v: %v", batch.Group, batch.Stream, targetErr)
-				break
 			}
-		case *cloudwatchlogs.InvalidParameterException,
-			*cloudwatchlogs.DataAlreadyAcceptedException:
-			s.logger.Errorf("%v, will not retry the request", e)
-			batch.updateState()
-			return
-		default:
-			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, awsErr)
+		} else {
+			var invalidParam *types.InvalidParameterException
+			var dataAlreadyAccepted *types.DataAlreadyAcceptedException
+			if errors.As(err, &invalidParam) || errors.As(err, &dataAlreadyAccepted) {
+				s.logger.Errorf("%v, will not retry the request", err)
+				batch.updateState()
+				return
+			}
+			var apiErr smithy.APIError
+			if errors.As(err, &apiErr) {
+				s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, apiErr)
+			} else {
+				s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
+				batch.updateState()
+				return
+			}
 		}
 
 		// retry wait strategy depends on the type of error returned
