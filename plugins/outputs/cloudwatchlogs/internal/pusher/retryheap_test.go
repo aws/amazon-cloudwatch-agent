@@ -82,12 +82,12 @@ func TestRetryHeapProcessor(t *testing.T) {
 	defer heap.Stop()
 
 	// Create mock components with proper signature
-	mockWorkerPool := NewWorkerPool(2)
-	defer mockWorkerPool.Stop()
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, mockWorkerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
 	defer processor.Stop()
 
 	// Test start/stop
@@ -101,12 +101,12 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockWorkerPool := NewWorkerPool(2)
-	defer mockWorkerPool.Stop()
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, mockWorkerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond)
 
 	// Create expired batch
 	target := Target{Group: "group", Stream: "stream"}
@@ -125,12 +125,12 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockWorkerPool := NewWorkerPool(2)
-	defer mockWorkerPool.Stop()
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, mockWorkerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
 
 	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
@@ -208,12 +208,12 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockWorkerPool := NewWorkerPool(2)
-	defer mockWorkerPool.Stop()
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, mockWorkerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
 
 	// Process with empty heap - should not panic
 	processor.processReadyMessages()
@@ -225,8 +225,8 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockWorkerPool := NewWorkerPool(2)
-	defer mockWorkerPool.Stop()
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
 
 	// Create failing service with AWS error that triggers retry
 	mockService := &mockLogsService{}
@@ -235,7 +235,10 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, mockWorkerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+
+	processor.Start()
+	defer processor.Stop()
 
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
@@ -249,8 +252,9 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	})
 
 	heap.Push(batch)
-	processor.processReadyMessages()
-	time.Sleep(500 * time.Millisecond)
+
+	// Wait for goroutine to process the batch
+	time.Sleep(200 * time.Millisecond)
 
 	mockService.AssertExpectations(t)
 	// Batch should be back in heap after async failure

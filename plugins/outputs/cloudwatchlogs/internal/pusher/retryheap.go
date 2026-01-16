@@ -155,6 +155,7 @@ func (p *RetryHeapProcessor) Stop() {
 	// Process any remaining batches before stopping
 	p.processReadyMessages()
 
+	p.senderPool.Stop()
 	close(p.stopCh)
 	p.stopped = true
 }

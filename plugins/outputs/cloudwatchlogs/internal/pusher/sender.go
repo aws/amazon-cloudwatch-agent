@@ -167,5 +167,3 @@ func (s *sender) SetRetryDuration(retryDuration time.Duration) {
 func (s *sender) RetryDuration() time.Duration {
 	return s.retryDuration.Load().(time.Duration)
 }
-
-
