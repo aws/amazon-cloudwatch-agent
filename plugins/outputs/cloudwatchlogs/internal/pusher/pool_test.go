@@ -107,7 +107,7 @@ func TestSenderPool(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
-	s := newSender(logger, mockService, nil, time.Second, false, nil)
+	s := newSender(logger, mockService, nil, time.Second, nil)
 	p := NewWorkerPool(12)
 	sp := newSenderPool(p, s)
 
@@ -144,7 +144,7 @@ func TestSenderPoolRetryHeap(t *testing.T) {
 	retryHeap := NewRetryHeap(10)
 	defer retryHeap.Stop()
 
-	s := newSender(logger, mockService, nil, time.Second, false, retryHeap)
+	s := newSender(logger, mockService, nil, time.Second, retryHeap)
 	p := NewWorkerPool(12)
 	defer p.Stop()
 

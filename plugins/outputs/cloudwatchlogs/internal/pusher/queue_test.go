@@ -712,7 +712,7 @@ func testPreparationWithLogger(
 ) (*queue, Sender) {
 	t.Helper()
 	tm := NewTargetManager(logger, service)
-	s := newSender(logger, service, tm, retryDuration, false, nil)
+	s := newSender(logger, service, tm, retryDuration, nil)
 	q := newQueue(
 		logger,
 		Target{"G", "S", util.StandardLogGroupClass, retention},
