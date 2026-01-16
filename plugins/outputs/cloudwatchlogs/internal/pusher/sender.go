@@ -68,7 +68,7 @@ func (s *sender) Send(batch *logEventBatch) {
 	}
 
 	// Initialize start time before build()
-	batch.initializeStartTime()
+	batch.initializeStartTime(s.RetryDuration())
 	input := batch.build()
 
 	for {

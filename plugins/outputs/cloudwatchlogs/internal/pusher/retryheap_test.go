@@ -87,7 +87,7 @@ func TestRetryHeapProcessor(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 	defer processor.Stop()
 
 	// Test start/stop
@@ -106,7 +106,7 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Create expired batch
 	target := Target{Group: "group", Stream: "stream"}
@@ -130,7 +130,7 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
@@ -213,7 +213,7 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Process with empty heap - should not panic
 	processor.processReadyMessages()
@@ -235,7 +235,7 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	processor.Start()
 	defer processor.Stop()

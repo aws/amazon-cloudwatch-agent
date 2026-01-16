@@ -411,10 +411,10 @@ func TestBatchRetryMetadata(t *testing.T) {
 	// Test initial state
 	assert.True(t, batch.startTime.IsZero())
 	assert.True(t, batch.isReadyForRetry())
-	assert.False(t, batch.isExpired(time.Hour))
+	assert.False(t, batch.isExpired())
 
 	// Test initializeStartTime
-	batch.initializeStartTime()
+	batch.initializeStartTime(time.Hour)
 	assert.False(t, batch.startTime.IsZero())
 
 	// Test updateRetryMetadata
@@ -432,6 +432,7 @@ func TestBatchRetryMetadata(t *testing.T) {
 	assert.True(t, batch.isReadyForRetry())
 
 	// Test isExpired
-	batch.startTime = time.Now().Add(-25 * time.Hour)
-	assert.True(t, batch.isExpired(24*time.Hour))
+	batch.startTime = time.Now().Add(-2 * time.Hour) // Set startTime so initializeStartTime won't override
+	batch.expireAfter = time.Now().Add(-1 * time.Hour)
+	assert.True(t, batch.isExpired())
 }

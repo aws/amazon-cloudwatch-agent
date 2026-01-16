@@ -164,7 +164,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 
 			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
 			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
-			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, maxRetryTimeout)
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log)
 			c.retryHeapProcessor.Start()
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
