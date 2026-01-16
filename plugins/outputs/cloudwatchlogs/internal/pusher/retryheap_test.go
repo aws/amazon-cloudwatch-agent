@@ -9,6 +9,9 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 func TestRetryHeap(t *testing.T) {
@@ -216,4 +219,40 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	processor.processReadyMessages()
 
 	assert.Equal(t, 0, heap.Size())
+}
+
+func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
+	heap := NewRetryHeap(10)
+	defer heap.Stop()
+
+	mockWorkerPool := NewWorkerPool(2)
+	defer mockWorkerPool.Stop()
+
+	// Create failing service with AWS error that triggers retry
+	mockService := &mockLogsService{}
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{})
+
+	mockTargetManager := &mockTargetManager{}
+	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
+
+	processor := NewRetryHeapProcessor(heap, mockWorkerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+
+	target := Target{Group: "group", Stream: "stream"}
+	batch := newLogEventBatch(target, nil)
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
+
+	timestamp := time.Now().UnixMilli()
+	message := "test message"
+	batch.events = append(batch.events, &cloudwatchlogs.InputLogEvent{
+		Message:   &message,
+		Timestamp: &timestamp,
+	})
+
+	heap.Push(batch)
+	processor.processReadyMessages()
+	time.Sleep(500 * time.Millisecond)
+
+	mockService.AssertExpectations(t)
+	// Batch should be back in heap after async failure
+	assert.Equal(t, 1, heap.Size(), "Failed batch should go back to RetryHeap after async processing")
 }
