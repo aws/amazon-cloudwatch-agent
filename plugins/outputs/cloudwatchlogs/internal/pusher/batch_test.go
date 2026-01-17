@@ -414,7 +414,7 @@ func TestBatchRetryMetadata(t *testing.T) {
 	assert.False(t, batch.isExpired())
 
 	// Test initializeStartTime
-	batch.initializeStartTime(time.Hour)
+	batch.initializeStartTime()
 	assert.False(t, batch.startTime.IsZero())
 
 	// Test updateRetryMetadata

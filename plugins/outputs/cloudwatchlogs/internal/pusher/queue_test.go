@@ -77,15 +77,6 @@ func (m *mockSender) Send(batch *logEventBatch) {
 	m.Called(batch)
 }
 
-func (m *mockSender) SetRetryDuration(d time.Duration) {
-	m.Called(d)
-}
-
-func (m *mockSender) RetryDuration() time.Duration {
-	args := m.Called()
-	return args.Get(0).(time.Duration)
-}
-
 func (m *mockSender) Stop() {
 	m.Called()
 }
@@ -123,7 +114,7 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	}
 
 	ep := newMockEntityProvider(expectedEntity)
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, ep, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 	require.False(t, called.Load(), "PutLogEvents has been called too fast, it should wait until FlushTimeout.")
 
@@ -160,7 +151,7 @@ func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
 	}
 
 	ep := newMockEntityProvider(nil)
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, ep, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 	require.False(t, called.Load(), "PutLogEvents has been called too fast, it should wait until FlushTimeout.")
 
@@ -190,7 +181,7 @@ func TestStopQueueWouldDoFinalSend(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 
 	time.Sleep(10 * time.Millisecond)
@@ -214,7 +205,7 @@ func TestStopPusherWouldStopRetries(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now()))
 	time.Sleep(10 * time.Millisecond)
 
@@ -256,7 +247,7 @@ func TestLongMessageHandling(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent(longMsg, time.Now()))
 
 	triggerSend(t, q)
@@ -285,7 +276,7 @@ func TestRequestIsLessThan1MB(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	for i := 0; i < 8; i++ {
 		q.AddEvent(newStubLogEvent(longMsg, time.Now()))
 	}
@@ -311,7 +302,7 @@ func TestRequestIsLessThan10kEvents(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	for i := 0; i < 30000; i++ {
 		q.AddEvent(newStubLogEvent(msg, time.Now()))
 	}
@@ -337,7 +328,7 @@ func TestTimestampPopulation(t *testing.T) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	for i := 0; i < 3; i++ {
 		q.AddEvent(newStubLogEvent("msg", time.Time{}))
 	}
@@ -361,7 +352,7 @@ func TestIgnoreOutOfTimeRangeEvent(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG", time.Now().Add(-15*24*time.Hour)))
 	q.AddEventNonBlocking(newStubLogEvent("MSG", time.Now().Add(2*time.Hour+1*time.Minute)))
 
@@ -414,7 +405,7 @@ func TestAddMultipleEvents(t *testing.T) {
 		))
 	}
 	evts[10], evts[90] = evts[90], evts[10] // make events out of order
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	for _, e := range evts {
 		q.AddEvent(e)
 	}
@@ -466,7 +457,7 @@ func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {
 		return nil, nil
 	}
 
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("MSG 25hrs ago", time.Now().Add(-25*time.Hour)))
 	q.AddEvent(newStubLogEvent("MSG 24hrs ago", time.Now().Add(-24*time.Hour)))
 	q.AddEvent(newStubLogEvent("MSG 23hrs ago", time.Now().Add(-23*time.Hour)))
@@ -496,7 +487,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, nil, &wg)
 	q.AddEvent(newStubLogEvent("msg", time.Now()))
 	time.Sleep(2 * time.Second)
 
@@ -542,7 +533,7 @@ func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, nil, &wg)
 	var eventWG sync.WaitGroup
 	eventWG.Add(1)
 	q.AddEvent(&stubLogEvent{message: "msg", timestamp: time.Now(), done: eventWG.Done})
@@ -580,7 +571,7 @@ func TestLogRejectedLogEntryInfo(t *testing.T) {
 	}
 
 	logSink := testutil.NewLogSink()
-	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 1*time.Hour, nil, &wg)
 	var eventWG sync.WaitGroup
 	eventWG.Add(1)
 	q.AddEvent(&stubLogEvent{message: "msg", timestamp: time.Now(), done: eventWG.Done})
@@ -630,7 +621,7 @@ func TestAddEventNonBlocking(t *testing.T) {
 			start.Add(time.Duration(i)*time.Millisecond),
 		))
 	}
-	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, nil, &wg)
 	time.Sleep(200 * time.Millisecond) // Wait until pusher started, merge channel is blocked
 
 	for _, e := range evts {
@@ -640,32 +631,6 @@ func TestAddEventNonBlocking(t *testing.T) {
 	time.Sleep(time.Second)
 	triggerSend(t, q)
 	time.Sleep(20 * time.Millisecond)
-
-	q.Stop()
-	sender.Stop()
-	wg.Wait()
-}
-
-func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
-	t.Parallel()
-	var wg sync.WaitGroup
-	var s stubLogsService
-	var cnt atomic.Int32
-
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-		cnt.Add(1)
-		return nil, &cloudwatchlogs.ServiceUnavailableException{}
-	}
-
-	logSink := testutil.NewLogSink()
-	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, time.Second, nil, &wg)
-	q.AddEvent(newStubLogEvent("msg", time.Now()))
-	time.Sleep(2 * time.Second)
-
-	logLines := logSink.Lines()
-	lastLine := logLines[len(logLines)-1]
-	expected := fmt.Sprintf("All %v retries to G/S failed for PutLogEvents, request dropped.", cnt.Load()-1)
-	require.True(t, strings.HasSuffix(lastLine, expected), fmt.Sprintf("Expecting error log to end with request dropped, but received '%s' in the log", logSink.String()))
 
 	q.Stop()
 	sender.Stop()
@@ -684,7 +649,6 @@ func testPreparation(
 	retention int,
 	service cloudWatchLogsService,
 	flushTimeout time.Duration,
-	retryDuration time.Duration,
 	entityProvider logs.LogEntityProvider,
 	wg *sync.WaitGroup,
 ) (*queue, Sender) {
@@ -694,7 +658,6 @@ func testPreparation(
 		retention,
 		service,
 		flushTimeout,
-		retryDuration,
 		entityProvider,
 		wg,
 	)
@@ -706,13 +669,12 @@ func testPreparationWithLogger(
 	retention int,
 	service cloudWatchLogsService,
 	flushTimeout time.Duration,
-	retryDuration time.Duration,
 	entityProvider logs.LogEntityProvider,
 	wg *sync.WaitGroup,
 ) (*queue, Sender) {
 	t.Helper()
 	tm := NewTargetManager(logger, service)
-	s := newSender(logger, service, tm, retryDuration, nil)
+	s := newSender(logger, service, tm, nil)
 	q := newQueue(
 		logger,
 		Target{"G", "S", util.StandardLogGroupClass, retention},

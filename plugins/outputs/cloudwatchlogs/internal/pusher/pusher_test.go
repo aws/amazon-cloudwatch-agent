@@ -111,7 +111,6 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 		nil,
 		workerPool,
 		time.Second,
-		time.Minute,
 		wg,
 		1,   // concurrency
 		nil, // retryHeap
@@ -149,7 +148,6 @@ func TestPusherRetryHeap(t *testing.T) {
 		nil,
 		workerPool,
 		time.Second,
-		time.Minute,
 		&wg,
 		2, // concurrency > 1
 		retryHeap,

@@ -15,9 +15,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
-// CloudWatch Logs PutLogEvents API limits
-// Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 const (
+	// maxRetryTimeout is the default retry timeout for CloudWatch Logs operations
+	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
+
+	// CloudWatch Logs PutLogEvents API limits
+	// Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 	// The maximum batch size in bytes. This size is calculated as the sum of all event messages in UTF-8,
 	// plus 26 bytes for each log event.
 	reqSizeLimit = 1024 * 1024
@@ -253,11 +256,11 @@ func (t byTimestamp) Less(i, j int) bool {
 }
 
 // initializeStartTime sets the start time and expiration time if not already set.
-func (b *logEventBatch) initializeStartTime(retryDuration time.Duration) {
+func (b *logEventBatch) initializeStartTime() {
 	if b.startTime.IsZero() {
 		b.startTime = time.Now()
 	}
-	b.expireAfter = b.startTime.Add(retryDuration)
+	b.expireAfter = b.startTime.Add(maxRetryTimeout)
 }
 
 // updateRetryMetadata updates the retry metadata after a failed send attempt.

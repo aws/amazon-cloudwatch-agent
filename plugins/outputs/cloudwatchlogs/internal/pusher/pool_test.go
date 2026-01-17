@@ -107,13 +107,11 @@ func TestSenderPool(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
-	s := newSender(logger, mockService, nil, time.Second, nil)
+	s := newSender(logger, mockService, nil, nil)
 	p := NewWorkerPool(12)
 	sp := newSenderPool(p, s)
 
-	assert.Equal(t, time.Second, sp.RetryDuration())
-	sp.SetRetryDuration(time.Minute)
-	assert.Equal(t, time.Minute, sp.RetryDuration())
+	// Retry duration methods removed - just test basic functionality
 
 	var completed atomic.Int32
 	var evts []*logEvent
@@ -144,7 +142,7 @@ func TestSenderPoolRetryHeap(_ *testing.T) {
 	retryHeap := NewRetryHeap(10)
 	defer retryHeap.Stop()
 
-	s := newSender(logger, mockService, nil, time.Second, retryHeap)
+	s := newSender(logger, mockService, nil, retryHeap)
 	p := NewWorkerPool(12)
 	defer p.Stop()
 

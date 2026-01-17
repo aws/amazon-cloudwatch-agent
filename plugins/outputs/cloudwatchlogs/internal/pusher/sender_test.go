@@ -5,6 +5,9 @@ package pusher
 
 import (
 	"errors"
+	"fmt"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -80,7 +83,7 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -103,7 +106,7 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -122,7 +125,7 @@ func TestSender(t *testing.T) {
 		mockManager.On("InitTarget", mock.Anything).Return(nil).Once()
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -149,7 +152,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.InvalidParameterException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -177,7 +180,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.DataAlreadyAcceptedException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -205,7 +208,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, errors.New("test")).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -225,7 +228,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -233,7 +236,10 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("DropOnRetryExhaustion", func(t *testing.T) {
+		var cnt atomic.Int32
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		// Set startTime so batch expires in 200ms from now
+		batch.startTime = time.Now().Add(-maxRetryTimeout + 200*time.Millisecond)
 
 		doneCallbackCalled := false
 		doneCallback := func() {
@@ -248,14 +254,25 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
+		mockService.On("PutLogEvents", mock.Anything).Return(
+			&cloudwatchlogs.PutLogEventsOutput{},
+			&cloudwatchlogs.ServiceUnavailableException{},
+		).Run(func(args mock.Arguments) {
+			cnt.Add(1)
+		})
 
-		s := newSender(logger, mockService, mockManager, 100*time.Millisecond, nil)
+		logSink := testutil.NewLogSink()
+		s := newSender(logSink, mockService, mockManager, nil)
 		s.Send(batch)
+		time.Sleep(500 * time.Millisecond) // Wait for retries to exhaust
 		s.Stop()
 
-		mockService.AssertExpectations(t)
+		// Validate retry count in log message
+		logLines := logSink.Lines()
+		lastLine := logLines[len(logLines)-1]
+		expected := fmt.Sprintf("All %v retries to G/S failed for PutLogEvents, request dropped.", cnt.Load()-1)
+		assert.True(t, strings.HasSuffix(lastLine, expected), fmt.Sprintf("Expected log to end with '%s', but got '%s'", expected, lastLine))
+
 		assert.True(t, stateCallbackCalled, "State callback was not called when retry attempts were exhausted")
 		assert.False(t, doneCallbackCalled, "Done callback should not be called when retry attempts are exhausted")
 	})
@@ -279,7 +296,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second, nil)
+		s := newSender(logger, mockService, mockManager, nil)
 
 		go func() {
 			time.Sleep(50 * time.Millisecond)
@@ -302,7 +319,7 @@ func TestSenderConcurrencyWithRetryHeap(t *testing.T) {
 	retryHeap := NewRetryHeap(10)
 	defer retryHeap.Stop()
 
-	s := newSender(logger, mockService, mockManager, time.Hour, retryHeap)
+	s := newSender(logger, mockService, mockManager, retryHeap)
 
 	batch := newLogEventBatch(Target{Group: "test-group", Stream: "test-stream"}, nil)
 	batch.append(newLogEvent(time.Now(), "Test message", nil))
@@ -325,7 +342,7 @@ func TestSenderConcurrencyFallbackToSync(t *testing.T) {
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
 	// Concurrency enabled but nil RetryHeap should fall back to sync
-	s := newSender(logger, mockService, mockManager, 2*time.Second, nil)
+	s := newSender(logger, mockService, mockManager, nil)
 
 	batch := newLogEventBatch(Target{Group: "test-group", Stream: "test-stream"}, nil)
 	batch.append(newLogEvent(time.Now(), "Test message", nil))
