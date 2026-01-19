@@ -19,11 +19,13 @@ jobs:
     steps:
       - name: Get latest commit sha
         id: get-latest-commit
+        env:
+          COMMIT_SHA: ${{ inputs.CommitSha }}
         run: |
-          if ["${{ inputs.CommitSha }}" == ""]; then
+          if [ -z "$COMMIT_SHA" ]; then
             echo "sha=$(git ls-remote ${{ env.UPSTREAM }} ${{ env.UPSTREAM_BRANCH }} | awk '{print $1;}')" >> $GITHUB_OUTPUT
           else
-            echo "sha=${{ inputs.CommitSha }}" >> $GITHUB_OUTPUT
+            echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           fi
       - name: Checkout
         uses: actions/checkout@v3
