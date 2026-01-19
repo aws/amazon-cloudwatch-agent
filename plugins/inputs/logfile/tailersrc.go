@@ -68,6 +68,8 @@ type tailerSrc struct {
 	initialStateOffset int64
 	tailer             *tail.Tail
 	autoRemoval        bool
+	fileInode          uint64 // Inode of the file being tailed
+	fileDev            uint64 // Device of the file being tailed
 	timestampFn        func(string) (time.Time, string)
 	enc                encoding.Encoding
 	maxEventSize       int
@@ -102,6 +104,17 @@ func NewTailerSrc(
 	retentionInDays int,
 	backpressureMode logscommon.BackpressureMode,
 ) *tailerSrc {
+	// Capture the inode and device of the file being tailed
+	var fileInode, fileDev uint64
+	if autoRemoval && tailer.File() != nil {
+		if stat, err := tailer.File().Stat(); err == nil {
+			if sys := getInodeInfo(stat); sys != nil {
+				fileInode = sys.Inode
+				fileDev = sys.Dev
+			}
+		}
+	}
+
 	ts := &tailerSrc{
 		group:              group,
 		stream:             stream,
@@ -112,6 +125,8 @@ func NewTailerSrc(
 		fileGlobPath:       fileGlobPath,
 		tailer:             tailer,
 		autoRemoval:        autoRemoval,
+		fileInode:          fileInode,
+		fileDev:            fileDev,
 		isMLStart:          isMultilineStartFn,
 		filters:            filters,
 		timestampFn:        timestampFn,
@@ -350,10 +365,20 @@ func (ts *tailerSrc) runSender() {
 
 func (ts *tailerSrc) cleanUp() {
 	if ts.autoRemoval {
-		if err := os.Remove(ts.tailer.Filename); err != nil {
-			log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
+		fileToRemove := ts.tailer.Filename
+
+		// If we have inode info, try to find the actual file by inode
+		// This handles the case where the file was rotated
+		if ts.fileInode != 0 {
+			if actualPath := findFileByInode(ts.tailer.Filename, ts.fileInode, ts.fileDev); actualPath != "" {
+				fileToRemove = actualPath
+			}
+		}
+
+		if err := os.Remove(fileToRemove); err != nil {
+			log.Printf("W! [logfile] Failed to auto remove file %v: %v", fileToRemove, err)
 		} else {
-			log.Printf("I! [logfile] Successfully removed file %v with auto_removal feature", ts.tailer.Filename)
+			log.Printf("I! [logfile] Successfully removed file %v with auto_removal feature", fileToRemove)
 		}
 	}
 	for _, clf := range ts.cleanUpFns {
