@@ -34,7 +34,7 @@ func NewPusher(
 	flushTimeout time.Duration,
 	retryDuration time.Duration,
 	wg *sync.WaitGroup,
-	concurrency int,
+	_ int,
 	retryHeap RetryHeap,
 ) *Pusher {
 	s := createSender(logger, service, targetManager, workerPool, retryDuration, retryHeap)
