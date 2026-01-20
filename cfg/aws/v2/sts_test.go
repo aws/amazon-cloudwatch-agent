@@ -105,7 +105,7 @@ func TestStsCredentialsProvider_Retrieve(t *testing.T) {
 }
 
 func TestNewStsCredentialsProvider(t *testing.T) {
-	provider := newStsCredentialsProvider(aws.Config{}, "arn:aws:iam::012345678912:role/XXXXXXXX", testRegion)
+	provider := newStsCredentialsProvider(aws.Config{}, testRoleARN, testRegion)
 
 	assert.NotNil(t, provider)
 	stsProvider, ok := provider.(*stsCredentialsProvider)
@@ -131,20 +131,20 @@ func TestConfusedDeputyHeaders(t *testing.T) {
 			expectedHeaderAccount: "",
 		},
 		"both populated": {
-			envSourceArn:          "arn:aws:ec2:us-east-1:474668408639:instance/i-08293cd9825754f7c",
-			envSourceAccount:      "539247453986",
-			expectedHeaderArn:     "arn:aws:ec2:us-east-1:474668408639:instance/i-08293cd9825754f7c",
-			expectedHeaderAccount: "539247453986",
+			envSourceArn:          testInstanceARN,
+			envSourceAccount:      testAccountID,
+			expectedHeaderArn:     testInstanceARN,
+			expectedHeaderAccount: testAccountID,
 		},
 		"only source arn populated": {
-			envSourceArn:          "arn:aws:ec2:us-east-1:474668408639:instance/i-08293cd9825754f7c",
+			envSourceArn:          testInstanceARN,
 			envSourceAccount:      "",
 			expectedHeaderArn:     "",
 			expectedHeaderAccount: "",
 		},
 		"only source account populated": {
 			envSourceArn:          "",
-			envSourceAccount:      "539247453986",
+			envSourceAccount:      testAccountID,
 			expectedHeaderArn:     "",
 			expectedHeaderAccount: "",
 		},

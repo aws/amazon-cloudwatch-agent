@@ -15,10 +15,11 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	smithymiddleware "github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
@@ -30,31 +31,33 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
 )
 
-// Return true if found.
-func contains(dimensions []*cloudwatch.Dimension, key string, val string) bool {
-	for _, d := range dimensions {
-		if *d.Name == key && *d.Value == val {
-			return true
-		}
-	}
-	return false
+type mockMiddleware struct {
+	mock.Mock
+}
+
+var _ smithymiddleware.BuildMiddleware = (*mockMiddleware)(nil)
+
+func (m *mockMiddleware) ID() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *mockMiddleware) HandleBuild(ctx context.Context, in smithymiddleware.BuildInput, next smithymiddleware.BuildHandler) (smithymiddleware.BuildOutput, smithymiddleware.Metadata, error) {
+	args := m.Called(ctx, in, next)
+	return args.Get(0).(smithymiddleware.BuildOutput), args.Get(1).(smithymiddleware.Metadata), args.Error(2)
 }
 
 // Test that each tag becomes one dimension.
 // Test that no more than 30 dimensions will get returned.
 // Test that if "host" dimension exists, it is always included.
 func TestBuildDimensions(t *testing.T) {
-	assert := assert.New(t)
-	// nil
 	dims := BuildDimensions(nil)
-	assert.Equal(0, len(dims))
+	assert.Equal(t, 0, len(dims))
 	// empty
 	dims = BuildDimensions(make(map[string]string))
-	assert.Equal(0, len(dims))
+	assert.Equal(t, 0, len(dims))
 	// Always expect "host". Expect no more than 30.
 	for i := 1; i < 40; i++ {
 		tags := make(map[string]string, i)
@@ -88,13 +91,13 @@ func TestBuildDimensions(t *testing.T) {
 			}
 		}
 
-		assert.Equal(expectedLen, valCount)
+		assert.Equal(t, expectedLen, valCount)
 		if i%2 == 0 {
-			assert.Equal(1, hostCount)
-			assert.Equal(expectedLen-1, keyCount)
+			assert.Equal(t, 1, hostCount)
+			assert.Equal(t, expectedLen-1, keyCount)
 		} else {
-			assert.Equal(0, hostCount)
-			assert.Equal(expectedLen, keyCount)
+			assert.Equal(t, 0, hostCount)
+			assert.Equal(t, expectedLen, keyCount)
 		}
 
 	}
@@ -110,7 +113,7 @@ func TestProcessRollup(t *testing.T) {
 		cw.WriteToCloudWatch,
 	)
 
-	testRawDimensions := []*cloudwatch.Dimension{
+	testRawDimensions := []types.Dimension{
 		{
 			Name:  aws.String("d1"),
 			Value: aws.String("v1"),
@@ -127,13 +130,13 @@ func TestProcessRollup(t *testing.T) {
 
 	testCases := map[string]struct {
 		rollupDimensions [][]string
-		rawDimensions    []*cloudwatch.Dimension
-		want             [][]*cloudwatch.Dimension
+		rawDimensions    []types.Dimension
+		want             [][]types.Dimension
 	}{
 		"WithSimpleRollup": {
 			rollupDimensions: [][]string{{"d1", "d2"}, {"d1"}, {}, {"d4"}},
 			rawDimensions:    testRawDimensions,
-			want: [][]*cloudwatch.Dimension{
+			want: [][]types.Dimension{
 				testRawDimensions,
 				{
 					{
@@ -157,32 +160,32 @@ func TestProcessRollup(t *testing.T) {
 		"WithNoRollupConfig": {
 			rollupDimensions: [][]string{},
 			rawDimensions:    testRawDimensions,
-			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+			want:             [][]types.Dimension{testRawDimensions},
 		},
 		"WithNoRawDimensions": {
 			rollupDimensions: [][]string{{"d1", "d2"}, {"d1"}, {}},
-			rawDimensions:    []*cloudwatch.Dimension{},
-			want:             [][]*cloudwatch.Dimension{{}},
+			rawDimensions:    []types.Dimension{},
+			want:             [][]types.Dimension{{}},
 		},
 		"WithDuplicate/SameOrder": {
 			rollupDimensions: [][]string{{"d1", "d2", "d3"}},
 			rawDimensions:    testRawDimensions,
-			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+			want:             [][]types.Dimension{testRawDimensions},
 		},
 		"WithDuplicate/DifferentOrder": {
 			rollupDimensions: [][]string{{"d2", "d1", "d3"}},
 			rawDimensions:    testRawDimensions,
-			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+			want:             [][]types.Dimension{testRawDimensions},
 		},
 		"WithSameLength/DifferentNames": {
 			rollupDimensions: [][]string{{"d1", "d3", "d4"}},
 			rawDimensions:    testRawDimensions,
-			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+			want:             [][]types.Dimension{testRawDimensions},
 		},
 		"WithExtraDimensions": {
 			rollupDimensions: [][]string{{"d1", "d2", "d3", "d4"}},
 			rawDimensions:    testRawDimensions,
-			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+			want:             [][]types.Dimension{testRawDimensions},
 		},
 	}
 	for name, testCase := range testCases {
@@ -200,7 +203,7 @@ func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 	cw := newCloudWatchClient(svc, time.Second)
 
 	_, datums := cw.BuildMetricDatum(&aggregationDatum{
-		MetricDatum: cloudwatch.MetricDatum{
+		MetricDatum: types.MetricDatum{
 			MetricName: aws.String("test_nil_value"),
 			Value:      nil,
 		},
@@ -216,7 +219,7 @@ func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		_, datums := cw.BuildMetricDatum(&aggregationDatum{
-			MetricDatum: cloudwatch.MetricDatum{
+			MetricDatum: types.MetricDatum{
 				MetricName: aws.String("test"),
 				Value:      aws.Float64(testCase),
 			},
@@ -326,7 +329,7 @@ func TestIsDropping(t *testing.T) {
 func TestIsFlushable(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
-	svc.On("PutMetricData", mock.Anything).Return(
+	svc.On("PutMetricData", mock.Anything, mock.Anything, mock.Anything).Return(
 		&res,
 		nil)
 	cw := newCloudWatchClient(svc, time.Second)
@@ -335,80 +338,84 @@ func TestIsFlushable(t *testing.T) {
 		10,
 		2*time.Second,
 		cw.WriteToCloudWatch)
-	assert := assert.New(t)
 	perRequestConstSize := overallConstPerRequestSize + len("CWAgent") + namespaceOverheads
 	batch := newMetricDatumBatch(defaultMaxDatumsPerCall, perRequestConstSize)
 	tags := map[string]string{}
-	datum := cloudwatch.MetricDatum{
+	datum := types.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
 		Dimensions: BuildDimensions(tags),
 		Timestamp:  aws.Time(time.Now()),
 	}
-	batch.Partition = map[string][]*cloudwatch.MetricDatum{
-		"TestEntity": append([]*cloudwatch.MetricDatum{}, &datum),
+	batch.Partition = map[string][]types.MetricDatum{
+		"TestEntity": append([]types.MetricDatum{}, datum),
 	}
-	assert.False(cw.timeToPublish(batch))
+	assert.False(t, cw.timeToPublish(batch))
 	time.Sleep(time.Second + cw.config.ForceFlushInterval)
-	assert.True(cw.timeToPublish(batch))
-	cw.Shutdown(context.Background())
+	assert.True(t, cw.timeToPublish(batch))
+	assert.NoError(t, cw.Shutdown(context.Background()))
 }
 
 func TestIsFull(t *testing.T) {
-	assert := assert.New(t)
 	perRequestConstSize := overallConstPerRequestSize + len("CWAgent") + namespaceOverheads
 	batch := newMetricDatumBatch(defaultMaxDatumsPerCall, perRequestConstSize)
 	tags := map[string]string{}
-	datum := cloudwatch.MetricDatum{
+	datum := types.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
 		Dimensions: BuildDimensions(tags),
 		Timestamp:  aws.Time(time.Now()),
 	}
-	batch.Partition = map[string][]*cloudwatch.MetricDatum{
+	batch.Partition = map[string][]types.MetricDatum{
 		"TestEntity": {},
 	}
 	partition := batch.Partition["TestEntity"]
 	for i := 0; i < 3; {
-		batch.Partition["TestEntity"] = append(partition, &datum)
+		batch.Partition["TestEntity"] = append(partition, datum)
 		batch.Count++
 		i++
 	}
-	assert.False(batch.isFull())
+	assert.False(t, batch.isFull())
 	for i := 0; i < defaultMaxDatumsPerCall-3; {
-		batch.Partition["TestEntity"] = append(partition, &datum)
+		batch.Partition["TestEntity"] = append(partition, datum)
 		batch.Count++
 		i++
 	}
-	assert.True(batch.isFull())
+	assert.True(t, batch.isFull())
 }
 
 type mockCloudWatchClient struct {
-	cloudwatchiface.CloudWatchAPI
 	mock.Mock
 }
 
-func (svc *mockCloudWatchClient) PutMetricData(
+var _ PutMetricDataAPI = (*mockCloudWatchClient)(nil)
+
+func (m *mockCloudWatchClient) PutMetricData(
+	ctx context.Context,
 	input *cloudwatch.PutMetricDataInput,
+	optFns ...func(*cloudwatch.Options),
 ) (*cloudwatch.PutMetricDataOutput, error) {
-	args := svc.Called(input)
+	args := m.Called(ctx, input, optFns)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*cloudwatch.PutMetricDataOutput), args.Error(1)
 }
 
 func newCloudWatchClient(
-	svc cloudwatchiface.CloudWatchAPI,
+	client PutMetricDataAPI,
 	forceFlushInterval time.Duration,
 ) *CloudWatch {
-	cloudwatch := &CloudWatch{
-		svc: svc,
+	cw := &CloudWatch{
+		client: client,
 		config: &Config{
 			ForceFlushInterval: forceFlushInterval,
 			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
 		},
 	}
-	cloudwatch.startRoutines()
-	return cloudwatch
+	cw.startRoutines()
+	return cw
 }
 
 func makeMetrics(count int) []telegraf.Metric {
@@ -430,7 +437,7 @@ func makeMetrics(count int) []telegraf.Metric {
 func TestConsumeMetrics(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
-	svc.On("PutMetricData", mock.Anything).Return(
+	svc.On("PutMetricData", mock.Anything, mock.Anything, mock.Anything).Return(
 		&res,
 		nil)
 	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
@@ -438,9 +445,9 @@ func TestConsumeMetrics(t *testing.T) {
 		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
 		cloudWatchOutput.WriteToCloudWatch)
 	metrics := makeMetrics(1500)
-	cloudWatchOutput.Write(metrics)
+	assert.NoError(t, cloudWatchOutput.Write(metrics))
 	time.Sleep(2*time.Second + 2*cloudWatchOutput.config.ForceFlushInterval)
-	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
+	svc.On("PutMetricData", mock.Anything, mock.Anything, mock.Anything).Return(&res, nil)
 	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
@@ -450,17 +457,19 @@ func TestConsumeMetrics(t *testing.T) {
 	// Expect 1500 metrics batched in 2 API calls.
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	ctx := context.Background()
-	cw.ConsumeMetrics(ctx, pmetrics)
+	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
 	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
-	cw.Shutdown(ctx)
+	assert.NoError(t, cw.Shutdown(ctx))
 }
 
 func TestWriteError(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
-	serverInternalErr := awserr.New(cloudwatch.ErrCodeLimitExceededFault, "", nil)
-	svc.On("PutMetricData", mock.Anything).Return(
+	serverInternalErr := &types.LimitExceededFault{
+		Message: aws.String("Limit exceeded"),
+	}
+	svc.On("PutMetricData", mock.Anything, mock.Anything, mock.Anything).Return(
 		&res,
 		serverInternalErr)
 	cw := newCloudWatchClient(svc, time.Second)
@@ -471,7 +480,7 @@ func TestWriteError(t *testing.T) {
 		cw.WriteToCloudWatch)
 	metrics := createTestMetrics(20, 1, 10, "")
 	ctx := context.Background()
-	cw.ConsumeMetrics(ctx, metrics)
+	assert.NoError(t, cw.ConsumeMetrics(ctx, metrics))
 
 	// Sum time for all retries.
 	var sum int
@@ -480,7 +489,7 @@ func TestWriteError(t *testing.T) {
 	}
 	time.Sleep(backoffRetryBase * time.Duration(sum))
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
-	cw.Shutdown(ctx)
+	assert.NoError(t, cw.Shutdown(ctx))
 }
 
 // TestPublish verifies metric batches do not get pushed immediately when
@@ -488,7 +497,7 @@ func TestWriteError(t *testing.T) {
 func TestPublish(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
-	svc.On("PutMetricData", mock.Anything).Return(
+	svc.On("PutMetricData", mock.Anything, mock.Anything, mock.Anything).Return(
 		&res,
 		nil)
 	interval := 60 * time.Second
@@ -506,7 +515,9 @@ func TestPublish(t *testing.T) {
 	metrics := createTestMetrics(numMetrics, 1, 1, "")
 	ctx := context.Background()
 	// Use goroutine since it could block if len(metrics) >metricChanBufferSize.
-	go cw.ConsumeMetrics(ctx, metrics)
+	go func() {
+		assert.NoError(t, cw.ConsumeMetrics(ctx, metrics))
+	}()
 	// Expect some, but not all API calls after half the original interval.
 	time.Sleep(interval/2 + 2*time.Second)
 	assert.Less(t, 0, len(svc.Calls))
@@ -516,7 +527,7 @@ func TestPublish(t *testing.T) {
 	time.Sleep(interval)
 	assert.Equal(t, expectedCalls, len(svc.Calls))
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
-	cw.Shutdown(ctx)
+	assert.NoError(t, cw.Shutdown(ctx))
 }
 
 func TestMiddleware(t *testing.T) {
@@ -525,6 +536,7 @@ func TestMiddleware(t *testing.T) {
 	newType, _ := component.NewType("test")
 	id := component.NewID(newType)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("smithy-protocol", "rpc-v2-cbor")
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -568,36 +580,35 @@ func TestBackoffRetries(t *testing.T) {
 		time.Millisecond * 1600,
 		time.Millisecond * 3200,
 		time.Millisecond * 6400}
-	assert := assert.New(t)
 	leniency := 200 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
 		start := time.Now()
 		c.backoffSleep()
 		// Expect time since start is between sleeps[i]/2 and sleeps[i].
 		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(sleeps[i]/2, time.Since(start))
-		assert.Greater(sleeps[i]+leniency, time.Since(start))
+		assert.Less(t, sleeps[i]/2, time.Since(start))
+		assert.Greater(t, sleeps[i]+leniency, time.Since(start))
 	}
 	start := time.Now()
 	c.backoffSleep()
-	assert.Less(30*time.Second, time.Since(start))
-	assert.Greater(60*time.Second, time.Since(start))
+	assert.Less(t, 30*time.Second, time.Since(start))
+	assert.Greater(t, 60*time.Second, time.Since(start))
 	// reset
 	c.retries = 0
 	start = time.Now()
 	c.backoffSleep()
-	assert.Greater(200*time.Millisecond+leniency, time.Since(start))
+	assert.Greater(t, 200*time.Millisecond+leniency, time.Since(start))
 }
 
 // Fill up the channel and verify it is full.
 // Take 1 item out of the channel and verify it is no longer full.
 func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	c := &CloudWatch{
-		datumBatchChan: make(chan map[string][]*cloudwatch.MetricDatum, datumBatchChanBufferSize),
+		datumBatchChan: make(chan map[string][]types.MetricDatum, datumBatchChanBufferSize),
 	}
 	assert.False(t, c.metricDatumBatchFull())
 	for i := 0; i < datumBatchChanBufferSize; i++ {
-		c.datumBatchChan <- map[string][]*cloudwatch.MetricDatum{}
+		c.datumBatchChan <- map[string][]types.MetricDatum{}
 	}
 	assert.True(t, c.metricDatumBatchFull())
 	<-c.datumBatchChan
@@ -607,28 +618,16 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 func TestCreateEntityMetricData(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
-	entity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			"Type":         aws.String("Service"),
-			"Environment":  aws.String("Environment"),
-			"Name":         aws.String("MyServiceName"),
-			"AwsAccountId": aws.String("0123456789012"),
-		},
-		Attributes: map[string]*string{
-			"InstanceID": aws.String("i-123456789"),
-			"Platform":   aws.String("AWS::EC2"),
-		},
-	}
 	metrics := createTestMetrics(1, 1, 1, "s")
 	assert.Equal(t, 7, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
-	aggregations := ConvertOtelMetrics(metrics)
+	aggregations := convertOtelMetrics(metrics)
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	entity, metricDatum := cw.BuildMetricDatum(aggregations[0])
 
-	entityToMetrics := map[string][]*cloudwatch.MetricDatum{
+	entityToMetrics := map[string][]types.MetricDatum{
 		entityToString(entity): metricDatum,
 	}
-	wantedEntityMetricData := []*cloudwatch.EntityMetricData{
+	wantedEntityMetricData := []types.EntityMetricData{
 		{
 			Entity:     &entity,
 			MetricData: metricDatum,
@@ -642,21 +641,21 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 	expectedPMDInput := &cloudwatch.PutMetricDataInput{
 		Namespace:              aws.String(""),
 		StrictEntityValidation: aws.Bool(false),
-		EntityMetricData: []*cloudwatch.EntityMetricData{
+		EntityMetricData: []types.EntityMetricData{
 			{
-				Entity: &cloudwatch.Entity{
-					Attributes: map[string]*string{},
-					KeyAttributes: map[string]*string{
-						"Environment": aws.String("Environment"),
-						"Service":     aws.String("Service"),
+				Entity: &types.Entity{
+					Attributes: map[string]string{},
+					KeyAttributes: map[string]string{
+						"Environment": "Environment",
+						"Service":     "Service",
 					},
 				},
-				MetricData: []*cloudwatch.MetricDatum{
+				MetricData: []types.MetricDatum{
 					{
 						MetricName: aws.String("TestMetricWithEntity"),
 						Value:      aws.Float64(1),
 						Timestamp:  timestampNow,
-						Dimensions: []*cloudwatch.Dimension{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("Class"), Value: aws.String("class")},
 							{Name: aws.String("Object"), Value: aws.String("object")},
 						},
@@ -664,12 +663,12 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 				},
 			},
 		},
-		MetricData: []*cloudwatch.MetricDatum{
+		MetricData: []types.MetricDatum{
 			{
 				MetricName: aws.String("TestMetricNoEntity"),
 				Value:      aws.Float64(1),
 				Timestamp:  timestampNow,
-				Dimensions: []*cloudwatch.Dimension{
+				Dimensions: []types.Dimension{
 					{Name: aws.String("Class"), Value: aws.String("class")},
 					{Name: aws.String("Object"), Value: aws.String("object")},
 				},
@@ -679,19 +678,18 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 
 	var input *cloudwatch.PutMetricDataInput
 	svc := new(mockCloudWatchClient)
-	svc.On("PutMetricData", &cloudwatch.PutMetricDataInput{}).Return(&cloudwatch.PutMetricDataOutput{}, nil)
-	svc.On("PutMetricData", mock.Anything).Run(func(args mock.Arguments) {
-		input = args.Get(0).(*cloudwatch.PutMetricDataInput)
+	svc.On("PutMetricData", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		input = args.Get(1).(*cloudwatch.PutMetricDataInput)
 	}).Return(&cloudwatch.PutMetricDataOutput{}, nil)
 
 	cw := newCloudWatchClient(svc, time.Second)
-	cw.WriteToCloudWatch(map[string][]*cloudwatch.MetricDatum{
+	cw.WriteToCloudWatch(map[string][]types.MetricDatum{
 		"": {
 			{
 				MetricName: aws.String("TestMetricNoEntity"),
 				Value:      aws.Float64(1),
 				Timestamp:  timestampNow,
-				Dimensions: []*cloudwatch.Dimension{
+				Dimensions: []types.Dimension{
 					{Name: aws.String("Class"), Value: aws.String("class")},
 					{Name: aws.String("Object"), Value: aws.String("object")},
 				},
@@ -702,7 +700,7 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 				MetricName: aws.String("TestMetricWithEntity"),
 				Value:      aws.Float64(1),
 				Timestamp:  timestampNow,
-				Dimensions: []*cloudwatch.Dimension{
+				Dimensions: []types.Dimension{
 					{Name: aws.String("Class"), Value: aws.String("class")},
 					{Name: aws.String("Object"), Value: aws.String("object")},
 				},
@@ -743,38 +741,57 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			sess := session.Must(session.NewSession(&aws.Config{
-				Region:   aws.String("us-west-2"),
-				Endpoint: aws.String("http://localhost:12345"),
-			}))
-			realSvc := cloudwatch.New(sess)
+			useragent.Get().Reset()
+
+			cfg := aws.Config{
+				Region: "us-west-2",
+			}
+			handler := useragent.NewHandler(true)
+			configurer := awsmiddleware.NewConfigurer([]awsmiddleware.RequestHandler{handler}, nil)
+			require.NoError(t, configurer.Configure(awsmiddleware.SDKv2(&cfg)))
+			client := cloudwatch.NewFromConfig(cfg, func(o *cloudwatch.Options) {
+				o.BaseEndpoint = aws.String("http://localhost:12345")
+			})
 			cw := &CloudWatch{
-				svc: realSvc,
+				client: client,
 				config: &Config{
 					ForceFlushInterval: time.Second,
 				},
 				logger: zap.NewNop(),
 			}
 
-			useragent.Get().Reset()
-			handler := useragent.NewHandler(true)
-			configurer := awsmiddleware.NewConfigurer([]awsmiddleware.RequestHandler{handler}, nil)
-			require.NoError(t, configurer.Configure(awsmiddleware.SDKv1(&realSvc.Handlers)))
-
 			// Process metrics to trigger detection
 			for _, name := range tc.metricNames {
 				cw.handleMetricName(name)
 			}
 
-			// Create a test request and run the Build handlers
-			testReq := &request.Request{
-				HTTPRequest: &http.Request{Header: http.Header{}},
-				Operation:   &request.Operation{Name: opPutMetricData},
-			}
-			realSvc.Handlers.Build.Run(testReq)
-
-			gotUA := testReq.HTTPRequest.Header.Get("User-Agent")
-			assert.Contains(t, gotUA, tc.expectedFeatureStr)
+			var got string
+			mm := new(mockMiddleware)
+			mm.On("ID").Return("captureUserAgent")
+			mm.On("HandleBuild", mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+				if in, ok := args.Get(1).(smithymiddleware.BuildInput); ok {
+					if req, ok := in.Request.(*smithyhttp.Request); ok {
+						got = req.Header.Get("User-Agent")
+					}
+				}
+			}).Return(smithymiddleware.BuildOutput{
+				Result: &cloudwatch.PutMetricDataOutput{},
+			}, smithymiddleware.Metadata{}, nil)
+			_, err := client.PutMetricData(t.Context(), &cloudwatch.PutMetricDataInput{
+				Namespace: aws.String("test"),
+				MetricData: []types.MetricDatum{
+					{
+						MetricName: aws.String("test"),
+						Value:      aws.Float64(1),
+					},
+				},
+			}, func(o *cloudwatch.Options) {
+				o.APIOptions = append(o.APIOptions, func(s *smithymiddleware.Stack) error {
+					return s.Build.Add(mm, smithymiddleware.After)
+				})
+			})
+			require.NoError(t, err)
+			assert.Contains(t, got, tc.expectedFeatureStr)
 		})
 	}
 }

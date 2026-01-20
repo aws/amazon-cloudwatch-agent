@@ -40,6 +40,7 @@ func TestSetSDKLogLevel(t *testing.T) {
 		{input: "LogDebugWithSigning", want: aws.LogRequest | aws.LogResponse | aws.LogSigning},
 		{input: "LogDebugWithHTTPBody", want: aws.LogRequestWithBody | aws.LogResponseWithBody},
 		{input: "LogDebugWithRequestRetries", want: aws.LogRequest | aws.LogResponse | aws.LogRetries},
+		{input: "LogDebugWithRequestErrors", want: aws.LogRequest | aws.LogResponse},
 		{input: "LogDebugWithEventStreamBody", want: aws.LogRequestEventMessage | aws.LogResponseEventMessage},
 		// Extra space around is allowed.
 		{input: "   LogRequest  ", want: aws.LogRequest},
