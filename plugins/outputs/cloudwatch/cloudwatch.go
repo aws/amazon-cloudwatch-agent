@@ -5,6 +5,7 @@ package cloudwatch
 
 import (
 	"context"
+	"errors"
 	"log"
 	"reflect"
 	"sort"
@@ -13,8 +14,10 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/smithy-go"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -25,15 +28,12 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
-	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
 )
 
 const (
@@ -51,26 +51,25 @@ const (
 )
 
 const (
-	opPutLogEvents  = "PutLogEvents"
-	opPutMetricData = "PutMetricData"
-)
-
-const (
 	featureFlagNvmeEBS        = "nvme_ebs"
 	featureFlagNvmeIS         = "nvme_is"
 	metricPrefixEBS           = "diskio_ebs_"
 	metricPrefixInstanceStore = "diskio_instance_store_"
 )
 
+type PutMetricDataAPI interface {
+	PutMetricData(ctx context.Context, params *cloudwatch.PutMetricDataInput, optFns ...func(*cloudwatch.Options)) (*cloudwatch.PutMetricDataOutput, error)
+}
+
 type CloudWatch struct {
 	config *Config
 	logger *zap.Logger
-	svc    cloudwatchiface.CloudWatchAPI
+	client PutMetricDataAPI
 	// todo: may want to increase the size of the chan since the type changed.
 	// 1 telegraf Metric could have many Fields.
 	// Each field corresponds to a MetricDatum.
 	metricChan             chan *aggregationDatum
-	datumBatchChan         chan map[string][]*cloudwatch.MetricDatum
+	datumBatchChan         chan map[string][]types.MetricDatum
 	metricDatumBatch       *MetricDatumBatch
 	shutdownChan           chan struct{}
 	retries                int
@@ -90,13 +89,13 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: false}
 }
 
-func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
+func (c *CloudWatch) Start(ctx context.Context, host component.Host) error {
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
 		2*time.Second,
 		c.WriteToCloudWatch)
-	credentialConfig := &configaws.CredentialConfig{
+	credentialConfig := &configaws.CredentialsConfig{
 		Region:    c.config.Region,
 		AccessKey: c.config.AccessKey,
 		SecretKey: c.config.SecretKey,
@@ -105,25 +104,26 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 		Filename:  c.config.SharedCredentialFilename,
 		Token:     c.config.Token,
 	}
-	configProvider := credentialConfig.Credentials()
+	awsConfig, err := credentialConfig.LoadConfig(ctx)
+	if err != nil {
+		return err
+	}
 	logger := models.NewLogger("outputs", "cloudwatch", "")
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(logger)
-	svc := cloudwatch.New(
-		configProvider,
-		&aws.Config{
-			Endpoint: aws.String(c.config.EndpointOverride),
-			Retryer:  logThrottleRetryer,
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
-		})
-	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
 	if c.config.MiddlewareID != nil {
-		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv1(&svc.Handlers))
+		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv2(&awsConfig))
 	}
+
+	client := cloudwatch.NewFromConfig(awsConfig, func(o *cloudwatch.Options) {
+		if c.config.EndpointOverride != "" {
+			o.BaseEndpoint = aws.String(c.config.EndpointOverride)
+		}
+		o.Retryer = logThrottleRetryer
+	})
 
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
-	c.svc = svc
+	c.client = client
 	c.retryer = logThrottleRetryer
 	c.startRoutines()
 	return nil
@@ -132,7 +132,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 func (c *CloudWatch) startRoutines() {
 	setNewDistributionFunc(c.config.MaxValuesPerDatum)
 	c.metricChan = make(chan *aggregationDatum, metricChanBufferSize)
-	c.datumBatchChan = make(chan map[string][]*cloudwatch.MetricDatum, datumBatchChanBufferSize)
+	c.datumBatchChan = make(chan map[string][]types.MetricDatum, datumBatchChanBufferSize)
 	c.shutdownChan = make(chan struct{})
 	c.aggregatorShutdownChan = make(chan struct{})
 	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
@@ -142,7 +142,7 @@ func (c *CloudWatch) startRoutines() {
 	go c.publish()
 }
 
-func (c *CloudWatch) Shutdown(ctx context.Context) error {
+func (c *CloudWatch) Shutdown(context.Context) error {
 	log.Println("D! Stopping the CloudWatch output plugin")
 	for i := 0; i < 5; i++ {
 		if len(c.metricChan) == 0 && len(c.datumBatchChan) == 0 {
@@ -165,8 +165,8 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 // ConsumeMetrics queues metrics to be published to CW.
 // The actual publishing will occur in a long running goroutine.
 // This method can block when publishing is backed up.
-func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
-	datums := ConvertOtelMetrics(metrics)
+func (c *CloudWatch) ConsumeMetrics(_ context.Context, metrics pmetric.Metrics) error {
+	datums := convertOtelMetrics(metrics)
 	for _, d := range datums {
 		c.aggregator.AddMetric(d)
 	}
@@ -203,7 +203,7 @@ func (c *CloudWatch) pushMetricDatum() {
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
 				c.metricDatumBatch.Partition[entityStr] = append(c.metricDatumBatch.Partition[entityStr], datums[i])
-				c.metricDatumBatch.Size += payload(datums[i])
+				c.metricDatumBatch.Size += payload(&datums[i])
 				c.metricDatumBatch.Count++
 				if c.metricDatumBatch.isFull() {
 					// if batch is full
@@ -234,7 +234,7 @@ func (c *CloudWatch) handleMetricName(name string) {
 
 type MetricDatumBatch struct {
 	MaxDatumsPerCall    int
-	Partition           map[string][]*cloudwatch.MetricDatum
+	Partition           map[string][]types.MetricDatum
 	BeginTime           time.Time
 	Size                int
 	Count               int
@@ -244,7 +244,7 @@ type MetricDatumBatch struct {
 func newMetricDatumBatch(maxDatumsPerCall, perRequestConstSize int) *MetricDatumBatch {
 	return &MetricDatumBatch{
 		MaxDatumsPerCall:    maxDatumsPerCall,
-		Partition:           map[string][]*cloudwatch.MetricDatum{},
+		Partition:           map[string][]types.MetricDatum{},
 		BeginTime:           time.Now(),
 		Size:                perRequestConstSize,
 		Count:               0,
@@ -253,7 +253,7 @@ func newMetricDatumBatch(maxDatumsPerCall, perRequestConstSize int) *MetricDatum
 }
 
 func (b *MetricDatumBatch) clear() {
-	b.Partition = map[string][]*cloudwatch.MetricDatum{}
+	b.Partition = map[string][]types.MetricDatum{}
 	b.BeginTime = time.Now()
 	b.Size = b.perRequestConstSize
 	b.Count = 0
@@ -373,14 +373,14 @@ func (c *CloudWatch) backoffSleep() {
 	time.Sleep(d)
 }
 
-func createEntityMetricData(entityToMetrics map[string][]*cloudwatch.MetricDatum) []*cloudwatch.EntityMetricData {
-	var entityMetricData []*cloudwatch.EntityMetricData
+func createEntityMetricData(entityToMetrics map[string][]types.MetricDatum) []types.EntityMetricData {
+	var entityMetricData []types.EntityMetricData
 	for entityStr, metrics := range entityToMetrics {
 		if entityStr == "" {
 			continue
 		}
 		entity := stringToEntity(entityStr)
-		entityMetricData = append(entityMetricData, &cloudwatch.EntityMetricData{
+		entityMetricData = append(entityMetricData, types.EntityMetricData{
 			Entity:     &entity,
 			MetricData: metrics,
 		})
@@ -389,12 +389,12 @@ func createEntityMetricData(entityToMetrics map[string][]*cloudwatch.MetricDatum
 }
 
 func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
-	entityToMetricDatum := req.(map[string][]*cloudwatch.MetricDatum)
+	entityToMetricDatum := req.(map[string][]types.MetricDatum)
 
 	// PMD requires PutMetricData to have MetricData
 	metricData := entityToMetricDatum[""]
 	if _, ok := entityToMetricDatum[""]; !ok {
-		metricData = []*cloudwatch.MetricDatum{}
+		metricData = []types.MetricDatum{}
 	}
 
 	params := &cloudwatch.PutMetricDataInput{
@@ -406,24 +406,39 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
-		_, err = c.svc.PutMetricData(params)
+		_, err = c.client.PutMetricData(context.Background(), params)
 		if err != nil {
-			awsErr, ok := err.(awserr.Error)
-			if !ok {
-				log.Printf("E! cloudwatch: Cannot cast PutMetricData error %v into awserr.Error.", err)
+			var lef *types.LimitExceededFault
+			if errors.As(err, &lef) {
+				log.Printf("W! cloudwatch: PutMetricData, error: %s, message: %s",
+					lef.ErrorCode(),
+					lef.ErrorMessage())
 				c.backoffSleep()
 				continue
 			}
-			switch awsErr.Code() {
-			case cloudwatch.ErrCodeLimitExceededFault, cloudwatch.ErrCodeInternalServiceFault:
+
+			var isf *types.InternalServiceFault
+			if errors.As(err, &isf) {
 				log.Printf("W! cloudwatch: PutMetricData, error: %s, message: %s",
-					awsErr.Code(),
-					awsErr.Message())
+					isf.ErrorCode(),
+					isf.ErrorMessage())
 				c.backoffSleep()
 				continue
+			}
 
-			default:
-				log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+			var oe *smithy.OperationError
+			if errors.As(err, &oe) {
+				log.Printf("W! cloudwatch: PutMetricData, error: %s", oe.Error())
+				c.backoffSleep()
+				continue
+			}
+
+			var apiErr smithy.APIError
+			if errors.As(err, &apiErr) {
+				log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", apiErr.ErrorCode(), apiErr.ErrorMessage(), apiErr.Error())
+				c.backoffSleep()
+			} else {
+				log.Printf("E! cloudwatch: Cannot cast PutMetricData error %v into smithy.APIError: %T.", err, err)
 				c.backoffSleep()
 			}
 		} else {
@@ -439,8 +454,8 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // BuildMetricDatum may just return the datum as-is.
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
-func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
-	var datums []*cloudwatch.MetricDatum
+func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (types.Entity, []types.MetricDatum) {
+	var datums []types.MetricDatum
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
 
 	if metric.distribution != nil {
@@ -463,7 +478,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 				continue
 			}
 			// Not a distribution.
-			datum := &cloudwatch.MetricDatum{
+			datum := types.MetricDatum{
 				MetricName:        metric.MetricName,
 				Dimensions:        dimensions,
 				Timestamp:         metric.Timestamp,
@@ -478,15 +493,15 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 	return metric.entity, datums
 }
 
-func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
-	datums := []*cloudwatch.MetricDatum{}
+func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsList [][]types.Dimension) []types.MetricDatum {
+	datums := []types.MetricDatum{}
 
 	if metric.distribution.Size() == 0 {
 		log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
 		return datums
 	}
 	if metric.distribution.Unit() != "" {
-		metric.SetUnit(metric.distribution.Unit())
+		metric.Unit = types.StandardUnit(metric.distribution.Unit())
 	}
 	distList := metric.distribution.Resize(c.config.MaxValuesPerDatum)
 
@@ -503,19 +518,20 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 			continue
 		}
 
-		s := cloudwatch.StatisticSet{}
-		s.SetMaximum(dist.Maximum())
-		s.SetMinimum(dist.Minimum())
-		s.SetSampleCount(dist.SampleCount())
-		s.SetSum(dist.Sum())
+		s := types.StatisticSet{
+			Maximum:     aws.Float64(dist.Maximum()),
+			Minimum:     aws.Float64(dist.Minimum()),
+			SampleCount: aws.Float64(dist.SampleCount()),
+			Sum:         aws.Float64(dist.Sum()),
+		}
 
 		// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
 		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
 		// the datasource does not provide a minimum and maximum value
 		if dist.Maximum() == 0 && dist.Minimum() == 0 {
 			distMin, distMax := minAndMax(values)
-			s.SetMinimum(distMin)
-			s.SetMaximum(distMax)
+			s.Minimum = aws.Float64(distMin)
+			s.Maximum = aws.Float64(distMax)
 		}
 
 		for index, dimensions := range dimensionsList {
@@ -528,14 +544,14 @@ func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsLi
 			// Beware there may be many datums sharing pointers to the same
 			// strings for metric names, dimensions, etc.
 			// It is fine since at this point the values will not change.
-			datum := &cloudwatch.MetricDatum{
+			datum := types.MetricDatum{
 				MetricName:        metric.MetricName,
 				Dimensions:        dimensions,
 				Timestamp:         metric.Timestamp,
 				Unit:              metric.Unit,
 				StorageResolution: metric.StorageResolution,
-				Values:            aws.Float64Slice(values),
-				Counts:            aws.Float64Slice(counts),
+				Values:            values,
+				Counts:            counts,
 				StatisticValues:   &s,
 			}
 			datums = append(datums, datum)
@@ -587,15 +603,15 @@ func sortedTagKeys(tagMap map[string]string) []string {
 // So keep up to the first 30 alphabetically.
 // This always includes the "host" tag if it exists.
 // See https://github.com/aws/amazon-cloudwatch-agent/issues/398
-func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
+func BuildDimensions(tagMap map[string]string) []types.Dimension {
 	if len(tagMap) > MaxDimensions {
 		log.Printf("D! cloudwatch: dropping dimensions, max %v, count %v",
 			MaxDimensions, len(tagMap))
 	}
-	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
+	dimensions := make([]types.Dimension, 0, MaxDimensions)
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
 	if host, ok := tagMap["host"]; ok && host != "" {
-		dimensions = append(dimensions, &cloudwatch.Dimension{
+		dimensions = append(dimensions, types.Dimension{
 			Name:  aws.String("host"),
 			Value: aws.String(host),
 		})
@@ -612,7 +628,7 @@ func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
 		if value == "" {
 			continue
 		}
-		dimensions = append(dimensions, &cloudwatch.Dimension{
+		dimensions = append(dimensions, types.Dimension{
 			Name:  aws.String(k),
 			Value: aws.String(tagMap[k]),
 		})
@@ -621,13 +637,13 @@ func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
 }
 
 // ProcessRollup creates the dimension sets based on the dimensions available in the original metric.
-func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
+func (c *CloudWatch) ProcessRollup(rawDimensions []types.Dimension) [][]types.Dimension {
 	rawDimensionMap := map[string]string{}
 	for _, v := range rawDimensions {
 		rawDimensionMap[*v.Name] = *v.Value
 	}
 	targetDimensionsList := c.config.RollupDimensions
-	fullDimensionsList := [][]*cloudwatch.Dimension{rawDimensions}
+	fullDimensionsList := [][]types.Dimension{rawDimensions}
 	for _, targetDimensions := range targetDimensionsList {
 		// skip if target dimensions count is same or more than the original metric.
 		// cannot have dimensions that do not exist in the original metric.
@@ -635,12 +651,12 @@ func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*c
 			continue
 		}
 		count := 0
-		extraDimensions := make([]*cloudwatch.Dimension, len(targetDimensions))
+		extraDimensions := make([]types.Dimension, len(targetDimensions))
 		for _, targetDimensionKey := range targetDimensions {
 			if val, ok := rawDimensionMap[targetDimensionKey]; !ok {
 				break
 			} else {
-				extraDimensions[count] = &cloudwatch.Dimension{
+				extraDimensions[count] = types.Dimension{
 					Name:  aws.String(targetDimensionKey),
 					Value: aws.String(val),
 				}
@@ -696,7 +712,7 @@ func (c *CloudWatch) Close() error {
 	return nil
 }
 
-func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+func (c *CloudWatch) Write([]telegraf.Metric) error {
 	return nil
 }
 

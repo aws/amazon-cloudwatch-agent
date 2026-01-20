@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	testProfile = "default"
-	testRegion  = "us-east-1"
-	testRoleARN = "arn:aws:iam::012345678912:role/XXXXXXXX"
+	testAccountID   = "012345678912"
+	testInstanceARN = "arn:aws:ec2:us-east-1:012345678912:instance/i-0123a456700123456"
+	testProfile     = "default"
+	testRegion      = "us-east-1"
+	testRoleARN     = "arn:aws:iam::012345678912:role/XXXXXXXX"
 )
 
 var (
