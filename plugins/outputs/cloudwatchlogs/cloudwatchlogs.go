@@ -37,8 +37,6 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
-
-	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
 )
 
 var (
@@ -69,14 +67,16 @@ type CloudWatchLogs struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	pusherWaitGroup sync.WaitGroup
-	cwDests         sync.Map
-	workerPool      pusher.WorkerPool
-	targetManager   pusher.TargetManager
-	once            sync.Once
-	middleware      awsmiddleware.Middleware
-	configurer      *awsmiddleware.Configurer
-	configurerOnce  sync.Once
+	pusherWaitGroup    sync.WaitGroup
+	cwDests            sync.Map
+	workerPool         pusher.WorkerPool
+	retryHeap          pusher.RetryHeap
+	retryHeapProcessor *pusher.RetryHeapProcessor
+	targetManager      pusher.TargetManager
+	once               sync.Once
+	middleware         awsmiddleware.Middleware
+	configurer         *awsmiddleware.Configurer
+	configurerOnce     sync.Once
 }
 
 var _ logs.LogBackend = (*CloudWatchLogs)(nil)
@@ -99,6 +99,14 @@ func (c *CloudWatchLogs) Close() error {
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
+	}
+
+	if c.retryHeapProcessor != nil {
+		c.retryHeapProcessor.Stop()
+	}
+
+	if c.retryHeap != nil {
+		c.retryHeap.Stop()
 	}
 
 	return nil
@@ -150,10 +158,16 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	c.once.Do(func() {
 		if c.Concurrency > 1 {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
+			c.retryHeap = pusher.NewRetryHeap(c.Concurrency)
+
+			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
+			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log)
+			c.retryHeapProcessor.Start()
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup, c.Concurrency)
+	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, &c.pusherWaitGroup, c.Concurrency, c.retryHeap)
 	cwd := &cwDest{
 		pusher:   p,
 		retryer:  logThrottleRetryer,

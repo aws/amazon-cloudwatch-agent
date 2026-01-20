@@ -116,23 +116,27 @@ func (rh *retryHeap) Stop() {
 
 // RetryHeapProcessor manages the retry heap and moves ready batches back to sender queue
 type RetryHeapProcessor struct {
-	retryHeap        RetryHeap
-	senderPool       Sender
-	stopCh           chan struct{}
-	logger           telegraf.Logger
-	stopped          bool
-	maxRetryDuration time.Duration
+	retryHeap  RetryHeap
+	senderPool Sender
+	stopCh     chan struct{}
+	logger     telegraf.Logger
+	stopped    bool
 }
 
 // NewRetryHeapProcessor creates a new retry heap processor
-func NewRetryHeapProcessor(retryHeap RetryHeap, senderPool Sender, logger telegraf.Logger, maxRetryDuration time.Duration) *RetryHeapProcessor {
+func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger) *RetryHeapProcessor {
+	// Create processor's own sender and senderPool
+	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
+	// Use the same default retry timeout that main pusher uses for consistency
+	sender := newSender(logger, service, targetManager, retryHeap)
+	senderPool := newSenderPool(workerPool, sender)
+
 	return &RetryHeapProcessor{
-		retryHeap:        retryHeap,
-		senderPool:       senderPool,
-		stopCh:           make(chan struct{}),
-		logger:           logger,
-		stopped:          false,
-		maxRetryDuration: maxRetryDuration,
+		retryHeap:  retryHeap,
+		senderPool: senderPool,
+		stopCh:     make(chan struct{}),
+		logger:     logger,
+		stopped:    false,
 	}
 }
 
@@ -150,6 +154,7 @@ func (p *RetryHeapProcessor) Stop() {
 	// Process any remaining batches before stopping
 	p.processReadyMessages()
 
+	p.senderPool.Stop()
 	close(p.stopCh)
 	p.stopped = true
 }
@@ -175,7 +180,7 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 
 	for _, batch := range readyBatches {
 		// Check if batch has expired
-		if batch.isExpired(p.maxRetryDuration) {
+		if batch.isExpired() {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
 			batch.updateState()
 			continue

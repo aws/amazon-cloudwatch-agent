@@ -5,7 +5,6 @@ package pusher
 
 import (
 	"errors"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -24,19 +23,16 @@ type cloudWatchLogsService interface {
 
 type Sender interface {
 	Send(*logEventBatch)
-	SetRetryDuration(time.Duration)
-	RetryDuration() time.Duration
 	Stop()
 }
 
 type sender struct {
-	service            cloudWatchLogsService
-	retryDuration      atomic.Value
-	targetManager      TargetManager
-	logger             telegraf.Logger
-	stopCh             chan struct{}
-	stopped            bool
-	concurrencyEnabled bool
+	service       cloudWatchLogsService
+	targetManager TargetManager
+	logger        telegraf.Logger
+	stopCh        chan struct{}
+	stopped       bool
+	retryHeap     RetryHeap
 }
 
 var _ (Sender) = (*sender)(nil)
@@ -45,23 +41,21 @@ func newSender(
 	logger telegraf.Logger,
 	service cloudWatchLogsService,
 	targetManager TargetManager,
-	retryDuration time.Duration,
-	concurrencyEnabled bool,
+	retryHeap RetryHeap,
 ) Sender {
 	s := &sender{
-		logger:             logger,
-		service:            service,
-		targetManager:      targetManager,
-		stopCh:             make(chan struct{}),
-		stopped:            false,
-		concurrencyEnabled: concurrencyEnabled,
+		logger:        logger,
+		service:       service,
+		targetManager: targetManager,
+		stopCh:        make(chan struct{}),
+		stopped:       false,
+		retryHeap:     retryHeap,
 	}
-	s.retryDuration.Store(retryDuration)
 	return s
 }
 
 // Send attempts to send a batch of log events to CloudWatch Logs. Will retry failed attempts until it reaches the
-// RetryDuration or an unretryable error.
+// MaxRetryDuration or an unretryable error.
 func (s *sender) Send(batch *logEventBatch) {
 	if len(batch.events) == 0 {
 		return
@@ -118,16 +112,18 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		// Check if retry would exceed max duration
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
-		if batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+		if batch.isExpired() {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		}
 
-		// If concurrency enabled, notify failure (will handle RetryHeap push) and return
+		// If RetryHeap available, push to RetryHeap and return
 		// Otherwise, continue with existing busy-wait retry behavior
-		if s.isConcurrencyEnabled() {
+		if s.retryHeap != nil {
+			s.retryHeap.Push(batch)
 			batch.fail()
+			return
 		}
 
 		// Calculate wait time until next retry (synchronous mode)
@@ -154,19 +150,4 @@ func (s *sender) Stop() {
 	}
 	close(s.stopCh)
 	s.stopped = true
-}
-
-// SetRetryDuration sets the maximum duration for retrying failed log sends.
-func (s *sender) SetRetryDuration(retryDuration time.Duration) {
-	s.retryDuration.Store(retryDuration)
-}
-
-// RetryDuration returns the current maximum retry duration.
-func (s *sender) RetryDuration() time.Duration {
-	return s.retryDuration.Load().(time.Duration)
-}
-
-// isConcurrencyEnabled returns whether concurrency mode is enabled for this sender.
-func (s *sender) isConcurrencyEnabled() bool {
-	return s.concurrencyEnabled
 }

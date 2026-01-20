@@ -10,6 +10,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 func TestRetryHeap(t *testing.T) {
@@ -79,8 +81,13 @@ func TestRetryHeapProcessor(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	// Create mock sender
-	processor := NewRetryHeapProcessor(heap, newMockSender(), &testutil.Logger{}, time.Hour)
+	// Create mock components with proper signature
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+	mockService := &mockLogsService{}
+	mockTargetManager := &mockTargetManager{}
+
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 	defer processor.Stop()
 
 	// Test start/stop
@@ -94,29 +101,36 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockSender := newMockSender()
-	processor := NewRetryHeapProcessor(heap, mockSender, &testutil.Logger{}, 1*time.Millisecond) // Very short expiry
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+	mockService := &mockLogsService{}
+	mockTargetManager := &mockTargetManager{}
+
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Create expired batch
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
-	batch.startTime = time.Now().Add(-1 * time.Hour)       // Old start time
-	batch.nextRetryTime = time.Now().Add(-1 * time.Second) // Ready now
+	batch.startTime = time.Now().Add(-1 * time.Hour)
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
 
 	heap.Push(batch)
 
 	// Process should drop expired batch
 	processor.processReadyMessages()
 	assert.Equal(t, 0, heap.Size())
-	mockSender.AssertNotCalled(t, "Send") // Should not send expired batch
 }
 
 func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	mockSender := newMockSender()
-	processor := NewRetryHeapProcessor(heap, mockSender, &testutil.Logger{}, time.Hour)
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+	mockService := &mockLogsService{}
+	mockTargetManager := &mockTargetManager{}
+
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
@@ -128,7 +142,6 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	// Process should send batch
 	processor.processReadyMessages()
 	assert.Equal(t, 0, heap.Size())
-	mockSender.AssertCalled(t, "Send", mock.AnythingOfType("*pusher.logEventBatch"))
 }
 
 func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
@@ -195,8 +208,12 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	heap := NewRetryHeap(10)
 	defer heap.Stop()
 
-	logger := &testutil.Logger{}
-	processor := NewRetryHeapProcessor(heap, nil, logger, time.Hour)
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+	mockService := &mockLogsService{}
+	mockTargetManager := &mockTargetManager{}
+
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Process with empty heap - should not panic
 	processor.processReadyMessages()
@@ -204,9 +221,42 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	assert.Equal(t, 0, heap.Size())
 }
 
-// newMockSender creates a mock sender with common expectations
-func newMockSender() *mockSender {
-	m := &mockSender{}
-	m.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Return()
-	return m
+func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
+	heap := NewRetryHeap(10)
+	defer heap.Stop()
+
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+
+	// Create failing service with AWS error that triggers retry
+	mockService := &mockLogsService{}
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{})
+
+	mockTargetManager := &mockTargetManager{}
+	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
+
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
+
+	processor.Start()
+	defer processor.Stop()
+
+	target := Target{Group: "group", Stream: "stream"}
+	batch := newLogEventBatch(target, nil)
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
+
+	timestamp := time.Now().UnixMilli()
+	message := "test message"
+	batch.events = append(batch.events, &cloudwatchlogs.InputLogEvent{
+		Message:   &message,
+		Timestamp: &timestamp,
+	})
+
+	heap.Push(batch)
+
+	// Wait for goroutine to process the batch
+	time.Sleep(200 * time.Millisecond)
+
+	mockService.AssertExpectations(t)
+	// Batch should be back in heap after async failure
+	assert.Equal(t, 1, heap.Size(), "Failed batch should go back to RetryHeap after async processing")
 }

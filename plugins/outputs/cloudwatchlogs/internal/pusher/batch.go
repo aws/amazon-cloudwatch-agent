@@ -15,9 +15,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
-// CloudWatch Logs PutLogEvents API limits
-// Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 const (
+	// maxRetryTimeout is the default retry timeout for CloudWatch Logs operations
+	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
+
+	// CloudWatch Logs PutLogEvents API limits
+	// Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 	// The maximum batch size in bytes. This size is calculated as the sum of all event messages in UTF-8,
 	// plus 26 bytes for each log event.
 	reqSizeLimit = 1024 * 1024
@@ -109,6 +112,7 @@ type logEventBatch struct {
 	retryCountLong  int       // Number of retries using long delay strategy
 	startTime       time.Time // Time of first request (for max retry duration calculation)
 	nextRetryTime   time.Time // When this batch should be retried next
+	expireAfter     time.Time // When this batch expires and should be dropped
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -251,11 +255,12 @@ func (t byTimestamp) Less(i, j int) bool {
 	return *t[i].Timestamp < *t[j].Timestamp
 }
 
-// initializeStartTime sets the start time if not already set.
+// initializeStartTime sets the start time and expiration time if not already set.
 func (b *logEventBatch) initializeStartTime() {
 	if b.startTime.IsZero() {
 		b.startTime = time.Now()
 	}
+	b.expireAfter = b.startTime.Add(maxRetryTimeout)
 }
 
 // updateRetryMetadata updates the retry metadata after a failed send attempt.
@@ -275,12 +280,9 @@ func (b *logEventBatch) updateRetryMetadata(err error) {
 	b.nextRetryTime = time.Now().Add(wait)
 }
 
-// isExpired checks if the batch has exceeded the maximum retry duration.
-func (b *logEventBatch) isExpired(maxRetryDuration time.Duration) bool {
-	if b.startTime.IsZero() {
-		return false
-	}
-	return time.Since(b.startTime) > maxRetryDuration
+// isExpired checks if the batch has exceeded its expiration time.
+func (b *logEventBatch) isExpired() bool {
+	return !b.expireAfter.IsZero() && time.Now().After(b.expireAfter)
 }
 
 // isReadyForRetry checks if enough time has passed since the last failure to retry this batch.
