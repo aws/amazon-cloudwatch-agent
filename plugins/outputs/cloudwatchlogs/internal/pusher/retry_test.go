@@ -6,16 +6,22 @@ package pusher
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"syscall"
 	"testing"
 	"time"
 
+	sdkhttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var _ httpResponseError = (*smithyhttp.ResponseError)(nil)
+var _ httpResponseError = (*sdkhttp.ResponseError)(nil)
 
 func TestChooseRetryWaitStrategy(t *testing.T) {
 	t.Parallel()
@@ -40,12 +46,26 @@ func TestChooseRetryWaitStrategy(t *testing.T) {
 			expectedStrategy: retryLong,
 		},
 		"500 - InternalFailure": {
-			err:              &smithy.GenericAPIError{Code: "InternalFailure", Message: "Internal server error"},
-			expectedStrategy: retryShort, // GenericAPIError doesn't have HTTP status, so it falls through to retryShort
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{
+						StatusCode: 500,
+					},
+				},
+				Err: errors.New("InternalFailure"),
+			},
+			expectedStrategy: retryLong,
 		},
 		"503 - ServiceUnavailable": {
-			err:              &smithy.GenericAPIError{Code: "ServiceUnavailable", Message: "Service unavailable"},
-			expectedStrategy: retryShort, // GenericAPIError doesn't have HTTP status, so it falls through to retryShort
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{
+						StatusCode: 503,
+					},
+				},
+				Err: errors.New("ServiceUnavailable"),
+			},
+			expectedStrategy: retryLong,
 		},
 		"Connection Refused": {
 			err:              &smithy.GenericAPIError{Code: "SomeError", Message: "connection refused"},
@@ -73,7 +93,7 @@ func TestChooseRetryWaitStrategy(t *testing.T) {
 		},
 		"Response Timeout": {
 			err:              &smithy.GenericAPIError{Code: "ResponseTimeout", Message: "response timed out"},
-			expectedStrategy: retryShort, // GenericAPIError with ResponseTimeout code doesn't match any specific case
+			expectedStrategy: retryLong,
 		},
 		"Deadline Exceeded": {
 			err:              os.ErrDeadlineExceeded,

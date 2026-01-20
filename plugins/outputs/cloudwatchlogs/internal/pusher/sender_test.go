@@ -222,10 +222,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		// Create a generic AWS API error using smithy.GenericAPIError
-		apiErr := &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}
 		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, apiErr).Once()
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}).Once()
 		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
@@ -252,10 +250,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		// Create a generic AWS API error using smithy.GenericAPIError
-		apiErr := &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}
 		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, apiErr).Once()
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}).Once()
 
 		s := newSender(logger, mockService, mockManager, 100*time.Millisecond)
 		s.Send(batch)
@@ -282,10 +278,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		// Create a generic AWS API error using smithy.GenericAPIError
-		apiErr := &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}
 		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, apiErr).Once()
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 

@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/smithy-go"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
 )
 
 const (
@@ -63,6 +64,10 @@ func withJitter(d time.Duration) time.Duration {
 	return time.Duration(rand.Int63n(int64(d/2)) + int64(d/2)) // nolint:gosec
 }
 
+type httpResponseError interface {
+	HTTPStatusCode() int
+}
+
 // chooseRetryWaitStrategy decides if a "long" or "short" retry strategy should be used when the PutLogEvents API call
 // returns an error. A short retry strategy should be used for most errors, while a long retry strategy is used for
 // errors where retrying too quickly could cause excessive strain on the backend servers.
@@ -75,19 +80,7 @@ func withJitter(d time.Duration) time.Duration {
 //   - Connection Timeout
 //   - Throttling
 func chooseRetryWaitStrategy(err error) retryWaitStrategy {
-	if isErrConnectionTimeout(err) || isErrConnectionReset(err) || isErrConnectionRefused(err) {
-		return retryLong
-	}
-
-	// Check for throttling errors using v2 types
-	var throttlingErr *types.ThrottlingException
-	if errors.As(err, &throttlingErr) {
-		return retryLong
-	}
-
-	// Check for service unavailable using v2 types
-	var serviceUnavailableErr *types.ServiceUnavailableException
-	if errors.As(err, &serviceUnavailableErr) {
+	if isErrConnectionTimeout(err) || isErrConnectionReset(err) || isErrConnectionRefused(err) || retryer.IsErrThrottle(err) {
 		return retryLong
 	}
 
@@ -97,13 +90,14 @@ func chooseRetryWaitStrategy(err error) retryWaitStrategy {
 		switch apiErr.ErrorCode() {
 		case "ServiceUnavailableException",
 			"ThrottlingException",
-			"RequestTimeout":
+			"RequestTimeout",
+			"ResponseTimeout":
 			return retryLong
 		}
 	}
 
-	// Check HTTP status codes using smithy HTTPResponse
-	var httpErr interface{ HTTPStatusCode() int }
+	// Check HTTP status codes
+	var httpErr httpResponseError
 	if errors.As(err, &httpErr) {
 		switch httpErr.HTTPStatusCode() {
 		case
