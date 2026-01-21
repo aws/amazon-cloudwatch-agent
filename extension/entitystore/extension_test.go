@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/jellydator/ttlcache/v3"
@@ -24,7 +24,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -211,7 +210,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   map[string]*string
+		want   map[string]string
 	}{
 		{
 			name: "HappyPath",
@@ -221,10 +220,10 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				},
 				mode: config.ModeEC2,
 			},
-			want: map[string]*string{
-				ASGKey:        aws.String("ASG-1"),
-				InstanceIDKey: aws.String("i-123456789"),
-				PlatformType:  aws.String(EC2PlatForm),
+			want: map[string]string{
+				ASGKey:        "ASG-1",
+				InstanceIDKey: "i-123456789",
+				PlatformType:  EC2PlatForm,
 			},
 		},
 		{
@@ -236,9 +235,9 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				mode:     config.ModeEC2,
 				emptyASG: true,
 			},
-			want: map[string]*string{
-				InstanceIDKey: aws.String("i-123456789"),
-				PlatformType:  aws.String(EC2PlatForm),
+			want: map[string]string{
+				InstanceIDKey: "i-123456789",
+				PlatformType:  EC2PlatForm,
 			},
 		},
 		{
@@ -247,8 +246,8 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				mode:     config.ModeEC2,
 				emptyASG: true,
 			},
-			want: map[string]*string{
-				PlatformType: aws.String(EC2PlatForm),
+			want: map[string]string{
+				PlatformType: EC2PlatForm,
 			},
 		},
 		{
@@ -259,7 +258,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				},
 				mode: config.ModeOnPrem,
 			},
-			want: map[string]*string{},
+			want: map[string]string{},
 		},
 	}
 	for _, tt := range tests {
@@ -275,7 +274,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 				sp.On("getAutoScalingGroup").Return("ASG-1")
 			}
 			e.serviceprovider = sp
-			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(e.createAttributeMap()), "createAttributeMap()")
+			assert.Equalf(t, tt.want, e.createAttributeMap(), "createAttributeMap()")
 		})
 	}
 }
@@ -284,38 +283,38 @@ func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 	tests := []struct {
 		name        string
 		serviceAttr ServiceAttribute
-		want        map[string]*string
+		want        map[string]string
 	}{
 		{
 			name:        "NameAndEnvironmentSet",
 			serviceAttr: ServiceAttribute{ServiceName: "test-service", Environment: "test-environment"},
-			want: map[string]*string{
-				entityattributes.DeploymentEnvironment: aws.String("test-environment"),
-				entityattributes.ServiceName:           aws.String("test-service"),
-				entityattributes.EntityType:            aws.String(Service),
+			want: map[string]string{
+				entityattributes.DeploymentEnvironment: "test-environment",
+				entityattributes.ServiceName:           "test-service",
+				entityattributes.EntityType:            Service,
 			},
 		},
 		{
 			name:        "OnlyNameSet",
 			serviceAttr: ServiceAttribute{ServiceName: "test-service"},
-			want: map[string]*string{
-				entityattributes.ServiceName: aws.String("test-service"),
-				entityattributes.EntityType:  aws.String(Service),
+			want: map[string]string{
+				entityattributes.ServiceName: "test-service",
+				entityattributes.EntityType:  Service,
 			},
 		},
 		{
 			name:        "OnlyEnvironmentSet",
 			serviceAttr: ServiceAttribute{Environment: "test-environment"},
-			want: map[string]*string{
-				entityattributes.DeploymentEnvironment: aws.String("test-environment"),
-				entityattributes.EntityType:            aws.String(Service),
+			want: map[string]string{
+				entityattributes.DeploymentEnvironment: "test-environment",
+				entityattributes.EntityType:            Service,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &EntityStore{}
-			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(e.createServiceKeyAttributes(tt.serviceAttr)), "createServiceKeyAttributes()")
+			assert.Equalf(t, tt.want, e.createServiceKeyAttributes(tt.serviceAttr), "createServiceKeyAttributes()")
 		})
 	}
 }
@@ -342,22 +341,22 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 
 	entity := e.CreateLogFileEntity(glob, group)
 
-	expectedEntity := cloudwatchlogs.Entity{
-		KeyAttributes: map[string]*string{
-			entityattributes.DeploymentEnvironment: aws.String("test-environment"),
-			entityattributes.ServiceName:           aws.String("test-service"),
-			entityattributes.EntityType:            aws.String(Service),
-			entityattributes.AwsAccountId:          aws.String(accountId),
+	expectedEntity := types.Entity{
+		KeyAttributes: map[string]string{
+			entityattributes.DeploymentEnvironment: "test-environment",
+			entityattributes.ServiceName:           "test-service",
+			entityattributes.EntityType:            Service,
+			entityattributes.AwsAccountId:          accountId,
 		},
-		Attributes: map[string]*string{
-			InstanceIDKey:                     aws.String(instanceId),
-			ServiceNameSourceKey:              aws.String(ServiceNameSourceUserConfiguration),
-			PlatformType:                      aws.String(EC2PlatForm),
-			entityattributes.AutoscalingGroup: aws.String("ASG-1"),
+		Attributes: map[string]string{
+			InstanceIDKey:                     instanceId,
+			ServiceNameSourceKey:              ServiceNameSourceUserConfiguration,
+			PlatformType:                      EC2PlatForm,
+			entityattributes.AutoscalingGroup: "ASG-1",
 		},
 	}
-	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
-	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
+	assert.Equal(t, expectedEntity.KeyAttributes, entity.KeyAttributes)
+	assert.Equal(t, expectedEntity.Attributes, entity.Attributes)
 }
 
 func TestEntityStore_createLogFileRID_ServiceProviderIsEmpty(t *testing.T) {
@@ -373,18 +372,6 @@ func TestEntityStore_createLogFileRID_ServiceProviderIsEmpty(t *testing.T) {
 	entity := e.CreateLogFileEntity(glob, group)
 
 	assert.Nil(t, entity)
-}
-
-func dereferenceMap(input map[string]*string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range input {
-		if v != nil {
-			result[k] = *v
-		} else {
-			result[k] = ""
-		}
-	}
-	return result
 }
 
 func TestEntityStore_addServiceAttrEntryForLogFile(t *testing.T) {

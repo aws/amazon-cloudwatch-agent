@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/smithy-go"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
 )
 
 const (
@@ -64,6 +64,10 @@ func withJitter(d time.Duration) time.Duration {
 	return time.Duration(rand.Int63n(int64(d/2)) + int64(d/2)) // nolint:gosec
 }
 
+type httpResponseError interface {
+	HTTPStatusCode() int
+}
+
 // chooseRetryWaitStrategy decides if a "long" or "short" retry strategy should be used when the PutLogEvents API call
 // returns an error. A short retry strategy should be used for most errors, while a long retry strategy is used for
 // errors where retrying too quickly could cause excessive strain on the backend servers.
@@ -76,31 +80,30 @@ func withJitter(d time.Duration) time.Duration {
 //   - Connection Timeout
 //   - Throttling
 func chooseRetryWaitStrategy(err error) retryWaitStrategy {
-	if isErrConnectionTimeout(err) || isErrConnectionReset(err) || isErrConnectionRefused(err) || request.IsErrorThrottle(err) {
+	if isErrConnectionTimeout(err) || isErrConnectionReset(err) || isErrConnectionRefused(err) || retryer.IsErrThrottle(err) {
 		return retryLong
 	}
 
-	// Check AWS Error codes if available
-	var awsErr awserr.Error
-	if errors.As(err, &awsErr) {
-		switch awsErr.Code() {
-		case
-			cloudwatchlogs.ErrCodeServiceUnavailableException,
-			cloudwatchlogs.ErrCodeThrottlingException,
+	// Check error code using smithy.APIError
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "ServiceUnavailableException",
+			"ThrottlingException",
 			"RequestTimeout",
-			request.ErrCodeResponseTimeout:
+			"ResponseTimeout":
 			return retryLong
 		}
+	}
 
-		// Check HTTP status codes if available
-		var requestFailure awserr.RequestFailure
-		if errors.As(err, &requestFailure) {
-			switch requestFailure.StatusCode() {
-			case
-				500, // internal failure
-				503: // service unavailable
-				return retryLong
-			}
+	// Check HTTP status codes
+	var httpErr httpResponseError
+	if errors.As(err, &httpErr) {
+		switch httpErr.HTTPStatusCode() {
+		case
+			500, // internal failure
+			503: // service unavailable
+			return retryLong
 		}
 	}
 

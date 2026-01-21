@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -21,7 +22,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -147,7 +147,7 @@ func (e *EntityStore) NativeCredentialExists() bool {
 }
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
-func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
+func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *types.Entity {
 	if e.serviceprovider == nil {
 		return nil
 	}
@@ -159,7 +159,7 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 	if _, ok := keyAttributes[entityattributes.AwsAccountId]; !ok {
 		return nil
 	}
-	return &cloudwatchlogs.Entity{
+	return &types.Entity{
 		KeyAttributes: keyAttributes,
 		Attributes:    attributeMap,
 	}
@@ -175,7 +175,7 @@ func (e *EntityStore) GetMetricServiceNameAndSource() (string, string) {
 
 // GetServiceMetricAttributesMap creates the attribute map for service metrics. This will be expanded upon in a later PR'S,
 // but for now is just covering the EC2 attributes for service metrics.
-func (e *EntityStore) GetServiceMetricAttributesMap() map[string]*string {
+func (e *EntityStore) GetServiceMetricAttributesMap() map[string]string {
 	return e.createAttributeMap()
 }
 
@@ -235,8 +235,8 @@ func (e *EntityStore) GetPodServiceEnvironmentMapping() *ttlcache.Cache[string, 
 	)
 }
 
-func (e *EntityStore) createAttributeMap() map[string]*string {
-	attributeMap := make(map[string]*string)
+func (e *EntityStore) createAttributeMap() map[string]string {
+	attributeMap := make(map[string]string)
 
 	if e.mode == config.ModeEC2 {
 		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.GetInstanceID())
@@ -244,15 +244,15 @@ func (e *EntityStore) createAttributeMap() map[string]*string {
 	}
 	switch e.mode {
 	case config.ModeEC2:
-		attributeMap[PlatformType] = aws.String(EC2PlatForm)
+		attributeMap[PlatformType] = EC2PlatForm
 	}
 	return attributeMap
 }
 
 // createServiceKeyAttribute creates KeyAttributes for Service entities
-func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) map[string]*string {
-	serviceKeyAttr := map[string]*string{
-		entityattributes.EntityType: aws.String(Service),
+func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) map[string]string {
+	serviceKeyAttr := map[string]string{
+		entityattributes.EntityType: Service,
 	}
 	addNonEmptyToMap(serviceKeyAttr, entityattributes.ServiceName, serviceAttr.ServiceName)
 	addNonEmptyToMap(serviceKeyAttr, entityattributes.DeploymentEnvironment, serviceAttr.Environment)
@@ -275,8 +275,8 @@ var getEC2Provider = func(region string, ec2CredentialConfig *configaws.Credenti
 		})
 }
 
-func addNonEmptyToMap(m map[string]*string, key, value string) {
+func addNonEmptyToMap(m map[string]string, key, value string) {
 	if value != "" {
-		m[key] = aws.String(value)
+		m[key] = value
 	}
 }

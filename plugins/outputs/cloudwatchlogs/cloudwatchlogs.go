@@ -4,38 +4,36 @@
 package cloudwatchlogs
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	smithymiddleware "github.com/aws/smithy-go/middleware"
+	smithyrequestcompression "github.com/aws/smithy-go/private/requestcompression"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
-	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/middleware"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs/internal/pusher"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
-	LogGroupNameTag   = "log_group_name"
-	LogStreamNameTag  = "log_stream_name"
-	LogGroupClassTag  = "log_group_class"
-	LogTimestampField = "log_timestamp"
-	LogEntryField     = "value"
-
 	defaultFlushTimeout = 5 * time.Second
 
 	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
@@ -62,8 +60,8 @@ type CloudWatchLogs struct {
 	LogGroupName  string `toml:"log_group_name"`
 
 	// Retention for log group
-	RetentionInDays int `toml:"retention_in_days"`
-	Concurrency     int `toml:"concurrency"`
+	RetentionInDays int32 `toml:"retention_in_days"`
+	Concurrency     int   `toml:"concurrency"`
 
 	ForceFlushInterval internal.Duration `toml:"force_flush_interval"` // unit is second
 
@@ -104,12 +102,12 @@ func (c *CloudWatchLogs) Close() error {
 	return nil
 }
 
-func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
+func (c *CloudWatchLogs) Write([]telegraf.Metric) error {
 	// we no longer expect this to be used. We now use the OTel awsemfexporter for sending EMF metrics to CloudWatch Logs
 	return fmt.Errorf("unexpected call to Write")
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGroupClass string, logSrc logs.LogSrc) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int32, logGroupClass string, logSrc logs.LogSrc) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
@@ -141,7 +139,18 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	}
 
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
-	client := c.createClient(logThrottleRetryer)
+	cwd := &cwDest{
+		retryer:  logThrottleRetryer,
+		refCount: 1,
+		onStopFunc: func() {
+			c.cwDests.Delete(t)
+		},
+	}
+	client, err := c.createClient(context.Background(), logThrottleRetryer, cwd)
+	if err != nil {
+		c.Log.Errorf("Failed to create CloudWatch Logs client: %v", err)
+		return nil
+	}
 	agent.UsageFlags().SetValue(agent.FlagRegionType, c.RegionType)
 	agent.UsageFlags().SetValue(agent.FlagMode, c.Mode)
 	if containerInsightsRegexp.MatchString(t.Group) {
@@ -153,21 +162,13 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
-	cwd := &cwDest{
-		pusher:   p,
-		retryer:  logThrottleRetryer,
-		refCount: 1,
-		onStopFunc: func() {
-			c.cwDests.Delete(t)
-		},
-	}
+	cwd.pusher = pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
 	c.cwDests.Store(t, cwd)
 	return cwd
 }
 
-func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlogs.CloudWatchLogs {
-	credentialConfig := &configaws.CredentialConfig{
+func (c *CloudWatchLogs) createClient(ctx context.Context, retryer aws.Retryer, cwd *cwDest) (*cloudwatchlogs.Client, error) {
+	credentialConfig := &configaws.CredentialsConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
 		SecretKey: c.SecretKey,
@@ -176,27 +177,47 @@ func (c *CloudWatchLogs) createClient(retryer aws.RequestRetryer) *cloudwatchlog
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
-	client := cloudwatchlogs.New(
-		credentialConfig.Credentials(),
-		&aws.Config{
-			Endpoint: aws.String(c.EndpointOverride),
-			Retryer:  retryer,
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
-		},
-	)
-	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
+
+	awsConfig, err := credentialConfig.LoadConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if c.middleware != nil {
 		c.configurerOnce.Do(func() {
 			c.configurer = awsmiddleware.NewConfigurer(c.middleware.Handlers())
 		})
-		if err := c.configurer.Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
+		if err = c.configurer.Configure(awsmiddleware.SDKv2(&awsConfig)); err != nil {
 			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
 		} else {
 			c.Log.Debug("Configured middleware on AWS client")
 		}
 	}
-	return client
+
+	if cwd != nil {
+		awsConfig.APIOptions = append(awsConfig.APIOptions, func(stack *smithymiddleware.Stack) error {
+			return stack.Build.Add(&middleware.CustomHeaderMiddleware{
+				MiddlewareID: "EmfHeader",
+				Fn:           cwd.emfHeader,
+			}, smithymiddleware.After)
+		})
+	}
+
+	// follows PutMetricData compression setup (https://github.com/aws/aws-sdk-go-v2/blob/main/service/cloudwatch/api_op_PutMetricData.go#L269-L274)
+	awsConfig.APIOptions = append(awsConfig.APIOptions, func(stack *smithymiddleware.Stack) error {
+		return smithyrequestcompression.AddRequestCompression(stack, awsConfig.DisableRequestCompression, awsConfig.RequestMinCompressSizeBytes, []string{"gzip"})
+	})
+
+	client := cloudwatchlogs.NewFromConfig(awsConfig, func(o *cloudwatchlogs.Options) {
+		if c.EndpointOverride != "" {
+			o.BaseEndpoint = aws.String(c.EndpointOverride)
+		}
+		if retryer != nil {
+			o.Retryer = retryer
+		}
+	})
+
+	return client, nil
 }
 
 // Description returns a one-sentence description on the Output
@@ -240,7 +261,7 @@ func (c *CloudWatchLogs) SampleConfig() string {
 type cwDest struct {
 	pusher *pusher.Pusher
 	sync.Mutex
-	isEMF   bool
+	isEMF   atomic.Bool
 	retryer *retryer.LogThrottleRetryer
 
 	// refCount keeps track of how many LogSrc objects are referencing
@@ -261,7 +282,7 @@ func (cd *cwDest) Publish(events []logs.LogEvent) error {
 		return logs.ErrOutputStopped
 	}
 	for _, e := range events {
-		if !cd.isEMF {
+		if !cd.isEMF.Load() {
 			msg := e.Message()
 			if strings.HasPrefix(msg, "{") && strings.HasSuffix(msg, "}") && strings.Contains(msg, "\"CloudWatchMetrics\"") {
 				cd.switchToEMF()
@@ -305,7 +326,7 @@ func (cd *cwDest) stop() {
 
 func (cd *cwDest) addEvent(e logs.LogEvent) {
 	// Drop events for metric path logs when queue is full
-	if cd.isEMF {
+	if cd.isEMF.Load() {
 		cd.pusher.AddEventNonBlocking(e)
 	} else {
 		cd.pusher.AddEvent(e)
@@ -313,13 +334,18 @@ func (cd *cwDest) addEvent(e logs.LogEvent) {
 }
 
 func (cd *cwDest) switchToEMF() {
-	if !cd.isEMF {
-		cd.isEMF = true
-		cwl, ok := cd.pusher.Service.(*cloudwatchlogs.CloudWatchLogs)
-		if ok {
-			cwl.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("x-amzn-logs-format", "json/emf"))
+	if !cd.isEMF.Load() {
+		cd.isEMF.Store(true)
+	}
+}
+
+func (cd *cwDest) emfHeader() map[string]string {
+	if cd.isEMF.Load() {
+		return map[string]string{
+			"x-amzn-logs-format": "json/emf",
 		}
 	}
+	return nil
 }
 
 func init() {

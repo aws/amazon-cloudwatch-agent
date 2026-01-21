@@ -53,7 +53,7 @@ func NewLogThrottleRetryer(logger telegraf.Logger) *LogThrottleRetryer {
 }
 
 func (r *LogThrottleRetryer) IsErrorRetryable(err error) bool {
-	if retry.IsErrorThrottles(retry.DefaultThrottles).IsErrorThrottle(err) == aws.TrueTernary {
+	if IsErrThrottle(err) {
 		te := throttleEvent{Err: err}
 		var oe *smithy.OperationError
 		if errors.As(err, &oe) {
@@ -106,4 +106,9 @@ func (r *LogThrottleRetryer) watchThrottleEvents() {
 			return
 		}
 	}
+}
+
+// IsErrThrottle is a wrapper for the default throttle error code check for the AWS SDK retry logic.
+func IsErrThrottle(err error) bool {
+	return retry.IsErrorThrottles(retry.DefaultThrottles).IsErrorThrottle(err) == aws.TrueTernary
 }

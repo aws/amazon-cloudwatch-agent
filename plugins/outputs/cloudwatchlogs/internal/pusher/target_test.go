@@ -4,18 +4,20 @@
 package pusher
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
@@ -26,7 +28,7 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S"}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -40,10 +42,10 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Class: "newClass"}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).
-			Return(&cloudwatchlogs.CreateLogStreamOutput{}, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group not found", nil)).Once()
-		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceAlreadyExistsException{}).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -57,10 +59,10 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G1", Stream: "S1"}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).
-			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Once()
-		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &types.ResourceAlreadyExistsException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -74,10 +76,10 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G1", Stream: "S1"}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).
-			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Once()
-		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.AccessDeniedException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, &types.ResourceAlreadyExistsException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.AccessDeniedException{}).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -91,10 +93,10 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G1", Stream: "S1"}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).
-			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Once()
-		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &cloudwatchlogs.ResourceAlreadyExistsException{}).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceAlreadyExistsException{}).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -108,10 +110,10 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S"}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).
-			Return(&cloudwatchlogs.CreateLogStreamOutput{}, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group not found", nil)).Once()
-		mockService.On("CreateLogGroup", mock.Anything).
-			Return(&cloudwatchlogs.CreateLogGroupOutput{}, awserr.New("SomeAWSError", "Failed to create log group", nil)).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.CreateLogGroupOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Failed to create log group"}).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -127,16 +129,16 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{
 				{
 					LogGroupName:    aws.String(target.Group),
-					RetentionInDays: aws.Int64(0),
+					RetentionInDays: aws.Int32(0),
 				},
 			},
 		}, nil).Once()
-		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+		mockService.On("PutRetentionPolicy", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -153,12 +155,12 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{
 				{
 					LogGroupName:    aws.String(target.Group),
-					RetentionInDays: aws.Int64(7),
+					RetentionInDays: aws.Int32(7),
 				},
 			},
 		}, nil).Once()
@@ -177,9 +179,9 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).
-			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(numBackoffRetries)
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &types.ResourceNotFoundException{}).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -195,18 +197,18 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{
 				{
 					LogGroupName:    aws.String(target.Group),
-					RetentionInDays: aws.Int64(0),
+					RetentionInDays: aws.Int32(0),
 				},
 			},
 		}, nil).Once()
-		mockService.On("PutRetentionPolicy", mock.Anything).
+		mockService.On("PutRetentionPolicy", mock.Anything, mock.Anything, mock.Anything).
 			Return(&cloudwatchlogs.PutRetentionPolicyOutput{},
-				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(numBackoffRetries)
+				&smithy.GenericAPIError{Code: "SomeAWSError", Message: "Failed to set retention policy"}).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -236,7 +238,7 @@ func TestTargetManager(t *testing.T) {
 
 		var count atomic.Int32
 		service := new(stubLogsService)
-		service.cls = func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+		service.cls = func(context.Context, *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 			time.Sleep(10 * time.Millisecond)
 			count.Add(1)
 			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
@@ -263,7 +265,7 @@ func TestTargetManager(t *testing.T) {
 
 		var count atomic.Int32
 		service := new(stubLogsService)
-		service.cls = func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+		service.cls = func(context.Context, *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 			count.Add(1)
 			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
 		}
@@ -291,7 +293,7 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: 0}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -308,13 +310,13 @@ func TestTargetManager(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		// fails with ResourceNotFound
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group not found", nil)).Once()
-		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 		// should be called directly without DescribeLogGroups
-		mockService.On("PutRetentionPolicy", mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
-			return *input.LogGroupName == target.Group && *input.RetentionInDays == int64(target.Retention)
-		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+		mockService.On("PutRetentionPolicy", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
+			return *input.LogGroupName == target.Group && *input.RetentionInDays == int32(target.Retention)
+		}), mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -331,11 +333,11 @@ func TestTargetManager(t *testing.T) {
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group not found", nil)).Once()
-		mockService.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
-		mockService.On("CreateLogStream", mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+		mockService.On("CreateLogGroup", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+		mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
 		// fails but should retry
-		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, awserr.New("InternalError", "Internal error", nil)).Times(numBackoffRetries)
+		mockService.On("PutRetentionPolicy", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, &smithy.GenericAPIError{Code: "InternalError", Message: "Internal error"}).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
@@ -356,10 +358,10 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService := new(mockLogsService)
 
 		// Setup mock to expect a batch of 50 log groups
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return len(input.LogGroupIdentifiers) == logGroupIdentifierLimit
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{},
 		}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
@@ -386,15 +388,15 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 
 		// Setup mock to expect a batch of 125 (2.5x the limit) log groups
 		// DescribeLogGroups will be called twice due to reaching batch limit on the first 100, then the other 25 on the timer
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return len(input.LogGroupIdentifiers) == logGroupIdentifierLimit
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{},
 		}, nil).Twice()
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return len(input.LogGroupIdentifiers) == 25
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{},
 		}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
@@ -420,10 +422,10 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService := new(mockLogsService)
 
 		// Setup mock to expect a batch of less than 50 log groups
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return len(input.LogGroupIdentifiers) == 5
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{},
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{},
 		}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
@@ -450,8 +452,8 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService := new(mockLogsService)
 
 		// Return empty  result
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{},
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{},
 		}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
@@ -472,31 +474,31 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService := new(mockLogsService)
 
 		// First call with identifiers fails with unsupported error
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return len(input.LogGroupIdentifiers) > 0
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
-			awserr.New(cloudwatchlogs.ErrCodeInvalidParameterException, errMessageLogGroupIdentifierNotSupported, nil)).Once()
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
+			&types.InvalidParameterException{Message: aws.String(errMessageLogGroupIdentifierNotSupported)}).Once()
 
 		// Fallback calls with prefix for each group
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return input.LogGroupNamePrefix != nil && *input.LogGroupNamePrefix == "group-1"
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
-				{LogGroupName: aws.String("group-1"), RetentionInDays: aws.Int64(1)},
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{
+				{LogGroupName: aws.String("group-1"), RetentionInDays: aws.Int32(1)},
 			},
 		}, nil).Once()
 
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return input.LogGroupNamePrefix != nil && *input.LogGroupNamePrefix == "group-2"
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
-				{LogGroupName: aws.String("group-2"), RetentionInDays: aws.Int64(7)},
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{
+				{LogGroupName: aws.String("group-2"), RetentionInDays: aws.Int32(7)},
 			},
 		}, nil).Once()
 
-		mockService.On("PutRetentionPolicy", mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
+		mockService.On("PutRetentionPolicy", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
 			return *input.LogGroupName == "group-1" && *input.RetentionInDays == 7
-		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+		}), mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		tm := manager.(*targetManager)
@@ -514,23 +516,23 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 	t.Run("RetentionPolicyUpdate", func(t *testing.T) {
 		mockService := new(mockLogsService)
 
-		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-			LogGroups: []*cloudwatchlogs.LogGroup{
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+			LogGroups: []types.LogGroup{
 				{
 					LogGroupName:    aws.String("group-1"),
-					RetentionInDays: aws.Int64(1),
+					RetentionInDays: aws.Int32(1),
 				},
 				{
 					LogGroupName:    aws.String("group-2"),
-					RetentionInDays: aws.Int64(7),
+					RetentionInDays: aws.Int32(7),
 				},
 			},
 		}, nil).Once()
 
 		// Setup mock for PutRetentionPolicy (should only be called for group-1)
-		mockService.On("PutRetentionPolicy", mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
+		mockService.On("PutRetentionPolicy", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.PutRetentionPolicyInput) bool {
 			return *input.LogGroupName == "group-1" && *input.RetentionInDays == 7
-		})).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
+		}), mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
 		tm := manager.(*targetManager)
@@ -552,11 +554,11 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService := new(mockLogsService)
 
 		// Setup mock to fail once then succeed
-		mockService.On("DescribeLogGroups", mock.Anything).
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).
 			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, fmt.Errorf("internal error")).Once()
-		mockService.On("DescribeLogGroups", mock.Anything).
+		mockService.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).
 			Return(&cloudwatchlogs.DescribeLogGroupsOutput{
-				LogGroups: []*cloudwatchlogs.LogGroup{},
+				LogGroups: []types.LogGroup{},
 			}, nil).Once()
 
 		manager := NewTargetManager(logger, mockService)
@@ -577,10 +579,10 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		mockService := new(mockLogsService)
 
 		// First call with identifiers fails with different error (should not fallback)
-		mockService.On("DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
+		mockService.On("DescribeLogGroups", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
 			return len(input.LogGroupIdentifiers) > 0
-		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
-			awserr.New(cloudwatchlogs.ErrCodeInvalidParameterException, "Different error message", nil)).Times(numBackoffRetries)
+		}), mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
+			&types.InvalidParameterException{Message: aws.String("Different error message")}).Times(numBackoffRetries)
 
 		manager := NewTargetManager(logger, mockService)
 		tm := manager.(*targetManager)
