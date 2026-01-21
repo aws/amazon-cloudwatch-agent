@@ -47,6 +47,8 @@ jobs:
 
   StartIntegrationTests:
     needs: [ RepackageArtifacts, OutputEnvVariables ]
+    permissions:
+      actions: write
     runs-on: ubuntu-latest
     steps:
       # Avoid the limit of 5 nested workflows by executing the workflow in this manner
