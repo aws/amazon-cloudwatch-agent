@@ -6,11 +6,11 @@ package aws
 import (
 	"context"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds"
@@ -52,7 +52,7 @@ func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.Credent
 	log.Printf("D! Fallback shared config file(s): %v", cfgFiles)
 	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(c.Region),
-		config.WithHTTPClient(&http.Client{Timeout: 1 * time.Minute}),
+		config.WithHTTPClient(http.NewBuildableClient().WithTimeout(1 * time.Minute)),
 		config.WithClientLogMode(SDKLogLevel()),
 		config.WithLogger(SDKLogger{}),
 		config.WithSharedCredentialsFiles(cfgFiles),

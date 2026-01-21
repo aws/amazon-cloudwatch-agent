@@ -15,11 +15,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"golang.org/x/sys/windows"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385588(v=vs.85).aspx
@@ -65,14 +65,14 @@ type windowsEventLog struct {
 	eventHandle   EvtHandle
 	eventOffset   uint64
 	gapsToRead    state.RangeList
-	retention     int
+	retention     int32
 	outputFn      func(logs.LogEvent)
 	done          chan struct{}
 	startOnce     sync.Once
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventFilter, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventFilter, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int32, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -151,7 +151,7 @@ func (w *windowsEventLog) Destination() string {
 	return w.destination
 }
 
-func (w *windowsEventLog) Retention() int {
+func (w *windowsEventLog) Retention() int32 {
 	return w.retention
 }
 
@@ -163,7 +163,7 @@ func (w *windowsEventLog) Stop() {
 	close(w.done)
 }
 
-func (w *windowsEventLog) Entity() *cloudwatchlogs.Entity {
+func (w *windowsEventLog) Entity() *types.Entity {
 	return nil
 }
 

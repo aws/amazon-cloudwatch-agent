@@ -4,16 +4,18 @@
 package pusher
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
@@ -21,28 +23,28 @@ type mockLogsService struct {
 	mock.Mock
 }
 
-func (m *mockLogsService) PutLogEvents(input *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-	args := m.Called(input)
+func (m *mockLogsService) PutLogEvents(ctx context.Context, input *cloudwatchlogs.PutLogEventsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	args := m.Called(ctx, input, opts)
 	return args.Get(0).(*cloudwatchlogs.PutLogEventsOutput), args.Error(1)
 }
 
-func (m *mockLogsService) CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
-	args := m.Called(input)
+func (m *mockLogsService) CreateLogStream(ctx context.Context, input *cloudwatchlogs.CreateLogStreamInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+	args := m.Called(ctx, input, opts)
 	return args.Get(0).(*cloudwatchlogs.CreateLogStreamOutput), args.Error(1)
 }
 
-func (m *mockLogsService) CreateLogGroup(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
-	args := m.Called(input)
+func (m *mockLogsService) CreateLogGroup(ctx context.Context, input *cloudwatchlogs.CreateLogGroupInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+	args := m.Called(ctx, input, opts)
 	return args.Get(0).(*cloudwatchlogs.CreateLogGroupOutput), args.Error(1)
 }
 
-func (m *mockLogsService) PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
-	args := m.Called(input)
+func (m *mockLogsService) PutRetentionPolicy(ctx context.Context, input *cloudwatchlogs.PutRetentionPolicyInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+	args := m.Called(ctx, input, opts)
 	return args.Get(0).(*cloudwatchlogs.PutRetentionPolicyOutput), args.Error(1)
 }
 
-func (m *mockLogsService) DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
-	args := m.Called(input)
+func (m *mockLogsService) DescribeLogGroups(ctx context.Context, input *cloudwatchlogs.DescribeLogGroupsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	args := m.Called(ctx, input, opts)
 	return args.Get(0).(*cloudwatchlogs.DescribeLogGroupsOutput), args.Error(1)
 }
 
@@ -78,7 +80,7 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
@@ -93,15 +95,15 @@ func TestSender(t *testing.T) {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
 		batch.append(newLogEvent(time.Now(), "Test message", nil))
 
-		rejectedInfo := &cloudwatchlogs.RejectedLogEventsInfo{
-			TooOldLogEventEndIndex:   aws.Int64(1),
-			TooNewLogEventStartIndex: aws.Int64(2),
-			ExpiredLogEventEndIndex:  aws.Int64(3),
+		rejectedInfo := &types.RejectedLogEventsInfo{
+			TooOldLogEventEndIndex:   aws.Int32(1),
+			TooNewLogEventStartIndex: aws.Int32(2),
+			ExpiredLogEventEndIndex:  aws.Int32(3),
 		}
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
@@ -116,11 +118,11 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Twice()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &types.ResourceNotFoundException{}).Twice()
 		mockManager.On("InitTarget", mock.Anything).Return(errors.New("test")).Once()
 		mockManager.On("InitTarget", mock.Anything).Return(nil).Once()
-		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
@@ -146,8 +148,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.InvalidParameterException{}).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &types.InvalidParameterException{}).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
@@ -174,8 +176,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.DataAlreadyAcceptedException{}).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &types.DataAlreadyAcceptedException{}).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 		s.Send(batch)
@@ -202,7 +204,7 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, errors.New("test")).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
@@ -220,9 +222,9 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
-		mockService.On("PutLogEvents", mock.Anything).
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
@@ -248,8 +250,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}).Once()
 
 		s := newSender(logger, mockService, mockManager, 100*time.Millisecond)
 		s.Send(batch)
@@ -276,8 +278,8 @@ func TestSender(t *testing.T) {
 
 		mockService := new(mockLogsService)
 		mockManager := new(mockTargetManager)
-		mockService.On("PutLogEvents", mock.Anything).
-			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
+		mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).
+			Return(&cloudwatchlogs.PutLogEventsOutput{}, &smithy.GenericAPIError{Code: "SomeAWSError", Message: "Some AWS error"}).Once()
 
 		s := newSender(logger, mockService, mockManager, time.Second)
 

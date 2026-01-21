@@ -20,7 +20,7 @@ func TestCreateDestination(t *testing.T) {
 	testCases := map[string]struct {
 		cfgLogGroup               string
 		cfgLogStream              string
-		cfgLogRetention           int
+		cfgLogRetention           int32
 		cfgLogClass               string
 		cfgTailerSrc              logs.LogSrc
 		expectedLogGroup          string
@@ -79,7 +79,7 @@ func TestCreateDestination(t *testing.T) {
 			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, testCase.cfgLogClass, testCase.cfgTailerSrc).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
 			require.Equal(t, testCase.expectedLogStream, dest.pusher.Stream)
-			require.Equal(t, testCase.expectedLogGroupRetention, dest.pusher.Retention)
+			require.EqualValues(t, testCase.expectedLogGroupRetention, dest.pusher.Retention)
 			require.Equal(t, testCase.expectedLogClass, dest.pusher.Class)
 			require.Equal(t, testCase.expectedTailerSrc, dest.pusher.EntityProvider)
 		})

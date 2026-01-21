@@ -15,8 +15,8 @@ import (
 )
 
 func TestCustomHeaderFinalizeMiddleware_ID(t *testing.T) {
-	middleware := &CustomHeaderFinalizeMiddleware{
-		Name: "TestMiddleware",
+	middleware := &CustomHeaderMiddleware{
+		MiddlewareID: "TestMiddleware",
 	}
 
 	assert.Equal(t, "TestMiddleware", middleware.ID())
@@ -84,19 +84,16 @@ func TestCustomHeaderFinalizeMiddleware_HandleFinalize(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			middleware := &CustomHeaderFinalizeMiddleware{
-				Name:    "TestMiddleware",
-				Headers: tc.headers,
-			}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			middleware := NewCustomHeaderMiddleware("TestMiddleware", testCase.headers)
 
 			// Create mock HTTP request
 			httpReq, err := http.NewRequest("POST", "https://www.amazon.com", nil)
 			require.NoError(t, err)
 
 			// Set existing headers
-			for k, v := range tc.existingHeaders {
+			for k, v := range testCase.existingHeaders {
 				httpReq.Header.Set(k, v)
 			}
 
@@ -105,33 +102,33 @@ func TestCustomHeaderFinalizeMiddleware_HandleFinalize(t *testing.T) {
 				Request: httpReq,
 			}
 
-			input := smithymiddleware.FinalizeInput{
+			input := smithymiddleware.BuildInput{
 				Request: req,
 			}
 
 			// Mock next handler
 			nextCalled := false
-			next := smithymiddleware.FinalizeHandlerFunc(func(context.Context, smithymiddleware.FinalizeInput) (smithymiddleware.FinalizeOutput, smithymiddleware.Metadata, error) {
+			next := smithymiddleware.BuildHandlerFunc(func(context.Context, smithymiddleware.BuildInput) (smithymiddleware.BuildOutput, smithymiddleware.Metadata, error) {
 				nextCalled = true
-				return smithymiddleware.FinalizeOutput{}, smithymiddleware.Metadata{}, nil
+				return smithymiddleware.BuildOutput{}, smithymiddleware.Metadata{}, nil
 			})
 
 			// Execute middleware
-			_, _, err = middleware.HandleFinalize(context.Background(), input, next)
+			_, _, err = middleware.HandleBuild(context.Background(), input, next)
 			require.NoError(t, err)
 			assert.True(t, nextCalled)
 
 			// Verify headers
-			for expectedKey, expectedValue := range tc.expectedHeaders {
+			for expectedKey, expectedValue := range testCase.expectedHeaders {
 				assert.Equal(t, expectedValue, req.Header.Get(expectedKey), "Header %s should have value %s", expectedKey, expectedValue)
 			}
 
 			// Verify no unexpected headers were added (only check if we have expected headers)
-			if len(tc.expectedHeaders) > 0 {
+			if len(testCase.expectedHeaders) > 0 {
 				for actualKey := range req.Header {
-					if _, expected := tc.expectedHeaders[actualKey]; !expected {
+					if _, expected := testCase.expectedHeaders[actualKey]; !expected {
 						// This header was not in our expected set, it must have been an existing header
-						_, wasExisting := tc.existingHeaders[actualKey]
+						_, wasExisting := testCase.existingHeaders[actualKey]
 						assert.True(t, wasExisting, "Unexpected header %s found", actualKey)
 					}
 				}
@@ -141,32 +138,31 @@ func TestCustomHeaderFinalizeMiddleware_HandleFinalize(t *testing.T) {
 }
 
 func TestCustomHeaderFinalizeMiddleware_InvalidRequest(t *testing.T) {
-	middleware := &CustomHeaderFinalizeMiddleware{
-		Name: "TestMiddleware",
-		Headers: map[string]string{
-			"X-Test": "value",
-		},
-	}
+	middleware := NewCustomHeaderMiddleware("TestMiddleware", map[string]string{
+		"X-Test": "value",
+	})
 
 	// Use invalid request type
-	input := smithymiddleware.FinalizeInput{
+	input := smithymiddleware.BuildInput{
 		Request: "invalid-request-type",
 	}
 
-	next := smithymiddleware.FinalizeHandlerFunc(func(context.Context, smithymiddleware.FinalizeInput) (smithymiddleware.FinalizeOutput, smithymiddleware.Metadata, error) {
+	next := smithymiddleware.BuildHandlerFunc(func(context.Context, smithymiddleware.BuildInput) (smithymiddleware.BuildOutput, smithymiddleware.Metadata, error) {
 		t.Fatal("Next handler should not be called")
-		return smithymiddleware.FinalizeOutput{}, smithymiddleware.Metadata{}, nil
+		return smithymiddleware.BuildOutput{}, smithymiddleware.Metadata{}, nil
 	})
 
-	_, _, err := middleware.HandleFinalize(context.Background(), input, next)
+	_, _, err := middleware.HandleBuild(context.Background(), input, next)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unrecognized transport type")
 }
 
 func TestCustomHeaderFinalizeMiddleware_EmptyHeaders(t *testing.T) {
-	middleware := &CustomHeaderFinalizeMiddleware{
-		Name:    "TestMiddleware",
-		Headers: nil, // nil headers map
+	middleware := &CustomHeaderMiddleware{
+		MiddlewareID: "TestMiddleware",
+		Fn: func() map[string]string {
+			return nil
+		},
 	}
 
 	// Create mock HTTP request
@@ -177,17 +173,17 @@ func TestCustomHeaderFinalizeMiddleware_EmptyHeaders(t *testing.T) {
 		Request: httpReq,
 	}
 
-	input := smithymiddleware.FinalizeInput{
+	input := smithymiddleware.BuildInput{
 		Request: req,
 	}
 
 	nextCalled := false
-	next := smithymiddleware.FinalizeHandlerFunc(func(context.Context, smithymiddleware.FinalizeInput) (smithymiddleware.FinalizeOutput, smithymiddleware.Metadata, error) {
+	next := smithymiddleware.BuildHandlerFunc(func(context.Context, smithymiddleware.BuildInput) (smithymiddleware.BuildOutput, smithymiddleware.Metadata, error) {
 		nextCalled = true
-		return smithymiddleware.FinalizeOutput{}, smithymiddleware.Metadata{}, nil
+		return smithymiddleware.BuildOutput{}, smithymiddleware.Metadata{}, nil
 	})
 
-	_, _, err = middleware.HandleFinalize(context.Background(), input, next)
+	_, _, err = middleware.HandleBuild(context.Background(), input, next)
 	require.NoError(t, err)
 	assert.True(t, nextCalled)
 }
