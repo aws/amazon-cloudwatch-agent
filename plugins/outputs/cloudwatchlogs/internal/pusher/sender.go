@@ -90,27 +90,28 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		}
 
+		var apiErr smithy.APIError
+		if !errors.As(err, &apiErr) {
+			s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
+			batch.updateState()
+			return
+		}
+
 		var resourceNotFound *types.ResourceNotFoundException
-		if errors.As(err, &resourceNotFound) {
+		var invalidParameter *types.InvalidParameterException
+		var dataAlreadyAccepted *types.DataAlreadyAcceptedException
+		switch {
+		case errors.As(err, &resourceNotFound):
 			if targetErr := s.targetManager.InitTarget(batch.Target); targetErr != nil {
 				s.logger.Errorf("Unable to create log stream %v/%v: %v", batch.Group, batch.Stream, targetErr)
+				break
 			}
-		} else {
-			var invalidParam *types.InvalidParameterException
-			var dataAlreadyAccepted *types.DataAlreadyAcceptedException
-			if errors.As(err, &invalidParam) || errors.As(err, &dataAlreadyAccepted) {
-				s.logger.Errorf("%v, will not retry the request", err)
-				batch.updateState()
-				return
-			}
-			var apiErr smithy.APIError
-			if errors.As(err, &apiErr) {
-				s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, apiErr)
-			} else {
-				s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
-				batch.updateState()
-				return
-			}
+		case errors.As(err, &invalidParameter) || errors.As(err, &dataAlreadyAccepted):
+			s.logger.Errorf("%v, will not retry the request", err)
+			batch.updateState()
+			return
+		default:
+			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, apiErr)
 		}
 
 		// retry wait strategy depends on the type of error returned
