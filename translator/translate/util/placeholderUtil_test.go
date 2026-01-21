@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
@@ -257,4 +258,120 @@ func TestAWSMetadataFunctionality(t *testing.T) {
 	assert.Equal(t, "i-test123", resultMap2["InstanceId"])
 	assert.Equal(t, "t3.micro", resultMap2["InstanceType"])
 	assert.Equal(t, "ami-test123", resultMap2["ImageId"])
+}
+
+// --- Cloudmetadata Singleton Integration Tests ---
+
+func TestGetMetadataInfo_WithCloudmetadataSingleton(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_: "i-singleton123",
+		Region_:     "us-west-2",
+		Hostname_:   "singleton-host",
+		PrivateIP_:  "192.168.1.1",
+		AccountID_:  "999888777666",
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	result := GetMetadataInfo(nil)
+
+	assert.Equal(t, "i-singleton123", result[instanceIdPlaceholder])
+	assert.Equal(t, "us-west-2", result[awsRegionPlaceholder])
+	assert.Equal(t, "singleton-host", result[hostnamePlaceholder])
+	assert.Equal(t, "192.168.1.1", result[ipAddressPlaceholder])
+	assert.Equal(t, "999888777666", result[accountIdPlaceholder])
+}
+
+func TestGetMetadataInfo_FallbackToLegacy(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	// Don't set singleton - test fallback
+
+	legacyMock := mockMetadataProvider("i-legacy456", "legacy-host", "10.0.0.99", "111222333444")
+
+	result := GetMetadataInfo(legacyMock)
+
+	assert.Equal(t, "i-legacy456", result[instanceIdPlaceholder])
+	assert.Equal(t, "legacy-host", result[hostnamePlaceholder])
+	assert.Equal(t, "10.0.0.99", result[ipAddressPlaceholder])
+	assert.Equal(t, "111222333444", result[accountIdPlaceholder])
+}
+
+func TestGetMetadataInfo_SingletonTakesPrecedence(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	// Set singleton
+	singletonMock := &cloudmetadata.MockProvider{
+		InstanceID_: "i-singleton",
+		Region_:     "singleton-region",
+		Hostname_:   "singleton-host",
+		PrivateIP_:  "10.1.1.1",
+		AccountID_:  "singleton-account",
+	}
+	cloudmetadata.SetGlobalProviderForTest(singletonMock)
+
+	// Also provide legacy (should be ignored)
+	legacyMock := mockMetadataProvider("i-legacy", "legacy-host", "10.2.2.2", "legacy-account")
+
+	result := GetMetadataInfo(legacyMock)
+
+	// Singleton should win
+	assert.Equal(t, "i-singleton", result[instanceIdPlaceholder])
+	assert.Equal(t, "singleton-region", result[awsRegionPlaceholder])
+	assert.Equal(t, "singleton-host", result[hostnamePlaceholder])
+	assert.Equal(t, "10.1.1.1", result[ipAddressPlaceholder])
+	assert.Equal(t, "singleton-account", result[accountIdPlaceholder])
+}
+
+func TestGetMetadataInfo_SingletonWithEmptyPrivateIP(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	// Azure provider may return empty PrivateIP
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "azure-vm-123",
+		Region_:        "eastus",
+		Hostname_:      "azure-host",
+		PrivateIP_:     "", // Empty - should fallback to getIpAddress()
+		AccountID_:     "azure-subscription",
+		CloudProvider_: cloudmetadata.CloudProviderAzure,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	result := GetMetadataInfo(nil)
+
+	assert.Equal(t, "azure-vm-123", result[instanceIdPlaceholder])
+	assert.Equal(t, "eastus", result[awsRegionPlaceholder])
+	assert.Equal(t, "azure-host", result[hostnamePlaceholder])
+	// Should fallback to local IP detection
+	assert.NotEmpty(t, result[ipAddressPlaceholder])
+	assert.Equal(t, "azure-subscription", result[accountIdPlaceholder])
+}
+
+func TestGetMetadataInfo_SingletonWithEmptyValues(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	// Provider with all empty values
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_: "",
+		Region_:     "",
+		Hostname_:   "",
+		PrivateIP_:  "",
+		AccountID_:  "",
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	result := GetMetadataInfo(nil)
+
+	// Should use defaults for empty values
+	assert.Equal(t, unknownInstanceID, result[instanceIdPlaceholder])
+	assert.Equal(t, unknownAwsRegion, result[awsRegionPlaceholder])
+	// Hostname should fallback to local hostname
+	assert.Equal(t, getHostName(), result[hostnamePlaceholder])
+	// PrivateIP should fallback to local IP
+	assert.NotEmpty(t, result[ipAddressPlaceholder])
+	assert.Equal(t, unknownAccountID, result[accountIdPlaceholder])
 }

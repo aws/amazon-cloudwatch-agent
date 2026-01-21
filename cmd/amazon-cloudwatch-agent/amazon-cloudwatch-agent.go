@@ -36,6 +36,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
@@ -293,6 +294,15 @@ func runAgent(ctx context.Context,
 		log.Println("I! AWS SDK log level not set")
 	} else {
 		log.Printf("I! AWS SDK log level, %s\n", sdkLogLevel)
+	}
+
+	// Initialize global cloud metadata provider early
+	// Covers all agent modes (logs-only and OTEL)
+	log.Println("I! [agent] Initializing cloud metadata provider...")
+	if err := cloudmetadata.InitGlobalProvider(ctx, nil); err != nil {
+		log.Printf("W! [agent] Cloud metadata provider unavailable - some features may be limited: %v", err)
+	} else {
+		log.Println("I! [agent] Cloud metadata provider ready")
 	}
 
 	if *fTest || *fTestWait != 0 {
