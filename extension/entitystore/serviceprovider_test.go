@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
@@ -26,7 +26,7 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 		{
 			name: "HappyPath_AllServiceNames",
 			metadataProvider: &mockMetadataProvider{
-				InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+				InstanceIdentityDocument: &imds.InstanceIdentityDocument{
 					InstanceID: "i-123456789"},
 				Tags: map[string]string{"service": "test-service"},
 			},

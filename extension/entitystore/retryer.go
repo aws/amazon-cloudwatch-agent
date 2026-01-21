@@ -4,16 +4,16 @@
 package entitystore
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/smithy-go"
 	"go.uber.org/zap"
 )
 
 const (
-	RequestLimitExceeded = "RequestLimitExceeded"
-	infRetry             = -1
+	infRetry = -1
 )
 
 var (
@@ -57,7 +57,7 @@ func (r *Retryer) refreshLoop(updateFunc func() error) int {
 		err := updateFunc()
 		if err == nil && r.oneTime {
 			return retry
-		} else if awsErr, ok := err.(awserr.Error); ok && !r.retryAnyError && !retryableErrorMap[awsErr.Code()] {
+		} else if !r.retryAnyError && !isRetryableError(err) {
 			return retry
 		}
 
@@ -83,7 +83,15 @@ func (r *Retryer) refreshLoop(updateFunc func() error) int {
 		}
 
 	}
-	return retry
+}
+
+// isRetryableError checks if the error is a retryable API error code recognized by the extension.
+func isRetryableError(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		return retryableErrorMap[apiErr.ErrorCode()]
+	}
+	return false
 }
 
 // calculateWaitTime returns different time based on whether if

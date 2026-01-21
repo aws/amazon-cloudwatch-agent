@@ -7,20 +7,17 @@ import (
 	"context"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/jellydator/ttlcache/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -34,8 +31,6 @@ const (
 	EC2PlatForm                 = "AWS::EC2"
 	podTerminationCheckInterval = 5 * time.Minute
 )
-
-type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
 
 type serviceProviderInterface interface {
 	startServiceProvider()
@@ -69,10 +64,6 @@ type EntityStore struct {
 	// that we can attach to the entity
 	serviceprovider serviceProviderInterface
 
-	// nativeCredential stores the credential config for agent's native
-	// component such as LogAgent
-	nativeCredential client.ConfigProvider
-
 	metadataprovider ec2metadataprovider.MetadataProvider
 
 	podTerminationCheckInterval time.Duration
@@ -80,20 +71,16 @@ type EntityStore struct {
 
 var _ extension.Extension = (*EntityStore)(nil)
 
-func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
+func (e *EntityStore) Start(ctx context.Context, _ component.Host) error {
 	// Get IMDS client and EC2 API client which requires region for authentication
 	// These will be passed down to any object that requires access to IMDS or EC2
 	// API client so we have single source of truth for credential
 	e.done = make(chan struct{})
-	e.metadataprovider = getMetaDataProvider()
+	e.metadataprovider = getMetaDataProvider(ctx)
 	e.mode = e.config.Mode
 	e.kubernetesMode = e.config.KubernetesMode
 	e.podTerminationCheckInterval = podTerminationCheckInterval
-	ec2CredentialConfig := &configaws.CredentialConfig{
-		Profile:  e.config.Profile,
-		Filename: e.config.Filename,
-	}
-	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
+	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, e.done, e.logger)
 	switch e.mode {
 	case config.ModeEC2:
 		e.ec2Info = *newEC2Info(e.metadataprovider, e.done, e.config.Region, e.logger)
@@ -136,14 +123,6 @@ func (e *EntityStore) EKSInfo() *eksInfo {
 
 func (e *EntityStore) EC2Info() EC2Info {
 	return e.ec2Info
-}
-
-func (e *EntityStore) SetNativeCredential(client client.ConfigProvider) {
-	e.nativeCredential = client
-}
-
-func (e *EntityStore) NativeCredentialExists() bool {
-	return e.nativeCredential != nil
 }
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
@@ -260,19 +239,13 @@ func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 	return serviceKeyAttr
 }
 
-var getMetaDataProvider = func() ec2metadataprovider.MetadataProvider {
-	mdCredentialConfig := &configaws.CredentialConfig{}
-	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
-}
-
-var getEC2Provider = func(region string, ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
-	ec2CredentialConfig.Region = region
-	return ec2.New(
-		ec2CredentialConfig.Credentials(),
-		&aws.Config{
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
-		})
+var getMetaDataProvider = func(ctx context.Context) ec2metadataprovider.MetadataProvider {
+	mdCredentialConfig := &configaws.CredentialsConfig{}
+	cfg, err := mdCredentialConfig.LoadConfig(ctx)
+	if err != nil {
+		cfg = aws.Config{}
+	}
+	return ec2metadataprovider.NewMetadataProvider(cfg, retryer.GetDefaultRetryNumber())
 }
 
 func addNonEmptyToMap(m map[string]string, key, value string) {
