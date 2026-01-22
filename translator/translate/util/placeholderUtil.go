@@ -298,9 +298,16 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 
 	for k, v := range inputMap {
 		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
-			if replacement, exists := metadata[vStr]; exists {
-				result[k] = replacement
+			// Support embedded placeholders: replace all occurrences in the string
+			resolved := vStr
+			for placeholder, replacement := range metadata {
+				resolved = strings.ReplaceAll(resolved, placeholder, replacement)
 			}
+			// Only include if fully resolved (no placeholders remain)
+			if !strings.Contains(resolved, awsPlaceholderPrefix) {
+				result[k] = resolved
+			}
+			// Otherwise omit the key 
 		} else {
 			result[k] = v
 		}
@@ -333,12 +340,16 @@ func ResolveAzureMetadataPlaceholders(input any) any {
 
 	for k, v := range inputMap {
 		if vStr, ok := v.(string); ok && strings.Contains(vStr, azurePlaceholderPrefix) {
-			if replacement, exists := metadata[vStr]; exists {
-				result[k] = replacement
-			} else {
-				log.Printf("W! Azure placeholder not found in metadata: %s", vStr)
-				result[k] = v
+			// Support embedded placeholders: replace all occurrences in the string
+			resolved := vStr
+			for placeholder, replacement := range metadata {
+				resolved = strings.ReplaceAll(resolved, placeholder, replacement)
 			}
+			// Only include if fully resolved (no placeholders remain)
+			if !strings.Contains(resolved, azurePlaceholderPrefix) {
+				result[k] = resolved
+			}
+			// Otherwise omit the key (backward compatible behavior)
 		} else {
 			result[k] = v
 		}
@@ -363,18 +374,12 @@ func getAzureMetadata() map[string]string {
 		}
 	}
 
-	// Type assert to Azure provider to access GetResourceGroupName
-	resourceGroup := ""
-	if azureProvider, ok := provider.(*azure.Provider); ok {
-		resourceGroup = azureProvider.GetResourceGroupName()
-	}
-
 	return map[string]string{
 		"${azure:InstanceId}":        provider.GetInstanceID(),
 		"${azure:InstanceType}":      provider.GetInstanceType(),
 		"${azure:ImageId}":           provider.GetImageID(),
 		"${azure:VmScaleSetName}":    provider.GetScalingGroupName(),
-		"${azure:ResourceGroupName}": resourceGroup,
+		"${azure:ResourceGroupName}": provider.GetResourceGroupName(),
 	}
 }
 

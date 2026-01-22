@@ -448,3 +448,185 @@ func TestGetMetadataInfo_NilProviderWithoutSingleton(t *testing.T) {
 	assert.NotEmpty(t, result[hostnamePlaceholder])
 	assert.NotEmpty(t, result[ipAddressPlaceholder])
 }
+
+// TestResolveAWSMetadataPlaceholders_EmbeddedPlaceholders tests embedded placeholder support
+func TestResolveAWSMetadataPlaceholders_EmbeddedPlaceholders(t *testing.T) {
+	// Mock the metadata provider
+	tagMetadataProvider = func() map[string]string {
+		return map[string]string{}
+	}
+	defer func() { tagMetadataProvider = nil }()
+
+	ec2MetadataInfoProviderFunc = func() *Metadata {
+		return &Metadata{
+			InstanceID:   "i-test123",
+			InstanceType: "t2.micro",
+			ImageID:      "ami-test456",
+		}
+	}
+	defer func() { ec2MetadataInfoProviderFunc = ec2MetadataInfoProvider }()
+
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "single embedded placeholder",
+			input: map[string]interface{}{
+				"Name": "prefix-${aws:InstanceId}-suffix",
+			},
+			expected: map[string]interface{}{
+				"Name": "prefix-i-test123-suffix",
+			},
+		},
+		{
+			name: "multiple placeholders in one string",
+			input: map[string]interface{}{
+				"Name": "${aws:InstanceId}-${aws:InstanceType}",
+			},
+			expected: map[string]interface{}{
+				"Name": "i-test123-t2.micro",
+			},
+		},
+		{
+			name: "mixed embedded and exact match",
+			input: map[string]interface{}{
+				"InstanceId": "${aws:InstanceId}",
+				"Name":       "server-${aws:InstanceId}",
+			},
+			expected: map[string]interface{}{
+				"InstanceId": "i-test123",
+				"Name":       "server-i-test123",
+			},
+		},
+		{
+			name: "no placeholders",
+			input: map[string]interface{}{
+				"Name": "static-value",
+			},
+			expected: map[string]interface{}{
+				"Name": "static-value",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveAWSMetadataPlaceholders(tt.input)
+			resultMap := result.(map[string]interface{})
+			assert.Equal(t, tt.expected, resultMap)
+		})
+	}
+}
+
+// TestResolveAzureMetadataPlaceholders_EmbeddedPlaceholders tests embedded placeholder support for Azure
+func TestResolveAzureMetadataPlaceholders_EmbeddedPlaceholders(t *testing.T) {
+	// Set up mock Azure provider
+	mockProvider := &cloudmetadata.MockProvider{
+		InstanceID:    "vm-12345",
+		InstanceType:  "Standard_D2s_v3",
+		ImageID:       "image-67890",
+		CloudProvider: cloudmetadata.CloudProviderAzure,
+		ResourceGroup: "my-resource-group",
+		Available:     true,
+		Tags: map[string]string{
+			"VmScaleSetName": "my-vmss",
+		},
+	}
+
+	cloudmetadata.SetGlobalProviderForTest(mockProvider)
+	defer cloudmetadata.ResetGlobalProvider()
+
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "single embedded placeholder",
+			input: map[string]interface{}{
+				"Name": "prefix-${azure:InstanceId}-suffix",
+			},
+			expected: map[string]interface{}{
+				"Name": "prefix-vm-12345-suffix",
+			},
+		},
+		{
+			name: "multiple placeholders in one string",
+			input: map[string]interface{}{
+				"Name": "${azure:InstanceId}-${azure:InstanceType}",
+			},
+			expected: map[string]interface{}{
+				"Name": "vm-12345-Standard_D2s_v3",
+			},
+		},
+		{
+			name: "resource group embedded",
+			input: map[string]interface{}{
+				"Path": "/subscriptions/sub/${azure:ResourceGroupName}/vms/${azure:InstanceId}",
+			},
+			expected: map[string]interface{}{
+				"Path": "/subscriptions/sub/my-resource-group/vms/vm-12345",
+			},
+		},
+		{
+			name: "mixed embedded and exact match",
+			input: map[string]interface{}{
+				"InstanceId": "${azure:InstanceId}",
+				"Name":       "vm-${azure:InstanceId}",
+			},
+			expected: map[string]interface{}{
+				"InstanceId": "vm-12345",
+				"Name":       "vm-vm-12345",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveAzureMetadataPlaceholders(tt.input)
+			resultMap := result.(map[string]interface{})
+			assert.Equal(t, tt.expected, resultMap)
+		})
+	}
+}
+
+// TestResolveCloudMetadataPlaceholders_MixedEmbedded tests mixed AWS and Azure placeholders
+func TestResolveCloudMetadataPlaceholders_MixedEmbedded(t *testing.T) {
+	// Mock AWS metadata
+	ec2MetadataInfoProviderFunc = func() *Metadata {
+		return &Metadata{
+			InstanceID: "i-aws123",
+		}
+	}
+	defer func() { ec2MetadataInfoProviderFunc = ec2MetadataInfoProvider }()
+
+	tagMetadataProvider = func() map[string]string {
+		return map[string]string{}
+	}
+	defer func() { tagMetadataProvider = nil }()
+
+	// Set up mock Azure provider
+	mockProvider := &cloudmetadata.MockProvider{
+		InstanceID:    "vm-azure456",
+		CloudProvider: cloudmetadata.CloudProviderAzure,
+		Available:     true,
+	}
+
+	cloudmetadata.SetGlobalProviderForTest(mockProvider)
+	defer cloudmetadata.ResetGlobalProvider()
+
+	input := map[string]interface{}{
+		"AWSName":   "aws-${aws:InstanceId}",
+		"AzureName": "azure-${azure:InstanceId}",
+		"Mixed":     "${aws:InstanceId}-and-${azure:InstanceId}",
+	}
+
+	result := ResolveCloudMetadataPlaceholders(input)
+	resultMap := result.(map[string]interface{})
+
+	assert.Equal(t, "aws-i-aws123", resultMap["AWSName"])
+	assert.Equal(t, "azure-vm-azure456", resultMap["AzureName"])
+	assert.Equal(t, "i-aws123-and-vm-azure456", resultMap["Mixed"])
+}

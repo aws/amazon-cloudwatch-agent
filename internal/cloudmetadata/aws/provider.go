@@ -117,6 +117,11 @@ func (p *Provider) GetScalingGroupName() string {
 	return asgName
 }
 
+// GetResourceGroupName returns empty string for AWS (Azure-specific concept)
+func (p *Provider) GetResourceGroupName() string {
+	return ""
+}
+
 // Refresh refreshes the metadata
 func (p *Provider) Refresh(_ context.Context) error {
 	// EC2 metadata is fetched once at startup via ec2util singleton

@@ -22,6 +22,7 @@ type MockProvider struct {
 	CloudProvider CloudProvider
 	Available     bool
 	Tags          map[string]string
+	ResourceGroup string // For Azure mocking
 	RefreshErr    error
 	RefreshCount  int
 }
@@ -59,8 +60,9 @@ func (m *MockProvider) GetTag(key string) (string, error) {
 	return "", fmt.Errorf("tag not found: %s", key)
 }
 
-func (m *MockProvider) GetVolumeID(_ string) string { return "" }
-func (m *MockProvider) GetScalingGroupName() string { return "" }
+func (m *MockProvider) GetVolumeID(_ string) string  { return "" }
+func (m *MockProvider) GetScalingGroupName() string  { return "" }
+func (m *MockProvider) GetResourceGroupName() string { return m.ResourceGroup }
 func (m *MockProvider) Refresh(_ context.Context) error {
 	m.RefreshCount++
 	return m.RefreshErr

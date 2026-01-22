@@ -71,6 +71,9 @@ type Provider interface {
 	// GetScalingGroupName returns the Auto Scaling Group name (AWS) or VM Scale Set name (Azure)
 	GetScalingGroupName() string
 
+	// GetResourceGroupName returns the resource group name (Azure-specific, returns empty string for other clouds)
+	GetResourceGroupName() string
+
 	// Refresh fetches the latest metadata from the cloud provider
 	Refresh(ctx context.Context) error
 
