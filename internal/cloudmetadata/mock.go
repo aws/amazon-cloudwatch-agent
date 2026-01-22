@@ -11,19 +11,20 @@ import (
 // MockProvider implements Provider interface for testing.
 // This is exported so other packages can use it in their tests.
 type MockProvider struct {
-	InstanceID_    string
-	InstanceType_  string
-	ImageID_       string
-	Region_        string
-	AZ_            string
-	AccountID_     string
-	Hostname_      string
-	PrivateIP_     string
-	CloudProvider_ CloudProvider
-	Available_     bool
-	Tags_          map[string]string
-	RefreshErr     error
-	RefreshCount   int
+	InstanceID_       string
+	InstanceType_     string
+	ImageID_          string
+	Region_           string
+	AZ_               string
+	AccountID_        string
+	Hostname_         string
+	PrivateIP_        string
+	CloudProvider_    CloudProvider
+	Available_        bool
+	Tags_             map[string]string
+	ScalingGroupName_ string
+	RefreshErr        error
+	RefreshCount      int
 }
 
 func (m *MockProvider) GetInstanceID() string       { return m.InstanceID_ }
@@ -54,6 +55,9 @@ func (m *MockProvider) GetTag(key string) (string, error) {
 	return "", fmt.Errorf("tag not found: %s", key)
 }
 
-func (m *MockProvider) GetVolumeID(device string) string  { return "" }
-func (m *MockProvider) GetScalingGroupName() string       { return "" }
-func (m *MockProvider) Refresh(ctx context.Context) error { m.RefreshCount++; return m.RefreshErr }
+func (m *MockProvider) GetVolumeID(device string) string { return "" }
+func (m *MockProvider) GetScalingGroupName() string      { return m.ScalingGroupName_ }
+func (m *MockProvider) Refresh(ctx context.Context) error {
+	m.RefreshCount++
+	return m.RefreshErr
+}

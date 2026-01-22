@@ -375,3 +375,356 @@ func TestGetMetadataInfo_SingletonWithEmptyValues(t *testing.T) {
 	assert.NotEmpty(t, result[ipAddressPlaceholder])
 	assert.Equal(t, unknownAccountID, result[accountIdPlaceholder])
 }
+
+// --- Tests for AWS Placeholders with Cloudmetadata Provider ---
+
+func TestResolveAWSMetadataPlaceholders_WithCloudmetadataProvider(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	// Set up AWS cloudmetadata provider
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "i-cloudmeta123",
+		InstanceType_:  "m5.xlarge",
+		ImageID_:       "ami-cloudmeta456",
+		Region_:        "us-east-1",
+		AccountID_:     "123456789012",
+		AZ_:            "us-east-1a",
+		Hostname_:      "cloudmeta-host",
+		PrivateIP_:     "10.0.0.50",
+		CloudProvider_: cloudmetadata.CloudProviderAWS,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"InstanceId":   "${aws:InstanceId}",
+		"InstanceType": "${aws:InstanceType}",
+		"ImageId":      "${aws:ImageId}",
+		"RegularKey":   "regular_value",
+	}
+
+	result := ResolveAWSMetadataPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "i-cloudmeta123", resultMap["InstanceId"])
+	assert.Equal(t, "m5.xlarge", resultMap["InstanceType"])
+	assert.Equal(t, "ami-cloudmeta456", resultMap["ImageId"])
+	assert.Equal(t, "regular_value", resultMap["RegularKey"])
+}
+
+func TestResolveAWSMetadataPlaceholders_ExtendedPlaceholders(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "i-extended123",
+		InstanceType_:  "t3.medium",
+		ImageID_:       "ami-extended456",
+		Region_:        "eu-west-1",
+		AccountID_:     "987654321098",
+		AZ_:            "eu-west-1b",
+		Hostname_:      "extended-host",
+		PrivateIP_:     "172.16.0.100",
+		CloudProvider_: cloudmetadata.CloudProviderAWS,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"Region":           "${aws:Region}",
+		"AccountId":        "${aws:AccountId}",
+		"AvailabilityZone": "${aws:AvailabilityZone}",
+		"Hostname":         "${aws:Hostname}",
+		"PrivateIP":        "${aws:PrivateIP}",
+	}
+
+	result := ResolveAWSMetadataPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "eu-west-1", resultMap["Region"])
+	assert.Equal(t, "987654321098", resultMap["AccountId"])
+	assert.Equal(t, "eu-west-1b", resultMap["AvailabilityZone"])
+	assert.Equal(t, "extended-host", resultMap["Hostname"])
+	assert.Equal(t, "172.16.0.100", resultMap["PrivateIP"])
+}
+
+// --- Tests for Azure Placeholders with Cloudmetadata Provider ---
+
+func TestResolveAzureMetadataPlaceholders_WithCloudmetadataProvider(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:       "azure-vm-12345",
+		InstanceType_:     "Standard_D4s_v3",
+		Region_:           "eastus2",
+		AccountID_:        "sub-12345-67890",
+		AZ_:               "1",
+		Hostname_:         "azure-vm-host",
+		PrivateIP_:        "10.1.0.50",
+		ScalingGroupName_: "my-vmss",
+		CloudProvider_:    cloudmetadata.CloudProviderAzure,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"InstanceId":     "${azure:InstanceId}",
+		"InstanceType":   "${azure:InstanceType}",
+		"VmScaleSetName": "${azure:VmScaleSetName}",
+		"Region":         "${azure:Region}",
+		"SubscriptionId": "${azure:SubscriptionId}",
+		"RegularKey":     "regular_value",
+	}
+
+	result := ResolveAzureMetadataPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "azure-vm-12345", resultMap["InstanceId"])
+	assert.Equal(t, "Standard_D4s_v3", resultMap["InstanceType"])
+	assert.Equal(t, "my-vmss", resultMap["VmScaleSetName"])
+	assert.Equal(t, "eastus2", resultMap["Region"])
+	assert.Equal(t, "sub-12345-67890", resultMap["SubscriptionId"])
+	assert.Equal(t, "regular_value", resultMap["RegularKey"])
+}
+
+func TestResolveAzureMetadataPlaceholders_ExtendedPlaceholders(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "azure-extended-vm",
+		InstanceType_:  "Standard_E8s_v4",
+		Region_:        "westeurope",
+		AccountID_:     "sub-extended-12345",
+		AZ_:            "2",
+		Hostname_:      "azure-extended-host",
+		PrivateIP_:     "10.2.0.100",
+		CloudProvider_: cloudmetadata.CloudProviderAzure,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"AvailabilityZone": "${azure:AvailabilityZone}",
+		"Hostname":         "${azure:Hostname}",
+		"PrivateIP":        "${azure:PrivateIP}",
+	}
+
+	result := ResolveAzureMetadataPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "2", resultMap["AvailabilityZone"])
+	assert.Equal(t, "azure-extended-host", resultMap["Hostname"])
+	assert.Equal(t, "10.2.0.100", resultMap["PrivateIP"])
+}
+
+// --- Tests for Cloud-Agnostic Placeholders ---
+
+func TestResolveCloudAgnosticPlaceholders_AWS(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "i-aws-agnostic",
+		InstanceType_:  "c5.2xlarge",
+		Region_:        "ap-southeast-1",
+		AccountID_:     "111222333444",
+		AZ_:            "ap-southeast-1a",
+		Hostname_:      "aws-agnostic-host",
+		PrivateIP_:     "10.10.10.10",
+		CloudProvider_: cloudmetadata.CloudProviderAWS,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"InstanceId":       "${cloud:InstanceId}",
+		"InstanceType":     "${cloud:InstanceType}",
+		"Region":           "${cloud:Region}",
+		"AccountId":        "${cloud:AccountId}",
+		"AvailabilityZone": "${cloud:AvailabilityZone}",
+		"Hostname":         "${cloud:Hostname}",
+		"PrivateIP":        "${cloud:PrivateIP}",
+	}
+
+	result := ResolveCloudAgnosticPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "i-aws-agnostic", resultMap["InstanceId"])
+	assert.Equal(t, "c5.2xlarge", resultMap["InstanceType"])
+	assert.Equal(t, "ap-southeast-1", resultMap["Region"])
+	assert.Equal(t, "111222333444", resultMap["AccountId"])
+	assert.Equal(t, "ap-southeast-1a", resultMap["AvailabilityZone"])
+	assert.Equal(t, "aws-agnostic-host", resultMap["Hostname"])
+	assert.Equal(t, "10.10.10.10", resultMap["PrivateIP"])
+}
+
+func TestResolveCloudAgnosticPlaceholders_Azure(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "azure-agnostic-vm",
+		InstanceType_:  "Standard_D8s_v3",
+		Region_:        "northeurope",
+		AccountID_:     "azure-sub-12345",
+		AZ_:            "3",
+		Hostname_:      "azure-agnostic-host",
+		PrivateIP_:     "10.20.30.40",
+		CloudProvider_: cloudmetadata.CloudProviderAzure,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"InstanceId":   "${cloud:InstanceId}",
+		"InstanceType": "${cloud:InstanceType}",
+		"Region":       "${cloud:Region}",
+		"AccountId":    "${cloud:AccountId}",
+	}
+
+	result := ResolveCloudAgnosticPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "azure-agnostic-vm", resultMap["InstanceId"])
+	assert.Equal(t, "Standard_D8s_v3", resultMap["InstanceType"])
+	assert.Equal(t, "northeurope", resultMap["Region"])
+	assert.Equal(t, "azure-sub-12345", resultMap["AccountId"])
+}
+
+func TestResolveCloudAgnosticPlaceholders_NoProvider(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	// Don't set provider - test fallback behavior
+
+	input := map[string]any{
+		"InstanceId": "${cloud:InstanceId}",
+		"Region":     "${cloud:Region}",
+	}
+
+	result := ResolveCloudAgnosticPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	// Should use defaults when no provider available
+	assert.Equal(t, unknownInstanceID, resultMap["InstanceId"])
+	assert.Equal(t, unknownAwsRegion, resultMap["Region"])
+}
+
+// --- Tests for ResolveCloudMetadataPlaceholders (unified resolver) ---
+
+func TestResolveCloudMetadataPlaceholders_MixedPlaceholders(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "i-mixed123",
+		InstanceType_:  "t3.large",
+		Region_:        "us-west-2",
+		AccountID_:     "555666777888",
+		CloudProvider_: cloudmetadata.CloudProviderAWS,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	input := map[string]any{
+		"AWSInstanceId": "${aws:InstanceId}",
+		"CloudRegion":   "${cloud:Region}",
+		"RegularKey":    "regular_value",
+	}
+
+	result := ResolveCloudMetadataPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "i-mixed123", resultMap["AWSInstanceId"])
+	assert.Equal(t, "us-west-2", resultMap["CloudRegion"])
+	assert.Equal(t, "regular_value", resultMap["RegularKey"])
+}
+
+func TestResolveCloudMetadataPlaceholders_NoPlaceholders(t *testing.T) {
+	input := map[string]any{
+		"key1": "value1",
+		"key2": "value2",
+	}
+
+	result := ResolveCloudMetadataPlaceholders(input)
+	resultMap := result.(map[string]any)
+
+	assert.Equal(t, "value1", resultMap["key1"])
+	assert.Equal(t, "value2", resultMap["key2"])
+}
+
+// --- Tests for fallback behavior ---
+
+func TestGetAWSMetadata_FallbackToLegacy(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	// Don't set provider - should fallback to legacy
+
+	originalProvider := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata {
+		return &Metadata{
+			InstanceID:   "i-legacy-fallback",
+			InstanceType: "t2.micro",
+			ImageID:      "ami-legacy-fallback",
+		}
+	}
+	defer func() {
+		Ec2MetadataInfoProvider = originalProvider
+	}()
+
+	metadata := getAWSMetadata()
+
+	assert.Equal(t, "i-legacy-fallback", metadata["${aws:InstanceId}"])
+	assert.Equal(t, "t2.micro", metadata["${aws:InstanceType}"])
+	assert.Equal(t, "ami-legacy-fallback", metadata["${aws:ImageId}"])
+}
+
+func TestGetAWSMetadata_UsesCloudmetadataWhenAvailable(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:    "i-cloudmeta-preferred",
+		InstanceType_:  "m5.large",
+		ImageID_:       "ami-cloudmeta-preferred",
+		Region_:        "eu-central-1",
+		CloudProvider_: cloudmetadata.CloudProviderAWS,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	// Also set legacy (should be ignored)
+	originalProvider := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata {
+		return &Metadata{
+			InstanceID:   "i-legacy-ignored",
+			InstanceType: "t2.nano",
+			ImageID:      "ami-legacy-ignored",
+		}
+	}
+	defer func() {
+		Ec2MetadataInfoProvider = originalProvider
+	}()
+
+	metadata := getAWSMetadata()
+
+	// Cloudmetadata should win
+	assert.Equal(t, "i-cloudmeta-preferred", metadata["${aws:InstanceId}"])
+	assert.Equal(t, "m5.large", metadata["${aws:InstanceType}"])
+	assert.Equal(t, "ami-cloudmeta-preferred", metadata["${aws:ImageId}"])
+}
+
+func TestGetAzureMetadata_UsesCloudmetadataWhenAvailable(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
+	mock := &cloudmetadata.MockProvider{
+		InstanceID_:       "azure-cloudmeta-vm",
+		InstanceType_:     "Standard_D2s_v3",
+		Region_:           "australiaeast",
+		AccountID_:        "azure-sub-cloudmeta",
+		ScalingGroupName_: "cloudmeta-vmss",
+		CloudProvider_:    cloudmetadata.CloudProviderAzure,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	metadata := getAzureMetadata()
+
+	assert.Equal(t, "azure-cloudmeta-vm", metadata["${azure:InstanceId}"])
+	assert.Equal(t, "Standard_D2s_v3", metadata["${azure:InstanceType}"])
+	assert.Equal(t, "australiaeast", metadata["${azure:Region}"])
+	assert.Equal(t, "azure-sub-cloudmeta", metadata["${azure:SubscriptionId}"])
+	assert.Equal(t, "cloudmeta-vmss", metadata["${azure:VmScaleSetName}"])
+}

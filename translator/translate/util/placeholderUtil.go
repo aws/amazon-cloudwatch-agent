@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	// Legacy placeholders for log group/stream names
 	instanceIdPlaceholder    = "{instance_id}"
 	hostnamePlaceholder      = "{hostname}"
 	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
@@ -29,6 +30,7 @@ const (
 	datePlaceholder          = "{date}"
 	accountIdPlaceholder     = "{account_id}"
 
+	// Default values when metadata unavailable
 	unknownInstanceID   = "i-UNKNOWN"
 	unknownHostname     = "UNKNOWN-HOST"
 	unknownIPAddress    = "UNKNOWN-IP"
@@ -37,8 +39,42 @@ const (
 	unknownInstanceType = "UNKNOWN-TYPE"
 	unknownImageID      = "UNKNOWN-AMI"
 
+	// Placeholder prefixes for append_dimensions
 	awsPlaceholderPrefix   = "${aws:"
 	azurePlaceholderPrefix = "${azure:"
+	cloudPlaceholderPrefix = "${cloud:"
+
+	// AWS-specific placeholders (append_dimensions)
+	awsInstanceId           = "${aws:InstanceId}"
+	awsInstanceType         = "${aws:InstanceType}"
+	awsImageId              = "${aws:ImageId}"
+	awsAutoScalingGroupName = "${aws:AutoScalingGroupName}"
+	awsRegion               = "${aws:Region}"
+	awsAccountId            = "${aws:AccountId}"
+	awsAvailabilityZone     = "${aws:AvailabilityZone}"
+	awsHostname             = "${aws:Hostname}"
+	awsPrivateIP            = "${aws:PrivateIP}"
+
+	// Azure-specific placeholders (append_dimensions)
+	azureInstanceId        = "${azure:InstanceId}"
+	azureInstanceType      = "${azure:InstanceType}"
+	azureImageId           = "${azure:ImageId}"
+	azureVmScaleSetName    = "${azure:VmScaleSetName}"
+	azureResourceGroupName = "${azure:ResourceGroupName}"
+	azureRegion            = "${azure:Region}"
+	azureSubscriptionId    = "${azure:SubscriptionId}"
+	azureAvailabilityZone  = "${azure:AvailabilityZone}"
+	azureHostname          = "${azure:Hostname}"
+	azurePrivateIP         = "${azure:PrivateIP}"
+
+	// Cloud-agnostic placeholders (work on any cloud)
+	cloudInstanceId       = "${cloud:InstanceId}"
+	cloudInstanceType     = "${cloud:InstanceType}"
+	cloudRegion           = "${cloud:Region}"
+	cloudAccountId        = "${cloud:AccountId}"
+	cloudAvailabilityZone = "${cloud:AvailabilityZone}"
+	cloudHostname         = "${cloud:Hostname}"
+	cloudPrivateIP        = "${cloud:PrivateIP}"
 )
 
 type Metadata struct {
@@ -286,7 +322,50 @@ func getIpAddress() string {
 }
 
 func getAWSMetadata() map[string]string {
+	// Try cloudmetadata provider first
+	if cloudProvider := cloudmetadata.GetGlobalProviderOrNil(); cloudProvider != nil {
+		if cloudProvider.GetCloudProvider() == int(cloudmetadata.CloudProviderAWS) {
+			log.Printf("D! [placeholderUtil] Using cloudmetadata for AWS placeholders")
+			return buildAWSMetadataFromCloudProvider(cloudProvider)
+		}
+	}
+
+	// Fallback to legacy provider
+	log.Printf("D! [placeholderUtil] Using legacy provider for AWS placeholders")
 	return getAWSMetadataInfo(Ec2MetadataInfoProvider)
+}
+
+// buildAWSMetadataFromCloudProvider builds AWS placeholder map from cloudmetadata provider
+func buildAWSMetadataFromCloudProvider(provider cloudmetadata.Provider) map[string]string {
+	instanceID := defaultIfEmpty(provider.GetInstanceID(), unknownInstanceID)
+	instanceType := defaultIfEmpty(provider.GetInstanceType(), unknownInstanceType)
+	imageID := defaultIfEmpty(provider.GetImageID(), unknownImageID)
+	region := defaultIfEmpty(provider.GetRegion(), unknownAwsRegion)
+	accountID := defaultIfEmpty(provider.GetAccountID(), unknownAccountID)
+	az := provider.GetAvailabilityZone()
+	hostname := defaultIfEmpty(provider.GetHostname(), getHostName())
+	privateIP := provider.GetPrivateIP()
+	if privateIP == "" {
+		privateIP = getIpAddress()
+	}
+
+	// Use agent config region if available (user override)
+	if agent.Global_Config.Region != "" {
+		region = agent.Global_Config.Region
+	}
+
+	return map[string]string{
+		// Standard ec2tagger placeholders
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceID]:   instanceID,
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceType]: instanceType,
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyImageID]:      imageID,
+		// Extended AWS placeholders
+		awsRegion:           region,
+		awsAccountId:        accountID,
+		awsAvailabilityZone: az,
+		awsHostname:         hostname,
+		awsPrivateIP:        privateIP,
+	}
 }
 
 func getAWSMetadataWithTags(needsTags bool) map[string]string {
@@ -370,28 +449,87 @@ func ResolveAzureMetadataPlaceholders(input any) any {
 	return result
 }
 
-// getAzureMetadata returns Azure metadata from IMDS
+// getAzureMetadata returns Azure metadata from cloudmetadata provider or IMDS fallback
 func getAzureMetadata() map[string]string {
+	// Try cloudmetadata provider first
+	if cloudProvider := cloudmetadata.GetGlobalProviderOrNil(); cloudProvider != nil {
+		if cloudProvider.GetCloudProvider() == int(cloudmetadata.CloudProviderAzure) {
+			log.Printf("D! [placeholderUtil] Using cloudmetadata for Azure placeholders")
+			return buildAzureMetadataFromCloudProvider(cloudProvider)
+		}
+	}
+
+	// Fallback to legacy IMDS fetch
+	log.Println("D! [placeholderUtil] Using legacy IMDS for Azure placeholders")
+	return getAzureMetadataLegacy()
+}
+
+// buildAzureMetadataFromCloudProvider builds Azure placeholder map from cloudmetadata provider
+func buildAzureMetadataFromCloudProvider(provider cloudmetadata.Provider) map[string]string {
+	instanceID := defaultIfEmpty(provider.GetInstanceID(), "")
+	instanceType := defaultIfEmpty(provider.GetInstanceType(), "")
+	region := defaultIfEmpty(provider.GetRegion(), "")
+	accountID := defaultIfEmpty(provider.GetAccountID(), "") // SubscriptionId for Azure
+	az := provider.GetAvailabilityZone()
+	hostname := defaultIfEmpty(provider.GetHostname(), getHostName())
+	privateIP := provider.GetPrivateIP()
+	if privateIP == "" {
+		privateIP = getIpAddress()
+	}
+	scalingGroupName := provider.GetScalingGroupName() // VmScaleSetName for Azure
+
+	// Get tags for ResourceGroupName if available
+	resourceGroupName := ""
+	if rg, err := provider.GetTag("resourceGroupName"); err == nil {
+		resourceGroupName = rg
+	}
+
+	return map[string]string{
+		azureInstanceId:        instanceID,
+		azureInstanceType:      instanceType,
+		azureImageId:           instanceID, // Azure uses VMID as ImageId equivalent
+		azureVmScaleSetName:    scalingGroupName,
+		azureResourceGroupName: resourceGroupName,
+		azureRegion:            region,
+		azureSubscriptionId:    accountID,
+		azureAvailabilityZone:  az,
+		azureHostname:          hostname,
+		azurePrivateIP:         privateIP,
+	}
+}
+
+// getAzureMetadataLegacy fetches Azure metadata directly from IMDS (fallback)
+func getAzureMetadataLegacy() map[string]string {
 	log.Println("D! [Azure Metadata] Fetching Azure IMDS metadata...")
 
 	metadata := fetchAzureIMDS()
 	if metadata == nil {
 		log.Println("W! Failed to fetch Azure IMDS metadata, returning empty values")
 		return map[string]string{
-			"${azure:InstanceId}":        "",
-			"${azure:InstanceType}":      "",
-			"${azure:ImageId}":           "",
-			"${azure:VmScaleSetName}":    "",
-			"${azure:ResourceGroupName}": "",
+			azureInstanceId:        "",
+			azureInstanceType:      "",
+			azureImageId:           "",
+			azureVmScaleSetName:    "",
+			azureResourceGroupName: "",
+			azureRegion:            "",
+			azureSubscriptionId:    "",
+			azureAvailabilityZone:  "",
+			azureHostname:          getHostName(),
+			azurePrivateIP:         getIpAddress(),
 		}
 	}
 
 	return map[string]string{
-		"${azure:InstanceId}":        metadata.VMID,
-		"${azure:InstanceType}":      metadata.VMSize,
-		"${azure:ImageId}":           metadata.VMID,
-		"${azure:VmScaleSetName}":    metadata.VMScaleSetName,
-		"${azure:ResourceGroupName}": metadata.ResourceGroupName,
+		azureInstanceId:        metadata.VMID,
+		azureInstanceType:      metadata.VMSize,
+		azureImageId:           metadata.VMID,
+		azureVmScaleSetName:    metadata.VMScaleSetName,
+		azureResourceGroupName: metadata.ResourceGroupName,
+		azureRegion:            metadata.Location,
+		azureSubscriptionId:    metadata.SubscriptionID,
+		azureAvailabilityZone:  metadata.Zone,
+		azureHostname:          getHostName(),
+		azurePrivateIP:         getIpAddress(),
 	}
 }
 
@@ -401,6 +539,9 @@ type azureIMDSMetadata struct {
 	VMSize            string
 	VMScaleSetName    string
 	ResourceGroupName string
+	Location          string
+	SubscriptionID    string
+	Zone              string
 }
 
 // fetchAzureIMDS fetches metadata from Azure IMDS
@@ -444,6 +585,9 @@ func fetchAzureIMDS() *azureIMDSMetadata {
 		VMSize            string `json:"vmSize"`
 		VMScaleSetName    string `json:"vmScaleSetName"`
 		ResourceGroupName string `json:"resourceGroupName"`
+		Location          string `json:"location"`
+		SubscriptionID    string `json:"subscriptionId"`
+		Zone              string `json:"zone"`
 	}
 
 	if err := json.Unmarshal(body, &result); err != nil {
@@ -456,16 +600,20 @@ func fetchAzureIMDS() *azureIMDSMetadata {
 		VMSize:            result.VMSize,
 		VMScaleSetName:    result.VMScaleSetName,
 		ResourceGroupName: result.ResourceGroupName,
+		Location:          result.Location,
+		SubscriptionID:    result.SubscriptionID,
+		Zone:              result.Zone,
 	}
 }
 
-// ResolveCloudMetadataPlaceholders resolves both AWS and Azure placeholders
+// ResolveCloudMetadataPlaceholders resolves AWS, Azure, and cloud-agnostic placeholders
 // Detects cloud provider and uses appropriate resolver
 func ResolveCloudMetadataPlaceholders(input any) any {
 	inputMap := input.(map[string]interface{})
 
 	hasAzure := false
 	hasAWS := false
+	hasCloud := false
 
 	for _, v := range inputMap {
 		if vStr, ok := v.(string); ok {
@@ -474,6 +622,9 @@ func ResolveCloudMetadataPlaceholders(input any) any {
 			}
 			if strings.Contains(vStr, awsPlaceholderPrefix) {
 				hasAWS = true
+			}
+			if strings.Contains(vStr, cloudPlaceholderPrefix) {
+				hasCloud = true
 			}
 		}
 	}
@@ -487,5 +638,95 @@ func ResolveCloudMetadataPlaceholders(input any) any {
 		result = ResolveAWSMetadataPlaceholders(result)
 	}
 
+	if hasCloud {
+		result = ResolveCloudAgnosticPlaceholders(result)
+	}
+
 	return result
+}
+
+// ResolveCloudAgnosticPlaceholders resolves ${cloud:...} placeholders that work on any cloud
+func ResolveCloudAgnosticPlaceholders(input any) any {
+	inputMap := input.(map[string]interface{})
+	result := make(map[string]any, len(inputMap))
+
+	hasCloudPlaceholders := false
+	for _, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, cloudPlaceholderPrefix) {
+			hasCloudPlaceholders = true
+			break
+		}
+	}
+
+	var metadata map[string]string
+	if hasCloudPlaceholders {
+		metadata = getCloudAgnosticMetadata()
+	}
+
+	for k, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, cloudPlaceholderPrefix) {
+			if replacement, exists := metadata[vStr]; exists && replacement != "" {
+				result[k] = replacement
+			} else {
+				log.Printf("W! Cloud placeholder not resolved: %s", vStr)
+				result[k] = v
+			}
+		} else {
+			result[k] = v
+		}
+	}
+
+	return result
+}
+
+// getCloudAgnosticMetadata returns metadata using cloud-agnostic placeholder keys
+func getCloudAgnosticMetadata() map[string]string {
+	cloudProvider := cloudmetadata.GetGlobalProviderOrNil()
+	if cloudProvider == nil {
+		log.Printf("D! [placeholderUtil] cloudmetadata not available for cloud-agnostic placeholders")
+		return map[string]string{
+			cloudInstanceId:       unknownInstanceID,
+			cloudInstanceType:     unknownInstanceType,
+			cloudRegion:           unknownAwsRegion,
+			cloudAccountId:        unknownAccountID,
+			cloudAvailabilityZone: "",
+			cloudHostname:         getHostName(),
+			cloudPrivateIP:        getIpAddress(),
+		}
+	}
+
+	instanceID := defaultIfEmpty(cloudProvider.GetInstanceID(), unknownInstanceID)
+	instanceType := defaultIfEmpty(cloudProvider.GetInstanceType(), unknownInstanceType)
+	region := defaultIfEmpty(cloudProvider.GetRegion(), unknownAwsRegion)
+	accountID := defaultIfEmpty(cloudProvider.GetAccountID(), unknownAccountID)
+	az := cloudProvider.GetAvailabilityZone()
+	hostname := defaultIfEmpty(cloudProvider.GetHostname(), getHostName())
+	privateIP := cloudProvider.GetPrivateIP()
+	if privateIP == "" {
+		privateIP = getIpAddress()
+	}
+
+	// Use agent config region if available (user override)
+	if agent.Global_Config.Region != "" {
+		region = agent.Global_Config.Region
+	}
+
+	cloudType := "Unknown"
+	switch cloudProvider.GetCloudProvider() {
+	case int(cloudmetadata.CloudProviderAWS):
+		cloudType = "AWS"
+	case int(cloudmetadata.CloudProviderAzure):
+		cloudType = "Azure"
+	}
+	log.Printf("D! [placeholderUtil] Resolved cloud-agnostic placeholders (cloud=%s)", cloudType)
+
+	return map[string]string{
+		cloudInstanceId:       instanceID,
+		cloudInstanceType:     instanceType,
+		cloudRegion:           region,
+		cloudAccountId:        accountID,
+		cloudAvailabilityZone: az,
+		cloudHostname:         hostname,
+		cloudPrivateIP:        privateIP,
+	}
 }
