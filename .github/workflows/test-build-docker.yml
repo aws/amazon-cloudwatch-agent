@@ -70,7 +70,7 @@ jobs:
 
       - name: Cache container
         id: cached_container
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached_container_${{ github.sha }}"
           path: go.mod
@@ -153,7 +153,7 @@ jobs:
 
       - name: Cache win zip
         id: cached_win_zip
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached_win_zip_${{ github.sha }}_${{ inputs.PackageBucketKey }}_${{ inputs.Bucket }}_${{ inputs.BucketKey }}"
           path: go.mod
@@ -206,7 +206,7 @@ jobs:
 
       - name: Cache msi
         id: cached_msi
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached_msi_${{ github.sha }}"
           path: go.mod
@@ -338,7 +338,7 @@ jobs:
 
       - name: Cache sig
         id: cached_sig
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: "cached_sig_${{ github.sha }}"
           path: go.mod
