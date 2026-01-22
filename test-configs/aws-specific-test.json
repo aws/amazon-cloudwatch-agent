@@ -1,0 +1,27 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "AWSTest/${aws:InstanceId}",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          {
+            "name": "cpu_usage_idle"
+          }
+        ],
+        "metrics_collection_interval": 60
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "Region": "${aws:Region}",
+      "AccountId": "${aws:AccountId}",
+      "AvailabilityZone": "${aws:AvailabilityZone}",
+      "Hostname": "${aws:Hostname}",
+      "PrivateIP": "${aws:PrivateIP}"
+    }
+  }
+}

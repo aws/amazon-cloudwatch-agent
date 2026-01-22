@@ -1,0 +1,27 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "PlaceholderTest/${cloud:InstanceId}",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_IDLE"
+          }
+        ],
+        "metrics_collection_interval": 60
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${cloud:InstanceId}",
+      "InstanceType": "${cloud:InstanceType}",
+      "Region": "${cloud:Region}",
+      "AccountId": "${cloud:AccountId}",
+      "Hostname": "${cloud:Hostname}",
+      "PrivateIP": "${cloud:PrivateIP}"
+    }
+  }
+}

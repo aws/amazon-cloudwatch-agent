@@ -1,0 +1,27 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "AzureTest/${azure:InstanceId}",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          {
+            "name": "cpu_usage_idle"
+          }
+        ],
+        "metrics_collection_interval": 60
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${azure:InstanceId}",
+      "InstanceType": "${azure:InstanceType}",
+      "Region": "${azure:Region}",
+      "SubscriptionId": "${azure:SubscriptionId}",
+      "ResourceGroupName": "${azure:ResourceGroupName}",
+      "Hostname": "${azure:Hostname}",
+      "PrivateIP": "${azure:PrivateIP}"
+    }
+  }
+}
