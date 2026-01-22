@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -22,11 +22,10 @@ import (
 	"go.opentelemetry.io/collector/processor/processortest"
 	"golang.org/x/exp/maps"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 )
 
 type mockEC2Client struct {
-	ec2iface.EC2API
 	//The following fields are used to control how the mocked DescribeTags api behave:
 	//tagsCallCount records how many times DescribeTags has been called
 	//if tagsCallCount <= tagsFailLimit, DescribeTags call fails
@@ -39,49 +38,50 @@ type mockEC2Client struct {
 	UseUpdatedTags   bool
 }
 
-// construct the return results for the mocked DescribeTags api
+var _ EC2APIClient = (*mockEC2Client)(nil)
+
 var (
 	tagKey1 = "tagKey1"
 	tagVal1 = "tagVal1"
-	tagDes1 = ec2.TagDescription{Key: &tagKey1, Value: &tagVal1}
+	tagDes1 = types.TagDescription{Key: &tagKey1, Value: &tagVal1}
 )
 
 var (
 	tagKey2 = "tagKey2"
 	tagVal2 = "tagVal2"
-	tagDes2 = ec2.TagDescription{Key: &tagKey2, Value: &tagVal2}
+	tagDes2 = types.TagDescription{Key: &tagKey2, Value: &tagVal2}
 )
 
 var (
 	tagKey3 = "aws:autoscaling:groupName"
 	tagVal3 = "ASG-1"
-	tagDes3 = ec2.TagDescription{Key: &tagKey3, Value: &tagVal3}
+	tagDes3 = types.TagDescription{Key: &tagKey3, Value: &tagVal3}
 )
 
 var (
 	updatedTagVal2 = "updated-tagVal2"
-	updatedTagDes2 = ec2.TagDescription{Key: &tagKey2, Value: &updatedTagVal2}
+	updatedTagDes2 = types.TagDescription{Key: &tagKey2, Value: &updatedTagVal2}
 )
 
-func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
+func (m *mockEC2Client) DescribeTags(context.Context, *ec2.DescribeTagsInput, ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
 	//partial tags returned when the DescribeTags api are called initially
 	//some tags are not returned because customer just attach them to the ec2 instance
 	//and the api doesn't know about them yet
 	partialTags := ec2.DescribeTagsOutput{
 		NextToken: nil,
-		Tags:      []*ec2.TagDescription{&tagDes1},
+		Tags:      []types.TagDescription{tagDes1},
 	}
 
 	//all tags are returned when the ec2 metadata service knows about all tags
 	allTags := ec2.DescribeTagsOutput{
 		NextToken: nil,
-		Tags:      []*ec2.TagDescription{&tagDes1, &tagDes2, &tagDes3},
+		Tags:      []types.TagDescription{tagDes1, tagDes2, tagDes3},
 	}
 
 	//later customer changes the value of the second tag and DescribeTags api returns updated tags
 	allTagsUpdated := ec2.DescribeTagsOutput{
 		NextToken: nil,
-		Tags:      []*ec2.TagDescription{&tagDes1, &updatedTagDes2, &tagDes3},
+		Tags:      []types.TagDescription{tagDes1, updatedTagDes2, tagDes3},
 	}
 
 	//return error initially to simulate the case
@@ -111,6 +111,10 @@ func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsO
 	return nil, nil
 }
 
+func (m *mockEC2Client) DescribeVolumes(context.Context, *ec2.DescribeVolumesInput, ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error) {
+	return &ec2.DescribeVolumesOutput{}, nil
+}
+
 // construct the return results for the mocked DescribeTags api
 var (
 	device1   = "xvdc"
@@ -127,37 +131,37 @@ var (
 )
 
 type mockMetadataProvider struct {
-	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
+	InstanceIdentityDocument *imds.InstanceIdentityDocument
 }
 
-func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
+func (m *mockMetadataProvider) Get(context.Context) (imds.InstanceIdentityDocument, error) {
 	if m.InstanceIdentityDocument != nil {
 		return *m.InstanceIdentityDocument, nil
 	}
-	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("No instance identity document")
+	return imds.InstanceIdentityDocument{}, errors.New("No instance identity document")
 }
 
-func (m *mockMetadataProvider) Hostname(ctx context.Context) (string, error) {
+func (m *mockMetadataProvider) Hostname(context.Context) (string, error) {
 	return "MockHostName", nil
 }
 
-func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
+func (m *mockMetadataProvider) InstanceID(context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceTags(_ context.Context) ([]string, error) {
+func (m *mockMetadataProvider) InstanceTags(context.Context) ([]string, error) {
 	return []string{"MockInstanceTag"}, nil
 }
 
-func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
+func (m *mockMetadataProvider) InstanceTagValue(context.Context, string) (string, error) {
 	return "MockInstanceValue", nil
 }
 
-func (m *mockMetadataProvider) ClientIAMRole(ctx context.Context) (string, error) {
+func (m *mockMetadataProvider) ClientIAMRole(context.Context) (string, error) {
 	return "MockIAMRole", nil
 }
 
-var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
+var mockedInstanceIdentityDoc = &imds.InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44",
 	Region:       "us-east-1",
 	InstanceType: "m5ad.large",
@@ -295,7 +299,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 		tagsPartialLimit: 1,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
@@ -340,7 +344,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 		tagsPartialLimit: 2,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
@@ -397,7 +401,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		tagsPartialLimit: 1,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
@@ -443,7 +447,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		tagsPartialLimit: 1,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
@@ -546,7 +550,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		tagsPartialLimit: 1,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
@@ -562,13 +566,13 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	}
 
 	md := createTestMetrics([]map[string]string{
-		map[string]string{
+		{
 			"host": "example.org",
 		},
-		map[string]string{
+		{
 			"device": device1,
 		},
-		map[string]string{
+		{
 			"device": device2,
 		},
 	})
@@ -612,7 +616,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 		tagsPartialLimit: 1,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	BackoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
@@ -657,7 +661,7 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 		tagsPartialLimit: 1,
 		UseUpdatedTags:   false,
 	}
-	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(context.Context, component.Host, *configaws.CredentialsConfig) EC2APIClient {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}

@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
-var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
+var mockedInstanceIdentityDoc = &imds.InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44",
 	AccountID:    "874389809020",
 	Region:       "us-east-1",
@@ -24,7 +24,7 @@ var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	ImageID:      "ami-09edd32d9b0990d49",
 }
 
-var mockedInstanceIdentityDocWithLargeInstanceId = &ec2metadata.EC2InstanceIdentityDocument{
+var mockedInstanceIdentityDocWithLargeInstanceID = &imds.InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44394824728",
 	AccountID:    "874389809020",
 	Region:       "us-east-1",
@@ -60,12 +60,12 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 		{
 			name: "InstanceId too large",
 			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDocWithLargeInstanceId},
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDocWithLargeInstanceID},
 			},
 			wantErr: false,
 			want: EC2Info{
 				InstanceID: "",
-				AccountID:  mockedInstanceIdentityDocWithLargeInstanceId.AccountID,
+				AccountID:  mockedInstanceIdentityDocWithLargeInstanceID.AccountID,
 			},
 		},
 	}

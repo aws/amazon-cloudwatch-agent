@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
@@ -30,7 +30,7 @@ func TestRetryer_refreshLoop(t *testing.T) {
 			name: "HappyPath_CorrectRefresh",
 			fields: fields{
 				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+					InstanceIdentityDocument: &imds.InstanceIdentityDocument{
 						InstanceID: "i-123456789"},
 				},
 				iamRole: "original-role",
