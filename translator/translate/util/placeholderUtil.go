@@ -272,6 +272,17 @@ func getAWSMetadataWithTags(needsTags bool) map[string]string {
 	return metadata
 }
 
+// ResolveAWSMetadataPlaceholders resolves AWS-specific placeholders like ${aws:InstanceId}
+//
+// Behavior: Keys with unresolved placeholders are OMITTED from the result map.
+// This preserves backward compatibility with existing behavior where configuration
+// entries with unavailable metadata are silently dropped rather than left as placeholders.
+//
+// Example:
+//
+//	Input:  {"name": "${aws:InstanceId}", "static": "value"}
+//	Output: {"static": "value"}  // if InstanceId unavailable
+//	Output: {"name": "i-123", "static": "value"}  // if InstanceId available
 func ResolveAWSMetadataPlaceholders(input any) any {
 	inputMap, ok := input.(map[string]interface{})
 	if !ok {
@@ -310,6 +321,15 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 }
 
 // ResolveAzureMetadataPlaceholders resolves Azure-specific placeholders like ${azure:InstanceId}
+//
+// Behavior: Keys with unresolved placeholders are OMITTED from the result map.
+// This matches AWS placeholder behavior for consistency.
+//
+// Example:
+//
+//	Input:  {"name": "${azure:InstanceId}", "static": "value"}
+//	Output: {"static": "value"}  // if InstanceId unavailable
+//	Output: {"name": "vm-123", "static": "value"}  // if InstanceId available
 func ResolveAzureMetadataPlaceholders(input any) any {
 	inputMap, ok := input.(map[string]interface{})
 	if !ok {
@@ -380,7 +400,10 @@ func getAzureMetadata() map[string]string {
 }
 
 // ResolveCloudMetadataPlaceholders resolves both AWS and Azure placeholders
-// Detects cloud provider and uses appropriate resolver
+// Detects cloud provider and uses appropriate resolver.
+//
+// Resolution order: Azure placeholders first, then AWS placeholders.
+// Keys with unresolved placeholders are omitted from the result.
 func ResolveCloudMetadataPlaceholders(input any) any {
 	inputMap, ok := input.(map[string]interface{})
 	if !ok {
