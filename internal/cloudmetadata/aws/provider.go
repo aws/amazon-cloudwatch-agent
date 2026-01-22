@@ -157,6 +157,7 @@ func (p *Provider) GetCloudProvider() int {
 // maskValue masks sensitive values for logging
 // NOTE: Duplicated from internal/cloudmetadata/mask.go to avoid import cycle
 // (aws → cloudmetadata → factory → aws).
+// DO NOT REFACTOR: Keep in sync with cloudmetadata.MaskValue if logic changes.
 func maskValue(value string) string {
 	if value == "" {
 		return "<empty>"
@@ -169,6 +170,7 @@ func maskValue(value string) string {
 
 // maskIPAddress masks IP addresses for logging (e.g., 10.0.x.x)
 // NOTE: Duplicated from internal/cloudmetadata/mask.go to avoid import cycle.
+// DO NOT REFACTOR: Keep in sync with cloudmetadata.MaskIPAddress if logic changes.
 func maskIPAddress(ip string) string {
 	if ip == "" {
 		return "<empty>"

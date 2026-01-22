@@ -20,6 +20,11 @@ var (
 
 // InitGlobalProvider initializes the global cloud metadata provider.
 // Safe to call multiple times - only the first call has effect.
+//
+// IMPORTANT: This function is typically called asynchronously during agent startup
+// with a timeout context (e.g., 5 seconds). Callers using GetGlobalProvider() or
+// GetGlobalProviderOrNil() must handle the case where initialization has not yet
+// completed or has failed. Use GetGlobalProviderOrNil() for graceful degradation.
 func InitGlobalProvider(ctx context.Context, logger *zap.Logger) error {
 	globalOnce.Do(func() {
 		if logger == nil {
@@ -83,6 +88,7 @@ func GetGlobalProviderOrNil() Provider {
 
 // ResetGlobalProvider resets the singleton state.
 // FOR TESTING ONLY. Not safe for concurrent use with other global provider functions.
+// Tests using this function must run serially (not in parallel with t.Parallel()).
 // Resets sync.Once to allow re-initialization in test scenarios.
 func ResetGlobalProvider() {
 	globalMu.Lock()
@@ -94,6 +100,8 @@ func ResetGlobalProvider() {
 
 // SetGlobalProviderForTest injects a mock provider. FOR TESTING ONLY.
 // This function is not safe for concurrent use with other global provider functions.
+// Tests using this function must run serially (not in parallel with t.Parallel()).
+// Marks the provider as initialized to prevent InitGlobalProvider from overwriting.
 func SetGlobalProviderForTest(p Provider) {
 	globalMu.Lock()
 	defer globalMu.Unlock()
