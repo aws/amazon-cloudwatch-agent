@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
 	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -38,7 +38,13 @@ type ec2MetadataRespondType struct {
 	region       string
 }
 
-type ec2ProviderType func(*configaws.CredentialConfig) ec2iface.EC2API
+// EC2APIClient defines the interface for EC2 API operations needed by the tagger
+type EC2APIClient interface {
+	ec2.DescribeTagsAPIClient
+	ec2.DescribeVolumesAPIClient
+}
+
+type ec2ProviderType func(ctx context.Context, host component.Host, credentialConfig *configaws.CredentialsConfig) EC2APIClient
 
 type Tagger struct {
 	*Config
@@ -53,8 +59,8 @@ type Tagger struct {
 	started            bool
 	ec2MetadataLookup  ec2MetadataLookupType
 	ec2MetadataRespond ec2MetadataRespondType
-	tagFilters         []*ec2.Filter
-	ec2API             ec2iface.EC2API
+	tagFilters         []types.Filter
+	ec2API             EC2APIClient
 	volumeSerialCache  volume.Cache
 
 	Configurer   *awsmiddleware.Configurer
@@ -64,52 +70,37 @@ type Tagger struct {
 // newTagger returns a new EC2 Tagger processor.
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	_, cancel := context.WithCancel(context.Background())
-	mdCredentialConfig := &configaws.CredentialConfig{}
+	mdCredentialConfig := &configaws.CredentialsConfig{}
+
+	mdCfg, err := mdCredentialConfig.LoadConfig(context.Background())
+	if err != nil {
+		logger.Error("ec2tagger: Failed to load AWS config for metadata provider", zap.Error(err))
+	}
+
 	p := &Tagger{
 		Config:           config,
 		logger:           logger,
 		cancelFunc:       cancel,
-		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
-		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
-			return ec2.New(
-				ec2CredentialConfig.Credentials(),
-				&aws.Config{
-					LogLevel: configaws.SDKLogLevel(),
-					Logger:   configaws.SDKLogger{},
-				})
-		},
+		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCfg, config.IMDSRetries),
 	}
+	p.ec2Provider = p.createEC2Client
 	return p
 }
 
-func getOtelAttributes(m pmetric.Metric) []pcommon.Map {
-	attributes := []pcommon.Map{}
-	switch m.Type() {
-	case pmetric.MetricTypeGauge:
-		dps := m.Gauge().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			attributes = append(attributes, dps.At(i).Attributes())
-		}
-	case pmetric.MetricTypeSum:
-		dps := m.Sum().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			attributes = append(attributes, dps.At(i).Attributes())
-		}
-	case pmetric.MetricTypeHistogram:
-		dps := m.Histogram().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			attributes = append(attributes, dps.At(i).Attributes())
-		}
-	case pmetric.MetricTypeExponentialHistogram:
-		dps := m.ExponentialHistogram().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			attributes = append(attributes, dps.At(i).Attributes())
-		}
+func (t *Tagger) createEC2Client(ctx context.Context, host component.Host, credentialConfig *configaws.CredentialsConfig) EC2APIClient {
+	cfg, err := credentialConfig.LoadConfig(ctx)
+	if err != nil {
+		cfg = aws.Config{}
 	}
-	return attributes
+
+	if t.MiddlewareID != nil {
+		awsmiddleware.TryConfigure(t.logger, host, *t.MiddlewareID, awsmiddleware.SDKv2(&cfg))
+	}
+
+	return ec2.NewFromConfig(cfg)
 }
 
-func (t *Tagger) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (t *Tagger) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	// grab the pointer to the map in case it gets refreshed while we're applying this round of metrics. At least
 	// this batch then will all get the same tags.
 	t.RLock()
@@ -131,6 +122,34 @@ func (t *Tagger) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetri
 		}
 	}
 	return md, nil
+}
+
+func getOtelAttributes(m pmetric.Metric) []pcommon.Map {
+	var attributes []pcommon.Map
+	switch m.Type() {
+	case pmetric.MetricTypeGauge:
+		dps := m.Gauge().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
+	case pmetric.MetricTypeSum:
+		dps := m.Sum().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
+	case pmetric.MetricTypeHistogram:
+		dps := m.Histogram().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
+	case pmetric.MetricTypeExponentialHistogram:
+		dps := m.ExponentialHistogram().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
+	default:
+	}
+	return attributes
 }
 
 // updateOtelAttributes adds tags and the requested dimensions to the attributes of each
@@ -175,14 +194,15 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 }
 
 // updateTags calls EC2 Describe Tags and replaces the Tagger's tagCache with the newly retrieved values
-func (t *Tagger) updateTags() error {
+func (t *Tagger) updateTags(ctx context.Context) error {
 	tags := make(map[string]string)
-	input := &ec2.DescribeTagsInput{
-		Filters: t.tagFilters,
-	}
 
-	for {
-		result, err := t.ec2API.DescribeTags(input)
+	paginator := ec2.NewDescribeTagsPaginator(t.ec2API, &ec2.DescribeTagsInput{
+		Filters: t.tagFilters,
+	})
+
+	for paginator.HasMorePages() {
+		result, err := paginator.NextPage(ctx)
 		if err != nil {
 			return err
 		}
@@ -194,11 +214,8 @@ func (t *Tagger) updateTags() error {
 			}
 			tags[key] = *tag.Value
 		}
-		if result.NextToken == nil {
-			break
-		}
-		input.SetNextToken(*result.NextToken)
 	}
+
 	t.Lock()
 	defer t.Unlock()
 	t.ec2TagCache = tags
@@ -234,7 +251,7 @@ func (t *Tagger) refreshLoopTags(refreshInterval time.Duration, stopAfterFirstSu
 			}
 
 			if refreshTags {
-				if err := t.updateTags(); err != nil {
+				if err := t.updateTags(context.Background()); err != nil {
 					t.logger.Warn("ec2tagger: Error refreshing EC2 tags, keeping old values", zap.Error(err))
 				}
 			}
@@ -324,14 +341,14 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	if err := t.deriveEC2MetadataFromIMDS(ctx); err != nil {
 		return err
 	}
-	t.tagFilters = []*ec2.Filter{
+	t.tagFilters = []types.Filter{
 		{
 			Name:   aws.String("resource-type"),
-			Values: aws.StringSlice([]string{"instance"}),
+			Values: []string{"instance"},
 		},
 		{
 			Name:   aws.String("resource-id"),
-			Values: aws.StringSlice([]string{t.ec2MetadataRespond.instanceId}),
+			Values: []string{t.ec2MetadataRespond.instanceId},
 		},
 	}
 	// if the customer said 'AutoScalingGroupName' (the CW dimension), do what they mean not what they said
@@ -345,13 +362,13 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			}
 		}
 
-		t.tagFilters = append(t.tagFilters, &ec2.Filter{
+		t.tagFilters = append(t.tagFilters, types.Filter{
 			Name:   aws.String("key"),
-			Values: aws.StringSlice(t.EC2InstanceTagKeys),
+			Values: t.EC2InstanceTagKeys,
 		})
 	}
 	if len(t.EC2InstanceTagKeys) > 0 || len(t.EBSDeviceKeys) > 0 {
-		ec2CredentialConfig := &configaws.CredentialConfig{
+		ec2CredentialConfig := &configaws.CredentialsConfig{
 			AccessKey: t.AccessKey,
 			SecretKey: t.SecretKey,
 			RoleARN:   t.RoleARN,
@@ -360,13 +377,8 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			Token:     t.Token,
 			Region:    t.ec2MetadataRespond.region,
 		}
-		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
-		if client, ok := t.ec2API.(*ec2.EC2); ok {
-			if t.MiddlewareID != nil {
-				awsmiddleware.TryConfigure(t.logger, host, *t.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
-			}
-		}
+		t.ec2API = t.ec2Provider(ctx, host, ec2CredentialConfig)
 
 		go func() { //Async start of initial retrieval to prevent block of agent start
 			t.initialRetrievalOfTagsAndVolumes()
@@ -528,7 +540,7 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 		}
 
 		if !tagsRetrieved {
-			if err := t.updateTags(); err != nil {
+			if err := t.updateTags(context.Background()); err != nil {
 				t.logger.Warn("ec2tagger: Unable to describe ec2 tags for initial retrieval", zap.Error(err))
 			} else {
 				tagsRetrieved = true

@@ -63,15 +63,15 @@ func TestHostProvider(t *testing.T) {
 	p := newHostProvider().(*hostProvider)
 	p.osReadDir = m.ReadDir
 	p.osReadFile = m.ReadFile
-	got, err := p.DeviceToSerialMap()
+	got, err := p.DeviceToSerialMap(t.Context())
 	assert.Error(t, err)
 	assert.Nil(t, got)
 	m.errDir = nil
-	got, err = p.DeviceToSerialMap()
+	got, err = p.DeviceToSerialMap(t.Context())
 	assert.Error(t, err)
 	assert.Nil(t, got)
 	m.serialMap = testSerialMap
-	got, err = p.DeviceToSerialMap()
+	got, err = p.DeviceToSerialMap(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{
 		"xvdc": "vol-0303a1cc896c42d28",
