@@ -26,7 +26,9 @@ type MetadataProvider interface {
 }
 
 type metadataClient struct {
+	// v2Client has fallback disabled, so it only tries to call IMDSv2.
 	v2Client *imds.Client
+	// v1Client has fallback enabled, so it will try to get the IMDSv2 token first and on failure will use IMDSv1.
 	v1Client *imds.Client
 }
 
@@ -100,6 +102,8 @@ func (c *metadataClient) getMetadata(ctx context.Context, path string) (string, 
 	})
 }
 
+// withMetadataFallbackRetry each fn call will first try the IMDS v2 client before falling back and retrying with the
+// IMDS v1 client.
 func withMetadataFallbackRetry[T any](c *metadataClient, fn func(*imds.Client) (T, error)) (T, error) {
 	result, err := fn(c.v2Client)
 	if err != nil {

@@ -4,49 +4,51 @@
 package ecsservicediscovery
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 )
 
 type ServiceDiscovery struct {
 	Config *ServiceDiscoveryConfig
 
-	svcEcs *ecs.ECS
-	svcEc2 *ec2.EC2
+	svcEcs *ecs.Client
+	svcEc2 *ec2.Client
 
 	stats             ProcessorStats
 	clusterProcessors []Processor
 	Configurer        *awsmiddleware.Configurer
 }
 
-func (sd *ServiceDiscovery) init() {
-	credentialConfig := &configaws.CredentialConfig{
+func (sd *ServiceDiscovery) init(ctx context.Context) {
+	credentialConfig := &configaws.CredentialsConfig{
 		Region: sd.Config.TargetClusterRegion,
 	}
-	configProvider := credentialConfig.Credentials()
-	sd.svcEcs = ecs.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
+	awsConfig, err := credentialConfig.LoadConfig(ctx)
+	if err != nil {
+		awsConfig = aws.Config{}
+	}
 
+	// Configure retry behavior
+	awsConfig.RetryMaxAttempts = AwsSdkLevelRetryCount
+
+	// Add middleware if configured
 	if sd.Configurer != nil {
-		if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEcs.Handlers)); err != nil {
-			log.Printf("ERROR: Failed to configure ECS client: %v", err)
+		if err = sd.Configurer.Configure(awsmiddleware.SDKv2(&awsConfig)); err != nil {
+			log.Printf("ERROR: Failed to configure middleware for ECS and EC2 clients: %v", err)
 		}
 	}
 
-	sd.svcEc2 = ec2.New(configProvider, aws.NewConfig().WithRegion(sd.Config.TargetClusterRegion).WithMaxRetries(AwsSdkLevelRetryCount))
-
-	if sd.Configurer != nil {
-		if err := sd.Configurer.Configure(awsmiddleware.SDKv1(&sd.svcEc2.Handlers)); err != nil {
-			log.Printf("ERROR: Failed to configure EC2 client: %v", err)
-		}
-	}
+	sd.svcEcs = ecs.NewFromConfig(awsConfig)
+	sd.svcEc2 = ec2.NewFromConfig(awsConfig)
 
 	sd.initClusterProcessorPipeline()
 }
@@ -69,8 +71,9 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 		return
 	}
 
+	ctx := context.Background()
 	frequency, _ := time.ParseDuration(sd.Config.Frequency)
-	sd.init()
+	sd.init(ctx)
 	t := time.NewTicker(frequency)
 	defer t.Stop()
 	for {
@@ -78,17 +81,17 @@ func StartECSServiceDiscovery(sd *ServiceDiscovery, shutDownChan chan interface{
 		case <-shutDownChan:
 			return
 		case <-t.C:
-			sd.work()
+			sd.work(ctx)
 		}
 	}
 }
 
-func (sd *ServiceDiscovery) work() {
+func (sd *ServiceDiscovery) work(ctx context.Context) {
 	sd.stats.ResetStats()
 	var clusterTasks []*DecoratedTask
 	var err error
 	for _, p := range sd.clusterProcessors {
-		clusterTasks, err = p.Process(sd.Config.TargetCluster, clusterTasks)
+		clusterTasks, err = p.Process(ctx, sd.Config.TargetCluster, clusterTasks)
 		// Ignore partial result to avoid overwriting existing targets
 		if err != nil {
 			log.Printf("E! ECS SD processor: %v got error: %v \n", p.ProcessorName(), err.Error())

@@ -6,26 +6,26 @@ package ecsservicediscovery
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func buildTestingTasksforDockerLabel() []*DecoratedTask {
+func buildTestingTasksForDockerLabel() []*DecoratedTask {
 	return []*DecoratedTask{
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						DockerLabels: map[string]*string{"SELECTED_LABEL": nil, "OTHER_LABELS": nil},
+						DockerLabels: map[string]string{"SELECTED_LABEL": "", "OTHER_LABELS": ""},
 					},
 				},
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						DockerLabels: map[string]*string{"OTHER_LABELS": nil},
+						DockerLabels: map[string]string{"OTHER_LABELS": ""},
 					},
 				},
 			},
@@ -34,12 +34,12 @@ func buildTestingTasksforDockerLabel() []*DecoratedTask {
 }
 
 func Test_DockerLabelDiscoveryProcessor_EmptyConfig(t *testing.T) {
-
 	p := NewDockerLabelDiscoveryProcessor(nil)
 	assert.Equal(t, "DockerLabelDiscoveryProcessor", p.ProcessorName())
-	taskList := buildTestingTasksforDockerLabel()
+	taskList := buildTestingTasksForDockerLabel()
 
-	p.Process("test_ecs_cluster_name", taskList)
+	_, err := p.Process(t.Context(), "test_ecs_cluster_name", taskList)
+	assert.NoError(t, err)
 
 	assert.False(t, taskList[0].DockerLabelBased)
 	assert.False(t, taskList[1].DockerLabelBased)
@@ -53,10 +53,11 @@ func Test_DockerLabelDiscoveryProcessor_Normal(t *testing.T) {
 		PortLabel:        "SELECTED_LABEL",
 		MetricsPathLabel: "",
 	}
-	taskList := buildTestingTasksforDockerLabel()
+	taskList := buildTestingTasksForDockerLabel()
 	p := NewDockerLabelDiscoveryProcessor(&config)
 	assert.Equal(t, "DockerLabelDiscoveryProcessor", p.ProcessorName())
-	p.Process("test_ecs_cluster_name", taskList)
+	_, err := p.Process(t.Context(), "test_ecs_cluster_name", taskList)
+	assert.NoError(t, err)
 
 	assert.True(t, taskList[0].DockerLabelBased)
 	assert.False(t, taskList[1].DockerLabelBased)

@@ -6,7 +6,7 @@ package ecsservicediscovery
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,10 +14,10 @@ func buildTestingTask() []*DecoratedTask {
 
 	return []*DecoratedTask{
 		{
-			TaskDefinition: &ecs.TaskDefinition{},
+			TaskDefinition: &types.TaskDefinition{},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{},
+			TaskDefinition: &types.TaskDefinition{},
 		},
 		{},
 	}
