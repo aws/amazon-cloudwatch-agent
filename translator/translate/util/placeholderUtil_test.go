@@ -29,6 +29,9 @@ func TestIpAddress(t *testing.T) {
 }
 
 func TestGetMetadataInfo(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
 	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, dummyPrivateIp, dummyAccountId))
 	assert.Equal(t, dummyInstanceId, m[instanceIdPlaceholder])
 	assert.Equal(t, dummyHostName, m[hostnamePlaceholder])
@@ -37,21 +40,33 @@ func TestGetMetadataInfo(t *testing.T) {
 }
 
 func TestGetMetadataInfoEmptyInstanceId(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
 	m := GetMetadataInfo(mockMetadataProvider("", dummyHostName, dummyPrivateIp, dummyAccountId))
 	assert.Equal(t, unknownInstanceID, m[instanceIdPlaceholder])
 }
 
 func TestGetMetadataInfoUsesLocalHostname(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
 	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, "", dummyPrivateIp, dummyAccountId))
 	assert.Equal(t, getHostName(), m[hostnamePlaceholder])
 }
 
 func TestGetMetadataInfoDerivesIpAddress(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
 	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, "", dummyAccountId))
 	assert.Equal(t, getIpAddress(), m[ipAddressPlaceholder])
 }
 
 func TestGetMetadataInfoEmptyAccountId(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
+
 	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, dummyPrivateIp, ""))
 	assert.Equal(t, unknownAccountID, m[accountIdPlaceholder])
 }

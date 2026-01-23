@@ -92,6 +92,9 @@ type Provider struct {
 
 	// Disk mapping cache
 	diskMap map[string]string // device name -> disk ID
+
+	// For testing: override IMDS endpoint
+	imdsEndpoint string
 }
 
 // NewProvider creates a new Azure metadata provider
@@ -318,10 +321,16 @@ func (p *Provider) GetResourceGroupName() string {
 // Refresh fetches the latest metadata from Azure IMDS
 func (p *Provider) Refresh(ctx context.Context) error {
 	startTime := time.Now()
-	p.logger.Debug("[cloudmetadata/azure] Fetching compute metadata from IMDS...",
-		zap.String("endpoint", azureIMDSEndpoint))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, azureIMDSEndpoint, nil)
+	endpoint := azureIMDSEndpoint
+	if p.imdsEndpoint != "" {
+		endpoint = p.imdsEndpoint
+	}
+
+	p.logger.Debug("[cloudmetadata/azure] Fetching compute metadata from IMDS...",
+		zap.String("endpoint", endpoint))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
