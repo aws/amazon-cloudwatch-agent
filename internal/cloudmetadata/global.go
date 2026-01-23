@@ -7,15 +7,16 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
 var (
 	globalProvider Provider
-	globalOnce     sync.Once
 	globalErr      error
 	globalMu       sync.RWMutex
+	initialized    uint32 // atomic: 0 = not initialized, 1 = initialized
 )
 
 // InitGlobalProvider initializes the global cloud metadata provider.
@@ -26,43 +27,52 @@ var (
 // GetGlobalProviderOrNil() must handle the case where initialization has not yet
 // completed or has failed. Use GetGlobalProviderOrNil() for graceful degradation.
 func InitGlobalProvider(ctx context.Context, logger *zap.Logger) error {
-	globalOnce.Do(func() {
-		if logger == nil {
-			logger = zap.NewNop()
-		}
+	// Fast path: already initialized
+	if atomic.LoadUint32(&initialized) == 1 {
+		globalMu.RLock()
+		defer globalMu.RUnlock()
+		return globalErr
+	}
 
-		logger.Debug("[cloudmetadata] Initializing global provider...")
+	globalMu.Lock()
+	defer globalMu.Unlock()
 
-		globalMu.Lock()
-		defer globalMu.Unlock()
+	// Double-check under lock
+	if atomic.LoadUint32(&initialized) == 1 {
+		return globalErr
+	}
 
-		globalProvider, globalErr = NewProvider(ctx, logger)
-		if globalErr != nil {
-			logger.Warn("[cloudmetadata] Cloud detection failed - continuing without metadata provider",
-				zap.Error(globalErr))
-			return
-		}
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 
-		cloudType := CloudProvider(globalProvider.GetCloudProvider()).String()
-		logger.Info("[cloudmetadata] Cloud provider detected",
-			zap.String("cloud", cloudType))
+	logger.Debug("[cloudmetadata] Initializing global provider...")
 
-		if err := globalProvider.Refresh(ctx); err != nil {
-			logger.Warn("[cloudmetadata] Failed to refresh cloud metadata during init",
-				zap.Error(err))
-			// Don't fail - provider may still be usable
-		}
+	globalProvider, globalErr = NewProvider(ctx, logger)
+	if globalErr != nil {
+		logger.Warn("[cloudmetadata] Cloud detection failed - continuing without metadata provider",
+			zap.Error(globalErr))
+		atomic.StoreUint32(&initialized, 1)
+		return globalErr
+	}
 
-		logger.Info("[cloudmetadata] Provider initialized successfully",
-			zap.String("cloud", cloudType),
-			zap.Bool("available", globalProvider.IsAvailable()),
-			zap.String("instanceId", MaskValue(globalProvider.GetInstanceID())),
-			zap.String("region", globalProvider.GetRegion()))
-	})
+	cloudType := CloudProvider(globalProvider.GetCloudProvider()).String()
+	logger.Info("[cloudmetadata] Cloud provider detected",
+		zap.String("cloud", cloudType))
 
-	globalMu.RLock()
-	defer globalMu.RUnlock()
-	return globalErr
+	if err := globalProvider.Refresh(ctx); err != nil {
+		logger.Warn("[cloudmetadata] Failed to refresh cloud metadata during init",
+			zap.Error(err))
+	}
+
+	logger.Info("[cloudmetadata] Provider initialized successfully",
+		zap.String("cloud", cloudType),
+		zap.Bool("available", globalProvider.IsAvailable()),
+		zap.String("instanceId", MaskValue(globalProvider.GetInstanceID())),
+		zap.String("region", globalProvider.GetRegion()))
+
+	atomic.StoreUint32(&initialized, 1)
+	return nil
 }
 
 // GetGlobalProvider returns the initialized global provider.
@@ -88,27 +98,21 @@ func GetGlobalProviderOrNil() Provider {
 	return globalProvider
 }
 
-// ResetGlobalProvider resets the singleton state.
-// FOR TESTING ONLY. Not safe for concurrent use with other global provider functions.
-// Tests using this function must run serially (not in parallel with t.Parallel()).
-// Resets sync.Once to allow re-initialization in test scenarios.
+// ResetGlobalProvider resets the singleton state for testing.
+// FOR TESTING ONLY.
 func ResetGlobalProvider() {
 	globalMu.Lock()
 	defer globalMu.Unlock()
 	globalProvider = nil
-	globalOnce = sync.Once{}
 	globalErr = nil
+	atomic.StoreUint32(&initialized, 0)
 }
 
 // SetGlobalProviderForTest injects a mock provider. FOR TESTING ONLY.
-// This function is not safe for concurrent use with other global provider functions.
-// Tests using this function must run serially (not in parallel with t.Parallel()).
-// Marks the provider as initialized to prevent InitGlobalProvider from overwriting.
 func SetGlobalProviderForTest(p Provider) {
 	globalMu.Lock()
 	defer globalMu.Unlock()
 	globalProvider = p
 	globalErr = nil
-	// Mark as initialized so InitGlobalProvider won't overwrite
-	globalOnce.Do(func() {})
+	atomic.StoreUint32(&initialized, 1)
 }
