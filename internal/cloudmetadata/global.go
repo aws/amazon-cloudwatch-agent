@@ -60,6 +60,8 @@ func InitGlobalProvider(ctx context.Context, logger *zap.Logger) error {
 			zap.String("region", globalProvider.GetRegion()))
 	})
 
+	globalMu.RLock()
+	defer globalMu.RUnlock()
 	return globalErr
 }
 
