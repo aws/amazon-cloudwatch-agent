@@ -345,7 +345,7 @@ func TestProvider_GetVolumeID(t *testing.T) {
 
 func TestProvider_Refresh_Timeout(t *testing.T) {
 	// Create a server that delays longer than the client timeout
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
 	}))
