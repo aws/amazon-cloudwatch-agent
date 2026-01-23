@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -32,10 +33,8 @@ func TestRetryHeap(t *testing.T) {
 	batch2.nextRetryTime = time.Now().Add(-1 * time.Second)
 
 	// Push batches
-	err := heap.Push(batch1)
-	assert.NoError(t, err)
-	err = heap.Push(batch2)
-	assert.NoError(t, err)
+	heap.Push(batch1)
+	heap.Push(batch2)
 
 	assert.Equal(t, 2, heap.Size())
 
@@ -87,7 +86,7 @@ func TestRetryHeapProcessor(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 	defer processor.Stop()
 
 	// Test start/stop
@@ -106,7 +105,7 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Create expired batch
 	target := Target{Group: "group", Stream: "stream"}
@@ -130,7 +129,7 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
@@ -169,8 +168,8 @@ func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
 	go func() {
 		batch3 := newLogEventBatch(target, nil)
 		batch3.nextRetryTime = time.Now().Add(-1 * time.Hour)
-		err := heap.Push(batch3) // This should block on semaphore
-		pushResult <- err
+		heap.Push(batch3) // This should block on semaphore
+		pushResult <- nil
 	}()
 
 	// Verify the push is blocked (expects no result in channel)
@@ -213,7 +212,7 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Process with empty heap - should not panic
 	processor.processReadyMessages()
@@ -235,7 +234,7 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour)
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	processor.Start()
 	defer processor.Stop()
@@ -259,4 +258,65 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	mockService.AssertExpectations(t)
 	// Batch should be back in heap after async failure
 	assert.Equal(t, 1, heap.Size(), "Failed batch should go back to RetryHeap after async processing")
+}
+
+func TestRetryHeapStopTwice(t *testing.T) {
+	rh := NewRetryHeap(5)
+
+	// Call Stop twice - should not panic
+	rh.Stop()
+	rh.Stop()
+
+	// After stopping, Push should drop the batch silently
+	target := Target{Group: "test-group", Stream: "test-stream"}
+	batch := newLogEventBatch(target, nil)
+
+	rh.Push(batch) // Should not panic or return error
+
+	// Verify heap is empty (nothing was pushed)
+	assert.Equal(t, 0, rh.Size())
+}
+
+func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
+	heap := NewRetryHeap(10)
+	defer heap.Stop()
+
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+	mockService := &mockLogsService{}
+	mockTargetManager := &mockTargetManager{}
+
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+
+	// Add a ready batch to the heap
+	target := Target{Group: "group", Stream: "stream"}
+	batch := newLogEventBatch(target, nil)
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second) // Ready for retry
+	heap.Push(batch)
+
+	// Verify batch is in heap
+	assert.Equal(t, 1, heap.Size())
+
+	// Stop the processor (this will process the batch as part of shutdown)
+	processor.Stop()
+
+	// Verify the processor processed the batch during shutdown (heap is now empty)
+	assert.Equal(t, 0, heap.Size())
+
+	// Add another batch after stopping
+	batch2 := newLogEventBatch(target, nil)
+	batch2.nextRetryTime = time.Now().Add(-1 * time.Second)
+	heap.Push(batch2)
+	assert.Equal(t, 1, heap.Size())
+
+	// Calling processReadyMessages on stopped processor should not panic and should not process
+	assert.NotPanics(t, func() {
+		processor.processReadyMessages()
+	})
+
+	// Verify the stopped processor didn't process the new batch
+	assert.Equal(t, 1, heap.Size())
+
+	// Verify processor is marked as stopped
+	assert.True(t, processor.stopped)
 }

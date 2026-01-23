@@ -5,11 +5,12 @@ package pusher
 
 import (
 	"container/heap"
-	"errors"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
 // retryHeapImpl implements heap.Interface for logEventBatch sorted by nextRetryTime
@@ -40,7 +41,7 @@ func (h *retryHeapImpl) Pop() interface{} {
 
 // RetryHeap manages failed batches during their retry wait periods
 type RetryHeap interface {
-	Push(batch *logEventBatch) error
+	Push(batch *logEventBatch)
 	PopReady() []*logEventBatch
 	Size() int
 	Stop()
@@ -52,6 +53,7 @@ type retryHeap struct {
 	semaphore chan struct{} // Size enforcer
 	stopCh    chan struct{}
 	maxSize   int
+	stopped   bool
 }
 
 var _ RetryHeap = (*retryHeap)(nil)
@@ -69,7 +71,7 @@ func NewRetryHeap(maxSize int) RetryHeap {
 }
 
 // Push adds a batch to the heap, blocking if full
-func (rh *retryHeap) Push(batch *logEventBatch) error {
+func (rh *retryHeap) Push(batch *logEventBatch) {
 	// Acquire semaphore slot (blocks if at maxSize capacity)
 	select {
 	case rh.semaphore <- struct{}{}:
@@ -77,9 +79,11 @@ func (rh *retryHeap) Push(batch *logEventBatch) error {
 		rh.mutex.Lock()
 		heap.Push(&rh.heap, batch)
 		rh.mutex.Unlock()
-		return nil
+		return
 	case <-rh.stopCh:
-		return errors.New("retry heap stopped")
+		// RetryHeap is stopped, drop the batch
+		batch.updateState()
+		return
 	}
 }
 
@@ -111,21 +115,27 @@ func (rh *retryHeap) Size() int {
 
 // Stop stops the retry heap
 func (rh *retryHeap) Stop() {
+	if rh.stopped {
+		return
+	}
 	close(rh.stopCh)
+	rh.stopped = true
 }
 
 // RetryHeapProcessor manages the retry heap and moves ready batches back to sender queue
 type RetryHeapProcessor struct {
 	retryHeap        RetryHeap
 	senderPool       Sender
+	retryer          *retryer.LogThrottleRetryer
 	stopCh           chan struct{}
 	logger           telegraf.Logger
 	stopped          bool
 	maxRetryDuration time.Duration
+	wg               sync.WaitGroup
 }
 
 // NewRetryHeapProcessor creates a new retry heap processor
-func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration) *RetryHeapProcessor {
+func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
 	sender := newSender(logger, service, targetManager, maxRetryDuration, retryHeap)
@@ -134,6 +144,7 @@ func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service c
 	return &RetryHeapProcessor{
 		retryHeap:        retryHeap,
 		senderPool:       senderPool,
+		retryer:          retryer,
 		stopCh:           make(chan struct{}),
 		logger:           logger,
 		stopped:          false,
@@ -143,6 +154,7 @@ func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service c
 
 // Start begins processing the retry heap every 100ms
 func (p *RetryHeapProcessor) Start() {
+	p.wg.Add(1)
 	go p.processLoop()
 }
 
@@ -155,13 +167,16 @@ func (p *RetryHeapProcessor) Stop() {
 	// Process any remaining batches before stopping
 	p.processReadyMessages()
 
+	p.retryer.Stop()
 	p.senderPool.Stop()
 	close(p.stopCh)
+	p.wg.Wait()
 	p.stopped = true
 }
 
 // processLoop runs the main processing loop
 func (p *RetryHeapProcessor) processLoop() {
+	defer p.wg.Done()
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -177,6 +192,10 @@ func (p *RetryHeapProcessor) processLoop() {
 
 // processReadyMessages checks the heap for ready batches and moves them back to sender queue
 func (p *RetryHeapProcessor) processReadyMessages() {
+	if p.stopped {
+		return
+	}
+
 	readyBatches := p.retryHeap.PopReady()
 
 	for _, batch := range readyBatches {

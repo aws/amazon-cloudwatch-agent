@@ -90,6 +90,10 @@ func (c *CloudWatchLogs) Connect() error {
 
 func (c *CloudWatchLogs) Close() error {
 
+	if c.retryHeap != nil {
+		c.retryHeap.Stop()
+	}
+
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
 			d.Stop()
@@ -99,16 +103,12 @@ func (c *CloudWatchLogs) Close() error {
 
 	c.pusherWaitGroup.Wait()
 
-	if c.workerPool != nil {
-		c.workerPool.Stop()
-	}
-
 	if c.retryHeapProcessor != nil {
 		c.retryHeapProcessor.Stop()
 	}
 
-	if c.retryHeap != nil {
-		c.retryHeap.Stop()
+	if c.workerPool != nil {
+		c.workerPool.Stop()
 	}
 
 	return nil
@@ -164,7 +164,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 
 			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
 			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
-			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, maxRetryTimeout)
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, maxRetryTimeout, retryHeapProcessorRetryer)
 			c.retryHeapProcessor.Start()
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
