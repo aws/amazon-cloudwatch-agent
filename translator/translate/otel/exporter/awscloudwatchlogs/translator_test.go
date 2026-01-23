@@ -34,6 +34,16 @@ func testMetadata() *logsutil.Metadata {
 func TestTranslator(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
 	defer cloudmetadata.ResetGlobalProvider()
+
+	// Set mock provider to ensure consistent behavior across all environments (including Azure CI)
+	mock := &cloudmetadata.MockProvider{
+		InstanceID: "some_instance_id",
+		Hostname:   "some_hostname",
+		PrivateIP:  "some_private_ip",
+		AccountID:  "some_account_id",
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
@@ -41,7 +51,7 @@ func TestTranslator(t *testing.T) {
 		"profile":                "some_profile",
 		"shared_credential_file": "/some/credentials",
 	}
-	globallogs.GlobalLogConfig.MetadataInfo = logsutil.GetMetadataInfo(testMetadata)
+	globallogs.GlobalLogConfig.MetadataInfo = logsutil.GetMetadataInfo(nil)
 	tt := NewTranslatorWithName(common.PipelineNameEmfLogs)
 	require.EqualValues(t, "awscloudwatchlogs/emf_logs", tt.ID().String())
 	testCases := map[string]struct {
