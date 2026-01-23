@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata/azure"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
@@ -33,7 +35,8 @@ const (
 	unknownInstanceType = "UNKNOWN-TYPE"
 	unknownImageID      = "UNKNOWN-AMI"
 
-	awsPlaceholderPrefix = "${aws:"
+	awsPlaceholderPrefix   = "${aws:"
+	azurePlaceholderPrefix = "${azure:"
 )
 
 type Metadata struct {
@@ -71,9 +74,9 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 		tmpString = instanceIdPlaceholder
 	}
 	for k, v := range metadata {
-		tmpString = strings.Replace(tmpString, k, v, -1)
+		tmpString = strings.ReplaceAll(tmpString, k, v)
 	}
-	tmpString = strings.Replace(tmpString, datePlaceholder, time.Now().Format("2006-01-02"), -1)
+	tmpString = strings.ReplaceAll(tmpString, datePlaceholder, time.Now().Format("2006-01-02"))
 	return tmpString
 }
 
@@ -85,8 +88,61 @@ func defaultIfEmpty(value, defaultValue string) string {
 }
 
 func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
-	md := provider()
 	localHostname := getHostName()
+
+	// Try cloudmetadata singleton first (supports multi-cloud)
+	if cloudProvider := cloudmetadata.GetGlobalProviderOrNil(); cloudProvider != nil {
+		cloudType := cloudmetadata.CloudProvider(cloudProvider.GetCloudProvider()).String()
+		log.Printf("I! [placeholderUtil] Using cloudmetadata provider (cloud=%s)", cloudType)
+
+		instanceID := defaultIfEmpty(cloudProvider.GetInstanceID(), unknownInstanceID)
+		hostname := defaultIfEmpty(cloudProvider.GetHostname(), localHostname)
+		privateIP := cloudProvider.GetPrivateIP()
+		if privateIP == "" {
+			log.Printf("D! [placeholderUtil] cloudmetadata returned empty PrivateIP, using local IP fallback")
+			privateIP = getIpAddress()
+		}
+		region := defaultIfEmpty(cloudProvider.GetRegion(), unknownAwsRegion)
+		accountID := defaultIfEmpty(cloudProvider.GetAccountID(), unknownAccountID)
+
+		// Use agent config region if available (user override)
+		if agent.Global_Config.Region != "" {
+			region = agent.Global_Config.Region
+		}
+
+		log.Printf("I! [placeholderUtil] Resolved via cloudmetadata: instanceId=%s, hostname=%s, region=%s, accountId=%s, privateIP=%s",
+			cloudmetadata.MaskValue(instanceID), hostname, region, cloudmetadata.MaskValue(accountID), cloudmetadata.MaskIPAddress(privateIP))
+
+		return map[string]string{
+			instanceIdPlaceholder:    instanceID,
+			hostnamePlaceholder:      hostname,
+			localHostnamePlaceholder: localHostname,
+			ipAddressPlaceholder:     privateIP,
+			awsRegionPlaceholder:     region,
+			accountIdPlaceholder:     accountID,
+		}
+	}
+
+	// Fallback: Check if we're on Azure (legacy path)
+	if azure.IsAzure() {
+		log.Printf("D! [placeholderUtil] cloudmetadata not available, using legacy Azure provider")
+		return getAzureMetadataInfo()
+	}
+
+	// Fallback: AWS legacy path using provider function
+	if provider == nil {
+		log.Printf("W! [placeholderUtil] No provider available and cloudmetadata not initialized, using defaults")
+		return map[string]string{
+			instanceIdPlaceholder:    unknownInstanceID,
+			hostnamePlaceholder:      localHostname,
+			localHostnamePlaceholder: localHostname,
+			ipAddressPlaceholder:     getIpAddress(),
+			awsRegionPlaceholder:     unknownAwsRegion,
+			accountIdPlaceholder:     unknownAccountID,
+		}
+	}
+	log.Printf("D! [placeholderUtil] cloudmetadata not available, using legacy AWS provider")
+	md := provider()
 
 	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
 	hostname := defaultIfEmpty(md.Hostname, localHostname)
@@ -94,12 +150,47 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	awsRegion := defaultIfEmpty(agent.Global_Config.Region, unknownAwsRegion)
 	accountID := defaultIfEmpty(md.AccountID, unknownAccountID)
 
+	log.Printf("D! [placeholderUtil] Resolved via legacy: instanceId=%s, region=%s, privateIP=%s",
+		cloudmetadata.MaskValue(instanceID), awsRegion, cloudmetadata.MaskIPAddress(ipAddress))
+
 	return map[string]string{
 		instanceIdPlaceholder:    instanceID,
 		hostnamePlaceholder:      hostname,
 		localHostnamePlaceholder: localHostname,
 		ipAddressPlaceholder:     ipAddress,
 		awsRegionPlaceholder:     awsRegion,
+		accountIdPlaceholder:     accountID,
+	}
+}
+
+// getAzureMetadataInfo returns metadata info for Azure
+func getAzureMetadataInfo() map[string]string {
+	localHostname := getHostName()
+	ipAddress := getIpAddress()
+
+	instanceID := unknownInstanceID
+	accountID := unknownAccountID
+	region := unknownAwsRegion
+
+	// Try cloudmetadata provider first
+	if provider := cloudmetadata.GetGlobalProviderOrNil(); provider != nil && provider.GetCloudProvider() == int(cloudmetadata.CloudProviderAzure) {
+		if id := provider.GetInstanceID(); id != "" {
+			instanceID = id
+		}
+		if acct := provider.GetAccountID(); acct != "" {
+			accountID = acct
+		}
+		if reg := provider.GetRegion(); reg != "" {
+			region = reg
+		}
+	}
+
+	return map[string]string{
+		instanceIdPlaceholder:    instanceID,
+		hostnamePlaceholder:      localHostname,
+		localHostnamePlaceholder: localHostname,
+		ipAddressPlaceholder:     ipAddress,
+		awsRegionPlaceholder:     region,
 		accountIdPlaceholder:     accountID,
 	}
 }
@@ -180,8 +271,23 @@ func getAWSMetadataWithTags(needsTags bool) map[string]string {
 	return metadata
 }
 
+// ResolveAWSMetadataPlaceholders resolves AWS-specific placeholders like ${aws:InstanceId}
+//
+// Behavior: Keys with unresolved placeholders are OMITTED from the result map.
+// This preserves backward compatibility with existing behavior where configuration
+// entries with unavailable metadata are silently dropped rather than left as placeholders.
+//
+// Example:
+//
+//	Input:  {"name": "${aws:InstanceId}", "static": "value"}
+//	Output: {"static": "value"}  // if InstanceId unavailable
+//	Output: {"name": "i-123", "static": "value"}  // if InstanceId available
 func ResolveAWSMetadataPlaceholders(input any) any {
-	inputMap := input.(map[string]interface{})
+	inputMap, ok := input.(map[string]interface{})
+	if !ok {
+		log.Printf("W! [placeholderUtil] ResolveAWSMetadataPlaceholders: input is not map[string]interface{}, returning unchanged")
+		return input
+	}
 	result := make(map[string]any, len(inputMap))
 
 	hasAWSPlaceholders := false
@@ -203,12 +309,134 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 
 	for k, v := range inputMap {
 		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
-			if replacement, exists := metadata[vStr]; exists {
-				result[k] = replacement
+			// Support embedded placeholders: replace all occurrences in the string
+			resolved := vStr
+			for placeholder, replacement := range metadata {
+				resolved = strings.ReplaceAll(resolved, placeholder, replacement)
 			}
+			// Only include if fully resolved (no placeholders remain)
+			if !strings.Contains(resolved, awsPlaceholderPrefix) {
+				result[k] = resolved
+			}
+			// Otherwise omit the key
 		} else {
 			result[k] = v
 		}
 	}
+	return result
+}
+
+// ResolveAzureMetadataPlaceholders resolves Azure-specific placeholders like ${azure:InstanceId}
+//
+// Behavior: Keys with unresolved placeholders are OMITTED from the result map.
+// This matches AWS placeholder behavior for consistency.
+//
+// Example:
+//
+//	Input:  {"name": "${azure:InstanceId}", "static": "value"}
+//	Output: {"static": "value"}  // if InstanceId unavailable
+//	Output: {"name": "vm-123", "static": "value"}  // if InstanceId available
+func ResolveAzureMetadataPlaceholders(input any) any {
+	inputMap, ok := input.(map[string]interface{})
+	if !ok {
+		log.Printf("W! [placeholderUtil] ResolveAzureMetadataPlaceholders: input is not map[string]interface{}, returning unchanged")
+		return input
+	}
+	result := make(map[string]any, len(inputMap))
+
+	hasAzurePlaceholders := false
+
+	for _, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, azurePlaceholderPrefix) {
+			hasAzurePlaceholders = true
+			break
+		}
+	}
+
+	var metadata map[string]string
+	if hasAzurePlaceholders {
+		metadata = getAzureMetadata()
+	}
+
+	for k, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, azurePlaceholderPrefix) {
+			// Support embedded placeholders: replace all occurrences in the string
+			resolved := vStr
+			for placeholder, replacement := range metadata {
+				resolved = strings.ReplaceAll(resolved, placeholder, replacement)
+			}
+			// Only include if fully resolved (no placeholders remain)
+			if !strings.Contains(resolved, azurePlaceholderPrefix) {
+				result[k] = resolved
+			}
+			// Otherwise omit the key (backward compatible behavior)
+		} else {
+			result[k] = v
+		}
+	}
+
+	return result
+}
+
+// getAzureMetadata returns Azure metadata from cloudmetadata provider
+func getAzureMetadata() map[string]string {
+	log.Println("D! [Azure Metadata] Fetching Azure metadata from cloudmetadata provider...")
+
+	provider := cloudmetadata.GetGlobalProviderOrNil()
+	if provider == nil || provider.GetCloudProvider() != int(cloudmetadata.CloudProviderAzure) {
+		log.Println("W! Azure cloudmetadata provider not available, returning empty values")
+		return map[string]string{
+			"${azure:InstanceId}":        "",
+			"${azure:InstanceType}":      "",
+			"${azure:ImageId}":           "",
+			"${azure:VmScaleSetName}":    "",
+			"${azure:ResourceGroupName}": "",
+		}
+	}
+
+	return map[string]string{
+		"${azure:InstanceId}":        provider.GetInstanceID(),
+		"${azure:InstanceType}":      provider.GetInstanceType(),
+		"${azure:ImageId}":           provider.GetImageID(),
+		"${azure:VmScaleSetName}":    provider.GetScalingGroupName(),
+		"${azure:ResourceGroupName}": provider.GetResourceGroupName(),
+	}
+}
+
+// ResolveCloudMetadataPlaceholders resolves both AWS and Azure placeholders
+// Detects cloud provider and uses appropriate resolver.
+//
+// Resolution order: Azure placeholders first, then AWS placeholders.
+// Keys with unresolved placeholders are omitted from the result.
+func ResolveCloudMetadataPlaceholders(input any) any {
+	inputMap, ok := input.(map[string]interface{})
+	if !ok {
+		log.Printf("W! [placeholderUtil] ResolveCloudMetadataPlaceholders: input is not map[string]interface{}, returning unchanged")
+		return input
+	}
+
+	hasAzure := false
+	hasAWS := false
+
+	for _, v := range inputMap {
+		if vStr, ok := v.(string); ok {
+			if strings.Contains(vStr, azurePlaceholderPrefix) {
+				hasAzure = true
+			}
+			if strings.Contains(vStr, awsPlaceholderPrefix) {
+				hasAWS = true
+			}
+		}
+	}
+
+	result := input
+	if hasAzure {
+		result = ResolveAzureMetadataPlaceholders(result)
+	}
+
+	if hasAWS {
+		result = ResolveAWSMetadataPlaceholders(result)
+	}
+
 	return result
 }
