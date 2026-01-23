@@ -344,11 +344,19 @@ func TestProvider_GetVolumeID(t *testing.T) {
 }
 
 func TestProvider_Refresh_Timeout(t *testing.T) {
+	// Create a server that delays longer than the client timeout
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
 	logger := zap.NewNop()
 	p := &Provider{
-		logger: logger,
+		logger:       logger,
+		imdsEndpoint: server.URL,
 		httpClient: &http.Client{
-			Timeout: 100 * time.Millisecond,
+			Timeout: 50 * time.Millisecond,
 		},
 		diskMap: make(map[string]string),
 	}
@@ -356,12 +364,10 @@ func TestProvider_Refresh_Timeout(t *testing.T) {
 	ctx := context.Background()
 	err := p.Refresh(ctx)
 
-	// Should fail (real IMDS not available in test)
 	if err == nil {
 		t.Error("Refresh() expected error, got nil")
 	}
 
-	// Should mark as unavailable
 	if p.IsAvailable() {
 		t.Error("IsAvailable() = true after failed refresh, want false")
 	}
