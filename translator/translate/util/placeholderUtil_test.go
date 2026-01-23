@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata/azure"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
@@ -32,7 +33,16 @@ func TestGetMetadataInfo(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
 	defer cloudmetadata.ResetGlobalProvider()
 
-	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, dummyPrivateIp, dummyAccountId))
+	// Use mock provider to ensure consistent behavior across all environments
+	mock := &cloudmetadata.MockProvider{
+		InstanceID: dummyInstanceId,
+		Hostname:   dummyHostName,
+		PrivateIP:  dummyPrivateIp,
+		AccountID:  dummyAccountId,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	m := GetMetadataInfo(nil)
 	assert.Equal(t, dummyInstanceId, m[instanceIdPlaceholder])
 	assert.Equal(t, dummyHostName, m[hostnamePlaceholder])
 	assert.Equal(t, dummyPrivateIp, m[ipAddressPlaceholder])
@@ -43,7 +53,15 @@ func TestGetMetadataInfoEmptyInstanceId(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
 	defer cloudmetadata.ResetGlobalProvider()
 
-	m := GetMetadataInfo(mockMetadataProvider("", dummyHostName, dummyPrivateIp, dummyAccountId))
+	mock := &cloudmetadata.MockProvider{
+		InstanceID: "",
+		Hostname:   dummyHostName,
+		PrivateIP:  dummyPrivateIp,
+		AccountID:  dummyAccountId,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	m := GetMetadataInfo(nil)
 	assert.Equal(t, unknownInstanceID, m[instanceIdPlaceholder])
 }
 
@@ -51,7 +69,15 @@ func TestGetMetadataInfoUsesLocalHostname(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
 	defer cloudmetadata.ResetGlobalProvider()
 
-	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, "", dummyPrivateIp, dummyAccountId))
+	mock := &cloudmetadata.MockProvider{
+		InstanceID: dummyInstanceId,
+		Hostname:   "",
+		PrivateIP:  dummyPrivateIp,
+		AccountID:  dummyAccountId,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	m := GetMetadataInfo(nil)
 	assert.Equal(t, getHostName(), m[hostnamePlaceholder])
 }
 
@@ -59,7 +85,15 @@ func TestGetMetadataInfoDerivesIpAddress(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
 	defer cloudmetadata.ResetGlobalProvider()
 
-	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, "", dummyAccountId))
+	mock := &cloudmetadata.MockProvider{
+		InstanceID: dummyInstanceId,
+		Hostname:   dummyHostName,
+		PrivateIP:  "",
+		AccountID:  dummyAccountId,
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	m := GetMetadataInfo(nil)
 	assert.Equal(t, getIpAddress(), m[ipAddressPlaceholder])
 }
 
@@ -67,7 +101,15 @@ func TestGetMetadataInfoEmptyAccountId(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
 	defer cloudmetadata.ResetGlobalProvider()
 
-	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, dummyPrivateIp, ""))
+	mock := &cloudmetadata.MockProvider{
+		InstanceID: dummyInstanceId,
+		Hostname:   dummyHostName,
+		PrivateIP:  dummyPrivateIp,
+		AccountID:  "",
+	}
+	cloudmetadata.SetGlobalProviderForTest(mock)
+
+	m := GetMetadataInfo(nil)
 	assert.Equal(t, unknownAccountID, m[accountIdPlaceholder])
 }
 
@@ -301,7 +343,12 @@ func TestGetMetadataInfo_WithCloudmetadataSingleton(t *testing.T) {
 
 func TestGetMetadataInfo_FallbackToLegacy(t *testing.T) {
 	cloudmetadata.ResetGlobalProvider()
-	// Don't set singleton - test fallback
+	defer cloudmetadata.ResetGlobalProvider()
+
+	// Skip on Azure since the fallback path won't be taken when azure.IsAzure() returns true
+	if azure.IsAzure() {
+		t.Skip("Skipping legacy fallback test on Azure - Azure path takes precedence")
+	}
 
 	legacyMock := mockMetadataProvider("i-legacy456", "legacy-host", "10.0.0.99", "111222333444")
 

@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -31,6 +32,8 @@ func testMetadata() *logsutil.Metadata {
 }
 
 func TestTranslator(t *testing.T) {
+	cloudmetadata.ResetGlobalProvider()
+	defer cloudmetadata.ResetGlobalProvider()
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
