@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/jellydator/ttlcache/v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
@@ -83,11 +83,11 @@ func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Reques
 	if r.ContentLength > 0 {
 		recorder.payloadBytes = r.ContentLength
 	} else if r.Body != nil {
-		rsc, ok := r.Body.(aws.ReaderSeekerCloser)
+		seeker, ok := r.Body.(io.Seeker)
 		if !ok {
-			rsc = aws.ReadSeekCloser(r.Body)
+			seeker = readSeekCloser(r.Body)
 		}
-		if length, _ := aws.SeekerLen(rsc); length > 0 {
+		if length, _ := seekerLen(seeker); length > 0 {
 			recorder.payloadBytes = length
 		} else if body, err := r.GetBody(); err == nil {
 			recorder.payloadBytes, _ = io.Copy(io.Discard, body)

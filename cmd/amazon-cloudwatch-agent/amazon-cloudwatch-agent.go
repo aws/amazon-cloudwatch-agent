@@ -33,7 +33,6 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	configaws2 "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
@@ -176,7 +175,6 @@ func reloadLoop(
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 							configaws.SetSDKLogLevel(sdkLogLevel)
-							configaws2.SetSDKLogLevel(sdkLogLevel)
 							previousModTime = info.ModTime()
 						}
 					case <-ctx.Done():
@@ -296,7 +294,6 @@ func runAgent(ctx context.Context,
 		log.Printf("I! AWS SDK log level, %s\n", sdkLogLevel)
 	}
 	configaws.SetSDKLogLevel(sdkLogLevel)
-	configaws2.SetSDKLogLevel(sdkLogLevel)
 
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second

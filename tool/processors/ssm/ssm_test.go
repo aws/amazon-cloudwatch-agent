@@ -4,6 +4,7 @@
 package ssm
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,29 +24,28 @@ func TestDetermineCreds(t *testing.T) {
 
 	ctx := new(runtime.Context)
 
-	accessKey, secretKey, creds := util.SDKCredentials()
+	accessKey, secretKey, creds := util.SDKCredentials(context.Background())
 	if creds != nil {
 		testutil.Type(inputChan, "")
 		actualCreds := determineCreds(ctx)
-		value, err := actualCreds.Get()
+		value, err := actualCreds.Retrieve(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, accessKey, value.AccessKeyID)
 		assert.Equal(t, secretKey, value.SecretAccessKey)
 
 		testutil.Type(inputChan, "2", "AK1", "SK1")
 		actualCreds = determineCreds(ctx)
-		value, err = actualCreds.Get()
+		value, err = actualCreds.Retrieve(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, "AK1", value.AccessKeyID)
 		assert.Equal(t, "SK1", value.SecretAccessKey)
 	} else {
 		testutil.Type(inputChan, "AK1", "SK1")
 		actualCreds := determineCreds(ctx)
-		value, err := actualCreds.Get()
+		value, err := actualCreds.Retrieve(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, "AK1", value.AccessKeyID)
 		assert.Equal(t, "SK1", value.SecretAccessKey)
-
 	}
 }
 

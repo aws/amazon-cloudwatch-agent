@@ -4,10 +4,12 @@
 package tagutil
 
 import (
+	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -17,8 +19,8 @@ type MockEC2TagsClient struct {
 	mock.Mock
 }
 
-func (m *MockEC2TagsClient) DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
-	args := m.Called(input)
+func (m *MockEC2TagsClient) DescribeTags(ctx context.Context, input *ec2.DescribeTagsInput, _ ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
+	args := m.Called(ctx, input)
 	return args.Get(0).(*ec2.DescribeTagsOutput), args.Error(1)
 }
 
@@ -26,7 +28,7 @@ func TestGetAutoScalingGroupName(t *testing.T) {
 	ResetTagsCache()
 
 	mockClient := &MockEC2TagsClient{}
-	mockTags := []*ec2.TagDescription{
+	mockTags := []types.TagDescription{
 		{
 			Key:   aws.String("aws:autoscaling:groupName"),
 			Value: aws.String("my-asg-group"),
@@ -41,15 +43,13 @@ func TestGetAutoScalingGroupName(t *testing.T) {
 		Tags: mockTags,
 	}
 
-	mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
+	mockClient.On("DescribeTags", mock.Anything, mock.Anything).Return(mockOutput, nil)
 
-	SetEC2APIProviderForTesting(func() interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	} {
+	SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
 		return mockClient
 	})
 
-	result := GetAutoScalingGroupName("i-1234567890abcdef0")
+	result := GetAutoScalingGroupName(t.Context(), "i-1234567890abcdef0")
 	assert.Equal(t, "my-asg-group", result)
 	mockClient.AssertExpectations(t)
 
@@ -62,7 +62,7 @@ func TestGetEKSClusterName(t *testing.T) {
 	ResetTagsCache()
 
 	mockClient := &MockEC2TagsClient{}
-	mockTags := []*ec2.TagDescription{
+	mockTags := []types.TagDescription{
 		{
 			Key:   aws.String("kubernetes.io/cluster/my-eks-cluster"),
 			Value: aws.String("owned"),
@@ -77,15 +77,13 @@ func TestGetEKSClusterName(t *testing.T) {
 		Tags: mockTags,
 	}
 
-	mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
+	mockClient.On("DescribeTags", mock.Anything, mock.Anything).Return(mockOutput, nil)
 
-	SetEC2APIProviderForTesting(func() interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	} {
+	SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
 		return mockClient
 	})
 
-	result := GetEKSClusterName("i-1234567890abcdef0")
+	result := GetEKSClusterName(t.Context(), "i-1234567890abcdef0")
 	assert.Equal(t, "my-eks-cluster", result)
 	mockClient.AssertExpectations(t)
 
@@ -99,17 +97,15 @@ func TestGetEKSClusterName_EmptyResult(t *testing.T) {
 
 	mockClient := &MockEC2TagsClient{}
 	mockOutput := &ec2.DescribeTagsOutput{
-		Tags: []*ec2.TagDescription{},
+		Tags: []types.TagDescription{},
 	}
 
-	mockClient.On("DescribeTags", mock.Anything).Return(mockOutput, nil)
-	SetEC2APIProviderForTesting(func() interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	} {
+	mockClient.On("DescribeTags", mock.Anything, mock.Anything).Return(mockOutput, nil)
+	SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
 		return mockClient
 	})
 
-	result := GetEKSClusterName("i-1234567890abcdef0")
+	result := GetEKSClusterName(t.Context(), "i-1234567890abcdef0")
 	assert.Equal(t, "", result)
 
 	// Clean up
@@ -126,9 +122,7 @@ func TestLoadAllTagsWithPagination(t *testing.T) {
 	paginatedClient := &MockEC2TagsClientWithPagination{}
 
 	// Set the mock provider with our custom client
-	SetEC2APIProviderForTesting(func() interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	} {
+	SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
 		return paginatedClient
 	})
 
@@ -138,7 +132,7 @@ func TestLoadAllTagsWithPagination(t *testing.T) {
 	}()
 
 	// Test GetEKSClusterName to trigger loadAllTags and verify all tags were loaded
-	clusterName := GetEKSClusterName(instanceID)
+	clusterName := GetEKSClusterName(t.Context(), instanceID)
 	assert.Equal(t, "my-cluster", clusterName)
 
 	// Verify that both API calls were made (pagination worked)
@@ -150,13 +144,13 @@ type MockEC2TagsClientWithPagination struct {
 	callCount int
 }
 
-func (m *MockEC2TagsClientWithPagination) DescribeTags(_ *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
+func (m *MockEC2TagsClientWithPagination) DescribeTags(context.Context, *ec2.DescribeTagsInput, ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
 	m.callCount++
 
 	if m.callCount == 1 {
 		// First page of results
 		return &ec2.DescribeTagsOutput{
-			Tags: []*ec2.TagDescription{
+			Tags: []types.TagDescription{
 				{
 					Key:   aws.String("Name"),
 					Value: aws.String("test-instance"),
@@ -171,7 +165,7 @@ func (m *MockEC2TagsClientWithPagination) DescribeTags(_ *ec2.DescribeTagsInput)
 	}
 	// Second page of results
 	return &ec2.DescribeTagsOutput{
-		Tags: []*ec2.TagDescription{
+		Tags: []types.TagDescription{
 			{
 				Key:   aws.String("kubernetes.io/cluster/my-cluster"),
 				Value: aws.String("owned"),

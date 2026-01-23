@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/collector/processor/processortest"
 	"golang.org/x/exp/maps"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 )
 
 type mockEC2Client struct {

@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
 type MetadataProvider interface {
