@@ -4,24 +4,22 @@
 package ec2util
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
-// this is a singleton struct
-type ec2Util struct {
+// EC2Util is a singleton struct
+type EC2Util struct {
 	Region       string
 	PrivateIP    string
 	InstanceID   string
@@ -32,24 +30,24 @@ type ec2Util struct {
 }
 
 var (
-	ec2UtilInstance *ec2Util
+	ec2UtilInstance *EC2Util
 	once            sync.Once
 )
 
 const allowedRetries = 5
 
-func GetEC2UtilSingleton() *ec2Util {
+func GetEC2UtilSingleton() *EC2Util {
 	once.Do(func() {
 		ec2UtilInstance = initEC2UtilSingleton()
 	})
 	return ec2UtilInstance
 }
 
-func initEC2UtilSingleton() (newInstance *ec2Util) {
-	newInstance = &ec2Util{Region: "", PrivateIP: ""}
+func initEC2UtilSingleton() *EC2Util {
+	newInstance := &EC2Util{Region: "", PrivateIP: ""}
 
-	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise) {
-		return
+	if (translatorcontext.CurrentContext().Mode() == translatorconfig.ModeOnPrem) || (translatorcontext.CurrentContext().Mode() == translatorconfig.ModeOnPremise) {
+		return newInstance
 	}
 
 	// Need to account for the scenario where a user running the CloudWatch agent on-premises,
@@ -82,70 +80,38 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		fmt.Println("E! [EC2] No available network interface")
 	}
 
-	err := newInstance.deriveEC2MetadataFromIMDS()
-
-	if err != nil {
+	if err := newInstance.deriveEC2MetadataFromIMDS(context.Background()); err != nil {
 		fmt.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
 	}
 
-	return
+	return newInstance
 }
 
-func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
-	ses, err := session.NewSession()
-
+func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) error {
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return err
 	}
 
-	mdDisableFallback := ec2metadata.New(ses, &aws.Config{
-		LogLevel:                  configaws.SDKLogLevel(),
-		Logger:                    configaws.SDKLogger{},
-		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
-		EC2MetadataEnableFallback: aws.Bool(false),
-	})
-	mdEnableFallback := ec2metadata.New(ses, &aws.Config{
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
-	})
-
+	mdProvider := ec2metadataprovider.NewMetadataProvider(cfg, retryer.GetDefaultRetryNumber())
 	// ec2 and ecs treats retries for getting host name differently
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
-	if hostname, err := mdDisableFallback.GetMetadata("hostname"); err == nil {
-		e.Hostname = hostname
+	if hostname, err := mdProvider.Hostname(ctx); err != nil {
+		fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
 	} else {
-		fmt.Println("D! could not get hostname without imds v1 fallback enable thus enable fallback")
-		hostnameInner, errInner := mdEnableFallback.GetMetadata("hostname")
-		if errInner == nil {
-			e.Hostname = hostnameInner
-			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
-		} else {
-			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", errInner)
-		}
+		e.Hostname = hostname
 	}
 
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-	if instanceIdentityDocument, err := mdDisableFallback.GetInstanceIdentityDocument(); err == nil {
+	if instanceIdentityDocument, err := mdProvider.Get(ctx); err != nil {
+		fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", err)
+	} else {
 		e.Region = instanceIdentityDocument.Region
 		e.AccountID = instanceIdentityDocument.AccountID
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
 		e.InstanceType = instanceIdentityDocument.InstanceType
 		e.ImageID = instanceIdentityDocument.ImageID
-	} else {
-		fmt.Println("D! could not get instance document without imds v1 fallback enable thus enable fallback")
-		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocument()
-		if errInner == nil {
-			e.Region = instanceIdentityDocumentInner.Region
-			e.AccountID = instanceIdentityDocumentInner.AccountID
-			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
-			e.InstanceID = instanceIdentityDocumentInner.InstanceID
-			e.InstanceType = instanceIdentityDocumentInner.InstanceType
-			e.ImageID = instanceIdentityDocumentInner.ImageID
-			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
-		} else {
-			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
-		}
 	}
 
 	return nil
