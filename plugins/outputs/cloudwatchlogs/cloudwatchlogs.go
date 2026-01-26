@@ -89,6 +89,12 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
+	// Stop components in specific order to prevent race conditions:
+	// 1. RetryHeap - stop accepting new batches first
+	// 2. Pushers - stop all active pushers (queues/senders)
+	// 3. Wait for pushers to complete
+	// 4. RetryHeapProcessor - stop retry processing and wait for WorkerPool usage to complete
+	// 5. WorkerPool - finally stop the worker threads
 
 	if c.retryHeap != nil {
 		c.retryHeap.Stop()
@@ -160,7 +166,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	c.once.Do(func() {
 		if c.Concurrency > 1 {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
-			c.retryHeap = pusher.NewRetryHeap(c.Concurrency)
+			c.retryHeap = pusher.NewRetryHeap(c.Concurrency, c.Log)
 
 			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
 			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
@@ -169,7 +175,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup, c.Concurrency, c.retryHeap)
+	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup, c.retryHeap)
 	cwd := &cwDest{
 		pusher:   p,
 		retryer:  logThrottleRetryer,

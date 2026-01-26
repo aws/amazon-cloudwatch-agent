@@ -54,17 +54,19 @@ type retryHeap struct {
 	stopCh    chan struct{}
 	maxSize   int
 	stopped   bool
+	logger    telegraf.Logger
 }
 
 var _ RetryHeap = (*retryHeap)(nil)
 
 // NewRetryHeap creates a new retry heap with the specified maximum size
-func NewRetryHeap(maxSize int) RetryHeap {
+func NewRetryHeap(maxSize int, logger telegraf.Logger) RetryHeap {
 	rh := &retryHeap{
 		heap:      make(retryHeapImpl, 0, maxSize),
 		maxSize:   maxSize,
 		semaphore: make(chan struct{}, maxSize), // Semaphore for size enforcement
 		stopCh:    make(chan struct{}),
+		logger:    logger,
 	}
 	heap.Init(&rh.heap)
 	return rh
@@ -79,11 +81,10 @@ func (rh *retryHeap) Push(batch *logEventBatch) {
 		rh.mutex.Lock()
 		heap.Push(&rh.heap, batch)
 		rh.mutex.Unlock()
-		return
 	case <-rh.stopCh:
 		// RetryHeap is stopped, drop the batch
+		rh.logger.Errorf("Stop requested for %v/%v failed for PutLogEvents, request dropped.", batch.Group, batch.Stream)
 		batch.updateState()
-		return
 	}
 }
 
