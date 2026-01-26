@@ -163,6 +163,7 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
+        transit_spans_in_otlp_format: true
     debug/application_signals:
         sampling_initial: 2
         sampling_thereafter: 500

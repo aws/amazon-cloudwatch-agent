@@ -66,6 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if isAppSignals(conf) {
 		cfg.IndexedAttributes = indexedAttributes
+		cfg.TransitSpansInOtlpFormat = true
 	}
 
 	c := confmap.NewFromStringMap(map[string]interface{}{
