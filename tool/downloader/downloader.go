@@ -4,21 +4,20 @@
 package downloader
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -83,7 +82,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	mode = util.DetectAgentMode(mode)
 	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
 	if region == "" && downloadLocation != locationDefault {
-		if mode == config.ModeEC2 {
+		if mode == translatorconfig.ModeEC2 {
 			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
 		}
 		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
@@ -141,37 +140,31 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 }
 
 func defaultJSONConfig(mode string) (string, error) {
-	return config.DefaultJsonConfig(config.ToValidOs(""), mode), nil
+	return translatorconfig.DefaultJsonConfig(translatorconfig.ToValidOs(""), mode), nil
 }
 
 func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[string]string) (string, error) {
-	var ses *session.Session
+	ctx := context.Background()
+
+	// Build v2 credentials config
 	credsMap := util.GetCredentials(mode, credsConfig)
-	profile, profileOk := credsMap[commonconfig.CredentialProfile]
-	sharedConfigFile, sharedConfigFileOk := credsMap[commonconfig.CredentialFile]
-	rootconfig := &aws.Config{
-		Region:   aws.String(region),
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
-	}
-	if profileOk || sharedConfigFileOk {
-		rootconfig.Credentials = credentials.NewCredentials(&credentials.SharedCredentialsProvider{
-			Filename: sharedConfigFile,
-			Profile:  profile,
-		})
+	credConfig := &configaws.CredentialsConfig{
+		Region:   region,
+		Profile:  credsMap[commonconfig.CredentialProfile],
+		Filename: credsMap[commonconfig.CredentialFile],
 	}
 
-	ses, err := session.NewSession(rootconfig)
+	cfg, err := credConfig.LoadConfig(ctx)
 	if err != nil {
 		return "", fmt.Errorf("error in creating session: %v", err)
 	}
 
-	ssmClient := ssm.New(ses)
-	input := ssm.GetParameterInput{
+	ssmClient := ssm.NewFromConfig(cfg)
+	input := &ssm.GetParameterInput{
 		Name:           aws.String(parameterStoreName),
 		WithDecryption: aws.Bool(true),
 	}
-	output, err := ssmClient.GetParameter(&input)
+	output, err := ssmClient.GetParameter(ctx, input)
 	if err != nil {
 		return "", fmt.Errorf("error in retrieving parameter store content: %v", err)
 	}

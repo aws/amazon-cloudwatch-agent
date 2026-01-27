@@ -22,12 +22,15 @@ type RefreshableSharedCredentialsProvider struct {
 
 var _ aws.CredentialsProvider = (*RefreshableSharedCredentialsProvider)(nil)
 
-// Retrieve reads and extracts the shared credentials from the current
-// users home directory.
+// Retrieve reads and extracts the shared credentials from the current users home directory.
 func (p RefreshableSharedCredentialsProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
-	sharedConfig, err := config.LoadSharedConfigProfile(ctx, p.Profile, func(options *config.LoadSharedConfigOptions) {
-		options.CredentialsFiles = []string{p.Filename}
-	})
+	var opts []func(*config.LoadSharedConfigOptions)
+	if p.Filename != "" {
+		opts = append(opts, func(options *config.LoadSharedConfigOptions) {
+			options.CredentialsFiles = []string{p.Filename}
+		})
+	}
+	sharedConfig, err := config.LoadSharedConfigProfile(ctx, p.Profile, opts...)
 	if err != nil {
 		return aws.Credentials{}, err
 	}

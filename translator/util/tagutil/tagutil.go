@@ -4,22 +4,23 @@
 package tagutil
 
 import (
+	"context"
 	"log"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
 const (
 	defaultRetryCount          = 5
-	defaultBackoffDuration     = time.Duration(1 * time.Minute)
+	defaultBackoffDuration     = 1 * time.Minute
 	EKSClusterNameTagKeyPrefix = "kubernetes.io/cluster/"
 	autoScalingGroupNameTag    = "aws:autoscaling:groupName"
 	HighResolutionTagKey       = "aws:StorageResolution"
@@ -66,9 +67,9 @@ func getBackoffDuration(i int) time.Duration {
 }
 
 // encapsulate the retry logic in this separate method.
-func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error), input *ec2.DescribeTagsInput, errorMsg string) (*ec2.DescribeTagsOutput, error) {
+func callFuncWithRetries(fn func() (*ec2.DescribeTagsOutput, error), errorMsg string) (*ec2.DescribeTagsOutput, error) {
 	for i := 0; i <= defaultRetryCount; i++ {
-		result, err := fn(input)
+		result, err := fn()
 		if err == nil {
 			return result, nil
 		}
@@ -78,33 +79,29 @@ func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTag
 	return nil, nil
 }
 
-var ec2ClientFactory = func(_ string) (interface {
-	DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-}, error) {
+var ec2ClientFactory = createDescribeTagsClient
+
+func createDescribeTagsClient(ctx context.Context) (ec2.DescribeTagsAPIClient, error) {
 	region := ec2util.GetEC2UtilSingleton().Region
 	if region == "" {
 		return nil, nil
 	}
 
-	config := &aws.Config{
-		Region:                        aws.String(region),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		LogLevel:                      configaws.SDKLogLevel(),
-		Logger:                        configaws.SDKLogger{},
+	cfg := configaws.CredentialsConfig{
+		Region: region,
 	}
-
-	ses, err := session.NewSession(config)
+	awsCfg, err := cfg.LoadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return ec2.New(ses), nil
+	return ec2.NewFromConfig(awsCfg), nil
 }
 
 // loadAllTags loads all tags for the instance using retry logic
-func (tc *TagsCache) loadAllTags() {
+func (tc *TagsCache) loadAllTags(ctx context.Context) {
 	tc.once.Do(func() {
-		ec2Client, err := ec2ClientFactory(tc.instanceID)
+		ec2Client, err := ec2ClientFactory(ctx)
 		if err != nil {
 			log.Printf("E! loadAllTags: Failed to create EC2 client: %v", err)
 			return
@@ -114,14 +111,14 @@ func (tc *TagsCache) loadAllTags() {
 			return
 		}
 
-		tagFilters := []*ec2.Filter{
+		tagFilters := []types.Filter{
 			{
 				Name:   aws.String("resource-type"),
-				Values: aws.StringSlice([]string{"instance"}),
+				Values: []string{"instance"},
 			},
 			{
 				Name:   aws.String("resource-id"),
-				Values: aws.StringSlice([]string{tc.instanceID}),
+				Values: []string{tc.instanceID},
 			},
 		}
 
@@ -130,8 +127,12 @@ func (tc *TagsCache) loadAllTags() {
 		}
 
 		totalTags := 0
-		for {
-			result, err := callFuncWithRetries(ec2Client.DescribeTags, input, "Describe EC2 Tag Fail.")
+		paginator := ec2.NewDescribeTagsPaginator(ec2Client, input)
+		for paginator.HasMorePages() {
+			result, err := callFuncWithRetries(func() (*ec2.DescribeTagsOutput, error) {
+				return paginator.NextPage(ctx)
+			}, "Describe EC2 Tag Fail.")
+
 			if err != nil {
 				log.Printf("E! loadAllTags: DescribeTags failed: %v", err)
 				return
@@ -142,14 +143,6 @@ func (tc *TagsCache) loadAllTags() {
 				tc.tags[*tag.Key] = *tag.Value
 			}
 			totalTags += len(result.Tags)
-
-			// Check if there are more pages
-			if result.NextToken == nil {
-				break
-			}
-
-			// Set the next token for the next page
-			input.SetNextToken(*result.NextToken)
 		}
 
 		log.Printf("D! loadAllTags: Loaded %d tags", totalTags)
@@ -157,25 +150,25 @@ func (tc *TagsCache) loadAllTags() {
 }
 
 // GetAutoScalingGroupName gets the AutoScaling Group name for an instance
-func GetAutoScalingGroupName(instanceID string) string {
+func GetAutoScalingGroupName(ctx context.Context, instanceID string) string {
 	if instanceID == "" {
 		return ""
 	}
 
 	tc := getTagsCache(instanceID)
-	tc.loadAllTags()
+	tc.loadAllTags(ctx)
 
 	return tc.tags[autoScalingGroupNameTag]
 }
 
 // GetEKSClusterName gets the EKS cluster name for an instance
-func GetEKSClusterName(instanceID string) string {
+func GetEKSClusterName(ctx context.Context, instanceID string) string {
 	if instanceID == "" {
 		return ""
 	}
 
 	tc := getTagsCache(instanceID)
-	tc.loadAllTags()
+	tc.loadAllTags(ctx)
 
 	// Look for kubernetes.io/cluster/<cluster-name> tags with value "owned"
 	for key, value := range tc.tags {
@@ -205,39 +198,14 @@ func FilterReservedKeys(input any) any {
 }
 
 // Test functions
-func SetEC2APIProviderForTesting(provider func() interface {
-	DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-}) {
-	ec2ClientFactory = func(_ string) (interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	}, error) {
+func SetEC2APIProviderForTesting(provider func() ec2.DescribeTagsAPIClient) {
+	ec2ClientFactory = func(context.Context) (ec2.DescribeTagsAPIClient, error) {
 		return provider(), nil
 	}
 }
 
 func ResetEC2APIProvider() {
-	ec2ClientFactory = func(_ string) (interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	}, error) {
-		region := ec2util.GetEC2UtilSingleton().Region
-		if region == "" {
-			return nil, nil
-		}
-
-		config := &aws.Config{
-			Region:                        aws.String(region),
-			CredentialsChainVerboseErrors: aws.Bool(true),
-			LogLevel:                      configaws.SDKLogLevel(),
-			Logger:                        configaws.SDKLogger{},
-		}
-
-		ses, err := session.NewSession(config)
-		if err != nil {
-			return nil, err
-		}
-
-		return ec2.New(ses), nil
-	}
+	ec2ClientFactory = createDescribeTagsClient
 }
 
 func ResetTagsCache() {

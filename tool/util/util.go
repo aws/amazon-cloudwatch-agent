@@ -4,10 +4,10 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,12 +16,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
@@ -122,7 +121,6 @@ func SaveResultByteArrayToJsonFile(resultByteArray []byte, filePath string) stri
 	return filePath
 }
 func backupConfigFile(configFilePath, backupDirPath string) error {
-
 	err := os.MkdirAll(backupDirPath, 0755)
 	if err != nil {
 		return err
@@ -169,74 +167,43 @@ func backupConfigFile(configFilePath, backupDirPath string) error {
 	return err
 }
 
-func SDKRegion() (region string) {
-	ses, err := session.NewSession()
-
+func SDKRegionWithProfile(ctx context.Context, profile string) string {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
 	if err != nil {
-		return
+		return ""
 	}
-	if ses.Config != nil && ses.Config.Region != nil {
-		region = *ses.Config.Region
-	}
-	return region
+	return cfg.Region
 }
 
-func SDKRegionWithProfile(profile string) (region string) {
-	ses, err := session.NewSessionWithOptions(session.Options{Profile: profile, SharedConfigState: session.SharedConfigEnable})
-
+func SDKCredentials(ctx context.Context) (string, string, aws.CredentialsProvider) {
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return
+		return "", "", nil
 	}
-	if ses.Config != nil && ses.Config.Region != nil {
-		region = *ses.Config.Region
-	}
-	return region
-}
-
-func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentials) {
-	ses, err := session.NewSession()
-	if err != nil {
-		return
-	}
-	if ses.Config != nil && ses.Config.Credentials != nil {
-		if credsValue, err := ses.Config.Credentials.Get(); err == nil {
-			accessKey = credsValue.AccessKeyID
-			secretKey = credsValue.SecretAccessKey
-			creds = ses.Config.Credentials
+	if cfg.Credentials != nil {
+		if credsValue, err := cfg.Credentials.Retrieve(ctx); err == nil {
+			return credsValue.AccessKeyID, credsValue.SecretAccessKey, cfg.Credentials
 		}
 	}
-	return
+	return "", "", nil
 }
 
-func DefaultEC2Region() (region string) {
+func DefaultEC2Region(ctx context.Context) string {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
-	// imds should by the time user can run the wizard
-	sesFallBackDisabled, err := session.NewSession(&aws.Config{
-		LogLevel:                  configaws.SDKLogLevel(),
-		Logger:                    configaws.SDKLogger{},
-		EC2MetadataEnableFallback: aws.Bool(false),
-		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
-	})
-	sesFallBackEnabled, err := session.NewSession(&aws.Config{
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
-	})
+
+	cfg := configaws.CredentialsConfig{}
+	awsCfg, err := cfg.LoadConfig(ctx)
 	if err != nil {
-		return
+		return ""
 	}
-	md := ec2metadata.New(sesFallBackDisabled)
-	if info, errOuter := md.Region(); errOuter == nil {
-		region = info
+
+	mdProvider := ec2metadataprovider.NewMetadataProvider(awsCfg, retryer.GetDefaultRetryNumber())
+	if info, err := mdProvider.Get(ctx); err != nil {
+		fmt.Printf("W! could not get region from ec2 metadata... %v", err)
 	} else {
-		log.Printf("D! could not get region from imds v2 thus enable fallback")
-		mdInner := ec2metadata.New(sesFallBackEnabled)
-		if infoInner, errInner := mdInner.Region(); errInner == nil {
-			region = infoInner
-		} else {
-			fmt.Printf("W! could not get region from ec2 metadata... %v", errInner)
-		}
+		return info.Region
 	}
-	return
+	return ""
 }
 
 func AddToMap(ctx *runtime.Context, resultMap map[string]interface{}, obj interfaze.ConvertibleToMap) {

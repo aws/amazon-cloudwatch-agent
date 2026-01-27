@@ -4,16 +4,20 @@
 package ssm
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	"github.com/aws/smithy-go"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
@@ -21,8 +25,7 @@ import (
 )
 
 const (
-	ErrCodeAccessDeniedException = "AccessDeniedException"
-	defaultRetryCount            = 1 //total attempts are defaultRetryCount+1
+	defaultRetryCount = 1 //total attempts are defaultRetryCount+1
 )
 
 var Processor processors.Processor = &processor{}
@@ -42,43 +45,47 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 	var err error
 	for i := 0; i <= defaultRetryCount; i++ {
 		creds := determineCreds(ctx)
-		err = sendConfigToParameterStore(serializedConfig, parameterStoreName, region, creds)
+		err = sendConfigToParameterStore(context.Background(), serializedConfig, parameterStoreName, region, creds)
 		if err == nil {
 			fmt.Printf("Successfully put config to parameter store %s.\n", parameterStoreName)
 			return
 		}
 
-		if awsErr, ok := err.(awserr.Error); ok {
-			switch awsErr.Code() {
-			case ErrCodeAccessDeniedException:
-				fmt.Printf("Please make sure the creds you used have the right permissions configured for SSM access.\n")
-				continue
-			default:
-				fmt.Printf("Error code: %s, message: %s, original error: %v\n", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
-			}
+		var accessDenied *types.AccessDeniedException
+		if errors.As(err, &accessDenied) {
+			fmt.Printf("Please make sure the creds you used have the right permissions configured for SSM access.\n")
+			continue
+		}
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			fmt.Printf("Error code: %s, message: %s\n", apiErr.ErrorCode(), apiErr.ErrorMessage())
 		}
 		break
 	}
 	fmt.Printf("Error in putting config to parameter store %s: %v\n", parameterStoreName, err)
 }
 
-func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) interface{} {
+func (p *processor) NextProcessor(*runtime.Context, *data.Config) any {
 	return nil
 }
 
-func determineCreds(ctx *runtime.Context) *credentials.Credentials {
-	accessKeys := []string{}
-	sdkAccessKey, _, sdkCreds := util.SDKCredentials()
+func determineCreds(_ *runtime.Context) aws.CredentialsProvider {
+	ctx := context.Background()
+	var accessKeys []string
+	sdkAccessKey, _, sdkCredsProvider := util.SDKCredentials(ctx)
 	sdkAccessKeyDesc := ""
-	if sdkCreds != nil {
+	if sdkCredsProvider != nil {
 		sdkAccessKeyDesc = sdkAccessKey + "(From SDK)"
 		accessKeys = append(accessKeys, sdkAccessKeyDesc)
 	}
 
 	fileAccessKey := ""
 	fileAccessKeyDesc := ""
-	fileCredentialsProvider := credentials.NewSharedCredentials("", "AmazonCloudWatchAgent")
-	fileCreds, err := fileCredentialsProvider.Get()
+	fileCredentialsProvider := configaws.RefreshableSharedCredentialsProvider{
+		Profile:      "AmazonCloudWatchAgent",
+		ExpiryWindow: 10 * time.Minute,
+	}
+	fileCreds, err := fileCredentialsProvider.Retrieve(ctx)
 	if err == nil {
 		fileAccessKey = fileCreds.AccessKeyID
 		fileAccessKeyDesc = fileAccessKey + "(From Profile: AmazonCloudWatchAgent)"
@@ -90,7 +97,7 @@ func determineCreds(ctx *runtime.Context) *credentials.Credentials {
 
 		answer := util.Choice("Which AWS credential should be used to send json config to parameter store?", 1, accessKeys)
 		if answer == sdkAccessKeyDesc {
-			return sdkCreds
+			return sdkCredsProvider
 		} else if answer == fileAccessKeyDesc {
 			return fileCredentialsProvider
 		}
@@ -98,11 +105,10 @@ func determineCreds(ctx *runtime.Context) *credentials.Credentials {
 	return askCreds()
 }
 
-func askCreds() *credentials.Credentials {
+func askCreds() aws.CredentialsProvider {
 	accessKey := util.Ask("Please provide credentials to upload the json config file to parameter store.\nAWS Access Key:")
 	secretKey := util.Ask("AWS Secret Key:")
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
-	return creds
+	return credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")
 }
 
 func determineParameterStoreName(ctx *runtime.Context) string {
@@ -114,9 +120,9 @@ func determineParameterStoreName(ctx *runtime.Context) string {
 func determineRegion(ctx *runtime.Context) string {
 	var region string
 	if !ctx.IsOnPrem {
-		region = util.DefaultEC2Region()
+		region = util.DefaultEC2Region(context.Background())
 	} else {
-		region = util.SDKRegionWithProfile("AmazonCloudWatchAgent")
+		region = util.SDKRegionWithProfile(context.Background(), "AmazonCloudWatchAgent")
 	}
 	if region == "" {
 		region = "us-east-1"
@@ -125,24 +131,34 @@ func determineRegion(ctx *runtime.Context) string {
 	return region
 }
 
-func sendConfigToParameterStore(config, parameterStoreName, region string, creds *credentials.Credentials) error {
-	awsConfig := aws.NewConfig().WithRegion(region)
-	if creds != nil {
-		awsConfig = awsConfig.WithCredentials(creds)
+func sendConfigToParameterStore(ctx context.Context, configValue, parameterStoreName, region string, credsProvider aws.CredentialsProvider) error {
+	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(region),
 	}
-	ses, err := session.NewSession(awsConfig)
+
+	if credsProvider != nil {
+		opts = append(opts, config.WithCredentialsProvider(credsProvider))
+	}
+
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		fmt.Printf("Error in creating session:\n %v\n", err)
 		return err
 	}
-	ssmClient := ssm.New(ses)
-	input := ssm.PutParameterInput{}
-	input.SetName(parameterStoreName)
-	input.SetOverwrite(true)
+
+	ssmClient := ssm.NewFromConfig(cfg)
+
 	hostName, _ := os.Hostname()
-	input.SetDescription(fmt.Sprintf("Generated by wizard on %s at %s", hostName, time.Now().Format(time.RFC1123)))
-	input.SetType("String")
-	input.SetValue(config)
-	_, err = ssmClient.PutParameter(&input)
+	description := fmt.Sprintf("Generated by wizard on %s at %s", hostName, time.Now().Format(time.RFC1123))
+
+	input := &ssm.PutParameterInput{
+		Name:        aws.String(parameterStoreName),
+		Value:       aws.String(configValue),
+		Description: aws.String(description),
+		Overwrite:   aws.Bool(true),
+		Type:        types.ParameterTypeString,
+	}
+
+	_, err = ssmClient.PutParameter(ctx, input)
 	return err
 }
