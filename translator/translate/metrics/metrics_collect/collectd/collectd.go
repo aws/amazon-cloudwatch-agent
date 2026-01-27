@@ -6,6 +6,7 @@ package collected
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
 
 //
@@ -49,8 +50,7 @@ func (obj *CollectD) ApplyRule(input interface{}) (returnKey string, returnVal i
 		returnKey = ""
 		returnVal = ""
 	} else {
-		//If exists, process it
-		//Check if there are some config entry with rules applied
+		util.ProcessAppendDimensions(m[SectionKey].(map[string]interface{}), SectionKey, result)
 		result = translator.ProcessRuleToMergeAndApply(m[SectionKey], ChildRule, result)
 		resArray = append(resArray, result)
 		returnKey = SectionMappedKey
