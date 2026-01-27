@@ -63,6 +63,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/azuretagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
@@ -99,6 +100,7 @@ func Factories() (otelcol.Factories, error) {
 		attributesprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
 		awsentity.NewFactory(),
+		azuretagger.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		deltatocumulativeprocessor.NewFactory(),

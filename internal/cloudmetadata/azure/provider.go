@@ -117,6 +117,36 @@ func NewProvider(ctx context.Context, logger *zap.Logger) (*Provider, error) {
 	return p, nil
 }
 
+// StartRefreshLoop starts a background goroutine that periodically refreshes metadata.
+// This is used by azuretagger to keep tags up-to-date.
+// The loop stops when the context is cancelled.
+func (p *Provider) StartRefreshLoop(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = defaultRefreshInterval
+	}
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				p.logger.Info("[cloudmetadata/azure] Metadata refresh loop stopped")
+				return
+			case <-ticker.C:
+				if err := p.Refresh(ctx); err != nil {
+					p.logger.Warn("[cloudmetadata/azure] Failed to refresh metadata", zap.Error(err))
+				} else {
+					p.logger.Debug("[cloudmetadata/azure] Metadata refreshed successfully")
+				}
+			}
+		}
+	}()
+
+	p.logger.Info("[cloudmetadata/azure] Metadata refresh loop started", zap.Duration("interval", interval))
+}
+
 // IsAzure detects if running on Azure by checking DMI information
 func IsAzure() bool {
 	// Check sys_vendor

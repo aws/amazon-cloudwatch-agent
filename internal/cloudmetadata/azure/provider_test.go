@@ -755,3 +755,148 @@ func TestProvider_Refresh_WithMockServer(t *testing.T) {
 		t.Error("IsAvailable() = false, want true")
 	}
 }
+
+func TestProvider_StartRefreshLoop_RefreshesTags(t *testing.T) {
+	// Track refresh calls
+	refreshCount := 0
+	var mu sync.Mutex
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		refreshCount++
+		count := refreshCount
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		switch r.URL.Path {
+		case "/metadata/instance/compute":
+			response := ComputeMetadata{
+				Location:       "eastus",
+				VMID:           "test-vm-id",
+				VMSize:         "Standard_D2s_v3",
+				SubscriptionID: "test-sub",
+				TagsList: []ComputeTagsListMetadata{
+					{Name: "RefreshCount", Value: fmt.Sprintf("%d", count)},
+				},
+			}
+			json.NewEncoder(w).Encode(response)
+		case "/metadata/instance/network":
+			json.NewEncoder(w).Encode(NetworkMetadata{})
+		}
+	}))
+	defer server.Close()
+
+	logger := zap.NewNop()
+	p := &Provider{
+		logger:       logger,
+		imdsEndpoint: server.URL + "/metadata/instance/compute",
+		httpClient: &http.Client{
+			Timeout: 2 * time.Second,
+		},
+		diskMap: make(map[string]string),
+	}
+
+	// Initial refresh
+	ctx := context.Background()
+	err := p.Refresh(ctx)
+	if err != nil {
+		t.Fatalf("Initial Refresh() failed: %v", err)
+	}
+
+	// Start refresh loop with short interval
+	loopCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	p.StartRefreshLoop(loopCtx, 50*time.Millisecond)
+
+	// Wait for a few refresh cycles
+	time.Sleep(200 * time.Millisecond)
+
+	// Cancel and verify multiple refreshes occurred
+	cancel()
+
+	mu.Lock()
+	finalCount := refreshCount
+	mu.Unlock()
+
+	// At least 2 refreshes should have occurred (initial + loop)
+	if finalCount < 2 {
+		t.Errorf("Expected at least 2 refreshes, got %d", finalCount)
+	}
+}
+
+func TestProvider_StartRefreshLoop_ContextCancellation(_ *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(ComputeMetadata{VMID: "test"})
+	}))
+	defer server.Close()
+
+	logger := zap.NewNop()
+	p := &Provider{
+		logger:       logger,
+		imdsEndpoint: server.URL,
+		httpClient: &http.Client{
+			Timeout: 2 * time.Second,
+		},
+		diskMap: make(map[string]string),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Start refresh loop
+	p.StartRefreshLoop(ctx, 100*time.Millisecond)
+
+	// Cancel immediately
+	cancel()
+
+	// Give goroutine time to exit
+	time.Sleep(50 * time.Millisecond)
+
+	// Test passes if no panic/deadlock occurs
+}
+
+func TestProvider_StartRefreshLoop_DefaultInterval(_ *testing.T) {
+	logger := zap.NewNop()
+	p := &Provider{
+		logger: logger,
+		httpClient: &http.Client{
+			Timeout: 2 * time.Second,
+		},
+		diskMap: make(map[string]string),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Pass 0 interval - should use default
+	p.StartRefreshLoop(ctx, 0)
+
+	// Cancel immediately - just testing it doesn't panic
+	cancel()
+	time.Sleep(10 * time.Millisecond)
+}
+
+func TestProvider_StartRefreshLoop_NegativeInterval(_ *testing.T) {
+	logger := zap.NewNop()
+	p := &Provider{
+		logger: logger,
+		httpClient: &http.Client{
+			Timeout: 2 * time.Second,
+		},
+		diskMap: make(map[string]string),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Pass negative interval - should use default
+	p.StartRefreshLoop(ctx, -1*time.Second)
+
+	// Cancel immediately - just testing it doesn't panic
+	cancel()
+	time.Sleep(10 * time.Millisecond)
+}
