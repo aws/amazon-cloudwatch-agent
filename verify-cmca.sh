@@ -15,8 +15,8 @@ echo "Building cmca-verify tool..."
 go build -o build/bin/cmca-verify ./cmd/cmca-verify
 
 if [ ! -f "build/bin/cmca-verify" ]; then
-    echo "❌ Failed to build cmca-verify"
-    exit 1
+     echo "❌ Failed to build cmca-verify"
+     exit 1
 fi
 
 echo "✅ Build successful"
@@ -31,9 +31,9 @@ echo ""
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
-    echo "✅ All verifications passed!"
+     echo "✅ All verifications passed!"
 else
-    echo "❌ Some verifications failed"
+     echo "❌ Some verifications failed"
 fi
 
 exit $exit_code
