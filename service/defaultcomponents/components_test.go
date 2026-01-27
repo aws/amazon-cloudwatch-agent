@@ -44,6 +44,7 @@ func TestComponents(t *testing.T) {
 		"awsapplicationsignals",
 		"awsentity",
 		"attributes",
+		"azuretagger",
 		"batch",
 		"cumulativetodelta",
 		"deltatocumulative",
