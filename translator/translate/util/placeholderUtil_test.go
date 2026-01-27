@@ -65,6 +65,14 @@ func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) fun
 		}
 	}
 }
+
+// mockEC2Metadata sets up a mock EC2 metadata provider and returns a cleanup
+// function that restores the original.
+func mockEC2Metadata(m *Metadata) func() {
+	original := Ec2MetadataInfoProvider
+	Ec2MetadataInfoProvider = func() *Metadata { return m }
+	return func() { Ec2MetadataInfoProvider = original }
+}
 func TestResolveAWSMetadataPlaceholders(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -128,18 +136,14 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	// Reset cache before test
 	tagutil.ResetTagsCache()
 
-	// Mock the metadata provider for this test
-	originalProvider := Ec2MetadataInfoProvider
-	Ec2MetadataInfoProvider = func() *Metadata {
-		return &Metadata{
-			InstanceID:   "i-1234567890abcdef0",
-			InstanceType: "t3.large",
-			ImageID:      "ami-0abcdef1234567890",
-			Hostname:     "test-hostname",
-			PrivateIP:    "10.0.1.100",
-			AccountID:    "123456789012",
-		}
-	}
+	cleanup := mockEC2Metadata(&Metadata{
+		InstanceID:   "i-1234567890abcdef0",
+		InstanceType: "t3.large",
+		ImageID:      "ami-0abcdef1234567890",
+		Hostname:     "test-hostname",
+		PrivateIP:    "10.0.1.100",
+		AccountID:    "123456789012",
+	})
 
 	// Mock the tag metadata provider for this test
 	originalTagProvider := tagMetadataProvider
@@ -150,7 +154,7 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 	}
 
 	defer func() {
-		Ec2MetadataInfoProvider = originalProvider
+		cleanup()
 		tagMetadataProvider = originalTagProvider
 		tagutil.ResetTagsCache()
 	}()
@@ -226,17 +230,12 @@ func TestAWSMetadataFunctionality(t *testing.T) {
 	// Test that AWS metadata placeholders are resolved correctly
 	// Note: We rely on ec2util.GetEC2UtilSingleton() for caching, not additional layers
 
-	originalProvider := Ec2MetadataInfoProvider
-	Ec2MetadataInfoProvider = func() *Metadata {
-		return &Metadata{
-			InstanceID:   "i-test123",
-			InstanceType: "t3.micro",
-			ImageID:      "ami-test123",
-		}
-	}
-	defer func() {
-		Ec2MetadataInfoProvider = originalProvider
-	}()
+	cleanup := mockEC2Metadata(&Metadata{
+		InstanceID:   "i-test123",
+		InstanceType: "t3.micro",
+		ImageID:      "ami-test123",
+	})
+	defer cleanup()
 
 	// Test single placeholder resolution
 	input1 := map[string]interface{}{

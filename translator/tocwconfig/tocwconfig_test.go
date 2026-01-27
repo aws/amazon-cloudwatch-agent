@@ -415,6 +415,15 @@ func TestCollectDConfig(t *testing.T) {
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
 }
 
+// CollectD with append_dimensions
+func TestCollectDAppendDimensionsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "collectd_append_dimensions_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "collectd_append_dimensions_linux", "darwin", nil, "")
+}
+
 // diskio
 func TestDiskIOTelegrafConfig(t *testing.T) {
 	resetContext(t)
