@@ -100,7 +100,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultKubernetesConfig
 	}
 
-	if isOTLP(c) {
+	if isOTLP(c, t.name) {
 		cfg.AddEntity = true
 	}
 
@@ -154,6 +154,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := setPrometheusFields(c, cfg); err != nil {
 			return nil, err
 		}
+	} else if isOTLP(c, t.name) {
+		if err := setOTLPFields(c, cfg); err != nil {
+			return nil, err
+		}
 	} else if isKubernetes(c, t.name) {
 		if err := setKubernetesFields(c, cfg); err != nil {
 			return nil, err
@@ -186,8 +190,8 @@ func isPrometheus(conf *confmap.Conf, pipelineName string) bool {
 	return conf.IsSet(prometheusBasePathKey) && pipelineName == common.PipelineNamePrometheus
 }
 
-func isOTLP(conf *confmap.Conf) bool {
-	return conf.IsSet(common.OTLPLogsKey)
+func isOTLP(conf *confmap.Conf, pipelineName string) bool {
+	return conf.IsSet(common.OTLPLogsKey) && pipelineName == ""
 }
 
 func setAppSignalsFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {

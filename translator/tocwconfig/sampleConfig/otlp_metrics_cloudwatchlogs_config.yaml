@@ -11,12 +11,19 @@ exporters:
         external_id: ""
         imds_retries: 1
         local_mode: false
-        log_group_name: /aws/cwagent
+        log_group_name: /aws/application/otlp
         log_retention: 0
         log_stream_name: ""
         max_retries: 2
+        metric_descriptors:
+            - metric_name: request_count
+              overwrite: false
+              unit: Count
+            - metric_name: request_duration
+              overwrite: false
+              unit: Milliseconds
         middleware: agenthealth/logs
-        namespace: CWAgent
+        namespace: MyApplication/OTLP
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
