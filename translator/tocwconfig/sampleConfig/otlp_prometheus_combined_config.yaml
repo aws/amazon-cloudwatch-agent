@@ -1,0 +1,195 @@
+exporters:
+    awsemf:
+        add_entity: true
+        certificate_file_path: ""
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        enhanced_container_insights: false
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/otlp/metrics
+        log_retention: 0
+        log_stream_name: ""
+        max_retries: 2
+        metric_descriptors:
+            - metric_name: request_count
+              overwrite: false
+              unit: Count
+            - metric_name: error_rate
+              overwrite: false
+              unit: Percent
+            - metric_name: request_duration
+              overwrite: false
+              unit: Milliseconds
+        middleware: agenthealth/logs
+        namespace: OTLPApp
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
+    awsemf/prometheus:
+        add_entity: false
+        certificate_file_path: ""
+        detailed_metrics: false
+        dimension_rollup_option: NoDimensionRollup
+        disable_metric_extraction: false
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        enhanced_container_insights: false
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /aws/prometheus/metrics
+        log_retention: 0
+        log_stream_name: '{JobName}'
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - ClusterName
+                  - Namespace
+              label_matchers:
+                - label_names:
+                    - job
+                  regex: ^kubernetes-pod-jmx$
+                  separator: ;
+              metric_name_selectors:
+                - ^jvm_threads_current$
+                - ^jvm_memory_bytes_used$
+        metric_descriptors:
+            - metric_name: http_request_duration_seconds
+              overwrite: false
+              unit: Seconds
+            - metric_name: http_requests_total
+              overwrite: false
+              unit: Count
+        middleware: agenthealth/logs
+        namespace: PrometheusApp
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        retain_initial_value_of_delta_metric: false
+        role_arn: ""
+        version: "0"
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+processors:
+    awsentity/service/otlp:
+        entity_type: Service
+        platform: ec2
+    batch/hostOtlpMetrics/cloudwatchlogs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 30s
+    batch/prometheus/cloudwatchlogs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 30s
+    cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+receivers:
+    otlp/grpc_0_0_0_0_4317:
+        protocols:
+            grpc:
+                endpoint: 0.0.0.0:4317
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
+                read_buffer_size: 524288
+                transport: tcp
+    otlp/http_0_0_0_0_4318:
+        protocols:
+            http:
+                cors: {}
+                endpoint: 0.0.0.0:4318
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+    telegraf_prometheus:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+service:
+    extensions:
+        - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        metrics/hostOtlpMetrics/cloudwatchlogs:
+            exporters:
+                - awsemf
+            processors:
+                - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - awsentity/service/otlp
+                - batch/hostOtlpMetrics/cloudwatchlogs
+            receivers:
+                - otlp/grpc_0_0_0_0_4317
+                - otlp/http_0_0_0_0_4318
+        metrics/prometheus/cloudwatchlogs:
+            exporters:
+                - awsemf/prometheus
+            processors:
+                - batch/prometheus/cloudwatchlogs
+            receivers:
+                - telegraf_prometheus
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
