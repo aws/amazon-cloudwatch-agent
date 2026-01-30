@@ -20,7 +20,7 @@ func GetCurPath() string {
 	return curPath
 }
 
-func (o *Otlp) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (o *Otlp) ApplyRule(input interface{}) (string, interface{}) {
 	im := input.(map[string]interface{})
 	result := map[string]map[string]interface{}{}
 	inputs := map[string]interface{}{}
@@ -28,17 +28,13 @@ func (o *Otlp) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 
 	// Check if this plugin exists in the input instance
 	if _, ok := im[SectionKey]; !ok {
-		returnKey = ""
-		returnVal = ""
-	} else {
-		// OTLP configuration is handled by the OTEL pipeline translator
-		// This rule just validates the configuration exists
-		result["inputs"] = inputs
-		result["processors"] = processors
-		returnKey = SectionKey
-		returnVal = result
+		return "", ""
 	}
-	return
+	// OTLP configuration is handled by the OTEL pipeline translator
+	// This rule just validates the configuration exists
+	result["inputs"] = inputs
+	result["processors"] = processors
+	return SectionKey, result
 }
 
 func init() {
