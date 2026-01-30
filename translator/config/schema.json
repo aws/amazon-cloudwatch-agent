@@ -1390,6 +1390,13 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 259
+        },
+        "log_group_name": {
+          "description": "CloudWatch log group name for OTLP metrics",
+          "type": "string"
+        },
+        "emf_processor": {
+          "$ref": "#/definitions/emfProcessorDefinition"
         }
       },
       "additionalProperties": false

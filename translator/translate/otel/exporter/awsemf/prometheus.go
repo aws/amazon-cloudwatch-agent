@@ -16,8 +16,6 @@ import (
 )
 
 const (
-	metricUnit                    = "metric_unit"
-	metricNamespace               = "metric_namespace"
 	metricDeclartion              = "metric_declaration"
 	ecsDefaultCloudWatchNamespace = "ECS/ContainerInsights/Prometheus"
 	k8sDefaultCloudWatchNamespace = "ContainerInsights/Prometheus"
@@ -51,48 +49,21 @@ func setPrometheusLogGroup(conf *confmap.Conf, cfg *awsemfexporter.Config) error
 	return nil
 }
 func setPrometheusNamespace(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
-	if namespace, ok := common.GetString(conf, common.ConfigKey(emfProcessorBasePathKey, metricNamespace)); ok {
-		cfg.Namespace = namespace
-		return nil
-	}
-
+	var defaultNamespace string
 	if context.CurrentContext().RunInContainer() {
 		if ecsutil.GetECSUtilSingleton().IsECS() {
-			cfg.Namespace = ecsDefaultCloudWatchNamespace
+			defaultNamespace = ecsDefaultCloudWatchNamespace
 		} else {
-			cfg.Namespace = k8sDefaultCloudWatchNamespace
+			defaultNamespace = k8sDefaultCloudWatchNamespace
 		}
 	} else {
-		cfg.Namespace = ec2DefaultCloudWatchNamespace
+		defaultNamespace = ec2DefaultCloudWatchNamespace
 	}
-
-	return nil
-
+	return setNamespaceWithDefault(conf, common.ConfigKey(emfProcessorBasePathKey, metricNamespace), defaultNamespace, cfg)
 }
 
 func setPrometheusMetricDescriptors(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
-	metricUnitKey := common.ConfigKey(emfProcessorBasePathKey, metricUnit)
-	if !conf.IsSet(metricUnitKey) {
-		return nil
-	}
-
-	mus := conf.Get(metricUnitKey)
-	metricUnits := mus.(map[string]interface{})
-	var metricDescriptors []map[string]string
-	for mName, unit := range metricUnits {
-		metricDescriptors = append(metricDescriptors, map[string]string{
-			"metric_name": mName,
-			"unit":        unit.(string),
-		})
-	}
-	c := confmap.NewFromStringMap(map[string]interface{}{
-		"metric_descriptors": metricDescriptors,
-	})
-	cfg.MetricDescriptors = []awsemfexporter.MetricDescriptor{}
-	if err := c.Unmarshal(&cfg); err != nil {
-		return fmt.Errorf("unable to unmarshal metric_descriptors: %w", err)
-	}
-	return nil
+	return setMetricDescriptors(conf, common.ConfigKey(emfProcessorBasePathKey, metricUnit), cfg)
 }
 
 func setPrometheusMetricDeclarations(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
