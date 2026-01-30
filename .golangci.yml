@@ -39,6 +39,9 @@ linters:
         path: 'translator/translate/util/*'
         text: 'var-naming: avoid meaningless package names'
       - linters:
+        - nonamedreturns
+        path: 'translator/translate/*'
+      - linters:
         - staticcheck
         text: 'ST1005: error strings should not be capitalized'
 issues:
