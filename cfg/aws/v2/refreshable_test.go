@@ -21,8 +21,10 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	require.NoError(t, tmpFile.Close())
 
 	provider := &RefreshableSharedCredentialsProvider{
-		Filename:     tmpFilename,
-		Profile:      testProfile,
+		Provider: SharedCredentialsProvider{
+			Filename: tmpFilename,
+			Profile:  testProfile,
+		},
 		ExpiryWindow: 500 * time.Millisecond,
 	}
 

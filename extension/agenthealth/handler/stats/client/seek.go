@@ -113,12 +113,6 @@ func (r *readerSeekerCloser) Seek(offset int64, whence int) (int64, error) {
 	return int64(0), nil
 }
 
-// IsSeeker returns if the underlying reader is also a seeker.
-func (r *readerSeekerCloser) IsSeeker() bool {
-	_, ok := r.r.(io.Seeker)
-	return ok
-}
-
 // Close closes the readerSeekerCloser.
 //
 // If the readerSeekerCloser is not an io.Closer nothing will be done.

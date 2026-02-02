@@ -26,6 +26,7 @@ import (
 
 const (
 	defaultRetryCount = 1 //total attempts are defaultRetryCount+1
+	defaultProfile    = "AmazonCloudWatchAgent"
 )
 
 var Processor processors.Processor = &processor{}
@@ -81,9 +82,8 @@ func determineCreds(_ *runtime.Context) aws.CredentialsProvider {
 
 	fileAccessKey := ""
 	fileAccessKeyDesc := ""
-	fileCredentialsProvider := configaws.RefreshableSharedCredentialsProvider{
-		Profile:      "AmazonCloudWatchAgent",
-		ExpiryWindow: 10 * time.Minute,
+	fileCredentialsProvider := configaws.SharedCredentialsProvider{
+		Profile: defaultProfile,
 	}
 	fileCreds, err := fileCredentialsProvider.Retrieve(ctx)
 	if err == nil {
@@ -122,7 +122,7 @@ func determineRegion(ctx *runtime.Context) string {
 	if !ctx.IsOnPrem {
 		region = util.DefaultEC2Region(context.Background())
 	} else {
-		region = util.SDKRegionWithProfile(context.Background(), "AmazonCloudWatchAgent")
+		region = util.SDKRegionWithProfile(context.Background(), defaultProfile)
 	}
 	if region == "" {
 		region = "us-east-1"
