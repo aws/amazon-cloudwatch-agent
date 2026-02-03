@@ -85,6 +85,7 @@ jobs:
     needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -171,6 +172,7 @@ jobs:
     needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -250,6 +252,7 @@ jobs:
     needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -336,6 +339,7 @@ jobs:
     needs: [ GenerateTestMatrix ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:

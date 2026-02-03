@@ -311,6 +311,7 @@ jobs:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -528,6 +529,7 @@ jobs:
     needs: [OutputEnvVariables, GenerateTestMatrix]
     name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -607,6 +609,7 @@ jobs:
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -820,6 +823,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -894,6 +898,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -971,6 +976,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1045,6 +1051,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1110,6 +1117,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1175,6 +1183,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1241,6 +1250,7 @@ jobs:
     name: ${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1308,6 +1318,7 @@ jobs:
     name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
