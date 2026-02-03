@@ -135,9 +135,11 @@ func init() {
 			if c.Profile != "" || c.Filename != "" {
 				log.Printf("I! will use file based credentials provider")
 				return aws.NewCredentialsCache(RefreshableSharedCredentialsProvider{
-					Filename:     c.Filename,
-					Profile:      c.Profile,
-					ExpiryWindow: 10 * time.Minute,
+					Provider: SharedCredentialsProvider{
+						Filename: c.Filename,
+						Profile:  c.Profile,
+					},
+					ExpiryWindow: defaultExpiryWindow,
 				})
 			}
 			return nil
