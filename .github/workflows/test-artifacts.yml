@@ -309,9 +309,8 @@ jobs:
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -345,6 +344,8 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         if: ${{ matrix.arrays.family == 'linux' }}
         uses: nick-fields/retry@v2
         with:
@@ -379,7 +380,18 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform apply
+        id: terraform_apply_windows
+        continue-on-error: true
         if: ${{ matrix.arrays.family == 'window' }}
         uses: nick-fields/retry@v2
         with:
@@ -408,6 +420,14 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply_windows.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply_windows.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -529,7 +549,6 @@ jobs:
     needs: [OutputEnvVariables, GenerateTestMatrix]
     name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -563,6 +582,8 @@ jobs:
 
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -590,6 +611,14 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -607,9 +636,8 @@ jobs:
             terraform destroy --auto-approve
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -643,6 +671,8 @@ jobs:
 
         # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -670,6 +700,14 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
@@ -742,7 +780,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
@@ -820,10 +858,9 @@ jobs:
             terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -857,6 +894,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -879,6 +918,14 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -895,10 +942,9 @@ jobs:
             terraform destroy --auto-approve
 
   EKSIntegrationTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -932,6 +978,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
@@ -957,6 +1005,14 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -973,10 +1029,9 @@ jobs:
             terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1010,6 +1065,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -1032,6 +1089,14 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1048,10 +1113,9 @@ jobs:
             terraform destroy --auto-approve
 
   PerformanceTrackingTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1081,6 +1145,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1104,6 +1170,14 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1114,10 +1188,9 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   EC2WinPerformanceTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1147,6 +1220,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1170,6 +1245,14 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1180,10 +1263,9 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   StressTrackingTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1216,6 +1298,8 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1237,6 +1321,14 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1247,10 +1339,9 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   EC2WinStressTrackingTest:
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1283,6 +1374,8 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1305,6 +1398,14 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1318,7 +1419,6 @@ jobs:
     name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -1352,6 +1452,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply and setup
+        id: terraform_apply
+        continue-on-error: true
         run: |
           if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
             cd "${{ matrix.arrays.terraform_dir }}"
@@ -1371,6 +1473,14 @@ jobs:
           else
             terraform destroy -auto-approve && exit 1
           fi
+
+      - name: Log WIP test marked as successful
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: echo "::warning::WIP test failed but marked as successful"
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
 
       - name: Terraform destroy
         if: always()

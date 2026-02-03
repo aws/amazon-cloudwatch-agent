@@ -54,7 +54,6 @@ jobs:
   EC2IntegrationTest:
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.arrays.wip == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +89,8 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 2
@@ -132,6 +133,11 @@ jobs:
             else
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
             fi
+      
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+      
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
