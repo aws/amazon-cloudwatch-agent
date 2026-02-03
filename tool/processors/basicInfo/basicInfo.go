@@ -4,6 +4,7 @@
 package basicInfo
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
@@ -24,7 +25,7 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 	isEC2(ctx, config)
 }
 
-func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) interface{} {
+func (p *processor) NextProcessor(*runtime.Context, *data.Config) any {
 	return agentconfig.Processor
 }
 
@@ -54,9 +55,9 @@ func whichOS(ctx *runtime.Context) {
 	ctx.OsParameter = answer
 }
 
-func isEC2(ctx *runtime.Context, conf *data.Config) {
+func isEC2(ctx *runtime.Context, _ *data.Config) {
 	defaultOption := 1
-	defaultRegion := util.DefaultEC2Region()
+	defaultRegion := util.DefaultEC2Region(context.Background())
 	if defaultRegion == "" {
 		defaultOption = 2
 	}

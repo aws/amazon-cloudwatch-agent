@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -62,7 +61,7 @@ func TestHandle(t *testing.T) {
 
 	// with seeker
 	body = append(body, " with seeker"...)
-	req, err = http.NewRequest("", "localhost", aws.ReadSeekCloser(bytes.NewReader(body)))
+	req, err = http.NewRequest("", "localhost", readSeekCloser(bytes.NewReader(body)))
 	require.NoError(t, err)
 	req.ContentLength = 0
 	handler.HandleRequest(ctx, req)

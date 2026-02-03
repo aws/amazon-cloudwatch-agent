@@ -11,28 +11,51 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 )
 
+const (
+	defaultExpiryWindow = 10 * time.Minute
+)
+
+// RefreshableSharedCredentialsProvider wraps a SharedCredentialsProvider and sets an expiration.
 type RefreshableSharedCredentialsProvider struct {
-	// Path to the shared credentials file.
-	Filename string
-	// AWS Profile to extract credentials from the shared credentials file.
-	Profile string
+	// Provider is the underlying SharedCredentialsProvider.
+	Provider SharedCredentialsProvider
 	// Retrieval frequency, if the value is 15 minutes, the credentials will be retrieved every 15 minutes.
 	ExpiryWindow time.Duration
 }
 
 var _ aws.CredentialsProvider = (*RefreshableSharedCredentialsProvider)(nil)
 
-// Retrieve reads and extracts the shared credentials from the current
-// users home directory.
 func (p RefreshableSharedCredentialsProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
-	sharedConfig, err := config.LoadSharedConfigProfile(ctx, p.Profile, func(options *config.LoadSharedConfigOptions) {
-		options.CredentialsFiles = []string{p.Filename}
-	})
+	credentials, err := p.Provider.Retrieve(ctx)
+	if err != nil {
+		return aws.Credentials{}, err
+	}
+	credentials.CanExpire = true
+	credentials.Expires = time.Now().Add(p.ExpiryWindow)
+	return credentials, nil
+}
+
+// SharedCredentialsProvider loads the credentials from a shared credential file and profile.
+type SharedCredentialsProvider struct {
+	// Filename is the path to the shared credentials file.
+	Filename string
+	// Profile is the AWS Profile to extract credentials from the shared credentials file.
+	Profile string
+}
+
+var _ aws.CredentialsProvider = (*SharedCredentialsProvider)(nil)
+
+func (p SharedCredentialsProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
+	var opts []func(*config.LoadSharedConfigOptions)
+	if p.Filename != "" {
+		opts = append(opts, func(options *config.LoadSharedConfigOptions) {
+			options.CredentialsFiles = []string{p.Filename}
+		})
+	}
+	sharedConfig, err := config.LoadSharedConfigProfile(ctx, p.Profile, opts...)
 	if err != nil {
 		return aws.Credentials{}, err
 	}
 	credentials := sharedConfig.Credentials
-	credentials.CanExpire = true
-	credentials.Expires = time.Now().Add(p.ExpiryWindow)
 	return credentials, nil
 }
