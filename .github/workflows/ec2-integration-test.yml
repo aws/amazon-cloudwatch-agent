@@ -134,6 +134,16 @@ jobs:
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
             fi
       
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1

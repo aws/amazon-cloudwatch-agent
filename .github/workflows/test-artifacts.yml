@@ -381,10 +381,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -421,10 +427,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply_windows.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply_windows.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply_windows.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -612,10 +624,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -701,10 +719,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -918,10 +942,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1005,10 +1035,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1090,10 +1126,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1170,10 +1212,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1245,10 +1293,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1321,10 +1375,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1398,10 +1458,16 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
@@ -1474,10 +1540,16 @@ jobs:
             terraform destroy -auto-approve && exit 1
           fi
 
-      - name: Log WIP test marked as successful
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
         if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: echo "::warning::WIP test failed but marked as successful"
-      
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
