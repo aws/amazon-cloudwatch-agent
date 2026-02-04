@@ -61,6 +61,12 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
+
+	// CloudMetadataInitTimeout is the maximum time to wait for cloud metadata
+	// provider initialization during agent startup. This is intentionally short
+	// to avoid delaying agent startup. Features requiring metadata will gracefully
+	// degrade if initialization times out or fails.
+	CloudMetadataInitTimeout = 5 * time.Second
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -298,8 +304,9 @@ func runAgent(ctx context.Context,
 
 	// Initialize global cloud metadata provider early (non-blocking with timeout)
 	// Covers all agent modes (logs-only and OTEL)
+	// If initialization fails or times out, the agent continues with graceful degradation
 	log.Println("I! [agent] Initializing cloud metadata provider...")
-	initCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	initCtx, cancel := context.WithTimeout(ctx, CloudMetadataInitTimeout)
 	defer cancel() // Release context resources
 	go func() {
 		if err := cloudmetadata.InitGlobalProvider(initCtx, nil); err != nil {

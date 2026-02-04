@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 )
 
 func TestNetworkMetadata_Parsing(t *testing.T) {
@@ -197,8 +199,8 @@ func TestProvider_GettersWithMetadata(t *testing.T) {
 func TestProvider_GetCloudProvider(t *testing.T) {
 	p := &Provider{}
 	got := p.GetCloudProvider()
-	if got != CloudProviderAzure {
-		t.Errorf("GetCloudProvider() = %d, want %d", got, CloudProviderAzure)
+	if got != 2 { // cloudmetadata.CloudProviderAzure
+		t.Errorf("GetCloudProvider() = %d, want 2", got)
 	}
 }
 
@@ -436,9 +438,9 @@ func TestMaskValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got := maskValue(tt.input)
+			got := util.MaskValue(tt.input)
 			if got != tt.want {
-				t.Errorf("maskValue(%q) = %q, want %q", tt.input, got, tt.want)
+				t.Errorf("util.MaskValue(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -457,9 +459,9 @@ func TestMaskIPAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got := maskIPAddress(tt.input)
+			got := util.MaskIPAddress(tt.input)
 			if got != tt.want {
-				t.Errorf("maskIPAddress(%q) = %q, want %q", tt.input, got, tt.want)
+				t.Errorf("util.MaskIPAddress(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -611,8 +613,11 @@ func TestIsAzure(t *testing.T) {
 }
 
 func TestCloudProviderAzure_Constant(t *testing.T) {
-	if CloudProviderAzure != 2 {
-		t.Errorf("CloudProviderAzure = %d, want 2", CloudProviderAzure)
+	// Verify that Azure provider returns the correct cloud provider constant
+	// This should match cloudmetadata.CloudProviderAzure = 2
+	p := &Provider{}
+	if p.GetCloudProvider() != 2 {
+		t.Errorf("GetCloudProvider() = %d, want 2 (cloudmetadata.CloudProviderAzure)", p.GetCloudProvider())
 	}
 }
 

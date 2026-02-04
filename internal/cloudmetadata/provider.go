@@ -7,27 +7,6 @@ import (
 	"context"
 )
 
-// CloudProvider represents the cloud platform
-type CloudProvider int
-
-const (
-	CloudProviderUnknown CloudProvider = iota
-	CloudProviderAWS
-	CloudProviderAzure
-)
-
-// String returns the string representation of the cloud provider
-func (c CloudProvider) String() string {
-	switch c {
-	case CloudProviderAWS:
-		return "AWS"
-	case CloudProviderAzure:
-		return "Azure"
-	default:
-		return "Unknown"
-	}
-}
-
 // Provider is a cloud-agnostic interface for fetching instance metadata
 type Provider interface {
 	// GetInstanceID returns the instance/VM ID

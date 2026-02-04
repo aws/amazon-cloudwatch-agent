@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 )
 
 var (
@@ -68,7 +70,7 @@ func InitGlobalProvider(ctx context.Context, logger *zap.Logger) error {
 	logger.Info("[cloudmetadata] Provider initialized successfully",
 		zap.String("cloud", cloudType),
 		zap.Bool("available", globalProvider.IsAvailable()),
-		zap.String("instanceId", MaskValue(globalProvider.GetInstanceID())),
+		zap.String("instanceId", util.MaskValue(globalProvider.GetInstanceID())),
 		zap.String("region", globalProvider.GetRegion()))
 
 	atomic.StoreUint32(&initialized, 1)
