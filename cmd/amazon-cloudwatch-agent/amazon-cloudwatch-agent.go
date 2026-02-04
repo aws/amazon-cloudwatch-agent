@@ -36,6 +36,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
@@ -60,6 +61,12 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
+
+	// CloudMetadataInitTimeout is the maximum time to wait for cloud metadata
+	// provider initialization during agent startup. This is intentionally short
+	// to avoid delaying agent startup. Features requiring metadata will gracefully
+	// degrade if initialization times out or fails.
+	CloudMetadataInitTimeout = 5 * time.Second
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -294,6 +301,20 @@ func runAgent(ctx context.Context,
 	} else {
 		log.Printf("I! AWS SDK log level, %s\n", sdkLogLevel)
 	}
+
+	// Initialize global cloud metadata provider early (non-blocking with timeout)
+	// Covers all agent modes (logs-only and OTEL)
+	// If initialization fails or times out, the agent continues with graceful degradation
+	log.Println("I! [agent] Initializing cloud metadata provider...")
+	initCtx, cancel := context.WithTimeout(ctx, CloudMetadataInitTimeout)
+	defer cancel() // Release context resources
+	go func() {
+		if err := cloudmetadata.InitGlobalProvider(initCtx, nil); err != nil {
+			log.Printf("W! [agent] Cloud metadata provider unavailable - some features may be limited: %v", err)
+		} else {
+			log.Println("I! [agent] Cloud metadata provider ready")
+		}
+	}()
 
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
