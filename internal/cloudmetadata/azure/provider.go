@@ -17,10 +17,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-)
 
-// CloudProviderAzure is the constant for Azure cloud provider (matches cloudmetadata.CloudProviderAzure)
-const CloudProviderAzure = 2
+	"github.com/aws/amazon-cloudwatch-agent/internal/util"
+)
 
 const (
 	// DMI paths for Azure detection
@@ -387,7 +386,7 @@ func (p *Provider) Refresh(ctx context.Context) error {
 	p.mu.Unlock()
 
 	p.logger.Debug("[cloudmetadata/azure] Parsed compute metadata",
-		zap.String("vmId", maskValue(metadata.VMID)),
+		zap.String("vmId", util.MaskValue(metadata.VMID)),
 		zap.String("vmSize", metadata.VMSize),
 		zap.String("location", metadata.Location),
 		zap.String("resourceGroup", metadata.ResourceGroupName))
@@ -456,35 +455,12 @@ func (p *Provider) refreshNetwork(ctx context.Context) error {
 
 	if privateIP != "" {
 		p.logger.Debug("[cloudmetadata/azure] Network metadata refreshed",
-			zap.String("privateIP", maskIPAddress(privateIP)))
+			zap.String("privateIP", util.MaskIPAddress(privateIP)))
 	} else {
 		p.logger.Debug("[cloudmetadata/azure] Network metadata refreshed but no private IP found")
 	}
 
 	return nil
-}
-
-// maskValue masks sensitive values for logging
-func maskValue(value string) string {
-	if value == "" {
-		return "<empty>"
-	}
-	if len(value) <= 4 {
-		return "<present>"
-	}
-	return value[:4] + "..."
-}
-
-// maskIPAddress masks IP addresses for logging (e.g., 10.0.x.x)
-func maskIPAddress(ip string) string {
-	if ip == "" {
-		return "<empty>"
-	}
-	parts := strings.Split(ip, ".")
-	if len(parts) == 4 {
-		return parts[0] + "." + parts[1] + ".x.x"
-	}
-	return "<present>"
 }
 
 // IsAvailable returns true if metadata has been successfully fetched
@@ -532,12 +508,13 @@ func (p *Provider) GetPrivateIP() string {
 	privateIP := p.networkMetadata.Interface[0].IPv4.IPAddress[0].PrivateIPAddress
 	if p.logger != nil {
 		p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called",
-			zap.String("value", maskIPAddress(privateIP)))
+			zap.String("value", util.MaskIPAddress(privateIP)))
 	}
 	return privateIP
 }
 
-// GetCloudProvider returns the cloud provider type (Azure = 2)
+// GetCloudProvider returns the cloud provider type
+// Returns 2 which corresponds to cloudmetadata.CloudProviderAzure
 func (p *Provider) GetCloudProvider() int {
-	return CloudProviderAzure
+	return 2 // cloudmetadata.CloudProviderAzure
 }

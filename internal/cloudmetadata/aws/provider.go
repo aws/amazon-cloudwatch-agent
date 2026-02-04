@@ -6,16 +6,13 @@ package aws
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
-
-// CloudProviderAWS is the constant for AWS cloud provider (matches cloudmetadata.CloudProviderAWS)
-const CloudProviderAWS = 1
 
 // Provider implements the metadata provider interface for AWS
 type Provider struct {
@@ -42,7 +39,7 @@ func IsAWS(_ context.Context) bool {
 func (p *Provider) GetInstanceID() string {
 	value := ec2util.GetEC2UtilSingleton().InstanceID
 	p.logger.Debug("[cloudmetadata/aws] GetInstanceID called",
-		zap.String("value", maskValue(value)))
+		zap.String("value", util.MaskValue(value)))
 	return value
 }
 
@@ -58,7 +55,7 @@ func (p *Provider) GetInstanceType() string {
 func (p *Provider) GetImageID() string {
 	value := ec2util.GetEC2UtilSingleton().ImageID
 	p.logger.Debug("[cloudmetadata/aws] GetImageID called",
-		zap.String("value", maskValue(value)))
+		zap.String("value", util.MaskValue(value)))
 	return value
 }
 
@@ -80,7 +77,7 @@ func (p *Provider) GetAvailabilityZone() string {
 func (p *Provider) GetAccountID() string {
 	value := ec2util.GetEC2UtilSingleton().AccountID
 	p.logger.Debug("[cloudmetadata/aws] GetAccountID called",
-		zap.String("value", maskValue(value)))
+		zap.String("value", util.MaskValue(value)))
 	return value
 }
 
@@ -145,39 +142,12 @@ func (p *Provider) GetHostname() string {
 func (p *Provider) GetPrivateIP() string {
 	value := ec2util.GetEC2UtilSingleton().PrivateIP
 	p.logger.Debug("[cloudmetadata/aws] GetPrivateIP called",
-		zap.String("value", maskIPAddress(value)))
+		zap.String("value", util.MaskIPAddress(value)))
 	return value
 }
 
-// GetCloudProvider returns the cloud provider type (AWS = 1)
+// GetCloudProvider returns the cloud provider type
+// Returns 1 which corresponds to cloudmetadata.CloudProviderAWS
 func (p *Provider) GetCloudProvider() int {
-	return CloudProviderAWS
-}
-
-// maskValue masks sensitive values for logging
-// NOTE: Duplicated from internal/cloudmetadata/mask.go to avoid import cycle
-// (aws → cloudmetadata → factory → aws).
-// DO NOT REFACTOR: Keep in sync with cloudmetadata.MaskValue if logic changes.
-func maskValue(value string) string {
-	if value == "" {
-		return "<empty>"
-	}
-	if len(value) <= 4 {
-		return "<present>"
-	}
-	return value[:4] + "..."
-}
-
-// maskIPAddress masks IP addresses for logging (e.g., 10.0.x.x)
-// NOTE: Duplicated from internal/cloudmetadata/mask.go to avoid import cycle.
-// DO NOT REFACTOR: Keep in sync with cloudmetadata.MaskIPAddress if logic changes.
-func maskIPAddress(ip string) string {
-	if ip == "" {
-		return "<empty>"
-	}
-	parts := strings.Split(ip, ".")
-	if len(parts) == 4 {
-		return parts[0] + "." + parts[1] + ".x.x"
-	}
-	return "<present>"
+	return 1 // cloudmetadata.CloudProviderAWS
 }

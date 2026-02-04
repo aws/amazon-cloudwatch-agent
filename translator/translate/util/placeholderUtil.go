@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata/azure"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
@@ -111,7 +112,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 		}
 
 		log.Printf("I! [placeholderUtil] Resolved via cloudmetadata: instanceId=%s, hostname=%s, region=%s, accountId=%s, privateIP=%s",
-			cloudmetadata.MaskValue(instanceID), hostname, region, cloudmetadata.MaskValue(accountID), cloudmetadata.MaskIPAddress(privateIP))
+			util.MaskValue(instanceID), hostname, region, util.MaskValue(accountID), util.MaskIPAddress(privateIP))
 
 		return map[string]string{
 			instanceIdPlaceholder:    instanceID,
@@ -151,7 +152,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	accountID := defaultIfEmpty(md.AccountID, unknownAccountID)
 
 	log.Printf("D! [placeholderUtil] Resolved via legacy: instanceId=%s, region=%s, privateIP=%s",
-		cloudmetadata.MaskValue(instanceID), awsRegion, cloudmetadata.MaskIPAddress(ipAddress))
+		util.MaskValue(instanceID), awsRegion, util.MaskIPAddress(ipAddress))
 
 	return map[string]string{
 		instanceIdPlaceholder:    instanceID,
