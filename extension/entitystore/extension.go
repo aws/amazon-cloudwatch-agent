@@ -15,9 +15,9 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )

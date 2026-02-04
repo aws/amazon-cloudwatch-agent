@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/smithy-go"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
 const (
