@@ -28,10 +28,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer/v2"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
