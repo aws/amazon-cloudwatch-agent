@@ -5,6 +5,7 @@ package aws
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	assert.Equal(t, aws.Credentials{}, got)
 
 	// Write initial credentials
-	content, err := os.ReadFile("../testdata/credential_original")
+	content, err := os.ReadFile(filepath.Join("testdata", "credential_original"))
 	require.NoError(t, err)
 	err = os.WriteFile(tmpFilename, content, 0600)
 	require.NoError(t, err)
@@ -50,7 +51,7 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	assert.False(t, got.Expired(), "Expect credentials not to be expired.")
 
 	// Rotate credentials file
-	content, err = os.ReadFile("../testdata/credential_rotate")
+	content, err = os.ReadFile(filepath.Join("testdata", "credential_rotate"))
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(tmpFile.Name(), content, 0600))
 

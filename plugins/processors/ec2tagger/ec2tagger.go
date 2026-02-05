@@ -19,10 +19,10 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws/v2"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
-	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 type ec2MetadataLookupType struct {
@@ -495,7 +495,7 @@ func (t *Tagger) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 	doc, err := t.metadataProvider.Get(ctx)
 	if err != nil {
 		t.logger.Error("ec2tagger: Unable to retrieve EC2 Metadata. This plugin must only be used on an EC2 instance.")
-		if translatorCtx.CurrentContext().RunInContainer() {
+		if translatorcontext.CurrentContext().RunInContainer() {
 			t.logger.Warn("ec2tagger: Timeout may have occurred because hop limit is too small. Please increase hop limit to 2 by following this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances.")
 		}
 		return err

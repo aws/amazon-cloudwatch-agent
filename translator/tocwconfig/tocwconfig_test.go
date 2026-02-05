@@ -942,7 +942,7 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 }
 
 func resetContext(t *testing.T) {
-	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultMetadataRetries))
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-west-2", "ACJ"
 	}
