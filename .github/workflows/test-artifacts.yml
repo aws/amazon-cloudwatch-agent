@@ -39,6 +39,10 @@ on:
         description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
 
+permissions:
+  id-token: write
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.build_id }}
   cancel-in-progress: true
