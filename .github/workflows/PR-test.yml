@@ -161,6 +161,9 @@ jobs:
     needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       build_id: ${{ github.sha }}
       test_dir: terraform/ec2/linux
@@ -181,6 +184,9 @@ jobs:
     needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       build_id: ${{ github.sha }}
       test_dir: terraform/ec2/linux
