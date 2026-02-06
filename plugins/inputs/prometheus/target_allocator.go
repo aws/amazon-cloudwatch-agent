@@ -79,7 +79,7 @@ func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
 	return &cfg, nil
 }
 
-func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel *promslog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
+func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel *promslog.Level, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
 	tam := TargetAllocatorManager{
 		enabled:             false,
 		manager:             nil,
@@ -100,20 +100,25 @@ func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel
 	if tam.config == nil {
 		return &tam
 	}
-	tam.enabled = (tam.config.TargetAllocator != nil) && isPodNameAvailable()
+	tam.enabled = tam.config.TargetAllocator.HasValue() && isPodNameAvailable()
 	if tam.enabled {
 		tam.loadManager(logLevel)
 	}
 	return &tam
 }
 
-func (tam *TargetAllocatorManager) loadManager(logLevel *promslog.AllowedLevel) {
+func (tam *TargetAllocatorManager) loadManager(logLevel *promslog.Level) {
 	zapLogger, err := createZapLogger(logLevel)
 	if err != nil {
 		tam.logger.Error("Error creating zap logger", "error", err)
 	}
+	taCfg := tam.config.TargetAllocator.Get()
+	if taCfg == nil {
+		tam.logger.Error("Target allocator config is nil despite being enabled")
+		return
+	}
 	receiverSettings := receiver.Settings{
-		ID: component.MustNewID(strings.ReplaceAll(tam.config.TargetAllocator.CollectorID, "-", "_")),
+		ID: component.MustNewID(strings.ReplaceAll(taCfg.CollectorID, "-", "_")),
 		TelemetrySettings: component.TelemetrySettings{
 			Logger:         zapLogger,
 			TracerProvider: nil,
@@ -122,10 +127,10 @@ func (tam *TargetAllocatorManager) loadManager(logLevel *promslog.AllowedLevel) 
 		},
 	}
 
-	tam.manager = tamanager.NewManager(receiverSettings, tam.config.TargetAllocator, (*promconfig.Config)(tam.config.PrometheusConfig), false)
+	tam.manager = tamanager.NewManager(receiverSettings, taCfg, (*promconfig.Config)(tam.config.PrometheusConfig))
 }
 
-func createZapLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
+func createZapLogger(level *promslog.Level) (*zap.Logger, error) {
 	zapLevel, err := zapcore.ParseLevel(level.String())
 	if err != nil {
 		err = fmt.Errorf("error parsing level: %v. Defaulting to info", err)
@@ -148,16 +153,21 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 		return err
 	}
 	tam.config = config
-	if tam.config.TargetAllocator == nil {
+	if !tam.config.TargetAllocator.HasValue() {
 		return nil // no target allocator return
 	}
 	//has target allocator
-	tam.config.TargetAllocator.TLSSetting.CAFile = DefaultTLSCaFilePath
-	tam.config.TargetAllocator.TLSSetting.CertFile = DefaultTLSCertFilePath
-	tam.config.TargetAllocator.TLSSetting.KeyFile = DefaultTLSKeyFilePath
-	tam.config.TargetAllocator.TLSSetting.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
+	taCfg := tam.config.TargetAllocator.Get()
+	if taCfg == nil {
+		return nil
+	}
+	taCfg.TLS.CAFile = DefaultTLSCaFilePath
+	taCfg.TLS.CertFile = DefaultTLSCertFilePath
+	taCfg.TLS.KeyFile = DefaultTLSKeyFilePath
+	taCfg.TLS.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
 	return nil
 }
+
 func (tam *TargetAllocatorManager) Run() error {
 	err := tam.manager.Start(context.Background(), tam.host, tam.sm, tam.dm)
 	if err != nil {
@@ -183,17 +193,20 @@ func (tam *TargetAllocatorManager) AttachReloadConfigHandler(handler func(config
 }
 
 func (tam *TargetAllocatorManager) reloadConfigTicker() error {
-	if tam.config.TargetAllocator == nil {
+	if !tam.config.TargetAllocator.HasValue() {
 		return fmt.Errorf("target Allocator is not configured properly")
 	}
 	if tam.reloadConfigHandler == nil {
 		return fmt.Errorf("target allocator reload config handler is not configured properly")
 	}
 
-	tam.logger.Info("Starting Target Allocator Reload Config Ticker",
-		"interval", tam.config.TargetAllocator.Interval.Seconds())
+	taCfg := tam.config.TargetAllocator.Get()
+	if taCfg == nil {
+		return fmt.Errorf("target allocator config is nil despite HasValue being true")
+	}
+	tam.logger.Info("Starting Target Allocator Reload Config Ticker", "interval", taCfg.Interval.Seconds())
 
-	ticker := time.NewTicker(tam.config.TargetAllocator.Interval)
+	ticker := time.NewTicker(taCfg.Interval)
 	go func() {
 		for {
 			select {

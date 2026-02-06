@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/config/confighttp"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -75,10 +76,10 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 				},
-				TargetAllocator: &targetallocator.Config{
+				TargetAllocator: configoptional.Some(targetallocator.Config{
 					CollectorID: "col-1234",
 					ClientConfig: confighttp.ClientConfig{
-						TLSSetting: configtls.ClientConfig{
+						TLS: configtls.ClientConfig{
 							Config: configtls.Config{
 								CAFile:         defaultTLSCaPath,
 								CertFile:       defaultTLSCertPath,
@@ -87,7 +88,7 @@ func TestTranslator(t *testing.T) {
 							},
 						},
 					},
-				},
+				}),
 			},
 		},
 		"WithPromConfig": {
