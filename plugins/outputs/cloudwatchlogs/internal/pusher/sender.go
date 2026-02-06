@@ -36,6 +36,7 @@ type sender struct {
 	logger        telegraf.Logger
 	stopCh        chan struct{}
 	stopped       bool
+	retryHeap     RetryHeap
 }
 
 var _ (Sender) = (*sender)(nil)
@@ -45,6 +46,7 @@ func newSender(
 	service cloudWatchLogsService,
 	targetManager TargetManager,
 	retryDuration time.Duration,
+	retryHeap RetryHeap,
 ) Sender {
 	s := &sender{
 		logger:        logger,
@@ -52,6 +54,7 @@ func newSender(
 		targetManager: targetManager,
 		stopCh:        make(chan struct{}),
 		stopped:       false,
+		retryHeap:     retryHeap,
 	}
 	s.retryDuration.Store(retryDuration)
 	return s
@@ -63,11 +66,11 @@ func (s *sender) Send(batch *logEventBatch) {
 	if len(batch.events) == 0 {
 		return
 	}
-	input := batch.build()
-	startTime := time.Now()
 
-	retryCountShort := 0
-	retryCountLong := 0
+	// Initialize start time before build()
+	batch.initializeStartTime()
+	input := batch.build()
+
 	for {
 		output, err := s.service.PutLogEvents(input)
 		if err == nil {
@@ -84,7 +87,7 @@ func (s *sender) Send(batch *logEventBatch) {
 				}
 			}
 			batch.done()
-			s.logger.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(batch.events), batch.Group, batch.Stream, batch.bufferedSize/1024, time.Since(startTime))
+			s.logger.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(batch.events), batch.Group, batch.Stream, batch.bufferedSize/1024, time.Since(batch.startTime))
 			return
 		}
 
@@ -110,27 +113,36 @@ func (s *sender) Send(batch *logEventBatch) {
 			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, awsErr)
 		}
 
-		// retry wait strategy depends on the type of error returned
-		var wait time.Duration
-		if chooseRetryWaitStrategy(err) == retryLong {
-			wait = retryWaitLong(retryCountLong)
-			retryCountLong++
-		} else {
-			wait = retryWaitShort(retryCountShort)
-			retryCountShort++
-		}
+		// Update retry metadata in the batch
+		batch.updateRetryMetadata(err)
 
-		if time.Since(startTime)+wait > s.RetryDuration() {
-			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
+		// Check if retry would exceed max duration
+		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
+		if batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		}
 
-		s.logger.Warnf("Retried %v time, going to sleep %v before retrying.", retryCountShort+retryCountLong-1, wait)
+		// If RetryHeap available, push to RetryHeap and return
+		// Otherwise, continue with existing busy-wait retry behavior
+		if s.retryHeap != nil {
+			s.retryHeap.Push(batch)
+			batch.fail()
+			return
+		}
+
+		// Calculate wait time until next retry (synchronous mode)
+		wait := time.Until(batch.nextRetryTime)
+		if wait < 0 {
+			wait = 0
+		}
+
+		s.logger.Warnf("Retried %v time, going to sleep %v before retrying.", totalRetries, wait)
 
 		select {
 		case <-s.stopCh:
-			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
+			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		case <-time.After(wait):

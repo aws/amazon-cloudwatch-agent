@@ -404,3 +404,34 @@ func TestValidateAndTruncateMessage(t *testing.T) {
 		})
 	}
 }
+func TestBatchRetryMetadata(t *testing.T) {
+	target := Target{Group: "test-group", Stream: "test-stream"}
+	batch := newLogEventBatch(target, nil)
+
+	// Test initial state
+	assert.True(t, batch.startTime.IsZero())
+	assert.True(t, batch.isReadyForRetry())
+	assert.False(t, batch.isExpired(time.Hour))
+
+	// Test initializeStartTime
+	batch.initializeStartTime()
+	assert.False(t, batch.startTime.IsZero())
+
+	// Test updateRetryMetadata
+	err := assert.AnError
+	batch.updateRetryMetadata(err)
+	assert.Equal(t, 1, batch.retryCountShort)
+	assert.Equal(t, 0, batch.retryCountLong)
+	assert.False(t, batch.nextRetryTime.IsZero())
+
+	// Test isReadyForRetry - should be false immediately after retry metadata update
+	assert.False(t, batch.isReadyForRetry())
+
+	// Test isReadyForRetry - should be true after nextRetryTime passes
+	batch.nextRetryTime = time.Now().Add(-1 * time.Second) // Set to past time
+	assert.True(t, batch.isReadyForRetry())
+
+	// Test isExpired
+	batch.startTime = time.Now().Add(-25 * time.Hour)
+	assert.True(t, batch.isExpired(24*time.Hour))
+}

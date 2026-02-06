@@ -113,6 +113,7 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 		time.Second,
 		time.Minute,
 		wg,
+		nil, // retryHeap
 	)
 
 	assert.NotNil(t, pusher)
@@ -123,4 +124,40 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 	// Verify that PutRetentionPolicy was called
 	mockManager.AssertCalled(t, "PutRetentionPolicy", target)
 	return pusher
+}
+
+func TestPusherRetryHeap(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	target := Target{Group: "G", Stream: "S"}
+	service := &stubLogsService{}
+	mockManager := new(mockTargetManager)
+	mockManager.On("PutRetentionPolicy", target).Return()
+
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+
+	retryHeap := NewRetryHeap(10, logger)
+	defer retryHeap.Stop()
+
+	var wg sync.WaitGroup
+	pusher := NewPusher(
+		logger,
+		target,
+		service,
+		mockManager,
+		nil,
+		workerPool,
+		time.Second,
+		time.Minute,
+		&wg,
+		retryHeap,
+	)
+
+	assert.NotNil(t, pusher)
+	assert.Equal(t, target, pusher.Target)
+
+	// Verify pusher has retryHeap when concurrency enabled
+	// (RetryHeap is now passed to the underlying sender, not senderPool)
+
+	mockManager.AssertCalled(t, "PutRetentionPolicy", target)
 }

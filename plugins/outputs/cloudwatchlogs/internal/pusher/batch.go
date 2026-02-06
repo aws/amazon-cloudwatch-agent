@@ -100,7 +100,15 @@ type logEventBatch struct {
 	doneCallbacks []func()
 	// Callbacks specifically for updating state
 	stateCallbacks []func()
-	batchers       map[string]*state.RangeQueueBatcher
+	// Callbacks to execute when batch fails (for circuit breaker notification)
+	failCallbacks []func()
+	batchers      map[string]*state.RangeQueueBatcher
+
+	// Retry metadata
+	retryCountShort int       // Number of retries using short delay strategy
+	retryCountLong  int       // Number of retries using long delay strategy
+	startTime       time.Time // Time of first request (for max retry duration calculation)
+	nextRetryTime   time.Time // When this batch should be retried next
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -175,6 +183,13 @@ func (b *logEventBatch) addStateCallback(callback func()) {
 	}
 }
 
+// addFailCallback adds the callback to the end of the registered fail callbacks.
+func (b *logEventBatch) addFailCallback(callback func()) {
+	if callback != nil {
+		b.failCallbacks = append(b.failCallbacks, callback)
+	}
+}
+
 // done runs all registered callbacks, including both success callbacks and state callbacks.
 func (b *logEventBatch) done() {
 	b.updateState()
@@ -192,6 +207,15 @@ func (b *logEventBatch) done() {
 func (b *logEventBatch) updateState() {
 	for i := len(b.stateCallbacks) - 1; i >= 0; i-- {
 		callback := b.stateCallbacks[i]
+		callback()
+	}
+}
+
+// fail runs fail callbacks to notify upstream components of batch failure.
+// This is used for circuit breaker notification when a batch fails.
+func (b *logEventBatch) fail() {
+	for i := len(b.failCallbacks) - 1; i >= 0; i-- {
+		callback := b.failCallbacks[i]
 		callback()
 	}
 }
@@ -225,4 +249,44 @@ func (t byTimestamp) Swap(i, j int) {
 
 func (t byTimestamp) Less(i, j int) bool {
 	return *t[i].Timestamp < *t[j].Timestamp
+}
+
+// initializeStartTime sets the start time if not already set.
+func (b *logEventBatch) initializeStartTime() {
+	if b.startTime.IsZero() {
+		b.startTime = time.Now()
+	}
+}
+
+// updateRetryMetadata updates the retry metadata after a failed send attempt.
+// It increments the appropriate retry counter based on the error type and calculates the next retry time.
+func (b *logEventBatch) updateRetryMetadata(err error) {
+	// Determine retry strategy and increment counter
+	var wait time.Duration
+	if chooseRetryWaitStrategy(err) == retryLong {
+		wait = retryWaitLong(b.retryCountLong)
+		b.retryCountLong++
+	} else {
+		wait = retryWaitShort(b.retryCountShort)
+		b.retryCountShort++
+	}
+
+	// Calculate next retry time
+	b.nextRetryTime = time.Now().Add(wait)
+}
+
+// isExpired checks if the batch has exceeded the maximum retry duration.
+func (b *logEventBatch) isExpired(maxRetryDuration time.Duration) bool {
+	if b.startTime.IsZero() {
+		return false
+	}
+	return time.Since(b.startTime) > maxRetryDuration
+}
+
+// isReadyForRetry checks if enough time has passed since the last failure to retry this batch.
+func (b *logEventBatch) isReadyForRetry() bool {
+	if b.nextRetryTime.IsZero() {
+		return true
+	}
+	return time.Now().After(b.nextRetryTime)
 }
