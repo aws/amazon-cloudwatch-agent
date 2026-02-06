@@ -1,0 +1,44 @@
+{
+  "logs": {
+    "force_flush_interval": 30,
+    "metrics_collected": {
+      "prometheus": {
+        "log_group_name": "/aws/prometheus/metrics",
+        "prometheus_config_path": "/etc/prometheus/prometheus.yaml",
+        "emf_processor": {
+          "metric_namespace": "PrometheusApp",
+          "metric_unit": {
+            "http_requests_total": "Count",
+            "http_request_duration_seconds": "Seconds"
+          },
+          "metric_declaration": [
+            {
+              "source_labels": ["job"],
+              "label_matcher": "^kubernetes-pod-jmx$",
+              "dimensions": [
+                ["ClusterName", "Namespace"]
+              ],
+              "metric_selectors": [
+                "^jvm_threads_current$",
+                "^jvm_memory_bytes_used$"
+              ]
+            }
+          ]
+        }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:4317",
+        "http_endpoint": "0.0.0.0:4318",
+        "log_group_name": "/aws/otlp/metrics",
+        "emf_processor": {
+          "metric_namespace": "OTLPApp",
+          "metric_unit": {
+            "request_duration": "Milliseconds",
+            "request_count": "Count",
+            "error_rate": "Percent"
+          }
+        }
+      }
+    }
+  }
+}
