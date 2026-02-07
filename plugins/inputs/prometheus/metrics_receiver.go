@@ -78,14 +78,14 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 func (ma *metricAppender) Append(_ storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
 	metricName := ""
 
-	labelMap := make(map[string]string, len(ls))
-	for _, l := range ls {
+	labelMap := make(map[string]string, ls.Len())
+	ls.Range(func(l labels.Label) {
 		if l.Name == model.MetricNameLabel {
 			metricName = l.Value
-			continue
+			return
 		}
 		labelMap[l.Name] = l.Value
-	}
+	})
 
 	if metricName == "" {
 		// The error should never happen, print log here for debugging

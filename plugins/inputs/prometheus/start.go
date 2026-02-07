@@ -79,7 +79,7 @@ func init() {
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	logLevel := &promslog.AllowedLevel{}
+	logLevel := promslog.NewLevel()
 	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
@@ -87,7 +87,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		runtime.SetMutexProfileFraction(20)
 		logLevel.Set("debug")
 	}
-	logFormat := &promslog.AllowedFormat{}
+	logFormat := &promslog.Format{}
 	_ = logFormat.Set("logfmt")
 
 	cfg := struct {

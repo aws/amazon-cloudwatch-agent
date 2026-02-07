@@ -95,11 +95,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	} else {
 		// given prometheus config is in otel format so check if target allocator is being used
 		// then add the default ca, cert, and key for TargetAllocator
-		if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
-			cfg.TargetAllocator.TLSSetting.CAFile = defaultTLSCaPath
-			cfg.TargetAllocator.TLSSetting.CertFile = defaultTLSCertPath
-			cfg.TargetAllocator.TLSSetting.KeyFile = defaultTLSKeyPath
-			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
+		if cfg.TargetAllocator.HasValue() {
+			taCfg := cfg.TargetAllocator.Get()
+			if taCfg != nil && len(taCfg.CollectorID) > 0 {
+				taCfg.TLS.CAFile = defaultTLSCaPath
+				taCfg.TLS.CertFile = defaultTLSCertPath
+				taCfg.TLS.KeyFile = defaultTLSKeyPath
+				taCfg.TLS.ReloadInterval = 10 * time.Second
+			}
 		}
 	}
 
