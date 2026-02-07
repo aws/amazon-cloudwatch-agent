@@ -107,7 +107,10 @@ func (s *Server) reloadServer(config *tls.Config) error {
 	// close the current server
 	if s.httpsServer != nil {
 		// closing the server gracefully
-		if err := s.httpsServer.Close(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		// do not use Close plus wait for Shutdown to return, otherwise ListenAndServe returns ErrServerClosed
+		if err := s.httpsServer.Shutdown(ctx); err != nil {
 			s.logger.Error("Failed to shutdown HTTPS server", zap.Error(err))
 		}
 	}
