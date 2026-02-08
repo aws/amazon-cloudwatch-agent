@@ -10,6 +10,12 @@ const (
 	// More than one process tried to modify a resource at the same time.
 	ErrCodeConcurrentModificationException = "ConcurrentModificationException"
 
+	// ErrCodeConflictException for service response error code
+	// "ConflictException".
+	//
+	// This operation attempted to create a resource that already exists.
+	ErrCodeConflictException = "ConflictException"
+
 	// ErrCodeDashboardInvalidInputError for service response error code
 	// "InvalidParameterInput".
 	//

@@ -3,6 +3,8 @@ lint:
   - '**/*.sh'
   - '.golangci.yml'
   - 'packaging/**'
+  - 'go.mod'
+  - 'Makefile'
 
 build:
   - 'Makefile'

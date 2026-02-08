@@ -68,6 +68,14 @@ on:
       eks_installation_type:
         required: true
         type: string
+      ip_family:
+        required: false
+        type: string
+        default: "ipv4"
+      vpc_name:
+        required: false
+        type: string
+        default: ""
 
 jobs:
   EKSE2ETest:
@@ -99,6 +107,8 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -119,7 +129,7 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="region=${{ inputs.region }}" \
-              -var="k8s_version=${{ matrix.arrays.k8s_version }}" \
+              -var="k8s_version=${{ matrix.arrays.k8sVersion }}" \
               -var="nodes=${{ matrix.arrays.nodes }}" \
               -var="helm_charts_branch=${{ inputs.helm_charts_branch }}" \
               -var="cloudwatch_agent_repository_url=${{ steps.login-ecr.outputs.registry }}" \
@@ -136,7 +146,9 @@ jobs:
               -var="prometheus_config=${{ inputs.prometheus_config }}" \
               -var="otel_config=${{ inputs.otel_config }}" \
               -var="sample_app=${{ inputs.sample_app }}" \
-              -var="eks_installation_type=${{ inputs.eks_installation_type }}"; then
+              -var="eks_installation_type=${{ inputs.eks_installation_type }}" \
+              -var="ip_family=${{ inputs.ip_family }}" \
+              -var="vpc_name=${{ inputs.vpc_name }}"; then
               terraform destroy --auto-approve
             else
               terraform destroy --auto-approve && exit 1

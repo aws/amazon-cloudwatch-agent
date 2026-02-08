@@ -21,21 +21,11 @@ exporters:
         add_metric_suffixes: true
         auth:
             authenticator: sigv4auth
-        compression: ""
-        disable_keep_alives: false
         endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        export_created_metric:
-            enabled: false
-        http2_ping_timeout: 0s
-        http2_read_idle_timeout: 0s
         idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
-        max_conns_per_host: 0
         max_idle_conns: 100
-        max_idle_conns_per_host: 0
         namespace: ""
-        proxy_url: ""
-        read_buffer_size: 0
         remote_write_queue:
             enabled: true
             num_consumers: 5
@@ -54,17 +44,6 @@ exporters:
         target_info:
             enabled: true
         timeout: 5s
-        tls:
-            ca_file: ""
-            cert_file: ""
-            include_system_ca_certs_pool: false
-            insecure: false
-            insecure_skip_verify: false
-            key_file: ""
-            max_version: ""
-            min_version: ""
-            reload_interval: 0s
-            server_name_override: ""
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
@@ -106,9 +85,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -130,6 +109,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
@@ -169,9 +149,6 @@ service:
                 - telegraf_cpu
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -182,7 +159,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

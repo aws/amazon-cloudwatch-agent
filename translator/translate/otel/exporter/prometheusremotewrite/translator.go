@@ -49,7 +49,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.ResourceToTelemetrySettings = resourcetotelemetry.Settings{Enabled: true, ClearAfterCopy: true}
 	// ignoring bool return value since we are checking with isSet beforehand
 	value, _ := common.GetString(conf, common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))
-	ampEndpoint := "https://aps-workspaces." + agent.Global_Config.Region + ".amazonaws.com/workspaces/" + value + "/api/v1/remote_write"
+	domain := "amazonaws.com"
+	if agent.Global_Config.UseDualStackEndpoint {
+		domain = "api.aws"
+	}
+	ampEndpoint := "https://aps-workspaces." + agent.Global_Config.Region + "." + domain + "/workspaces/" + value + "/api/v1/remote_write"
+
 	cfg.ClientConfig.Endpoint = ampEndpoint
 	return cfg, nil
 }

@@ -1,0 +1,59 @@
+{
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": [
+              "INFORMATION",
+              "ERROR"
+            ],
+            "log_group_name": "System",
+            "log_stream_name": "System",
+            "event_format": "xml",
+            "filters": [
+              {
+                "type": "exclude",
+                "expression": "Foo: ([1-5]\\d\\d)"
+              }
+            ]
+          },
+          {
+            "event_name": "Security",
+            "event_ids": [
+              4624,
+              4625
+            ],
+            "log_group_name": "Security",
+            "log_stream_name": "Security",
+            "event_format": "text",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "(TRACE|DEBUG)"
+              }
+            ]
+          },
+          {
+            "event_name": "Application",
+            "log_group_name": "Application",
+            "log_stream_name": "Application",
+            "event_format": "text",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "Database*connection"
+              },
+              {
+                "type": "exclude",
+                "expression": "Application*exce"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

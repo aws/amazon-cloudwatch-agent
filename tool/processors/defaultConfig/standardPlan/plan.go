@@ -63,12 +63,14 @@ func ConfigureEC2Metrics(metrics *metric.Collection, ctx *runtime.Context) {
 		metrics.WinPagingFile = new(windows.PagingFile)
 		metrics.WinPagingFile.PercentUsage = true
 	} else {
-		metrics.CPU = new(linux.CPU)
-		metrics.CPU.TotalCPU = false
-		metrics.CPU.UsageIdle = true
-		metrics.CPU.UsageIOWait = true
-		metrics.CPU.UsageUser = true
-		metrics.CPU.UsageSystem = true
+		if ctx.WantPerInstanceMetrics {
+			metrics.CPU = new(linux.CPU)
+			metrics.CPU.TotalCPU = false
+			metrics.CPU.UsageIdle = true
+			metrics.CPU.UsageIOWait = true
+			metrics.CPU.UsageUser = true
+			metrics.CPU.UsageSystem = true
+		}
 
 		metrics.DiskIO = new(linux.DiskIO)
 		metrics.DiskIO.IOTime = true

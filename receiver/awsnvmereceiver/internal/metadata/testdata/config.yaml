@@ -1,0 +1,115 @@
+default:
+all_set:
+  metrics:
+    diskio_ebs_ec2_instance_performance_exceeded_iops:
+      enabled: true
+    diskio_ebs_ec2_instance_performance_exceeded_tp:
+      enabled: true
+    diskio_ebs_total_read_bytes:
+      enabled: true
+    diskio_ebs_total_read_ops:
+      enabled: true
+    diskio_ebs_total_read_time:
+      enabled: true
+    diskio_ebs_total_write_bytes:
+      enabled: true
+    diskio_ebs_total_write_ops:
+      enabled: true
+    diskio_ebs_total_write_time:
+      enabled: true
+    diskio_ebs_volume_performance_exceeded_iops:
+      enabled: true
+    diskio_ebs_volume_performance_exceeded_tp:
+      enabled: true
+    diskio_ebs_volume_queue_length:
+      enabled: true
+    diskio_instance_store_performance_exceeded_iops:
+      enabled: true
+    diskio_instance_store_performance_exceeded_tp:
+      enabled: true
+    diskio_instance_store_total_read_bytes:
+      enabled: true
+    diskio_instance_store_total_read_ops:
+      enabled: true
+    diskio_instance_store_total_read_time:
+      enabled: true
+    diskio_instance_store_total_write_bytes:
+      enabled: true
+    diskio_instance_store_total_write_ops:
+      enabled: true
+    diskio_instance_store_total_write_time:
+      enabled: true
+    diskio_instance_store_volume_queue_length:
+      enabled: true
+  resource_attributes:
+    SerialId:
+      enabled: true
+    VolumeId:
+      enabled: true
+none_set:
+  metrics:
+    diskio_ebs_ec2_instance_performance_exceeded_iops:
+      enabled: false
+    diskio_ebs_ec2_instance_performance_exceeded_tp:
+      enabled: false
+    diskio_ebs_total_read_bytes:
+      enabled: false
+    diskio_ebs_total_read_ops:
+      enabled: false
+    diskio_ebs_total_read_time:
+      enabled: false
+    diskio_ebs_total_write_bytes:
+      enabled: false
+    diskio_ebs_total_write_ops:
+      enabled: false
+    diskio_ebs_total_write_time:
+      enabled: false
+    diskio_ebs_volume_performance_exceeded_iops:
+      enabled: false
+    diskio_ebs_volume_performance_exceeded_tp:
+      enabled: false
+    diskio_ebs_volume_queue_length:
+      enabled: false
+    diskio_instance_store_performance_exceeded_iops:
+      enabled: false
+    diskio_instance_store_performance_exceeded_tp:
+      enabled: false
+    diskio_instance_store_total_read_bytes:
+      enabled: false
+    diskio_instance_store_total_read_ops:
+      enabled: false
+    diskio_instance_store_total_read_time:
+      enabled: false
+    diskio_instance_store_total_write_bytes:
+      enabled: false
+    diskio_instance_store_total_write_ops:
+      enabled: false
+    diskio_instance_store_total_write_time:
+      enabled: false
+    diskio_instance_store_volume_queue_length:
+      enabled: false
+  resource_attributes:
+    SerialId:
+      enabled: false
+    VolumeId:
+      enabled: false
+filter_set_include:
+  resource_attributes:
+    SerialId:
+      enabled: true
+      metrics_include:
+        - regexp: ".*"
+    VolumeId:
+      enabled: true
+      metrics_include:
+        - regexp: ".*"
+filter_set_exclude:
+  resource_attributes:
+    SerialId:
+      enabled: true
+      metrics_exclude:
+        - strict: "SerialId-val"
+    VolumeId:
+      enabled: true
+      metrics_exclude:
+        - strict: "VolumeId-val"

@@ -15,6 +15,9 @@ on:
 
 jobs:
   update-components:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Get latest commit sha
@@ -30,7 +33,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
           cache: false
       - name: Update OTel fork components version
         id: set-matrix

@@ -16,12 +16,16 @@ import (
 )
 
 const (
-	retentionChannelSize = 100
+	retentionChannelSize    = 100
+	cacheTTL                = 5 * time.Second
+	logGroupIdentifierLimit = 50
 	// max wait time with backoff and jittering:
 	// 0 + 2.4 + 4.8 + 9.6 + 10 ~= 26.8 sec
 	baseRetryDelay      = 1 * time.Second
 	maxRetryDelayTarget = 10 * time.Second
 	numBackoffRetries   = 5
+
+	errMessageLogGroupIdentifierNotSupported = "Input filter on Log group identifiers is not supported."
 )
 
 type Target struct {
@@ -38,19 +42,21 @@ type targetManager struct {
 	logger  telegraf.Logger
 	service cloudWatchLogsService
 	// cache of initialized targets
-	cache map[Target]struct{}
-	mu    sync.Mutex
-	dlg   chan Target
-	prp   chan Target
+	cache    map[Target]time.Time
+	cacheTTL time.Duration
+	mu       sync.Mutex
+	dlg      chan Target
+	prp      chan Target
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) TargetManager {
 	tm := &targetManager{
-		logger:  logger,
-		service: service,
-		cache:   make(map[Target]struct{}),
-		dlg:     make(chan Target, retentionChannelSize),
-		prp:     make(chan Target, retentionChannelSize),
+		logger:   logger,
+		service:  service,
+		cache:    make(map[Target]time.Time),
+		cacheTTL: cacheTTL,
+		dlg:      make(chan Target, retentionChannelSize),
+		prp:      make(chan Target, retentionChannelSize),
 	}
 
 	go tm.processDescribeLogGroup()
@@ -58,11 +64,14 @@ func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) Tar
 	return tm
 }
 
-// InitTarget initializes a Target if it hasn't been initialized before.
+// InitTarget initializes a Target if it hasn't been initialized before. Stores a timestamp of the last successful
+// initialization of the Target. If the timestamp is older than the TTL, allows the creation attempt again.
 func (m *targetManager) InitTarget(target Target) error {
+	now := time.Now()
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if _, ok := m.cache[target]; !ok {
+	lastHit, ok := m.cache[target]
+	if !ok || now.Sub(lastHit) > m.cacheTTL {
 		newGroup, err := m.createLogGroupAndStream(target)
 		if err != nil {
 			return err
@@ -76,7 +85,7 @@ func (m *targetManager) InitTarget(target Target) error {
 				m.dlg <- target
 			}
 		}
-		m.cache[target] = struct{}{}
+		m.cache[target] = time.Now()
 	}
 	return nil
 }
@@ -168,7 +177,76 @@ func (m *targetManager) createLogStream(t Target) error {
 }
 
 func (m *targetManager) processDescribeLogGroup() {
-	for target := range m.dlg {
+	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
+
+	batch := make(map[string]Target, logGroupIdentifierLimit)
+
+	for {
+		select {
+		case target := <-m.dlg:
+			batch[target.Group] = target
+			if len(batch) == logGroupIdentifierLimit {
+				m.updateTargets(batch)
+				// Reset batch
+				batch = make(map[string]Target, logGroupIdentifierLimit)
+			}
+		case <-t.C:
+			if len(batch) > 0 {
+				m.updateTargets(batch)
+				// Reset batch
+				batch = make(map[string]Target, logGroupIdentifierLimit)
+			}
+		}
+	}
+}
+
+func (m *targetManager) updateTargets(targets map[string]Target) {
+	err := m.updateTargetsBatch(targets)
+	if err != nil {
+		m.logger.Debug("falling back to describing log groups by prefix")
+		m.updateTargetsIteratively(targets)
+	}
+}
+
+// updateTargetsBatch will call DLG for the entire batch (single call). Will return an error if
+// DLG by identifiers is not supported.
+func (m *targetManager) updateTargetsBatch(targets map[string]Target) error {
+	identifiers := make([]*string, 0, len(targets))
+	for logGroup := range targets {
+		identifiers = append(identifiers, aws.String(logGroup))
+	}
+	describeLogGroupsInput := &cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupIdentifiers: identifiers,
+		Limit:               aws.Int64(50),
+	}
+	for attempt := 0; attempt < numBackoffRetries; attempt++ {
+		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == cloudwatchlogs.ErrCodeInvalidParameterException && aerr.Message() == errMessageLogGroupIdentifierNotSupported {
+				return err
+			}
+
+			m.logger.Errorf("failed to batch describe log group retention for targets %v: %v", targets, err)
+			time.Sleep(m.calculateBackoff(attempt))
+			continue
+		}
+
+		for _, logGroups := range output.LogGroups {
+			target := targets[*logGroups.LogGroupName]
+			if (logGroups.RetentionInDays == nil || target.Retention != int(*logGroups.RetentionInDays)) && target.Retention > 0 {
+				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
+				m.prp <- target
+			}
+		}
+		break
+	}
+	return nil
+}
+
+// updateTargetsIteratively will iterate through the targets and call DLG for each target.
+func (m *targetManager) updateTargetsIteratively(targets map[string]Target) {
+	for _, target := range targets {
 		for attempt := 0; attempt < numBackoffRetries; attempt++ {
 			currentRetention, err := m.getRetention(target)
 			if err != nil {

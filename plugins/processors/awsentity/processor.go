@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/clientutil"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entitytransformer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/k8sattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -126,16 +127,18 @@ var getPodMeta = func(ctx context.Context) k8sclient.PodMetadata {
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
 type awsEntityProcessor struct {
-	config     *Config
-	k8sscraper scraper
-	logger     *zap.Logger
+	config            *Config
+	k8sscraper        scraper
+	entityTransformer *entitytransformer.EntityTransformer
+	logger            *zap.Logger
 }
 
 func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcessor {
 	return &awsEntityProcessor{
-		config:     config,
-		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
-		logger:     logger,
+		config:            config,
+		k8sscraper:        k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
+		entityTransformer: entitytransformer.NewEntityTransformer(config.TransformEntity, logger),
+		logger:            logger,
 	}
 }
 
@@ -305,6 +308,15 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
+					if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
+						// Instrumentation Service Name Source has highest priority
+						// Therefore only apply when service name source is not
+						// Instrumentation. Service instrumented with "unknown_service" name
+						// will not be an issue since we have logics to modify it with propoer
+						// service name and source
+						p.entityTransformer.ApplyTransforms(resourceAttrs)
+					}
+
 				}
 			}
 			if logGroupNames == EMPTY || (serviceName == EMPTY && environmentName == EMPTY) {

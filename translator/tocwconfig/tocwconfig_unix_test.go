@@ -40,6 +40,16 @@ func TestAMPConfig(t *testing.T) {
 	checkTranslation(t, "amp_config_linux", "darwin", nil, "")
 }
 
+func TestDualStackConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	expectedEnvVars := map[string]string{
+		"AWS_USE_DUALSTACK_ENDPOINT": "true",
+	}
+	checkTranslation(t, "dualstack_config", "linux", expectedEnvVars, "")
+}
+
 func TestJMXConfigLinux(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

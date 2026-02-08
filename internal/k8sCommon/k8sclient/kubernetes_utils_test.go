@@ -188,23 +188,23 @@ func TestGetWorkloadAndNamespace(t *testing.T) {
 	}
 
 	// Test StatefulSet case
-	pod.ObjectMeta.OwnerReferences[0].Kind = "StatefulSet"
-	pod.ObjectMeta.OwnerReferences[0].Name = "testStatefulSet"
+	pod.OwnerReferences[0].Kind = "StatefulSet"
+	pod.OwnerReferences[0].Name = "testStatefulSet"
 	result = GetWorkloadAndNamespace(pod)
 	if result != "testStatefulSet@testNamespace" {
 		t.Errorf("getWorkloadAndNamespace was incorrect, got: %s, want: %s.", result, "testStatefulSet@testNamespace")
 	}
 
 	// Test Other case
-	pod.ObjectMeta.OwnerReferences[0].Kind = "Other"
-	pod.ObjectMeta.OwnerReferences[0].Name = "testOther"
+	pod.OwnerReferences[0].Kind = "Other"
+	pod.OwnerReferences[0].Name = "testOther"
 	result = GetWorkloadAndNamespace(pod)
 	if result != "" {
 		t.Errorf("getWorkloadAndNamespace was incorrect, got: %s, want: %s.", result, "")
 	}
 
 	// Test no OwnerReferences case
-	pod.ObjectMeta.OwnerReferences = nil
+	pod.OwnerReferences = nil
 	result = GetWorkloadAndNamespace(pod)
 	if result != "" {
 		t.Errorf("getWorkloadAndNamespace was incorrect, got: %s, want: %s.", result, "")

@@ -4,13 +4,16 @@
 package awscontainerinsight
 
 import (
+	"time"
+
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (
-	BaseContainerInsights = iota + 1
+	BaseContainerInsights            = iota + 1
+	DefaultMetricsCollectionInterval = time.Minute
 )
 
 func EnhancedContainerInsightsEnabled(conf *confmap.Conf) bool {
@@ -26,4 +29,16 @@ func EnhancedContainerInsightsEnabled(conf *confmap.Conf) bool {
 
 func AcceleratedComputeMetricsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableAcceleratedComputeMetric), true)
+}
+
+func GetAcceleratedComputeGPUMetricsCollectionInterval(conf *confmap.Conf) time.Duration {
+	return common.GetOrDefaultDuration(conf, []string{
+		common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.AcceleratedComputeGPUMetricsCollectionInterval),
+	}, DefaultMetricsCollectionInterval)
+}
+
+func IsHighFrequencyGPUMetricsEnabled(conf *confmap.Conf) bool {
+	return EnhancedContainerInsightsEnabled(conf) &&
+		AcceleratedComputeMetricsEnabled(conf) &&
+		GetAcceleratedComputeGPUMetricsCollectionInterval(conf) < DefaultMetricsCollectionInterval
 }

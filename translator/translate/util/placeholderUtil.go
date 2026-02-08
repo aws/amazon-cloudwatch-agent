@@ -10,28 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
-
-type Metadata struct {
-	InstanceID string
-	Hostname   string
-	PrivateIP  string
-	AccountID  string
-}
-
-type MetadataInfoProvider func() *Metadata
-
-var Ec2MetadataInfoProvider = func() *Metadata {
-	ec2 := ec2util.GetEC2UtilSingleton()
-	return &Metadata{
-		InstanceID: ec2.InstanceID,
-		Hostname:   ec2.Hostname,
-		PrivateIP:  ec2.PrivateIP,
-		AccountID:  ec2.AccountID,
-	}
-}
 
 const (
 	instanceIdPlaceholder    = "{instance_id}"
@@ -42,14 +25,46 @@ const (
 	datePlaceholder          = "{date}"
 	accountIdPlaceholder     = "{account_id}"
 
-	unknownInstanceId = "i-UNKNOWN"
-	unknownHostname   = "UNKNOWN-HOST"
-	unknownIpAddress  = "UNKNOWN-IP"
-	unknownAwsRegion  = "UNKNOWN-REGION"
-	unknownAccountId  = "UNKNOWN-ACCOUNT"
+	unknownInstanceID   = "i-UNKNOWN"
+	unknownHostname     = "UNKNOWN-HOST"
+	unknownIPAddress    = "UNKNOWN-IP"
+	unknownAwsRegion    = "UNKNOWN-REGION"
+	unknownAccountID    = "UNKNOWN-ACCOUNT"
+	unknownInstanceType = "UNKNOWN-TYPE"
+	unknownImageID      = "UNKNOWN-AMI"
+
+	awsPlaceholderPrefix = "${aws:"
 )
 
-// resolve place holder for log group and log stream.
+type Metadata struct {
+	InstanceID   string
+	Hostname     string
+	PrivateIP    string
+	AccountID    string
+	InstanceType string
+	ImageID      string
+}
+
+type MetadataInfoProvider func() *Metadata
+
+var ec2MetadataInfoProviderFunc = ec2MetadataInfoProvider
+
+var Ec2MetadataInfoProvider = func() *Metadata {
+	return ec2MetadataInfoProviderFunc()
+}
+
+func ec2MetadataInfoProvider() *Metadata {
+	ec2 := ec2util.GetEC2UtilSingleton()
+	return &Metadata{
+		InstanceID:   ec2.InstanceID,
+		Hostname:     ec2.Hostname,
+		PrivateIP:    ec2.PrivateIP,
+		AccountID:    ec2.AccountID,
+		InstanceType: ec2.InstanceType,
+		ImageID:      ec2.ImageID,
+	}
+}
+
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	tmpString := placeholder
 	if tmpString == "" {
@@ -62,38 +77,67 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	return tmpString
 }
 
+func defaultIfEmpty(value, defaultValue string) string {
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
 func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
+	md := provider()
 	localHostname := getHostName()
 
-	instanceID := provider().InstanceID
-	if instanceID == "" {
-		instanceID = unknownInstanceId
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	hostname := defaultIfEmpty(md.Hostname, localHostname)
+	ipAddress := defaultIfEmpty(md.PrivateIP, getIpAddress())
+	awsRegion := defaultIfEmpty(agent.Global_Config.Region, unknownAwsRegion)
+	accountID := defaultIfEmpty(md.AccountID, unknownAccountID)
+
+	return map[string]string{
+		instanceIdPlaceholder:    instanceID,
+		hostnamePlaceholder:      hostname,
+		localHostnamePlaceholder: localHostname,
+		ipAddressPlaceholder:     ipAddress,
+		awsRegionPlaceholder:     awsRegion,
+		accountIdPlaceholder:     accountID,
+	}
+}
+
+func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
+	md := provider()
+
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
+	imageID := defaultIfEmpty(md.ImageID, unknownImageID)
+
+	return map[string]string{
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceID]:   instanceID,
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyInstanceType]: instanceType,
+		ec2tagger.SupportedAppendDimensions[ec2tagger.MdKeyImageID]:      imageID,
+	}
+}
+
+var tagMetadataProvider func() map[string]string
+
+func getTagMetadata() map[string]string {
+	if tagMetadataProvider != nil {
+		return tagMetadataProvider()
 	}
 
-	hostname := provider().Hostname
-	if hostname == "" {
-		hostname = localHostname
+	md := Ec2MetadataInfoProvider()
+	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+
+	if instanceID == unknownInstanceID {
+		return map[string]string{}
 	}
 
-	ipAddress := provider().PrivateIP
-	if ipAddress == "" {
-		ipAddress = getIpAddress()
+	result := make(map[string]string)
+	asgName := tagutil.GetAutoScalingGroupName(instanceID)
+	if asgName != "" {
+		result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
 	}
-
-	awsRegion := agent.Global_Config.Region
-	if awsRegion == "" {
-		awsRegion = unknownAwsRegion
-	}
-
-	accountID := provider().AccountID
-	if accountID == "" {
-		accountID = unknownAccountId
-	}
-
-	return map[string]string{instanceIdPlaceholder: instanceID, hostnamePlaceholder: hostname,
-		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion,
-		accountIdPlaceholder: accountID,
-	}
+	return result
 }
 
 func getHostName() string {
@@ -109,12 +153,62 @@ func getIpAddress() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		log.Println("E! getIpAddress -> getInterfaceAddrs: ", err)
-		return unknownIpAddress
+		return unknownIPAddress
 	}
 	for _, addr := range addrs {
 		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
 			return ipnet.IP.String()
 		}
 	}
-	return unknownIpAddress
+	return unknownIPAddress
+}
+
+func getAWSMetadata() map[string]string {
+	return getAWSMetadataInfo(Ec2MetadataInfoProvider)
+}
+
+func getAWSMetadataWithTags(needsTags bool) map[string]string {
+	metadata := getAWSMetadata()
+
+	if needsTags {
+		tagMetadata := getTagMetadata()
+		for k, v := range tagMetadata {
+			metadata[k] = v
+		}
+	}
+
+	return metadata
+}
+
+func ResolveAWSMetadataPlaceholders(input any) any {
+	inputMap := input.(map[string]interface{})
+	result := make(map[string]any, len(inputMap))
+
+	hasAWSPlaceholders := false
+	needsTags := false
+
+	for _, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
+			hasAWSPlaceholders = true
+			if vStr == ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"] {
+				needsTags = true
+			}
+		}
+	}
+
+	var metadata map[string]string
+	if hasAWSPlaceholders {
+		metadata = getAWSMetadataWithTags(needsTags)
+	}
+
+	for k, v := range inputMap {
+		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
+			if replacement, exists := metadata[vStr]; exists {
+				result[k] = replacement
+			}
+		} else {
+			result[k] = v
+		}
+	}
+	return result
 }

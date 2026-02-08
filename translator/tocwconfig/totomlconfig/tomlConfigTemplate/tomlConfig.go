@@ -3,6 +3,10 @@
 
 package tomlConfigTemplate
 
+import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log/wineventlog"
+)
+
 type (
 	TomlConfig struct {
 		Agent      agentConfig
@@ -103,18 +107,21 @@ type (
 	}
 
 	eventConfig struct {
-		BatchReadSize   int      `toml:"batch_read_size"`
-		EventLevels     []string `toml:"event_levels"`
-		EventName       string   `toml:"event_name"`
-		LogGroupName    string   `toml:"log_group_name"`
-		LogStreamName   string   `toml:"log_stream_name"`
-		RetentionInDays int      `toml:"retention_in_days"`
+		BatchReadSize   int                        `toml:"batch_read_size"`
+		EventLevels     []string                   `toml:"event_levels"`
+		EventIDs        []int                      `toml:"event_ids"`
+		EventFilters    []*wineventlog.EventFilter `toml:"filters"`
+		EventName       string                     `toml:"event_name"`
+		LogGroupName    string                     `toml:"log_group_name"`
+		LogStreamName   string                     `toml:"log_stream_name"`
+		RetentionInDays int                        `toml:"retention_in_days"`
 	}
 
 	logFileConfig struct {
 		Destination     string
 		FileStateFolder string       `toml:"file_state_folder"`
 		FileConfig      []fileConfig `toml:"file_config"`
+		MaxPersistState int          `toml:"max_persist_state"`
 	}
 
 	fileConfig struct {
@@ -241,6 +248,7 @@ type (
 	windowsEventLogConfig struct {
 		Destination     string
 		FileStateFolder string        `toml:"file_state_folder"`
+		MaxPersistState int           `toml:"max_persist_state"`
 		EventConfig     []eventConfig `toml:"event_config"`
 		Tags            map[string]string
 	}
@@ -270,6 +278,7 @@ type (
 	}
 
 	cloudWatchLogsConfig struct {
+		Concurrency        int    `toml:"concurrency"`
 		EndpointOverride   string `toml:"endpoint_override"`
 		ForceFlushInterval string `toml:"force_flush_interval"`
 		LogStreamName      string `toml:"log_stream_name"`

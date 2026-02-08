@@ -31,6 +31,7 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 		return requestHandlers, responseHandlers
 	}
 
+	useragent.Get().AddFeatureFlags(ah.cfg.UsageMetadata...)
 	statusCodeEnabled := ah.cfg.IsStatusCodeEnabled
 
 	var statsResponseHandlers []awsmiddleware.ResponseHandler

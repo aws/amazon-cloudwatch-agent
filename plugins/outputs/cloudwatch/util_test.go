@@ -33,11 +33,11 @@ func TestPublishJitter(t *testing.T) {
 
 func TestSetNewDistributionFunc(t *testing.T) {
 	setNewDistributionFunc(maxValuesPerDatum)
-	_, ok := distribution.NewDistribution().(*seh1.SEH1Distribution)
+	_, ok := distribution.NewClassicDistribution().(*seh1.SEH1Distribution)
 	assert.True(t, ok)
 
 	setNewDistributionFunc(defaultMaxValuesPerDatum)
-	_, ok = distribution.NewDistribution().(*regular.RegularDistribution)
+	_, ok = distribution.NewClassicDistribution().(*regular.RegularDistribution)
 	assert.True(t, ok)
 }
 
@@ -45,11 +45,11 @@ func TestResize(t *testing.T) {
 	maxListSize := 2
 	setNewDistributionFunc(maxListSize)
 
-	dist := distribution.NewDistribution()
+	dist := distribution.NewClassicDistribution()
 
 	dist.AddEntry(1, 1)
 
-	distList := resize(dist, maxListSize)
+	distList := dist.Resize(maxListSize)
 	assert.Equal(t, 1, len(distList))
 
 	actualDist := distList[0]
@@ -69,7 +69,7 @@ func TestResize(t *testing.T) {
 	assert.NoError(t, dist.AddEntry(3, 1))
 	assert.NoError(t, dist.AddEntry(4, 1))
 
-	distList = resize(dist, maxListSize)
+	distList = dist.Resize(maxListSize)
 	assert.Equal(t, 2, len(distList))
 
 	actualDist = distList[0]

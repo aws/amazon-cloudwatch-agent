@@ -131,39 +131,42 @@ func TestResourceAttributesResolverWithCustomEnvironment(t *testing.T) {
 			attributesResolver := NewAttributesResolver([]config.Resolver{tt.resolver}, logger)
 			resolver := attributesResolver.subResolvers[0]
 
-			attributes := pcommon.NewMap()
+			// Test hosted in env overrides default env
 			resourceAttributes := pcommon.NewMap()
-			// insert default env
 			resourceAttributes.PutStr(attr.ResourceDetectionASG, "my-asg")
 			resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/my-cluster/10838bed-421f-43ef-870a-f43feacbbb5b")
+			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "hosted_in_env")
+			validateLocalEnvResolution(t, resolver, resourceAttributes, "hosted_in_env")
 
-			// insert custom env
-			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "env1")
-			resolver.Process(attributes, resourceAttributes)
-			envAttr, ok := attributes.Get(attr.AWSLocalEnvironment)
-			assert.True(t, ok)
-			assert.Equal(t, "env1", envAttr.Str())
-
-			attributes = pcommon.NewMap()
+			// Test deployment env overrides hosted in env
 			resourceAttributes = pcommon.NewMap()
+			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "hosted_in_env")
+			resourceAttributes.PutStr(attr.AttributeDeploymentEnvironment, "dep_env")
+			validateLocalEnvResolution(t, resolver, resourceAttributes, "dep_env")
 
-			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "error")
-			resourceAttributes.PutStr(semconv.AttributeDeploymentEnvironment, "env2")
-			resolver.Process(attributes, resourceAttributes)
-			envAttr, ok = attributes.Get(attr.AWSLocalEnvironment)
-			assert.True(t, ok)
-			assert.Equal(t, "env2", envAttr.Str())
-
-			attributes = pcommon.NewMap()
 			resourceAttributes = pcommon.NewMap()
+			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "hosted_in_env")
+			resourceAttributes.PutStr(attr.AttributeDeploymentEnvironmentName, "dep_env_name")
+			validateLocalEnvResolution(t, resolver, resourceAttributes, "dep_env_name")
 
-			resourceAttributes.PutStr(semconv.AttributeDeploymentEnvironment, "env3")
-			resolver.Process(attributes, resourceAttributes)
-			envAttr, ok = attributes.Get(attr.AWSLocalEnvironment)
-			assert.True(t, ok)
-			assert.Equal(t, "env3", envAttr.Str())
+			// Test deployment env works standalone
+			resourceAttributes = pcommon.NewMap()
+			resourceAttributes.PutStr(attr.AttributeDeploymentEnvironment, "dep_env")
+			validateLocalEnvResolution(t, resolver, resourceAttributes, "dep_env")
+
+			resourceAttributes = pcommon.NewMap()
+			resourceAttributes.PutStr(attr.AttributeDeploymentEnvironmentName, "dep_env_name")
+			validateLocalEnvResolution(t, resolver, resourceAttributes, "dep_env_name")
 		})
 	}
+}
+
+func validateLocalEnvResolution(t *testing.T, resolver subResolver, resourceAttributes pcommon.Map, expectedEnv string) {
+	attributes := pcommon.NewMap()
+	resolver.Process(attributes, resourceAttributes)
+	envAttr, ok := attributes.Get(attr.AWSLocalEnvironment)
+	assert.True(t, ok)
+	assert.Equal(t, expectedEnv, envAttr.Str())
 }
 
 func TestAttributesResolver_Process(t *testing.T) {

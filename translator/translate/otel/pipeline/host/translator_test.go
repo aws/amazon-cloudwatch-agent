@@ -327,6 +327,47 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"sigv4auth"},
 			},
 		},
+		"WithOtlpMetricsEC2AndServiceName": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{
+							"service.name": "test-service",
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostOtlpMetrics,
+			mode:         config.ModeEC2,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp/cloudwatch"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
+			},
+		},
+		"WithOtlpMetricsEC2CloudWatchLogsAndServiceName": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{
+							"service.name": "test-service",
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostOtlpMetrics,
+			destination:  common.CloudWatchLogsKey,
+			mode:         config.ModeEC2,
+			want: &want{
+				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				exporters:  []string{"awsemf"},
+				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

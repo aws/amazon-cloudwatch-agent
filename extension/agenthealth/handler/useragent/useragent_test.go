@@ -4,6 +4,8 @@
 package useragent
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"testing"
 
@@ -208,6 +210,67 @@ func TestJmx(t *testing.T) {
 	assert.Equal(t, "outputs:(nop)", ua.outputsStr.Load())
 }
 
+func TestAddFeatureFlags(t *testing.T) {
+	ua := newUserAgent()
+
+	ua.AddFeatureFlags("feature1")
+	assert.Len(t, ua.feature, 1)
+	assert.Equal(t, "feature:(feature1)", ua.featureStr.Load())
+
+	ua.AddFeatureFlags("feature1", "feature2", "feature3")
+	assert.Len(t, ua.feature, 3)
+	assert.Equal(t, "feature:(feature1 feature2 feature3)", ua.featureStr.Load())
+
+	ua.AddFeatureFlags("")
+	assert.Len(t, ua.feature, 3)
+	assert.Equal(t, "feature:(feature1 feature2 feature3)", ua.featureStr.Load())
+	assert.Contains(t, ua.Header(true), "feature:(feature1 feature2 feature3)")
+}
+
+func TestAddFeatureFlags_Concurrent(t *testing.T) {
+	ua := newUserAgent()
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			ua.AddFeatureFlags(fmt.Sprintf("feature%d", i))
+		}(i)
+	}
+	wg.Wait()
+	assert.Len(t, ua.feature, 50)
+}
+
+func TestReset(t *testing.T) {
+	ua := newUserAgent()
+
+	ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+	ua.SetContainerInsightsFlag()
+	ua.AddFeatureFlags("test")
+
+	assert.Len(t, ua.inputs, 1)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 1)
+	assert.Len(t, ua.feature, 1)
+
+	assert.Equal(t, "inputs:(run_as_user)", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "outputs:(container_insights)", ua.outputsStr.Load())
+	assert.Equal(t, "feature:(test)", ua.featureStr.Load())
+
+	ua.Reset()
+
+	assert.Len(t, ua.inputs, 0)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 0)
+	assert.Len(t, ua.feature, 0)
+
+	assert.Equal(t, "", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "", ua.outputsStr.Load())
+	assert.Equal(t, "", ua.featureStr.Load())
+}
+
 func TestSingleton(t *testing.T) {
 	assert.Equal(t, Get().(*userAgent).id, Get().(*userAgent).id)
 }
@@ -221,4 +284,47 @@ func TestListen(t *testing.T) {
 	}
 	ua.SetContainerInsightsFlag()
 	wg.Wait()
+}
+
+func TestSetComponents_WithDualStackEndpoint(t *testing.T) {
+	// Save original env var
+	originalEnv := os.Getenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT)
+	defer func() {
+		if originalEnv == "" {
+			os.Unsetenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT)
+		} else {
+			os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, originalEnv)
+		}
+	}()
+
+	t.Run("ipv6_feature_added_when_dualstack_enabled", func(t *testing.T) {
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "true")
+		ua := newUserAgent()
+		ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+
+		assert.Contains(t, ua.feature, "ipv6")
+		assert.Contains(t, ua.featureStr.Load(), "ipv6")
+		header := ua.Header(true)
+		assert.Contains(t, header, "feature:(ipv6)")
+	})
+
+	t.Run("ipv6_feature_not_added_when_dualstack_disabled", func(t *testing.T) {
+		os.Setenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT, "false")
+		ua := newUserAgent()
+		ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+
+		assert.NotContains(t, ua.feature, "ipv6")
+		header := ua.Header(true)
+		assert.NotContains(t, header, "ipv6")
+	})
+
+	t.Run("ipv6_feature_not_added_when_dualstack_not_set", func(t *testing.T) {
+		os.Unsetenv(envconfig.AWS_USE_DUALSTACK_ENDPOINT)
+		ua := newUserAgent()
+		ua.SetComponents(&otelcol.Config{}, &telegraf.Config{})
+
+		assert.NotContains(t, ua.feature, "ipv6")
+		header := ua.Header(true)
+		assert.NotContains(t, header, "ipv6")
+	})
 }

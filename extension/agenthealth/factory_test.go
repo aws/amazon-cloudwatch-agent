@@ -20,7 +20,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	cfg := &Config{}
-	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(), cfg)
+	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(TypeStr), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 }

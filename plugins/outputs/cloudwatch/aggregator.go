@@ -142,7 +142,7 @@ func (durationAgg *durationAggregator) aggregating() {
 				durationAgg.metricMap[metricMapKey] = m
 				if m.distribution == nil {
 					// Assume function pointer is always valid.
-					m.distribution = distribution.NewDistribution()
+					m.distribution = distribution.NewClassicDistribution()
 					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
 					if err != nil {
 						if errors.Is(err, distribution.ErrUnsupportedValue) {
@@ -155,13 +155,13 @@ func (durationAgg *durationAggregator) aggregating() {
 				// Else the first entry has a distribution, so do nothing.
 			} else {
 				// Update an existing entry.
-				if m.distribution == nil {
+				if m.distribution != nil {
+					aggregatedMetric.distribution.AddDistribution(m.distribution)
+				} else {
 					err := aggregatedMetric.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
 					if err != nil {
 						log.Printf("W! err %s, metric %s", err, *m.MetricName)
 					}
-				} else {
-					aggregatedMetric.distribution.AddDistribution(m.distribution)
 				}
 			}
 		case <-durationAgg.ticker.C:

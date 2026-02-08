@@ -116,34 +116,6 @@ It is using [Semantic versioning](https://semver.org/)
 ## Distributions
 You can download the official release from S3, refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
 
-Nightly s3 release are not production ready and should be used at own risk
-1. Download Binaries
-    1. Linux
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/amazon-cloudwatch-agent
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/amazon-cloudwatch-agent-config-wizard
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/config-downloader
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/config-translator
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/start-amazon-cloudwatch-agent
-    1. Windows
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/amazon-cloudwatch-agent-config-wizard.exe
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/amazon-cloudwatch-agent.exe
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/config-downloader.exe
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/config-translator.exe
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/start-amazon-cloudwatch-agent.exe
-    1. Mac
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/amazon-cloudwatch-agent
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/amazon-cloudwatch-agent-config-wizard
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/config-downloader
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/config-translator
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/start-amazon-cloudwatch-agent
-2. Download Packages
-    1. Linux
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux/{amd64/arm64}/amazon-cloudwatch-agent.{deb/rpm}
-    2. Windows
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows/amd64/amazon-cloudwatch-agent.zip
-    3. Mac
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin/amd64/amazon-cloudwatch-agent.tar.gz
-
 ## Usage data
 By default, the CloudWatch agent sends health and performance data about itself to CloudWatch whenever it publishes metrics or logs to CloudWatch. This data incurs no costs to you. You can prevent the agent from sending this data by specifying `false` for `usage_data` in the `agent` section of the configuration. If you omit this parameter, the default of true is used and the agent sends the health and performance data. Refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Agentsection).
 

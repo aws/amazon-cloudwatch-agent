@@ -28,12 +28,12 @@ func TestCreateDefaultConfig(t *testing.T) {
 
 func TestCreateProcessor(t *testing.T) {
 	factory := NewFactory()
-	mp, err := factory.CreateMetrics(context.Background(), processortest.NewNopSettings(), nil, consumertest.NewNop())
+	mp, err := factory.CreateMetrics(context.Background(), processortest.NewNopSettings(component.MustNewType("rollup")), nil, consumertest.NewNop())
 	assert.Error(t, err)
 	assert.Nil(t, mp)
 
 	cfg := factory.CreateDefaultConfig().(*Config)
-	mp, err = factory.CreateMetrics(context.Background(), processortest.NewNopSettings(), cfg, consumertest.NewNop())
+	mp, err = factory.CreateMetrics(context.Background(), processortest.NewNopSettings(component.MustNewType("rollup")), cfg, consumertest.NewNop())
 	assert.NoError(t, err)
 	assert.NotNil(t, mp)
 

@@ -23,13 +23,30 @@ on:
       - synchronize
       - reopened
       - ready_for_review
+      - labeled
+      - unlabeled
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
+  CheckLabel:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.has_label }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
+            echo "has_label=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_label=false" >> $GITHUB_OUTPUT
+          fi
+
   BuildAndUpload:
+    needs: [ CheckLabel ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -43,6 +60,8 @@ jobs:
 
   OutputEnvVariables:
     name: 'OutputEnvVariables'
+    needs: [ CheckLabel ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     outputs:
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
@@ -73,11 +92,12 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
   StartLocalStack:
     name: 'StartLocalStack'
-    needs: [OutputEnvVariables]
+    needs: [ CheckLabel, OutputEnvVariables ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
@@ -93,8 +113,9 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   GenerateTestMatrix:
-    needs: [OutputEnvVariables]
     name: 'GenerateTestMatrix'
+    needs: [ CheckLabel, OutputEnvVariables ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     outputs:
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
@@ -109,7 +130,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.22.2
+          go-version: ~1.25
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -136,9 +157,13 @@ jobs:
 
 
   EC2LinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
     name: 'EC2LinuxTests'
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       build_id: ${{ github.sha }}
       test_dir: terraform/ec2/linux
@@ -155,9 +180,13 @@ jobs:
     secrets: inherit
 
   EC2SELinuxIntegrationTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables, StartLocalStack ]
     name: 'EC2SELinuxTests'
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       build_id: ${{ github.sha }}
       test_dir: terraform/ec2/linux
@@ -175,8 +204,8 @@ jobs:
 
   StopLocalStack:
     name: 'StopLocalStack'
-    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    needs: [ CheckLabel, StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    if: ${{ always() && needs.StartLocalStack.result == 'success' && needs.CheckLabel.outputs.should_run == 'true'}}
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -189,3 +218,59 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       github_sha: ${{ github.sha }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  IntegrationTestGate:
+    name: Check ready for testing label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for ready for testing label
+        run: |
+          if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
+            echo "Draft PR - skipping label check."
+            exit 0
+          fi
+
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" != "true" ]]; then
+            echo "Missing 'ready for testing' label. Please add before merging."
+            exit 1
+          fi
+
+          echo "'ready for testing' label found!"
+
+  verify-all:
+    name: Verify All PR Test Jobs
+    needs: [IntegrationTestGate, CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
+            GenerateTestMatrix, EC2LinuxIntegrationTest, EC2SELinuxIntegrationTest,
+            StopLocalStack]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Job Status
+        run: |
+          # Convert needs context to JSON and process with jq
+          needs_json='${{ toJSON(needs) }}'
+
+          failed_jobs=()
+          successful_jobs=()
+
+          # Loop through all jobs in needs context
+          for job in $(echo "$needs_json" | jq -r 'keys[]'); do
+            result=$(echo "$needs_json" | jq -r ".[\"$job\"].result")
+
+            if [[ "$result" == "failure" ]]; then
+              failed_jobs+=("$job")
+            elif [[ "$result" == "success" ]]; then
+              successful_jobs+=("$job")
+            fi
+          done
+
+          echo "Successfully validated jobs:"
+          printf '%s\n' "${successful_jobs[@]}"
+
+          if [ ${#failed_jobs[@]} -ne 0 ]; then
+            echo -e "\nFailed jobs:"
+            printf '%s\n' "${failed_jobs[@]}"
+            exit 1
+          fi
+
+          echo -e "\nAll required jobs completed without failures!"

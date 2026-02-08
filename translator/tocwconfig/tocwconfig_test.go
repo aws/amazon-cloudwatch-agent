@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//nolint:gosec
 package tocwconfig
 
 import (
@@ -38,6 +39,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -48,8 +51,11 @@ const (
 	ecsSdFileNameToken      = "ecsSdFileName"
 )
 
-//go:embed sampleConfig/prometheus_config.yaml
-var prometheusConfig string
+//go:embed sampleConfig/prometheus_ecs_config.yaml
+var ecsPrometheusConfig string
+
+//go:embed sampleConfig/prometheus_kubernetes_config.yaml
+var k8sPrometheusConfig string
 
 type testCase struct {
 	filename        string
@@ -82,6 +88,7 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
+
 func TestContainerInsightsJMX(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -113,7 +120,7 @@ func TestAppSignalsAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -128,7 +135,7 @@ func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -143,7 +150,7 @@ func TestStatsDAndEKSConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_statsd_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -172,7 +179,7 @@ func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
@@ -231,6 +238,18 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
+}
+
+func TestEmfAndKubernetesWithGpuHighFrequencyConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_high_frequency_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_high_frequency_config", "darwin", nil, "")
 }
 
 func TestEmfAndKubernetesWithKueueConfig(t *testing.T) {
@@ -323,6 +342,12 @@ func TestOtlpMetricsEmfConfigKubernetes(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_cloudwatchlogs_eks_config", "windows", nil, "")
 }
 
+func TestSharedOtlp(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "shared_otlp_config", "linux", nil, "")
+}
+
 func TestProcstatMemorySwapConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
@@ -339,6 +364,18 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
+func TestWindowsEventIDOnly(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids", "windows", expectedEnvVars, "")
+}
+
+// test both event_ids and levels
+func TestWindowsEventIdsAndLevels(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "windows_eventids_and_levels", "windows", expectedEnvVars, "")
+}
 func TestStatsDConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
@@ -387,11 +424,11 @@ func TestDiskIOTelegrafConfig(t *testing.T) {
 	checkTranslation(t, "diskio_telegraf_config_linux", "darwin", nil, "")
 }
 
-func TestDiskIOEBSConfig(t *testing.T) {
+func TestDiskIONVMeConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "diskio_ebs_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "diskio_nvme_config_linux", "linux", expectedEnvVars, "")
 }
 
 // Both Telegraf & EBS
@@ -417,7 +454,7 @@ func TestPrometheusConfig(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -440,7 +477,7 @@ func TestPrometheusConfigwithTargetAllocator(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -466,7 +503,7 @@ func TestOtelPrometheusConfig(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
@@ -489,13 +526,29 @@ func TestCombinedPrometheusConfig(t *testing.T) {
 		ecsSdFileNameToken:      strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
 	}
 	// Load prometheus config and replace ecs sd results file name token with temp file name
-	testPrometheusConfig := strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
+	testPrometheusConfig := strings.ReplaceAll(ecsPrometheusConfig, "{"+ecsSdFileNameToken+"}", ecsSdFileName)
 	// Write the modified prometheus config to temp prometheus config file
 	err := os.WriteFile(prometheusConfigFileName, []byte(testPrometheusConfig), os.ModePerm)
 	require.NoError(t, err)
 	// In the following checks, we first load the json and replace tokens with the temp files
 	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
 	checkTranslation(t, "prometheus_combined_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+}
+
+func TestPrometheusAndKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(k8sPrometheusConfig), os.ModePerm)
+	require.NoError(t, err)
+	checkTranslation(t, "prometheus_and_kubernetes_config", "linux", expectedEnvVars, "")
 }
 
 func TestBasicConfig(t *testing.T) {
@@ -706,6 +759,38 @@ func TestTraceConfig(t *testing.T) {
 	}
 }
 
+func TestAppendDimensionsHostMetrics(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	// Setup mock AWS metadata to get realistic values in the TOML output
+	cleanup := translateutil.MockCompleteAWSMetadata(
+		translateutil.MockAWSMetadata{
+			InstanceID:   "i-1234567890abcdef0",
+			InstanceType: "t3.medium",
+			ImageID:      "ami-0abcdef1234567890",
+			Hostname:     "test-hostname",
+			PrivateIP:    "10.0.1.100",
+			AccountID:    "123456789012",
+		},
+		map[string]string{
+			"aws:autoscaling:groupName": "production-web-asg",
+		},
+	)
+	defer cleanup()
+
+	// Test that append_dimensions_host_metrics.json generates the correct .conf and .yaml files
+	// Expected .conf file contains resolved AWS metadata values:
+	// [inputs.cpu.tags]
+	//   AutoScalingGroupName = "production-web-asg"
+	//   ImageId = "ami-0abcdef1234567890"
+	//   InstanceType = "t3.medium"
+	//   ServiceName = "MyServiceApplication"
+	//
+	// Expected .yaml file includes ec2tagger processor for InstanceId resolution
+	checkTranslation(t, "append_dimensions_host_metrics", "linux", nil, "")
+}
+
 func TestConfigWithEnvironmentVariables(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -867,6 +952,9 @@ func resetContext(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = ""
 	context.ResetContext()
 
+	// Clear OTLP config cache to avoid conflicts between tests
+	otlp.ClearConfigCache()
+
 	t.Setenv("ProgramData", "c:\\ProgramData")
 }
 
@@ -926,7 +1014,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
-		// assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
+		//assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
 
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}
