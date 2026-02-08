@@ -1,0 +1,23 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+        "cluster_name": "TestCluster",
+        "metrics_collection_interval": 30,
+        "disable_metric_extraction": true,
+        "enhanced_container_insights": true,
+        "accelerated_compute_metrics": false,
+        "kueue_container_insights": false
+      },
+      "prometheus": {
+        "cluster_name": "TestCluster",
+        "prometheus_config_path": "{prometheusFileName}"
+      }
+    },
+    "force_flush_interval": 5,
+    "endpoint_override":"https://fake_endpoint"
+  }
+}

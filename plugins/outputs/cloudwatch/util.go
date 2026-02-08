@@ -5,7 +5,6 @@ package cloudwatch
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"sort"
 	"strings"
@@ -72,38 +71,10 @@ func publishJitter(publishInterval time.Duration) time.Duration {
 
 func setNewDistributionFunc(maxValuesPerDatumLimit int) {
 	if maxValuesPerDatumLimit >= maxValuesPerDatum {
-		distribution.NewDistribution = seh1.NewSEH1Distribution
+		distribution.NewClassicDistribution = seh1.NewSEH1Distribution
 	} else {
-		distribution.NewDistribution = regular.NewRegularDistribution
+		distribution.NewClassicDistribution = regular.NewRegularDistribution
 	}
-}
-
-func resize(dist distribution.Distribution, listMaxSize int) (distList []distribution.Distribution) {
-	var ok bool
-	// If this is SEH1 distribution, it has already considered the list max size.
-	if _, ok = dist.(*seh1.SEH1Distribution); ok {
-		distList = append(distList, dist)
-		return
-	}
-	var regularDist *regular.RegularDistribution
-	if regularDist, ok = dist.(*regular.RegularDistribution); !ok {
-		log.Printf("E! The distribution type %T is not supported for resizing.", dist)
-		return
-	}
-	values, _ := regularDist.ValuesAndCounts()
-	sort.Float64s(values)
-	newSEH1Dist := seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
-	for i := 0; i < len(values); i++ {
-		if !newSEH1Dist.CanAdd(values[i], listMaxSize) {
-			distList = append(distList, newSEH1Dist)
-			newSEH1Dist = seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
-		}
-		newSEH1Dist.AddEntry(values[i], regularDist.GetCount(values[i]))
-	}
-	if newSEH1Dist.Size() > 0 {
-		distList = append(distList, newSEH1Dist)
-	}
-	return
 }
 
 func payload(datum *cloudwatch.MetricDatum) (size int) {

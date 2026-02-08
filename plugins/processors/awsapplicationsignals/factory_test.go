@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
+	"go.opentelemetry.io/collector/confmap/xconfmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
@@ -100,10 +101,10 @@ func TestLoadEKSConfig(t *testing.T) {
 			require.NoError(t, sub.Unmarshal(cfg))
 
 			if tt.expected == nil {
-				assert.EqualError(t, component.ValidateConfig(cfg), tt.errorMessage)
+				assert.EqualError(t, xconfmap.Validate(cfg), tt.errorMessage)
 				return
 			}
-			assert.NoError(t, component.ValidateConfig(cfg))
+			assert.NoError(t, xconfmap.Validate(cfg))
 			assert.Equal(t, tt.expected, cfg)
 
 			validateErr := cfg.Validate()
@@ -143,10 +144,10 @@ func TestLoadGenericConfig(t *testing.T) {
 			require.NoError(t, sub.Unmarshal(cfg))
 
 			if tt.expected == nil {
-				assert.EqualError(t, component.ValidateConfig(cfg), tt.errorMessage)
+				assert.EqualError(t, xconfmap.Validate(cfg), tt.errorMessage)
 				return
 			}
-			assert.NoError(t, component.ValidateConfig(cfg))
+			assert.NoError(t, xconfmap.Validate(cfg))
 			assert.Equal(t, tt.expected, cfg)
 
 			validateErr := cfg.Validate()

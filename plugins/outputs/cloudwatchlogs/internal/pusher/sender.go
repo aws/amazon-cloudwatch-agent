@@ -26,6 +26,7 @@ type Sender interface {
 	Send(*logEventBatch)
 	SetRetryDuration(time.Duration)
 	RetryDuration() time.Duration
+	Stop()
 }
 
 type sender struct {
@@ -33,21 +34,24 @@ type sender struct {
 	retryDuration atomic.Value
 	targetManager TargetManager
 	logger        telegraf.Logger
-	stop          <-chan struct{}
+	stopCh        chan struct{}
+	stopped       bool
 }
+
+var _ (Sender) = (*sender)(nil)
 
 func newSender(
 	logger telegraf.Logger,
 	service cloudWatchLogsService,
 	targetManager TargetManager,
 	retryDuration time.Duration,
-	stop <-chan struct{},
 ) Sender {
 	s := &sender{
 		logger:        logger,
 		service:       service,
 		targetManager: targetManager,
-		stop:          stop,
+		stopCh:        make(chan struct{}),
+		stopped:       false,
 	}
 	s.retryDuration.Store(retryDuration)
 	return s
@@ -87,6 +91,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		var awsErr awserr.Error
 		if !errors.As(err, &awsErr) {
 			s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
+			batch.updateState()
 			return
 		}
 
@@ -99,6 +104,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		case *cloudwatchlogs.InvalidParameterException,
 			*cloudwatchlogs.DataAlreadyAcceptedException:
 			s.logger.Errorf("%v, will not retry the request", e)
+			batch.updateState()
 			return
 		default:
 			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, awsErr)
@@ -116,18 +122,28 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		if time.Since(startTime)+wait > s.RetryDuration() {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
+			batch.updateState()
 			return
 		}
 
 		s.logger.Warnf("Retried %v time, going to sleep %v before retrying.", retryCountShort+retryCountLong-1, wait)
 
 		select {
-		case <-s.stop:
+		case <-s.stopCh:
 			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
+			batch.updateState()
 			return
 		case <-time.After(wait):
 		}
 	}
+}
+
+func (s *sender) Stop() {
+	if s.stopped {
+		return
+	}
+	close(s.stopCh)
+	s.stopped = true
 }
 
 // SetRetryDuration sets the maximum duration for retrying failed log sends.

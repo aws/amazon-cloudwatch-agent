@@ -30,8 +30,11 @@ jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
+      - env:
+          BUILD_SHA: ${{ inputs.build_sha }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
+        run: |
+          if [[ "$BUILD_SHA" == "$GITHUB_SHA_VAL" ]]; then
             echo "Build SHA matches test SHA"
           else
             echo "Build SHA does not match test SHA"
@@ -60,6 +63,14 @@ jobs:
   java-ec2-default-e2e-test:
     needs: CheckBuildTestArtifacts
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  java-ec2-ubuntu-e2e-test:
+    needs: CheckBuildTestArtifacts
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-ubuntu-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -190,18 +201,17 @@ jobs:
       caller-workflow-name: 'main-build'
       dotnet-version: '8.0'
 
-  dotnet-ec2-default-v6-e2e-test:
+  dotnet-ec2-windows-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-default-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-windows-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
-      dotnet-version: '6.0'
 
-  dotnet-ec2-windows-e2e-test:
+  dotnet-ec2-linux-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-windows-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-ec2-asg-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -216,6 +226,15 @@ jobs:
       test-cluster-name: 'e2e-cw-agent-test'
       caller-workflow-name: 'main-build'
 
+  dotnet-eks-e2e-windows-test:
+    needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-eks-windows-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-windows-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
   dotnet-k8s-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-k8s-test.yml@main
@@ -223,3 +242,21 @@ jobs:
     with:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
+
+  # This validation is to ensure that all test workflows relevant to this repo are actually
+  # being used in this repo, which is referring to all the other jobs in this file.
+  #
+  # If this starts failing, then it most likely means that new e2e test workflow was
+  # added to `aws-observability/aws-application-signals-test-framework`, but was not
+  # added to this file. It could also mean that a test in this file has been removed.
+  #
+  # If a particular test file is intended to not be tested in this repo and should not
+  # be failing this particular validation, then choose one of the following options:
+  # - Add the test file to the exclusions input (CSV format) to the workflow
+  #   (see: https://github.com/aws-observability/aws-application-signals-test-framework/blob/main/.github/workflows/validate-e2e-tests-are-accounted-for.yml#L1)
+  # - Update the `validate-e2e-tests-are-accounted-for` job to change which "workflow files are expected to be used by this repo"
+  #   (see: https://github.com/aws-observability/aws-application-signals-test-framework/blob/main/.github/workflows/validate-e2e-tests-are-accounted-for.yml)
+  validate-all-tests-are-accounted-for:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/validate-e2e-tests-are-accounted-for.yml@main
+    with:
+      exclusions: dotnet-ec2-nuget-test.yml

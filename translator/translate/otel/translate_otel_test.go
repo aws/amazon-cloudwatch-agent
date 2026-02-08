@@ -26,7 +26,6 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
-		detector        func() (eksdetector.Detector, error)
 		isEKSDataStore  func() eksdetector.IsEKSCache
 	}{
 		"WithValidConfig": {
@@ -71,7 +70,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsTracesEnabled": {
@@ -82,7 +80,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsMetricsAndTracesEnabled": {
@@ -98,7 +95,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsMultipleMetricsReceiversConfig": {
@@ -117,7 +113,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsFallbackMetricsEnabled": {
@@ -128,7 +123,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsFallbackTracesEnabled": {
@@ -139,7 +133,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsFallbackMetricsAndTracesEnabled": {
@@ -155,7 +148,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsFallbackMultipleMetricsReceiversConfig": {
@@ -174,7 +166,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAMPDestinationConfig": {
@@ -211,7 +202,6 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			eksdetector.NewDetector = testCase.detector
 			eksdetector.IsEKS = testCase.isEKSDataStore
 			translator.SetTargetPlatform("linux")
 			got, err := Translate(testCase.input, "linux")

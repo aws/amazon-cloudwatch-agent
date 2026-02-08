@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/logger"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 func Test_getCollectorParams(t *testing.T) {
@@ -150,6 +151,52 @@ service:
 				assert.NotNil(t, got)
 				assert.Equal(t, testCase.want.ToStringMap(), got.ToStringMap())
 			}
+		})
+	}
+}
+
+func TestFallbackOtelConfig(t *testing.T) {
+	defaultYamlRelativePath := filepath.Join("default", paths.YAML)
+	testCases := map[string]struct {
+		tomlRelativePath string
+		filesToCreate    []string
+		want             string
+	}{
+		"WithoutAnyFiles": {
+			tomlRelativePath: filepath.Join("config", "config.toml"),
+			want:             defaultYamlRelativePath,
+		},
+		"WithDefaultYamlPath": {
+			tomlRelativePath: filepath.Join("config", "config.toml"),
+			filesToCreate:    []string{defaultYamlRelativePath, filepath.Join("config", paths.YAML)},
+			want:             defaultYamlRelativePath,
+		},
+		"WithDefaultYamlInTomlDir": {
+			tomlRelativePath: filepath.Join("config", "config.toml"),
+			filesToCreate:    []string{filepath.Join("config", paths.YAML), filepath.Join("config", "config.yaml")},
+			want:             filepath.Join("config", paths.YAML),
+		},
+		"WithSameNameAsToml": {
+			tomlRelativePath: filepath.Join("config", "config.toml"),
+			filesToCreate:    []string{filepath.Join("config", "config.yaml")},
+			want:             filepath.Join("config", "config.yaml"),
+		},
+		"WithoutTomlPath": {
+			tomlRelativePath: "",
+			filesToCreate:    []string{filepath.Join("config", "config.yaml")},
+			want:             defaultYamlRelativePath,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			for _, fileToCreate := range testCase.filesToCreate {
+				path := filepath.Join(tmpDir, fileToCreate)
+				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+				require.NoError(t, os.WriteFile(path, nil, 0600))
+			}
+			got := getFallbackOtelConfig(filepath.Join(tmpDir, testCase.tomlRelativePath), filepath.Join(tmpDir, defaultYamlRelativePath))
+			assert.Equal(t, filepath.Join(tmpDir, testCase.want), got)
 		})
 	}
 }

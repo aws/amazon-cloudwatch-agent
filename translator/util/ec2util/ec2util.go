@@ -22,11 +22,13 @@ import (
 
 // this is a singleton struct
 type ec2Util struct {
-	Region     string
-	PrivateIP  string
-	InstanceID string
-	Hostname   string
-	AccountID  string
+	Region       string
+	PrivateIP    string
+	InstanceID   string
+	Hostname     string
+	AccountID    string
+	InstanceType string
+	ImageID      string
 }
 
 var (
@@ -128,6 +130,8 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		e.AccountID = instanceIdentityDocument.AccountID
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
+		e.InstanceType = instanceIdentityDocument.InstanceType
+		e.ImageID = instanceIdentityDocument.ImageID
 	} else {
 		fmt.Println("D! could not get instance document without imds v1 fallback enable thus enable fallback")
 		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocument()
@@ -136,6 +140,8 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 			e.AccountID = instanceIdentityDocumentInner.AccountID
 			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
 			e.InstanceID = instanceIdentityDocumentInner.InstanceID
+			e.InstanceType = instanceIdentityDocumentInner.InstanceType
+			e.ImageID = instanceIdentityDocumentInner.ImageID
 			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		} else {
 			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)

@@ -41,13 +41,20 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins" // do not remove, necessary for telegraf to know what plugins are used
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
+	"github.com/aws/amazon-cloudwatch-agent/tool/downloader"
+	downloaderflags "github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/tool/translator"
+	"github.com/aws/amazon-cloudwatch-agent/tool/wizard"
+	wizardflags "github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
+	translatorflags "github.com/aws/amazon-cloudwatch-agent/translator/flags"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 )
 
@@ -492,9 +499,43 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
+
+	// Check for subcommands first
+	if len(os.Args) > 1 {
+		subcommand := os.Args[1]
+		if subcommand == translatorflags.TranslatorCommand || subcommand == downloaderflags.Command || subcommand == wizardflags.Command {
+			subcommands := map[string]map[string]cmdwrapper.Flag{
+				translatorflags.TranslatorCommand: translatorflags.TranslatorFlags,
+				downloaderflags.Command:           downloaderflags.DownloaderFlags,
+				wizardflags.Command:               wizardflags.WizardFlags,
+			}
+			handlers := map[string]func(map[string]*string) error{
+				translatorflags.TranslatorCommand: translator.RunTranslator,
+				downloaderflags.Command:           downloader.RunDownloaderFromFlags,
+				wizardflags.Command:               wizard.RunWizardFromFlags,
+			}
+
+			if err := cmdwrapper.HandleSubcommand(subcommands, handlers); err != nil {
+				log.Fatalf("E! %s", err.Error())
+			}
+			return
+		}
+	}
+
+	// Override flag.Usage to include subcommand help
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nAvailable subcommands:\n")
+		fmt.Fprintf(os.Stderr, "  %s\t\tTranslate configuration files\n", translatorflags.TranslatorCommand)
+		fmt.Fprintf(os.Stderr, "  %s\t\tDownload configuration from remote sources\n", downloaderflags.Command)
+		fmt.Fprintf(os.Stderr, "  %s\t\t\tInteractive configuration wizard\n", wizardflags.Command)
+		fmt.Fprintf(os.Stderr, "\nUse '%s <subcommand> --help' for more information about a subcommand.\n", os.Args[0])
+	}
+
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
-		_ = fOtelConfigs.Set(paths.YamlConfigPath)
+		_ = fOtelConfigs.Set(getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath))
 	}
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
@@ -614,6 +655,7 @@ func main() {
 			}
 		}
 		return
+
 	}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
@@ -742,4 +784,29 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 	}
 
 	return "", nil
+}
+
+// getFallbackOtelConfig returns the first fallback YAML file that exists. It checks files in the following order:
+//  1. Default YAML path
+//  2. Default YAML in the provided TOML directory
+//  3. YAML with the same name as the provided TOML
+func getFallbackOtelConfig(tomlPath, defaultYamlPath string) string {
+	candidatePaths := []string{defaultYamlPath}
+	if tomlPath != "" {
+		tomlDir := filepath.Dir(tomlPath)
+		samePathYAML := strings.TrimSuffix(tomlPath, filepath.Ext(tomlPath)) + ".yaml"
+		candidatePaths = append(candidatePaths,
+			filepath.Join(tomlDir, paths.YAML),
+			samePathYAML,
+		)
+	}
+	fallbackPath := defaultYamlPath
+	for _, candidatePath := range candidatePaths {
+		_, err := os.Stat(candidatePath)
+		if err == nil {
+			fallbackPath = candidatePath
+			break
+		}
+	}
+	return fallbackPath
 }

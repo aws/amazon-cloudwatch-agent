@@ -43,6 +43,7 @@ cp ${PREPKGPATH}/config-translator ${BUILD_ROOT}${MACHINE_ROOT}bin/
 cp ${PREPKGPATH}/config-downloader ${BUILD_ROOT}${MACHINE_ROOT}bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard ${BUILD_ROOT}${MACHINE_ROOT}bin/
 cp ${PREPKGPATH}/start-amazon-cloudwatch-agent ${BUILD_ROOT}${MACHINE_ROOT}bin/
+cp ${PREPKGPATH}/workload-discovery ${BUILD_ROOT}${MACHINE_ROOT}bin/
 cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}${MACHINE_ROOT}bin/
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}${MACHINE_ROOT}etc/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}${MACHINE_ROOT}doc/
@@ -53,6 +54,7 @@ chmod 600 ${BUILD_ROOT}/Library/LaunchDaemons/*
 chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/amazon-cloudwatch-agent
 chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/amazon-cloudwatch-agent-ctl
 chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/start-amazon-cloudwatch-agent
+chmod 700 ${BUILD_ROOT}${MACHINE_ROOT}bin/workload-discovery
 
 echo "Creating tar"
 (

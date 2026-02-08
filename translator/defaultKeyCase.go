@@ -74,6 +74,25 @@ func DefaultStringArrayCase(key string, defaultVal, input interface{}) (returnKe
 	return
 }
 
+func DefaultIntegralArrayCase(key string, defaultVal, input interface{}) (string, interface{}) {
+	returnKey, returnVal := DefaultCase(key, defaultVal, input)
+	if arrayVal, ok := returnVal.([]interface{}); ok {
+		intArrayVal := []int{}
+		for _, v := range arrayVal {
+			if floatVal, ok := v.(float64); ok {
+				intVal := int(floatVal)
+				intArrayVal = append(intArrayVal, intVal)
+			}
+		}
+		returnVal = intArrayVal
+	} else {
+		AddErrorMessages(
+			fmt.Sprintf("int array key: %s", key),
+			fmt.Sprintf("%s value (%v) in json is not valid as an array of integers.", key, returnVal))
+	}
+	return returnKey, returnVal
+}
+
 func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = DefaultIntegralCase(key, defaultVal, input)
 	if intVal, ok := returnVal.(int); ok && IsValidRetentionDays(intVal) {

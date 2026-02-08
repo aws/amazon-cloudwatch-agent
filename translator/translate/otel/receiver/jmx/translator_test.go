@@ -84,9 +84,10 @@ func TestTranslator(t *testing.T) {
 			index:  0,
 			wantID: "jmx/0",
 			want: confmap.NewFromStringMap(map[string]any{
-				"endpoint":            "localhost:8080",
-				"target_system":       "tomcat",
-				"collection_interval": "60s",
+				"aggregate_across_mbeans": true,
+				"endpoint":                "localhost:8080",
+				"target_system":           "tomcat",
+				"collection_interval":     "60s",
 				"otlp": map[string]any{
 					"endpoint": "0.0.0.0:0",
 					"timeout":  "5s",

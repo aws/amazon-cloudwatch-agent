@@ -19,6 +19,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatorateprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyattrsprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbytraceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricsgenerationprocessor"
@@ -66,18 +67,18 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/receiver/awsebsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 )
 
 func Factories() (otelcol.Factories, error) {
 	var factories otelcol.Factories
 	var err error
 
-	if factories.Receivers, err = receiver.MakeFactoryMap(
+	if factories.Receivers, err = otelcol.MakeFactoryMap[receiver.Factory](
 		awscontainerinsightreceiver.NewFactory(),
 		awscontainerinsightskueuereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
-		awsebsnvmereceiver.NewFactory(),
+		awsnvmereceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
 		jaegerreceiver.NewFactory(),
@@ -94,7 +95,7 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Processors, err = processor.MakeFactoryMap(
+	if factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory](
 		attributesprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
 		awsentity.NewFactory(),
@@ -107,6 +108,7 @@ func Factories() (otelcol.Factories, error) {
 		gpuattributes.NewFactory(),
 		kueueattributes.NewFactory(),
 		groupbytraceprocessor.NewFactory(),
+		groupbyattrsprocessor.NewFactory(),
 		k8sattributesprocessor.NewFactory(),
 		memorylimiterprocessor.NewFactory(),
 		metricsgenerationprocessor.NewFactory(),
@@ -122,7 +124,7 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Exporters, err = exporter.MakeFactoryMap(
+	if factories.Exporters, err = otelcol.MakeFactoryMap[exporter.Factory](
 		awscloudwatchlogsexporter.NewFactory(),
 		awsemfexporter.NewFactory(),
 		awsxrayexporter.NewFactory(),
@@ -134,7 +136,7 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Extensions, err = extension.MakeFactoryMap(
+	if factories.Extensions, err = otelcol.MakeFactoryMap[extension.Factory](
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
 		entitystore.NewFactory(),

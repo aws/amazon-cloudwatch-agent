@@ -1,0 +1,115 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+    prometheusremotewrite/amp:
+        add_metric_suffixes: true
+        auth:
+            authenticator: sigv4auth
+        endpoint: https://aps-workspaces.us-west-2.api.aws/workspaces/ws-12345/api/v1/remote_write
+        idle_conn_timeout: 1m30s
+        max_batch_size_bytes: 3000000
+        max_idle_conns: 100
+        namespace: ""
+        remote_write_queue:
+            enabled: true
+            num_consumers: 5
+            queue_size: 10000
+        resource_to_telemetry_conversion:
+            clear_after_copy: true
+            enabled: true
+        retry_on_failure:
+            enabled: true
+            initial_interval: 50ms
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        send_metadata: false
+        target_info:
+            enabled: true
+        timeout: 5s
+        write_buffer_size: 524288
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+    sigv4auth:
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
+processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
+    batch/host/amp:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    deltatocumulative/host/amp:
+        max_stale: 336h0m0s
+        max_streams: 9223372036854775807
+receivers:
+    telegraf_cpu:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - sigv4auth
+        - entitystore
+    pipelines:
+        metrics/host/amp:
+            exporters:
+                - prometheusremotewrite/amp
+            processors:
+                - batch/host/amp
+                - deltatocumulative/host/amp
+            receivers:
+                - telegraf_cpu
+        metrics/host/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - awsentity/resource
+            receivers:
+                - telegraf_cpu
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

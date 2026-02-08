@@ -5,7 +5,6 @@ package host
 
 import (
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -14,13 +13,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsebsnvme"
-	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
-)
-
-const (
-	diskIOPrefix    = "diskio_"
-	diskIOEbsPrefix = "ebs_"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 var (
@@ -52,26 +46,11 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 		})
 	}
 
-	if shouldAddEbsReceiver(conf, configSection) {
-		deltaReceivers.Set(awsebsnvme.NewTranslator())
+	if shouldAddNvmeReceiver(conf, configSection) {
+		deltaReceivers.Set(awsnvme.NewTranslator())
 	}
 
-	// Gather OTLP receivers
-	switch v := conf.Get(common.ConfigKey(configSection, common.OtlpKey)).(type) {
-	case []any:
-		for index := range v {
-			otlpReceivers.Set(otlpreceiver.NewTranslator(
-				otlpreceiver.WithSignal(pipeline.SignalMetrics),
-				otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
-				common.WithIndex(index),
-			))
-		}
-	case map[string]any:
-		otlpReceivers.Set(otlpreceiver.NewTranslator(
-			otlpreceiver.WithSignal(pipeline.SignalMetrics),
-			otlpreceiver.WithConfigKey(common.ConfigKey(configSection, common.OtlpKey)),
-		))
-	}
+	otlpReceivers.Merge(otlp.NewTranslators(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey)))
 
 	hasHostPipeline := hostReceivers.Len() != 0
 	hasHostCustomPipeline := hostCustomReceivers.Len() != 0
@@ -133,16 +112,14 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	return translators, nil
 }
 
-func shouldAddEbsReceiver(conf *confmap.Conf, configSection string) bool {
+func shouldAddNvmeReceiver(conf *confmap.Conf, configSection string) bool {
 	diskioMap := conf.Get(common.ConfigKey(configSection, common.DiskIOKey))
 	if diskioMap == nil {
 		return false
 	}
-
 	measurements := common.GetMeasurements(diskioMap.(map[string]any))
 	for _, measurement := range measurements {
-		measurement = strings.TrimPrefix(measurement, diskIOPrefix)
-		if strings.HasPrefix(measurement, diskIOEbsPrefix) {
+		if awsnvme.IsNVMEMetric(measurement) {
 			return true
 		}
 	}

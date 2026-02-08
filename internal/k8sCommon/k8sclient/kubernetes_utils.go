@@ -83,13 +83,14 @@ func extractWorkloadNameFromPodName(podName string) (string, error) {
 
 func GetWorkloadAndNamespace(pod *corev1.Pod) string {
 	var workloadAndNamespace string
-	if pod.ObjectMeta.OwnerReferences != nil {
-		for _, ownerRef := range pod.ObjectMeta.OwnerReferences {
+	if pod.OwnerReferences != nil {
+		for _, ownerRef := range pod.OwnerReferences {
 			if workloadAndNamespace != "" {
 				break
 			}
 
-			if ownerRef.Kind == "ReplicaSet" {
+			switch ownerRef.Kind {
+			case "ReplicaSet":
 				if workloadName, err := extractWorkloadNameFromRS(ownerRef.Name); err == nil {
 					// when the replicaSet is created by a deployment, use deployment name
 					workloadAndNamespace = attachNamespace(workloadName, pod.Namespace)
@@ -97,9 +98,9 @@ func GetWorkloadAndNamespace(pod *corev1.Pod) string {
 					// when the replicaSet is not created by a deployment, use replicaSet name directly
 					workloadAndNamespace = attachNamespace(workloadName, pod.Namespace)
 				}
-			} else if ownerRef.Kind == "StatefulSet" {
+			case "StatefulSet":
 				workloadAndNamespace = attachNamespace(ownerRef.Name, pod.Namespace)
-			} else if ownerRef.Kind == "DaemonSet" {
+			case "DaemonSet":
 				workloadAndNamespace = attachNamespace(ownerRef.Name, pod.Namespace)
 			}
 		}

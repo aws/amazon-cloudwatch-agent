@@ -6,3 +6,8 @@ agenthealth/2:
   stats:
     operations:
       - 'ListBuckets'
+agenthealth/3:
+  is_usage_data_enabled: true
+  usage_metadata:
+    - 'obs_jvm'
+    - 'obs_tomcat'

@@ -8,6 +8,7 @@ import (
 	"log"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -51,6 +53,13 @@ const (
 const (
 	opPutLogEvents  = "PutLogEvents"
 	opPutMetricData = "PutMetricData"
+)
+
+const (
+	featureFlagNvmeEBS        = "nvme_ebs"
+	featureFlagNvmeIS         = "nvme_is"
+	metricPrefixEBS           = "diskio_ebs_"
+	metricPrefixInstanceStore = "diskio_instance_store_"
 )
 
 type CloudWatch struct {
@@ -111,6 +120,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	if c.config.MiddlewareID != nil {
 		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv1(&svc.Handlers))
 	}
+
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
@@ -172,20 +182,23 @@ func (c *CloudWatch) pushMetricDatum() {
 	for {
 		select {
 		case metric := <-c.metricChan:
+			if metric.MetricName != nil {
+				c.handleMetricName(*metric.MetricName)
+			}
 			entity, datums := c.BuildMetricDatum(metric)
 			numberOfPartitions := len(datums)
 			/* We currently do not account for entity information as a part of the payload size.
-			This is by design and should be revisited once the SDK protocol changes.
-			In the meantime there has been a payload limit increase applied in the background to accommodate this decision
+			   This is by design and should be revisited once the SDK protocol changes.
+			   In the meantime there has been a payload limit increase applied in the background to accommodate this decision
 
-			Otherwise to include entity size you would do something like this:
-			c.metricDatumBatch.Size += calculateEntitySize(entity)
+			   Otherwise to include entity size you would do something like this:
+			   c.metricDatumBatch.Size += calculateEntitySize(entity)
 
-			In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
-			added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
-			c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
+			   In addition to calculating the size of the entity object, you might also need to account for any extra bytes that get
+			   added on an individual metric level when entity data is present (depends on how the sdk protocol changes)—something like:
+			   c.metricDatumBatch.Size += payload(datums[i], entityPresent=true)
 
-			File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
+			   File diff that could be useful: https://github.com/aws/amazon-cloudwatch-agent/compare/af960d7...459ef7c
 			*/
 			for i := 0; i < numberOfPartitions; i++ {
 				entityStr := entityToString(entity)
@@ -208,6 +221,14 @@ func (c *CloudWatch) pushMetricDatum() {
 		case <-c.shutdownChan:
 			return
 		}
+	}
+}
+
+func (c *CloudWatch) handleMetricName(name string) {
+	if strings.HasPrefix(name, metricPrefixEBS) {
+		useragent.Get().AddFeatureFlags(featureFlagNvmeEBS)
+	} else if strings.HasPrefix(name, metricPrefixInstanceStore) {
+		useragent.Get().AddFeatureFlags(featureFlagNvmeIS)
 	}
 }
 
@@ -420,27 +441,18 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Entity, []*cloudwatch.MetricDatum) {
 	var datums []*cloudwatch.MetricDatum
-	var distList []distribution.Distribution
+	dimensionsList := c.ProcessRollup(metric.Dimensions)
 
 	if metric.distribution != nil {
-		if metric.distribution.Size() == 0 {
-			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
-			return metric.entity, datums
-		}
-		if metric.distribution.Unit() != "" {
-			metric.SetUnit(metric.distribution.Unit())
-		}
-		distList = resize(metric.distribution, c.config.MaxValuesPerDatum)
-	}
+		datums = c.buildMetricDatumDist(metric, dimensionsList)
+	} else {
+		for index, dimensions := range dimensionsList {
+			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
+			//metric datum
+			if index == 0 && c.IsDropping(*metric.MetricName) {
+				continue
+			}
 
-	dimensionsList := c.ProcessRollup(metric.Dimensions)
-	for index, dimensions := range dimensionsList {
-		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
-		//metric datum
-		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
-			continue
-		}
-		if len(distList) == 0 {
 			if metric.Value == nil {
 				log.Printf("D! metric (%s) has nil value, dropping it", *metric.MetricName)
 				continue
@@ -460,32 +472,90 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) (cloudwatch.Enti
 				Value:             metric.Value,
 			}
 			datums = append(datums, datum)
-		} else {
-			for _, dist := range distList {
-				values, counts := dist.ValuesAndCounts()
-				s := cloudwatch.StatisticSet{}
-				s.SetMaximum(dist.Maximum())
-				s.SetMinimum(dist.Minimum())
-				s.SetSampleCount(dist.SampleCount())
-				s.SetSum(dist.Sum())
-				// Beware there may be many datums sharing pointers to the same
-				// strings for metric names, dimensions, etc.
-				// It is fine since at this point the values will not change.
-				datum := &cloudwatch.MetricDatum{
-					MetricName:        metric.MetricName,
-					Dimensions:        dimensions,
-					Timestamp:         metric.Timestamp,
-					Unit:              metric.Unit,
-					StorageResolution: metric.StorageResolution,
-					Values:            aws.Float64Slice(values),
-					Counts:            aws.Float64Slice(counts),
-					StatisticValues:   &s,
-				}
-				datums = append(datums, datum)
-			}
 		}
 	}
+
 	return metric.entity, datums
+}
+
+func (c *CloudWatch) buildMetricDatumDist(metric *aggregationDatum, dimensionsList [][]*cloudwatch.Dimension) []*cloudwatch.MetricDatum {
+	datums := []*cloudwatch.MetricDatum{}
+
+	if metric.distribution.Size() == 0 {
+		log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
+		return datums
+	}
+	if metric.distribution.Unit() != "" {
+		metric.SetUnit(metric.distribution.Unit())
+	}
+	distList := metric.distribution.Resize(c.config.MaxValuesPerDatum)
+
+	for _, dist := range distList {
+		values, counts := dist.ValuesAndCounts()
+
+		if len(values) != len(counts) {
+			log.Printf("E! metric has a distribution with different length of values and counts, %s, len(values) = %d, len(counts) = %d", *metric.MetricName, len(values), len(counts))
+			continue
+		}
+
+		if len(values) == 0 {
+			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
+			continue
+		}
+
+		s := cloudwatch.StatisticSet{}
+		s.SetMaximum(dist.Maximum())
+		s.SetMinimum(dist.Minimum())
+		s.SetSampleCount(dist.SampleCount())
+		s.SetSum(dist.Sum())
+
+		// If min and max are both 0, then they are are invalid. Estimate min/max using the values array
+		// This can happen for cumulative histograms that were converted to delta histograms, or whenever
+		// the datasource does not provide a minimum and maximum value
+		if dist.Maximum() == 0 && dist.Minimum() == 0 {
+			distMin, distMax := minAndMax(values)
+			s.SetMinimum(distMin)
+			s.SetMaximum(distMax)
+		}
+
+		for index, dimensions := range dimensionsList {
+			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
+			//metric datum
+			if index == 0 && c.IsDropping(*metric.MetricName) {
+				continue
+			}
+
+			// Beware there may be many datums sharing pointers to the same
+			// strings for metric names, dimensions, etc.
+			// It is fine since at this point the values will not change.
+			datum := &cloudwatch.MetricDatum{
+				MetricName:        metric.MetricName,
+				Dimensions:        dimensions,
+				Timestamp:         metric.Timestamp,
+				Unit:              metric.Unit,
+				StorageResolution: metric.StorageResolution,
+				Values:            aws.Float64Slice(values),
+				Counts:            aws.Float64Slice(counts),
+				StatisticValues:   &s,
+			}
+			datums = append(datums, datum)
+		}
+	}
+	return datums
+}
+
+func minAndMax(values []float64) (float64, float64) {
+	// assumes values has at least one value
+	myMin, myMax := values[0], values[0] // avoid conflict with built-in min, max functions
+	for _, v := range values[1:] {
+		if v < myMin {
+			myMin = v
+		}
+		if v > myMax {
+			myMax = v
+		}
+	}
+	return myMin, myMax
 }
 
 func (c *CloudWatch) IsDropping(metricName string) bool {

@@ -6,14 +6,15 @@ package awscontainerinsight
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
-	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -30,8 +31,7 @@ const (
 	ecs = "ecs"
 	eks = "eks"
 
-	defaultMetricsCollectionInterval = time.Minute
-	defaultLeaderLockName            = "cwagent-clusterleader" // To maintain backwards compatability with https://github.com/aws/amazon-cloudwatch-agent/blob/2dd89abaab4590cffbbc31ef89319b62809b09d1/plugins/inputs/k8sapiserver/k8sapiserver.go#L30
+	defaultLeaderLockName = "cwagent-clusterleader" // To maintain backwards compatibility with https://github.com/aws/amazon-cloudwatch-agent/blob/2dd89abaab4590cffbbc31ef89319b62809b09d1/plugins/inputs/k8sapiserver/k8sapiserver.go#L30
 )
 
 type translator struct {
@@ -80,9 +80,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		common.ConfigKey(configuredService.Key, common.MetricsCollectionIntervalKey),
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
-	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
+	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, DefaultMetricsCollectionInterval)
+	cfg.CollectionRole = getCollectionRole()
 	cfg.ContainerOrchestrator = configuredService.Value
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AcceleratedComputeGPUMetricsCollectionInterval = GetAcceleratedComputeGPUMetricsCollectionInterval(conf)
+
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
 	}
@@ -162,4 +165,15 @@ func (t *translator) getConfiguredContainerService(conf *confmap.Conf) *collecti
 		}
 	}
 	return configuredService
+}
+
+func getCollectionRole() awscontainerinsightreceiver.CollectionRole {
+	switch strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)) {
+	case envconfig.LEADER:
+		return awscontainerinsightreceiver.LEADER
+	case envconfig.NODE:
+		return awscontainerinsightreceiver.NODE
+	default:
+		return awscontainerinsightreceiver.ALL
+	}
 }
