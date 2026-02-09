@@ -359,8 +359,25 @@ jobs:
             aws ssm delete-document --name "${{ inputs.DistributorName }}" --document-version "$OLDEST_VERSION" --region ${{ inputs.Region }}
           fi
 
-      - name: Update distributor
+      - name: Check if version already exists
         if: steps.check-distributor.outputs.exists == 'true'
+        id: check-version
+        run: |
+          VERSION_EXISTS=$(aws ssm list-document-versions \
+            --name "${{ inputs.DistributorName }}" \
+            --region ${{ inputs.Region }} \
+            --no-paginate \
+            --query "DocumentVersions[?VersionName=='${AGENT_VERSION}']" \
+            --output text)
+          if [ -z "$VERSION_EXISTS" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version ${AGENT_VERSION} already exists, skipping upload"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update distributor
+        if: steps.check-distributor.outputs.exists == 'true' && steps.check-version.outputs.exists == 'false'
         run: |
           aws ssm update-document \
             --name "${{ inputs.DistributorName }}" \
