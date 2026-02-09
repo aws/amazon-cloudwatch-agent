@@ -131,7 +131,7 @@ func (rh *retryHeap) Size() int {
 func (rh *retryHeap) Stop() {
 	rh.mutex.Lock()
 	defer rh.mutex.Unlock()
-	
+
 	if rh.stopped {
 		return
 	}
@@ -220,6 +220,7 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 		if batch.isExpired(p.maxRetryDuration) {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
 			batch.updateState()
+			batch.done() // Resume circuit breaker to allow target to process new batches
 			continue
 		}
 

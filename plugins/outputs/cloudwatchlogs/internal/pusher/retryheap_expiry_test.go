@@ -48,10 +48,10 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	workerPool := NewWorkerPool(5)
 	tm := NewTargetManager(logger, mockService)
 	maxRetryDuration := 50 * time.Millisecond // Normally 14 days
-	
+
 	retryHeapProcessor := NewRetryHeapProcessor(retryHeap, workerPool, mockService, tm, logger, maxRetryDuration, nil)
 	retryHeapProcessor.Start()
-	
+
 	defer retryHeap.Stop()
 	defer workerPool.Stop()
 	defer retryHeapProcessor.Stop()
@@ -59,46 +59,46 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	// Create a batch that will expire
 	batch := newLogEventBatch(target, nil)
 	batch.append(newLogEvent(time.Now(), "test message", nil))
-	
+
 	// Set up callbacks to track circuit breaker state
 	var circuitBreakerHalted atomic.Bool
 	var circuitBreakerResumed atomic.Bool
-	
+
 	batch.addFailCallback(func() {
 		circuitBreakerHalted.Store(true)
 	})
-	
+
 	batch.addDoneCallback(func() {
 		circuitBreakerResumed.Store(true)
 	})
-	
+
 	// Initialize the batch's start time to make it already expired
 	batch.initializeStartTime()
 	batch.startTime = time.Now().Add(-100 * time.Millisecond) // Already expired
-	
+
 	// Update retry metadata to simulate a failed attempt and make it ready for retry
 	batch.updateRetryMetadata(&cloudwatchlogs.ServiceUnavailableException{})
 	// Set nextRetryTime to past so it's ready for retry
 	batch.nextRetryTime = time.Now().Add(-10 * time.Millisecond)
-	
+
 	// Push the expired batch to the retry heap
 	err := retryHeap.Push(batch)
 	assert.NoError(t, err)
-	
+
 	// Verify batch is in the heap
 	assert.Equal(t, 1, retryHeap.Size())
-	
+
 	// Wait for RetryHeapProcessor to process the expired batch
 	time.Sleep(200 * time.Millisecond)
-	
+
 	// The batch should have been removed from the heap
 	assert.Equal(t, 0, retryHeap.Size(), "Expired batch should be removed from heap")
-	
+
 	// The circuit breaker SHOULD be resumed when the batch expires
 	// This allows the target to continue processing new batches after the bad batch is dropped
 	assert.True(t, circuitBreakerResumed.Load(),
 		"Circuit breaker should be resumed after batch expiry. "+
-		"When a batch is retried for 14 days and eventually dropped, "+
-		"the target must be unblocked to allow new batches to be processed. "+
-		"Otherwise the target remains blocked forever.")
+			"When a batch is retried for 14 days and eventually dropped, "+
+			"the target must be unblocked to allow new batches to be processed. "+
+			"Otherwise the target remains blocked forever.")
 }
