@@ -4,10 +4,10 @@
 package prometheus
 
 import (
-	"net/url"
 	"testing"
 
 	"github.com/prometheus/common/model"
+	promconfig "github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +35,7 @@ func (mStore *mockMetricMetadataStore) GetMetadata(metric string) (scrape.Metric
 	}
 
 	return scrape.MetricMetadata{
-		Metric: metric,
+		MetricFamily: metric,
 		Type:   mStore.Type,
 		Help:   mStore.Help,
 		Unit:   mStore.Unit,
@@ -63,16 +63,17 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 	targetMap := make(map[string][]*scrape.Target)
 
 	//add a target
-	params := url.Values{
-		"abc": []string{"foo", "bar", "baz"},
-		"xyz": []string{"www"},
-	}
 	labels1 := labels.FromMap(map[string]string{
 		model.JobLabel:           "job1",
 		model.InstanceLabel:      "instance1",
 		savedScrapeInstanceLabel: "instance1",
 	})
-	target1 := scrape.NewTarget(labels1, labels1, params)
+	tLabels1 := model.LabelSet{
+		model.LabelName(model.JobLabel):           "job1",
+		model.LabelName(model.InstanceLabel):      "instance1",
+		model.LabelName(savedScrapeInstanceLabel): "instance1",
+	}
+	target1 := scrape.NewTarget(labels1, &promconfig.ScrapeConfig{}, tLabels1, nil)
 	mStore1 := &mockMetricMetadataStore{
 		MetricList: []string{"m1", "m2", "m4"},
 		Type:       model.MetricTypeCounter,
@@ -83,16 +84,17 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 	targetMap["job1"] = []*scrape.Target{target1}
 
 	//add a target whose job name has been replaced (e.g. job2 -> job2_replaced)
-	params2 := url.Values{
-		"abc": []string{"foo", "bar", "foobar"},
-		"xyz": []string{"ooo"},
-	}
 	labels2 := labels.FromMap(map[string]string{
 		model.JobLabel:           "job2_replaced",
 		model.InstanceLabel:      "instance2",
 		savedScrapeInstanceLabel: "instance2",
 	})
-	target2 := scrape.NewTarget(labels2, labels2, params2)
+	tLabels2 := model.LabelSet{
+		model.LabelName(model.JobLabel):           "job2_replaced",
+		model.LabelName(model.InstanceLabel):      "instance2",
+		model.LabelName(savedScrapeInstanceLabel): "instance2",
+	}
+	target2 := scrape.NewTarget(labels2, &promconfig.ScrapeConfig{}, tLabels2, nil)
 	mStore2 := &mockMetricMetadataStore{
 		MetricList: []string{"m1", "m2"},
 		Type:       model.MetricTypeGauge,
@@ -133,7 +135,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	mCache, err = metricsTypeHandler.ms.Get("job1", "instance1")
 	require.NoError(t, err)
 	expectedMetricMetadata := scrape.MetricMetadata{
-		Metric: "m1",
+		MetricFamily: "m1",
 		Type:   model.MetricTypeCounter,
 		Help:   "",
 		Unit:   "",
@@ -143,7 +145,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	assert.Equal(t, expectedMetricMetadata, metricMetadata)
 
 	expectedMetricMetadata = scrape.MetricMetadata{
-		Metric: "m2",
+		MetricFamily: "m2",
 		Type:   model.MetricTypeCounter,
 		Help:   "",
 		Unit:   "",
