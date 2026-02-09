@@ -873,3 +873,89 @@ func TestQueueHaltResume(t *testing.T) {
 
 	mockSender.AssertExpectations(t)
 }
+
+// TestQueueResumeOnBatchExpiry verifies that when a batch expires after 14 days of retrying,
+// the circuit breaker resumes the queue to allow new batches to be processed.
+// This prevents the target from being permanently blocked when a bad batch is eventually dropped.
+//
+// Scenario from PR comment: "Say a bad batch from a target caused this to halt. Now that bad batch 
+// is re-tried for 14 days and eventually dropped - but this never gets resumed in that case right? 
+// So this target is blocked forever in that scenario?"
+func TestQueueResumeOnBatchExpiry(t *testing.T) {
+	logger := testutil.NewNopLogger()
+
+	var sendCount atomic.Int32
+	mockService := &stubLogsService{
+		ple: func(input *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+			sendCount.Add(1)
+			// Always return an error to simulate a failing target
+			return nil, &cloudwatchlogs.ServiceUnavailableException{}
+		},
+		cls: func(_ *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
+		},
+		clg: func(_ *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+			return &cloudwatchlogs.CreateLogGroupOutput{}, nil
+		},
+		dlg: func(_ *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+			return &cloudwatchlogs.DescribeLogGroupsOutput{}, nil
+		},
+	}
+
+	target := Target{Group: "test-group", Stream: "test-stream"}
+	
+	// Create components
+	workerPool := NewWorkerPool(5)
+	retryHeap := NewRetryHeap(10, logger)
+	tm := NewTargetManager(logger, mockService)
+	defer workerPool.Stop()
+	defer retryHeap.Stop()
+
+	// Create RetryHeapProcessor with very short max retry duration for testing
+	maxRetryDuration := 100 * time.Millisecond // Normally 14 days
+	retryHeapProcessor := NewRetryHeapProcessor(retryHeap, workerPool, mockService, tm, logger, maxRetryDuration, nil)
+	retryHeapProcessor.Start()
+	defer retryHeapProcessor.Stop()
+
+	// Create pusher/queue
+	var wg sync.WaitGroup
+	flushTimeout := 50 * time.Millisecond
+	pusher := NewPusher(logger, target, mockService, tm, nil, workerPool, flushTimeout, maxRetryDuration, &wg, retryHeap)
+	defer pusher.Stop()
+
+	// Add first event - will fail and halt the queue
+	pusher.AddEvent(newStubLogEvent("first message", time.Now()))
+	
+	// Wait for batch to be sent, fail, and go to retry heap
+	time.Sleep(200 * time.Millisecond)
+	
+	// Verify at least one send attempt was made
+	assert.Greater(t, sendCount.Load(), int32(0), "Should have attempted to send")
+	
+	// Add second event - should be queued but blocked by circuit breaker
+	pusher.AddEvent(newStubLogEvent("second message", time.Now()))
+	
+	initialSendCount := sendCount.Load()
+	
+	// Wait for the batch in retry heap to expire
+	time.Sleep(200 * time.Millisecond)
+	
+	// After expiry, the RetryHeapProcessor should drop the expired batch
+	// but currently it only calls updateState(), not done()
+	// This means the circuit breaker remains closed and the second batch never gets sent
+	
+	// Add a third event to trigger another flush
+	pusher.AddEvent(newStubLogEvent("third message", time.Now()))
+	
+	// Wait for potential sends
+	time.Sleep(200 * time.Millisecond)
+	
+	finalSendCount := sendCount.Load()
+	
+	// BUG: The second and third batches should have been attempted after the first batch expired
+	// but they won't be because the queue remains halted forever
+	assert.Equal(t, initialSendCount, finalSendCount,
+		"No new send attempts should occur because the circuit breaker is permanently closed. "+
+		"This demonstrates the bug: when a batch expires in RetryHeapProcessor, it calls "+
+		"updateState() but not done(), so the queue never resumes. The target is blocked forever.")
+}
