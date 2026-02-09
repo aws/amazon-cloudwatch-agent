@@ -275,7 +275,7 @@ func TestRetryHeapStopTwice(t *testing.T) {
 	target := Target{Group: "test-group", Stream: "test-stream"}
 	batch := newLogEventBatch(target, nil)
 
-	rh.Push(batch) // Should not panic or return error
+	rh.Push(batch)
 
 	// Verify heap is empty (nothing was pushed)
 	assert.Equal(t, 0, rh.Size())
