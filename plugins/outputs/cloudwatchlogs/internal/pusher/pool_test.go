@@ -144,7 +144,7 @@ func TestSenderPoolRetryHeap(_ *testing.T) {
 	retryHeap := NewRetryHeap(10, logger)
 	defer retryHeap.Stop()
 
-	s := newSender(logger, mockService, nil, time.Second, retryHeap)
+	s := newSender(logger, mockService, nil, time.Second, false, retryHeap)
 	p := NewWorkerPool(12)
 	defer p.Stop()
 
