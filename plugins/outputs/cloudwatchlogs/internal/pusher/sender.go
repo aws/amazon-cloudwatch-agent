@@ -30,14 +30,13 @@ type Sender interface {
 }
 
 type sender struct {
-	service            cloudWatchLogsService
-	retryDuration      atomic.Value
-	targetManager      TargetManager
-	logger             telegraf.Logger
-	stopCh             chan struct{}
-	stopped            bool
-	concurrencyEnabled bool
-	retryHeap          RetryHeap
+	service       cloudWatchLogsService
+	retryDuration atomic.Value
+	targetManager TargetManager
+	logger        telegraf.Logger
+	stopCh        chan struct{}
+	stopped       bool
+	retryHeap     RetryHeap
 }
 
 var _ (Sender) = (*sender)(nil)
@@ -47,17 +46,15 @@ func newSender(
 	service cloudWatchLogsService,
 	targetManager TargetManager,
 	retryDuration time.Duration,
-	concurrencyEnabled bool,
 	retryHeap RetryHeap,
 ) Sender {
 	s := &sender{
-		logger:             logger,
-		service:            service,
-		targetManager:      targetManager,
-		stopCh:             make(chan struct{}),
-		stopped:            false,
-		concurrencyEnabled: concurrencyEnabled,
-		retryHeap:          retryHeap,
+		logger:        logger,
+		service:       service,
+		targetManager: targetManager,
+		stopCh:        make(chan struct{}),
+		stopped:       false,
+		retryHeap:     retryHeap,
 	}
 	s.retryDuration.Store(retryDuration)
 	return s
@@ -121,15 +118,15 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		// Check if retry would exceed max duration
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
-		if batch.isExpired(s.RetryDuration()) || batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+		if batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		}
 
-		// If concurrency enabled, push to RetryHeap and return
+		// If RetryHeap available, push to RetryHeap and return
 		// Otherwise, continue with existing busy-wait retry behavior
-		if s.isConcurrencyEnabled() {
+		if s.retryHeap != nil {
 			s.retryHeap.Push(batch)
 			batch.fail()
 			return

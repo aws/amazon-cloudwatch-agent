@@ -34,12 +34,9 @@ func NewPusher(
 	flushTimeout time.Duration,
 	retryDuration time.Duration,
 	wg *sync.WaitGroup,
-	concurrency int,
 	retryHeap RetryHeap,
 ) *Pusher {
-	concurrencyEnabled := concurrency > 1
-
-	s := createSender(logger, service, targetManager, workerPool, retryDuration, concurrencyEnabled, retryHeap)
+	s := createSender(logger, service, targetManager, workerPool, retryDuration, retryHeap)
 
 	q := newQueue(logger, target, flushTimeout, entityProvider, s, wg)
 	targetManager.PutRetentionPolicy(target)
@@ -65,10 +62,9 @@ func createSender(
 	targetManager TargetManager,
 	workerPool WorkerPool,
 	retryDuration time.Duration,
-	concurrencyEnabled bool,
 	retryHeap RetryHeap,
 ) Sender {
-	s := newSender(logger, service, targetManager, retryDuration, concurrencyEnabled, retryHeap)
+	s := newSender(logger, service, targetManager, retryDuration, retryHeap)
 	if workerPool == nil {
 		return s
 	}
