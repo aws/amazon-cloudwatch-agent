@@ -32,7 +32,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "jmx"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx"),
 			},
 		},
 		"WithSingle/Destinations": {
@@ -49,7 +49,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "jmx/amp"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/amp"),
 			},
 		},
 		"WithMultiple": {
@@ -64,8 +64,8 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "jmx/0"),
-				pipeline.MustNewIDWithName("metrics", "jmx/1"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/0"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/1"),
 			},
 		},
 		"WithMultiple/Destinations": {
@@ -86,10 +86,10 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "jmx/cloudwatch/0"),
-				pipeline.MustNewIDWithName("metrics", "jmx/amp/0"),
-				pipeline.MustNewIDWithName("metrics", "jmx/cloudwatch/1"),
-				pipeline.MustNewIDWithName("metrics", "jmx/amp/1"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/cloudwatch/0"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/amp/0"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/cloudwatch/1"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "jmx/amp/1"),
 			},
 		},
 	}
