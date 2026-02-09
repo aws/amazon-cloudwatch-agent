@@ -97,11 +97,19 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		// then add the default ca, cert, and key for TargetAllocator
 		if cfg.TargetAllocator.HasValue() {
 			taCfg := cfg.TargetAllocator.Get()
-			if taCfg != nil && len(taCfg.CollectorID) > 0 {
-				taCfg.TLS.CAFile = defaultTLSCaPath
-				taCfg.TLS.CertFile = defaultTLSCertPath
-				taCfg.TLS.KeyFile = defaultTLSKeyPath
-				taCfg.TLS.ReloadInterval = 10 * time.Second
+			if taCfg != nil {
+				if taCfg.TLS.CAFile == "" {
+					taCfg.TLS.CAFile = defaultTLSCaPath
+				}
+				if taCfg.TLS.CertFile == "" {
+					taCfg.TLS.CertFile = defaultTLSCertPath
+				}
+				if taCfg.TLS.KeyFile == "" {
+					taCfg.TLS.KeyFile = defaultTLSKeyPath
+				}
+				if taCfg.TLS.ReloadInterval == 0 {
+					taCfg.TLS.ReloadInterval = 10 * time.Second
+				}
 			}
 		}
 	}

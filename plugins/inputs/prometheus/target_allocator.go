@@ -161,6 +161,9 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 	if taCfg == nil {
 		return nil
 	}
+	if err := taCfg.Validate(); err != nil {
+		return fmt.Errorf("target allocator config validation failed: %w", err)
+	}
 	taCfg.TLS.CAFile = DefaultTLSCaFilePath
 	taCfg.TLS.CertFile = DefaultTLSCertFilePath
 	taCfg.TLS.KeyFile = DefaultTLSKeyFilePath
