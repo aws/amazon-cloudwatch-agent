@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
-	"go.opentelemetry.io/collector/service/telemetry"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
@@ -100,10 +100,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		Processors: map[component.ID]component.Config{},
 		Extensions: map[component.ID]component.Config{},
 		Service: service.Config{
-			Telemetry: telemetry.Config{
+			Telemetry: &otelconftelemetry.Config{
 				Logs:    getLoggingConfig(conf),
-				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
-				Traces:  telemetry.TracesConfig{Level: configtelemetry.LevelNone},
+				Metrics: otelconftelemetry.MetricsConfig{Level: configtelemetry.LevelNone},
+				Traces:  otelconftelemetry.TracesConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines.Pipelines,
 			Extensions: pipelines.Translators.Extensions.Keys(),
@@ -135,7 +135,7 @@ func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
 
 // getLoggingConfig uses the given JSON config to determine the correct
 // logging configuration that should go in the YAML.
-func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
+func getLoggingConfig(conf *confmap.Conf) otelconftelemetry.LogsConfig {
 	var outputPaths []string
 	filename := context.CurrentContext().GetAgentLogFile()
 	// A slice with an empty string causes OTEL issues, so avoid it.
@@ -143,12 +143,12 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 		outputPaths = []string{filename}
 	}
 	logLevel := parseAgentLogLevel(conf)
-	return telemetry.LogsConfig{
+	return otelconftelemetry.LogsConfig{
 		OutputPaths: outputPaths,
 		Level:       logLevel,
 		Encoding:    common.Console,
 		// enabled by default with 10 second tick
-		Sampling: &telemetry.LogsSamplingConfig{
+		Sampling: &otelconftelemetry.LogsSamplingConfig{
 			Enabled:    true,
 			Initial:    2,
 			Thereafter: 500,
