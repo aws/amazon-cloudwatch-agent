@@ -20,7 +20,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
-            enabled: true
             initial_interval: 5s
             max_elapsed_time: 5m0s
             max_interval: 30s
@@ -29,8 +28,6 @@ exporters:
         role_arn: ""
         sending_queue:
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 1
             queue_size: 1000
             sizer: {}
@@ -765,7 +762,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
-            enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         shared_credentials_file:

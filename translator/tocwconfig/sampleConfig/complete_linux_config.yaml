@@ -13,7 +13,6 @@ exporters:
         namespace: CWAgent
         region: us-west-2
         resource_to_telemetry_conversion:
-            enabled: true
         role_arn: metrics_role_arn_value_test
         rollup_dimensions:
             - - ImageId
@@ -42,7 +41,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
-            enabled: true
             initial_interval: 5s
             max_elapsed_time: 5m0s
             max_interval: 30s
@@ -51,8 +49,6 @@ exporters:
         role_arn: log_role_arn_value_test
         sending_queue:
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 1
             queue_size: 1000
             sizer: {}
@@ -75,7 +71,6 @@ exporters:
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
         telemetry:
-            enabled: true
             include_metadata: true
 extensions:
     agenthealth/logs:

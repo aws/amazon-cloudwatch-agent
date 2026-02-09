@@ -29,8 +29,6 @@ exporters:
         role_arn: ${ENV_CREDENTIALS_ROLE_ARN}
         sending_queue:
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 1
             queue_size: 1000
             sizer: {}
