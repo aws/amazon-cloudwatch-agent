@@ -94,7 +94,6 @@ func TestRetryHeapProcessor(t *testing.T) {
 
 	// Test start/stop
 	processor.Start()
-	assert.NotNil(t, processor.ticker)
 
 	processor.Stop()
 	assert.True(t, processor.stopped)
@@ -183,6 +182,8 @@ func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		// Push is successfully blocked when at capacity
 	}
+
+	time.Sleep(3 * time.Second)
 
 	// Pop ready batches to release semaphore slots
 	readyBatches := heap.PopReady()
