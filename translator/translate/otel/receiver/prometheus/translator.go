@@ -92,6 +92,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
 		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
 		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
+
+		// Reload ensures the config goes through promconfig.Load() which sets the
+		// internal `loaded` flag required by GetScrapeConfigs() in Prometheus v0.308.1+.
+		if err = cfg.PrometheusConfig.Reload(); err != nil {
+			return nil, fmt.Errorf("unable to reload prometheus config: %w", err)
+		}
 	} else {
 		// given prometheus config is in otel format so check if target allocator is being used
 		// then add the default ca, cert, and key for TargetAllocator
