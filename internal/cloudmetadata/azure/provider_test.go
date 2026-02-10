@@ -433,7 +433,7 @@ func TestProvider_GetVolumeID_WithSysfs(t *testing.T) {
 		device string
 		want   string
 	}{
-		{"/dev/sda", ""},           // LUN 0 not in dataDisks
+		{"/dev/sda", ""},            // LUN 0 not in dataDisks
 		{"/dev/sdb", "data-disk-1"}, // LUN 1
 		{"/dev/sdc", "data-disk-2"}, // LUN 2
 		{"sdb", "data-disk-1"},      // Without /dev/ prefix
