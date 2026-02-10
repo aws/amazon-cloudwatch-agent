@@ -11,20 +11,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 )
 
 const (
-	// DMI paths for Azure detection
-	dmiSysVendorPath     = "/sys/class/dmi/id/sys_vendor"
-	dmiChassisAssetPath  = "/sys/class/dmi/id/chassis_asset_tag"
 	azureChassisAssetTag = "7783-7084-3265-9085-8269-3286-77"
 	microsoftCorporation = "Microsoft Corporation"
 
@@ -37,6 +32,15 @@ const (
 	defaultRefreshInterval = 5 * time.Minute
 )
 
+// Configurable paths for testing and cross-platform support
+var (
+	// DMI paths - can be overridden for testing
+	DMISysVendorPath    = "/sys/class/dmi/id/sys_vendor"
+	DMIChassisAssetPath = "/sys/class/dmi/id/chassis_asset_tag"
+	// Sysfs block device path
+	SysBlockPath = "/sys/block"
+)
+
 // ComputeMetadata represents Azure IMDS compute metadata
 type ComputeMetadata struct {
 	Location          string                    `json:"location"`
@@ -47,6 +51,18 @@ type ComputeMetadata struct {
 	ResourceGroupName string                    `json:"resourceGroupName"`
 	VMScaleSetName    string                    `json:"vmScaleSetName"`
 	TagsList          []ComputeTagsListMetadata `json:"tagsList"`
+	StorageProfile    StorageProfile            `json:"storageProfile"`
+}
+
+// StorageProfile represents Azure VM storage configuration
+type StorageProfile struct {
+	DataDisks []DataDisk `json:"dataDisks"`
+}
+
+// DataDisk represents an attached data disk
+type DataDisk struct {
+	Lun  string `json:"lun"`
+	Name string `json:"name"`
 }
 
 // ComputeTagsListMetadata represents a tag in Azure IMDS
@@ -76,7 +92,16 @@ type NetworkIPAddress struct {
 	PublicIPAddress  string `json:"publicIpAddress"`
 }
 
-// Provider implements the metadata provider interface for Azure
+// Provider implements the metadata provider interface for Azure.
+// Uses raw HTTP calls to Azure IMDS instead of an SDK because:
+// 1. Azure does not provide an official Go SDK for IMDS access
+// 2. The IMDS API is simple and stable (HTTP GET with Metadata header)
+// 3. Avoids additional dependencies for a straightforward HTTP API
+//
+// Azure metadata is refreshed periodically (unlike AWS which caches at startup) because:
+// 1. Azure VMs can have tags and network config updated dynamically
+// 2. VM scale set membership can change
+// 3. Azure IMDS is designed for periodic polling with fast response times
 type Provider struct {
 	logger     *zap.Logger
 	httpClient *http.Client
@@ -87,10 +112,7 @@ type Provider struct {
 	networkMetadata *NetworkMetadata
 	lastRefresh     time.Time
 	refreshInterval time.Duration
-	available       bool
-
-	// Disk mapping cache
-	diskMap map[string]string // device name -> disk ID
+	available       atomic.Bool // Use atomic for lock-free access
 
 	// For testing: override IMDS endpoint
 	imdsEndpoint string
@@ -98,13 +120,16 @@ type Provider struct {
 
 // NewProvider creates a new Azure metadata provider
 func NewProvider(ctx context.Context, logger *zap.Logger) (*Provider, error) {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	p := &Provider{
 		logger: logger,
 		httpClient: &http.Client{
 			Timeout: 2 * time.Second,
 		},
 		refreshInterval: defaultRefreshInterval,
-		diskMap:         make(map[string]string),
 	}
 
 	// Initial fetch
@@ -116,23 +141,53 @@ func NewProvider(ctx context.Context, logger *zap.Logger) (*Provider, error) {
 	return p, nil
 }
 
-// IsAzure detects if running on Azure by checking DMI information
+// IsAzure detects if running on Azure using multiple methods:
+// IsAzure detects if running on Azure.
+// Detection order:
+// 1. DMI sys_vendor check
+// 2. DMI chassis asset tag check (Azure-specific)
+// 3. IMDS probe as fallback (for containers without DMI access)
 func IsAzure() bool {
-	// Check sys_vendor
-	if data, err := os.ReadFile(dmiSysVendorPath); err == nil {
+	// 1. Check sys_vendor for Microsoft
+	if data, err := os.ReadFile(DMISysVendorPath); err == nil {
 		if strings.Contains(strings.TrimSpace(string(data)), microsoftCorporation) {
 			return true
 		}
 	}
 
-	// Check chassis asset tag (Azure-specific)
-	if data, err := os.ReadFile(dmiChassisAssetPath); err == nil {
+	// 3. Check chassis asset tag (Azure-specific identifier)
+	if data, err := os.ReadFile(DMIChassisAssetPath); err == nil {
 		if strings.TrimSpace(string(data)) == azureChassisAssetTag {
 			return true
 		}
 	}
 
+	// 3. IMDS probe fallback (for containers without DMI)
+	if probeAzureIMDS() {
+		return true
+	}
+
 	return false
+}
+
+// probeAzureIMDS attempts a quick IMDS request to detect Azure.
+// Uses short timeout to avoid blocking on non-Azure environments.
+func probeAzureIMDS() bool {
+	client := &http.Client{Timeout: 1 * time.Second}
+	req, err := http.NewRequest("GET", azureIMDSEndpoint+"?api-version="+azureAPIVersion, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Metadata", "true")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	// Azure IMDS returns 200 with JSON body
+	return resp.StatusCode == http.StatusOK
 }
 
 // GetInstanceID returns the Azure VM ID
@@ -227,72 +282,54 @@ func (p *Provider) GetTag(key string) (string, error) {
 	return "", fmt.Errorf("tag %s not found", key)
 }
 
-// GetVolumeID returns the disk ID for a given device name
-// Uses LUN-based mapping between Linux device names and Azure managed disks
+// GetVolumeID returns the disk name for a given device.
+// Maps Linux device (e.g., /dev/sdc) to Azure disk name using LUN from sysfs.
+// The Logical Unit Number (LUN) is extracted from the device symlink: /sys/block/sdc/device -> ../../../0:0:0:LUN
+// https://learn.microsoft.com/en-us/azure/virtual-machines/linux/azure-to-guest-disk-mapping
 func (p *Provider) GetVolumeID(deviceName string) string {
-	// Check cache first with read lock
-	p.mu.RLock()
-	if diskID, ok := p.diskMap[deviceName]; ok {
-		p.mu.RUnlock()
-		return diskID
-	}
-	p.mu.RUnlock()
-
-	// Cache miss - compute disk ID
-	diskID := p.mapDeviceToDisk(deviceName)
-	if diskID != "" {
-		// Store in cache with write lock
-		p.mu.Lock()
-		p.diskMap[deviceName] = diskID
-		p.mu.Unlock()
-	}
-
-	return diskID
-}
-
-// mapDeviceToDisk maps a Linux device name to an Azure disk ID using LUN
-func (p *Provider) mapDeviceToDisk(deviceName string) string {
 	// Extract device name (e.g., "sdc" from "/dev/sdc")
 	devName := strings.TrimPrefix(deviceName, "/dev/")
 
-	// Get LUN from sysfs
-	lun, err := p.getLUNFromDevice(devName)
-	if err != nil {
-		p.logger.Debug("Failed to get LUN for device",
-			zap.String("device", deviceName),
-			zap.Error(err))
+	// Get LUN from sysfs symlink
+	lun := p.getLUNFromDevice(devName)
+	if lun == "" {
 		return ""
 	}
 
-	p.logger.Debug("Device LUN mapping",
-		zap.String("device", deviceName),
-		zap.Int("lun", lun))
+	// Match LUN to disk name from IMDS metadata
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.metadata == nil {
+		return ""
+	}
+
+	for _, disk := range p.metadata.StorageProfile.DataDisks {
+		if disk.Lun == lun {
+			return disk.Name
+		}
+	}
 
 	return ""
 }
 
-// getLUNFromDevice reads the LUN number from sysfs for a given device
-func (p *Provider) getLUNFromDevice(devName string) (int, error) {
-	// Pattern: /sys/block/<device>/device/scsi_device/*/device/lun
-	pattern := filepath.Join("/sys/block", devName, "device/scsi_device/*/device/lun")
+// getLUNFromDevice extracts LUN from sysfs device symlink.
+// Example: /sys/block/sda/device -> ../../../0:0:0:0 returns "0"
+func (p *Provider) getLUNFromDevice(devName string) string {
+	devicePath := filepath.Join(SysBlockPath, devName, "device")
 
-	matches, err := filepath.Glob(pattern)
-	if err != nil || len(matches) == 0 {
-		return -1, fmt.Errorf("no LUN file found for device %s", devName)
-	}
-
-	// Read the first match
-	data, err := os.ReadFile(matches[0])
+	target, err := os.Readlink(devicePath)
 	if err != nil {
-		return -1, fmt.Errorf("failed to read LUN file: %w", err)
+		return ""
 	}
 
-	lun, err := strconv.Atoi(strings.TrimSpace(string(data)))
-	if err != nil {
-		return -1, fmt.Errorf("failed to parse LUN: %w", err)
+	// Target format: ../../../H:C:T:L (Host:Channel:Target:LUN)
+	parts := strings.Split(target, ":")
+	if len(parts) < 4 {
+		return ""
 	}
 
-	return lun, nil
+	return parts[len(parts)-1]
 }
 
 // GetScalingGroupName returns the VM Scale Set name
@@ -343,9 +380,7 @@ func (p *Provider) Refresh(ctx context.Context) error {
 	resp, err := p.httpClient.Do(req)
 	duration := time.Since(startTime)
 	if err != nil {
-		p.mu.Lock()
-		p.available = false
-		p.mu.Unlock()
+		p.available.Store(false)
 		p.logger.Warn("[cloudmetadata/azure] IMDS request failed",
 			zap.Error(err),
 			zap.Duration("duration", duration))
@@ -354,9 +389,7 @@ func (p *Provider) Refresh(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		p.mu.Lock()
-		p.available = false
-		p.mu.Unlock()
+		p.available.Store(false)
 		p.logger.Warn("[cloudmetadata/azure] IMDS returned non-200 status",
 			zap.Int("status", resp.StatusCode),
 			zap.Duration("duration", duration))
@@ -380,13 +413,10 @@ func (p *Provider) Refresh(ctx context.Context) error {
 	p.mu.Lock()
 	p.metadata = &metadata
 	p.lastRefresh = time.Now()
-	p.available = true
-	// Clear disk cache on refresh to pick up new disks
-	p.diskMap = make(map[string]string)
+	p.available.Store(true)
 	p.mu.Unlock()
 
 	p.logger.Debug("[cloudmetadata/azure] Parsed compute metadata",
-		zap.String("vmId", util.MaskValue(metadata.VMID)),
 		zap.String("vmSize", metadata.VMSize),
 		zap.String("location", metadata.Location),
 		zap.String("resourceGroup", metadata.ResourceGroupName))
@@ -454,8 +484,7 @@ func (p *Provider) refreshNetwork(ctx context.Context) error {
 	}
 
 	if privateIP != "" {
-		p.logger.Debug("[cloudmetadata/azure] Network metadata refreshed",
-			zap.String("privateIP", util.MaskIPAddress(privateIP)))
+		p.logger.Debug("[cloudmetadata/azure] Network metadata refreshed")
 	} else {
 		p.logger.Debug("[cloudmetadata/azure] Network metadata refreshed but no private IP found")
 	}
@@ -465,9 +494,7 @@ func (p *Provider) refreshNetwork(ctx context.Context) error {
 
 // IsAvailable returns true if metadata has been successfully fetched
 func (p *Provider) IsAvailable() bool {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.available
+	return p.available.Load()
 }
 
 // GetHostname returns the Azure VM name
@@ -487,34 +514,24 @@ func (p *Provider) GetPrivateIP() string {
 	defer p.mu.RUnlock()
 
 	if p.networkMetadata == nil {
-		if p.logger != nil {
-			p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called: network metadata not available")
-		}
+		p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called: network metadata not available")
 		return ""
 	}
 	if len(p.networkMetadata.Interface) == 0 {
-		if p.logger != nil {
-			p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called: no network interfaces found")
-		}
+		p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called: no network interfaces found")
 		return ""
 	}
 	if len(p.networkMetadata.Interface[0].IPv4.IPAddress) == 0 {
-		if p.logger != nil {
-			p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called: no IP addresses found")
-		}
+		p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called: no IP addresses found")
 		return ""
 	}
 
-	privateIP := p.networkMetadata.Interface[0].IPv4.IPAddress[0].PrivateIPAddress
-	if p.logger != nil {
-		p.logger.Debug("[cloudmetadata/azure] GetPrivateIP called",
-			zap.String("value", util.MaskIPAddress(privateIP)))
-	}
-	return privateIP
+	return p.networkMetadata.Interface[0].IPv4.IPAddress[0].PrivateIPAddress
 }
 
-// GetCloudProvider returns the cloud provider type
-// Returns 2 which corresponds to cloudmetadata.CloudProviderAzure
+// GetCloudProvider returns the cloud provider type.
+// Returns 2 (CloudProviderAzure from internal/cloudmetadata/constants.go).
+// NOTE: Cannot import cloudmetadata package here due to import cycle.
 func (p *Provider) GetCloudProvider() int {
-	return 2 // cloudmetadata.CloudProviderAzure
+	return 2 // Must match cloudmetadata.CloudProviderAzure
 }

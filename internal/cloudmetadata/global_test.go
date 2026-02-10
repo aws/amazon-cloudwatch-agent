@@ -13,21 +13,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetGlobalProvider_BeforeInit(t *testing.T) {
+func TestGetGlobalProvider_LazyInit(t *testing.T) {
 	ResetGlobalProvider()
 
+	// With lazy init, first call triggers initialization
 	provider, err := GetGlobalProvider()
 
+	// In test env without IMDS, initialization fails
 	assert.Nil(t, provider)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not initialized")
+	assert.Contains(t, err.Error(), "initialization failed")
 }
 
-func TestGetGlobalProviderOrNil_BeforeInit(t *testing.T) {
+func TestGetGlobalProviderOrNil_LazyInit(t *testing.T) {
 	ResetGlobalProvider()
 
+	// With lazy init, first call triggers initialization
 	provider := GetGlobalProviderOrNil()
 
+	// In test env without IMDS, returns nil
 	assert.Nil(t, provider)
 }
 
@@ -295,17 +299,15 @@ func TestSetGlobalProviderForTest_PreventsInitOverwrite(t *testing.T) {
 	assert.Equal(t, "mock-instance", p.GetInstanceID())
 }
 
-func TestInitGlobalProvider_NilLogger(_ *testing.T) {
+func TestLazyInitialization(_ *testing.T) {
 	ResetGlobalProvider()
 	defer ResetGlobalProvider()
 
-	// Should not panic with nil logger
-	err := InitGlobalProvider(context.Background(), nil)
-
-	// Error expected (no IMDS in test env), but no panic
-	_ = err
-
-	// Verify state is consistent
+	// First call should initialize (will fail in test env, but shouldn't panic)
 	p := GetGlobalProviderOrNil()
 	_ = p
+
+	// Second call should return cached result
+	p2 := GetGlobalProviderOrNil()
+	_ = p2
 }

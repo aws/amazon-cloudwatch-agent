@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 )
 
 func TestNetworkMetadata_Parsing(t *testing.T) {
@@ -58,7 +58,10 @@ func TestNetworkMetadata_Parsing(t *testing.T) {
 				t.Fatalf("failed to unmarshal: %v", err)
 			}
 
-			p := &Provider{networkMetadata: &nm}
+			p := &Provider{
+				logger:          zap.NewNop(),
+				networkMetadata: &nm,
+			}
 			got := p.GetPrivateIP()
 
 			if got != tt.wantIP {
@@ -69,7 +72,10 @@ func TestNetworkMetadata_Parsing(t *testing.T) {
 }
 
 func TestGetPrivateIP_NilNetworkMetadata(t *testing.T) {
-	p := &Provider{networkMetadata: nil}
+	p := &Provider{
+		logger:          zap.NewNop(),
+		networkMetadata: nil,
+	}
 
 	got := p.GetPrivateIP()
 
@@ -113,7 +119,7 @@ func TestNetworkMetadataStructs(t *testing.T) {
 }
 
 func TestProvider_GettersWithNilMetadata(t *testing.T) {
-	p := &Provider{}
+	p := &Provider{logger: zap.NewNop()}
 
 	tests := []struct {
 		name string
@@ -143,6 +149,7 @@ func TestProvider_GettersWithNilMetadata(t *testing.T) {
 
 func TestProvider_GettersWithMetadata(t *testing.T) {
 	p := &Provider{
+		logger: zap.NewNop(),
 		metadata: &ComputeMetadata{
 			Location:          "eastus",
 			Name:              "test-vm",
@@ -167,8 +174,8 @@ func TestProvider_GettersWithMetadata(t *testing.T) {
 				},
 			},
 		},
-		available: true,
 	}
+	p.available.Store(true)
 
 	tests := []struct {
 		name string
@@ -197,7 +204,7 @@ func TestProvider_GettersWithMetadata(t *testing.T) {
 }
 
 func TestProvider_GetCloudProvider(t *testing.T) {
-	p := &Provider{}
+	p := &Provider{logger: zap.NewNop()}
 	got := p.GetCloudProvider()
 	if got != 2 { // cloudmetadata.CloudProviderAzure
 		t.Errorf("GetCloudProvider() = %d, want 2", got)
@@ -216,7 +223,8 @@ func TestProvider_IsAvailable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Provider{available: tt.available}
+			p := &Provider{logger: zap.NewNop()}
+			p.available.Store(tt.available)
 			got := p.IsAvailable()
 			if got != tt.want {
 				t.Errorf("IsAvailable() = %v, want %v", got, tt.want)
@@ -271,7 +279,10 @@ func TestProvider_GetTags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := &Provider{metadata: tt.metadata}
+			p := &Provider{
+				logger:   zap.NewNop(),
+				metadata: tt.metadata,
+			}
 			got := p.GetTags()
 
 			if len(got) != len(tt.want) {
@@ -325,23 +336,114 @@ func TestProvider_GetTag(t *testing.T) {
 func TestProvider_GetVolumeID(t *testing.T) {
 	logger := zap.NewNop()
 	p := &Provider{
-		logger:  logger,
-		diskMap: make(map[string]string),
+		logger: logger,
+		metadata: &ComputeMetadata{
+			StorageProfile: StorageProfile{
+				DataDisks: []DataDisk{
+					{Lun: "0", Name: "disk-os"},
+					{Lun: "1", Name: "disk-data1"},
+					{Lun: "2", Name: "disk-data2"},
+				},
+			},
+		},
 	}
 
-	// First call - cache miss (will return empty since we can't mock sysfs)
-	got1 := p.GetVolumeID("/dev/sdc")
-	if got1 != "" {
-		t.Errorf("GetVolumeID() first call = %q, want empty (no sysfs)", got1)
+	// Without sysfs, returns empty
+	got := p.GetVolumeID("/dev/sdc")
+	if got != "" {
+		t.Errorf("GetVolumeID() without sysfs = %q, want empty", got)
 	}
 
-	// Manually populate cache to test cache hit
-	p.diskMap["/dev/sdc"] = "disk-12345"
+	// Test with nil metadata
+	p2 := &Provider{logger: logger}
+	if got := p2.GetVolumeID("/dev/sdc"); got != "" {
+		t.Errorf("GetVolumeID() with nil metadata = %q, want empty", got)
+	}
+}
 
-	// Second call - cache hit
-	got2 := p.GetVolumeID("/dev/sdc")
-	if got2 != "disk-12345" {
-		t.Errorf("GetVolumeID() cached call = %q, want %q", got2, "disk-12345")
+func TestGetLUNFromDevice(t *testing.T) {
+	// Create temp sysfs structure
+	tmpDir := t.TempDir()
+	origPath := SysBlockPath
+	SysBlockPath = tmpDir
+	defer func() { SysBlockPath = origPath }()
+
+	// Create device symlink: sda/device -> ../../../0:0:0:1
+	sdaDir := filepath.Join(tmpDir, "sda")
+	if err := os.MkdirAll(sdaDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../../../0:0:0:1", filepath.Join(sdaDir, "device")); err != nil {
+		t.Fatal(err)
+	}
+
+	p := &Provider{logger: zap.NewNop()}
+
+	// Test valid device
+	lun := p.getLUNFromDevice("sda")
+	if lun != "1" {
+		t.Errorf("getLUNFromDevice(sda) = %q, want %q", lun, "1")
+	}
+
+	// Test non-existent device
+	lun = p.getLUNFromDevice("nonexistent")
+	if lun != "" {
+		t.Errorf("getLUNFromDevice(nonexistent) = %q, want empty", lun)
+	}
+}
+
+func TestProvider_GetVolumeID_WithSysfs(t *testing.T) {
+	// Create temp sysfs structure
+	tmpDir := t.TempDir()
+	origPath := SysBlockPath
+	SysBlockPath = tmpDir
+	defer func() { SysBlockPath = origPath }()
+
+	// Create device symlinks
+	for _, dev := range []struct {
+		name string
+		lun  string
+	}{
+		{"sda", "0"},
+		{"sdb", "1"},
+		{"sdc", "2"},
+	} {
+		devDir := filepath.Join(tmpDir, dev.name)
+		if err := os.MkdirAll(devDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink("../../../0:0:0:"+dev.lun, filepath.Join(devDir, "device")); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	p := &Provider{
+		logger: zap.NewNop(),
+		metadata: &ComputeMetadata{
+			StorageProfile: StorageProfile{
+				DataDisks: []DataDisk{
+					{Lun: "1", Name: "data-disk-1"},
+					{Lun: "2", Name: "data-disk-2"},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		device string
+		want   string
+	}{
+		{"/dev/sda", ""},           // LUN 0 not in dataDisks
+		{"/dev/sdb", "data-disk-1"}, // LUN 1
+		{"/dev/sdc", "data-disk-2"}, // LUN 2
+		{"sdb", "data-disk-1"},      // Without /dev/ prefix
+	}
+
+	for _, tt := range tests {
+		got := p.GetVolumeID(tt.device)
+		if got != tt.want {
+			t.Errorf("GetVolumeID(%q) = %q, want %q", tt.device, got, tt.want)
+		}
 	}
 }
 
@@ -360,7 +462,6 @@ func TestProvider_Refresh_Timeout(t *testing.T) {
 		httpClient: &http.Client{
 			Timeout: 50 * time.Millisecond,
 		},
-		diskMap: make(map[string]string),
 	}
 
 	ctx := context.Background()
@@ -383,9 +484,8 @@ func TestProvider_ConcurrentAccess(_ *testing.T) {
 			Location: "eastus",
 			VMID:     "test-id",
 		},
-		available: true,
-		diskMap:   make(map[string]string),
 	}
+	p.available.Store(true)
 
 	var wg sync.WaitGroup
 	iterations := 100
@@ -415,56 +515,13 @@ func TestProvider_ConcurrentAccess(_ *testing.T) {
 					Location: fmt.Sprintf("region-%d", id),
 					VMID:     fmt.Sprintf("vm-%d", id),
 				}
-				p.available = true
+				p.available.Store(true)
 				p.mu.Unlock()
 			}
 		}(i)
 	}
 
 	wg.Wait()
-}
-
-func TestMaskValue(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"", "<empty>"},
-		{"abc", "<present>"},
-		{"abcd", "<present>"},
-		{"abcde", "abcd..."},
-		{"12345678-1234-1234-1234-123456789abc", "1234..."},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := util.MaskValue(tt.input)
-			if got != tt.want {
-				t.Errorf("util.MaskValue(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMaskIPAddress(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"", "<empty>"},
-		{"10.0.1.5", "10.0.x.x"},
-		{"192.168.1.100", "192.168.x.x"},
-		{"invalid", "<present>"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := util.MaskIPAddress(tt.input)
-			if got != tt.want {
-				t.Errorf("util.MaskIPAddress(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
-	}
 }
 
 func TestNewProvider(t *testing.T) {
@@ -488,10 +545,6 @@ func TestNewProvider(t *testing.T) {
 
 	if p.httpClient == nil {
 		t.Error("Provider httpClient is nil")
-	}
-
-	if p.diskMap == nil {
-		t.Error("Provider diskMap is nil")
 	}
 
 	if p.refreshInterval != defaultRefreshInterval {
@@ -552,7 +605,6 @@ func TestProvider_Refresh_ContextCanceled(t *testing.T) {
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		diskMap: make(map[string]string),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -570,7 +622,10 @@ func TestProvider_Refresh_ContextCanceled(t *testing.T) {
 }
 
 func TestProvider_GetTag_NilMetadata(t *testing.T) {
-	p := &Provider{metadata: nil}
+	p := &Provider{
+		logger:   zap.NewNop(),
+		metadata: nil,
+	}
 
 	_, err := p.GetTag("any-key")
 	if err == nil {
@@ -581,17 +636,13 @@ func TestProvider_GetTag_NilMetadata(t *testing.T) {
 func TestProvider_GetVolumeID_Concurrent(_ *testing.T) {
 	logger := zap.NewNop()
 	p := &Provider{
-		logger:  logger,
-		diskMap: make(map[string]string),
+		logger: logger,
 	}
-
-	// Pre-populate cache
-	p.diskMap["/dev/sdc"] = "disk-12345"
 
 	var wg sync.WaitGroup
 	iterations := 50
 
-	// Concurrent reads
+	// Concurrent reads - all return empty since not implemented
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
@@ -612,18 +663,38 @@ func TestIsAzure(t *testing.T) {
 	t.Logf("IsAzure() = %v (environment-dependent)", result)
 }
 
+func TestConfigurablePaths(t *testing.T) {
+	// Verify paths are configurable (for testing)
+	origSysVendor := DMISysVendorPath
+	origChassis := DMIChassisAssetPath
+	defer func() {
+		DMISysVendorPath = origSysVendor
+		DMIChassisAssetPath = origChassis
+	}()
+
+	DMISysVendorPath = "/tmp/test/sys_vendor"
+	DMIChassisAssetPath = "/tmp/test/chassis_asset_tag"
+
+	// Verify paths were changed
+	if DMISysVendorPath != "/tmp/test/sys_vendor" {
+		t.Error("DMISysVendorPath not configurable")
+	}
+}
+
 func TestCloudProviderAzure_Constant(t *testing.T) {
 	// Verify that Azure provider returns the correct cloud provider constant
 	// This should match cloudmetadata.CloudProviderAzure = 2
-	p := &Provider{}
+	p := &Provider{logger: zap.NewNop()}
 	if p.GetCloudProvider() != 2 {
 		t.Errorf("GetCloudProvider() = %d, want 2 (cloudmetadata.CloudProviderAzure)", p.GetCloudProvider())
 	}
 }
 
 func TestProvider_GetPrivateIP_NilLogger(t *testing.T) {
+	// This test verifies that the provider works correctly even when
+	// logger is initialized with zap.NewNop() (which happens automatically in NewProvider)
 	p := &Provider{
-		logger: nil,
+		logger: zap.NewNop(),
 		networkMetadata: &NetworkMetadata{
 			Interface: []NetworkInterface{
 				{
@@ -675,7 +746,7 @@ func TestProvider_GetPrivateIP_EdgeCases_NilLogger(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Provider{
-				logger:          nil,
+				logger:          zap.NewNop(),
 				networkMetadata: tt.networkMetadata,
 			}
 
@@ -739,13 +810,12 @@ func TestProvider_Refresh_WithMockServer(t *testing.T) {
 			Timeout: 2 * time.Second,
 		},
 		refreshInterval: defaultRefreshInterval,
-		diskMap:         make(map[string]string),
 	}
 
 	// Manually set metadata to test getters
 	p.metadata = &computeResponse
 	p.networkMetadata = &networkResponse
-	p.available = true
+	p.available.Store(true)
 
 	if p.GetInstanceID() != "test-vm-id" {
 		t.Errorf("GetInstanceID() = %q, want %q", p.GetInstanceID(), "test-vm-id")

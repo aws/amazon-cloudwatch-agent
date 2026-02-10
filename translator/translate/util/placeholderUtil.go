@@ -13,10 +13,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata/azure"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
@@ -58,16 +56,21 @@ var Ec2MetadataInfoProvider = func() *Metadata {
 	return ec2MetadataInfoProviderFunc()
 }
 
+// ec2MetadataInfoProvider returns metadata from cloudmetadata provider.
+// This is the single source of truth for EC2/cloud metadata.
 func ec2MetadataInfoProvider() *Metadata {
-	ec2 := ec2util.GetEC2UtilSingleton()
-	return &Metadata{
-		InstanceID:   ec2.InstanceID,
-		Hostname:     ec2.Hostname,
-		PrivateIP:    ec2.PrivateIP,
-		AccountID:    ec2.AccountID,
-		InstanceType: ec2.InstanceType,
-		ImageID:      ec2.ImageID,
+	if provider := cloudmetadata.GetGlobalProviderOrNil(); provider != nil {
+		return &Metadata{
+			InstanceID:   provider.GetInstanceID(),
+			Hostname:     provider.GetHostname(),
+			PrivateIP:    provider.GetPrivateIP(),
+			AccountID:    provider.GetAccountID(),
+			InstanceType: provider.GetInstanceType(),
+			ImageID:      provider.GetImageID(),
+		}
 	}
+	// Return empty metadata if provider not available
+	return &Metadata{}
 }
 
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
@@ -112,8 +115,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 			region = agent.Global_Config.Region
 		}
 
-		log.Printf("I! [placeholderUtil] Resolved via cloudmetadata: instanceId=%s, hostname=%s, region=%s, accountId=%s, privateIP=%s",
-			util.MaskValue(instanceID), hostname, region, util.MaskValue(accountID), util.MaskIPAddress(privateIP))
+		log.Printf("I! [placeholderUtil] Resolved via cloudmetadata: region=%s, hostname=%s", region, hostname)
 
 		return map[string]string{
 			instanceIdPlaceholder:    instanceID,
@@ -152,8 +154,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	awsRegion := defaultIfEmpty(agent.Global_Config.Region, unknownAwsRegion)
 	accountID := defaultIfEmpty(md.AccountID, unknownAccountID)
 
-	log.Printf("D! [placeholderUtil] Resolved via legacy: instanceId=%s, region=%s, privateIP=%s",
-		util.MaskValue(instanceID), awsRegion, util.MaskIPAddress(ipAddress))
+	log.Printf("D! [placeholderUtil] Resolved via legacy: region=%s", awsRegion)
 
 	return map[string]string{
 		instanceIdPlaceholder:    instanceID,

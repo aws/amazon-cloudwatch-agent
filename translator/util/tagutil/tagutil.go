@@ -13,9 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 )
 
 const (
@@ -79,10 +80,13 @@ func callFuncWithRetries(fn func() (*ec2.DescribeTagsOutput, error), errorMsg st
 	return nil, nil
 }
 
-var ec2ClientFactory = createDescribeTagsClient
-
-func createDescribeTagsClient(ctx context.Context) (ec2.DescribeTagsAPIClient, error) {
-	region := ec2util.GetEC2UtilSingleton().Region
+var ec2ClientFactory = func(_ string) (interface {
+	DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+}, error) {
+	var region string
+	if provider := cloudmetadata.GetGlobalProviderOrNil(); provider != nil {
+		region = provider.GetRegion()
+	}
 	if region == "" {
 		return nil, nil
 	}
@@ -205,7 +209,31 @@ func SetEC2APIProviderForTesting(provider func() ec2.DescribeTagsAPIClient) {
 }
 
 func ResetEC2APIProvider() {
-	ec2ClientFactory = createDescribeTagsClient
+	ec2ClientFactory = func(_ string) (interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	}, error) {
+		var region string
+		if provider := cloudmetadata.GetGlobalProviderOrNil(); provider != nil {
+			region = provider.GetRegion()
+		}
+		if region == "" {
+			return nil, nil
+		}
+
+		config := &aws.Config{
+			Region:                        aws.String(region),
+			CredentialsChainVerboseErrors: aws.Bool(true),
+			LogLevel:                      configaws.SDKLogLevel(),
+			Logger:                        configaws.SDKLogger{},
+		}
+
+		ses, err := session.NewSession(config)
+		if err != nil {
+			return nil, err
+		}
+
+		return ec2.New(ses), nil
+	}
 }
 
 func ResetTagsCache() {

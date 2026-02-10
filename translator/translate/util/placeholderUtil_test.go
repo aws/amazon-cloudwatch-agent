@@ -282,7 +282,7 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 }
 func TestAWSMetadataFunctionality(t *testing.T) {
 	// Test that AWS metadata placeholders are resolved correctly
-	// Note: We rely on ec2util.GetEC2UtilSingleton() for caching, not additional layers
+	// Note: cloudmetadata.GetGlobalProviderOrNil() is the single source of truth
 
 	originalProvider := Ec2MetadataInfoProvider
 	Ec2MetadataInfoProvider = func() *Metadata {

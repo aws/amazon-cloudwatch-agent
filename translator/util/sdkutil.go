@@ -14,10 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
-	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
@@ -114,7 +114,10 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) string {
 }
 
 func defaultEC2Region() string {
-	return ec2util.GetEC2UtilSingleton().Region
+	if provider := cloudmetadata.GetGlobalProviderOrNil(); provider != nil {
+		return provider.GetRegion()
+	}
+	return ""
 }
 
 func defaultECSRegion() string {
