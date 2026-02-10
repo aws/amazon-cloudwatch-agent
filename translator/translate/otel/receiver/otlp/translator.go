@@ -114,24 +114,26 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
-	tlsSettings := configtls.ServerConfig{}
+	var tlsCfg configoptional.Optional[configtls.ServerConfig]
 	if t.endpointConfig.certFile != "" || t.endpointConfig.keyFile != "" {
-		tlsSettings.CertFile = t.endpointConfig.certFile
-		tlsSettings.KeyFile = t.endpointConfig.keyFile
+		tlsCfg = configoptional.Some(configtls.ServerConfig{
+			Config: configtls.Config{
+				CertFile: t.endpointConfig.certFile,
+				KeyFile:  t.endpointConfig.keyFile,
+			},
+		})
 	}
 
 	if t.endpointConfig.protocol == http {
 		cfg.GRPC = configoptional.None[configgrpc.ServerConfig]()
-		if httpCfg := cfg.HTTP.Get(); httpCfg != nil {
-			httpCfg.ServerConfig.Endpoint = t.endpointConfig.endpoint
-			httpCfg.ServerConfig.TLS = configoptional.Some(tlsSettings)
-		}
+		httpCfg := cfg.HTTP.GetOrInsertDefault()
+		httpCfg.ServerConfig.Endpoint = t.endpointConfig.endpoint
+		httpCfg.ServerConfig.TLS = tlsCfg
 	} else {
 		cfg.HTTP = configoptional.None[otlpreceiver.HTTPConfig]()
-		if grpcCfg := cfg.GRPC.Get(); grpcCfg != nil {
-			grpcCfg.NetAddr.Endpoint = t.endpointConfig.endpoint
-			grpcCfg.TLS = configoptional.Some(tlsSettings)
-		}
+		grpcCfg := cfg.GRPC.GetOrInsertDefault()
+		grpcCfg.NetAddr.Endpoint = t.endpointConfig.endpoint
+		grpcCfg.TLS = tlsCfg
 	}
 
 	configCache[t.endpointConfig] = cfg
