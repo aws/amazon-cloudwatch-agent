@@ -155,7 +155,7 @@ type RetryHeapProcessor struct {
 func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
-	sender := newSender(logger, service, targetManager, maxRetryDuration, retryHeap)
+	sender := newSender(logger, service, targetManager, retryHeap)
 	senderPool := newSenderPool(workerPool, sender)
 
 	return &RetryHeapProcessor{
@@ -217,7 +217,7 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 
 	for _, batch := range readyBatches {
 		// Check if batch has expired
-		if batch.isExpired(p.maxRetryDuration) {
+		if batch.isExpired() {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
 			batch.updateState()
 			batch.done() // Resume circuit breaker to allow target to process new batches

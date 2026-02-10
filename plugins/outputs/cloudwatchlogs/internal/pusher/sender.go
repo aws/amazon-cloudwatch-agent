@@ -5,7 +5,6 @@ package pusher
 
 import (
 	"errors"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -24,14 +23,11 @@ type cloudWatchLogsService interface {
 
 type Sender interface {
 	Send(*logEventBatch)
-	SetRetryDuration(time.Duration)
-	RetryDuration() time.Duration
 	Stop()
 }
 
 type sender struct {
 	service       cloudWatchLogsService
-	retryDuration atomic.Value
 	targetManager TargetManager
 	logger        telegraf.Logger
 	stopCh        chan struct{}
@@ -45,7 +41,6 @@ func newSender(
 	logger telegraf.Logger,
 	service cloudWatchLogsService,
 	targetManager TargetManager,
-	retryDuration time.Duration,
 	retryHeap RetryHeap,
 ) Sender {
 	s := &sender{
@@ -56,7 +51,6 @@ func newSender(
 		stopped:       false,
 		retryHeap:     retryHeap,
 	}
-	s.retryDuration.Store(retryDuration)
 	return s
 }
 
@@ -118,7 +112,7 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		// Check if retry would exceed max duration
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
-		if batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+		if batch.isExpired() {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
@@ -158,12 +152,3 @@ func (s *sender) Stop() {
 	s.stopped = true
 }
 
-// SetRetryDuration sets the maximum duration for retrying failed log sends.
-func (s *sender) SetRetryDuration(retryDuration time.Duration) {
-	s.retryDuration.Store(retryDuration)
-}
-
-// RetryDuration returns the current maximum retry duration.
-func (s *sender) RetryDuration() time.Duration {
-	return s.retryDuration.Load().(time.Duration)
-}
