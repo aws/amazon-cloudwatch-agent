@@ -438,6 +438,9 @@ func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
 		for _, loader := range loaders {
 			conf, err := loader.Load()
 			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
 				return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
 			}
 			if err = result.Merge(conf); err != nil {

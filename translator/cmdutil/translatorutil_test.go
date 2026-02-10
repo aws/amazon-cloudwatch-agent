@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -231,5 +232,28 @@ func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldS
 		}
 		assert.Equal(t, expectedErrorMap, actualErrorMap, "Unexpected error set!")
 		assert.False(t, shouldSuccess, "It should pass the schemaValidation!")
+	}
+}
+
+func TestGenerateMergedJsonConfigMap_OnlyYAML(t *testing.T) {
+	testCases := map[string]string{
+		"WithYAMLFile":    "config.yaml",
+		"WithYAMLTmpFile": "config.yaml.tmp",
+	}
+	for name, file := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			err := os.WriteFile(path.Join(tmpDir, file), nil, 0600)
+			assert.NoError(t, err)
+
+			translatorcontext.ResetContext()
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetInputJsonDirPath(tmpDir)
+			ctx.SetMultiConfig("default")
+
+			_, err = GenerateMergedJsonConfigMap(ctx)
+
+			assert.ErrorIs(t, err, ErrOnlyYAML)
+		})
 	}
 }

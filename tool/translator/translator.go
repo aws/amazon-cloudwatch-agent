@@ -23,6 +23,7 @@ import (
 const (
 	exitErrorMessage   = "configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version"
 	exitSuccessMessage = "Configuration validation first phase succeeded"
+	exitSkipMessage    = "Configuration validation first phase skipped. No JSON files found"
 	version            = "1.0"
 	envConfigFileName  = "env-config.json"
 	yamlConfigFileName = "amazon-cloudwatch-agent.yaml"
@@ -98,9 +99,17 @@ func (ct *ConfigTranslator) Translate() (err error) {
 		}
 	}()
 
+	tomlConfigPath := cmdutil.GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
+	tomlConfigDir := filepath.Dir(tomlConfigPath)
+	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
+
 	mergedJSONConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ct.ctx)
 	if err != nil {
-		return fmt.Errorf("failed to generate merged json config: %v", err)
+		if errors.Is(err, cmdutil.ErrOnlyYAML) {
+			log.Println(exitSkipMessage)
+		} else {
+			return fmt.Errorf("failed to generate merged json config: %v", err)
+		}
 	}
 
 	if !ct.ctx.RunInContainer() {
@@ -114,9 +123,6 @@ func (ct *ConfigTranslator) Translate() (err error) {
 		}
 	}
 
-	tomlConfigPath := cmdutil.GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
-	tomlConfigDir := filepath.Dir(tomlConfigPath)
-	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
 	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(mergedJSONConfigMap)
 	if err != nil {
 		return fmt.Errorf("failed to generate TOML configuration validation content: %v", err)
@@ -128,8 +134,12 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
 		return fmt.Errorf("failed to create the configuration TOML validation file: %v", err)
 	}
-	if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
-		return fmt.Errorf("failed to create the configuration YAML validation file: %v", err)
+	if yamlConfig != nil {
+		if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
+			return fmt.Errorf("failed to create the configuration YAML validation file: %v", err)
+		}
+	} else {
+		_ = os.Remove(yamlConfigPath)
 	}
 	log.Println(exitSuccessMessage)
 

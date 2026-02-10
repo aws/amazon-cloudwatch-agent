@@ -4,6 +4,7 @@
 package cmdutil
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -35,6 +36,8 @@ const (
 	jsonTemplateName_Darwin  = "default_darwin_config.json"
 	defaultTomlConfigName    = "CWAgent.conf"
 )
+
+var ErrOnlyYAML = errors.New("only YAML files detected")
 
 // TranslateJsonMapToEnvConfigFile populates env-config.json based on the input json config.
 func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, envConfigPath string) {
@@ -115,6 +118,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 	// for the append operation when the existing file name and new .tmp file name have diff
 	// only for the ".tmp" suffix, i.e. it is override operation even it says append.
 	var jsonConfigMapMap = make(map[string]map[string]interface{})
+	var foundYAML bool
 
 	if ctx.MultiConfig() == "append" || ctx.MultiConfig() == "remove" {
 		// backwards compatible for the old json config file
@@ -163,6 +167,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				ext = filepath.Ext(key)
 				// skip .yaml files
 				if ext == constants.FileSuffixYAML {
+					foundYAML = true
 					return nil
 				}
 				if ctx.MultiConfig() == "default" || ctx.MultiConfig() == "append" {
@@ -176,6 +181,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				}
 			} else if ext == constants.FileSuffixYAML {
 				// skip .yaml files
+				foundYAML = true
 				return nil
 			} else {
 				// non .tmp / existing files
@@ -207,6 +213,9 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				return nil, fmt.Errorf("unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
+		}
+		if foundYAML {
+			return nil, ErrOnlyYAML
 		}
 	}
 
