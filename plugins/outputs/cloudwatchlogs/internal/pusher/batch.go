@@ -260,8 +260,8 @@ func (t byTimestamp) Less(i, j int) bool {
 func (b *logEventBatch) initializeStartTime() {
 	if b.startTime.IsZero() {
 		b.startTime = time.Now()
+		b.expireAfter = b.startTime.Add(maxRetryTimeout)
 	}
-	b.expireAfter = b.startTime.Add(maxRetryTimeout)
 }
 
 // updateRetryMetadata updates the retry metadata after a failed send attempt.
