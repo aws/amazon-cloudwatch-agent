@@ -436,3 +436,37 @@ func TestBatchRetryMetadata(t *testing.T) {
 	batch.expireAfter = time.Now().Add(-1 * time.Hour)
 	assert.True(t, batch.isExpired())
 }
+
+func TestBatchInitializeStartTimeIdempotent(t *testing.T) {
+	batch := newLogEventBatch(Target{Group: "test-group", Stream: "test-stream"}, nil)
+
+	// Verify initial state
+	assert.True(t, batch.startTime.IsZero())
+	assert.True(t, batch.expireAfter.IsZero())
+
+	// First call should set both values
+	batch.initializeStartTime()
+	assert.False(t, batch.startTime.IsZero())
+	assert.False(t, batch.expireAfter.IsZero())
+
+	// Capture the values
+	firstStartTime := batch.startTime
+	firstExpireAfter := batch.expireAfter
+
+	// Verify expireAfter is set to startTime + maxRetryTimeout
+	expectedExpireAfter := firstStartTime.Add(maxRetryTimeout)
+	assert.Equal(t, expectedExpireAfter, firstExpireAfter)
+
+	// Wait a bit to ensure time has passed
+	time.Sleep(10 * time.Millisecond)
+
+	// Second call should NOT change the values (idempotent)
+	batch.initializeStartTime()
+	assert.Equal(t, firstStartTime, batch.startTime, "startTime should not change on second call")
+	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on second call")
+
+	// Third call should also not change the values
+	batch.initializeStartTime()
+	assert.Equal(t, firstStartTime, batch.startTime, "startTime should not change on third call")
+	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on third call")
+}
