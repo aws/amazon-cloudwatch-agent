@@ -4,18 +4,14 @@
 package prometheus
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/targetallocator"
-	promcommon "github.com/prometheus/common/config"
-	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/config"
 	promconfig "github.com/prometheus/prometheus/config"
-	"github.com/prometheus/prometheus/discovery"
-	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/config/confighttp"
@@ -26,115 +22,51 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 )
 
+// loadPromConfig loads a Prometheus YAML config file through promconfig.Load()
+// so that all defaults (MetricNameValidationScheme, ScrapeNativeHistograms, etc.)
+// are populated the same way the translator's Reload() populates them.
+func loadPromConfig(t *testing.T, path string) *promconfig.Config {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	require.NoError(t, err)
+	cfg, err := promconfig.Load(string(content), nil)
+	require.NoError(t, err)
+	return cfg
+}
+
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input   map[string]any
 		wantID  string
-		want    *prometheusreceiver.Config
+		wantTA  configoptional.Optional[targetallocator.Config]
 		wantErr error
+		// promYAML is the path to the raw Prometheus YAML used to build expected
+		// GlobalConfig and ScrapeConfigs via promconfig.Load(). This ensures the
+		// expected values include all Prometheus defaults (populated by Load/Reload).
+		promYAML string
 	}{
 		"WithOtelConfig": {
-			input:  testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			wantID: "prometheus",
-			want: &prometheusreceiver.Config{
-				PrometheusConfig: &prometheusreceiver.PromConfig{
-					GlobalConfig: promconfig.GlobalConfig{
-						ScrapeInterval:     model.Duration(1 * time.Minute),
-						ScrapeTimeout:      model.Duration(30 * time.Second),
-						ScrapeProtocols:    promconfig.DefaultScrapeProtocols,
-						EvaluationInterval: model.Duration(1 * time.Minute),
-					},
-					ScrapeConfigs: []*config.ScrapeConfig{
-						{
-							ScrapeInterval:    model.Duration(1 * time.Minute),
-							ScrapeTimeout:     model.Duration(30 * time.Second),
-							JobName:           "prometheus_test_job",
-							HonorTimestamps:   true,
-							ScrapeProtocols:   promconfig.DefaultScrapeProtocols,
-							MetricsPath:       "/metrics",
-							Scheme:            "http",
-							EnableCompression: true,
-							ServiceDiscoveryConfigs: discovery.Configs{
-								discovery.StaticConfig{
-									&targetgroup.Group{
-										Targets: []model.LabelSet{
-											{
-												model.AddressLabel: "localhost:8000",
-											},
-										},
-										Labels: map[model.LabelName]model.LabelValue{
-											"label1": "test1",
-										},
-										Source: "0",
-									},
-								},
-							},
-							HTTPClientConfig: promcommon.HTTPClientConfig{
-								FollowRedirects: true,
-								EnableHTTP2:     true,
-							},
+			input:    testutil.GetJson(t, filepath.Join("testdata", "config.json")),
+			wantID:   "prometheus",
+			promYAML: filepath.Join("testdata", "config_prom.yaml"), // same scrape content, just without OTel wrapper
+			wantTA: configoptional.Some(targetallocator.Config{
+				CollectorID: "col-1234",
+				ClientConfig: confighttp.ClientConfig{
+					TLS: configtls.ClientConfig{
+						Config: configtls.Config{
+							CAFile:         defaultTLSCaPath,
+							CertFile:       defaultTLSCertPath,
+							KeyFile:        defaultTLSKeyPath,
+							ReloadInterval: 10 * time.Second,
 						},
 					},
 				},
-				TargetAllocator: configoptional.Some(targetallocator.Config{
-					CollectorID: "col-1234",
-					ClientConfig: confighttp.ClientConfig{
-						TLS: configtls.ClientConfig{
-							Config: configtls.Config{
-								CAFile:         defaultTLSCaPath,
-								CertFile:       defaultTLSCertPath,
-								KeyFile:        defaultTLSKeyPath,
-								ReloadInterval: 10 * time.Second,
-							},
-						},
-					},
-				}),
-			},
+			}),
 		},
 		"WithPromConfig": {
-			input:  testutil.GetJson(t, filepath.Join("testdata", "config_prom.json")),
-			wantID: "prometheus",
-			want: &prometheusreceiver.Config{
-				PrometheusConfig: &prometheusreceiver.PromConfig{
-					GlobalConfig: promconfig.GlobalConfig{
-						ScrapeInterval:     model.Duration(1 * time.Minute),
-						ScrapeTimeout:      model.Duration(30 * time.Second),
-						ScrapeProtocols:    promconfig.DefaultScrapeProtocols,
-						EvaluationInterval: model.Duration(1 * time.Minute),
-					},
-					ScrapeConfigs: []*config.ScrapeConfig{
-						{
-							ScrapeInterval:    model.Duration(1 * time.Minute),
-							ScrapeTimeout:     model.Duration(30 * time.Second),
-							JobName:           "prometheus_test_job",
-							HonorTimestamps:   true,
-							ScrapeProtocols:   promconfig.DefaultScrapeProtocols,
-							MetricsPath:       "/metrics",
-							Scheme:            "http",
-							EnableCompression: true,
-							ServiceDiscoveryConfigs: discovery.Configs{
-								discovery.StaticConfig{
-									&targetgroup.Group{
-										Targets: []model.LabelSet{
-											{
-												model.AddressLabel: "localhost:8000",
-											},
-										},
-										Labels: map[model.LabelName]model.LabelValue{
-											"label1": "test1",
-										},
-										Source: "0",
-									},
-								},
-							},
-							HTTPClientConfig: promcommon.HTTPClientConfig{
-								FollowRedirects: true,
-								EnableHTTP2:     true,
-							},
-						},
-					},
-				},
-			},
+			input:    testutil.GetJson(t, filepath.Join("testdata", "config_prom.json")),
+			wantID:   "prometheus",
+			promYAML: filepath.Join("testdata", "config_prom.yaml"),
 		},
 	}
 	for name, testCase := range testCases {
@@ -149,10 +81,13 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*prometheusreceiver.Config)
 				require.True(t, ok)
 
-				assert.NoError(t, err)
-				assert.Equal(t, testCase.want.PrometheusConfig.ScrapeConfigs, gotCfg.PrometheusConfig.ScrapeConfigs)
-				assert.Equal(t, testCase.want.PrometheusConfig.GlobalConfig, gotCfg.PrometheusConfig.GlobalConfig)
-				assert.Equal(t, testCase.want.TargetAllocator, gotCfg.TargetAllocator)
+				// Build expected Prometheus config by loading the same YAML through
+				// promconfig.Load(), which populates all defaults identically to
+				// the translator's Reload() path.
+				wantPromCfg := loadPromConfig(t, testCase.promYAML)
+				assert.Equal(t, wantPromCfg.ScrapeConfigs, gotCfg.PrometheusConfig.ScrapeConfigs)
+				assert.Equal(t, wantPromCfg.GlobalConfig, gotCfg.PrometheusConfig.GlobalConfig)
+				assert.Equal(t, testCase.wantTA, gotCfg.TargetAllocator)
 			}
 		})
 	}
