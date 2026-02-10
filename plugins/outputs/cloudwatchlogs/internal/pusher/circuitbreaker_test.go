@@ -61,8 +61,8 @@ func TestCircuitBreakerBlocksTargetAfterFailure(t *testing.T) {
 	var wg sync.WaitGroup
 	flushTimeout := 50 * time.Millisecond
 
-	failingPusher := NewPusher(logger, failingTarget, service, tm, nil, workerPool, flushTimeout, &wg, 2, retryHeap)
-	healthyPusher := NewPusher(logger, healthyTarget, service, tm, nil, workerPool, flushTimeout, &wg, 2, retryHeap)
+	failingPusher := NewPusher(logger, failingTarget, service, tm, nil, workerPool, flushTimeout, &wg, retryHeap)
+	healthyPusher := NewPusher(logger, healthyTarget, service, tm, nil, workerPool, flushTimeout, &wg, retryHeap)
 	defer failingPusher.Stop()
 	defer healthyPusher.Stop()
 
