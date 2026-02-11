@@ -177,22 +177,16 @@ func TestPoisonPillScenario(t *testing.T) {
 // TestRetryHeapSmallerThanFailingLogGroups tests the specific bottleneck scenario where:
 // - Retry heap size = concurrency (e.g., 2)
 // - Number of failing log groups (10) > retry heap size (2)
-// - This causes the retry heap to fill up with failed batches
-// - New batches from failing log groups block trying to push to full heap
-// - Workers get stuck waiting to push failed batches back to heap
-// - Allowed log group gets starved of worker time
+// - With bounded heap: This caused deadlock as heap filled up
+// - With unbounded heap: System handles this gracefully
 //
-// This test validates the ACTUAL bug: when retry heap size (equal to concurrency)
-// is smaller than the number of failing log groups, the system deadlocks.
-//
-// **EXPECTED BEHAVIOR**: This test will timeout/deadlock, proving the bug exists.
+// This test validates the FIX: unbounded retry heap allows all failed batches
+// to be queued without blocking workers.
 func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
-	t.Skip("This test intentionally deadlocks to demonstrate the poison pill bug where heap size < failing log groups")
-	
 	concurrency := 2
 	numFailingLogGroups := 10
 	
-	// CRITICAL: Retry heap size equals concurrency (this is the bug)
+	// Retry heap is now unbounded (maxSize parameter ignored)
 	heap := NewRetryHeap(concurrency, &testutil.Logger{})
 	defer heap.Stop()
 
@@ -237,7 +231,6 @@ func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Generate batches for all failing log groups continuously
-	// This will cause deadlock as heap fills up
 	for i := 0; i < numFailingLogGroups; i++ {
 		wg.Add(1)
 		go func(target Target) {
@@ -255,7 +248,6 @@ func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 					}
 					batch := createBatch(target, 10)
 					batch.nextRetryTime = time.Now().Add(-1 * time.Second)
-					// This will block when heap is full
 					heap.Push(batch)
 					batchCount++
 				}
@@ -313,11 +305,13 @@ func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 	successCount := allowedGroupSuccessCount.Load()
 	
 	t.Logf("Results: Allowed success=%d, Denied attempts=%d, Heap size=%d, Failing groups=%d",
-		successCount, deniedGroupAttemptCount.Load(), concurrency, numFailingLogGroups)
+		successCount, deniedGroupAttemptCount.Load(), heap.Size(), numFailingLogGroups)
 
-	// This test documents the bug: with heap size < failing log groups, the system deadlocks
+	// With unbounded heap, allowed log group should receive events
 	if successCount == 0 {
-		t.Errorf("POISON PILL BUG DETECTED: Allowed log group received 0 events. Heap size (%d) < failing groups (%d) caused deadlock", concurrency, numFailingLogGroups)
+		t.Errorf("UNEXPECTED: Allowed log group received 0 events with unbounded heap")
+	} else {
+		t.Logf("SUCCESS: Unbounded heap handled poison pill scenario: %d successful publishes despite %d failing groups", successCount, numFailingLogGroups)
 	}
 }
 
