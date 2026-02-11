@@ -185,12 +185,12 @@ jobs:
             
             # Apply OS filter if provided
             if [ -n "${{ inputs.test_os_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq '[.[] | select(.os == "${{ inputs.test_os_filter }}")]')
+              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.os == "${{ inputs.test_os_filter }}")]')
             fi
             
             # Apply test directory filter if provided
             if [ -n "${{ inputs.test_dir_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
+              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
             fi
             
             echo "$matrix_content"
