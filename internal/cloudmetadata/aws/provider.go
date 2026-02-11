@@ -158,21 +158,21 @@ func (p *Provider) GetAccountID() string {
 }
 
 // GetTags returns all EC2 tags.
-// Note: EC2 tags require DescribeTags API calls, not IMDS.
-// Use tagutil package for tag operations.
+// TODO: Implement using ec2metadataprovider.InstanceTags() (available since IMDSv2)
+// For now, use tagutil package for tag operations.
 func (p *Provider) GetTags() map[string]string {
 	return make(map[string]string)
 }
 
 // GetTag returns a specific EC2 tag value.
-// Note: EC2 tags require DescribeTags API calls, not IMDS.
-// Use tagutil package for tag operations.
-func (p *Provider) GetTag(key string) (string, error) {
-	return "", fmt.Errorf("EC2 tags not available via IMDS - use tagutil package")
+// TODO: Implement using ec2metadataprovider.InstanceTagValue() (available since IMDSv2)
+// For now, use tagutil package for tag operations.
+func (p *Provider) GetTag(_ string) (string, error) {
+	return "", fmt.Errorf("EC2 tags not implemented yet - use tagutil package")
 }
 
 // GetVolumeID returns the EBS volume ID for a given device name.
-// Note: Volume mapping is handled by ec2tagger processor.
+// Note: Volume mapping is handled by disktagger processor.
 func (p *Provider) GetVolumeID(_ string) string {
 	return ""
 }
