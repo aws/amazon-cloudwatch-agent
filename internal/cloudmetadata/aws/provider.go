@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -40,14 +40,14 @@ func NewProvider(ctx context.Context, logger *zap.Logger) (*Provider, error) {
 		logger = zap.NewNop()
 	}
 
-	// Create AWS session
-	sess, err := session.NewSession()
+	// Create AWS config
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create AWS session: %w", err)
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
 	// Create metadata provider with retry support
-	metadataProvider := ec2metadataprovider.NewMetadataProvider(sess, retryer.GetDefaultRetryNumber())
+	metadataProvider := ec2metadataprovider.NewMetadataProvider(cfg, retryer.GetDefaultRetryNumber())
 
 	p := &Provider{
 		logger:   logger,
@@ -105,12 +105,12 @@ func (p *Provider) fetchMetadata(ctx context.Context) error {
 // IsAWS detects if running on AWS by attempting to fetch metadata.
 // This is used during cloud detection.
 func IsAWS(ctx context.Context) bool {
-	sess, err := session.NewSession()
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return false
 	}
 
-	metadataProvider := ec2metadataprovider.NewMetadataProvider(sess, retryer.GetDefaultRetryNumber())
+	metadataProvider := ec2metadataprovider.NewMetadataProvider(cfg, retryer.GetDefaultRetryNumber())
 	_, err = metadataProvider.Get(ctx)
 	return err == nil
 }

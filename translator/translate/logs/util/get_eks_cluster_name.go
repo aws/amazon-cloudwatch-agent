@@ -4,6 +4,8 @@
 package util
 
 import (
+	"context"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
@@ -27,5 +29,5 @@ func GetClusterNameFromEc2Tagger() string {
 	if provider := cloudmetadata.GetGlobalProviderOrNil(); provider != nil {
 		instanceID = provider.GetInstanceID()
 	}
-	return tagutil.GetEKSClusterName(instanceID)
+	return tagutil.GetEKSClusterName(context.Background(), instanceID)
 }

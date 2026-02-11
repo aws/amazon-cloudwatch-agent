@@ -16,8 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
@@ -137,9 +136,8 @@ func detectRegion(mode string, credsConfig map[string]string) (string, string) {
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == translatorconfig.ModeEC2 {
-
 		fmt.Println("I! Trying to detect region from ec2")
-		region = util.DefaultEC2Region(context.Background())
+		region = defaultEC2Region()
 		regionType = translatorconfig.RegionTypeEC2Metadata
 	}
 

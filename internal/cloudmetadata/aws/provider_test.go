@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -18,9 +18,9 @@ type MockMetadataProvider struct {
 	mock.Mock
 }
 
-func (m *MockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
+func (m *MockMetadataProvider) Get(ctx context.Context) (imds.InstanceIdentityDocument, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(ec2metadata.EC2InstanceIdentityDocument), args.Error(1)
+	return args.Get(0).(imds.InstanceIdentityDocument), args.Error(1)
 }
 
 func (m *MockMetadataProvider) Hostname(ctx context.Context) (string, error) {
@@ -55,7 +55,7 @@ func TestProvider_GetMetadata(t *testing.T) {
 	mockMetadata := &MockMetadataProvider{}
 
 	// Setup mock expectations
-	expectedDoc := ec2metadata.EC2InstanceIdentityDocument{
+	expectedDoc := imds.InstanceIdentityDocument{
 		InstanceID:       "i-1234567890abcdef0",
 		InstanceType:     "t3.micro",
 		ImageID:          "ami-0abcdef1234567890",
@@ -100,7 +100,7 @@ func TestProvider_GetMetadata_Failure(t *testing.T) {
 	mockMetadata := &MockMetadataProvider{}
 
 	// Setup mock to return error
-	mockMetadata.On("Get", ctx).Return(ec2metadata.EC2InstanceIdentityDocument{}, assert.AnError)
+	mockMetadata.On("Get", ctx).Return(imds.InstanceIdentityDocument{}, assert.AnError)
 
 	// Create provider with mock
 	provider := &Provider{
@@ -123,13 +123,13 @@ func TestProvider_Refresh(t *testing.T) {
 	mockMetadata := &MockMetadataProvider{}
 
 	// Setup initial metadata
-	initialDoc := ec2metadata.EC2InstanceIdentityDocument{
+	initialDoc := imds.InstanceIdentityDocument{
 		InstanceID: "i-initial",
 		Region:     "us-east-1",
 	}
 
 	// Setup updated metadata
-	updatedDoc := ec2metadata.EC2InstanceIdentityDocument{
+	updatedDoc := imds.InstanceIdentityDocument{
 		InstanceID: "i-updated",
 		Region:     "us-west-2",
 	}
@@ -165,7 +165,7 @@ func TestProvider_ConcurrentAccess(t *testing.T) {
 
 	mockMetadata := &MockMetadataProvider{}
 
-	doc := ec2metadata.EC2InstanceIdentityDocument{
+	doc := imds.InstanceIdentityDocument{
 		InstanceID: "i-concurrent",
 		Region:     "us-west-2",
 	}
