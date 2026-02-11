@@ -29,14 +29,6 @@ on:
       test_repo_branch:
         description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
-      test_os_filter:
-        description: 'Filter tests to specific OS (e.g., al2023, ubuntu-22.04)'
-        type: string
-        required: false
-      test_dir_filter:
-        description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
-        type: string
-        required: false
   workflow_call:
     inputs:
       build_id:
@@ -46,14 +38,6 @@ on:
       test_repo_branch:
         description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
-      test_os_filter:
-        description: 'Filter tests to specific OS (e.g., al2023, ubuntu-22.04)'
-        type: string
-        required: false
-      test_dir_filter:
-        description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
-        type: string
-        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.build_id }}
@@ -181,42 +165,23 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          
-          # Function to apply filters to a matrix
-          apply_filters() {
-            local matrix_file=$1
-            local matrix_content=$(cat "$matrix_file")
-            
-            # Apply OS filter if provided
-            if [ -n "${{ inputs.test_os_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq '[.[] | select(.os == "${{ inputs.test_os_filter }}")]')
-            fi
-            
-            # Apply test directory filter if provided
-            if [ -n "${{ inputs.test_dir_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
-            fi
-            
-            echo "$matrix_content"
-          }
-          
-          echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_matrix=$(apply_filters generator/resources/ec2_linux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_mac_matrix=$(apply_filters generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_performance_matrix=$(apply_filters generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_performance_matrix=$(apply_filters generator/resources/ec2_windows_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_stress_matrix=$(apply_filters generator/resources/ec2_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_stress_matrix=$(apply_filters generator/resources/ec2_windows_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ecs_ec2_launch_daemon_matrix=$(apply_filters generator/resources/ecs_ec2_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ecs_fargate_matrix=$(apply_filters generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_daemon_matrix=$(apply_filters generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_deployment_matrix=$(apply_filters generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "eks_addon_matrix=$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_onprem_matrix=$(echo $(cat generator/resources/ec2_linux_onprem_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_selinux_matrix=$(echo $(cat generator/resources/ec2_selinux_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_performance_matrix=$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_performance_matrix=$(echo $(cat generator/resources/ec2_windows_performance_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_stress_matrix=$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_stress_matrix=$(echo $(cat generator/resources/ec2_windows_stress_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ecs_ec2_launch_daemon_matrix=$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ecs_fargate_matrix=$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "eks_daemon_matrix=$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "eks_deployment_matrix=$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_itar_matrix=$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_china_matrix=$(echo $(cat generator/resources/ec2_linux_china_complete_test_matrix.json))" >> "$GITHUB_OUTPUT"
 
       - name: Echo test plan matrix
         run: |
