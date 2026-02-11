@@ -49,7 +49,7 @@ type Extension struct {
 }
 
 var (
-	_ extension.Extension    = (*Extension)(nil)
+	_ extension.Extension     = (*Extension)(nil)
 	_ aws.CredentialsProvider = (*Extension)(nil)
 
 	instance *Extension
@@ -72,7 +72,7 @@ func (e *Extension) Retrieve(_ context.Context) (aws.Credentials, error) {
 	}
 	return aws.Credentials{
 		AccessKeyID:     aws.ToString(creds.AccessKeyId),
-		SecretAccessKey:  aws.ToString(creds.SecretAccessKey),
+		SecretAccessKey: aws.ToString(creds.SecretAccessKey),
 		SessionToken:    aws.ToString(creds.SessionToken),
 		CanExpire:       true,
 		Expires:         aws.ToTime(creds.Expiration),

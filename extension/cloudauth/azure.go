@@ -24,7 +24,7 @@ const (
 	azureComputeAPI      = "2020-09-01"
 	// The default resource/audience for the token.
 	azureDefaultResource = "https://management.azure.com/"
-	azureProbeTimeout = 2 * time.Second
+	azureProbeTimeout    = 2 * time.Second
 )
 
 // AzureProvider fetches OIDC tokens from Azure Instance Metadata Service (IMDS)
