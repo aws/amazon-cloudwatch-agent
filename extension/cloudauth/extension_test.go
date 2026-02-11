@@ -32,7 +32,7 @@ func TestExtension_Retrieve(t *testing.T) {
 	expiry := time.Now().Add(time.Hour)
 	ext.credentials = &ststypes.Credentials{
 		AccessKeyId:     aws.String("AKID"),
-		SecretAccessKey:  aws.String("SECRET"),
+		SecretAccessKey: aws.String("SECRET"),
 		SessionToken:    aws.String("TOKEN"),
 		Expiration:      &expiry,
 	}
