@@ -255,11 +255,12 @@ func (e *Extension) nextRefreshInterval() time.Duration {
 // hostJitter returns a deterministic jitter duration based on the hostname.
 // All agents on the same host get the same offset, but different hosts spread
 // their refresh calls across the jitter window to avoid thundering herd on STS.
-func hostJitter(max time.Duration) time.Duration {
+func hostJitter(maxDuration time.Duration) time.Duration {
 	hostName, _ := os.Hostname()
 	h := fnv.New64()
 	h.Write([]byte(hostName))
-	return time.Duration(int64(h.Sum64()>>1)) % max
+	// Right shift by one to ensure the value fits in int64 (max 2^63-1).
+	return time.Duration(int64(h.Sum64()>>1)) % maxDuration //nolint:gosec
 }
 
 // IsActive returns true if the extension has valid credentials.
