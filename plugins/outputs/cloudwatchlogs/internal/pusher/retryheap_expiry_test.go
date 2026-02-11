@@ -74,7 +74,7 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 
 	// Initialize the batch's start time to make it already expired
 	batch.initializeStartTime()
-	batch.startTime = time.Now().Add(-100 * time.Millisecond) // Already expired
+	batch.expireAfter = time.Now().Add(-10 * time.Millisecond) // Already expired
 
 	// Update retry metadata to simulate a failed attempt and make it ready for retry
 	batch.updateRetryMetadata(&cloudwatchlogs.ServiceUnavailableException{})

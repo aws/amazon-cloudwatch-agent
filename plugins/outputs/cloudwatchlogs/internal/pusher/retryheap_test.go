@@ -145,65 +145,46 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	assert.Equal(t, 0, heap.Size())
 }
 
-func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
-	heap := NewRetryHeap(2, &testutil.Logger{}) // maxSize = 2
+func TestRetryHeap_UnboundedPush(t *testing.T) {
+	heap := NewRetryHeap(2, &testutil.Logger{}) // maxSize parameter ignored (unbounded)
 	defer heap.Stop()
 
-	// Fill heap to capacity with batches that will be ready in 3 seconds
+	// Push multiple batches without blocking
 	target := Target{Group: "group", Stream: "stream"}
 	batch1 := newLogEventBatch(target, nil)
 	batch1.nextRetryTime = time.Now().Add(3 * time.Second)
 	batch2 := newLogEventBatch(target, nil)
 	batch2.nextRetryTime = time.Now().Add(3 * time.Second)
+	batch3 := newLogEventBatch(target, nil)
+	batch3.nextRetryTime = time.Now().Add(3 * time.Second)
 
-	heap.Push(batch1)
-	heap.Push(batch2)
+	// All pushes should succeed immediately (non-blocking)
+	err := heap.Push(batch1)
+	assert.NoError(t, err)
+	err = heap.Push(batch2)
+	assert.NoError(t, err)
+	err = heap.Push(batch3)
+	assert.NoError(t, err)
 
-	// Verify heap is at capacity
-	if heap.Size() != 2 {
-		t.Fatalf("Expected size 2, got %d", heap.Size())
-	}
-
-	// Test that semaphore is actually blocking by trying to push in a goroutine
-	pushResult := make(chan error, 1)
-
-	go func() {
-		batch3 := newLogEventBatch(target, nil)
-		batch3.nextRetryTime = time.Now().Add(-1 * time.Hour)
-		heap.Push(batch3) // This should block on semaphore
-		pushResult <- nil
-	}()
-
-	// Verify the push is blocked (expects no result in channel)
-	select {
-	case <-pushResult:
-		t.Fatal("Unexpected push, heap should be blocked")
-	case <-time.After(100 * time.Millisecond):
-		// Push is successfully blocked when at capacity
+	// Verify heap can grow beyond original maxSize parameter
+	if heap.Size() != 3 {
+		t.Fatalf("Expected size 3, got %d", heap.Size())
 	}
 
 	time.Sleep(3 * time.Second)
 
-	// Pop ready batches to release semaphore slots
+	// Pop ready batches
 	readyBatches := heap.PopReady()
-	assert.Len(t, readyBatches, 2, "Should pop exactly 2 ready batches")
+	assert.Len(t, readyBatches, 3, "Should pop exactly 3 ready batches")
 
 	for _, batch := range readyBatches {
 		assert.Equal(t, "group", batch.Group)
 		assert.Equal(t, "stream", batch.Stream)
 	}
 
-	// Expects push to now be unblocked
-	select {
-	case err := <-pushResult:
-		assert.NoError(t, err, "Push should succeed after PopReady")
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("Unexpected timeout, heap should be unblocked")
-	}
-
-	// Verify 1 item remaining in heap (2 popped, 1 pushed)
-	if heap.Size() != 1 {
-		t.Fatalf("Expected size 1 after pop/push cycle, got %d", heap.Size())
+	// Verify heap is empty
+	if heap.Size() != 0 {
+		t.Fatalf("Expected size 0 after pop, got %d", heap.Size())
 	}
 }
 

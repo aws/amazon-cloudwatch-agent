@@ -49,56 +49,37 @@ type RetryHeap interface {
 }
 
 type retryHeap struct {
-	heap      retryHeapImpl
-	mutex     sync.RWMutex
-	semaphore chan struct{} // Size enforcer
-	stopCh    chan struct{}
-	maxSize   int
-	stopped   bool
-	logger    telegraf.Logger
+	heap    retryHeapImpl
+	mutex   sync.RWMutex
+	stopCh  chan struct{}
+	stopped bool
+	logger  telegraf.Logger
 }
 
 var _ RetryHeap = (*retryHeap)(nil)
 
-// NewRetryHeap creates a new retry heap with the specified maximum size
+// NewRetryHeap creates a new retry heap (unbounded)
 func NewRetryHeap(maxSize int, logger telegraf.Logger) RetryHeap {
 	rh := &retryHeap{
-		heap:      make(retryHeapImpl, 0, maxSize),
-		maxSize:   maxSize,
-		semaphore: make(chan struct{}, maxSize), // Semaphore for size enforcement
-		stopCh:    make(chan struct{}),
-		logger:    logger,
+		heap:   make(retryHeapImpl, 0),
+		stopCh: make(chan struct{}),
+		logger: logger,
 	}
 	heap.Init(&rh.heap)
 	return rh
 }
 
-// Push adds a batch to the heap, blocking if full
+// Push adds a batch to the heap (non-blocking)
 func (rh *retryHeap) Push(batch *logEventBatch) error {
-	rh.mutex.RLock()
-	if rh.stopped {
-		rh.mutex.RUnlock()
-		return errors.New("retry heap stopped")
-	}
-	rh.mutex.RUnlock()
+	rh.mutex.Lock()
+	defer rh.mutex.Unlock()
 
-	// Acquire semaphore slot (blocks if at maxSize capacity)
-	select {
-	case rh.semaphore <- struct{}{}:
-		// add batch to heap with mutex protection
-		rh.mutex.Lock()
-		if rh.stopped {
-			// Release semaphore if stopped after acquiring
-			<-rh.semaphore
-			rh.mutex.Unlock()
-			return errors.New("retry heap stopped")
-		}
-		heap.Push(&rh.heap, batch)
-		rh.mutex.Unlock()
-		return nil
-	case <-rh.stopCh:
+	if rh.stopped {
 		return errors.New("retry heap stopped")
 	}
+
+	heap.Push(&rh.heap, batch)
+	return nil
 }
 
 // PopReady returns all batches that are ready for retry (nextRetryTime <= now)
@@ -113,8 +94,6 @@ func (rh *retryHeap) PopReady() []*logEventBatch {
 	for len(rh.heap) > 0 && !rh.heap[0].nextRetryTime.After(now) {
 		batch := heap.Pop(&rh.heap).(*logEventBatch)
 		ready = append(ready, batch)
-		// Release semaphore slot for each popped batch
-		<-rh.semaphore
 	}
 
 	return ready
@@ -155,7 +134,7 @@ type RetryHeapProcessor struct {
 func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
-	sender := newSender(logger, service, targetManager, maxRetryDuration, retryHeap)
+	sender := newSender(logger, service, targetManager, retryHeap)
 	senderPool := newSenderPool(workerPool, sender)
 
 	return &RetryHeapProcessor{
@@ -217,7 +196,7 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 
 	for _, batch := range readyBatches {
 		// Check if batch has expired
-		if batch.isExpired(p.maxRetryDuration) {
+		if batch.isExpired() {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
 			batch.updateState()
 			batch.done() // Resume circuit breaker to allow target to process new batches
