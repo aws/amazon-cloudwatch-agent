@@ -81,7 +81,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	// Detect agent mode and region
 	mode = util.DetectAgentMode(mode)
 	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
-	if region == "" && downloadLocation != locationDefault {
+	if region == "" && downloadLocation != locationDefault && !strings.HasPrefix(downloadLocation, locationFile+locationSeparator) {
 		if mode == translatorconfig.ModeEC2 {
 			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
 		}

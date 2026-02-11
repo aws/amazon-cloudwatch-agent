@@ -25,25 +25,26 @@ type CredentialsConfig struct {
 	Profile   string
 	Filename  string
 	Token     string
+
+	// roleAssumed is set by credential chain providers (e.g. cloudauth)
+	// that already performed role assumption. LoadConfig checks this to
+	// avoid wrapping the provider with a second sts:AssumeRole call.
+	roleAssumed bool
 }
+
+// SetRoleAssumed marks that a chain provider already performed role assumption.
+func (c *CredentialsConfig) SetRoleAssumed(v bool) { c.roleAssumed = v }
 
 func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) {
-	if c.RoleARN != "" {
-		return c.assumeRoleConfig(ctx)
+	chainProvider := c.fromChain()
+	if c.RoleARN != "" && !c.roleAssumed {
+		cfg, err := c.loadConfig(ctx, chainProvider)
+		if err != nil {
+			return aws.Config{}, err
+		}
+		return c.loadConfig(ctx, aws.NewCredentialsCache(newStsCredentialsProvider(cfg, c.RoleARN, c.Region)))
 	}
-	return c.rootConfig(ctx)
-}
-
-func (c *CredentialsConfig) assumeRoleConfig(ctx context.Context) (aws.Config, error) {
-	cfg, err := c.rootConfig(ctx)
-	if err != nil {
-		return aws.Config{}, err
-	}
-	return c.loadConfig(ctx, aws.NewCredentialsCache(newStsCredentialsProvider(cfg, c.RoleARN, c.Region)))
-}
-
-func (c *CredentialsConfig) rootConfig(ctx context.Context) (aws.Config, error) {
-	return c.loadConfig(ctx, c.fromChain())
+	return c.loadConfig(ctx, chainProvider)
 }
 
 func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {

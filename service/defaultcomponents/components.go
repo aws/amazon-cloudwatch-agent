@@ -57,6 +57,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/cloudauth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/extension/server"
@@ -139,6 +140,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Extensions, err = otelcol.MakeFactoryMap[extension.Factory](
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
+		cloudauth.NewFactory(),
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
 		server.NewFactory(),
