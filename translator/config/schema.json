@@ -112,6 +112,17 @@
             },
             "amp": {
               "$ref": "#/definitions/metricsDefinition/definitions/ampDefinition"
+            },
+            "otlp": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048
+                }
+              },
+              "additionalProperties": false
             }
           },
           "minProperties": 1,
