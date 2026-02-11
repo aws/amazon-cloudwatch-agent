@@ -8,6 +8,7 @@ exporters:
         region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -38,14 +39,14 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s

@@ -4,10 +4,12 @@ exporters:
         auth:
             authenticator: sigv4auth
         endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+        force_attempt_http2: true
         idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
         max_idle_conns: 100
         namespace: ""
+        protobuf_message: prometheus.WriteRequest
         remote_write_queue:
             enabled: true
             num_consumers: 5
@@ -15,6 +17,7 @@ exporters:
         resource_to_telemetry_conversion:
             clear_after_copy: true
             enabled: true
+            exclude_service_attributes: false
         retry_on_failure:
             enabled: true
             initial_interval: 50ms
@@ -46,18 +49,29 @@ processors:
         max_streams: 9223372036854775807
 receivers:
     prometheus:
+        api_server:
+            enabled: false
+            server_config:
+                idle_timeout: 0s
+                read_header_timeout: 0s
+                write_timeout: 0s
         config:
             global:
                 evaluation_interval: 1m
+                metric_name_validation_scheme: utf8
                 scrape_interval: 5m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_native_histograms: false
                 scrape_timeout: 5s
+            otlp:
+                label_name_preserve_multiple_underscores: true
+                label_name_underscore_sanitization: true
+                translation_strategy: UnderscoreEscapingWithSuffixes
+            runtime:
+                gogc: 75
             scrape_configs:
-                - enable_compression: true
+                - always_scrape_classic_histograms: false
+                  convert_classic_histograms_to_nhcb: false
+                  enable_compression: true
                   enable_http2: true
                   fallback_scrape_protocol: PrometheusText0.0.4
                   file_sd_configs:
@@ -67,10 +81,13 @@ receivers:
                   follow_redirects: true
                   honor_timestamps: true
                   job_name: cwagent-ecs-file-sd-config
+                  metric_name_escaping_scheme: allow-utf-8
+                  metric_name_validation_scheme: utf8
                   metrics_path: /metrics
                   sample_limit: 10000
                   scheme: http
                   scrape_interval: 5m
+                  scrape_native_histograms: false
                   scrape_protocols:
                     - OpenMetricsText1.0.0
                     - OpenMetricsText0.0.1
@@ -79,9 +96,7 @@ receivers:
                   scrape_timeout: 5s
                   track_timestamps_staleness: false
         report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
         trim_metric_suffixes: false
-        use_start_time_metric: false
 service:
     extensions:
         - sigv4auth

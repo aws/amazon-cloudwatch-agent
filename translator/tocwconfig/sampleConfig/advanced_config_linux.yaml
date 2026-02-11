@@ -8,6 +8,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -42,7 +43,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -100,9 +101,9 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_swap
                 - telegraf_mem
                 - telegraf_netstat
-                - telegraf_swap
                 - telegraf_ethtool
                 - telegraf_nvidia_smi
                 - telegraf_cpu

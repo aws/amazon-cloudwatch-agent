@@ -12,6 +12,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         role_arn: metrics_role_arn_value_test
         rollup_dimensions:
             - - ImageId
@@ -47,6 +48,7 @@ exporters:
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
         role_arn: log_role_arn_value_test
         version: "0"
@@ -117,14 +119,14 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
         exclude:
             match_type: ""
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -142,19 +144,21 @@ receivers:
             grpc:
                 endpoint: 127.0.0.1:4317
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 transport: tcp
     otlp/http_127_0_0_1_4318:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 127.0.0.1:4318
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
+                tls: null
                 traces_url_path: /v1/traces
                 write_timeout: 0s
     telegraf_socket_listener:

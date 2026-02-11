@@ -13,6 +13,8 @@ exporters:
         namespace: CWAgent
         region: us-west-2
         resource_to_telemetry_conversion:
+            enabled: true
+            exclude_service_attributes: false
         role_arn: metrics_role_arn_value_test
         rollup_dimensions:
             - - ImageId
@@ -41,6 +43,7 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
+            enabled: true
             initial_interval: 5s
             max_elapsed_time: 5m0s
             max_interval: 30s
@@ -48,10 +51,12 @@ exporters:
             randomization_factor: 0.5
         role_arn: log_role_arn_value_test
         sending_queue:
+            batch: null
             block_on_overflow: false
             num_consumers: 1
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
     awsxray:
         certificate_file_path: ""
@@ -71,6 +76,7 @@ exporters:
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
         telemetry:
+            enabled: true
             include_metadata: true
 extensions:
     agenthealth/logs:
@@ -137,14 +143,14 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     cumulativetodelta/jmx:
         exclude:
             match_type: ""
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -167,6 +173,7 @@ processors:
                     - jvm.memory.heap.used
                     - jvm.memory.nonheap.init
                     - kafka.consumer.fetch-rate
+        profiles: {}
         spans: {}
         traces: {}
     filter/jmx/1:
@@ -178,6 +185,7 @@ processors:
                 metric_names:
                     - tomcat.sessions
                     - tomcat.errors
+        profiles: {}
         spans: {}
         traces: {}
     resource/jmx:
@@ -203,11 +211,12 @@ processors:
             - context: metric
               error_mode: propagate
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
+        profile_statements: []
         trace_statements: []
     transform/jmx/0:
         error_mode: propagate
@@ -217,9 +226,10 @@ processors:
             - context: metric
               error_mode: propagate
               statements:
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+        profile_statements: []
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -230,6 +240,7 @@ processors:
               error_mode: propagate
               statements:
                 - set(name, "TC_ERR") where name == "tomcat.errors"
+        profile_statements: []
         trace_statements: []
 receivers:
     awsnvmereceiver:
@@ -305,6 +316,7 @@ receivers:
         collection_interval: 1m0s
         endpoint: localhost:12345
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        jmx_configs: ""
         keystore_path: /keystore
         keystore_type: PKCS
         otlp:
@@ -314,6 +326,7 @@ receivers:
         remote_profile: SASL/PLAIN
         resource_attributes:
             service.name: jmx_app
+        target_source: ""
         target_system: jvm,kafka-consumer
         truststore_path: /truststore
         truststore_type: PKCS12
@@ -323,6 +336,7 @@ receivers:
         collection_interval: 1m0s
         endpoint: localhost:4567
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        jmx_configs: ""
         jmx_registry_ssl_enabled: true
         keystore_path: /keystore
         keystore_type: PKCS
@@ -333,6 +347,7 @@ receivers:
         remote_profile: SASL/PLAIN
         resource_attributes:
             service.name: jmx_app
+        target_source: ""
         target_system: tomcat
         truststore_path: /truststore
         truststore_type: PKCS12
@@ -342,19 +357,21 @@ receivers:
             grpc:
                 endpoint: 0.0.0.0:1111
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 transport: tcp
     otlp/http_0_0_0_0_2222:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:2222
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
+                tls: null
                 traces_url_path: /v1/traces
                 write_timeout: 0s
     telegraf_cpu:
@@ -440,12 +457,12 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_netstat
                 - telegraf_disk
-                - telegraf_mem
-                - telegraf_cpu
-                - telegraf_processes
                 - telegraf_procstat/1917393364
+                - telegraf_processes
+                - telegraf_cpu
+                - telegraf_mem
+                - telegraf_netstat
                 - telegraf_swap
         metrics/hostCustomMetrics/cloudwatch:
             exporters:

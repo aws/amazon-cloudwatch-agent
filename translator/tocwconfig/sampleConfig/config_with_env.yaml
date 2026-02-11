@@ -28,10 +28,12 @@ exporters:
             randomization_factor: 0.5
         role_arn: ${ENV_CREDENTIALS_ROLE_ARN}
         sending_queue:
+            batch: null
             block_on_overflow: false
             num_consumers: 1
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
 extensions:
     agenthealth/logs:

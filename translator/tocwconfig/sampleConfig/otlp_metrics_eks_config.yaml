@@ -8,6 +8,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -47,7 +48,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -65,8 +66,8 @@ receivers:
             grpc:
                 endpoint: 0.0.0.0:1234
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 tls:
                     cert_file: /path/to/cert.pem
@@ -75,9 +76,10 @@ receivers:
     otlp/http_0_0_0_0_2345:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:2345
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
