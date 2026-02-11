@@ -71,11 +71,11 @@ func TestExtension_NextRefreshInterval(t *testing.T) {
 }
 
 func TestHostJitter(t *testing.T) {
-	max := 5 * time.Minute
-	j := hostJitter(max)
-	assert.True(t, j >= 0 && j < max, "jitter %v out of range [0, %v)", j, max)
+	maxDuration := 5 * time.Minute
+	j := hostJitter(maxDuration)
+	assert.True(t, j >= 0 && j < maxDuration, "jitter %v out of range [0, %v)", j, maxDuration)
 	// Deterministic: same host always returns the same value.
-	assert.Equal(t, j, hostJitter(max))
+	assert.Equal(t, j, hostJitter(maxDuration))
 }
 
 func TestExtension_Shutdown_CleansUp(t *testing.T) {
