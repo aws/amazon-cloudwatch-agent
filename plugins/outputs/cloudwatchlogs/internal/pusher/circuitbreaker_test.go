@@ -89,10 +89,8 @@ func TestCircuitBreakerBlocksTargetAfterFailure(t *testing.T) {
 	// Circuit breaker assertion: after the first failure, the failing target should
 	// NOT have sent additional batches. Only 1 send attempt should have been made
 	// before the circuit breaker blocks it.
-	assert.LessOrEqual(t, failingTargetSendCount.Load(), int32(1),
-		"Circuit breaker should block failing target from sending more than 1 batch, "+
-			"but %d batches were sent. Without a circuit breaker, the failing target "+
-			"continues flooding the worker pool with bad requests.", failingTargetSendCount.Load())
+	assert.Equal(t, int32(1), failingTargetSendCount.Load(),
+		"Circuit breaker should block failing target after exactly 1 send attempt")
 
 	// Healthy target should continue sending successfully
 	assert.Greater(t, healthyTargetSendCount.Load(), int32(0),
