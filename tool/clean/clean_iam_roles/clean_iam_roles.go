@@ -32,14 +32,16 @@ var (
 )
 
 type iamClient interface {
-	ListRoles(ctx context.Context, input *iam.ListRolesInput, optFns ...func(*iam.Options)) (*iam.ListRolesOutput, error)
-	GetRole(ctx context.Context, input *iam.GetRoleInput, optFns ...func(*iam.Options)) (*iam.GetRoleOutput, error)
-	DeleteRole(ctx context.Context, input *iam.DeleteRoleInput, optFns ...func(*iam.Options)) (*iam.DeleteRoleOutput, error)
-	ListAttachedRolePolicies(ctx context.Context, input *iam.ListAttachedRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedRolePoliciesOutput, error)
-	DetachRolePolicy(ctx context.Context, input *iam.DetachRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DetachRolePolicyOutput, error)
-	ListInstanceProfilesForRole(ctx context.Context, input *iam.ListInstanceProfilesForRoleInput, optFns ...func(*iam.Options)) (*iam.ListInstanceProfilesForRoleOutput, error)
-	RemoveRoleFromInstanceProfile(ctx context.Context, input *iam.RemoveRoleFromInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.RemoveRoleFromInstanceProfileOutput, error)
 	DeleteInstanceProfile(ctx context.Context, input *iam.DeleteInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.DeleteInstanceProfileOutput, error)
+	DeleteRole(ctx context.Context, input *iam.DeleteRoleInput, optFns ...func(*iam.Options)) (*iam.DeleteRoleOutput, error)
+	DeleteRolePolicy(ctx context.Context, input *iam.DeleteRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DeleteRolePolicyOutput, error)
+	DetachRolePolicy(ctx context.Context, input *iam.DetachRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DetachRolePolicyOutput, error)
+	iam.GetRoleAPIClient
+	iam.ListAttachedRolePoliciesAPIClient
+	iam.ListInstanceProfilesForRoleAPIClient
+	iam.ListRolePoliciesAPIClient
+	iam.ListRolesAPIClient
+	RemoveRoleFromInstanceProfile(ctx context.Context, input *iam.RemoveRoleFromInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.RemoveRoleFromInstanceProfileOutput, error)
 }
 
 func main() {
@@ -97,6 +99,9 @@ func deleteRole(ctx context.Context, client iamClient, role types.Role) error {
 	if err := detachPolicies(ctx, client, role); err != nil {
 		return err
 	}
+	if err := deleteInlinePolicies(ctx, client, role); err != nil {
+		return err
+	}
 	if err := deleteProfiles(ctx, client, role); err != nil {
 		return err
 	}
@@ -105,6 +110,29 @@ func deleteRole(ctx context.Context, client iamClient, role types.Role) error {
 		return err
 	}
 	log.Printf("Deleted role (%q) successfully", *role.RoleName)
+	return nil
+}
+
+func deleteInlinePolicies(ctx context.Context, client iamClient, role types.Role) error {
+	var marker *string
+	for {
+		output, err := client.ListRolePolicies(ctx, &iam.ListRolePoliciesInput{RoleName: role.RoleName, Marker: marker})
+		if err != nil {
+			return err
+		}
+		for _, policyName := range output.PolicyNames {
+			log.Printf("Trying to delete inline policy (%q) from role (%q)", policyName, *role.RoleName)
+			if _, err = client.DeleteRolePolicy(ctx, &iam.DeleteRolePolicyInput{PolicyName: &policyName, RoleName: role.RoleName}); err != nil {
+				log.Printf("Failed to delete inline policy (%q): %v", policyName, err)
+				return err
+			}
+			log.Printf("Deleted inline policy (%q) from role (%q) successfully", policyName, *role.RoleName)
+		}
+		if output.Marker == nil {
+			break
+		}
+		marker = output.Marker
+	}
 	return nil
 }
 

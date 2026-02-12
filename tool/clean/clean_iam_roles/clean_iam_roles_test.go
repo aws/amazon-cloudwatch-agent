@@ -26,14 +26,9 @@ type mockIamClient struct {
 
 var _ iamClient = (*mockIamClient)(nil)
 
-func (m *mockIamClient) ListRoles(ctx context.Context, input *iam.ListRolesInput, optFns ...func(*iam.Options)) (*iam.ListRolesOutput, error) {
+func (m *mockIamClient) DeleteInstanceProfile(ctx context.Context, input *iam.DeleteInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.DeleteInstanceProfileOutput, error) {
 	args := m.Called(ctx, input, optFns)
-	return args.Get(0).(*iam.ListRolesOutput), args.Error(1)
-}
-
-func (m *mockIamClient) GetRole(ctx context.Context, input *iam.GetRoleInput, optFns ...func(*iam.Options)) (*iam.GetRoleOutput, error) {
-	args := m.Called(ctx, input, optFns)
-	return args.Get(0).(*iam.GetRoleOutput), args.Error(1)
+	return args.Get(0).(*iam.DeleteInstanceProfileOutput), args.Error(1)
 }
 
 func (m *mockIamClient) DeleteRole(ctx context.Context, input *iam.DeleteRoleInput, optFns ...func(*iam.Options)) (*iam.DeleteRoleOutput, error) {
@@ -41,9 +36,9 @@ func (m *mockIamClient) DeleteRole(ctx context.Context, input *iam.DeleteRoleInp
 	return args.Get(0).(*iam.DeleteRoleOutput), args.Error(1)
 }
 
-func (m *mockIamClient) ListAttachedRolePolicies(ctx context.Context, input *iam.ListAttachedRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedRolePoliciesOutput, error) {
+func (m *mockIamClient) DeleteRolePolicy(ctx context.Context, input *iam.DeleteRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DeleteRolePolicyOutput, error) {
 	args := m.Called(ctx, input, optFns)
-	return args.Get(0).(*iam.ListAttachedRolePoliciesOutput), args.Error(1)
+	return args.Get(0).(*iam.DeleteRolePolicyOutput), args.Error(1)
 }
 
 func (m *mockIamClient) DetachRolePolicy(ctx context.Context, input *iam.DetachRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DetachRolePolicyOutput, error) {
@@ -51,19 +46,34 @@ func (m *mockIamClient) DetachRolePolicy(ctx context.Context, input *iam.DetachR
 	return args.Get(0).(*iam.DetachRolePolicyOutput), args.Error(1)
 }
 
+func (m *mockIamClient) GetRole(ctx context.Context, input *iam.GetRoleInput, optFns ...func(*iam.Options)) (*iam.GetRoleOutput, error) {
+	args := m.Called(ctx, input, optFns)
+	return args.Get(0).(*iam.GetRoleOutput), args.Error(1)
+}
+
+func (m *mockIamClient) ListAttachedRolePolicies(ctx context.Context, input *iam.ListAttachedRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedRolePoliciesOutput, error) {
+	args := m.Called(ctx, input, optFns)
+	return args.Get(0).(*iam.ListAttachedRolePoliciesOutput), args.Error(1)
+}
+
 func (m *mockIamClient) ListInstanceProfilesForRole(ctx context.Context, input *iam.ListInstanceProfilesForRoleInput, optFns ...func(*iam.Options)) (*iam.ListInstanceProfilesForRoleOutput, error) {
 	args := m.Called(ctx, input, optFns)
 	return args.Get(0).(*iam.ListInstanceProfilesForRoleOutput), args.Error(1)
 }
 
+func (m *mockIamClient) ListRolePolicies(ctx context.Context, input *iam.ListRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListRolePoliciesOutput, error) {
+	args := m.Called(ctx, input, optFns)
+	return args.Get(0).(*iam.ListRolePoliciesOutput), args.Error(1)
+}
+
+func (m *mockIamClient) ListRoles(ctx context.Context, input *iam.ListRolesInput, optFns ...func(*iam.Options)) (*iam.ListRolesOutput, error) {
+	args := m.Called(ctx, input, optFns)
+	return args.Get(0).(*iam.ListRolesOutput), args.Error(1)
+}
+
 func (m *mockIamClient) RemoveRoleFromInstanceProfile(ctx context.Context, input *iam.RemoveRoleFromInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.RemoveRoleFromInstanceProfileOutput, error) {
 	args := m.Called(ctx, input, optFns)
 	return args.Get(0).(*iam.RemoveRoleFromInstanceProfileOutput), args.Error(1)
-}
-
-func (m *mockIamClient) DeleteInstanceProfile(ctx context.Context, input *iam.DeleteInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.DeleteInstanceProfileOutput, error) {
-	args := m.Called(ctx, input, optFns)
-	return args.Get(0).(*iam.DeleteInstanceProfileOutput), args.Error(1)
 }
 
 func TestDeleteRoles(t *testing.T) {
@@ -104,38 +114,49 @@ func TestDeleteRoles(t *testing.T) {
 	}
 
 	client := &mockIamClient{}
-	client.On("ListRoles", ctx, &iam.ListRolesInput{}, mock.Anything).Return(&iam.ListRolesOutput{Roles: testRoles}, nil)
+	client.On("DeleteInstanceProfile", ctx, &iam.DeleteInstanceProfileInput{
+		InstanceProfileName: testProfile.InstanceProfileName,
+	}, mock.Anything).Return(&iam.DeleteInstanceProfileOutput{}, nil)
+	client.On("DeleteRole", ctx, mock.Anything, mock.Anything).Return(&iam.DeleteRoleOutput{}, nil)
+	client.On("DeleteRolePolicy", ctx, mock.Anything, mock.Anything).Return(&iam.DeleteRolePolicyOutput{}, nil)
+	client.On("DetachRolePolicy", ctx, mock.Anything, mock.Anything).Return(&iam.DetachRolePolicyOutput{}, nil)
 	client.On("GetRole", ctx, &iam.GetRoleInput{RoleName: aws.String(expiredTestRoleName)}, mock.Anything).Return(&iam.GetRoleOutput{Role: &expiredRole}, nil)
 	client.On("GetRole", ctx, &iam.GetRoleInput{RoleName: aws.String(activeTestRoleName)}, mock.Anything).Return(&iam.GetRoleOutput{Role: &activeRole}, nil)
-	client.On("DeleteRole", ctx, mock.Anything, mock.Anything).Return(&iam.DeleteRoleOutput{}, nil)
 	client.On("ListAttachedRolePolicies", ctx, mock.Anything, mock.Anything).Return(&iam.ListAttachedRolePoliciesOutput{
 		AttachedPolicies: testPolicies,
 	}, nil)
-	client.On("DetachRolePolicy", ctx, mock.Anything, mock.Anything).Return(&iam.DetachRolePolicyOutput{}, nil)
 	client.On("ListInstanceProfilesForRole", ctx, &iam.ListInstanceProfilesForRoleInput{
 		RoleName: aws.String(expiredTestRoleName),
 	}, mock.Anything).Return(&iam.ListInstanceProfilesForRoleOutput{InstanceProfiles: []types.InstanceProfile{testProfile}}, nil)
+	client.On("ListRolePolicies", ctx, mock.Anything, mock.Anything).Return(&iam.ListRolePoliciesOutput{
+		PolicyNames: []string{"inline-policy"},
+	}, nil)
+	client.On("ListRoles", ctx, &iam.ListRolesInput{}, mock.Anything).Return(&iam.ListRolesOutput{Roles: testRoles}, nil)
 	client.On("RemoveRoleFromInstanceProfile", ctx, &iam.RemoveRoleFromInstanceProfileInput{
 		RoleName:            aws.String(expiredTestRoleName),
 		InstanceProfileName: testProfile.InstanceProfileName,
 	}, mock.Anything).Return(&iam.RemoveRoleFromInstanceProfileOutput{}, nil)
-	client.On("DeleteInstanceProfile", ctx, &iam.DeleteInstanceProfileInput{
-		InstanceProfileName: testProfile.InstanceProfileName,
-	}, mock.Anything).Return(&iam.DeleteInstanceProfileOutput{}, nil)
 	assert.NoError(t, deleteRoles(ctx, client, expirationDate))
-	assert.Len(t, client.Calls, 9)
+	assert.Len(t, client.Calls, 11)
 	for _, call := range client.Calls {
 		switch call.Method {
 		case "DeleteRole":
 			input := call.Arguments.Get(1).(*iam.DeleteRoleInput)
 			assert.Equal(t, expiredTestRoleName, *input.RoleName)
-		case "ListAttachedRolePolicies":
-			input := call.Arguments.Get(1).(*iam.ListAttachedRolePoliciesInput)
+		case "DeleteRolePolicy":
+			input := call.Arguments.Get(1).(*iam.DeleteRolePolicyInput)
 			assert.Equal(t, expiredTestRoleName, *input.RoleName)
+			assert.Equal(t, "inline-policy", *input.PolicyName)
 		case "DetachRolePolicy":
 			input := call.Arguments.Get(1).(*iam.DetachRolePolicyInput)
 			assert.Equal(t, expiredTestRoleName, *input.RoleName)
 			assert.Equal(t, "policy-arn", *input.PolicyArn)
+		case "ListAttachedRolePolicies":
+			input := call.Arguments.Get(1).(*iam.ListAttachedRolePoliciesInput)
+			assert.Equal(t, expiredTestRoleName, *input.RoleName)
+		case "ListRolePolicies":
+			input := call.Arguments.Get(1).(*iam.ListRolePoliciesInput)
+			assert.Equal(t, expiredTestRoleName, *input.RoleName)
 		}
 	}
 }
