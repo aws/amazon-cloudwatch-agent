@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: PR Test
+permissions:
+  id-token: write
+  contents: read
 env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
