@@ -821,27 +821,6 @@ func TestQueueHaltResume(t *testing.T) {
 	// Verify only one send happened (queue is halted)
 	assert.Equal(t, int32(1), sendCount.Load(), "Should have only one send due to halt")
 
-	// Trigger flush to force send of second batch - this should block until resumed
-	done := make(chan bool)
-	go func() {
-		time.Sleep(100 * time.Millisecond) // Wait a bit
-		// Manually resume by calling success callback on a dummy batch
-		dummyBatch := newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1}, nil)
-		dummyBatch.addDoneCallback(func() {
-			// This simulates a successful send that should resume the queue
-		})
-		dummyBatch.done()
-		done <- true
-	}()
-
-	// This should eventually complete when the queue is resumed
-	select {
-	case <-done:
-		// Success - the resume worked
-	case <-time.After(5 * time.Second):
-		t.Fatal("Test timed out - queue may be permanently halted")
-	}
-
 	mockSender.AssertExpectations(t)
 }
 
