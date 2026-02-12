@@ -186,15 +186,17 @@ jobs:
           apply_filters() {
             local matrix_file=$1
             local matrix_content=$(cat "$matrix_file")
+            local os_filter="${{ inputs.test_os_filter }}"
+            local dir_filter="${{ inputs.test_dir_filter }}"
             
             # Apply OS filter if provided
-            if [ -n "${{ inputs.test_os_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq '[.[] | select(.os == "${{ inputs.test_os_filter }}")]')
+            if [ -n "$os_filter" ]; then
+              matrix_content=$(echo "$matrix_content" | jq --arg os "$os_filter" '[.[] | select(.os == $os)]')
             fi
             
             # Apply test directory filter if provided
-            if [ -n "${{ inputs.test_dir_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
+            if [ -n "$dir_filter" ]; then
+              matrix_content=$(echo "$matrix_content" | jq --arg dir "$dir_filter" '[.[] | select(.test_dir == $dir)]')
             fi
             
             echo "$matrix_content"
