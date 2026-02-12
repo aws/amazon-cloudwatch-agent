@@ -21,6 +21,9 @@ func GetMetricsDestinations(conf *confmap.Conf) []string {
 	if conf.IsSet(ConfigKey(metricsDestinationsKey, AMPKey)) {
 		destinations = append(destinations, AMPKey)
 	}
+	if conf.IsSet(OTLPIngestionKey) {
+		destinations = append(destinations, OtlpKey)
+	}
 	if conf.IsSet(MetricsKey) && len(destinations) == 0 {
 		destinations = append(destinations, DefaultDestination)
 	}

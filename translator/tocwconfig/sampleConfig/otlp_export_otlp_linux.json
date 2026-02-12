@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "otlp": {
+        "endpoint": "test-endpoint"
+      },
+      "cloudwatch": {
+      }
+    },
+    "metrics_collected": {
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:1234",
+        "http_endpoint": "0.0.0.0:2345",
+        "tls": {
+          "cert_file": "/path/to/cert.pem",
+          "key_file": "/path/to/key.pem"
+        }
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    }
+  }
+}

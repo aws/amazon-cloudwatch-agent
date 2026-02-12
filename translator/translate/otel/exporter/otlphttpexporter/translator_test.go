@@ -31,8 +31,12 @@ func TestTranslator(t *testing.T) {
 		},
 		"WithEndpoint": {
 			input: map[string]any{
-				"otlp": map[string]any{
-					"endpoint": "https://custom-endpoint.com/v1/metrics",
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"otlp": map[string]any{
+							"endpoint": "https://custom-endpoint.com/v1/metrics",
+						},
+					},
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]any{

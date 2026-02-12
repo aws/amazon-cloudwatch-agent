@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttpexporter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/k8smetadata"
@@ -149,6 +150,10 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		// prometheusremotewrite doesn't support delta metrics so convert them to cumulative metrics
 		translators.Processors.Set(deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		translators.Extensions.Set(sigv4auth.NewTranslator())
+	case common.OtlpKey:
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		translators.Exporters.Set(otlphttpexporter.NewTranslator())
 		translators.Extensions.Set(sigv4auth.NewTranslator())
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))

@@ -41,7 +41,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlphttpexporter.Config)
 
-	metricsEndpoint, ok := common.GetString(conf, common.ConfigKey(common.OtlpKey, common.Endpoint))
+	metricsEndpoint, ok := common.GetString(conf, common.ConfigKey(common.OTLPIngestionKey, common.Endpoint))
 	if !ok {
 		return nil, errors.New("otlphttpexporter: missing required endpoint")
 	}

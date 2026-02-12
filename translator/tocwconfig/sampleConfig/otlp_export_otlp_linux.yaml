@@ -1,0 +1,163 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-east-1
+        resource_to_telemetry_conversion:
+            enabled: true
+    otlphttp:
+        auth:
+            authenticator: sigv4auth
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: test-endpoint
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
+    sigv4auth:
+        assume_role:
+            sts_region: us-east-1
+        region: us-east-1
+processors:
+    awsentity/service/otlp:
+        entity_type: Service
+        platform: ec2
+    batch/hostOtlpMetrics/otlp:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    cumulativetodelta/hostOtlpMetrics/cloudwatch:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    cumulativetodelta/hostOtlpMetrics/otlp:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - InstanceId
+            - InstanceType
+            - ImageId
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
+receivers:
+    otlp/grpc_0_0_0_0_1234:
+        protocols:
+            grpc:
+                endpoint: 0.0.0.0:1234
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
+                read_buffer_size: 524288
+                tls:
+                    cert_file: /path/to/cert.pem
+                    key_file: /path/to/key.pem
+                transport: tcp
+    otlp/http_0_0_0_0_2345:
+        protocols:
+            http:
+                cors: {}
+                endpoint: 0.0.0.0:2345
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                tls:
+                    cert_file: /path/to/cert.pem
+                    key_file: /path/to/key.pem
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - sigv4auth
+        - entitystore
+    pipelines:
+        metrics/hostOtlpMetrics/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostOtlpMetrics/cloudwatch
+                - ec2tagger
+                - awsentity/service/otlp
+            receivers:
+                - otlp/grpc_0_0_0_0_1234
+                - otlp/http_0_0_0_0_2345
+        metrics/hostOtlpMetrics/otlp:
+            exporters:
+                - otlphttp
+            processors:
+                - cumulativetodelta/hostOtlpMetrics/otlp
+                - ec2tagger
+                - batch/hostOtlpMetrics/otlp
+            receivers:
+                - otlp/grpc_0_0_0_0_1234
+                - otlp/http_0_0_0_0_2345
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
