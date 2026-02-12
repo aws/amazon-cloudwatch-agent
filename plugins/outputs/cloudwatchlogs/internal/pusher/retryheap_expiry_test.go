@@ -14,12 +14,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
-// TestRetryHeapProcessorExpiredBatchShouldResume demonstrates the bug where
-// expired batches don't resume the circuit breaker, leaving the target permanently blocked.
-//
-// From PR comment: "Say a bad batch from a target caused this to halt. Now that bad batch
-// is re-tried for 14 days and eventually dropped - but this never gets resumed in that case right?
-// So this target is blocked forever in that scenario?"
+// TestRetryHeapProcessorExpiredBatchShouldResume verifies that expired batches
+// resume the circuit breaker, preventing the target from being permanently blocked.
 func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	logger := testutil.NewNopLogger()
 
