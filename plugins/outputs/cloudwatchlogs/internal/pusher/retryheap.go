@@ -198,7 +198,6 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 		// Check if batch has expired
 		if batch.isExpired() {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
-			batch.updateState()
 			batch.done() // Resume circuit breaker to allow target to process new batches
 			continue
 		}
