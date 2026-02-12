@@ -6,10 +6,12 @@ package logs
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -238,4 +240,60 @@ func TestLogs_ServiceAndEnvironmentMissing(t *testing.T) {
 	_, _ = l.ApplyRule(input)
 	assert.Equal(t, "my-service", GlobalLogConfig.ServiceName)
 	assert.Equal(t, "ec2:group", GlobalLogConfig.DeploymentEnvironment)
+}
+
+func TestLogs_Concurrency(t *testing.T) {
+	l := new(Logs)
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.RegionType = "any"
+	context.ResetContext()
+
+	var input interface{}
+	err := json.Unmarshal([]byte(`{"logs":{"concurrency":10}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	_, _ = l.ApplyRule(input)
+
+	assert.Equal(t, 10, GlobalLogConfig.Concurrency)
+}
+
+func TestLogs_Concurrency_Default(t *testing.T) {
+	l := new(Logs)
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.RegionType = "any"
+	context.ResetContext()
+	context.CurrentContext().SetAgentLogFile("/tmp/amazon-cloudwatch-agent.log")
+
+	testCases := map[string]struct {
+		input map[string]any
+		want  int
+	}{
+		"WithMissingLogsCollected": {
+			input: map[string]any{
+				"logs": map[string]any{},
+			},
+			want: -1,
+		},
+		"WithLogFileOnly": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "default_concurrency", "logfile_only.json")),
+			want:  defaultConcurrency,
+		},
+		"WithWindowsEventsOnly": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "default_concurrency", "windows_events_only.json")),
+			want:  defaultConcurrency,
+		},
+		"WithMissingTimestampFormat/LogFile": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "default_concurrency", "missing_timestamp.json")),
+			want:  -1,
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			_, _ = l.ApplyRule(testCase.input)
+
+			assert.Equal(t, testCase.want, GlobalLogConfig.Concurrency)
+		})
+	}
 }
