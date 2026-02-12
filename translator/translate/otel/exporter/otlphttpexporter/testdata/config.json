@@ -1,0 +1,5 @@
+{
+  "metrics": {
+    "endpoint_override": "https://otlp-endpoint.us-west-2.amazonaws.com/v1/metrics"
+  }
+}

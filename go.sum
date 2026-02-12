@@ -1696,6 +1696,8 @@ go.opentelemetry.io/collector/exporter/exportertest v0.124.0 h1:IOxA/4CiVWGPlmA0
 go.opentelemetry.io/collector/exporter/exportertest v0.124.0/go.mod h1:2EmU8IwVJV79MmFBFFW1LCN0Ob2UZsEkX/mSUB06lbI=
 go.opentelemetry.io/collector/exporter/nopexporter v0.124.0 h1:oGXHe7lqa1FebpbLL9S4njO86CUTLFDjDhLo18IkYQo=
 go.opentelemetry.io/collector/exporter/nopexporter v0.124.0/go.mod h1:Ceru8F6fsFoSieHJ3g9TLJMSICMK/KCmCqmAx15Hu/A=
+go.opentelemetry.io/collector/exporter/otlphttpexporter v0.124.0 h1:047D4wLOb5ug4O99y3AjR/SNFTxlq3RAr2zr/8G1JWI=
+go.opentelemetry.io/collector/exporter/otlphttpexporter v0.124.0/go.mod h1:Jk/1hiZvwy4dzFEfX37h18n3U9pNIfHSApcLjZmSFmU=
 go.opentelemetry.io/collector/exporter/xexporter v0.124.0 h1:Itfn2+F4ki8hObOtPCecWBwGpuxakUYSsTwwkB5iUns=
 go.opentelemetry.io/collector/exporter/xexporter v0.124.0/go.mod h1:dNK/PPY02gA9BawIKHyVk8kIFdYvqVZ2A+LlMZucIPY=
 go.opentelemetry.io/collector/extension v1.30.0 h1:AJqntAp1p40Q1az2Vze3OHiMURq56KWnUxaLzs1ghaA=

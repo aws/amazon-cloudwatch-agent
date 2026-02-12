@@ -150,6 +150,7 @@ var (
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
 	OTLPLogsKey                     = ConfigKey(LogsKey, MetricsCollectedKey, OtlpKey)
 	OTLPMetricsKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, OtlpKey)
+	OTLPIngestionKey                = ConfigKey(MetricsKey, MetricsDestinationsKey, OtlpKey)
 )
 
 type TranslatorID interface {
