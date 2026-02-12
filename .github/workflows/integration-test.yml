@@ -33,6 +33,14 @@ on:
       test_repo_branch:
         description: 'Override for the GitHub test repository branch to use (default is main)'
         type: string
+      test_os_filter:
+        description: 'Filter tests to specific OS (e.g., al2023, ubuntu-22.04). Leave empty to run all OS.'
+        type: string
+        required: false
+      test_dir_filter:
+        description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs). Leave empty to run all tests.'
+        type: string
+        required: false
 
 jobs:
   CheckBuildTestArtifacts:
@@ -70,3 +78,5 @@ jobs:
     with:
       build_id: ${{ inputs.build_sha }}
       test_repo_branch: ${{ inputs.test_repo_branch }}
+      test_os_filter: ${{ inputs.test_os_filter }}
+      test_dir_filter: ${{ inputs.test_dir_filter }}
