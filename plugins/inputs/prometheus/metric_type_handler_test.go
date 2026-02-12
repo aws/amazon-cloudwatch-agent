@@ -36,9 +36,9 @@ func (mStore *mockMetricMetadataStore) GetMetadata(metric string) (scrape.Metric
 
 	return scrape.MetricMetadata{
 		MetricFamily: metric,
-		Type:   mStore.Type,
-		Help:   mStore.Help,
-		Unit:   mStore.Unit,
+		Type:         mStore.Type,
+		Help:         mStore.Help,
+		Unit:         mStore.Unit,
 	}, true
 }
 
@@ -136,9 +136,9 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	require.NoError(t, err)
 	expectedMetricMetadata := scrape.MetricMetadata{
 		MetricFamily: "m1",
-		Type:   model.MetricTypeCounter,
-		Help:   "",
-		Unit:   "",
+		Type:         model.MetricTypeCounter,
+		Help:         "",
+		Unit:         "",
 	}
 	metricMetadata, ok := mCache.Metadata("m1")
 	assert.Equal(t, ok, true)
@@ -146,9 +146,9 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 
 	expectedMetricMetadata = scrape.MetricMetadata{
 		MetricFamily: "m2",
-		Type:   model.MetricTypeCounter,
-		Help:   "",
-		Unit:   "",
+		Type:         model.MetricTypeCounter,
+		Help:         "",
+		Unit:         "",
 	}
 	metricMetadata, ok = mCache.Metadata("m2")
 	assert.Equal(t, ok, true)
