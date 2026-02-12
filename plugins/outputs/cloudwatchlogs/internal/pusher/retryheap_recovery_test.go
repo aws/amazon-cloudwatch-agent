@@ -22,7 +22,7 @@ import (
 // and successfully publishes logs.
 // This test addresses CWQS-3192 requirement 1.
 func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)
@@ -33,7 +33,7 @@ func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 	accessDeniedErr := &cloudwatchlogs.AccessDeniedException{
 		Message_: stringPtr("Access denied"),
 	}
-	
+
 	// First call fails with AccessDenied
 	mockService.On("PutLogEvents", mock.Anything).Return((*cloudwatchlogs.PutLogEventsOutput)(nil), accessDeniedErr).Once()
 	// Second call succeeds (permission granted)
@@ -114,7 +114,7 @@ func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 // retry ongoing, it resumes correctly by loading state and continuing retries.
 // This test addresses CWQS-3192 requirement 2.
 func TestRecoveryAfterSystemRestart(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)
@@ -185,7 +185,7 @@ func TestRecoveryAfterSystemRestart(t *testing.T) {
 // TestRecoveryWithMultipleTargets validates that when one target has permission
 // issues, other healthy targets continue publishing successfully.
 func TestRecoveryWithMultipleTargets(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)

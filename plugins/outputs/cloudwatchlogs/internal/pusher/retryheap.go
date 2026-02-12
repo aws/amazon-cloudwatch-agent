@@ -59,7 +59,7 @@ type retryHeap struct {
 var _ RetryHeap = (*retryHeap)(nil)
 
 // NewRetryHeap creates a new retry heap (unbounded)
-func NewRetryHeap(maxSize int, logger telegraf.Logger) RetryHeap {
+func NewRetryHeap(logger telegraf.Logger) RetryHeap {
 	rh := &retryHeap{
 		heap:   make(retryHeapImpl, 0),
 		stopCh: make(chan struct{}),

@@ -174,7 +174,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	c.once.Do(func() {
 		if c.Concurrency > 1 {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
-			c.retryHeap = pusher.NewRetryHeap(c.Concurrency, c.Log)
+			c.retryHeap = pusher.NewRetryHeap(c.Log)
 
 			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
 			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)

@@ -135,7 +135,7 @@ func TestPusherRetryHeap(t *testing.T) {
 	workerPool := NewWorkerPool(2)
 	defer workerPool.Stop()
 
-	retryHeap := NewRetryHeap(10, logger)
+	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Stop()
 
 	var wg sync.WaitGroup

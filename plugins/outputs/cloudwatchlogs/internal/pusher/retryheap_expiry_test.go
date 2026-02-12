@@ -44,7 +44,7 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	target := Target{Group: "failing-group", Stream: "stream"}
 
 	// Create retry heap and processor with very short expiry for testing
-	retryHeap := NewRetryHeap(10, logger)
+	retryHeap := NewRetryHeap(logger)
 	workerPool := NewWorkerPool(5)
 	tm := NewTargetManager(logger, mockService)
 	maxRetryDuration := 50 * time.Millisecond // Normally 14 days

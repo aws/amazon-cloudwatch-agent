@@ -252,11 +252,11 @@ func TestSender(t *testing.T) {
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
 		s := newSender(logger, mockService, mockManager, nil)
-		
+
 		// Set expireAfter to past time so batch expires immediately after first retry
 		batch.initializeStartTime()
 		batch.expireAfter = time.Now().Add(-1 * time.Hour)
-		
+
 		s.Send(batch)
 		s.Stop()
 
@@ -304,7 +304,7 @@ func TestSenderConcurrencyWithRetryHeap(t *testing.T) {
 	mockManager := new(mockTargetManager)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{}).Once()
 
-	retryHeap := NewRetryHeap(10, logger)
+	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Stop()
 
 	s := newSender(logger, mockService, mockManager, retryHeap)

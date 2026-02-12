@@ -39,7 +39,7 @@ import (
 // The test passes because the current implementation uses a retry heap with
 // proper backoff, preventing failed batches from monopolizing worker threads.
 func TestPoisonPillScenario(t *testing.T) {
-	heap := NewRetryHeap(100, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2) // Low concurrency as in the bug scenario
@@ -165,7 +165,7 @@ func TestPoisonPillScenario(t *testing.T) {
 	// CRITICAL ASSERTION: Allowed log group MUST receive events throughout the test
 	successCount := allowedGroupSuccessCount.Load()
 	t.Logf("Allowed group success count: %d, Denied group attempt count: %d", successCount, deniedGroupAttemptCount.Load())
-	
+
 	assert.Greater(t, successCount, int32(5),
 		"Allowed log group must continue receiving events despite continuous denied log group failures. Got %d, expected > 5", successCount)
 
@@ -185,7 +185,7 @@ func TestPoisonPillScenario(t *testing.T) {
 func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 	concurrency := 2
 	numFailingLogGroups := 10
-	
+
 	// Retry heap is now unbounded (maxSize parameter ignored)
 	heap := NewRetryHeap(concurrency, &testutil.Logger{})
 	defer heap.Stop()
@@ -303,7 +303,7 @@ func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 	close(processorDone)
 
 	successCount := allowedGroupSuccessCount.Load()
-	
+
 	t.Logf("Results: Allowed success=%d, Denied attempts=%d, Heap size=%d, Failing groups=%d",
 		successCount, deniedGroupAttemptCount.Load(), heap.Size(), numFailingLogGroups)
 
@@ -318,7 +318,7 @@ func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 // TestSingleDeniedLogGroup validates the baseline scenario where a single denied
 // log group does not affect the allowed log group.
 func TestSingleDeniedLogGroup(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(4) // Higher concurrency as in initial test

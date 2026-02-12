@@ -646,7 +646,6 @@ func TestAddEventNonBlocking(t *testing.T) {
 	wg.Wait()
 }
 
-
 // Cannot call q.send() directly as it would cause a race condition. Reset last sent time and trigger flush.
 func triggerSend(t *testing.T, q *queue) {
 	t.Helper()

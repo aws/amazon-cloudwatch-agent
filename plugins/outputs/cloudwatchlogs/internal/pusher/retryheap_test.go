@@ -16,7 +16,7 @@ import (
 )
 
 func TestRetryHeap(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	// Test empty heap
@@ -48,7 +48,7 @@ func TestRetryHeap(t *testing.T) {
 }
 
 func TestRetryHeapOrdering(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	target := Target{Group: "group", Stream: "stream"}
@@ -80,7 +80,7 @@ func TestRetryHeapOrdering(t *testing.T) {
 }
 
 func TestRetryHeapProcessor(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	// Create mock components with proper signature
@@ -99,7 +99,7 @@ func TestRetryHeapProcessor(t *testing.T) {
 }
 
 func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)
@@ -123,7 +123,7 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 }
 
 func TestRetryHeapProcessorSendsBatch(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)
@@ -146,7 +146,7 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 }
 
 func TestRetryHeap_UnboundedPush(t *testing.T) {
-	heap := NewRetryHeap(2, &testutil.Logger{}) // maxSize parameter ignored (unbounded)
+	heap := NewRetryHeap(&testutil.Logger{}) // maxSize parameter ignored (unbounded)
 	defer heap.Stop()
 
 	// Push multiple batches without blocking
@@ -189,7 +189,7 @@ func TestRetryHeap_UnboundedPush(t *testing.T) {
 }
 
 func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)
@@ -206,7 +206,7 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 }
 
 func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)
@@ -246,7 +246,7 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 }
 
 func TestRetryHeapStopTwice(t *testing.T) {
-	rh := NewRetryHeap(5, &testutil.Logger{})
+	rh := NewRetryHeap(&testutil.Logger{})
 
 	// Call Stop twice - should not panic
 	rh.Stop()
@@ -263,7 +263,7 @@ func TestRetryHeapStopTwice(t *testing.T) {
 }
 
 func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
-	heap := NewRetryHeap(10, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(2)

@@ -151,4 +151,3 @@ func (s *sender) Stop() {
 	close(s.stopCh)
 	s.stopped = true
 }
-
