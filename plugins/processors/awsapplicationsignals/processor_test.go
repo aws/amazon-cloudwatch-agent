@@ -6,6 +6,7 @@ package awsapplicationsignals
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"sync"
 	"testing"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
-	"golang.org/x/exp/rand"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
@@ -163,7 +163,7 @@ func TestProcessMetricsWithConcurrency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			time.Sleep(time.Duration(rand.Intn(50)*100) * time.Millisecond)
+			time.Sleep(time.Duration(rand.IntN(50)*100) * time.Millisecond) //nolint:gosec
 
 			lowercaseMetrics := pmetric.NewMetrics()
 			errorMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
@@ -171,7 +171,7 @@ func TestProcessMetricsWithConcurrency(t *testing.T) {
 			errorGauge := errorMetric.SetEmptyGauge().DataPoints().AppendEmpty()
 			errorGauge.SetIntValue(1)
 			errorGauge.Attributes().PutStr("Telemetry.Source", "UnitTest")
-			errorGauge.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.Intn(200)))
+			errorGauge.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.IntN(200))) //nolint:gosec
 			latencyMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
 			latencyMetric.SetName("latency")
 			histogram := latencyMetric.SetEmptyExponentialHistogram().DataPoints().AppendEmpty()
@@ -180,12 +180,12 @@ func TestProcessMetricsWithConcurrency(t *testing.T) {
 			histogram.SetMin(0)
 			histogram.SetMax(1)
 			histogram.Attributes().PutStr("Telemetry.Source", "UnitTest")
-			histogram.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.Intn(200)))
+			histogram.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.IntN(200))) //nolint:gosec
 			faultMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
 			faultGauge := faultMetric.SetEmptyGauge().DataPoints().AppendEmpty()
 			faultGauge.SetIntValue(1)
 			faultGauge.Attributes().PutStr("Telemetry.Source", "UnitTest")
-			faultGauge.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.Intn(200)))
+			faultGauge.Attributes().PutStr(common.CWMetricAttributeLocalService, fmt.Sprintf("UnitTest%d", rand.IntN(200))) //nolint:gosec
 			faultMetric.SetName("fault")
 
 			ap.processMetrics(ctx, lowercaseMetrics)
