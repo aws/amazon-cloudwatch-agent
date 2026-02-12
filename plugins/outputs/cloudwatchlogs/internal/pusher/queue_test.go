@@ -847,8 +847,3 @@ func TestQueueHaltResume(t *testing.T) {
 
 // TestQueueResumeOnBatchExpiry verifies that when a batch expires after 14 days of retrying,
 // the circuit breaker resumes the queue to allow new batches to be processed.
-// This prevents the target from being permanently blocked when a bad batch is eventually dropped.
-//
-// Scenario from PR comment: "Say a bad batch from a target caused this to halt. Now that bad batch
-// is re-tried for 14 days and eventually dropped - but this never gets resumed in that case right?
-// So this target is blocked forever in that scenario?"
