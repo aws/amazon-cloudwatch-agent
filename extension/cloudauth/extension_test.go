@@ -109,8 +109,8 @@ type mockTokenProvider struct {
 	err    error
 }
 
-func (m *mockTokenProvider) Name() string                                         { return "mock" }
-func (m *mockTokenProvider) IsAvailable(ctx context.Context) bool                 { return m.err == nil }
+func (m *mockTokenProvider) Name() string                         { return "mock" }
+func (m *mockTokenProvider) IsAvailable(ctx context.Context) bool { return m.err == nil }
 func (m *mockTokenProvider) GetToken(ctx context.Context) (string, time.Duration, error) {
 	if m.err != nil {
 		return "", 0, m.err
