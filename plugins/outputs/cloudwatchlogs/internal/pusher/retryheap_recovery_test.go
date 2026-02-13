@@ -20,7 +20,6 @@ import (
 // TestRecoveryWhenPermissionGrantedDuringRetry validates that when PLE permissions
 // are missing initially but granted while retry is ongoing, the system recovers
 // and successfully publishes logs.
-// This test addresses CWQS-3192 requirement 1.
 func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
@@ -112,7 +111,6 @@ func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 
 // TestRecoveryAfterSystemRestart validates that when the system restarts with
 // retry ongoing, it resumes correctly by loading state and continuing retries.
-// This test addresses CWQS-3192 requirement 2.
 func TestRecoveryAfterSystemRestart(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
