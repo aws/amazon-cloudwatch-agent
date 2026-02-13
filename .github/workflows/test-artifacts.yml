@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: Test Artifacts
+permissions:
+  id-token: write
+  contents: read
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -150,7 +153,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
-      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_linux_matrix_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
+      ec2_linux_matrix_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
+      ec2_linux_matrix_2: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}
+      ec2_linux_matrix_3: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}
+      ec2_linux_matrix_4: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}
+      ec2_linux_matrix_page_count: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
       ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
       ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
@@ -219,11 +227,48 @@ jobs:
           echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
 
+      - name: Paginate ec2_linux_matrix
+        id: paginate-matrix
+        run: |
+          # GitHub Actions matrix limit is 256 jobs per workflow run.
+          # Use 200 per page for headroom. Up to 5 pages supported (1000 tests).
+          PAGE_SIZE=200
+          FULL_MATRIX='${{ steps.set-matrix.outputs.ec2_linux_matrix }}'
+          TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
+          PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
+
+          if [ "$PAGE_COUNT" -gt 5 ]; then
+            echo "::error::ec2_linux_matrix has $TOTAL entries requiring $PAGE_COUNT pages, but only 5 are supported. Add more static page slots."
+            exit 1
+          fi
+
+          echo "ec2_linux total=$TOTAL pages=$PAGE_COUNT"
+          echo "ec2_linux_matrix_page_count=${PAGE_COUNT}" >> "$GITHUB_OUTPUT"
+
+          for (( i=0; i<PAGE_COUNT; i++ )); do
+            START=$(( i * PAGE_SIZE ))
+            PAGE=$(echo "$FULL_MATRIX" | jq -c ".[$START:$START+$PAGE_SIZE]")
+            echo "ec2_linux_matrix_${i}=${PAGE}" >> "$GITHUB_OUTPUT"
+            echo "  page $i: $(echo "$PAGE" | jq 'length') entries"
+          done
+
       - name: Echo test plan matrix
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
-          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_linux_matrix pages: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}"
+          for i in 0 1 2 3 4; do
+            page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}'
+            case $i in
+              1) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}' ;;
+              2) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}' ;;
+              3) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}' ;;
+              4) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}' ;;
+            esac
+            if [ -n "$page" ]; then
+              echo "ec2_linux_matrix_$i: $(echo "$page" | jq 'length') entries"
+            fi
+          done
           echo "ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}"
           echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
@@ -494,15 +539,99 @@ jobs:
             fi
             terraform destroy --auto-approve
 
-  EC2LinuxIntegrationTest:
+  EC2LinuxIntegrationTest-0:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2Linux'
+    name: 'EC2Linux-0'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
       build_id: ${{ inputs.build_id }}
       test_dir: terraform/ec2/linux
-      job_id: ec2-linux-integration-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix }}
+      job_id: ec2-linux-integration-test-0
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_0 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-1:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 1 }}
+    name: 'EC2Linux-1'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-1
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_1 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-2:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 2 }}
+    name: 'EC2Linux-2'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-2
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_2 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-3:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 3 }}
+    name: 'EC2Linux-3'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-3
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_3 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-4:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 4 }}
+    name: 'EC2Linux-4'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-4
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_4 }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -787,7 +916,7 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, OutputEnvVariables ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest-0, EC2LinuxIntegrationTest-1, EC2LinuxIntegrationTest-2, EC2LinuxIntegrationTest-3, EC2LinuxIntegrationTest-4, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
