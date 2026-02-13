@@ -42,14 +42,14 @@ func TestPoisonPillScenario(t *testing.T) {
 	// Configure mock service responses with realistic latency
 	mockService.On("PutLogEvents", mock.MatchedBy(func(input *cloudwatchlogs.PutLogEventsInput) bool {
 		return *input.LogGroupName == "log-stream-ple-access-granted"
-	})).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Run(func(args mock.Arguments) {
+	})).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Run(func(_ mock.Arguments) {
 		time.Sleep(10 * time.Millisecond) // Simulate API latency
 		allowedGroupSuccessCount.Add(1)
 	})
 
 	mockService.On("PutLogEvents", mock.MatchedBy(func(input *cloudwatchlogs.PutLogEventsInput) bool {
 		return *input.LogGroupName != "log-stream-ple-access-granted"
-	})).Return((*cloudwatchlogs.PutLogEventsOutput)(nil), accessDeniedErr).Run(func(args mock.Arguments) {
+	})).Return((*cloudwatchlogs.PutLogEventsOutput)(nil), accessDeniedErr).Run(func(_ mock.Arguments) {
 		time.Sleep(10 * time.Millisecond) // Simulate API latency
 		deniedGroupAttemptCount.Add(1)
 	})
@@ -177,7 +177,7 @@ func TestSingleDeniedLogGroup(t *testing.T) {
 
 	mockService.On("PutLogEvents", mock.MatchedBy(func(input *cloudwatchlogs.PutLogEventsInput) bool {
 		return *input.LogGroupName == "log-stream-ple-access-granted"
-	})).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Run(func(args mock.Arguments) {
+	})).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Run(func(_ mock.Arguments) {
 		allowedGroupSuccessCount.Add(1)
 	})
 
