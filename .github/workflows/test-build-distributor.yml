@@ -99,11 +99,13 @@ jobs:
       - name: Check if SSM distributor version already exists
         id: check
         run: |
-          if aws ssm describe-document \
+          VERSION_EXISTS=$(aws ssm list-document-versions \
             --name "${{ inputs.DistributorName }}" \
             --region ${{ inputs.Region }} \
-            --query 'Document.VersionName' \
-            --output text 2>/dev/null | grep -q "^${{ steps.version.outputs.version }}$"; then
+            --no-paginate \
+            --query "DocumentVersions[?VersionName=='${{ steps.version.outputs.version }}']" \
+            --output text 2>/dev/null)
+          if [ -n "$VERSION_EXISTS" ]; then
             echo "should-build=false" >> "$GITHUB_OUTPUT"
             echo "Version ${{ steps.version.outputs.version }} already exists, skipping build"
           else

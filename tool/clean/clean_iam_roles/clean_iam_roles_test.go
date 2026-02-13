@@ -66,6 +66,16 @@ func (m *mockIamClient) DeleteInstanceProfile(ctx context.Context, input *iam.De
 	return args.Get(0).(*iam.DeleteInstanceProfileOutput), args.Error(1)
 }
 
+func (m *mockIamClient) ListRolePolicies(ctx context.Context, input *iam.ListRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListRolePoliciesOutput, error) {
+	args := m.Called(ctx, input, optFns)
+	return args.Get(0).(*iam.ListRolePoliciesOutput), args.Error(1)
+}
+
+func (m *mockIamClient) DeleteRolePolicy(ctx context.Context, input *iam.DeleteRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DeleteRolePolicyOutput, error) {
+	args := m.Called(ctx, input, optFns)
+	return args.Get(0).(*iam.DeleteRolePolicyOutput), args.Error(1)
+}
+
 func TestDeleteRoles(t *testing.T) {
 	expirationDate := getExpirationDate()
 
@@ -112,6 +122,7 @@ func TestDeleteRoles(t *testing.T) {
 		AttachedPolicies: testPolicies,
 	}, nil)
 	client.On("DetachRolePolicy", ctx, mock.Anything, mock.Anything).Return(&iam.DetachRolePolicyOutput{}, nil)
+	client.On("ListRolePolicies", ctx, mock.Anything, mock.Anything).Return(&iam.ListRolePoliciesOutput{}, nil)
 	client.On("ListInstanceProfilesForRole", ctx, &iam.ListInstanceProfilesForRoleInput{
 		RoleName: aws.String(expiredTestRoleName),
 	}, mock.Anything).Return(&iam.ListInstanceProfilesForRoleOutput{InstanceProfiles: []types.InstanceProfile{testProfile}}, nil)
@@ -123,7 +134,7 @@ func TestDeleteRoles(t *testing.T) {
 		InstanceProfileName: testProfile.InstanceProfileName,
 	}, mock.Anything).Return(&iam.DeleteInstanceProfileOutput{}, nil)
 	assert.NoError(t, deleteRoles(ctx, client, expirationDate))
-	assert.Len(t, client.Calls, 9)
+	assert.Len(t, client.Calls, 10)
 	for _, call := range client.Calls {
 		switch call.Method {
 		case "DeleteRole":
