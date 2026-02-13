@@ -6,19 +6,21 @@ package cloudauth
 import (
 	"context"
 	"fmt"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/cloudauth/provider"
 )
 
 // registeredProviders is the ordered list of providers to try during auto-detection.
-var registeredProviders = []func() TokenProvider{
-	func() TokenProvider { return NewAzureProvider() },
+var registeredProviders = []func() provider.TokenProvider{
+	provider.NewAzureProvider,
 }
 
 // DetectProvider returns a TokenProvider for the current environment.
 // If tokenFile is set, a FileProvider is returned directly (no probing).
 // Otherwise, registered providers are probed in order.
-func DetectProvider(ctx context.Context, tokenFile string) (TokenProvider, error) {
+func DetectProvider(ctx context.Context, tokenFile string) (provider.TokenProvider, error) {
 	if tokenFile != "" {
-		fp := NewFileProvider(tokenFile)
+		fp := provider.NewFileProvider(tokenFile)
 		if !fp.IsAvailable(ctx) {
 			return nil, fmt.Errorf("cloudauth: token file %q does not exist", tokenFile)
 		}

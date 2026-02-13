@@ -78,16 +78,6 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 		return fmt.Errorf("usage: --output-dir <path> --download-source ssm:<parameter-store-name>")
 	}
 
-	// Detect agent mode and region
-	mode = util.DetectAgentMode(mode)
-	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
-	if region == "" && downloadLocation != locationDefault && !strings.HasPrefix(downloadLocation, locationFile+locationSeparator) {
-		if mode == translatorconfig.ModeEC2 {
-			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
-		}
-		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
-	}
-
 	err = cleanupOutputDir(outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to clean up output directory: %v", err)
@@ -96,6 +86,16 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
 	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
 		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
+	}
+
+	// Detect agent mode and region
+	mode = util.DetectAgentMode(mode)
+	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
+	if region == "" && locationArray[0] == locationSSM {
+		if mode == translatorconfig.ModeEC2 {
+			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
+		}
+		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
 	}
 
 	var config, outputFilePath string

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package cloudauth
+package provider
 
 import (
 	"context"
@@ -46,8 +46,4 @@ func TestFileProvider_IsAvailable(t *testing.T) {
 
 	assert.True(t, NewFileProvider(f).IsAvailable(context.Background()))
 	assert.False(t, NewFileProvider("/nonexistent").IsAvailable(context.Background()))
-}
-
-func TestFileProvider_Name(t *testing.T) {
-	assert.Equal(t, "file", NewFileProvider("x").Name())
 }

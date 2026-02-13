@@ -15,64 +15,35 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestExtension_IsActive(t *testing.T) {
-	ext := &Extension{logger: zaptest.NewLogger(t), config: &Config{}}
-
-	// Not active before token fetch
-	assert.False(t, ext.IsActive())
-
-	// Active with future expiry
-	ext.mu.Lock()
-	ext.lastExpiry = time.Now().Add(time.Hour)
-	ext.mu.Unlock()
-	assert.True(t, ext.IsActive())
-
-	// Not active after expiry
-	ext.mu.Lock()
-	ext.lastExpiry = time.Now().Add(-time.Hour)
-	ext.mu.Unlock()
-	assert.False(t, ext.IsActive())
-}
-
 func TestExtension_RefreshToken(t *testing.T) {
 	tmpDir := t.TempDir()
 	tokenFile := filepath.Join(tmpDir, "test-token")
 
 	t.Run("success", func(t *testing.T) {
 		ext := &Extension{
-			logger:    zaptest.NewLogger(t),
-			config:    &Config{RoleARN: "arn:aws:iam::123456789012:role/test"},
-			provider:  &mockTokenProvider{token: "test-token", expiry: time.Hour},
-			tokenFile: tokenFile,
+			logger:        zaptest.NewLogger(t),
+			config:        &Config{},
+			tokenProvider: &mockTokenProvider{token: "test-token", expiry: time.Hour},
+			tokenFile:     tokenFile,
 		}
 
-		err := ext.refreshToken(context.Background())
+		expiry, err := ext.refreshToken(context.Background())
 		require.NoError(t, err)
+		assert.True(t, expiry.After(time.Now()))
 
-		// Verify token written with correct permissions
 		content, err := os.ReadFile(tokenFile)
 		require.NoError(t, err)
 		assert.Equal(t, "test-token", string(content))
-
-		info, err := os.Stat(tokenFile)
-		require.NoError(t, err)
-		assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
-
-		// Verify expiry tracked
-		ext.mu.RLock()
-		assert.False(t, ext.lastExpiry.IsZero())
-		ext.mu.RUnlock()
 	})
 
 	t.Run("provider error", func(t *testing.T) {
 		ext := &Extension{
-			logger:    zaptest.NewLogger(t),
-			config:    &Config{RoleARN: "arn:aws:iam::123456789012:role/test"},
-			provider:  &mockTokenProvider{err: assert.AnError},
-			tokenFile: tokenFile,
+			logger:        zaptest.NewLogger(t),
+			config:        &Config{},
+			tokenProvider: &mockTokenProvider{err: assert.AnError},
+			tokenFile:     tokenFile,
 		}
-
-		err := ext.refreshToken(context.Background())
+		_, err := ext.refreshToken(context.Background())
 		assert.Error(t, err)
 	})
 }
@@ -80,8 +51,6 @@ func TestExtension_RefreshToken(t *testing.T) {
 func TestExtension_Shutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	tokenFile := filepath.Join(tmpDir, "test-token")
-
-	// Create token file
 	require.NoError(t, os.WriteFile(tokenFile, []byte("test"), 0600))
 
 	ext := &Extension{
@@ -90,17 +59,10 @@ func TestExtension_Shutdown(t *testing.T) {
 		tokenFile: tokenFile,
 		done:      make(chan struct{}),
 	}
-
-	instMu.Lock()
-	instance = ext
-	instMu.Unlock()
-
 	require.NoError(t, ext.Shutdown(context.Background()))
 
-	// Verify cleanup
 	_, err := os.Stat(tokenFile)
 	assert.True(t, os.IsNotExist(err))
-	assert.Nil(t, GetExtension())
 }
 
 type mockTokenProvider struct {

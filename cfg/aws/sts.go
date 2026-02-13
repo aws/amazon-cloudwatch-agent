@@ -67,6 +67,16 @@ func newStsCredentialsProvider(cfg aws.Config, roleARN string, region string) aw
 	}
 }
 
+func newWebIdentityProvider(region string, roleARN string, tokenFile string) aws.CredentialsProvider {
+	regionalCfg := aws.Config{Region: region}
+	partitionalCfg := aws.Config{Region: getFallbackRegion(region)}
+	token := stscreds.IdentityTokenFile(tokenFile)
+	return &stsCredentialsProvider{
+		regional:    stscreds.NewWebIdentityRoleProvider(sts.NewFromConfig(regionalCfg), roleARN, token),
+		partitional: stscreds.NewWebIdentityRoleProvider(sts.NewFromConfig(partitionalCfg), roleARN, token),
+	}
+}
+
 const (
 	SourceArnHeaderKey     = "x-amz-source-arn"
 	SourceAccountHeaderKey = "x-amz-source-account"

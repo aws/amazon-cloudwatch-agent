@@ -25,19 +25,11 @@ type CredentialsConfig struct {
 	Profile   string
 	Filename  string
 	Token     string
-
-	// roleAssumed is set by credential chain providers (e.g. cloudauth)
-	// that already performed role assumption. LoadConfig checks this to
-	// avoid wrapping the provider with a second sts:AssumeRole call.
-	roleAssumed bool
 }
-
-// SetRoleAssumed marks that a chain provider already performed role assumption.
-func (c *CredentialsConfig) SetRoleAssumed(v bool) { c.roleAssumed = v }
 
 func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) {
 	chainProvider := c.fromChain()
-	if c.RoleARN != "" && !c.roleAssumed {
+	if c.RoleARN != "" && os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE") == "" {
 		cfg, err := c.loadConfig(ctx, chainProvider)
 		if err != nil {
 			return aws.Config{}, err
@@ -120,6 +112,19 @@ func OverwriteCredentialsChain(providers ...CredentialsProvider) {
 
 func init() {
 	// Initialize the default root credentials chain
+	webIdentityProvider := CredentialsProvider{
+		Name: func() string { return "WebIdentityProvider" },
+		Provider: func(c *CredentialsConfig) aws.CredentialsProvider {
+			tokenFile := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+			if tokenFile == "" || c.RoleARN == "" {
+				return nil
+			}
+			log.Printf("I! will use web identity credentials provider")
+			p := newWebIdentityProvider(c.Region, c.RoleARN, tokenFile)
+			c.RoleARN = "" // consumed — prevent AssumeRole wrap in LoadConfig
+			return aws.NewCredentialsCache(p)
+		},
+	}
 	staticCredentialsProvider := CredentialsProvider{
 		Name: func() string { return "StaticCredentialsProvider" },
 		Provider: func(c *CredentialsConfig) aws.CredentialsProvider {
@@ -145,7 +150,7 @@ func init() {
 			return nil
 		},
 	}
-	credentialsChain = append(credentialsChain, staticCredentialsProvider, refreshableCredentialsProvider)
+	credentialsChain = append(credentialsChain, webIdentityProvider, staticCredentialsProvider, refreshableCredentialsProvider)
 	// You can overwrite the default credentials chain by first importing the current file
 	// and then calling OverwriteCredentialsChain() with your own credentials chain
 }

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package cloudauth
+package provider
 
 import (
 	"context"
@@ -9,22 +9,27 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 )
 
 const (
-	defaultAzureIMDSEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token"
-	// azureComputeEndpoint is used for detection only — probes the compute metadata
+	defaultAzureIMDSEndpoint   = "http://169.254.169.254/metadata/identity/oauth2/token"
+	defaultAzureIMDSAPIVersion = "2018-02-01"
+
+	// defaultAzureProbeEndpoint is used for detection only — probes the compute metadata
 	// path (same as resourcedetectionprocessor's Azure detector) to check "am I on Azure?"
 	// without requiring managed identity to be enabled.
-	azureComputeEndpoint = "http://169.254.169.254/metadata/instance/compute"
-	azureAPIVersion      = "2018-02-01"
-	azureComputeAPI      = "2020-09-01"
-	// The default resource/audience for the token.
-	azureDefaultResource = "https://management.azure.com/"
-	azureProbeTimeout    = 2 * time.Second
+	defaultAzureProbeEndpoint   = "http://169.254.169.254/metadata/instance/compute"
+	defaultAzureProbeAPIVersion = "2020-09-01"
+	defaultAzureProbeTimeout    = 2 * time.Second
+
+	// defaultAzureResource is the audience/resource claim for the token request.
+	defaultAzureResource = "https://management.azure.com/"
+
+	// defaultAzureTokenExpiry is the fallback token lifetime (1 hour) when the
+	// IMDS response does not include a valid expires_in value.
+	defaultAzureTokenExpiry = 3600
 )
 
 // AzureProvider fetches OIDC tokens from Azure Instance Metadata Service (IMDS)
@@ -38,36 +43,40 @@ type AzureProvider struct {
 
 var _ TokenProvider = (*AzureProvider)(nil)
 
-func NewAzureProvider() *AzureProvider {
+func NewAzureProvider() TokenProvider {
 	return &AzureProvider{
 		client:        &http.Client{Timeout: 30 * time.Second},
 		endpoint:      defaultAzureIMDSEndpoint,
-		probeEndpoint: azureComputeEndpoint,
-		resource:      azureDefaultResource,
+		probeEndpoint: defaultAzureProbeEndpoint,
+		resource:      defaultAzureResource,
 	}
 }
 
 func (p *AzureProvider) Name() string { return "azure" }
 
+// SetResource overrides the audience/resource claim for the token request.
+func (p *AzureProvider) SetResource(r string) { p.resource = r }
+
 func (p *AzureProvider) IsAvailable(ctx context.Context) bool {
-	probeCtx, cancel := context.WithTimeout(ctx, azureProbeTimeout)
+	probeCtx, cancel := context.WithTimeout(ctx, defaultAzureProbeTimeout)
 	defer cancel()
 
-	// Probe the compute metadata endpoint (not the token endpoint) to detect Azure.
-	// This matches the resourcedetectionprocessor's Azure detector approach and works
-	// even if managed identity is not enabled on the VM.
-	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet,
-		fmt.Sprintf("%s?api-version=%s&format=json", p.probeEndpoint, azureComputeAPI), nil)
+	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet, p.probeEndpoint, nil)
 	if err != nil {
 		return false
 	}
 	req.Header.Set("Metadata", "True")
+	q := req.URL.Query()
+	q.Set("api-version", defaultAzureProbeAPIVersion)
+	q.Set("format", "json")
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := p.client.Do(req)
 	if err != nil {
 		return false
 	}
 	defer resp.Body.Close()
+	// Drain body so the underlying TCP connection can be reused.
 	io.Copy(io.Discard, resp.Body)
 	return resp.StatusCode == http.StatusOK
 }
@@ -78,14 +87,15 @@ type azureTokenResponse struct {
 }
 
 func (p *AzureProvider) GetToken(ctx context.Context) (string, time.Duration, error) {
-	reqURL := fmt.Sprintf("%s?api-version=%s&resource=%s",
-		p.endpoint, azureAPIVersion, url.QueryEscape(p.resource))
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.endpoint, nil)
 	if err != nil {
 		return "", 0, fmt.Errorf("azure: create request: %w", err)
 	}
 	req.Header.Set("Metadata", "true")
+	q := req.URL.Query()
+	q.Set("api-version", defaultAzureIMDSAPIVersion)
+	q.Set("resource", p.resource)
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -109,7 +119,7 @@ func (p *AzureProvider) GetToken(ctx context.Context) (string, time.Duration, er
 
 	expiresIn, _ := strconv.Atoi(tokenResp.ExpiresIn)
 	if expiresIn <= 0 {
-		expiresIn = 3600
+		expiresIn = defaultAzureTokenExpiry
 	}
 
 	return tokenResp.AccessToken, time.Duration(expiresIn) * time.Second, nil

@@ -5,10 +5,12 @@ exporters:
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
+        profile: AmazonCloudWatchAgent
         region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
         role_arn: arn:aws:iam::123456789012:role/OIDCRole
+        shared_credential_file: fake-path
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -16,25 +18,21 @@ extensions:
             operations:
                 - PutMetricData
             usage_flags:
-                mode: EC2
+                mode: OP
                 region_type: ACJ
     agenthealth/statuscode:
         is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             usage_flags:
-                mode: EC2
+                mode: OP
                 region_type: ACJ
-    cloudauth:
-        region: us-east-1
-        role_arn: arn:aws:iam::123456789012:role/OIDCRole
+    cloudauth: {}
     entitystore:
-        mode: ec2
+        mode: onPremise
+        profile: AmazonCloudWatchAgent
         region: us-east-1
-processors:
-    awsentity/resource:
-        entity_type: Resource
-        platform: ec2
+        shared_credential_file: fake-path
 receivers:
     telegraf_mem:
         collection_interval: 1m0s
@@ -50,8 +48,7 @@ service:
         metrics/host:
             exporters:
                 - awscloudwatch
-            processors:
-                - awsentity/resource
+            processors: []
             receivers:
                 - telegraf_mem
     telemetry:

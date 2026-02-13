@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package cloudauth
+package provider
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 func TestAzureProvider_GetToken_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "true", r.Header.Get("Metadata"))
-		assert.Contains(t, r.URL.RawQuery, "api-version="+azureAPIVersion)
+		assert.Contains(t, r.URL.RawQuery, "api-version="+defaultAzureIMDSAPIVersion)
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"access_token":"mock-jwt-token","expires_in":"3600"}`)
 	}))
@@ -76,7 +76,7 @@ func TestAzureProvider_IsAvailable_Success(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		assert.Contains(t, r.URL.RawQuery, "api-version="+azureComputeAPI)
+		assert.Contains(t, r.URL.RawQuery, "api-version="+defaultAzureProbeAPIVersion)
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"location":"eastus"}`)
 	}))
