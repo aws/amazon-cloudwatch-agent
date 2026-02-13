@@ -182,7 +182,7 @@ func (q *queue) merge(mergeChan chan logs.LogEvent) {
 func (q *queue) send() {
 	if len(q.batch.events) > 0 {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
-		q.batch.addFailCallback(q.onFailCallback())
+		q.batch.addFailCallback(q.halt)
 
 		// Wait if halted (circuit breaker)
 		q.waitIfHalted()
@@ -289,12 +289,5 @@ func (q *queue) resume() {
 		q.halted = false
 		close(q.haltCh)
 		q.haltCh = make(chan struct{})
-	}
-}
-
-// onFailCallback returns a callback function to be executed after a failed send
-func (q *queue) onFailCallback() func() {
-	return func() {
-		q.halt()
 	}
 }
