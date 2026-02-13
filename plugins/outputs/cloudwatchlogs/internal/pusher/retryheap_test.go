@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -109,17 +110,20 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 
 	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
-	// Create expired batch
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
-	batch.startTime = time.Now().Add(-1 * time.Hour)
+	batch.initializeStartTime()
+	batch.expireAfter = time.Now().Add(-1 * time.Hour) // Already expired
 	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
+
+	var doneCalled bool
+	batch.addDoneCallback(func() { doneCalled = true })
 
 	heap.Push(batch)
 
-	// Process should drop expired batch
 	processor.processReadyMessages()
-	assert.Equal(t, 0, heap.Size())
+	assert.Equal(t, 0, heap.Size(), "Expired batch should be removed from heap")
+	assert.True(t, doneCalled, "done() should be called on expired batch to resume circuit breaker")
 }
 
 func TestRetryHeapProcessorSendsBatch(t *testing.T) {
@@ -128,21 +132,30 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 
 	workerPool := NewWorkerPool(2)
 	defer workerPool.Stop()
+
 	mockService := &mockLogsService{}
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
 	mockTargetManager := &mockTargetManager{}
+	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
 
 	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
-	// Create ready batch (retryTime already past)
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
+	batch.append(newLogEvent(time.Now(), "test message", nil))
 	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
+
+	var doneCalled atomic.Bool
+	batch.addDoneCallback(func() { doneCalled.Store(true) })
 
 	heap.Push(batch)
 
-	// Process should send batch
 	processor.processReadyMessages()
+	time.Sleep(200 * time.Millisecond)
+
 	assert.Equal(t, 0, heap.Size())
+	assert.True(t, doneCalled.Load(), "Batch done callback should be called on successful send")
+	mockService.AssertCalled(t, "PutLogEvents", mock.Anything)
 }
 
 func TestRetryHeap_UnboundedPush(t *testing.T) {
@@ -152,11 +165,11 @@ func TestRetryHeap_UnboundedPush(t *testing.T) {
 	// Push multiple batches without blocking
 	target := Target{Group: "group", Stream: "stream"}
 	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = time.Now().Add(3 * time.Second)
+	batch1.nextRetryTime = time.Now().Add(50 * time.Millisecond)
 	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = time.Now().Add(3 * time.Second)
+	batch2.nextRetryTime = time.Now().Add(50 * time.Millisecond)
 	batch3 := newLogEventBatch(target, nil)
-	batch3.nextRetryTime = time.Now().Add(3 * time.Second)
+	batch3.nextRetryTime = time.Now().Add(50 * time.Millisecond)
 
 	// All pushes should succeed immediately (non-blocking)
 	err := heap.Push(batch1)
@@ -171,7 +184,7 @@ func TestRetryHeap_UnboundedPush(t *testing.T) {
 		t.Fatalf("Expected size 3, got %d", heap.Size())
 	}
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 
 	// Pop ready batches
 	readyBatches := heap.PopReady()
