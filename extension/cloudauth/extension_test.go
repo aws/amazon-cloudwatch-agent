@@ -5,84 +5,90 @@ package cloudauth
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	ststypes "github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 
-func TestExtension_Retrieve(t *testing.T) {
-	ext := &Extension{
-		logger: zaptest.NewLogger(t),
-		config: &Config{},
-	}
+func TestExtension_IsActive(t *testing.T) {
+	ext := &Extension{logger: zaptest.NewLogger(t), config: &Config{}}
 
-	// No credentials yet.
-	_, err := ext.Retrieve(context.Background())
-	assert.Error(t, err)
+	// Not active before token fetch
+	assert.False(t, ext.IsActive())
 
-	// Set credentials.
-	expiry := time.Now().Add(time.Hour)
-	ext.credentials = &ststypes.Credentials{
-		AccessKeyId:     aws.String("AKID"),
-		SecretAccessKey: aws.String("SECRET"),
-		SessionToken:    aws.String("TOKEN"),
-		Expiration:      &expiry,
-	}
+	// Active with future expiry
+	ext.mu.Lock()
+	ext.lastExpiry = time.Now().Add(time.Hour)
+	ext.mu.Unlock()
+	assert.True(t, ext.IsActive())
 
-	creds, err := ext.Retrieve(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, "AKID", creds.AccessKeyID)
-	assert.Equal(t, "SECRET", creds.SecretAccessKey)
-	assert.Equal(t, "TOKEN", creds.SessionToken)
-	assert.Equal(t, "cloudauth/oidc", creds.Source)
-	assert.True(t, creds.CanExpire)
-	assert.WithinDuration(t, expiry, creds.Expires, time.Second)
+	// Not active after expiry
+	ext.mu.Lock()
+	ext.lastExpiry = time.Now().Add(-time.Hour)
+	ext.mu.Unlock()
+	assert.False(t, ext.IsActive())
 }
 
-func TestExtension_NextRefreshInterval(t *testing.T) {
-	ext := &Extension{
-		logger: zaptest.NewLogger(t),
-		config: &Config{},
-	}
+func TestExtension_RefreshToken(t *testing.T) {
+	tmpDir := t.TempDir()
+	tokenFile := filepath.Join(tmpDir, "test-token")
 
-	// No credentials — returns minRefreshInterval.
-	assert.Equal(t, minRefreshInterval, ext.nextRefreshInterval())
+	t.Run("success", func(t *testing.T) {
+		ext := &Extension{
+			logger:    zaptest.NewLogger(t),
+			config:    &Config{RoleARN: "arn:aws:iam::123456789012:role/test"},
+			provider:  &mockTokenProvider{token: "test-token", expiry: time.Hour},
+			tokenFile: tokenFile,
+		}
 
-	// Credentials expiring in 30 minutes.
-	// Interval = 30min - 5min buffer - hostJitter (0 to 5min) = 20-25min.
-	expiry := time.Now().Add(30 * time.Minute)
-	ext.credentials = &ststypes.Credentials{Expiration: &expiry}
-	interval := ext.nextRefreshInterval()
-	assert.True(t, interval >= 19*time.Minute && interval <= 26*time.Minute,
-		"expected interval between 19-26min, got %v", interval)
+		err := ext.refreshToken(context.Background())
+		require.NoError(t, err)
 
-	// Credentials expiring in 2 minutes (less than buffer).
-	expiry = time.Now().Add(2 * time.Minute)
-	ext.credentials = &ststypes.Credentials{Expiration: &expiry}
-	assert.Equal(t, minRefreshInterval, ext.nextRefreshInterval())
+		// Verify token written with correct permissions
+		content, err := os.ReadFile(tokenFile)
+		require.NoError(t, err)
+		assert.Equal(t, "test-token", string(content))
+
+		info, err := os.Stat(tokenFile)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
+
+		// Verify expiry tracked
+		ext.mu.RLock()
+		assert.False(t, ext.lastExpiry.IsZero())
+		ext.mu.RUnlock()
+	})
+
+	t.Run("provider error", func(t *testing.T) {
+		ext := &Extension{
+			logger:    zaptest.NewLogger(t),
+			config:    &Config{RoleARN: "arn:aws:iam::123456789012:role/test"},
+			provider:  &mockTokenProvider{err: assert.AnError},
+			tokenFile: tokenFile,
+		}
+
+		err := ext.refreshToken(context.Background())
+		assert.Error(t, err)
+	})
 }
 
-func TestHostJitter(t *testing.T) {
-	maxDuration := 5 * time.Minute
-	j := hostJitter(maxDuration)
-	assert.True(t, j >= 0 && j < maxDuration, "jitter %v out of range [0, %v)", j, maxDuration)
-	// Deterministic: same host always returns the same value.
-	assert.Equal(t, j, hostJitter(maxDuration))
-}
+func TestExtension_Shutdown(t *testing.T) {
+	tmpDir := t.TempDir()
+	tokenFile := filepath.Join(tmpDir, "test-token")
 
-func TestExtension_Shutdown_CleansUp(t *testing.T) {
+	// Create token file
+	require.NoError(t, os.WriteFile(tokenFile, []byte("test"), 0600))
+
 	ext := &Extension{
-		logger: zaptest.NewLogger(t),
-		config: &Config{},
-		done:   make(chan struct{}),
+		logger:    zaptest.NewLogger(t),
+		config:    &Config{},
+		tokenFile: tokenFile,
+		done:      make(chan struct{}),
 	}
 
 	instMu.Lock()
@@ -90,37 +96,24 @@ func TestExtension_Shutdown_CleansUp(t *testing.T) {
 	instMu.Unlock()
 
 	require.NoError(t, ext.Shutdown(context.Background()))
+
+	// Verify cleanup
+	_, err := os.Stat(tokenFile)
+	assert.True(t, os.IsNotExist(err))
 	assert.Nil(t, GetExtension())
 }
 
-func TestExtension_IsActive(t *testing.T) {
-	ext := &Extension{
-		logger: zaptest.NewLogger(t),
-		config: &Config{},
+type mockTokenProvider struct {
+	token  string
+	expiry time.Duration
+	err    error
+}
+
+func (m *mockTokenProvider) Name() string                                         { return "mock" }
+func (m *mockTokenProvider) IsAvailable(ctx context.Context) bool                 { return m.err == nil }
+func (m *mockTokenProvider) GetToken(ctx context.Context) (string, time.Duration, error) {
+	if m.err != nil {
+		return "", 0, m.err
 	}
-	assert.False(t, ext.IsActive())
-
-	expiry := time.Now().Add(time.Hour)
-	ext.credentials = &ststypes.Credentials{Expiration: &expiry}
-	assert.True(t, ext.IsActive())
-}
-
-func TestAzureProvider_Name(t *testing.T) {
-	p := NewAzureProvider()
-	assert.Equal(t, "azure", p.Name())
-}
-
-func TestAzureProvider_GetToken_MockIMDS(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Metadata") != "true" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"access_token":"mock-azure-token","expires_in":"3600"}`)
-	}))
-	defer server.Close()
-
-	p := &AzureProvider{client: server.Client()}
-	assert.Equal(t, "azure", p.Name())
+	return m.token, m.expiry, nil
 }
