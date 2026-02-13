@@ -80,6 +80,7 @@ func TestComponents(t *testing.T) {
 		"debug",
 		"nop",
 		"prometheusremotewrite",
+		"otlphttp",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
 	assert.Equal(t, len(wantExporters), len(gotExporters))

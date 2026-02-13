@@ -48,7 +48,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.MetricsEndpoint = metricsEndpoint
 
 	// Configure authentication
-	cfg.ClientConfig.Auth = &configauth.Authentication{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))}
+	cfg.ClientConfig.Auth = &configauth.Authentication{AuthenticatorID: component.NewIDWithName(component.MustNewType(common.SigV4Auth), common.MonitoringService)}
 
 	return cfg, nil
 }

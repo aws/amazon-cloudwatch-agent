@@ -10,7 +10,7 @@ exporters:
             enabled: true
     otlphttp:
         auth:
-            authenticator: sigv4auth
+            authenticator: sigv4auth/monitoring
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -54,10 +54,11 @@ extensions:
     entitystore:
         mode: ec2
         region: us-east-1
-    sigv4auth:
+    sigv4auth/monitoring:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
+        service: monitoring
 processors:
     awsentity/service/telegraf:
         entity_type: Service
@@ -72,11 +73,10 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
-        middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
@@ -88,7 +88,7 @@ service:
     extensions:
         - agenthealth/metrics
         - agenthealth/statuscode
-        - sigv4auth
+        - sigv4auth/monitoring
         - entitystore
     pipelines:
         metrics/hostCustomMetrics/cloudwatch:
@@ -104,6 +104,7 @@ service:
                 - otlphttp
             processors:
                 - ec2tagger
+                - awsentity/service/telegraf
                 - batch/hostCustomMetrics/otlp
             receivers:
                 - telegraf_socket_listener

@@ -37,17 +37,11 @@ exporters:
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
+        is_status_code_enabled: true
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    agenthealth/statuscode:
-        is_status_code_enabled: true
-        is_usage_data_enabled: true
-        stats:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -60,54 +54,80 @@ extensions:
         region: us-east-1
         service: monitoring
 processors:
-    awsentity/resource:
-        entity_type: Resource
-        platform: ec2
-        scrape_datapoint_attribute: true
-    batch/host/otlp:
+    batch/jmx/otlp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
-        ec2_metadata_tags:
-            - ImageId
-            - InstanceId
-            - InstanceType
-        imds_retries: 1
-        refresh_tags_interval: 0s
-        refresh_volumes_interval: 0s
+    cumulativetodelta/jmx:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    filter/jmx:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - jvm.memory.heap.init
+                    - jvm.memory.heap.used
+        spans: {}
+        traces: {}
+    resource/jmx:
+        attributes:
+            - action: delete
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: ""
+              pattern: telemetry.sdk.*
+            - action: delete
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: service.name
+              pattern: ""
+              value: unknown_service:java
 receivers:
-    telegraf_cpu:
+    jmx:
+        aggregate_across_mbeans: true
         collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
+        endpoint: localhost:8080
+        jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        otlp:
+            endpoint: 0.0.0.0:0
+            timeout: 5s
+        resource_attributes:
+            host: 80a9973b42dd
+        target_system: jvm
 service:
     extensions:
         - agenthealth/metrics
-        - agenthealth/statuscode
         - sigv4auth/monitoring
         - entitystore
     pipelines:
-        metrics/host/cloudwatch:
+        metrics/jmx/cloudwatch:
             exporters:
                 - awscloudwatch
             processors:
-                - ec2tagger
-                - awsentity/resource
+                - filter/jmx
+                - resource/jmx
+                - cumulativetodelta/jmx
             receivers:
-                - telegraf_cpu
-        metrics/host/otlp:
+                - jmx
+        metrics/jmx/otlp:
             exporters:
                 - otlphttp
             processors:
-                - ec2tagger
-                - awsentity/resource
-                - batch/host/otlp
+                - filter/jmx
+                - resource/jmx
+                - batch/jmx/otlp
             receivers:
-                - telegraf_cpu
+                - jmx
     telemetry:
         logs:
             encoding: console

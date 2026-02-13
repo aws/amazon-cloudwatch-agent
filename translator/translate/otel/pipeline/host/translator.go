@@ -46,6 +46,7 @@ var supportedEntityProcessorDestinations = [...]string{
 	common.DefaultDestination,
 	common.CloudWatchKey,
 	common.CloudWatchLogsKey,
+	common.OtlpKey,
 }
 
 // NewTranslator creates a new host pipeline translator. The receiver types
@@ -118,6 +119,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			case common.CloudWatchLogsKey:
 				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchLogsKey, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
+			case common.OtlpKey:
+				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			}
 		}
 	case common.PipelineNameHostCustomMetrics:
@@ -154,7 +157,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	case common.OtlpKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		translators.Exporters.Set(otlphttpexporter.NewTranslator())
-		translators.Extensions.Set(sigv4auth.NewTranslator())
+		translators.Extensions.Set(sigv4auth.NewTranslatorWithNameAndService(common.MonitoringService, common.MonitoringService))
 	case common.CloudWatchLogsKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.LogsKey))
 		translators.Exporters.Set(awsemf.NewTranslator())

@@ -46,6 +46,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
+	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/otelcol"
@@ -132,6 +133,7 @@ func Factories() (otelcol.Factories, error) {
 		debugexporter.NewFactory(),
 		nopexporter.NewFactory(),
 		prometheusremotewriteexporter.NewFactory(),
+		otlphttpexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}

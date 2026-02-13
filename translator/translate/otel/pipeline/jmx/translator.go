@@ -129,7 +129,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	case common.OtlpKey:
 		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
 		translators.Exporters.Set(otlphttpexporter.NewTranslator())
-		translators.Extensions.Set(sigv4auth.NewTranslator())
+		translators.Extensions.Set(sigv4auth.NewTranslatorWithNameAndService(common.MonitoringService, common.MonitoringService))
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}
