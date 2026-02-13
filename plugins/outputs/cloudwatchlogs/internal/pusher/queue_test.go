@@ -730,7 +730,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
-			haltCond:        sync.NewCond(&sync.Mutex{}),
+			haltCh:          make(chan struct{}),
 			halted:          false,
 		}
 		q.flushTimeout.Store(10 * time.Millisecond)
@@ -774,7 +774,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
-			haltCond:        sync.NewCond(&sync.Mutex{}),
+			haltCh:          make(chan struct{}),
 			halted:          false,
 		}
 		q.flushTimeout.Store(10 * time.Millisecond)
@@ -815,14 +815,68 @@ func TestQueueHaltResume(t *testing.T) {
 	// Wait a bit for the first send to complete and halt
 	time.Sleep(50 * time.Millisecond)
 
+	// Verify queue is halted
+	queueImpl := q.(*queue)
+	queueImpl.haltMu.Lock()
+	assert.True(t, queueImpl.halted, "Queue should be halted after failure")
+	queueImpl.haltMu.Unlock()
+
 	// Add second event - should be queued but not sent due to halt
 	q.AddEvent(newStubLogEvent("second message", time.Now()))
 
 	// Verify only one send happened (queue is halted)
 	assert.Equal(t, int32(1), sendCount.Load(), "Should have only one send due to halt")
 
+	// Trigger resume by calling the success callback directly
+	queueImpl.resume()
+
+	// Verify queue is no longer halted
+	queueImpl.haltMu.Lock()
+	assert.False(t, queueImpl.halted, "Queue should be resumed after success")
+	queueImpl.haltMu.Unlock()
+
+	// Add third event - should trigger send since queue is resumed
+	q.AddEvent(newStubLogEvent("third message", time.Now()))
+
+	// Wait for the second send to complete
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify second send happened (queue resumed)
+	assert.Equal(t, int32(2), sendCount.Load(), "Should have two sends after resume")
+
 	mockSender.AssertExpectations(t)
 }
 
-// TestQueueResumeOnBatchExpiry verifies that when a batch expires after 14 days of retrying,
-// the circuit breaker resumes the queue to allow new batches to be processed.
+// TestQueueStopWhileHalted verifies that Stop() unblocks a halted queue.
+// Without the stopCh select in waitIfHalted, this would deadlock.
+func TestQueueStopWhileHalted(t *testing.T) {
+	logger := testutil.NewNopLogger()
+
+	mockSender := &mockSender{}
+	mockSender.On("Send", mock.Anything).Run(func(args mock.Arguments) {
+		batch := args.Get(0).(*logEventBatch)
+		batch.fail() // Halt the queue
+	}).Return()
+	mockSender.On("Stop").Return()
+
+	var wg sync.WaitGroup
+	q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1}, 10*time.Millisecond, nil, mockSender, &wg)
+
+	// Add event to trigger send → fail → halt
+	q.AddEvent(newStubLogEvent("msg", time.Now()))
+	time.Sleep(50 * time.Millisecond)
+
+	// Queue is now halted. Stop must return without deadlocking.
+	done := make(chan struct{})
+	go func() {
+		q.Stop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Success — Stop() returned
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() deadlocked on halted queue")
+	}
+}

@@ -88,8 +88,5 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	// The circuit breaker SHOULD be resumed when the batch expires
 	// This allows the target to continue processing new batches after the bad batch is dropped
 	assert.True(t, circuitBreakerResumed.Load(),
-		"Circuit breaker should be resumed after batch expiry. "+
-			"When a batch is retried for 14 days and eventually dropped, "+
-			"the target must be unblocked to allow new batches to be processed. "+
-			"Otherwise the target remains blocked forever.")
+		"Circuit breaker should resume after batch expiry to unblock the target")
 }

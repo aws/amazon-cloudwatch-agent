@@ -52,7 +52,7 @@ func TestCircuitBreakerBlocksTargetAfterFailure(t *testing.T) {
 
 	concurrency := 5
 	workerPool := NewWorkerPool(concurrency)
-	retryHeap := NewRetryHeap(concurrency, logger)
+	retryHeap := NewRetryHeap(logger)
 	defer workerPool.Stop()
 	defer retryHeap.Stop()
 

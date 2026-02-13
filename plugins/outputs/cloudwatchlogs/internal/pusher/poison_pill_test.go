@@ -18,26 +18,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
-// TestPoisonPillScenario validates that when multiple log groups encounter
-// AccessDenied errors simultaneously with low concurrency, the agent continues
-// publishing to allowed log groups without blocking the entire pipeline.
-//
-// This test recreates the scenario from poison-pill-test-findings.md where:
-// - 1 allowed log group + 10 denied log groups
-// - Concurrency = 2
-// - Continuous stream of new batches (simulating force_flush_interval=5s)
-// - Expected: Allowed log group continues receiving events
-// - Historical Bug: Agent stopped publishing to ALL log groups after ~5 minutes
-//
-// This test validates that the retry heap and worker pool architecture correctly
-// handles this scenario by:
-// 1. Continuously generating batches for 10 denied + 1 allowed log group
-// 2. Processing with only 2 workers (low concurrency)
-// 3. Verifying allowed log group continues to receive events throughout
-// 4. Ensuring worker pool doesn't get saturated by failed retry attempts
-//
-// The test passes because the current implementation uses a retry heap with
-// proper backoff, preventing failed batches from monopolizing worker threads.
+// TestPoisonPillScenario validates that when 10 denied + 1 allowed log groups
+// share a worker pool with concurrency=2, the allowed log group continues
+// publishing without being starved by failed retries.
 func TestPoisonPillScenario(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
@@ -174,20 +157,14 @@ func TestPoisonPillScenario(t *testing.T) {
 		"Denied log groups should have attempted to send")
 }
 
-// TestRetryHeapSmallerThanFailingLogGroups tests the specific bottleneck scenario where:
-// - Retry heap size = concurrency (e.g., 2)
-// - Number of failing log groups (10) > retry heap size (2)
-// - With bounded heap: This caused deadlock as heap filled up
-// - With unbounded heap: System handles this gracefully
-//
-// This test validates the FIX: unbounded retry heap allows all failed batches
-// to be queued without blocking workers.
+// TestRetryHeapSmallerThanFailingLogGroups verifies that with an unbounded retry
+// heap, the system handles more failing log groups than workers without deadlock.
 func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 	concurrency := 2
 	numFailingLogGroups := 10
 
 	// Retry heap is now unbounded (maxSize parameter ignored)
-	heap := NewRetryHeap(concurrency, &testutil.Logger{})
+	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
 	workerPool := NewWorkerPool(concurrency)
@@ -308,11 +285,8 @@ func TestRetryHeapSmallerThanFailingLogGroups(t *testing.T) {
 		successCount, deniedGroupAttemptCount.Load(), heap.Size(), numFailingLogGroups)
 
 	// With unbounded heap, allowed log group should receive events
-	if successCount == 0 {
-		t.Errorf("UNEXPECTED: Allowed log group received 0 events with unbounded heap")
-	} else {
-		t.Logf("SUCCESS: Unbounded heap handled poison pill scenario: %d successful publishes despite %d failing groups", successCount, numFailingLogGroups)
-	}
+	assert.Greater(t, successCount, int32(0),
+		"Allowed log group must receive events despite %d failing groups", numFailingLogGroups)
 }
 
 // TestSingleDeniedLogGroup validates the baseline scenario where a single denied

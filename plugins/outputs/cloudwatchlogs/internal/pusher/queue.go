@@ -44,8 +44,9 @@ type queue struct {
 	wg                    *sync.WaitGroup
 
 	// Circuit breaker halt/resume functionality
-	haltCond *sync.Cond
-	halted   bool
+	haltMu sync.Mutex
+	haltCh chan struct{}
+	halted bool
 }
 
 var _ (Queue) = (*queue)(nil)
@@ -71,7 +72,7 @@ func newQueue(
 		stopCh:          make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
-		haltCond:        sync.NewCond(&sync.Mutex{}),
+		haltCh:          make(chan struct{}),
 		halted:          false,
 	}
 	q.flushTimeout.Store(flushTimeout)
@@ -258,28 +259,37 @@ func hasValidTime(e logs.LogEvent) bool {
 	return true
 }
 
-// waitIfHalted blocks until the queue is unhalted (circuit breaker functionality)
+// waitIfHalted blocks until the queue is unhalted or stopped.
 func (q *queue) waitIfHalted() {
-	q.haltCond.L.Lock()
-	for q.halted {
-		q.haltCond.Wait()
+	q.haltMu.Lock()
+	if !q.halted {
+		q.haltMu.Unlock()
+		return
 	}
-	q.haltCond.L.Unlock()
+	ch := q.haltCh
+	q.haltMu.Unlock()
+	select {
+	case <-ch:
+	case <-q.stopCh:
+	}
 }
 
-// halt stops the queue from sending batches (called on failure)
+// halt stops the queue from sending batches (called on failure).
 func (q *queue) halt() {
-	q.haltCond.L.Lock()
+	q.haltMu.Lock()
+	defer q.haltMu.Unlock()
 	q.halted = true
-	q.haltCond.L.Unlock()
 }
 
-// resume allows the queue to send batches again (called on success)
+// resume allows the queue to send batches again (called on success).
 func (q *queue) resume() {
-	q.haltCond.L.Lock()
-	q.halted = false
-	q.haltCond.Broadcast()
-	q.haltCond.L.Unlock()
+	q.haltMu.Lock()
+	defer q.haltMu.Unlock()
+	if q.halted {
+		q.halted = false
+		close(q.haltCh)
+		q.haltCh = make(chan struct{})
+	}
 }
 
 // onFailCallback returns a callback function to be executed after a failed send
