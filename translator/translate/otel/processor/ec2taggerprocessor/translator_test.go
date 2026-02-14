@@ -74,6 +74,39 @@ func TestTranslator(t *testing.T) {
 				EBSDeviceKeys:          []string{"*"},
 			},
 		},
+		"OTelPlaceholders": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"append_dimensions": map[string]interface{}{
+						"InstanceId":   "${host.id}",
+						"InstanceType": "${host.type}",
+						"ImageId":      "${host.image.id}",
+					},
+				},
+			},
+			want: &ec2tagger.Config{
+				RefreshTagsInterval:    0 * time.Second,
+				RefreshVolumesInterval: 0 * time.Minute,
+				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
+			},
+		},
+		"MixedLegacyAndOTelPlaceholders": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"append_dimensions": map[string]interface{}{
+						"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+						"InstanceId":           "${host.id}",
+						"InstanceType":         "${aws:InstanceType}",
+					},
+				},
+			},
+			want: &ec2tagger.Config{
+				RefreshTagsInterval:    0 * time.Second,
+				RefreshVolumesInterval: 0 * time.Minute,
+				EC2MetadataTags:        []string{"InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

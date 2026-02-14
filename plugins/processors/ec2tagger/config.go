@@ -16,6 +16,15 @@ var SupportedAppendDimensions = map[string]string{
 	"InstanceType":         "${aws:InstanceType}",
 }
 
+// OTelAppendDimensions maps OTel resource attribute placeholders to the same
+// ec2tagger dimension keys as SupportedAppendDimensions. This allows users to
+// use OTel-style placeholders (e.g. "${host.id}") in append_dimensions on EC2.
+var OTelAppendDimensions = map[string]string{
+	"ImageId":      "${host.image.id}",
+	"InstanceId":   "${host.id}",
+	"InstanceType": "${host.type}",
+}
+
 const (
 	AttributeVolumeId            = "VolumeId"
 	ValueAppendDimensionVolumeId = "${aws:VolumeId}"
