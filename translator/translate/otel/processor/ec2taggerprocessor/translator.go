@@ -50,12 +50,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	_ = credentials.Unmarshal(cfg)
 	for k, v := range ec2tagger.SupportedAppendDimensions {
 		value, ok := common.GetString(conf, common.ConfigKey(Ec2taggerKey, k))
-		if ok && v == value {
+		if !ok {
+			continue
+		}
+		if v == value {
 			if k == "AutoScalingGroupName" {
 				cfg.EC2InstanceTagKeys = append(cfg.EC2InstanceTagKeys, k)
 			} else {
 				cfg.EC2MetadataTags = append(cfg.EC2MetadataTags, k)
 			}
+		} else if otelVal, exists := ec2tagger.OTelAppendDimensions[k]; exists && otelVal == value {
+			cfg.EC2MetadataTags = append(cfg.EC2MetadataTags, k)
 		}
 	}
 

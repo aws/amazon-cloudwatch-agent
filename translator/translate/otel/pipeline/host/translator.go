@@ -28,6 +28,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetectionprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
@@ -91,10 +92,15 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	}
 
 	if t.Destination() != common.CloudWatchLogsKey {
-		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
-			log.Printf("D! ec2tagger processor required because append_dimensions is set")
-			translators.Processors.Set(ec2taggerprocessor.NewTranslator())
-			ec2TaggerEnabled = true
+		if context.CurrentContext().Mode() == config.ModeEC2 {
+			if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
+				log.Printf("D! ec2tagger processor required because append_dimensions is set")
+				translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+				ec2TaggerEnabled = true
+			}
+		} else {
+			log.Printf("D! resourcedetection processor required for cloud metadata")
+			translators.Processors.Set(resourcedetectionprocessor.NewTranslator([]string{"env", "azure", "gcp", "system"}))
 		}
 
 		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
@@ -176,3 +182,4 @@ func determinePipeline(name string) string {
 	}
 	return ""
 }
+
