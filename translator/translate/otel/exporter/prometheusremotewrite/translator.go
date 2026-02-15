@@ -46,6 +46,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: AMPSectionKey + " or " + common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*prometheusremotewriteexporter.Config)
+	cfg.AddMetricSuffixes = false
 	cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))})
 	cfg.ResourceToTelemetrySettings = resourcetotelemetry.Settings{Enabled: true, ClearAfterCopy: true}
 	// ignoring bool return value since we are checking with isSet beforehand

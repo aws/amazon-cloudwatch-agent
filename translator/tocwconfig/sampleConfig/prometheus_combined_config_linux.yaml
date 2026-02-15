@@ -72,7 +72,7 @@ exporters:
         role_arn: ""
         version: "0"
     prometheusremotewrite/amp:
-        add_metric_suffixes: true
+        add_metric_suffixes: false
         auth:
             authenticator: sigv4auth
         endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
