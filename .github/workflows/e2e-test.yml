@@ -69,12 +69,16 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      actions: write
     with:
-      test-image-before-upload: false
+      run-tests: false
 
   BuildOperator:
     needs: [GetLatestOperatorCommitSHA]
     uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
+    permissions:
+      id-token: write
+      contents: read
     concurrency:
       group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
       cancel-in-progress: true
@@ -159,6 +163,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJVMTomcatTestHelm'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -183,6 +190,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJVMTomcatTestAddon'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -207,6 +217,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EKafkaTestHelm'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -231,6 +244,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EKafkaTestAddon'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -255,6 +271,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJMXContainerInsightsTestHelm'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -279,6 +298,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJMXContainerInsightsTestAddon'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -303,6 +325,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJVMTomcatTestHelmIPv6'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -329,6 +354,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJVMTomcatTestAddonIPv6'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -355,6 +383,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EKafkaTestHelmIPv6'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -381,6 +412,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EKafkaTestAddonIPv6'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -407,6 +441,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJMXContainerInsightsTestHelmIPv6'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
@@ -433,6 +470,9 @@ jobs:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EJMXContainerInsightsTestAddonIPv6'
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
