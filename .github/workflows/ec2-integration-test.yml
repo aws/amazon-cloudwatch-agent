@@ -107,7 +107,7 @@ jobs:
             fi
 
             CACHE_KEY_VAR=""
-            if [ -n "${{ inputs.cache_key }}" ]; then
+            if [ -n "${{ inputs.cache_key }}" ] && grep -q 'variable "cache_key"' variables.tf 2>/dev/null; then
               CACHE_KEY_VAR="-var=cache_key=${{ inputs.cache_key }}"
             fi
 
