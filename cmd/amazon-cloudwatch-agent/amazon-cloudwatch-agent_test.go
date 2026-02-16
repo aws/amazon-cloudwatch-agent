@@ -89,8 +89,12 @@ service:
 		wantErr     bool
 	}{
 		"WithInvalidFile": {
-			input:   []string{filepath.Join("not", "a", "file"), filepath.Join("testdata", "base.yaml")},
+			input:   []string{filepath.Join("testdata", "invalid.yaml"), filepath.Join("testdata", "base.yaml")},
 			wantErr: true,
+		},
+		"WithMissingFile": {
+			input: []string{filepath.Join("not", "a", "file"), filepath.Join("testdata", "base.yaml")},
+			want:  mustLoadFromFile(t, filepath.Join("testdata", "base.yaml")),
 		},
 		"WithNoMerge": {
 			input:   []string{filepath.Join("testdata", "base.yaml")},
