@@ -6,11 +6,10 @@ package cloudauth
 import (
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/cloudauthextension"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-
-	extcloudauth "github.com/aws/amazon-cloudwatch-agent/extension/cloudauth"
 )
 
 func TestTranslator_Translate(t *testing.T) {
@@ -48,7 +47,7 @@ func TestTranslator_Translate(t *testing.T) {
 
 			cfg, err := tr.Translate(confmap.NewFromStringMap(tc.input))
 			require.NoError(t, err)
-			assert.Equal(t, tc.wantTokenFile, cfg.(*extcloudauth.Config).TokenFile)
+			assert.Equal(t, tc.wantTokenFile, cfg.(*cloudauthextension.Config).TokenFile)
 		})
 	}
 }

@@ -17,6 +17,7 @@ replace (
 replace (
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260114204312-9cef1509b4d3
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260114204312-9cef1509b4d3
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/cloudauthextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/cloudauthextension v0.0.0-20260114204312-9cef1509b4d3
 )
 
 replace (
@@ -141,6 +142,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/cloudauthextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.124.1

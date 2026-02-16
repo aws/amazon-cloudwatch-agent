@@ -4,11 +4,11 @@
 package cloudauth
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/cloudauthextension"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/extension"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/cloudauth"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -17,30 +17,27 @@ const (
 	stsResourceKey = "sts_resource"
 )
 
-var ID = component.NewID(cloudauth.TypeStr)
+var (
+	factory = cloudauthextension.NewFactory()
+	ID      = component.NewID(factory.Type())
+)
 
-type translator struct {
-	factory extension.Factory
-}
+type translator struct{}
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator() common.ComponentTranslator {
-	return &translator{
-		factory: cloudauth.NewFactory(),
-	}
+	return &translator{}
 }
 
 func (t *translator) ID() component.ID {
 	return ID
 }
 
-// Translate creates the cloudauth extension config from the agent JSON config.
-// The extension is activated when credentials.oidc_auth is present.
-// Each exporter's credentials.role_arn is used directly by the web identity
-// credential chain provider for AssumeRoleWithWebIdentity.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	cfg := t.factory.CreateDefaultConfig().(*cloudauth.Config)
+	cfg := factory.CreateDefaultConfig().(*cloudauthextension.Config)
+
+	cfg.TokenDir = paths.AgentDir + "/var"
 
 	if tf, ok := common.GetString(conf, common.ConfigKey(common.AgentKey, common.CredentialsKey, common.OIDCAuthKey, tokenFileKey)); ok {
 		cfg.TokenFile = tf

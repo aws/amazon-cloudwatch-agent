@@ -27,7 +27,8 @@ extensions:
             usage_flags:
                 mode: OP
                 region_type: ACJ
-    cloudauth: {}
+    cloudauth:
+        token_dir: /opt/aws/amazon-cloudwatch-agent/var
     entitystore:
         mode: onPremise
         profile: AmazonCloudWatchAgent
