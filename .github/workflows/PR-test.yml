@@ -187,10 +187,24 @@ jobs:
           echo "ec2_linux_matrix pages: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}"
           echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
 
+  WarmTestCache:
+    name: 'WarmTestCache'
+    needs: [CheckLabel, OutputEnvVariables]
+    if: needs.CheckLabel.outputs.should_run == 'true'
+    uses: ./.github/workflows/warm-test-cache.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
 
   EC2LinuxIntegrationTest-0:
     name: 'EC2LinuxTests-0'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload, WarmTestCache ]
     if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
     permissions:
@@ -208,12 +222,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       is_selinux_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-1:
     name: 'EC2LinuxTests-1'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload, WarmTestCache ]
     if: ${{ needs.CheckLabel.outputs.should_run == 'true' && needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 1 }}
     uses:  ./.github/workflows/ec2-integration-test.yml
     permissions:
@@ -231,12 +246,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       is_selinux_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-2:
     name: 'EC2LinuxTests-2'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload, WarmTestCache ]
     if: ${{ needs.CheckLabel.outputs.should_run == 'true' && needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 2 }}
     uses:  ./.github/workflows/ec2-integration-test.yml
     permissions:
@@ -254,12 +270,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       is_selinux_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-3:
     name: 'EC2LinuxTests-3'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload, WarmTestCache ]
     if: ${{ needs.CheckLabel.outputs.should_run == 'true' && needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 3 }}
     uses:  ./.github/workflows/ec2-integration-test.yml
     permissions:
@@ -277,12 +294,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       is_selinux_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-4:
     name: 'EC2LinuxTests-4'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload, WarmTestCache ]
     if: ${{ needs.CheckLabel.outputs.should_run == 'true' && needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 4 }}
     uses:  ./.github/workflows/ec2-integration-test.yml
     permissions:
@@ -300,12 +318,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       is_selinux_test: false
     secrets: inherit
 
   EC2SELinuxIntegrationTest:
     name: 'EC2SELinuxTests'
-    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload ]
+    needs: [ CheckLabel, GenerateTestMatrix, OutputEnvVariables, StartLocalStack, BuildAndUpload, WarmTestCache ]
     if: needs.CheckLabel.outputs.should_run == 'true'
     uses:  ./.github/workflows/ec2-integration-test.yml
     permissions:
@@ -323,6 +342,7 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       is_selinux_test: true
     secrets: inherit
 
@@ -364,7 +384,7 @@ jobs:
   verify-all:
     name: Verify All PR Test Jobs
     needs: [IntegrationTestGate, CheckLabel, BuildAndUpload, OutputEnvVariables, StartLocalStack,
-            GenerateTestMatrix, EC2LinuxIntegrationTest-0, EC2LinuxIntegrationTest-1,
+            GenerateTestMatrix, WarmTestCache, EC2LinuxIntegrationTest-0, EC2LinuxIntegrationTest-1,
             EC2LinuxIntegrationTest-2, EC2LinuxIntegrationTest-3, EC2LinuxIntegrationTest-4,
             EC2SELinuxIntegrationTest, StopLocalStack]
     runs-on: ubuntu-latest
