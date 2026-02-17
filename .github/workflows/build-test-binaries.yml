@@ -1,0 +1,87 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Build Test Binaries
+
+on:
+  workflow_call:
+    inputs:
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      s3_integration_bucket:
+        required: true
+        type: string
+      terraform_assume_role:
+        required: true
+        type: string
+    outputs:
+      test_binaries_prefix:
+        description: "S3 prefix for pre-compiled test binaries"
+        value: ${{ jobs.BuildTestBinaries.outputs.test_binaries_prefix }}
+
+jobs:
+  BuildTestBinaries:
+    name: 'BuildTestBinaries'
+    runs-on: ubuntu-latest
+    outputs:
+      test_binaries_prefix: ${{ steps.build.outputs.test_binaries_prefix }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.test_repo_name }}
+          ref: ${{ inputs.test_repo_branch }}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.25
+          cache: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: us-west-2
+
+      - name: Build and upload test binaries
+        id: build
+        env:
+          S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          TEST_BRANCH: ${{ inputs.test_repo_branch }}
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/amd64"
+          echo "test_binaries_prefix=${PREFIX}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p build/bin
+          go mod download
+
+          # Compile each test package under ./test/...
+          FAILED=0
+          for pkg in $(go list ./test/...); do
+            name=$(basename "$pkg")
+            echo "Building ${name}.test from ${pkg}..."
+            if CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test -c -o "build/bin/${name}.test" "$pkg" 2>&1; then
+              echo "  ✓ ${name}.test"
+            else
+              echo "  ✗ ${name}.test (skipped — may have no tests)"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          # Count results
+          BUILT=$(ls build/bin/*.test 2>/dev/null | wc -l)
+          echo "Built ${BUILT} test binaries (${FAILED} skipped)"
+          ls -lh build/bin/
+
+          # Upload to S3
+          echo "Uploading to s3://${S3_BUCKET}/${PREFIX}/"
+          aws s3 cp build/bin/ "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
+          echo "Upload complete"
