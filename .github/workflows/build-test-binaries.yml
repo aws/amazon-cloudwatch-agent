@@ -57,31 +57,27 @@ jobs:
           TEST_BRANCH: ${{ inputs.test_repo_branch }}
         run: |
           COMMIT_SHA=$(git rev-parse --short HEAD)
-          PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/amd64"
-          echo "test_binaries_prefix=${PREFIX}" >> "$GITHUB_OUTPUT"
+          echo "test_binaries_prefix=integration-test/test-binaries/${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
-          mkdir -p build/bin
           go mod download
 
-          # Compile each test package under ./test/...
-          FAILED=0
-          for pkg in $(go list ./test/...); do
-            name=$(basename "$pkg")
-            echo "Building ${name}.test from ${pkg}..."
-            if CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test -c -o "build/bin/${name}.test" "$pkg" 2>&1; then
-              echo "  ✓ ${name}.test"
-            else
-              echo "  ✗ ${name}.test (skipped — may have no tests)"
-              FAILED=$((FAILED + 1))
-            fi
+          for GOARCH in amd64 arm64; do
+            PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
+            mkdir -p "build/bin/${GOARCH}"
+
+            echo "=== Building for linux/${GOARCH} ==="
+            for pkg in $(go list ./test/...); do
+              name=$(basename "$pkg")
+              if CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go test -c -o "build/bin/${GOARCH}/${name}.test" "$pkg" 2>&1; then
+                echo "  ✓ ${name}.test"
+              else
+                echo "  ✗ ${name}.test (skipped)"
+              fi
+            done
+
+            BUILT=$(ls "build/bin/${GOARCH}/"*.test 2>/dev/null | wc -l)
+            echo "Built ${BUILT} binaries for linux/${GOARCH}"
+
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
           done
-
-          # Count results
-          BUILT=$(ls build/bin/*.test 2>/dev/null | wc -l)
-          echo "Built ${BUILT} test binaries (${FAILED} skipped)"
-          ls -lh build/bin/
-
-          # Upload to S3
-          echo "Uploading to s3://${S3_BUCKET}/${PREFIX}/"
-          aws s3 cp build/bin/ "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
           echo "Upload complete"
