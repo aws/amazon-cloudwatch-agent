@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttpexporter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -125,6 +126,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Processors.Set(deltatocumulativeprocessor.NewTranslator(common.WithName(t.name)))
 		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
 		translators.Extensions.Set(sigv4auth.NewTranslator())
+	case common.OtlpKey:
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		translators.Exporters.Set(otlphttpexporter.NewTranslator())
+		translators.Extensions.Set(sigv4auth.NewTranslatorWithNameAndService(common.MonitoringService, common.MonitoringService))
 	default:
 		return nil, fmt.Errorf("pipeline (%s) does not support destination (%s) in configuration", t.name, t.Destination())
 	}

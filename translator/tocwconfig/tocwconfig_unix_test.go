@@ -59,6 +59,14 @@ func TestJMXConfigLinux(t *testing.T) {
 	checkTranslation(t, "jmx_config_linux", "linux", expectedEnvVars, "")
 }
 
+func TestOtlpJmxConfigLinux(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "otlp_export_jmx_linux", "linux", expectedEnvVars, "")
+}
+
 func TestJMXConfigEKS(t *testing.T) {
 	resetContext(t)
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)

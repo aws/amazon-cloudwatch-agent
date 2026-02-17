@@ -53,6 +53,7 @@ const (
 	CredentialsKey                                 = "credentials"
 	RoleARNKey                                     = "role_arn"
 	SigV4Auth                                      = "sigv4auth"
+	MonitoringService                              = "monitoring"
 	MetricsCollectionIntervalKey                   = "metrics_collection_interval"
 	AggregationDimensionsKey                       = "aggregation_dimensions"
 	MeasurementKey                                 = "measurement"

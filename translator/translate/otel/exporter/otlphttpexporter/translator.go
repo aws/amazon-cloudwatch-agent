@@ -41,14 +41,14 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlphttpexporter.Config)
 
-	metricsEndpoint, ok := common.GetString(conf, common.ConfigKey(common.OtlpKey, common.Endpoint))
+	metricsEndpoint, ok := common.GetString(conf, common.ConfigKey(common.OTLPIngestionKey, common.Endpoint))
 	if !ok {
 		return nil, errors.New("otlphttpexporter: missing required endpoint")
 	}
 	cfg.MetricsEndpoint = metricsEndpoint
 
 	// Configure authentication
-	cfg.ClientConfig.Auth = &configauth.Authentication{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))}
+	cfg.ClientConfig.Auth = &configauth.Authentication{AuthenticatorID: component.NewIDWithName(component.MustNewType(common.SigV4Auth), common.MonitoringService)}
 
 	return cfg, nil
 }

@@ -24,3 +24,17 @@ func TestTranslate(t *testing.T) {
 		assert.Equal(t, wantCfg, gotCfg)
 	}
 }
+
+func TestTranslateWithService(t *testing.T) {
+	tt := NewTranslatorWithNameAndService("monitoring", "monitoring")
+	assert.Equal(t, "sigv4auth/monitoring", tt.ID().String())
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	gotCfg, ok := got.(*sigv4authextension.Config)
+	require.True(t, ok)
+	assert.Equal(t, "monitoring", gotCfg.Service)
+}

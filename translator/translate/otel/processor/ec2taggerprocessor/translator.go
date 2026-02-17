@@ -67,7 +67,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.DiskDeviceTagKey = "device"
 	}
 
-	cfg.MiddlewareID = &agenthealth.StatusCodeID
+	// Only set middleware when not using OTLP destination (agenthealth not in OTLP pipeline)
+	if !conf.IsSet(common.OTLPIngestionKey) {
+		cfg.MiddlewareID = &agenthealth.StatusCodeID
+	}
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil
