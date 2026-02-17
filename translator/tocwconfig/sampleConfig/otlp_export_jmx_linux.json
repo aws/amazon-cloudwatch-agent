@@ -1,5 +1,6 @@
 {
   "agent": {
+    "omit_hostname": true,
     "region": "us-east-1"
   },
   "metrics": {

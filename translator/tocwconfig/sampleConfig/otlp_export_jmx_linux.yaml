@@ -101,8 +101,6 @@ receivers:
         otlp:
             endpoint: 0.0.0.0:0
             timeout: 5s
-        resource_attributes:
-            host: 80a9973b42dd
         target_system: jvm
 service:
     extensions:
