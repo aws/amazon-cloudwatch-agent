@@ -919,6 +919,7 @@ func TestOtlpHostMetricsConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
 			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -937,6 +938,7 @@ func TestOtlpStatsDConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
 			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -955,6 +957,7 @@ func TestOtlpCollectedConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
 			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -973,6 +976,7 @@ func TestOtlpOTLPConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
 			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
