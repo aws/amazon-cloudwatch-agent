@@ -109,7 +109,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
-		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+		translators.Processors.Set(ec2taggerprocessor.NewTranslator(common.WithDestination(t.Destination())))
 	}
 
 	switch t.Destination() {

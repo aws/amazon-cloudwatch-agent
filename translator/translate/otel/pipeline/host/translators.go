@@ -79,25 +79,21 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 				common.WithDestination(destination),
 			))
 		case common.OtlpKey:
-			receivers := common.NewTranslatorMap[component.Config, component.ID]()
-			receivers.Merge(hostReceivers)
-			receivers.Merge(deltaReceivers)
-			translators.Set(NewTranslator(
-				common.PipelineNameHost,
-				receivers,
-				common.WithDestination(destination),
-			))
+			// Merge host and delta receivers into one pipeline (no separate delta pipeline needed)
+			if hasHostPipeline || hasDeltaPipeline {
+				receivers := common.NewTranslatorMap[component.Config, component.ID]()
+				receivers.Merge(hostReceivers)
+				receivers.Merge(deltaReceivers)
+				translators.Set(NewTranslator(
+					common.PipelineNameHost,
+					receivers,
+					common.WithDestination(destination),
+				))
+			}
 			if hasHostCustomPipeline {
 				translators.Set(NewTranslator(
 					common.PipelineNameHostCustomMetrics,
 					hostCustomReceivers,
-					common.WithDestination(destination),
-				))
-			}
-			if hasDeltaPipeline {
-				translators.Set(NewTranslator(
-					common.PipelineNameHostDeltaMetrics,
-					deltaReceivers,
 					common.WithDestination(destination),
 				))
 			}

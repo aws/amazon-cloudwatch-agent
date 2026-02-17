@@ -42,7 +42,7 @@ func TestTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]any{
 				"metrics_endpoint": "https://custom-endpoint.com/v1/metrics",
 				"auth": map[string]any{
-					"authenticator": "sigv4auth",
+					"authenticator": "sigv4auth/monitoring",
 				},
 			}),
 		},
