@@ -1,9 +1,0 @@
-{
-  "metrics": {
-    "metrics_destinations": {
-      "otlp": {
-        "endpoint": "https://otlp-endpoint.us-west-2.amazonaws.com/v1/metrics"
-      }
-    }
-  }
-}

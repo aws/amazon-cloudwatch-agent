@@ -61,6 +61,7 @@ func TestJMXConfigLinux(t *testing.T) {
 
 func TestOtlpJmxConfigLinux(t *testing.T) {
 	resetContext(t)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
 	expectedEnvVars := map[string]string{}

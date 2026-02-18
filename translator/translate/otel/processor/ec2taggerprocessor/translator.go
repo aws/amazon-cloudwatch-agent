@@ -22,16 +22,21 @@ var Ec2taggerKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKe
 type translator struct {
 	name    string
 	factory processor.Factory
+	common.DestinationProvider
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.ComponentTranslator {
-	return NewTranslatorWithName("")
-}
-
-func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, ec2tagger.NewFactory()}
+func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
+	t := &translator{factory: ec2tagger.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
+	// Only use named instance for OTLP to avoid changing existing CloudWatch configs
+	if t.Destination() == common.OtlpKey {
+		t.name = t.Destination()
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
@@ -68,7 +73,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	// Only set middleware when not using OTLP destination (agenthealth not in OTLP pipeline)
-	if !conf.IsSet(common.OTLPIngestionKey) {
+	if t.Destination() != common.OtlpKey {
 		cfg.MiddlewareID = &agenthealth.StatusCodeID
 	}
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()

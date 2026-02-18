@@ -77,6 +77,17 @@ processors:
             - InstanceId
             - InstanceType
         imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
+    ec2tagger/otlp:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        imds_retries: 1
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
 receivers:
@@ -103,7 +114,7 @@ service:
             exporters:
                 - otlphttp
             processors:
-                - ec2tagger
+                - ec2tagger/otlp
                 - awsentity/service/telegraf
                 - batch/hostCustomMetrics/otlp
             receivers:
