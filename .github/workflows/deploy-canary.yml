@@ -25,6 +25,7 @@ jobs:
   DeployCanary:
     name: "DeployCanary"
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read

@@ -47,6 +47,7 @@ env:
 jobs:
   scale-eks-cluster:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
