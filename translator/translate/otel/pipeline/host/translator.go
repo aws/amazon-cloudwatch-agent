@@ -26,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/deltatocumulativeprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/disktaggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetectionprocessor"
@@ -107,6 +108,11 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		if mdt.IsSet(conf) {
 			log.Printf("D! metric decorator required because measurement fields are set")
 			translators.Processors.Set(mdt)
+		}
+
+		if disktaggerprocessor.IsSet(conf) {
+			log.Printf("D! disktagger processor required because disk VolumeId/DiskId dimension is set")
+			translators.Processors.Set(disktaggerprocessor.NewTranslator())
 		}
 	}
 

@@ -14,10 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
@@ -28,7 +29,6 @@ const (
 
 var DetectRegion = detectRegion
 var DetectCredentialsPath = detectCredentialsPath
-var DefaultEC2Region = defaultEC2Region
 var DefaultECSRegion = defaultECSRegion
 var IsEKS = isEKS
 var runInAws = os.Getenv(translatorconfig.RUN_IN_AWS)
@@ -49,9 +49,16 @@ func DetectAgentMode(configuredMode string) string {
 		return translatorconfig.ModeWithIRSA
 	}
 
-	if DefaultEC2Region() != "" {
-		fmt.Println("I! Detected the instance is EC2")
-		return translatorconfig.ModeEC2
+	// Use cloudmetadata to detect cloud provider
+	if provider := cloudmetadata.GetProvider(); provider != nil {
+		switch provider.CloudProvider() {
+		case cloudprovider.AWS:
+			fmt.Println("I! Detected the instance is EC2")
+			return translatorconfig.ModeEC2
+		case cloudprovider.Azure:
+			fmt.Println("I! Detected the instance is Azure")
+			return translatorconfig.ModeOnPrem
+		}
 	}
 
 	if DefaultECSRegion() != "" {
@@ -113,9 +120,6 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) string {
 	return region
 }
 
-func defaultEC2Region() string {
-	return ec2util.GetEC2UtilSingleton().Region
-}
 
 func defaultECSRegion() string {
 	return ecsutil.GetECSUtilSingleton().Region

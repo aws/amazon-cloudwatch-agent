@@ -6,7 +6,7 @@ exporters:
         middleware: agenthealth/metrics
         namespace: CWAgent
         profile: AmazonCloudWatchAgent
-        region: us-west-2
+        region: westus2
         resource_to_telemetry_conversion:
             enabled: true
         shared_credential_file: fake-path
@@ -29,7 +29,7 @@ extensions:
     entitystore:
         mode: onPremise
         profile: AmazonCloudWatchAgent
-        region: us-west-2
+        region: westus2
         shared_credential_file: fake-path
 processors:
     resourcedetection/resourcedetection:
@@ -50,7 +50,7 @@ processors:
                 azure.vm.scaleset.name:
                     enabled: false
                 azure.vm.size:
-                    enabled: false
+                    enabled: true
                 cloud.account.id:
                     enabled: false
                 cloud.platform:
@@ -58,9 +58,9 @@ processors:
                 cloud.provider:
                     enabled: false
                 cloud.region:
-                    enabled: false
+                    enabled: true
                 host.id:
-                    enabled: false
+                    enabled: true
                 host.name:
                     enabled: false
             tags: []
@@ -101,9 +101,9 @@ processors:
                 cloud.provider:
                     enabled: false
                 cloud.region:
-                    enabled: false
+                    enabled: true
                 host.id:
-                    enabled: false
+                    enabled: true
                 host.image.id:
                     enabled: false
                 host.name:
@@ -312,8 +312,11 @@ processors:
                     enabled: false
         timeout: 5s
 receivers:
-    telegraf_procstat/793254176:
-        alias_name: amazon-cloudwatch-agent
+    telegraf_cpu:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_mem:
         collection_interval: 1m0s
         initial_delay: 1s
         timeout: 0s
@@ -329,7 +332,8 @@ service:
             processors:
                 - resourcedetection/resourcedetection
             receivers:
-                - telegraf_procstat/793254176
+                - telegraf_cpu
+                - telegraf_mem
     telemetry:
         logs:
             encoding: console

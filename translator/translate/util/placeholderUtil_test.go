@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
@@ -66,6 +67,11 @@ func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) fun
 	}
 }
 func TestResolveAWSMetadataPlaceholders(t *testing.T) {
+	// Mock cloudmetadata to return empty metadata (no IMDS)
+	cloudmetadata.SetForTest(nil)
+	defer cloudmetadata.ResetForTest()
+	tagMetadataProvider = func() map[string]string { return map[string]string{} }
+
 	tests := []struct {
 		name     string
 		input    map[string]interface{}
@@ -224,7 +230,7 @@ func TestResolveAWSMetadataPlaceholdersWithMockedData(t *testing.T) {
 }
 func TestAWSMetadataFunctionality(t *testing.T) {
 	// Test that AWS metadata placeholders are resolved correctly
-	// Note: We rely on ec2util.GetEC2UtilSingleton() for caching, not additional layers
+	// Note: We rely on cloudmetadata.GetProvider() singleton for caching
 
 	originalProvider := Ec2MetadataInfoProvider
 	Ec2MetadataInfoProvider = func() *Metadata {
