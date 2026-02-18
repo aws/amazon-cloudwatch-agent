@@ -272,10 +272,10 @@ func TestStartFailWithNoMetadata(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	_, cancel := context.WithCancel(context.Background())
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: nil},
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: nil},
 	}
 
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
@@ -305,11 +305,11 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
-		ec2Provider:       ec2Provider,
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
@@ -344,11 +344,11 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	defaultRefreshInterval = 10 * time.Millisecond
 
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
-		ec2Provider:       ec2Provider,
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
@@ -391,11 +391,11 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
-		ec2Provider:       ec2Provider,
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
@@ -432,11 +432,11 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
-		ec2Provider:       ec2Provider,
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 
 	md := createTestMetrics([]map[string]string{
@@ -494,11 +494,11 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	BackoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
 	defaultRefreshInterval = 180 * time.Second
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
-		ec2Provider:       ec2Provider,
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 
 	deadline := time.NewTimer(1 * time.Second)
@@ -538,11 +538,11 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
-		ec2Provider:       ec2Provider,
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
@@ -587,10 +587,10 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 	_, cancel := context.WithCancel(context.Background())
 
 	tagger := &Tagger{
-		Config:            cfg,
-		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
-		cancelFunc:        cancel,
-		metadataProvider:  &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		Config:           cfg,
+		logger:           processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 	}
 
 	deadline := time.NewTimer(1 * time.Second)

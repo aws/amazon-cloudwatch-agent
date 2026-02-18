@@ -120,7 +120,6 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) string {
 	return region
 }
 
-
 func defaultECSRegion() string {
 	return ecsutil.GetECSUtilSingleton().Region
 }

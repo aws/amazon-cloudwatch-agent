@@ -249,7 +249,6 @@ func (t *Tagger) refreshLoopTags(refreshInterval time.Duration, stopAfterFirstSu
 	}
 }
 
-
 func (t *Tagger) ec2TagsRetrieved() bool {
 	allTagsRetrieved := true
 	t.RLock()
@@ -270,7 +269,6 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	}
 	return allTagsRetrieved
 }
-
 
 // Start acts as input validation and serves the purpose of updating ec2 tags.
 // It will be called when OTel is enabling each processor
@@ -361,8 +359,6 @@ func (t *Tagger) refreshLoopToUpdateTags() {
 		}()
 	}
 }
-
-
 
 func (t *Tagger) setStarted() {
 	t.Lock()

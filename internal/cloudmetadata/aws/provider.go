@@ -7,9 +7,9 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/metadataproviders/ec2"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/metadataproviders/ec2"
 )
 
 type Provider struct {
@@ -48,11 +48,11 @@ func NewProvider(ctx context.Context) (*Provider, error) {
 	}, nil
 }
 
-func (p *Provider) Region() string                          { return p.region }
-func (p *Provider) InstanceID() string                      { return p.instanceID }
-func (p *Provider) Hostname() string                        { return p.hostname }
-func (p *Provider) InstanceType() string                    { return p.instanceType }
-func (p *Provider) ImageID() string                         { return p.imageID }
-func (p *Provider) AccountID() string                       { return p.accountID }
-func (p *Provider) PrivateIP() string                       { return p.privateIP }
+func (p *Provider) Region() string                             { return p.region }
+func (p *Provider) InstanceID() string                         { return p.instanceID }
+func (p *Provider) Hostname() string                           { return p.hostname }
+func (p *Provider) InstanceType() string                       { return p.instanceType }
+func (p *Provider) ImageID() string                            { return p.imageID }
+func (p *Provider) AccountID() string                          { return p.accountID }
+func (p *Provider) PrivateIP() string                          { return p.privateIP }
 func (p *Provider) CloudProvider() cloudprovider.CloudProvider { return cloudprovider.AWS }

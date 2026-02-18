@@ -188,4 +188,3 @@ func determinePipeline(name string) string {
 	}
 	return ""
 }
-
