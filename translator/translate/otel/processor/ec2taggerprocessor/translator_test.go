@@ -67,11 +67,9 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &ec2tagger.Config{
 				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 5 * time.Minute,
+				RefreshVolumesInterval: 0 * time.Second,
 				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
 				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
-				DiskDeviceTagKey:       "device",
-				EBSDeviceKeys:          []string{"*"},
 			},
 		},
 		"OTelPlaceholders": {

@@ -1,0 +1,21 @@
+{
+  "agent": {
+    "region": "westus2"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${host.id}",
+      "Region": "${cloud.region}",
+      "VMSize": "${azure.vm.size}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["cpu_usage_idle"],
+        "totalcpu": false
+      },
+      "mem": {
+        "measurement": ["mem_used_percent"]
+      }
+    }
+  }
+}

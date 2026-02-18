@@ -1,0 +1,57 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package cloudmetadata
+
+import (
+	"context"
+	"fmt"
+	"sync"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata/azure"
+)
+
+var (
+	globalProvider Provider
+	once           sync.Once
+)
+
+// GetProvider returns the singleton cloud metadata provider.
+// It auto-detects the cloud by trying each provider in order.
+func GetProvider() Provider {
+	once.Do(func() {
+		ctx := context.Background()
+		var err error
+
+		// Try AWS first (most common)
+		if globalProvider, err = aws.NewProvider(ctx); err == nil {
+			fmt.Printf("I! [cloudmetadata] Detected AWS (region=%s, instanceID=%s)\n", globalProvider.Region(), globalProvider.InstanceID())
+			return
+		}
+
+		// Try Azure
+		if globalProvider, err = azure.NewProvider(ctx); err == nil {
+			fmt.Printf("I! [cloudmetadata] Detected Azure (region=%s, instanceID=%s)\n", globalProvider.Region(), globalProvider.InstanceID())
+			return
+		}
+
+		// No cloud detected
+		fmt.Println("I! [cloudmetadata] No cloud provider detected")
+	})
+	return globalProvider
+}
+
+// ResetForTest resets the singleton for testing.
+func ResetForTest() {
+	once = sync.Once{}
+	globalProvider = nil
+}
+
+// SetForTest sets a specific provider for testing.
+// Pass nil to simulate no cloud detected.
+func SetForTest(p Provider) {
+	once = sync.Once{}
+	once.Do(func() {})
+	globalProvider = p
+}

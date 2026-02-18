@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 )
 
 const (
@@ -82,7 +82,10 @@ func callFuncWithRetries(fn func() (*ec2.DescribeTagsOutput, error), errorMsg st
 var ec2ClientFactory = createDescribeTagsClient
 
 func createDescribeTagsClient(ctx context.Context) (ec2.DescribeTagsAPIClient, error) {
-	region := ec2util.GetEC2UtilSingleton().Region
+	region := ""
+	if p := cloudmetadata.GetProvider(); p != nil {
+		region = p.Region()
+	}
 	if region == "" {
 		return nil, nil
 	}
