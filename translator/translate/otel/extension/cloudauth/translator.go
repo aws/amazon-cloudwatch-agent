@@ -14,7 +14,7 @@ import (
 
 const (
 	tokenFileKey   = "token_file"
-	stsResourceKey = "sts_resource"
+	audienceKey  = "audience"
 )
 
 var (
@@ -43,8 +43,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.TokenFile = tf
 	}
 
-	if res, ok := common.GetString(conf, common.ConfigKey(common.AgentKey, common.CredentialsKey, common.OIDCAuthKey, stsResourceKey)); ok {
-		cfg.STSResource = res
+	if res, ok := common.GetString(conf, common.ConfigKey(common.AgentKey, common.CredentialsKey, common.OIDCAuthKey, audienceKey)); ok {
+		cfg.Audience = res
 	}
 
 	return cfg, nil

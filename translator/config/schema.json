@@ -1319,7 +1319,7 @@
               "minLength": 1,
               "maxLength": 4096
             },
-            "sts_resource": {
+            "audience": {
               "description": "The audience/resource claim for the OIDC token request. Defaults to https://management.azure.com/ for Azure auto-detection.",
               "type": "string",
               "minLength": 1,
