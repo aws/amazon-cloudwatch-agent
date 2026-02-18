@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 )
 
 var appendDimensionsKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)

@@ -14,7 +14,7 @@ const (
 )
 
 type Config struct {
-	RefreshInterval time.Duration `mapstructure:"refresh_interval"`
-	DiskDeviceTagKey string      `mapstructure:"disk_device_tag_key"`
-	MiddlewareID    *component.ID `mapstructure:"middleware,omitempty"`
+	RefreshInterval  time.Duration `mapstructure:"refresh_interval"`
+	DiskDeviceTagKey string        `mapstructure:"disk_device_tag_key"`
+	MiddlewareID     *component.ID `mapstructure:"middleware,omitempty"`
 }

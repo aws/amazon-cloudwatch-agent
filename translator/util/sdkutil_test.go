@@ -20,14 +20,14 @@ type mockProvider struct {
 	cloudProvider cloudprovider.CloudProvider
 }
 
-func (m *mockProvider) Region() string        { return m.region }
-func (m *mockProvider) InstanceID() string     { return "i-test" }
-func (m *mockProvider) Hostname() string       { return "test" }
-func (m *mockProvider) InstanceType() string   { return "t3.micro" }
-func (m *mockProvider) ImageID() string        { return "" }
-func (m *mockProvider) AccountID() string      { return "123456" }
-func (m *mockProvider) PrivateIP() string      { return "10.0.0.1" }
-func (m *mockProvider) CloudProvider() cloudprovider.CloudProvider  { return m.cloudProvider }
+func (m *mockProvider) Region() string                             { return m.region }
+func (m *mockProvider) InstanceID() string                         { return "i-test" }
+func (m *mockProvider) Hostname() string                           { return "test" }
+func (m *mockProvider) InstanceType() string                       { return "t3.micro" }
+func (m *mockProvider) ImageID() string                            { return "" }
+func (m *mockProvider) AccountID() string                          { return "123456" }
+func (m *mockProvider) PrivateIP() string                          { return "10.0.0.1" }
+func (m *mockProvider) CloudProvider() cloudprovider.CloudProvider { return m.cloudProvider }
 
 func TestDetectAgentModeAuto(t *testing.T) {
 	testCases := map[string]struct {
