@@ -122,14 +122,18 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      actions: write
     with:
-      test-image-before-upload: false
+      run-tests: false
 
   # Build and upload operator image to ECR repo
   BuildOperator:
     needs: [ check-trigger, GetLatestOperatorCommitSHA ]
     if: ${{ needs.check-trigger.outputs.should_continue == 'true' }}
     uses: aws/amazon-cloudwatch-agent-operator/.github/workflows/build-and-upload.yml@main
+    permissions:
+      id-token: write
+      contents: read
     concurrency:
       group: ${{ github.workflow }}-operator-${{ inputs.operator-branch || 'main' }}
       cancel-in-progress: true

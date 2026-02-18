@@ -19,14 +19,14 @@ on:
     - cron: '0 11 * * 1,2,3,4,5' # Every day at 11:00 UTC on Monday to Friday
   workflow_dispatch:
     inputs:
-      test-image-before-upload:
-        description: "Run Test on the new container image"
+      run-tests:
+        description: "Run test workflows after build"
         default: true
         type: boolean
   workflow_call:
     inputs:
-      test-image-before-upload:
-        description: "Run Test on the new container image"
+      run-tests:
+        description: "Run test workflows after build"
         default: true
         type: boolean
 
@@ -114,7 +114,7 @@ jobs:
 
   StartIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
+    if: ${{ github.event_name == 'push' || inputs.run-tests }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -126,7 +126,7 @@ jobs:
   StartApplicationSignalsE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
     # Workflow only runs against main
-    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
+    if: ${{ github.event_name == 'push' || inputs.run-tests }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -137,7 +137,7 @@ jobs:
 
   StartEKSE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
+    if: ${{ github.event_name == 'push' || inputs.run-tests }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -148,7 +148,7 @@ jobs:
 
   StartWorkloadDiscoveryIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.test-image-before-upload }}
+    if: ${{ github.event_name == 'push' || inputs.run-tests }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
