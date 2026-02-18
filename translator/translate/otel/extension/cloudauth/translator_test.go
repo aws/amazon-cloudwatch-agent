@@ -16,6 +16,7 @@ func TestTranslator_Translate(t *testing.T) {
 	tests := map[string]struct {
 		input         map[string]interface{}
 		wantTokenFile string
+		wantAudience  string
 	}{
 		"EmptyOIDCAuth": {
 			input: map[string]interface{}{
@@ -38,6 +39,18 @@ func TestTranslator_Translate(t *testing.T) {
 			},
 			wantTokenFile: "/var/run/oidc/token",
 		},
+		"WithAudience": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"credentials": map[string]interface{}{
+						"oidc_auth": map[string]interface{}{
+							"audience": "https://monitoring.azure.com/",
+						},
+					},
+				},
+			},
+			wantAudience: "https://monitoring.azure.com/",
+		},
 	}
 
 	for name, tc := range tests {
@@ -47,7 +60,9 @@ func TestTranslator_Translate(t *testing.T) {
 
 			cfg, err := tr.Translate(confmap.NewFromStringMap(tc.input))
 			require.NoError(t, err)
-			assert.Equal(t, tc.wantTokenFile, cfg.(*cloudauthextension.Config).TokenFile)
+			c := cfg.(*cloudauthextension.Config)
+			assert.Equal(t, tc.wantTokenFile, c.TokenFile)
+			assert.Equal(t, tc.wantAudience, c.Audience)
 		})
 	}
 }

@@ -68,8 +68,19 @@ func newStsCredentialsProvider(cfg aws.Config, roleARN string, region string) aw
 }
 
 func newWebIdentityProvider(region string, roleARN string, tokenFile string) aws.CredentialsProvider {
-	regionalCfg := aws.Config{Region: region}
-	partitionalCfg := aws.Config{Region: getFallbackRegion(region)}
+	httpClient := getSharedHTTPClient()
+	regionalCfg := aws.Config{
+		Region:       region,
+		HTTPClient:   httpClient,
+		ClientLogMode: SDKLogLevel(),
+		Logger:       SDKLogger{},
+	}
+	partitionalCfg := aws.Config{
+		Region:       getFallbackRegion(region),
+		HTTPClient:   httpClient,
+		ClientLogMode: SDKLogLevel(),
+		Logger:       SDKLogger{},
+	}
 	token := stscreds.IdentityTokenFile(tokenFile)
 	return &stsCredentialsProvider{
 		regional:    stscreds.NewWebIdentityRoleProvider(sts.NewFromConfig(regionalCfg), roleARN, token),

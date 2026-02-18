@@ -30,13 +30,21 @@ type CredentialsConfig struct {
 func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) {
 	chainProvider := c.fromChain()
 	if c.RoleARN != "" && os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE") == "" {
-		cfg, err := c.loadConfig(ctx, chainProvider)
-		if err != nil {
-			return aws.Config{}, err
-		}
-		return c.loadConfig(ctx, aws.NewCredentialsCache(newStsCredentialsProvider(cfg, c.RoleARN, c.Region)))
+		return c.assumeRoleConfig(ctx, chainProvider)
 	}
-	return c.loadConfig(ctx, chainProvider)
+	return c.rootConfig(ctx, chainProvider)
+}
+
+func (c *CredentialsConfig) rootConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
+	return c.loadConfig(ctx, provider)
+}
+
+func (c *CredentialsConfig) assumeRoleConfig(ctx context.Context, baseProvider aws.CredentialsProvider) (aws.Config, error) {
+	cfg, err := c.loadConfig(ctx, baseProvider)
+	if err != nil {
+		return aws.Config{}, err
+	}
+	return c.loadConfig(ctx, aws.NewCredentialsCache(newStsCredentialsProvider(cfg, c.RoleARN, c.Region)))
 }
 
 func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
@@ -121,7 +129,6 @@ func init() {
 			}
 			log.Printf("I! will use web identity credentials provider")
 			p := newWebIdentityProvider(c.Region, c.RoleARN, tokenFile)
-			c.RoleARN = "" // consumed — prevent AssumeRole wrap in LoadConfig
 			return aws.NewCredentialsCache(p)
 		},
 	}

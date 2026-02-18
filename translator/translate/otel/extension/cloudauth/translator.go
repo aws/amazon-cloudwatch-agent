@@ -4,6 +4,8 @@
 package cloudauth
 
 import (
+	"path/filepath"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/cloudauthextension"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -37,7 +39,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := factory.CreateDefaultConfig().(*cloudauthextension.Config)
 
-	cfg.TokenDir = paths.AgentDir + "/var"
+	cfg.TokenDir = filepath.Join(paths.AgentDir, "var")
 
 	if tf, ok := common.GetString(conf, common.ConfigKey(common.AgentKey, common.CredentialsKey, common.OIDCAuthKey, tokenFileKey)); ok {
 		cfg.TokenFile = tf

@@ -117,6 +117,19 @@ func TestNewStsCredentialsProvider(t *testing.T) {
 	require.True(t, ok)
 }
 
+func TestNewWebIdentityProvider(t *testing.T) {
+	provider := newWebIdentityProvider(testRegion, testRoleARN, "/tmp/token")
+
+	assert.NotNil(t, provider)
+	stsProvider, ok := provider.(*stsCredentialsProvider)
+	require.True(t, ok)
+	assert.NotNil(t, stsProvider.regional)
+	assert.NotNil(t, stsProvider.partitional)
+
+	_, ok = stsProvider.regional.(*stscreds.WebIdentityRoleProvider)
+	require.True(t, ok)
+}
+
 func TestConfusedDeputyHeaders(t *testing.T) {
 	testCases := map[string]struct {
 		envSourceArn          string
