@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	tokenFileKey   = "token_file"
+	tokenFileKey = "token_file"
 	audienceKey  = "audience"
 )
 
