@@ -19,8 +19,8 @@ type Tagger struct {
 	logger   *zap.Logger
 	provider DiskProvider
 
-	mu   sync.RWMutex
-	done chan struct{}
+	done         chan struct{}
+	shutdownOnce sync.Once
 }
 
 func newTagger(config *Config, logger *zap.Logger, provider DiskProvider) *Tagger {
@@ -50,7 +50,7 @@ func (t *Tagger) Start(_ context.Context, _ component.Host) error {
 
 func (t *Tagger) Shutdown(_ context.Context) error {
 	if t.done != nil {
-		close(t.done)
+		t.shutdownOnce.Do(func() { close(t.done) })
 	}
 	return nil
 }
@@ -59,9 +59,6 @@ func (t *Tagger) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.
 	if t.provider == nil {
 		return md, nil
 	}
-
-	t.mu.RLock()
-	defer t.mu.RUnlock()
 
 	for i := 0; i < md.ResourceMetrics().Len(); i++ {
 		rm := md.ResourceMetrics().At(i)
@@ -110,11 +107,10 @@ func (t *Tagger) refreshLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			t.mu.Lock()
+			// Refresh outside the lock (network I/O).
 			if err := t.provider.Refresh(); err != nil {
 				t.logger.Warn("Disk refresh failed", zap.Error(err))
 			}
-			t.mu.Unlock()
 		case <-t.done:
 			return
 		}

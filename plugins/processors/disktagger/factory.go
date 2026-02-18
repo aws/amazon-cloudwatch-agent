@@ -67,7 +67,7 @@ func createDiskProvider(ctx context.Context, set processor.Settings) DiskProvide
 		}
 		awsCfg, err := credConfig.LoadConfig(ctx)
 		if err != nil {
-			set.Logger.Warn("Failed to load AWS config for disktagger")
+			set.Logger.Warn("Failed to load AWS config for disktagger", zap.Error(err))
 			return nil
 		}
 		set.Logger.Info("disktagger: using AWS EBS provider", zap.String("instanceID", p.InstanceID()), zap.String("region", p.Region()))
