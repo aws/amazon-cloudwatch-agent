@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   BuildAndUpload:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -34,6 +35,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   BuildAndUploadPackages:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     uses: ./.github/workflows/test-build-packages.yml
     needs: [BuildAndUpload]
     secrets: inherit
@@ -47,6 +49,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   BuildDocker:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     needs: [BuildAndUpload]
     uses: ./.github/workflows/test-build-docker.yml
     secrets: inherit
@@ -60,6 +63,7 @@ jobs:
 
   DeploySoakTest:
     name: "DeploySoakTest"
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
     runs-on: ubuntu-latest
     permissions:

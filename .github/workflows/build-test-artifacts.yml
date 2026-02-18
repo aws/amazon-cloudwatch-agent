@@ -36,6 +36,7 @@ concurrency:
 
 jobs:
   BuildAndUpload:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -48,6 +49,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   BuildAndUploadPackages:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     uses: ./.github/workflows/test-build-packages.yml
     needs: [BuildAndUpload]
     secrets: inherit
@@ -61,6 +63,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
   BuildDocker:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     needs: [BuildAndUpload]
     uses: ./.github/workflows/test-build-docker.yml
     secrets: inherit
@@ -73,6 +76,7 @@ jobs:
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
 
   BuildDistributor:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
     uses: ./.github/workflows/test-build-distributor.yml
     secrets: inherit
@@ -87,6 +91,7 @@ jobs:
       DistributorName: ${{ vars.SSM_TEST_DISTRIBUTOR_NAME }}
 
   BuildAndUploadITAR:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -100,6 +105,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   BuildAndUploadCN:
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -114,7 +120,7 @@ jobs:
 
   StartIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    if: github.repository == 'aws/amazon-cloudwatch-agent' && (github.event_name == 'push' || inputs.run-tests)
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -126,7 +132,7 @@ jobs:
   StartApplicationSignalsE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
     # Workflow only runs against main
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    if: github.repository == 'aws/amazon-cloudwatch-agent' && (github.event_name == 'push' || inputs.run-tests)
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -137,7 +143,7 @@ jobs:
 
   StartEKSE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    if: github.repository == 'aws/amazon-cloudwatch-agent' && (github.event_name == 'push' || inputs.run-tests)
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -148,7 +154,7 @@ jobs:
 
   StartWorkloadDiscoveryIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    if: github.repository == 'aws/amazon-cloudwatch-agent' && (github.event_name == 'push' || inputs.run-tests)
     runs-on: ubuntu-latest
     permissions:
       actions: write

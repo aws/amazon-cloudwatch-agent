@@ -11,6 +11,7 @@ on:
 jobs:
   clean-opensource-ami:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -30,6 +31,7 @@ jobs:
 
   clean-old-file-systems:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -49,6 +51,7 @@ jobs:
 
   clean-opensource-dedicated-hosts:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -68,6 +71,7 @@ jobs:
 
   clean-internal-dedicated-hosts:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -102,6 +106,7 @@ jobs:
 
   clean-hosts:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -142,6 +147,7 @@ jobs:
 
   clean-hosts-china:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -161,6 +167,7 @@ jobs:
 
   clean-ecs-resources:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -180,6 +187,7 @@ jobs:
 
   clean-eks-clusters:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -198,6 +206,7 @@ jobs:
         run: go run ./clean_eks/clean_eks.go --tags=clean
   clean-ebs-volumes:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -217,6 +226,7 @@ jobs:
 
   clean-asg:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -236,6 +246,7 @@ jobs:
 
   clean-launch-configs:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -254,6 +265,7 @@ jobs:
         run: go run ./clean_launch_configuration/clean_launch_configuration.go --tags=clean
   clean-iam-roles:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -272,6 +284,7 @@ jobs:
         run: go run ./clean_iam_roles/clean_iam_roles.go --tags=clean
   clean-log-groups:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
@@ -290,6 +303,7 @@ jobs:
         run: go run ./clean_log_group/clean_log_group.go 
   clean-security-groups:
     runs-on: ubuntu-latest
+    if: github.repository == 'aws/amazon-cloudwatch-agent'
     permissions:
       id-token: write
       contents: read
