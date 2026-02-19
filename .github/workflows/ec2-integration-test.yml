@@ -44,9 +44,6 @@ on:
         type: boolean
       s3_integration_bucket:
         type: string
-      cache_key:
-        type: string
-        required: false
       test_binaries_prefix:
         type: string
         required: false
@@ -109,11 +106,6 @@ jobs:
               cd ${{inputs.test_dir}}
             fi
 
-            CACHE_KEY_VAR=""
-            if [ -n "${{ inputs.cache_key }}" ] && grep -q 'variable "cache_key"' variables.tf 2>/dev/null; then
-              CACHE_KEY_VAR="-var=cache_key=${{ inputs.cache_key }}"
-            fi
-
             TEST_BINARIES_VAR=""
             if [ -n "${{ inputs.test_binaries_prefix }}" ] && grep -q 'variable "test_binaries_prefix"' variables.tf 2>/dev/null; then
               TEST_BINARIES_VAR="-var=test_binaries_prefix=${{ inputs.test_binaries_prefix }}"
@@ -144,7 +136,6 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="is_onprem=${{ inputs.is_onprem_test }}" \
-              $CACHE_KEY_VAR \
               $TEST_BINARIES_VAR \
               -var="user=${{ matrix.arrays.username }}"; then
               terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve

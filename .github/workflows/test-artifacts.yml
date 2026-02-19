@@ -284,20 +284,6 @@ jobs:
           echo "ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}"
           echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
 
-  WarmTestCache:
-    name: 'WarmTestCache'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/warm-test-cache.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-
   BuildTestBinaries:
     name: 'BuildTestBinaries'
     needs: [OutputEnvVariables]
@@ -568,7 +554,7 @@ jobs:
             terraform destroy --auto-approve
 
   EC2LinuxIntegrationTest-0:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     name: 'EC2Linux-0'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -583,14 +569,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: false
       is_onprem_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-1:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 1 }}
     name: 'EC2Linux-1'
     uses:  ./.github/workflows/ec2-integration-test.yml
@@ -606,14 +591,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: false
       is_onprem_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-2:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 2 }}
     name: 'EC2Linux-2'
     uses:  ./.github/workflows/ec2-integration-test.yml
@@ -629,14 +613,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: false
       is_onprem_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-3:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 3 }}
     name: 'EC2Linux-3'
     uses:  ./.github/workflows/ec2-integration-test.yml
@@ -652,14 +635,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: false
       is_onprem_test: false
     secrets: inherit
 
   EC2LinuxIntegrationTest-4:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 4 }}
     name: 'EC2Linux-4'
     uses:  ./.github/workflows/ec2-integration-test.yml
@@ -675,14 +657,13 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: false
       is_onprem_test: false
     secrets: inherit
 
   LinuxOnPremIntegrationTest:
-    needs: [GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries]
+    needs: [GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries]
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -697,7 +678,6 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: false
       is_onprem_test: true
@@ -745,7 +725,7 @@ jobs:
       KEY_NAME: ${{ secrets.KEY_NAME }}
 
   EC2SELinuxIntegrationTest:
-    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, WarmTestCache, BuildTestBinaries ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     name: 'EC2SELinux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -760,7 +740,6 @@ jobs:
       region: us-west-2
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-      cache_key: ${{ needs.WarmTestCache.outputs.cache_key }}
       test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
       is_selinux_test: true
 
