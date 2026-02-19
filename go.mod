@@ -44,7 +44,7 @@ replace (
 
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20260218231159-a29871b6f6b2
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20260218231159-a29871b6f6b2
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => ../opentelemetry-collector-contrib/processor/resourcedetectionprocessor
 )
 
 replace (
