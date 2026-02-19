@@ -41,6 +41,11 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs). Leave empty to run all tests.'
         type: string
         required: false
+      test_profiling:
+        description: 'Enable test profiling (sets CWA_TEST_PROFILING=1)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   CheckBuildTestArtifacts:
@@ -87,3 +92,4 @@ jobs:
       test_repo_branch: ${{ inputs.test_repo_branch }}
       test_os_filter: ${{ inputs.test_os_filter }}
       test_dir_filter: ${{ inputs.test_dir_filter }}
+      test_profiling: ${{ inputs.test_profiling }}

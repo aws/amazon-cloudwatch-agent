@@ -40,6 +40,11 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
         type: string
         required: false
+      test_profiling:
+        description: 'Enable test profiling (sets CWA_TEST_PROFILING=1)'
+        type: boolean
+        required: false
+        default: false
   workflow_call:
     inputs:
       build_id:
@@ -57,6 +62,11 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
         type: string
         required: false
+      test_profiling:
+        description: 'Enable test profiling (sets CWA_TEST_PROFILING=1)'
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.build_id }}
@@ -457,7 +467,8 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="test_profiling=${{ inputs.test_profiling }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
