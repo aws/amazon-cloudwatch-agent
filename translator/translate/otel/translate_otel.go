@@ -22,6 +22,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/cloudauth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
@@ -92,6 +93,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	}
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
+	}
+	if cloudauth.IsSet(conf) {
+		pipelines.Translators.Extensions.Set(cloudauth.NewTranslator())
 	}
 
 	cfg := &otelcol.Config{

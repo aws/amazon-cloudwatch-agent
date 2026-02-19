@@ -147,7 +147,27 @@ func TestDefaultCredentialsChain(t *testing.T) {
 	testCases := map[string]struct {
 		cfg          *CredentialsConfig
 		wantProvider aws.CredentialsProvider
+		setEnv       map[string]string
 	}{
+		"WebIdentity": {
+			cfg: &CredentialsConfig{
+				Region:  "us-east-1",
+				RoleARN: "arn:aws:iam::123456789012:role/test",
+			},
+			setEnv:       map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": "/tmp/token"},
+			wantProvider: &stsCredentialsProvider{},
+		},
+		"WebIdentity_NoTokenFile": {
+			cfg: &CredentialsConfig{
+				RoleARN: "arn:aws:iam::123456789012:role/test",
+			},
+			wantProvider: nil,
+		},
+		"WebIdentity_NoRoleARN": {
+			cfg:          &CredentialsConfig{},
+			setEnv:       map[string]string{"AWS_WEB_IDENTITY_TOKEN_FILE": "/tmp/token"},
+			wantProvider: nil,
+		},
 		"Static": {
 			cfg: &CredentialsConfig{
 				AccessKey: "A",
@@ -173,6 +193,9 @@ func TestDefaultCredentialsChain(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			for k, v := range testCase.setEnv {
+				t.Setenv(k, v)
+			}
 			provider := testCase.cfg.fromChain()
 
 			if testCase.wantProvider != nil {

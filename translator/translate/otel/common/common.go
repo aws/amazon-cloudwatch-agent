@@ -52,6 +52,7 @@ const (
 	LocalModeKey                                   = "local_mode"
 	CredentialsKey                                 = "credentials"
 	RoleARNKey                                     = "role_arn"
+	OIDCAuthKey                                    = "oidc_auth"
 	SigV4Auth                                      = "sigv4auth"
 	MetricsCollectionIntervalKey                   = "metrics_collection_interval"
 	AggregationDimensionsKey                       = "aggregation_dimensions"
