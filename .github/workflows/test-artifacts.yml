@@ -568,6 +568,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
       is_onprem_test: false
+      test_profiling: ${{ inputs.test_profiling }}
     secrets: inherit
 
   EC2LinuxIntegrationTest-1:
@@ -589,6 +590,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
       is_onprem_test: false
+      test_profiling: ${{ inputs.test_profiling }}
     secrets: inherit
 
   EC2LinuxIntegrationTest-2:
@@ -610,6 +612,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
       is_onprem_test: false
+      test_profiling: ${{ inputs.test_profiling }}
     secrets: inherit
 
   EC2LinuxIntegrationTest-3:
@@ -631,6 +634,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
       is_onprem_test: false
+      test_profiling: ${{ inputs.test_profiling }}
     secrets: inherit
 
   EC2LinuxIntegrationTest-4:
@@ -652,6 +656,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       is_selinux_test: false
       is_onprem_test: false
+      test_profiling: ${{ inputs.test_profiling }}
     secrets: inherit
 
   LinuxOnPremIntegrationTest:
