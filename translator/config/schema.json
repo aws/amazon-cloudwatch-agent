@@ -1308,6 +1308,25 @@
           "type": "string",
           "minLength": 20,
           "maxLength": 2048
+        },
+        "oidc_auth": {
+          "description": "Enables OIDC-based authentication for cross-cloud environments (e.g. Azure VM to AWS). The agent auto-detects the cloud provider and exchanges an OIDC token for AWS credentials via STS AssumeRoleWithWebIdentity. For on-prem environments, set token_file to a user-managed OIDC token.",
+          "type": "object",
+          "properties": {
+            "token_file": {
+              "description": "Path to a file containing an OIDC/JWT token. When set, the agent reads the token from this file instead of auto-detecting a cloud provider. The user is responsible for keeping the file current.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "audience": {
+              "description": "The audience/resource claim for the OIDC token request. Defaults to https://management.azure.com/ for Azure auto-detection.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

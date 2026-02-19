@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds"
@@ -29,22 +28,23 @@ type CredentialsConfig struct {
 }
 
 func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) {
-	if c.RoleARN != "" {
-		return c.assumeRoleConfig(ctx)
+	chainProvider := c.fromChain()
+	if c.RoleARN != "" && os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE") == "" {
+		return c.assumeRoleConfig(ctx, chainProvider)
 	}
-	return c.rootConfig(ctx)
+	return c.rootConfig(ctx, chainProvider)
 }
 
-func (c *CredentialsConfig) assumeRoleConfig(ctx context.Context) (aws.Config, error) {
-	cfg, err := c.rootConfig(ctx)
+func (c *CredentialsConfig) rootConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
+	return c.loadConfig(ctx, provider)
+}
+
+func (c *CredentialsConfig) assumeRoleConfig(ctx context.Context, baseProvider aws.CredentialsProvider) (aws.Config, error) {
+	cfg, err := c.loadConfig(ctx, baseProvider)
 	if err != nil {
 		return aws.Config{}, err
 	}
 	return c.loadConfig(ctx, aws.NewCredentialsCache(newStsCredentialsProvider(cfg, c.RoleARN, c.Region)))
-}
-
-func (c *CredentialsConfig) rootConfig(ctx context.Context) (aws.Config, error) {
-	return c.loadConfig(ctx, c.fromChain())
 }
 
 func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
@@ -52,7 +52,7 @@ func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.Credent
 	log.Printf("D! Fallback shared config file(s): %v", cfgFiles)
 	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(c.Region),
-		config.WithHTTPClient(http.NewBuildableClient().WithTimeout(1 * time.Minute)),
+		config.WithHTTPClient(getSharedHTTPClient()),
 		config.WithClientLogMode(SDKLogLevel()),
 		config.WithLogger(SDKLogger{}),
 		config.WithSharedCredentialsFiles(cfgFiles),
@@ -120,6 +120,18 @@ func OverwriteCredentialsChain(providers ...CredentialsProvider) {
 
 func init() {
 	// Initialize the default root credentials chain
+	webIdentityProvider := CredentialsProvider{
+		Name: func() string { return "WebIdentityProvider" },
+		Provider: func(c *CredentialsConfig) aws.CredentialsProvider {
+			tokenFile := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+			if tokenFile == "" || c.RoleARN == "" {
+				return nil
+			}
+			log.Printf("I! will use web identity credentials provider")
+			p := newWebIdentityProvider(c.Region, c.RoleARN, tokenFile)
+			return aws.NewCredentialsCache(p)
+		},
+	}
 	staticCredentialsProvider := CredentialsProvider{
 		Name: func() string { return "StaticCredentialsProvider" },
 		Provider: func(c *CredentialsConfig) aws.CredentialsProvider {
@@ -145,7 +157,7 @@ func init() {
 			return nil
 		},
 	}
-	credentialsChain = append(credentialsChain, staticCredentialsProvider, refreshableCredentialsProvider)
+	credentialsChain = append(credentialsChain, webIdentityProvider, staticCredentialsProvider, refreshableCredentialsProvider)
 	// You can overwrite the default credentials chain by first importing the current file
 	// and then calling OverwriteCredentialsChain() with your own credentials chain
 }
