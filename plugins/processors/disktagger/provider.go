@@ -6,6 +6,7 @@ package disktagger
 import (
 	"context"
 	"strings"
+	"sync"
 )
 
 // DiskProvider maps device names to disk identifiers (volume IDs, managed disk names, etc.)
@@ -21,6 +22,7 @@ type DiskProvider interface {
 // mapProvider wraps a simple map for providers that don't need prefix matching (e.g. Azure).
 type mapProvider struct {
 	fetchFunc func(ctx context.Context) (map[string]string, error)
+	mu        sync.RWMutex
 	cache     map[string]string
 }
 
@@ -33,11 +35,15 @@ func (p *mapProvider) Refresh() error {
 	if err != nil {
 		return err
 	}
+	p.mu.Lock()
 	p.cache = result
+	p.mu.Unlock()
 	return nil
 }
 
 func (p *mapProvider) Serial(devName string) string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	if v, ok := p.cache[devName]; ok {
 		return v
 	}
