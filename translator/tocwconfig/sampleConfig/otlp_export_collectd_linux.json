@@ -1,0 +1,23 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "otlp": {
+        "endpoint": "test-endpoint"
+      },
+      "cloudwatch": {
+      }
+    },
+    "metrics_collected": {
+      "collectd": {}
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    }
+  }
+}

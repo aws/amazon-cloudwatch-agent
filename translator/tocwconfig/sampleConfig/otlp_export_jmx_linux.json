@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "omit_hostname": true,
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "otlp": {
+        "endpoint": "test-endpoint"
+      },
+      "cloudwatch": {}
+    },
+    "metrics_collected": {
+      "jmx": {
+        "endpoint": "localhost:8080",
+        "jvm": {
+          "measurement": [
+            "jvm.memory.heap.init",
+            "jvm.memory.heap.used"
+          ]
+        }
+      }
+    }
+  }
+}

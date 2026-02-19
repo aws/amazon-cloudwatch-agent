@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "otlp": []
+    }
+  }
+}

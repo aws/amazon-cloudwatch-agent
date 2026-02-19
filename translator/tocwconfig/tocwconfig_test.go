@@ -931,6 +931,83 @@ func TestTomlToTomlComparison(t *testing.T) {
 	verifyToTomlTranslation(t, input, "./totomlconfig/testdata/agentToml.conf", map[string]string{})
 }
 
+// OTLP Metric Publication Section
+func TestOtlpHostMetricsConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "otlp_export_host_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
+
+func TestOtlpStatsDConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "otlp_export_statsd_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
+
+func TestOtlpCollectedConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "otlp_export_collectd_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
+
+func TestOtlpOTLPConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "otlp_export_otlp_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			testutil.SetPrometheusRemoteWriteTestingEnv(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
+
 func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string, tokenReplacements ...map[string]string) {
 	jsonFilePath := fmt.Sprintf("./sampleConfig/%v.json", fileName)
 	tomlFilePath := fmt.Sprintf("./sampleConfig/%v%v.conf", fileName, appendString)

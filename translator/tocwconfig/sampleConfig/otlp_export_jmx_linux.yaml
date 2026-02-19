@@ -1,0 +1,143 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-east-1
+        resource_to_telemetry_conversion:
+            enabled: true
+    otlphttp:
+        auth:
+            authenticator: sigv4auth/monitoring
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: test-endpoint
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+extensions:
+    agenthealth/metrics:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
+    sigv4auth/monitoring:
+        assume_role:
+            sts_region: us-east-1
+        region: us-east-1
+        service: monitoring
+processors:
+    batch/jmx/otlp:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    cumulativetodelta/jmx:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    filter/jmx:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - jvm.memory.heap.init
+                    - jvm.memory.heap.used
+        spans: {}
+        traces: {}
+    resource/jmx:
+        attributes:
+            - action: delete
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: ""
+              pattern: telemetry.sdk.*
+            - action: delete
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: service.name
+              pattern: ""
+              value: unknown_service:java
+receivers:
+    jmx:
+        aggregate_across_mbeans: true
+        collection_interval: 1m0s
+        endpoint: localhost:8080
+        jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        otlp:
+            endpoint: 0.0.0.0:0
+            timeout: 5s
+        target_system: jvm
+service:
+    extensions:
+        - agenthealth/metrics
+        - sigv4auth/monitoring
+        - entitystore
+    pipelines:
+        metrics/jmx/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx
+                - resource/jmx
+                - cumulativetodelta/jmx
+            receivers:
+                - jmx
+        metrics/jmx/otlp:
+            exporters:
+                - otlphttp
+            processors:
+                - filter/jmx
+                - resource/jmx
+                - batch/jmx/otlp
+            receivers:
+                - jmx
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

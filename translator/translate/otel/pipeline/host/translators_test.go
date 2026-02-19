@@ -254,6 +254,80 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithOtlpDestination/HostAndDeltaMerged": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"otlp": map[string]any{
+							"endpoint": "https://otlp-endpoint.com",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"cpu":    map[string]any{},
+						"diskio": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/host/otlp": {
+					receivers: []string{"telegraf_cpu", "telegraf_diskio"},
+					exporters: []string{"otlphttp"},
+				},
+			},
+		},
+		"WithOtlpAndCloudWatchDestinations/SeparatePipelines": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"otlp": map[string]any{
+							"endpoint": "https://otlp-endpoint.com",
+						},
+						"cloudwatch": map[string]any{},
+					},
+					"metrics_collected": map[string]any{
+						"cpu":    map[string]any{},
+						"diskio": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/host/cloudwatch": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/hostDeltaMetrics/cloudwatch": {
+					receivers: []string{"telegraf_diskio"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host/otlp": {
+					receivers: []string{"telegraf_cpu", "telegraf_diskio"},
+					exporters: []string{"otlphttp"},
+				},
+			},
+		},
+		"WithOtlpDestination/DeltaOnly": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"otlp": map[string]any{
+							"endpoint": "https://otlp-endpoint.com",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"net": map[string]any{},
+					},
+				},
+			},
+			configSection: MetricsKey,
+			want: map[string]want{
+				"metrics/host/otlp": {
+					receivers: []string{"telegraf_net"},
+					exporters: []string{"otlphttp"},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

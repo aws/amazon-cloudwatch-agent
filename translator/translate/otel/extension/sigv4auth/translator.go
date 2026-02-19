@@ -15,6 +15,7 @@ import (
 
 type translator struct {
 	name    string
+	service string
 	factory extension.Factory
 }
 
@@ -25,7 +26,11 @@ func NewTranslator() common.ComponentTranslator {
 }
 
 func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, sigv4authextension.NewFactory()}
+	return &translator{name: name, factory: sigv4authextension.NewFactory()}
+}
+
+func NewTranslatorWithNameAndService(name, service string) common.ComponentTranslator {
+	return &translator{name: name, service: service, factory: sigv4authextension.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {
@@ -35,6 +40,9 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*sigv4authextension.Config)
 	cfg.Region = agent.Global_Config.Region
+	if t.service != "" {
+		cfg.Service = t.service
+	}
 	if agent.Global_Config.Role_arn != "" {
 		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
 	}
