@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/cloudauth/provider"
 )
 
 type mockProvider struct {
@@ -44,9 +46,9 @@ func TestDetectProvider_AutoDetect(t *testing.T) {
 	orig := registeredProviders
 	defer func() { registeredProviders = orig }()
 
-	registeredProviders = []func() TokenProvider{
-		func() TokenProvider { return &mockProvider{name: "first", available: false} },
-		func() TokenProvider { return &mockProvider{name: "second", available: true} },
+	registeredProviders = []func() provider.TokenProvider{
+		func() provider.TokenProvider { return &mockProvider{name: "first", available: false} },
+		func() provider.TokenProvider { return &mockProvider{name: "second", available: true} },
 	}
 
 	p, err := DetectProvider(context.Background(), "")
@@ -58,8 +60,8 @@ func TestDetectProvider_NoneAvailable(t *testing.T) {
 	orig := registeredProviders
 	defer func() { registeredProviders = orig }()
 
-	registeredProviders = []func() TokenProvider{
-		func() TokenProvider { return &mockProvider{name: "only", available: false} },
+	registeredProviders = []func() provider.TokenProvider{
+		func() provider.TokenProvider { return &mockProvider{name: "only", available: false} },
 	}
 
 	_, err := DetectProvider(context.Background(), "")
