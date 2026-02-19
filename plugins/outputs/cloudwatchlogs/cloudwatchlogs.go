@@ -117,6 +117,14 @@ func (c *CloudWatchLogs) Close() error {
 		c.workerPool.Stop()
 	}
 
+	if c.retryHeapProcessor != nil {
+		c.retryHeapProcessor.Stop()
+	}
+
+	if c.retryHeap != nil {
+		c.retryHeap.Stop()
+	}
+
 	return nil
 }
 

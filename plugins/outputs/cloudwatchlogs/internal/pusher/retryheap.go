@@ -5,6 +5,7 @@ package pusher
 
 import (
 	"container/heap"
+	"errors"
 	"sync"
 	"time"
 
@@ -41,7 +42,7 @@ func (h *retryHeapImpl) Pop() interface{} {
 
 // RetryHeap manages failed batches during their retry wait periods
 type RetryHeap interface {
-	Push(batch *logEventBatch)
+	Push(batch *logEventBatch) error
 	PopReady() []*logEventBatch
 	Size() int
 	Stop()
@@ -73,18 +74,30 @@ func NewRetryHeap(maxSize int, logger telegraf.Logger) RetryHeap {
 }
 
 // Push adds a batch to the heap, blocking if full
-func (rh *retryHeap) Push(batch *logEventBatch) {
+func (rh *retryHeap) Push(batch *logEventBatch) error {
+	rh.mutex.RLock()
+	if rh.stopped {
+		rh.mutex.RUnlock()
+		return errors.New("retry heap stopped")
+	}
+	rh.mutex.RUnlock()
+
 	// Acquire semaphore slot (blocks if at maxSize capacity)
 	select {
 	case rh.semaphore <- struct{}{}:
 		// add batch to heap with mutex protection
 		rh.mutex.Lock()
+		if rh.stopped {
+			// Release semaphore if stopped after acquiring
+			<-rh.semaphore
+			rh.mutex.Unlock()
+			return errors.New("retry heap stopped")
+		}
 		heap.Push(&rh.heap, batch)
 		rh.mutex.Unlock()
+		return nil
 	case <-rh.stopCh:
-		// RetryHeap is stopped, drop the batch
-		rh.logger.Errorf("Stop requested for %v/%v failed for PutLogEvents, request dropped.", batch.Group, batch.Stream)
-		batch.updateState()
+		return errors.New("retry heap stopped")
 	}
 }
 
@@ -116,6 +129,9 @@ func (rh *retryHeap) Size() int {
 
 // Stop stops the retry heap
 func (rh *retryHeap) Stop() {
+	rh.mutex.Lock()
+	defer rh.mutex.Unlock()
+
 	if rh.stopped {
 		return
 	}
@@ -204,6 +220,7 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 		if batch.isExpired(p.maxRetryDuration) {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
 			batch.updateState()
+			batch.done() // Resume circuit breaker to allow target to process new batches
 			continue
 		}
 

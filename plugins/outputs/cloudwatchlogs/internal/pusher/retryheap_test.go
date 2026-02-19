@@ -27,17 +27,20 @@ func TestRetryHeap(t *testing.T) {
 	// Create test batches
 	target := Target{Group: "group", Stream: "stream"}
 	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = time.Now().Add(1 * time.Hour)
+	batch1.nextRetryTime = time.Now().Add(1 * time.Second)
 
 	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = time.Now().Add(-1 * time.Second)
+	batch2.nextRetryTime = time.Now().Add(-1 * time.Second) // Ready now
 
 	// Push batches
-	heap.Push(batch1)
-	heap.Push(batch2)
+	err := heap.Push(batch1)
+	assert.NoError(t, err)
+	err = heap.Push(batch2)
+	assert.NoError(t, err)
 
 	assert.Equal(t, 2, heap.Size())
 
+	// Pop ready batches
 	ready = heap.PopReady()
 	assert.Len(t, ready, 1)
 	assert.Equal(t, batch2, ready[0])
@@ -91,7 +94,6 @@ func TestRetryHeapProcessor(t *testing.T) {
 
 	// Test start/stop
 	processor.Start()
-
 	processor.Stop()
 	assert.True(t, processor.stopped)
 }
@@ -147,12 +149,12 @@ func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
 	heap := NewRetryHeap(2, &testutil.Logger{}) // maxSize = 2
 	defer heap.Stop()
 
-	// Fill heap to capacity with expired batches
+	// Fill heap to capacity with batches that will be ready in 3 seconds
 	target := Target{Group: "group", Stream: "stream"}
 	batch1 := newLogEventBatch(target, nil)
-	batch1.nextRetryTime = time.Now().Add(-1 * time.Hour)
+	batch1.nextRetryTime = time.Now().Add(3 * time.Second)
 	batch2 := newLogEventBatch(target, nil)
-	batch2.nextRetryTime = time.Now().Add(-1 * time.Hour)
+	batch2.nextRetryTime = time.Now().Add(3 * time.Second)
 
 	heap.Push(batch1)
 	heap.Push(batch2)
@@ -179,6 +181,8 @@ func TestRetryHeap_SemaphoreBlockingAndUnblocking(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		// Push is successfully blocked when at capacity
 	}
+
+	time.Sleep(3 * time.Second)
 
 	// Pop ready batches to release semaphore slots
 	readyBatches := heap.PopReady()
@@ -271,7 +275,7 @@ func TestRetryHeapStopTwice(t *testing.T) {
 	target := Target{Group: "test-group", Stream: "test-stream"}
 	batch := newLogEventBatch(target, nil)
 
-	rh.Push(batch) // Should not panic or return error
+	rh.Push(batch)
 
 	// Verify heap is empty (nothing was pushed)
 	assert.Equal(t, 0, rh.Size())

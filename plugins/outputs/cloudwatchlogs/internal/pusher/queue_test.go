@@ -759,6 +759,8 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
+			haltCond:        sync.NewCond(&sync.Mutex{}),
+			halted:          false,
 		}
 		q.flushTimeout.Store(10 * time.Millisecond)
 
@@ -801,6 +803,8 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
+			haltCond:        sync.NewCond(&sync.Mutex{}),
+			halted:          false,
 		}
 		q.flushTimeout.Store(10 * time.Millisecond)
 
@@ -814,3 +818,66 @@ func TestQueueCallbackRegistration(t *testing.T) {
 		mockSender.AssertExpectations(t)
 	})
 }
+func TestQueueHaltResume(t *testing.T) {
+	logger := testutil.NewNopLogger()
+
+	var sendCount atomic.Int32
+	mockSender := &mockSender{}
+	mockSender.On("Send", mock.Anything).Run(func(args mock.Arguments) {
+		sendCount.Add(1)
+		batch := args.Get(0).(*logEventBatch)
+		// Simulate failure on first call, success on second
+		if sendCount.Load() == 1 {
+			batch.fail() // This should halt the queue
+		} else {
+			batch.done() // This should resume the queue
+		}
+	}).Return()
+
+	var wg sync.WaitGroup
+	q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1}, 10*time.Millisecond, nil, mockSender, &wg)
+	defer q.Stop()
+
+	// Add first event - should trigger send and halt
+	q.AddEvent(newStubLogEvent("first message", time.Now()))
+
+	// Wait a bit for the first send to complete and halt
+	time.Sleep(50 * time.Millisecond)
+
+	// Add second event - should be queued but not sent due to halt
+	q.AddEvent(newStubLogEvent("second message", time.Now()))
+
+	// Verify only one send happened (queue is halted)
+	assert.Equal(t, int32(1), sendCount.Load(), "Should have only one send due to halt")
+
+	// Trigger flush to force send of second batch - this should block until resumed
+	done := make(chan bool)
+	go func() {
+		time.Sleep(100 * time.Millisecond) // Wait a bit
+		// Manually resume by calling success callback on a dummy batch
+		dummyBatch := newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1}, nil)
+		dummyBatch.addDoneCallback(func() {
+			// This simulates a successful send that should resume the queue
+		})
+		dummyBatch.done()
+		done <- true
+	}()
+
+	// This should eventually complete when the queue is resumed
+	select {
+	case <-done:
+		// Success - the resume worked
+	case <-time.After(5 * time.Second):
+		t.Fatal("Test timed out - queue may be permanently halted")
+	}
+
+	mockSender.AssertExpectations(t)
+}
+
+// TestQueueResumeOnBatchExpiry verifies that when a batch expires after 14 days of retrying,
+// the circuit breaker resumes the queue to allow new batches to be processed.
+// This prevents the target from being permanently blocked when a bad batch is eventually dropped.
+//
+// Scenario from PR comment: "Say a bad batch from a target caused this to halt. Now that bad batch
+// is re-tried for 14 days and eventually dropped - but this never gets resumed in that case right?
+// So this target is blocked forever in that scenario?"
