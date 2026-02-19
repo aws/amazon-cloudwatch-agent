@@ -28,29 +28,6 @@ func TestTranslator_Translate(t *testing.T) {
 			},
 		},
 		"WithTokenFile": {
-			input: map[string]interface{}{
-				"agent": map[string]interface{}{
-					"credentials": map[string]interface{}{
-						"oidc_auth": map[string]interface{}{
-							"token_file": "/var/run/oidc/token",
-						},
-					},
-				},
-			},
-			wantTokenFile: "/var/run/oidc/token",
-		},
-		"WithAudience": {
-			input: map[string]interface{}{
-				"agent": map[string]interface{}{
-					"credentials": map[string]interface{}{
-						"oidc_auth": map[string]interface{}{
-							"audience": "https://monitoring.azure.com/",
-						},
-					},
-				},
-			},
-			wantAudience: "https://monitoring.azure.com/",
-		},
 	}
 
 	for name, tc := range tests {

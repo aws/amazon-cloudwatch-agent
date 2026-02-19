@@ -25,7 +25,15 @@ type CredentialsConfig struct {
 	Profile   string
 	Filename  string
 	Token     string
+
+	// roleAssumed is set by credential chain providers (e.g. cloudauth)
+	// that already performed role assumption. LoadConfig checks this to
+	// avoid wrapping the provider with a second sts:AssumeRole call.
+	roleAssumed bool
 }
+
+// SetRoleAssumed marks that a chain provider already performed role assumption.
+func (c *CredentialsConfig) SetRoleAssumed(v bool) { c.roleAssumed = v }
 
 func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) {
 	chainProvider := c.fromChain()
