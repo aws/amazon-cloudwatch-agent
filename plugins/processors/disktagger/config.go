@@ -3,11 +3,7 @@
 
 package disktagger
 
-import (
-	"time"
-
-	"go.opentelemetry.io/collector/component"
-)
+import "time"
 
 const (
 	AttributeDiskID = "VolumeId"
@@ -16,5 +12,4 @@ const (
 type Config struct {
 	RefreshInterval  time.Duration `mapstructure:"refresh_interval"`
 	DiskDeviceTagKey string        `mapstructure:"disk_device_tag_key"`
-	MiddlewareID     *component.ID `mapstructure:"middleware,omitempty"`
 }
