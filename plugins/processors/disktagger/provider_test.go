@@ -47,7 +47,7 @@ func TestMapProvider_Serial_NvmePrefix(t *testing.T) {
 
 func TestMapProvider_Refresh(t *testing.T) {
 	callCount := 0
-	fetch := func(ctx context.Context) (map[string]string, error) {
+	fetch := func(_ context.Context) (map[string]string, error) {
 		callCount++
 		return map[string]string{"sda": fmt.Sprintf("disk-%d", callCount)}, nil
 	}
@@ -63,7 +63,7 @@ func TestMapProvider_Refresh(t *testing.T) {
 }
 
 func TestMapProvider_Refresh_Error(t *testing.T) {
-	fetch := func(ctx context.Context) (map[string]string, error) {
+	fetch := func(_ context.Context) (map[string]string, error) {
 		return nil, fmt.Errorf("imds error")
 	}
 
