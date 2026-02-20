@@ -33,7 +33,7 @@ on:
     outputs:
       test_binaries_prefix:
         description: "S3 prefix for pre-compiled test binaries"
-        value: ${{ jobs.BuildTestBinaries.outputs.test_binaries_prefix }}
+        value: ${{ jobs.Complete.outputs.test_binaries_prefix }}
 
 jobs:
   BuildTestBinaries:
@@ -66,7 +66,6 @@ jobs:
         id: build
         env:
           S3_BUCKET: ${{ inputs.s3_integration_bucket }}
-          TEST_BRANCH: ${{ inputs.test_repo_branch }}
         run: |
           COMMIT_SHA=$(git rev-parse --short HEAD)
           echo "test_binaries_prefix=integration-test/test-binaries/${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
@@ -94,42 +93,88 @@ jobs:
           done
           echo "Upload complete to commercial bucket"
 
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-binaries
+          path: build/bin/
+          retention-days: 1
+
+  UploadTestBinariesITAR:
+    name: 'UploadTestBinariesITAR'
+    needs: [BuildTestBinaries]
+    if: ${{ inputs.s3_integration_bucket_itar != '' && inputs.terraform_assume_role_itar != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download binaries artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries
+          path: build/bin/
+
+      - name: Configure AWS Credentials for ITAR
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role_itar }}
+          aws-region: us-gov-east-1
+
       - name: Upload to ITAR bucket
-        if: ${{ inputs.s3_integration_bucket_itar != '' && inputs.terraform_assume_role_itar != '' }}
         env:
-          S3_BUCKET_ITAR: ${{ inputs.s3_integration_bucket_itar }}
-          ASSUME_ROLE_ITAR: ${{ inputs.terraform_assume_role_itar }}
+          S3_BUCKET: ${{ inputs.s3_integration_bucket_itar }}
+          PREFIX: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
         run: |
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          
-          # Get ITAR credentials
-          CREDS=$(aws sts assume-role --role-arn "$ASSUME_ROLE_ITAR" --role-session-name "test-binaries-itar" --query 'Credentials' --output json)
-          export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.AccessKeyId')
-          export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.SecretAccessKey')
-          export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.SessionToken')
-          
           for GOARCH in amd64 arm64; do
-            PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
-            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET_ITAR}/${PREFIX}/" --recursive --quiet --region us-gov-east-1
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/linux/${GOARCH}/" --recursive --quiet
           done
           echo "Upload complete to ITAR bucket"
 
+  UploadTestBinariesCN:
+    name: 'UploadTestBinariesCN'
+    needs: [BuildTestBinaries]
+    if: ${{ inputs.s3_integration_bucket_cn != '' && inputs.terraform_assume_role_cn != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download binaries artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries
+          path: build/bin/
+
+      - name: Configure AWS Credentials for CN
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role_cn }}
+          aws-region: cn-north-1
+
       - name: Upload to CN bucket
-        if: ${{ inputs.s3_integration_bucket_cn != '' && inputs.terraform_assume_role_cn != '' }}
         env:
-          S3_BUCKET_CN: ${{ inputs.s3_integration_bucket_cn }}
-          ASSUME_ROLE_CN: ${{ inputs.terraform_assume_role_cn }}
+          S3_BUCKET: ${{ inputs.s3_integration_bucket_cn }}
+          PREFIX: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
         run: |
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          
-          # Get CN credentials
-          CREDS=$(aws sts assume-role --role-arn "$ASSUME_ROLE_CN" --role-session-name "test-binaries-cn" --query 'Credentials' --output json)
-          export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.AccessKeyId')
-          export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.SecretAccessKey')
-          export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.SessionToken')
-          
           for GOARCH in amd64 arm64; do
-            PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
-            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET_CN}/${PREFIX}/" --recursive --quiet --region cn-north-1
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/linux/${GOARCH}/" --recursive --quiet
           done
           echo "Upload complete to CN bucket"
+
+  Complete:
+    name: 'Complete'
+    needs: [BuildTestBinaries, UploadTestBinariesITAR, UploadTestBinariesCN]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    outputs:
+      test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
+    steps:
+      - name: Check results
+        run: |
+          echo "BuildTestBinaries: ${{ needs.BuildTestBinaries.result }}"
+          echo "UploadTestBinariesITAR: ${{ needs.UploadTestBinariesITAR.result }}"
+          echo "UploadTestBinariesCN: ${{ needs.UploadTestBinariesCN.result }}"
+          if [[ "${{ needs.BuildTestBinaries.result }}" != "success" ]]; then
+            exit 1
+          fi
