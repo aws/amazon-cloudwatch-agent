@@ -18,6 +18,18 @@ on:
       terraform_assume_role:
         required: true
         type: string
+      s3_integration_bucket_itar:
+        required: false
+        type: string
+      terraform_assume_role_itar:
+        required: false
+        type: string
+      s3_integration_bucket_cn:
+        required: false
+        type: string
+      terraform_assume_role_cn:
+        required: false
+        type: string
     outputs:
       test_binaries_prefix:
         description: "S3 prefix for pre-compiled test binaries"
@@ -80,4 +92,44 @@ jobs:
 
             aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
           done
-          echo "Upload complete"
+          echo "Upload complete to commercial bucket"
+
+      - name: Upload to ITAR bucket
+        if: ${{ inputs.s3_integration_bucket_itar != '' && inputs.terraform_assume_role_itar != '' }}
+        env:
+          S3_BUCKET_ITAR: ${{ inputs.s3_integration_bucket_itar }}
+          ASSUME_ROLE_ITAR: ${{ inputs.terraform_assume_role_itar }}
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          
+          # Get ITAR credentials
+          CREDS=$(aws sts assume-role --role-arn "$ASSUME_ROLE_ITAR" --role-session-name "test-binaries-itar" --query 'Credentials' --output json)
+          export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.AccessKeyId')
+          export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.SecretAccessKey')
+          export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.SessionToken')
+          
+          for GOARCH in amd64 arm64; do
+            PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET_ITAR}/${PREFIX}/" --recursive --quiet --region us-gov-east-1
+          done
+          echo "Upload complete to ITAR bucket"
+
+      - name: Upload to CN bucket
+        if: ${{ inputs.s3_integration_bucket_cn != '' && inputs.terraform_assume_role_cn != '' }}
+        env:
+          S3_BUCKET_CN: ${{ inputs.s3_integration_bucket_cn }}
+          ASSUME_ROLE_CN: ${{ inputs.terraform_assume_role_cn }}
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          
+          # Get CN credentials
+          CREDS=$(aws sts assume-role --role-arn "$ASSUME_ROLE_CN" --role-session-name "test-binaries-cn" --query 'Credentials' --output json)
+          export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.AccessKeyId')
+          export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.SecretAccessKey')
+          export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.SessionToken')
+          
+          for GOARCH in amd64 arm64; do
+            PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET_CN}/${PREFIX}/" --recursive --quiet --region cn-north-1
+          done
+          echo "Upload complete to CN bucket"

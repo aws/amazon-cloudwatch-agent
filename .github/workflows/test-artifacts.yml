@@ -297,6 +297,10 @@ jobs:
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket_itar: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+      terraform_assume_role_itar: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+      s3_integration_bucket_cn: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+      terraform_assume_role_cn: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
   CloudformationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
@@ -685,7 +689,7 @@ jobs:
 
 
   EC2LinuxIntegrationTestITAR:
-    needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     name: 'EC2LinuxITAR'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -700,12 +704,13 @@ jobs:
       region: us-gov-east-1
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+      test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
     secrets:
       AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
       KEY_NAME: ${{ secrets.KEY_NAME }}
 
   EC2LinuxIntegrationTestCN:
-    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables, BuildTestBinaries ]
     name: 'EC2LinuxCN'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -720,6 +725,7 @@ jobs:
       region: cn-north-1
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+      test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
     secrets:
       AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
       KEY_NAME: ${{ secrets.KEY_NAME }}
