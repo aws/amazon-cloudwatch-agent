@@ -581,12 +581,6 @@ func TestBasicConfig(t *testing.T) {
 	}
 }
 
-func TestOIDCAuthConfig(t *testing.T) {
-	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeOnPremise)
-	checkTranslation(t, "oidc_auth_config_linux", "linux", map[string]string{}, "")
-}
-
 func TestInvalidInputConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

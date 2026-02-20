@@ -82,3 +82,9 @@ func TestDropOriginConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
 }
+
+func TestOIDCAuthConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	checkTranslation(t, "oidc_auth_config_linux", "linux", map[string]string{}, "")
+}

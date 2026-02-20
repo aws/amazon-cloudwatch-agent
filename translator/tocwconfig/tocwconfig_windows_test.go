@@ -26,3 +26,9 @@ func TestCompleteConfigWindows(t *testing.T) {
 	// so this is separate
 	checkTranslation(t, "complete_windows_config", "windows", expectedEnvVars, "")
 }
+
+func TestOIDCAuthConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	checkTranslation(t, "oidc_auth_config_windows", "windows", map[string]string{}, "")
+}
