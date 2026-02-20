@@ -32,24 +32,14 @@ func TestTranslator_Translate(t *testing.T) {
 				"agent": map[string]interface{}{
 					"credentials": map[string]interface{}{
 						"oidc_auth": map[string]interface{}{
-							"token_file": "/var/run/oidc/token",
+							"token_file": "/path/to/token",
+							"audience":   "sts.amazonaws.com",
 						},
 					},
 				},
 			},
-			wantTokenFile: "/var/run/oidc/token",
-		},
-		"WithAudience": {
-			input: map[string]interface{}{
-				"agent": map[string]interface{}{
-					"credentials": map[string]interface{}{
-						"oidc_auth": map[string]interface{}{
-							"audience": "https://monitoring.azure.com/",
-						},
-					},
-				},
-			},
-			wantAudience: "https://monitoring.azure.com/",
+			wantTokenFile: "/path/to/token",
+			wantAudience:  "sts.amazonaws.com",
 		},
 	}
 

@@ -25,20 +25,10 @@ var OTelAppendDimensions = map[string]string{
 	"InstanceType": "${host.type}",
 }
 
-const (
-	AttributeVolumeId            = "VolumeId"
-	ValueAppendDimensionVolumeId = "${aws:VolumeId}"
-)
-
 type Config struct {
-	RefreshTagsInterval    time.Duration `mapstructure:"refresh_tags_interval"`
-	RefreshVolumesInterval time.Duration `mapstructure:"refresh_volumes_interval"`
-	EC2MetadataTags        []string      `mapstructure:"ec2_metadata_tags"`
-	EC2InstanceTagKeys     []string      `mapstructure:"ec2_instance_tag_keys"`
-	EBSDeviceKeys          []string      `mapstructure:"ebs_device_keys,omitempty"`
-
-	//The tag key in the metrics for disk device
-	DiskDeviceTagKey string `mapstructure:"disk_device_tag_key,omitempty"`
+	RefreshTagsInterval time.Duration `mapstructure:"refresh_tags_interval"`
+	EC2MetadataTags     []string      `mapstructure:"ec2_metadata_tags"`
+	EC2InstanceTagKeys  []string      `mapstructure:"ec2_instance_tag_keys"`
 
 	// unlike other AWS plugins, this one determines the region from ec2 metadata not user configuration
 	AccessKey   string `mapstructure:"access_key,omitempty"`

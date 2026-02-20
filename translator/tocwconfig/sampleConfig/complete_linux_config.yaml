@@ -160,7 +160,6 @@ processors:
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
-        refresh_volumes_interval: 0s
     filter/jmx/0:
         error_mode: propagate
         logs: {}

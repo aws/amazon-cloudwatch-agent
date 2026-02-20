@@ -41,10 +41,9 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 0 * time.Minute,
-				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
-				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"ImageId", "InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:  []string{"AutoScalingGroupName"},
 			},
 		},
 		"WithDiskAppendDimensions": {
@@ -66,10 +65,9 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 0 * time.Second,
-				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
-				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"ImageId", "InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:  []string{"AutoScalingGroupName"},
 			},
 		},
 		"OTelPlaceholders": {
@@ -83,9 +81,8 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 0 * time.Minute,
-				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"ImageId", "InstanceId", "InstanceType"},
 			},
 		},
 		"MixedLegacyAndOTelPlaceholders": {
@@ -99,10 +96,9 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 0 * time.Minute,
-				EC2MetadataTags:        []string{"InstanceId", "InstanceType"},
-				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:  []string{"AutoScalingGroupName"},
 			},
 		},
 	}
@@ -116,12 +112,9 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*ec2tagger.Config)
 				require.True(t, ok)
 				require.Equal(t, tc.want.RefreshTagsInterval, gotCfg.RefreshTagsInterval)
-				require.Equal(t, tc.want.RefreshVolumesInterval, gotCfg.RefreshVolumesInterval)
 				sort.Strings(gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2MetadataTags, gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2InstanceTagKeys, gotCfg.EC2InstanceTagKeys)
-				require.Equal(t, tc.want.DiskDeviceTagKey, gotCfg.DiskDeviceTagKey)
-				require.Equal(t, tc.want.EBSDeviceKeys, gotCfg.EBSDeviceKeys)
 			}
 		})
 	}

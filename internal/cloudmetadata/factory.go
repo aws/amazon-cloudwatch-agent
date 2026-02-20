@@ -28,16 +28,17 @@ func GetProvider() Provider {
 	once.Do(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), detectTimeout)
 		defer cancel()
-		var err error
 
 		// Try AWS first (most common)
-		if globalProvider, err = aws.NewProvider(ctx); err == nil {
+		if p, err := aws.NewProvider(ctx); err == nil {
+			globalProvider = p
 			log.Printf("I! [cloudmetadata] Detected AWS (region=%s, instanceID=%s)\n", globalProvider.Region(), globalProvider.InstanceID())
 			return
 		}
 
 		// Try Azure
-		if globalProvider, err = azure.NewProvider(ctx); err == nil {
+		if p, err := azure.NewProvider(ctx); err == nil {
+			globalProvider = p
 			log.Printf("I! [cloudmetadata] Detected Azure (region=%s, instanceID=%s)\n", globalProvider.Region(), globalProvider.InstanceID())
 			return
 		}
