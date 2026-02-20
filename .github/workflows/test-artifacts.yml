@@ -408,6 +408,7 @@ jobs:
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_gpu_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -751,6 +752,7 @@ jobs:
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_matrix != '[]' }}
     name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -846,6 +848,7 @@ jobs:
             terraform destroy --auto-approve
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_mac_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -999,6 +1002,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1077,6 +1081,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ecs_fargate_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1167,6 +1172,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_daemon_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1260,6 +1266,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_deployment_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1349,6 +1356,7 @@ jobs:
   PerformanceTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_performance_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1430,6 +1438,7 @@ jobs:
   EC2WinPerformanceTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1511,6 +1520,7 @@ jobs:
   StressTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_stress_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1593,6 +1603,7 @@ jobs:
   EC2WinStressTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1676,6 +1687,7 @@ jobs:
   GPUEndToEndTest:
     name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_addon_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

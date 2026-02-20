@@ -55,6 +55,7 @@ on:
 
 jobs:
   EC2IntegrationTest:
+    if: ${{ inputs.test_props != '[]' }}
     name: ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
