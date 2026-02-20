@@ -127,19 +127,18 @@ jobs:
         working-directory: cwa
         run: |
           echo cw agent version $(cat CWAGENT_VERSION)
-          mkdir -p /tmp/${{ matrix.arch }}
-          cp -r build/bin/${{ matrix.bin_dir }}/. /tmp/${{ matrix.arch }}/
-          cp build/bin/CWAGENT_VERSION /tmp/${{ matrix.arch }}/CWAGENT_VERSION
+          cp -r build/bin/${{ matrix.bin_dir }}/. /tmp/
+          cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
 
       - name: Create pkg dep folder and copy deps
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         working-directory: test
         run: |
-          cp -r pkg/tools/. /tmp/${{ matrix.arch }}/
+          cp -r pkg/tools/. /tmp/
 
       - name: Build And Upload PKG
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        working-directory: /tmp/${{ matrix.arch }}
+        working-directory: /tmp
         run: |
           chmod +x create_pkg.sh
           ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" ${{ matrix.arch }}
