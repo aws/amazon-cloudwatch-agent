@@ -56,6 +56,8 @@ func DetectAgentMode(configuredMode string) string {
 			fmt.Println("I! Detected the instance is EC2")
 			return translatorconfig.ModeEC2
 		case cloudprovider.Azure:
+			// Azure uses ModeOnPrem because CWA has no native Azure integration;
+			// it relies on the same credential and endpoint paths as on-premises.
 			fmt.Println("I! Detected the instance is Azure")
 			return translatorconfig.ModeOnPrem
 		}

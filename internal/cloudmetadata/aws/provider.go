@@ -35,6 +35,7 @@ func NewProvider(ctx context.Context) (*Provider, error) {
 		return nil, err
 	}
 
+	// Hostname is best-effort; empty string is acceptable.
 	hostname, _ := mdProvider.Hostname(ctx)
 
 	return &Provider{

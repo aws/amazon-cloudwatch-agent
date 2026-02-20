@@ -55,10 +55,10 @@ func TestMapProvider_Refresh(t *testing.T) {
 	p := newMapProvider(fetch)
 	assert.Equal(t, "", p.Serial("sda"))
 
-	require.NoError(t, p.Refresh())
+	require.NoError(t, p.Refresh(context.Background()))
 	assert.Equal(t, "disk-1", p.Serial("sda"))
 
-	require.NoError(t, p.Refresh())
+	require.NoError(t, p.Refresh(context.Background()))
 	assert.Equal(t, "disk-2", p.Serial("sda"))
 }
 
@@ -70,7 +70,7 @@ func TestMapProvider_Refresh_Error(t *testing.T) {
 	p := newMapProvider(fetch)
 	p.cache = map[string]string{"sda": "old-disk"}
 
-	err := p.Refresh()
+	err := p.Refresh(context.Background())
 	assert.Error(t, err)
 	// Cache should be unchanged on error
 	assert.Equal(t, "old-disk", p.Serial("sda"))

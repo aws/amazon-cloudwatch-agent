@@ -5,7 +5,6 @@ package disktagger
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -19,8 +18,8 @@ type Tagger struct {
 	logger   *zap.Logger
 	provider DiskProvider
 
-	done         chan struct{}
-	shutdownOnce sync.Once
+	cancel context.CancelFunc
+	ctx    context.Context
 }
 
 func newTagger(config *Config, logger *zap.Logger, provider DiskProvider) *Tagger {
@@ -31,26 +30,26 @@ func newTagger(config *Config, logger *zap.Logger, provider DiskProvider) *Tagge
 	}
 }
 
-func (t *Tagger) Start(_ context.Context, _ component.Host) error {
+func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 	if t.provider == nil {
 		t.logger.Warn("disktagger: no provider, disk tagging disabled")
 		return nil
 	}
 
-	if err := t.provider.Refresh(); err != nil {
+	if err := t.provider.Refresh(ctx); err != nil {
 		t.logger.Warn("Initial disk refresh failed, will retry", zap.Error(err))
 	}
 
 	if t.config.RefreshInterval > 0 {
-		t.done = make(chan struct{})
+		t.ctx, t.cancel = context.WithCancel(context.Background())
 		go t.refreshLoop()
 	}
 	return nil
 }
 
 func (t *Tagger) Shutdown(_ context.Context) error {
-	if t.done != nil {
-		t.shutdownOnce.Do(func() { close(t.done) })
+	if t.cancel != nil {
+		t.cancel()
 	}
 	return nil
 }
@@ -73,6 +72,8 @@ func (t *Tagger) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.
 }
 
 func (t *Tagger) tagMetric(m pmetric.Metric) {
+	// Only Gauge and Sum are relevant for disk metrics; other types
+	// (Histogram, Summary, ExponentialHistogram) are silently skipped.
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
 		for i := 0; i < m.Gauge().DataPoints().Len(); i++ {
@@ -107,11 +108,10 @@ func (t *Tagger) refreshLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			// Refresh outside the lock (network I/O).
-			if err := t.provider.Refresh(); err != nil {
+			if err := t.provider.Refresh(t.ctx); err != nil {
 				t.logger.Warn("Disk refresh failed", zap.Error(err))
 			}
-		case <-t.done:
+		case <-t.ctx.Done():
 			return
 		}
 	}

@@ -18,7 +18,7 @@ type mockProvider struct {
 	refreshErr error
 }
 
-func (m *mockProvider) Refresh() error { return m.refreshErr }
+func (m *mockProvider) Refresh(ctx context.Context) error { return m.refreshErr }
 func (m *mockProvider) Serial(devName string) string {
 	return m.cache[devName]
 }
@@ -41,15 +41,15 @@ func TestProcessMetrics_AddsDiskID(t *testing.T) {
 	m := sm.Metrics().AppendEmpty()
 	m.SetName("disk_used_percent")
 	dp := m.SetEmptyGauge().DataPoints().AppendEmpty()
-	dp.Attributes().PutStr("device", "sda1")
+	dp.Attributes().PutStr("device", "sda")
 
 	result, err := tagger.processMetrics(context.Background(), md)
 	require.NoError(t, err)
 
 	attrs := result.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
 	val, ok := attrs.Get(AttributeDiskID)
-	assert.False(t, ok, "exact match sda1 not in cache, prefix matching is in mapProvider not mockProvider")
-	_ = val
+	assert.True(t, ok)
+	assert.Equal(t, "os-disk-name", val.Str())
 }
 
 func TestProcessMetrics_SkipsExistingDiskID(t *testing.T) {
@@ -114,10 +114,10 @@ func TestProcessMetrics_SumMetricType(t *testing.T) {
 
 func TestShutdown_Safe(t *testing.T) {
 	tagger := newTagger(&Config{}, zap.NewNop(), nil)
-	// Shutdown without Start — done is nil
+	// Shutdown without Start — cancel is nil
 	require.NoError(t, tagger.Shutdown(context.Background()))
 	// Double shutdown after Start
-	tagger.done = make(chan struct{})
+	tagger.ctx, tagger.cancel = context.WithCancel(context.Background())
 	require.NoError(t, tagger.Shutdown(context.Background()))
 	require.NoError(t, tagger.Shutdown(context.Background()))
 }

@@ -4,6 +4,8 @@
 package aws
 
 import (
+	"context"
+
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/internal/volume"
@@ -20,8 +22,8 @@ func NewProvider(ec2Client ec2.DescribeVolumesAPIClient, instanceID string) *Pro
 	}
 }
 
-func (p *Provider) Refresh() error {
-	return p.cache.Refresh()
+func (p *Provider) Refresh(ctx context.Context) error {
+	return p.cache.Refresh(ctx)
 }
 
 // Serial returns the volume ID for a device name, with prefix matching.

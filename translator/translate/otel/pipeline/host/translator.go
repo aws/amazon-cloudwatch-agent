@@ -100,6 +100,10 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 				ec2TaggerEnabled = true
 			}
 		} else {
+			// Non-EC2 clouds always need resourcedetection for cloud metadata
+			// (instance ID, type, etc.) used by entity store and resource attribution.
+			// Unlike EC2 where ec2tagger is optional, this is the only source of
+			// cloud metadata on Azure/GCP.
 			log.Printf("D! resourcedetection processor required for cloud metadata")
 			translators.Processors.Set(resourcedetectionprocessor.NewTranslator([]string{"env", "azure", "gcp", "system"}))
 		}

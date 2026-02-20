@@ -224,8 +224,9 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 		if strings.Contains(vStr, awsPlaceholderPrefix) {
 			if replacement, exists := metadata[vStr]; exists {
 				result[k] = replacement
+			} else {
+				log.Printf("W! Unresolved AWS placeholder %q for key %q, omitting", vStr, k)
 			}
-			// Omit unresolved AWS placeholders
 		} else {
 			result[k] = v
 		}

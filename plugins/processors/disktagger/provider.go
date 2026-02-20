@@ -12,7 +12,8 @@ import (
 // DiskProvider maps device names to disk identifiers (volume IDs, managed disk names, etc.)
 type DiskProvider interface {
 	// Refresh updates the internal device-to-disk mapping.
-	Refresh() error
+	// The context allows cancellation during shutdown.
+	Refresh(ctx context.Context) error
 
 	// Serial returns the disk identifier for a device name.
 	// Supports prefix matching (e.g. "nvme0n1p1" matches "nvme0n1").
@@ -30,8 +31,8 @@ func newMapProvider(fetchFunc func(ctx context.Context) (map[string]string, erro
 	return &mapProvider{fetchFunc: fetchFunc, cache: make(map[string]string)}
 }
 
-func (p *mapProvider) Refresh() error {
-	result, err := p.fetchFunc(context.Background())
+func (p *mapProvider) Refresh(ctx context.Context) error {
+	result, err := p.fetchFunc(ctx)
 	if err != nil {
 		return err
 	}
