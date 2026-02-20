@@ -37,10 +37,13 @@ on:
 
 jobs:
   BuildTestBinaries:
-    name: 'BuildTestBinaries'
+    name: 'BuildTestBinaries-${{ matrix.arch }}'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     outputs:
-      test_binaries_prefix: ${{ steps.build.outputs.test_binaries_prefix }}
+      test_binaries_prefix: ${{ steps.set-prefix.outputs.test_binaries_prefix }}
     permissions:
       id-token: write
       contents: read
@@ -49,6 +52,12 @@ jobs:
         with:
           repository: ${{ inputs.test_repo_name }}
           ref: ${{ inputs.test_repo_branch }}
+
+      - name: Set prefix
+        id: set-prefix
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          echo "test_binaries_prefix=integration-test/test-binaries/${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
@@ -63,41 +72,37 @@ jobs:
           aws-region: us-west-2
 
       - name: Build and upload test binaries
-        id: build
         env:
           S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          GOARCH: ${{ matrix.arch }}
         run: |
           COMMIT_SHA=$(git rev-parse --short HEAD)
-          echo "test_binaries_prefix=integration-test/test-binaries/${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+          PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
+          mkdir -p "build/bin/${GOARCH}"
 
           go mod download
 
-          for GOARCH in amd64 arm64; do
-            PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
-            mkdir -p "build/bin/${GOARCH}"
-
-            echo "=== Building for linux/${GOARCH} ==="
-            for pkg in $(go list ./test/...); do
-              name=$(basename "$pkg")
-              if CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go test -c -o "build/bin/${GOARCH}/${name}.test" "$pkg" 2>&1; then
-                echo "  ✓ ${name}.test"
-              else
-                echo "  ✗ ${name}.test (skipped)"
-              fi
-            done
-
-            BUILT=$(ls "build/bin/${GOARCH}/"*.test 2>/dev/null | wc -l)
-            echo "Built ${BUILT} binaries for linux/${GOARCH}"
-
-            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
+          echo "=== Building for linux/${GOARCH} ==="
+          for pkg in $(go list ./test/...); do
+            name=$(basename "$pkg")
+            if CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go test -c -o "build/bin/${GOARCH}/${name}.test" "$pkg" 2>&1; then
+              echo "  ✓ ${name}.test"
+            else
+              echo "  ✗ ${name}.test (skipped)"
+            fi
           done
+
+          BUILT=$(ls "build/bin/${GOARCH}/"*.test 2>/dev/null | wc -l)
+          echo "Built ${BUILT} binaries for linux/${GOARCH}"
+
+          aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
           echo "Upload complete to commercial bucket"
 
       - name: Upload binaries artifact
         uses: actions/upload-artifact@v4
         with:
-          name: test-binaries
-          path: build/bin/
+          name: test-binaries-${{ matrix.arch }}
+          path: build/bin/${{ matrix.arch }}/
           retention-days: 1
 
   UploadTestBinariesITAR:
@@ -109,11 +114,17 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: Download binaries artifact
+      - name: Download amd64 binaries
         uses: actions/download-artifact@v4
         with:
-          name: test-binaries
-          path: build/bin/
+          name: test-binaries-amd64
+          path: build/bin/amd64/
+
+      - name: Download arm64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries-arm64
+          path: build/bin/arm64/
 
       - name: Configure AWS Credentials for ITAR
         uses: aws-actions/configure-aws-credentials@v4
@@ -140,11 +151,17 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: Download binaries artifact
+      - name: Download amd64 binaries
         uses: actions/download-artifact@v4
         with:
-          name: test-binaries
-          path: build/bin/
+          name: test-binaries-amd64
+          path: build/bin/amd64/
+
+      - name: Download arm64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries-arm64
+          path: build/bin/arm64/
 
       - name: Configure AWS Credentials for CN
         uses: aws-actions/configure-aws-credentials@v4

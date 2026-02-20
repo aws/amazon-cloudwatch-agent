@@ -94,6 +94,30 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
+amazon-cloudwatch-agent-darwin-amd64: copy-version-file workload-discovery-darwin-amd64
+ifneq ($(OS),Windows_NT)
+ifeq ($(shell uname -s),Darwin)
+	@echo Building CloudWatchAgent for MacOS AMD64
+	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(DARWIN_BUILD_AMD64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(DARWIN_BUILD_AMD64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+endif
+endif
+
+amazon-cloudwatch-agent-darwin-arm64: copy-version-file workload-discovery-darwin-arm64
+ifneq ($(OS),Windows_NT)
+ifeq ($(shell uname -s),Darwin)
+	@echo Building CloudWatchAgent for MacOS ARM64
+	$(DARWIN_BUILD_ARM64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(DARWIN_BUILD_ARM64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(DARWIN_BUILD_ARM64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+endif
+endif
+
 amazon-cloudwatch-agent-windows: copy-version-file workload-discovery-windows
 	@echo Building CloudWatchAgent for Windows with AMD64
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
@@ -110,6 +134,20 @@ workload-discovery-darwin:
 ifneq ($(OS),Windows_NT)
 ifeq ($(shell uname -s),Darwin)
 	CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/darwin_amd64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+	CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/darwin_arm64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+endif
+endif
+
+workload-discovery-darwin-amd64:
+ifneq ($(OS),Windows_NT)
+ifeq ($(shell uname -s),Darwin)
+	CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/darwin_amd64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
+endif
+endif
+
+workload-discovery-darwin-arm64:
+ifneq ($(OS),Windows_NT)
+ifeq ($(shell uname -s),Darwin)
 	CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -buildmode=${CWAGENT_BUILD_MODE} -o $(BUILD_SPACE)/bin/darwin_arm64/workload-discovery github.com/aws/amazon-cloudwatch-agent/cmd/workload-discovery
 endif
 endif
@@ -337,6 +375,32 @@ package-prepare-darwin-tar:
 
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
+package-prepare-darwin-tar-amd64:
+	mkdir -p $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg
+	cp $(BUILD_SPACE)/bin/darwin_amd64/* $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/licensing/* $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/RELEASE_NOTES $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BUILD_SPACE)/bin/CWAGENT_VERSION $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/cfg/commonconfig/common-config.toml $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
+	cp $(BASE_SPACE)/packaging/darwin/amazon-cloudwatch-agent-ctl $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/packaging/darwin/com.amazon.cloudwatch.agent.plist $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
+	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
+
+package-prepare-darwin-tar-arm64:
+	mkdir -p $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg
+	cp $(BUILD_SPACE)/bin/darwin_arm64/* $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/licensing/* $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/RELEASE_NOTES $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BUILD_SPACE)/bin/CWAGENT_VERSION $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/cfg/commonconfig/common-config.toml $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
+	cp $(BASE_SPACE)/packaging/darwin/amazon-cloudwatch-agent-ctl $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/packaging/darwin/com.amazon.cloudwatch.agent.plist $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
+	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
+	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
+
 .PHONY: package-rpm
 package-rpm: package-prepare-rpm
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_rpm.sh
@@ -354,6 +418,12 @@ package-win: package-prepare-win-zip
 .PHONY: package-darwin
 package-darwin: package-prepare-darwin-tar
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
+	ARCH=arm64 TARGET_SUPPORTED_ARCH=aarch64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
+
+package-darwin-amd64: package-prepare-darwin-tar-amd64
+	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
+
+package-darwin-arm64: package-prepare-darwin-tar-arm64
 	ARCH=arm64 TARGET_SUPPORTED_ARCH=aarch64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
 
 .PHONY: fmt fmt-sh build test clean
