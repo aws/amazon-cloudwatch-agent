@@ -239,7 +239,7 @@ func (c *CloudWatchLogs) SampleConfig() string {
 // and not calling any other function which requires the lock.
 type cwDest struct {
 	pusher *pusher.Pusher
-	sync.Mutex
+	sync.RWMutex
 	isEMF   bool
 	retryer *retryer.LogThrottleRetryer
 
@@ -255,9 +255,10 @@ type cwDest struct {
 var _ logs.LogDest = (*cwDest)(nil)
 
 func (cd *cwDest) Publish(events []logs.LogEvent) error {
-	cd.Lock()
-	defer cd.Unlock()
-	if cd.stopped {
+	cd.RLock()
+	stopped := cd.stopped
+	cd.RUnlock()
+	if stopped {
 		return logs.ErrOutputStopped
 	}
 	for _, e := range events {
