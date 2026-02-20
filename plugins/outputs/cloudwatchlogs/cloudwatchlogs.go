@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
@@ -134,7 +135,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		d := cwd.(*cwDest)
 		d.Lock()
 		defer d.Unlock()
-		if !d.stopped {
+		if !d.stopped.Load() {
 			d.refCount++
 			return d
 		}
@@ -248,16 +249,14 @@ type cwDest struct {
 	// references, the cwDest object stops itself, closing all goroutines,
 	// and it can no longer be used
 	refCount   int
-	stopped    bool
+	stopped    atomic.Bool
 	onStopFunc func()
 }
 
 var _ logs.LogDest = (*cwDest)(nil)
 
 func (cd *cwDest) Publish(events []logs.LogEvent) error {
-	cd.Lock()
-	defer cd.Unlock()
-	if cd.stopped {
+	if cd.stopped.Load() {
 		return logs.ErrOutputStopped
 	}
 	for _, e := range events {
@@ -292,12 +291,12 @@ func (cd *cwDest) Stop() {
 }
 
 func (cd *cwDest) stop() {
-	if cd.stopped {
+	if cd.stopped.Load() {
 		return
 	}
 	cd.retryer.Stop()
 	cd.pusher.Stop()
-	cd.stopped = true
+	cd.stopped.Store(true)
 	if cd.onStopFunc != nil {
 		cd.onStopFunc()
 	}
