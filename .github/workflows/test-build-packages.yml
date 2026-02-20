@@ -115,7 +115,7 @@ jobs:
           path: |
             ~/Library/Caches/go-build
             ~/go/pkg/mod
-          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/go.sum') }}
 
       - name: Build Binaries
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false

@@ -136,7 +136,7 @@ jobs:
               -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="test_func=${{ matrix.arrays.testFunc }}" \
+              -var="test_run_filter=${{ matrix.arrays.testRunFilter }}" \
               -var="is_onprem=${{ inputs.is_onprem_test }}" \
               $TEST_BINARIES_VAR \
               -var="user=${{ matrix.arrays.username }}"; then
