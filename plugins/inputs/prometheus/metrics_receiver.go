@@ -108,6 +108,10 @@ func (ma *metricAppender) Append(_ storage.SeriesRef, ls labels.Labels, t int64,
 	delete(labelMap, savedScrapeInstanceLabel)
 
 	pm.tags = labelMap
+	
+	// Debug logging for Prometheus scrape metrics
+	log.Printf("D! Prometheus scrape metric: name=%s, value=%f, timestamp=%d, labels=%v", metricName, v, t, labelMap)
+	
 	ma.batch = append(ma.batch, pm)
 	return 0, nil //return 0 to indicate caching is not supported
 }
