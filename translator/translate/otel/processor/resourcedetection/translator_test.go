@@ -113,6 +113,9 @@ func TestTranslate(t *testing.T) {
 				},
 				"timeout":  "2s",
 				"override": true,
+				"eks": map[string]interface{}{
+					"node_from_env_var": "HOST_NAME",
+				},
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^kubernetes.io/cluster/.*$", "^aws:autoscaling:groupName"},
 				},

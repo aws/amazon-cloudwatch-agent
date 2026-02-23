@@ -1193,7 +1193,7 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
-            node_from_env_var: ""
+            node_from_env_var: HOST_NAME
             resource_attributes:
                 cloud.account.id:
                     enabled: false
