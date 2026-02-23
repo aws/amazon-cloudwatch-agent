@@ -177,10 +177,9 @@ jobs:
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
-      # TODO: Revert to using main helm branch when changes from leader-election are merged in
       - name: Clone Helm Charts Repository
         env:
-          HELM_CHARTS_BRANCH: ${{ inputs.helm-charts-branch || 'sky333999/leader-election' }}
+          HELM_CHARTS_BRANCH: ${{ inputs.helm-charts-branch || 'main' }}
         run: |
           rm -rf ./helm-charts
           git clone -b "$HELM_CHARTS_BRANCH" https://github.com/aws-observability/helm-charts.git ./helm-charts
