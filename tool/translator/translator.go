@@ -104,12 +104,14 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
 
 	mergedJSONConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ct.ctx)
-	if err != nil {
-		if errors.Is(err, cmdutil.ErrOnlyYAML) {
-			log.Println(exitSkipMessage)
-		} else {
-			return fmt.Errorf("failed to generate merged json config: %v", err)
-		}
+	onlyYAML := errors.Is(err, cmdutil.ErrOnlyYAML)
+	if err != nil && !onlyYAML {
+		return fmt.Errorf("failed to generate merged json config: %v", err)
+	}
+	if onlyYAML {
+		log.Println(exitSkipMessage)
+		// TOML translation requires a non-nil map
+		mergedJSONConfigMap = map[string]any{}
 	}
 
 	if !ct.ctx.RunInContainer() {
@@ -127,9 +129,12 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to generate TOML configuration validation content: %v", err)
 	}
-	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
-	if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
-		return fmt.Errorf("failed to generate YAML configuration validation content: %v", err)
+	var yamlConfig any
+	if !onlyYAML {
+		yamlConfig, err = cmdutil.TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
+		if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
+			return fmt.Errorf("failed to generate YAML configuration validation content: %v", err)
+		}
 	}
 	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
 		return fmt.Errorf("failed to create the configuration TOML validation file: %v", err)
@@ -141,7 +146,9 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	} else {
 		_ = os.Remove(yamlConfigPath)
 	}
-	log.Println(exitSuccessMessage)
+	if !onlyYAML {
+		log.Println(exitSuccessMessage)
+	}
 
 	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)

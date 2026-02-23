@@ -214,7 +214,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
 		}
-		if foundYAML {
+		if foundYAML && len(jsonConfigMapMap) == 0 {
 			return nil, ErrOnlyYAML
 		}
 	}
