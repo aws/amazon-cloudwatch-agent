@@ -110,11 +110,12 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	}
 	if onlyYAML {
 		log.Println(exitSkipMessage)
-		// TOML translation requires a non-nil map
+		// YAML-only configs still require a generated TOML for agent and logging configuration.
+		// TOML translation requires a non-nil map.
 		mergedJSONConfigMap = map[string]any{}
 	}
 
-	if !ct.ctx.RunInContainer() {
+	if !onlyYAML && !ct.ctx.RunInContainer() {
 		current, err := user.Current()
 		if err == nil && current.Name == "****" {
 			runAsUser, err := userutil.DetectRunAsUser(mergedJSONConfigMap)
