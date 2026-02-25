@@ -31,7 +31,9 @@ func MockEC2Metadata(m *util.Metadata) func() {
 
 // UnmarshalAndApplyRule is a convenience for the common test pattern of
 // unmarshaling a JSON config string and passing it through a rule's ApplyRule.
-func UnmarshalAndApplyRule(t *testing.T, jsonInput string, rule interface{ ApplyRule(interface{}) (string, interface{}) }) (string, interface{}) {
+func UnmarshalAndApplyRule(t *testing.T, jsonInput string, rule interface {
+	ApplyRule(interface{}) (string, interface{})
+}) (string, interface{}) {
 	t.Helper()
 	var input interface{}
 	require.NoError(t, json.Unmarshal([]byte(jsonInput), &input))
