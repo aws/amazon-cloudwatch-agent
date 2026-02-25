@@ -42,6 +42,7 @@ const (
 	DisableMetricExtraction                        = "disable_metric_extraction"
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
+	OtlpExportKey                                  = "otlpexport"
 	JmxKey                                         = "jmx"
 	TLSKey                                         = "tls" //nolint:revive
 	Endpoint                                       = "endpoint"

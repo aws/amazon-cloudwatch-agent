@@ -153,6 +153,10 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 		resourceAttrs := rm.At(i).Resource().Attributes()
 		switch p.config.EntityType {
 		case entityattributes.Resource:
+			// For OTLP export path, skip adding internal entity attributes for resource metrics
+			if p.config.AddOtelSemConvAttributes {
+				continue
+			}
 			if p.config.KubernetesMode != "" {
 				switch p.config.KubernetesMode {
 				case config.ModeEKS:
@@ -293,30 +297,38 @@ func (p *awsEntityProcessor) processMetrics(ctx context.Context, md pmetric.Metr
 					}
 				}
 
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
-				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
-
 				ec2Attributes := EC2ServiceAttributes{
 					InstanceId:        ec2Info.GetInstanceID(),
 					AutoScalingGroup:  getAutoScalingGroupFromEntityStore(),
 					ServiceNameSource: entityServiceNameSource,
 				}
-				if err := validate.Struct(ec2Attributes); err == nil {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
-					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
-					if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
-						// Instrumentation Service Name Source has highest priority
-						// Therefore only apply when service name source is not
-						// Instrumentation. Service instrumented with "unknown_service" name
-						// will not be an issue since we have logics to modify it with propoer
-						// service name and source
-						p.entityTransformer.ApplyTransforms(resourceAttrs)
-					}
+				// For OTLP export path, only add otel semconv attributes
+				if p.config.AddOtelSemConvAttributes {
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.OtelSemConvAttributeServiceName, entityServiceName)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.OtelSemConvAttributeDeploymentEnvironmentName, entityEnvironmentName)
+					// Remove non-semconv attributes to avoid duplicates
+					resourceAttrs.Remove(attributeDeploymentEnvironment)
+				} else {
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.GetAccountID())
 
+					if err := validate.Struct(ec2Attributes); err == nil {
+						resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
+						AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
+						AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
+						AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
+						if ec2Attributes.ServiceNameSource != entitystore.ServiceNameSourceInstrumentation {
+							// Instrumentation Service Name Source has highest priority
+							// Therefore only apply when service name source is not
+							// Instrumentation. Service instrumented with "unknown_service" name
+							// will not be an issue since we have logics to modify it with propoer
+							// service name and source
+							p.entityTransformer.ApplyTransforms(resourceAttrs)
+						}
+
+					}
 				}
 			}
 			if logGroupNames == EMPTY || (serviceName == EMPTY && environmentName == EMPTY) {

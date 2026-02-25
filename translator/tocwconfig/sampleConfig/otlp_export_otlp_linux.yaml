@@ -63,19 +63,16 @@ processors:
     awsentity/service/otlp:
         entity_type: Service
         platform: ec2
-    batch/hostOtlpMetrics/otlp:
+    awsentity/service/otlpexport:
+        add_semconv_attributes: true
+        entity_type: Service
+        platform: ec2
+    batch/hostOtlpMetrics/otlpexport:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     cumulativetodelta/hostOtlpMetrics/cloudwatch:
-        exclude:
-            match_type: ""
-        include:
-            match_type: ""
-        initial_value: 2
-        max_staleness: 0s
-    cumulativetodelta/hostOtlpMetrics/otlp:
         exclude:
             match_type: ""
         include:
@@ -93,7 +90,7 @@ processors:
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
-    ec2tagger/otlp:
+    ec2tagger/otlpexport:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
@@ -147,14 +144,13 @@ service:
             receivers:
                 - otlp/grpc_0_0_0_0_1234
                 - otlp/http_0_0_0_0_2345
-        metrics/hostOtlpMetrics/otlp:
+        metrics/hostOtlpMetrics/otlpexport:
             exporters:
                 - otlphttp
             processors:
-                - cumulativetodelta/hostOtlpMetrics/otlp
-                - ec2tagger/otlp
-                - awsentity/service/otlp
-                - batch/hostOtlpMetrics/otlp
+                - ec2tagger/otlpexport
+                - awsentity/service/otlpexport
+                - batch/hostOtlpMetrics/otlpexport
             receivers:
                 - otlp/grpc_0_0_0_0_1234
                 - otlp/http_0_0_0_0_2345

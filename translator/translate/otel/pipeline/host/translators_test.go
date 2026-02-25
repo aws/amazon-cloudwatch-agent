@@ -270,7 +270,7 @@ func TestTranslators(t *testing.T) {
 			},
 			configSection: MetricsKey,
 			want: map[string]want{
-				"metrics/host/otlp": {
+				"metrics/host/otlpexport": {
 					receivers: []string{"telegraf_cpu", "telegraf_diskio"},
 					exporters: []string{"otlphttp"},
 				},
@@ -301,7 +301,7 @@ func TestTranslators(t *testing.T) {
 					receivers: []string{"telegraf_diskio"},
 					exporters: []string{"awscloudwatch"},
 				},
-				"metrics/host/otlp": {
+				"metrics/host/otlpexport": {
 					receivers: []string{"telegraf_cpu", "telegraf_diskio"},
 					exporters: []string{"otlphttp"},
 				},
@@ -322,7 +322,7 @@ func TestTranslators(t *testing.T) {
 			},
 			configSection: MetricsKey,
 			want: map[string]want{
-				"metrics/host/otlp": {
+				"metrics/host/otlpexport": {
 					receivers: []string{"telegraf_net"},
 					exporters: []string{"otlphttp"},
 				},

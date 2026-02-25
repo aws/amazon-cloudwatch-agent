@@ -30,6 +30,9 @@ type Config struct {
 	EntityType string `mapstructure:"entity_type,omitempty"`
 	// TransformEntity contains configuration for overriding entity attributes
 	TransformEntity *entity.Transform `mapstructure:"transform_entity,omitempty"`
+	// AddOtelSemConvAttributes determines if the processor should add OTEL semantic convention
+	// attributes (service.name, deployment.environment.name) for OTLP export paths.
+	AddOtelSemConvAttributes bool `mapstructure:"add_semconv_attributes,omitempty"`
 }
 
 // Verify Config implements Processor interface.

@@ -620,6 +620,22 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:                          "AddOtelSemConvAttributesEC2",
+			platform:                      config.ModeEC2,
+			metrics:                       generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
+			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012"),
+			mockGetAutoScalingGroup:       newMockGetAutoScalingGroupFromEntityStore("test-asg"),
+			want: map[string]any{
+				entityattributes.OtelSemConvAttributeServiceName:               "test-service",
+				entityattributes.OtelSemConvAttributeDeploymentEnvironmentName: "test-environment",
+			},
+			config: &Config{
+				EntityType:               attributeService,
+				AddOtelSemConvAttributes: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -657,14 +673,15 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	tests := []struct {
-		name           string
-		metrics        pmetric.Metrics
-		want           map[string]any
-		instance       string
-		accountID      string
-		asg            string
-		platform       string
-		kubernetesMode string
+		name                     string
+		metrics                  pmetric.Metrics
+		want                     map[string]any
+		instance                 string
+		accountID                string
+		asg                      string
+		platform                 string
+		kubernetesMode           string
+		addOtelSemConvAttributes bool
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -709,12 +726,21 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 				entityattributes.AttributeEntityPlatformType: entityattributes.AttributeEntityK8sPlatform,
 			},
 		},
+		{
+			name:                     "ResourceEntityEC2WithOtelSemConv",
+			metrics:                  generateMetrics(),
+			instance:                 "i-123456789",
+			accountID:                "0123456789012",
+			platform:                 config.ModeEC2,
+			addOtelSemConvAttributes: true,
+			want:                     map[string]any{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance, tt.accountID)
-			p := newAwsEntityProcessor(&Config{EntityType: entityattributes.Resource, Platform: tt.platform, KubernetesMode: tt.kubernetesMode}, logger)
+			p := newAwsEntityProcessor(&Config{EntityType: entityattributes.Resource, Platform: tt.platform, KubernetesMode: tt.kubernetesMode, AddOtelSemConvAttributes: tt.addOtelSemConvAttributes}, logger)
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
 			rm := tt.metrics.ResourceMetrics()

@@ -64,7 +64,11 @@ func NewTranslator(
 		opt(t)
 	}
 	if t.Destination() != "" {
-		t.name += "/" + t.Destination()
+		destSuffix := t.Destination()
+		if destSuffix == common.OtlpKey {
+			destSuffix = common.OtlpExportKey
+		}
+		t.name += "/" + destSuffix
 	}
 	return t
 }
@@ -89,7 +93,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 
-	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || (strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) && t.Destination() != common.OtlpKey) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 	}
@@ -132,16 +136,24 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 			case common.CloudWatchLogsKey:
 				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchLogsKey, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			case common.OtlpKey:
-				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
+				entityProcessor = util.CreateEntityProcessorForOTLPExport(common.OtlpExportKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			}
 		}
 	case common.PipelineNameHostCustomMetrics:
 		if !currentContext.RunInContainer() {
-			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+			if t.Destination() == common.OtlpKey {
+				entityProcessor = awsentity.NewTranslatorWithEntityTypeAndSemConv(awsentity.Service, "telegraf/otlpexport", true, true)
+			} else {
+				entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+			}
 		}
 	case common.PipelineNameHost, common.PipelineNameHostDeltaMetrics:
 		if !currentContext.RunInContainer() {
-			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", ec2TaggerEnabled)
+			if t.Destination() == common.OtlpKey {
+				entityProcessor = awsentity.NewTranslatorWithEntityTypeAndSemConv(awsentity.Resource, common.OtlpExportKey, ec2TaggerEnabled, true)
+			} else {
+				entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", ec2TaggerEnabled)
+			}
 		}
 	}
 

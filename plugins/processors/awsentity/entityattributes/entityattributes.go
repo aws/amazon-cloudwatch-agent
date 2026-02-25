@@ -44,6 +44,10 @@ const (
 	AttributeEntityEKSPlatform = "AWS::EKS"
 	AttributeEntityK8sPlatform = "K8s"
 
+	// OTEL semantic convention attributes for OTLP export
+	OtelSemConvAttributeServiceName               = "service.name"
+	OtelSemConvAttributeDeploymentEnvironmentName = "deployment.environment.name"
+
 	// The following Fields are the actual names attached to the Entity requests.
 	ServiceName           = "Name"
 	DeploymentEnvironment = "Environment"

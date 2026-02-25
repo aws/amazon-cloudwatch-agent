@@ -29,6 +29,7 @@ type translator struct {
 	name                     string
 	scrapeDatapointAttribute bool
 	transform                *entity.Transform
+	addSemConvAttributes     bool
 }
 
 func NewTranslator() common.ComponentTranslator {
@@ -48,6 +49,37 @@ func NewTranslatorWithEntityType(entityType string, name string, scrapeDatapoint
 		entityType:               entityType,
 		name:                     pipelineName,
 		scrapeDatapointAttribute: scrapeDatapointAttribute,
+	}
+}
+
+func NewTranslatorWithEntityTypeAndSemConv(entityType string, name string, scrapeDatapointAttribute bool, addSemConvAttributes bool) common.ComponentTranslator {
+	pipelineName := strings.ToLower(entityType)
+	if name != "" {
+		pipelineName = pipelineName + "/" + name
+	}
+
+	return &translator{
+		factory:                  awsentity.NewFactory(),
+		entityType:               entityType,
+		name:                     pipelineName,
+		scrapeDatapointAttribute: scrapeDatapointAttribute,
+		addSemConvAttributes:     addSemConvAttributes,
+	}
+}
+
+func NewTranslatorWithEntityTypeAndSemConvAndTransform(entityType string, name string, scrapeDatapointAttribute bool, addSemConvAttributes bool, transform *entity.Transform) common.ComponentTranslator {
+	pipelineName := strings.ToLower(entityType)
+	if name != "" {
+		pipelineName = pipelineName + "/" + name
+	}
+
+	return &translator{
+		factory:                  awsentity.NewFactory(),
+		entityType:               entityType,
+		name:                     pipelineName,
+		scrapeDatapointAttribute: scrapeDatapointAttribute,
+		addSemConvAttributes:     addSemConvAttributes,
+		transform:                transform,
 	}
 }
 
@@ -87,6 +119,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if t.scrapeDatapointAttribute {
 		cfg.ScrapeDatapointAttribute = true
 	}
+
+	cfg.AddOtelSemConvAttributes = t.addSemConvAttributes
 
 	cfg.KubernetesMode = ctx.KubernetesMode()
 	// We want to keep platform config variable to be

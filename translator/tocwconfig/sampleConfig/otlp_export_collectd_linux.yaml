@@ -64,7 +64,12 @@ processors:
         entity_type: Service
         platform: ec2
         scrape_datapoint_attribute: true
-    batch/hostCustomMetrics/otlp:
+    awsentity/service/telegraf/otlpexport:
+        add_semconv_attributes: true
+        entity_type: Service
+        platform: ec2
+        scrape_datapoint_attribute: true
+    batch/hostCustomMetrics/otlpexport:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -80,7 +85,7 @@ processors:
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
-    ec2tagger/otlp:
+    ec2tagger/otlpexport:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
@@ -110,13 +115,13 @@ service:
                 - awsentity/service/telegraf
             receivers:
                 - telegraf_socket_listener
-        metrics/hostCustomMetrics/otlp:
+        metrics/hostCustomMetrics/otlpexport:
             exporters:
                 - otlphttp
             processors:
-                - ec2tagger/otlp
-                - awsentity/service/telegraf
-                - batch/hostCustomMetrics/otlp
+                - ec2tagger/otlpexport
+                - awsentity/service/telegraf/otlpexport
+                - batch/hostCustomMetrics/otlpexport
             receivers:
                 - telegraf_socket_listener
     telemetry:

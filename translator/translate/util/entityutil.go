@@ -17,6 +17,8 @@ import (
 // For unit testing
 var NewTranslatorWithEntityType = awsentity.NewTranslatorWithEntityType
 var NewTranslatorWithEntityTypeAndTransform = awsentity.NewTranslatorWithEntityTypeAndTransform
+var NewTranslatorWithEntityTypeAndSemConv = awsentity.NewTranslatorWithEntityTypeAndSemConv
+var NewTranslatorWithEntityTypeAndSemConvAndTransform = awsentity.NewTranslatorWithEntityTypeAndSemConvAndTransform
 
 func CreateEntityProcessorFromConfig(name string, configSection string, conf *confmap.Conf) common.ComponentTranslator {
 	// Prioritize agent global config first
@@ -59,4 +61,40 @@ func CreateEntityProcessorFromConfig(name string, configSection string, conf *co
 	}
 
 	return NewTranslatorWithEntityType(awsentity.Service, common.OtlpKey, false)
+}
+
+// CreateEntityProcessorForOTLPExport creates an entity processor for OTLP export path
+// that uses OTEL semantic convention attributes (service.name, deployment.environment.name)
+// instead of internal entity attributes.
+func CreateEntityProcessorForOTLPExport(name string, configSection string, conf *confmap.Conf) common.ComponentTranslator {
+	serviceName := agent.Global_Config.ServiceName
+	environment := agent.Global_Config.DeploymentEnvironment
+
+	if val, _ := common.GetString(conf, common.ConfigKey(configSection, semconv.AttributeServiceName)); val != "" {
+		serviceName = val
+	}
+	if val, _ := common.GetString(conf, common.ConfigKey(configSection, semconv.AttributeDeploymentEnvironment)); val != "" {
+		environment = val
+	}
+
+	if serviceName != "" || environment != "" {
+		transform := &entity.Transform{
+			KeyAttributes: make([]entity.KeyPair, 0),
+		}
+		if serviceName != "" {
+			transform.KeyAttributes = append(transform.KeyAttributes, entity.KeyPair{
+				Key:   entityattributes.OtelSemConvAttributeServiceName,
+				Value: serviceName,
+			})
+		}
+		if environment != "" {
+			transform.KeyAttributes = append(transform.KeyAttributes, entity.KeyPair{
+				Key:   entityattributes.OtelSemConvAttributeDeploymentEnvironmentName,
+				Value: environment,
+			})
+		}
+		return NewTranslatorWithEntityTypeAndSemConvAndTransform(awsentity.Service, name, false, true, transform)
+	}
+
+	return NewTranslatorWithEntityTypeAndSemConv(awsentity.Service, name, false, true)
 }

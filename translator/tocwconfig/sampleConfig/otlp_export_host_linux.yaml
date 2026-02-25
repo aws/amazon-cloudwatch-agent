@@ -64,7 +64,12 @@ processors:
         entity_type: Resource
         platform: ec2
         scrape_datapoint_attribute: true
-    batch/host/otlp:
+    awsentity/resource/otlpexport:
+        add_semconv_attributes: true
+        entity_type: Resource
+        platform: ec2
+        scrape_datapoint_attribute: true
+    batch/host/otlpexport:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -80,13 +85,13 @@ processors:
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
-    ec2tagger/otlp:
+    ec2tagger/otlpexport:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
@@ -110,13 +115,13 @@ service:
                 - awsentity/resource
             receivers:
                 - telegraf_cpu
-        metrics/host/otlp:
+        metrics/host/otlpexport:
             exporters:
                 - otlphttp
             processors:
-                - ec2tagger/otlp
-                - awsentity/resource
-                - batch/host/otlp
+                - ec2tagger/otlpexport
+                - awsentity/resource/otlpexport
+                - batch/host/otlpexport
             receivers:
                 - telegraf_cpu
     telemetry:
