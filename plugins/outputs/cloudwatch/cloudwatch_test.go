@@ -399,13 +399,11 @@ func newCloudWatchClient(
 	svc cloudwatchiface.CloudWatchAPI,
 	forceFlushInterval time.Duration,
 ) *CloudWatch {
+	cfg := createDefaultConfig().(*Config)
+	cfg.ForceFlushInterval = forceFlushInterval
 	cloudwatch := &CloudWatch{
-		svc: svc,
-		config: &Config{
-			ForceFlushInterval: forceFlushInterval,
-			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
-			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
-		},
+		svc:    svc,
+		config: cfg,
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch
@@ -528,14 +526,14 @@ func TestMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
+	cfg := createDefaultConfig().(*Config)
+	cfg.Region = "test-region"
+	cfg.Namespace = "test-namespace"
+	cfg.ForceFlushInterval = time.Second
+	cfg.EndpointOverride = server.URL
+	cfg.MiddlewareID = &id
 	cw := &CloudWatch{
-		config: &Config{
-			Region:             "test-region",
-			Namespace:          "test-namespace",
-			ForceFlushInterval: time.Second,
-			EndpointOverride:   server.URL,
-			MiddlewareID:       &id,
-		},
+		config: cfg,
 		logger: zap.NewNop(),
 	}
 	ctx := context.Background()
@@ -560,7 +558,7 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestBackoffRetries(t *testing.T) {
-	c := &CloudWatch{}
+	c := &CloudWatch{config: createDefaultConfig().(*Config)}
 	sleeps := []time.Duration{
 		time.Millisecond * 200,
 		time.Millisecond * 400,
@@ -640,7 +638,7 @@ func TestCreateEntityMetricData(t *testing.T) {
 func TestWriteToCloudWatchEntity(t *testing.T) {
 	timestampNow := aws.Time(time.Now())
 	expectedPMDInput := &cloudwatch.PutMetricDataInput{
-		Namespace:              aws.String(""),
+		Namespace:              aws.String("CWAgent"),
 		StrictEntityValidation: aws.Bool(false),
 		EntityMetricData: []*cloudwatch.EntityMetricData{
 			{
@@ -748,11 +746,11 @@ func TestUserAgentFeatureFlags(t *testing.T) {
 				Endpoint: aws.String("http://localhost:12345"),
 			}))
 			realSvc := cloudwatch.New(sess)
+			cfg := createDefaultConfig().(*Config)
+			cfg.ForceFlushInterval = time.Second
 			cw := &CloudWatch{
-				svc: realSvc,
-				config: &Config{
-					ForceFlushInterval: time.Second,
-				},
+				svc:    realSvc,
+				config: cfg,
 				logger: zap.NewNop(),
 			}
 
