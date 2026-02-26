@@ -34,7 +34,7 @@ func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	}
 	// Only use named instance for OTLP to avoid changing existing CloudWatch configs
 	if t.Destination() == common.OtlpKey {
-		t.name = t.Destination()
+		t.name = common.OtlpExportKey
 	}
 	return t
 }

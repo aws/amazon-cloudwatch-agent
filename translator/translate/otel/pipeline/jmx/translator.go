@@ -51,7 +51,11 @@ func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
 		opt(t)
 	}
 	if t.Destination() != "" {
-		t.name += "/" + t.Destination()
+		suffix := t.Destination()
+		if suffix == common.OtlpKey {
+			suffix = common.OtlpExportKey
+		}
+		t.name += "/" + suffix
 	}
 	if t.Index() != -1 {
 		t.name += "/" + strconv.Itoa(t.Index())
