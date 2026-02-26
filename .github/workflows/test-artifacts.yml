@@ -211,7 +211,8 @@ jobs:
           
           echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_matrix=$(apply_filters generator/resources/ec2_linux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          # ec2_linux_matrix written to file (not GITHUB_OUTPUT) to avoid 1MB job output limit
+          apply_filters generator/resources/ec2_linux_complete_test_matrix.json > /tmp/ec2_linux_matrix.json
           echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
@@ -233,7 +234,7 @@ jobs:
           # GitHub Actions matrix limit is 256 jobs per workflow run.
           # Use 200 per page for headroom. Up to 5 pages supported (1000 tests).
           PAGE_SIZE=200
-          FULL_MATRIX='${{ steps.set-matrix.outputs.ec2_linux_matrix }}'
+          FULL_MATRIX=$(cat /tmp/ec2_linux_matrix.json)
           TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
           PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
 
