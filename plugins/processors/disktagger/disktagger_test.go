@@ -117,7 +117,7 @@ func TestShutdown_Safe(t *testing.T) {
 	// Shutdown without Start — cancel is nil
 	require.NoError(t, tagger.Shutdown(context.Background()))
 	// Double shutdown after Start
-	tagger.ctx, tagger.cancel = context.WithCancel(context.Background())
+	_, tagger.cancel = context.WithCancel(context.Background())
 	require.NoError(t, tagger.Shutdown(context.Background()))
 	require.NoError(t, tagger.Shutdown(context.Background()))
 }

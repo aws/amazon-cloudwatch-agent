@@ -4,6 +4,7 @@
 package resourcedetectionprocessor
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -23,7 +24,6 @@ var legacyToOTel = map[string]string{
 	"${aws:InstanceId}":   "host.id",
 	"${aws:InstanceType}": "host.type",
 	"${aws:ImageId}":      "host.image.id",
-	"${aws:Region}":       "cloud.region",
 }
 
 type translator struct {
@@ -60,8 +60,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.Override = false
 
 	requested := collectRequestedAttributes(conf)
-	configureEC2Attributes(cfg, requested)
-	configureAzureAttributes(cfg, requested)
+	if slices.Contains(t.detectors, "ec2") {
+		configureEC2Attributes(cfg, requested)
+	}
+	if slices.Contains(t.detectors, "azure") {
+		configureAzureAttributes(cfg, requested)
+	}
 
 	return cfg, nil
 }

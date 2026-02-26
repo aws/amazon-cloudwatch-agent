@@ -105,7 +105,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 			// Unlike EC2 where ec2tagger is optional, this is the only source of
 			// cloud metadata on Azure/GCP.
 			log.Printf("D! resourcedetection processor required for cloud metadata")
-			translators.Processors.Set(resourcedetectionprocessor.NewTranslator([]string{"env", "azure", "gcp", "system"}))
+			translators.Processors.Set(resourcedetectionprocessor.NewTranslator([]string{"env", "azure", "system"}))
 		}
 
 		mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))

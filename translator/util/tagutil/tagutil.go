@@ -16,6 +16,7 @@ import (
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
 )
 
 const (
@@ -83,7 +84,7 @@ var ec2ClientFactory = createDescribeTagsClient
 
 func createDescribeTagsClient(ctx context.Context) (ec2.DescribeTagsAPIClient, error) {
 	region := ""
-	if p := cloudmetadata.GetProvider(); p != nil {
+	if p := cloudmetadata.GetProvider(); p != nil && p.CloudProvider() == cloudprovider.AWS {
 		region = p.Region()
 	}
 	if region == "" {

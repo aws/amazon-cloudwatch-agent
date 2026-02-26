@@ -26,18 +26,22 @@ const detectTimeout = 3 * time.Second
 // on hosts where IMDS is unreachable.
 func GetProvider() Provider {
 	once.Do(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), detectTimeout)
-		defer cancel()
+		// Each provider gets its own context so that one provider's
+		// timeout does not consume the budget of the next.
 
 		// Try AWS first (most common)
-		if p, err := aws.NewProvider(ctx); err == nil {
+		awsCtx, awsCancel := context.WithTimeout(context.Background(), detectTimeout)
+		defer awsCancel()
+		if p, err := aws.NewProvider(awsCtx); err == nil {
 			globalProvider = p
 			log.Printf("I! [cloudmetadata] Detected AWS (region=%s, instanceID=%s)\n", globalProvider.Region(), globalProvider.InstanceID())
 			return
 		}
 
 		// Try Azure
-		if p, err := azure.NewProvider(ctx); err == nil {
+		azureCtx, azureCancel := context.WithTimeout(context.Background(), detectTimeout)
+		defer azureCancel()
+		if p, err := azure.NewProvider(azureCtx); err == nil {
 			globalProvider = p
 			log.Printf("I! [cloudmetadata] Detected Azure (region=%s, instanceID=%s)\n", globalProvider.Region(), globalProvider.InstanceID())
 			return

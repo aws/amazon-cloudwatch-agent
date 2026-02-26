@@ -111,15 +111,22 @@ type storageProfile struct {
 }
 
 // Provider maps Linux device names to Azure managed disk names.
+// The rootfs prefix and symlink availability are determined once at
+// construction time since they don't change at runtime.
 type Provider struct {
-	client   *http.Client
-	endpoint string
+	client       *http.Client
+	endpoint     string
+	rootfsPrefix string
+	useSymlinks  bool
 }
 
 func NewProvider() *Provider {
+	prefix := detectRootfsPrefix()
 	return &Provider{
-		client:   &http.Client{Timeout: 5 * time.Second},
-		endpoint: storageProfileEndpoint,
+		client:       &http.Client{Timeout: 5 * time.Second},
+		endpoint:     storageProfileEndpoint,
+		rootfsPrefix: prefix,
+		useSymlinks:  symlinkAvailable(prefix),
 	}
 }
 
@@ -129,18 +136,15 @@ func (p *Provider) DeviceToDiskID(ctx context.Context) (map[string]string, error
 		return nil, err
 	}
 
-	// Determine which device resolution method to use.
-	useSymlinks := symlinkAvailable()
-
 	result := make(map[string]string)
 
 	// Map OS disk.
 	if profile.OsDisk.Name != "" {
 		var dev string
-		if useSymlinks {
-			dev = resolveSymlink(azureDiskRoot)
+		if p.useSymlinks {
+			dev = p.resolveSymlink(azureDiskRoot)
 		} else {
-			dev = resolveScsiDevice(scsiHostOS, scsiLunOS)
+			dev = p.resolveScsiDevice(scsiHostOS, scsiLunOS)
 		}
 		if dev != "" {
 			result[dev] = profile.OsDisk.Name
@@ -154,11 +158,11 @@ func (p *Provider) DeviceToDiskID(ctx context.Context) (map[string]string, error
 			continue
 		}
 		var dev string
-		if useSymlinks {
+		if p.useSymlinks {
 			link := filepath.Join(azureDiskDataDir, fmt.Sprintf("lun%d", lun))
-			dev = resolveSymlink(link)
+			dev = p.resolveSymlink(link)
 		} else {
-			dev = resolveScsiDevice(scsiHostData, lun)
+			dev = p.resolveScsiDevice(scsiHostData, lun)
 		}
 		if dev != "" {
 			result[dev] = d.Name
@@ -168,29 +172,31 @@ func (p *Provider) DeviceToDiskID(ctx context.Context) (map[string]string, error
 	return result, nil
 }
 
-// symlinkAvailable checks if Azure Linux Agent symlinks exist.
-func symlinkAvailable() bool {
-	for _, prefix := range []string{"", "/rootfs"} {
-		if _, err := os.Lstat(prefix + azureDiskRoot); err == nil {
-			return true
-		}
+// detectRootfsPrefix returns "/rootfs" if the host filesystem is mounted
+// there (containerized environment), otherwise "".
+func detectRootfsPrefix() string {
+	if _, err := os.Lstat("/rootfs/proc"); err == nil {
+		return "/rootfs"
 	}
-	return false
+	return ""
+}
+
+// symlinkAvailable checks if Azure Linux Agent symlinks exist.
+func symlinkAvailable(prefix string) bool {
+	_, err := os.Lstat(prefix + azureDiskRoot)
+	return err == nil
 }
 
 // resolveSymlink reads a /dev/disk/azure/* symlink and returns the base
 // device name (without partition suffix).
 //
 // Example: /dev/disk/azure/root → ../../sda → "sda"
-func resolveSymlink(path string) string {
-	for _, prefix := range []string{"", "/rootfs"} {
-		target, err := os.Readlink(prefix + path)
-		if err != nil {
-			continue
-		}
-		return baseDevice(filepath.Base(target))
+func (p *Provider) resolveSymlink(path string) string {
+	target, err := os.Readlink(p.rootfsPrefix + path)
+	if err != nil {
+		return ""
 	}
-	return ""
+	return baseDevice(filepath.Base(target))
 }
 
 // resolveScsiDevice finds the block device for a given SCSI host and LUN
@@ -198,16 +204,13 @@ func resolveSymlink(path string) string {
 // installed.
 //
 // Example: host=1, lun=0 → scans /sys/bus/scsi/devices/1:0:0:0/block/* → "sdc"
-func resolveScsiDevice(host, lun int) string {
-	pattern := fmt.Sprintf("/sys/bus/scsi/devices/%d:0:0:%d/block/*", host, lun)
-	for _, prefix := range []string{"", "/rootfs"} {
-		matches, err := filepath.Glob(prefix + pattern)
-		if err != nil || len(matches) == 0 {
-			continue
-		}
-		return baseDevice(filepath.Base(matches[0]))
+func (p *Provider) resolveScsiDevice(host, lun int) string {
+	pattern := fmt.Sprintf("%s/sys/bus/scsi/devices/%d:0:0:%d/block/*", p.rootfsPrefix, host, lun)
+	matches, err := filepath.Glob(pattern)
+	if err != nil || len(matches) == 0 {
+		return ""
 	}
-	return ""
+	return baseDevice(filepath.Base(matches[0]))
 }
 
 // baseDevice strips the partition suffix from a device name to get the

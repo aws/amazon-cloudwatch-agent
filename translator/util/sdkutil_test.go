@@ -46,6 +46,7 @@ func TestDetectAgentModeAuto(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			runInAws = testCase.runInAws
 			cloudmetadata.SetForTest(testCase.provider)
+			defer cloudmetadata.ResetForTest()
 			DefaultECSRegion = func() string { return testCase.ecsRegion }
 			require.Equal(t, testCase.wantMode, DetectAgentMode("auto"))
 			runInAws = ""

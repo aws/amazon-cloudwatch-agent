@@ -4,8 +4,6 @@
 package disktaggerprocessor
 
 import (
-	"time"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
@@ -51,8 +49,5 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*disktagger.Config)
-	cfg.RefreshInterval = 5 * time.Minute
-	cfg.DiskDeviceTagKey = "device"
-
 	return cfg, nil
 }

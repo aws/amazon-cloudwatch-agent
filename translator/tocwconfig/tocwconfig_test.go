@@ -900,7 +900,7 @@ func TestIgnoreInvalidAppendDimensions(t *testing.T) {
 	checkTranslation(t, "ignore_append_dimensions", "linux", expectedEnvVars, "")
 }
 
-func TestEC2DisktaggerConfig(t *testing.T) {
+func TestEC2DiskTaggerConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	checkTranslation(t, "ec2_disktagger_config_linux", "linux", nil, "")

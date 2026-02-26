@@ -19,7 +19,6 @@ type Tagger struct {
 	provider DiskProvider
 
 	cancel context.CancelFunc
-	ctx    context.Context
 }
 
 func newTagger(config *Config, logger *zap.Logger, provider DiskProvider) *Tagger {
@@ -41,8 +40,9 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 	}
 
 	if t.config.RefreshInterval > 0 {
-		t.ctx, t.cancel = context.WithCancel(context.Background())
-		go t.refreshLoop()
+		ctx, cancel := context.WithCancel(context.Background())
+		t.cancel = cancel
+		go t.refreshLoop(ctx)
 	}
 	return nil
 }
@@ -102,16 +102,16 @@ func (t *Tagger) tagDataPoint(attrs pcommon.Map) {
 	}
 }
 
-func (t *Tagger) refreshLoop() {
+func (t *Tagger) refreshLoop(ctx context.Context) {
 	ticker := time.NewTicker(t.config.RefreshInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			if err := t.provider.Refresh(t.ctx); err != nil {
+			if err := t.provider.Refresh(ctx); err != nil {
 				t.logger.Warn("Disk refresh failed", zap.Error(err))
 			}
-		case <-t.ctx.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
