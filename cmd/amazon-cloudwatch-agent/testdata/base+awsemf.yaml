@@ -1,0 +1,26 @@
+exporters:
+  awsemf:
+    middleware: agenthealth/logs
+  nop:
+extensions:
+  agenthealth/logs:
+    is_usage_data_enabled: true
+    stats:
+      operations:
+        - PutLogEvents
+receivers:
+  nop:
+service:
+  extensions:
+    - agenthealth/logs
+  pipelines:
+    logs:
+      exporters:
+        - awsemf
+      receivers:
+        - nop
+    metrics:
+      exporters:
+        - nop
+      receivers:
+        - nop
