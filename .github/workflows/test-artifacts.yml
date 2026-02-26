@@ -205,8 +205,8 @@ jobs:
               matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
             fi
             
-            # Output compact JSON (single line) for GITHUB_OUTPUT compatibility
-            echo "$matrix_content" | jq -c '.'
+            # Strip empty/zero/false fields to reduce size (~40% smaller), then output compact JSON
+            echo "$matrix_content" | jq -c '[.[] | with_entries(select(.value != "" and .value != 0 and .value != false and .value != null))]'
           }
           
           echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
