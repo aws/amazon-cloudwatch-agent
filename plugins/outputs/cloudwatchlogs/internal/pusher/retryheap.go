@@ -5,6 +5,7 @@ package pusher
 
 import (
 	"container/heap"
+	"errors"
 	"sync"
 	"time"
 
@@ -41,51 +42,44 @@ func (h *retryHeapImpl) Pop() interface{} {
 
 // RetryHeap manages failed batches during their retry wait periods
 type RetryHeap interface {
-	Push(batch *logEventBatch)
+	Push(batch *logEventBatch) error
 	PopReady() []*logEventBatch
 	Size() int
 	Stop()
 }
 
 type retryHeap struct {
-	heap      retryHeapImpl
-	mutex     sync.RWMutex
-	semaphore chan struct{} // Size enforcer
-	stopCh    chan struct{}
-	maxSize   int
-	stopped   bool
-	logger    telegraf.Logger
+	heap    retryHeapImpl
+	mutex   sync.RWMutex
+	stopCh  chan struct{}
+	stopped bool
+	logger  telegraf.Logger
 }
 
 var _ RetryHeap = (*retryHeap)(nil)
 
-// NewRetryHeap creates a new retry heap with the specified maximum size
-func NewRetryHeap(maxSize int, logger telegraf.Logger) RetryHeap {
+// NewRetryHeap creates a new retry heap (unbounded)
+func NewRetryHeap(logger telegraf.Logger) RetryHeap {
 	rh := &retryHeap{
-		heap:      make(retryHeapImpl, 0, maxSize),
-		maxSize:   maxSize,
-		semaphore: make(chan struct{}, maxSize), // Semaphore for size enforcement
-		stopCh:    make(chan struct{}),
-		logger:    logger,
+		heap:   make(retryHeapImpl, 0),
+		stopCh: make(chan struct{}),
+		logger: logger,
 	}
 	heap.Init(&rh.heap)
 	return rh
 }
 
-// Push adds a batch to the heap, blocking if full
-func (rh *retryHeap) Push(batch *logEventBatch) {
-	// Acquire semaphore slot (blocks if at maxSize capacity)
-	select {
-	case rh.semaphore <- struct{}{}:
-		// add batch to heap with mutex protection
-		rh.mutex.Lock()
-		heap.Push(&rh.heap, batch)
-		rh.mutex.Unlock()
-	case <-rh.stopCh:
-		// RetryHeap is stopped, drop the batch
-		rh.logger.Errorf("Stop requested for %v/%v failed for PutLogEvents, request dropped.", batch.Group, batch.Stream)
-		batch.updateState()
+// Push adds a batch to the heap (non-blocking)
+func (rh *retryHeap) Push(batch *logEventBatch) error {
+	rh.mutex.Lock()
+	defer rh.mutex.Unlock()
+
+	if rh.stopped {
+		return errors.New("retry heap stopped")
 	}
+
+	heap.Push(&rh.heap, batch)
+	return nil
 }
 
 // PopReady returns all batches that are ready for retry (nextRetryTime <= now)
@@ -100,8 +94,6 @@ func (rh *retryHeap) PopReady() []*logEventBatch {
 	for len(rh.heap) > 0 && !rh.heap[0].nextRetryTime.After(now) {
 		batch := heap.Pop(&rh.heap).(*logEventBatch)
 		ready = append(ready, batch)
-		// Release semaphore slot for each popped batch
-		<-rh.semaphore
 	}
 
 	return ready
@@ -116,6 +108,9 @@ func (rh *retryHeap) Size() int {
 
 // Stop stops the retry heap
 func (rh *retryHeap) Stop() {
+	rh.mutex.Lock()
+	defer rh.mutex.Unlock()
+
 	if rh.stopped {
 		return
 	}
@@ -125,31 +120,30 @@ func (rh *retryHeap) Stop() {
 
 // RetryHeapProcessor manages the retry heap and moves ready batches back to sender queue
 type RetryHeapProcessor struct {
-	retryHeap        RetryHeap
-	senderPool       Sender
-	retryer          *retryer.LogThrottleRetryer
-	stopCh           chan struct{}
-	logger           telegraf.Logger
-	stopped          bool
-	maxRetryDuration time.Duration
-	wg               sync.WaitGroup
+	retryHeap  RetryHeap
+	senderPool Sender
+	retryer    *retryer.LogThrottleRetryer
+	stopCh     chan struct{}
+	logger     telegraf.Logger
+	stopped    bool
+	stopMu     sync.Mutex
+	wg         sync.WaitGroup
 }
 
 // NewRetryHeapProcessor creates a new retry heap processor
-func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
+func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
-	sender := newSender(logger, service, targetManager, maxRetryDuration, retryHeap)
+	sender := newSender(logger, service, targetManager, retryHeap)
 	senderPool := newSenderPool(workerPool, sender)
 
 	return &RetryHeapProcessor{
-		retryHeap:        retryHeap,
-		senderPool:       senderPool,
-		retryer:          retryer,
-		stopCh:           make(chan struct{}),
-		logger:           logger,
-		stopped:          false,
-		maxRetryDuration: maxRetryDuration,
+		retryHeap:  retryHeap,
+		senderPool: senderPool,
+		retryer:    retryer,
+		stopCh:     make(chan struct{}),
+		logger:     logger,
+		stopped:    false,
 	}
 }
 
@@ -161,18 +155,24 @@ func (p *RetryHeapProcessor) Start() {
 
 // Stop stops the retry heap processor
 func (p *RetryHeapProcessor) Stop() {
+	p.stopMu.Lock()
+	defer p.stopMu.Unlock()
+
 	if p.stopped {
 		return
 	}
 
-	// Process any remaining batches before stopping
-	p.processReadyMessages()
+	// Flush remaining ready batches before marking as stopped
+	p.flushReadyBatches()
 
-	p.retryer.Stop()
+	p.stopped = true
+
+	if p.retryer != nil {
+		p.retryer.Stop()
+	}
 	p.senderPool.Stop()
 	close(p.stopCh)
 	p.wg.Wait()
-	p.stopped = true
 }
 
 // processLoop runs the main processing loop
@@ -193,17 +193,26 @@ func (p *RetryHeapProcessor) processLoop() {
 
 // processReadyMessages checks the heap for ready batches and moves them back to sender queue
 func (p *RetryHeapProcessor) processReadyMessages() {
+	p.stopMu.Lock()
 	if p.stopped {
+		p.stopMu.Unlock()
 		return
 	}
+	p.stopMu.Unlock()
 
+	p.flushReadyBatches()
+}
+
+// flushReadyBatches pops ready batches from the heap and sends them.
+// Called by both processReadyMessages and Stop.
+func (p *RetryHeapProcessor) flushReadyBatches() {
 	readyBatches := p.retryHeap.PopReady()
 
 	for _, batch := range readyBatches {
 		// Check if batch has expired
-		if batch.isExpired(p.maxRetryDuration) {
+		if batch.isExpired() {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
-			batch.updateState()
+			batch.done() // Resume circuit breaker to allow target to process new batches
 			continue
 		}
 

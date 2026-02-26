@@ -111,7 +111,6 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 		nil,
 		workerPool,
 		time.Second,
-		time.Minute,
 		wg,
 		nil, // retryHeap
 	)
@@ -136,7 +135,7 @@ func TestPusherRetryHeap(t *testing.T) {
 	workerPool := NewWorkerPool(2)
 	defer workerPool.Stop()
 
-	retryHeap := NewRetryHeap(10, logger)
+	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Stop()
 
 	var wg sync.WaitGroup
@@ -148,7 +147,6 @@ func TestPusherRetryHeap(t *testing.T) {
 		nil,
 		workerPool,
 		time.Second,
-		time.Minute,
 		&wg,
 		retryHeap,
 	)

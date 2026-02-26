@@ -5,7 +5,6 @@ package pusher
 
 import (
 	"errors"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -24,14 +23,11 @@ type cloudWatchLogsService interface {
 
 type Sender interface {
 	Send(*logEventBatch)
-	SetRetryDuration(time.Duration)
-	RetryDuration() time.Duration
 	Stop()
 }
 
 type sender struct {
 	service       cloudWatchLogsService
-	retryDuration atomic.Value
 	targetManager TargetManager
 	logger        telegraf.Logger
 	stopCh        chan struct{}
@@ -45,7 +41,6 @@ func newSender(
 	logger telegraf.Logger,
 	service cloudWatchLogsService,
 	targetManager TargetManager,
-	retryDuration time.Duration,
 	retryHeap RetryHeap,
 ) Sender {
 	s := &sender{
@@ -56,7 +51,6 @@ func newSender(
 		stopped:       false,
 		retryHeap:     retryHeap,
 	}
-	s.retryDuration.Store(retryDuration)
 	return s
 }
 
@@ -118,7 +112,7 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		// Check if retry would exceed max duration
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
-		if batch.nextRetryTime.After(batch.startTime.Add(s.RetryDuration())) {
+		if batch.isExpired() {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.updateState()
 			return
@@ -127,7 +121,14 @@ func (s *sender) Send(batch *logEventBatch) {
 		// If RetryHeap available, push to RetryHeap and return
 		// Otherwise, continue with existing busy-wait retry behavior
 		if s.retryHeap != nil {
-			s.retryHeap.Push(batch)
+			if err := s.retryHeap.Push(batch); err != nil {
+				// Heap is stopped (shutdown in progress). Persist file offsets
+				// so these events aren't re-read on restart, then notify the
+				// circuit breaker so the queue isn't permanently halted.
+				s.logger.Warnf("RetryHeap stopped, dropping batch for %v/%v: %v", batch.Group, batch.Stream, err)
+				batch.done()
+				return
+			}
 			batch.fail()
 			return
 		}
@@ -156,14 +157,4 @@ func (s *sender) Stop() {
 	}
 	close(s.stopCh)
 	s.stopped = true
-}
-
-// SetRetryDuration sets the maximum duration for retrying failed log sends.
-func (s *sender) SetRetryDuration(retryDuration time.Duration) {
-	s.retryDuration.Store(retryDuration)
-}
-
-// RetryDuration returns the current maximum retry duration.
-func (s *sender) RetryDuration() time.Duration {
-	return s.retryDuration.Load().(time.Duration)
 }
