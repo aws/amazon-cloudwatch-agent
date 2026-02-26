@@ -439,6 +439,14 @@ func TestDiskIOMixedConfig(t *testing.T) {
 	checkTranslation(t, "diskio_mixed_config_linux", "linux", expectedEnvVars, "")
 }
 
+func TestSystemMetricsConfig(t *testing.T) {
+	resetContext(t)
+	t.Setenv(envconfig.SystemMetricsEnabled, "true")
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "system_metrics_config", "linux", expectedEnvVars, "")
+}
+
 // prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext(t)
@@ -943,6 +951,7 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 
 func resetContext(t *testing.T) {
 	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
+	t.Setenv(envconfig.SystemMetricsEnabled, "false")
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-west-2", "ACJ"
 	}
