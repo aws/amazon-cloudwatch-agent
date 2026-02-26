@@ -120,31 +120,30 @@ func (rh *retryHeap) Stop() {
 
 // RetryHeapProcessor manages the retry heap and moves ready batches back to sender queue
 type RetryHeapProcessor struct {
-	retryHeap        RetryHeap
-	senderPool       Sender
-	retryer          *retryer.LogThrottleRetryer
-	stopCh           chan struct{}
-	logger           telegraf.Logger
-	stopped          bool
-	maxRetryDuration time.Duration
-	wg               sync.WaitGroup
+	retryHeap  RetryHeap
+	senderPool Sender
+	retryer    *retryer.LogThrottleRetryer
+	stopCh     chan struct{}
+	logger     telegraf.Logger
+	stopped    bool
+	stopMu     sync.Mutex
+	wg         sync.WaitGroup
 }
 
 // NewRetryHeapProcessor creates a new retry heap processor
-func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, maxRetryDuration time.Duration, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
+func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
 	sender := newSender(logger, service, targetManager, retryHeap)
 	senderPool := newSenderPool(workerPool, sender)
 
 	return &RetryHeapProcessor{
-		retryHeap:        retryHeap,
-		senderPool:       senderPool,
-		retryer:          retryer,
-		stopCh:           make(chan struct{}),
-		logger:           logger,
-		stopped:          false,
-		maxRetryDuration: maxRetryDuration,
+		retryHeap:  retryHeap,
+		senderPool: senderPool,
+		retryer:    retryer,
+		stopCh:     make(chan struct{}),
+		logger:     logger,
+		stopped:    false,
 	}
 }
 
@@ -156,18 +155,24 @@ func (p *RetryHeapProcessor) Start() {
 
 // Stop stops the retry heap processor
 func (p *RetryHeapProcessor) Stop() {
+	p.stopMu.Lock()
+	defer p.stopMu.Unlock()
+
 	if p.stopped {
 		return
 	}
 
-	// Process any remaining batches before stopping
-	p.processReadyMessages()
+	// Flush remaining ready batches before marking as stopped
+	p.flushReadyBatches()
 
-	p.retryer.Stop()
+	p.stopped = true
+
+	if p.retryer != nil {
+		p.retryer.Stop()
+	}
 	p.senderPool.Stop()
 	close(p.stopCh)
 	p.wg.Wait()
-	p.stopped = true
 }
 
 // processLoop runs the main processing loop
@@ -188,10 +193,19 @@ func (p *RetryHeapProcessor) processLoop() {
 
 // processReadyMessages checks the heap for ready batches and moves them back to sender queue
 func (p *RetryHeapProcessor) processReadyMessages() {
+	p.stopMu.Lock()
 	if p.stopped {
+		p.stopMu.Unlock()
 		return
 	}
+	p.stopMu.Unlock()
 
+	p.flushReadyBatches()
+}
+
+// flushReadyBatches pops ready batches from the heap and sends them.
+// Called by both processReadyMessages and Stop.
+func (p *RetryHeapProcessor) flushReadyBatches() {
 	readyBatches := p.retryHeap.PopReady()
 
 	for _, batch := range readyBatches {

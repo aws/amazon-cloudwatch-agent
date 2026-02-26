@@ -72,7 +72,7 @@ func TestRetryHeapSuccessCallsStateCallback(t *testing.T) {
 	defer retryHeap.Stop()
 	defer workerPool.Stop()
 
-	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, time.Hour, retryer.NewLogThrottleRetryer(logger))
+	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, retryer.NewLogThrottleRetryer(logger))
 
 	batch := newStatefulBatch(target, queue)
 	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
@@ -119,7 +119,7 @@ func TestRetryHeapExpiryCallsStateCallback(t *testing.T) {
 	defer retryHeap.Stop()
 	defer workerPool.Stop()
 
-	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, 50*time.Millisecond, nil)
+	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
 
 	batch := newStatefulBatch(target, queue)
 	batch.initializeStartTime()
@@ -166,7 +166,7 @@ func TestShutdownDoesNotCallStateCallback(t *testing.T) {
 	}
 	tm := NewTargetManager(logger, service)
 
-	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, time.Hour, nil)
+	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
 	processor.Start()
 
 	// Push a batch with a future retry time so it won't be processed before Stop

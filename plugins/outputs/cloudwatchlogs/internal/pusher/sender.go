@@ -121,7 +121,14 @@ func (s *sender) Send(batch *logEventBatch) {
 		// If RetryHeap available, push to RetryHeap and return
 		// Otherwise, continue with existing busy-wait retry behavior
 		if s.retryHeap != nil {
-			s.retryHeap.Push(batch)
+			if err := s.retryHeap.Push(batch); err != nil {
+				// Heap is stopped (shutdown in progress). Persist file offsets
+				// so these events aren't re-read on restart, then notify the
+				// circuit breaker so the queue isn't permanently halted.
+				s.logger.Warnf("RetryHeap stopped, dropping batch for %v/%v: %v", batch.Group, batch.Stream, err)
+				batch.done()
+				return
+			}
 			batch.fail()
 			return
 		}

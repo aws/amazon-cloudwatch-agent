@@ -43,9 +43,8 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	retryHeap := NewRetryHeap(logger)
 	workerPool := NewWorkerPool(5)
 	tm := NewTargetManager(logger, mockService)
-	maxRetryDuration := 50 * time.Millisecond // Normally 14 days
 
-	retryHeapProcessor := NewRetryHeapProcessor(retryHeap, workerPool, mockService, tm, logger, maxRetryDuration, nil)
+	retryHeapProcessor := NewRetryHeapProcessor(retryHeap, workerPool, mockService, tm, logger, nil)
 	retryHeapProcessor.Start()
 
 	defer retryHeap.Stop()

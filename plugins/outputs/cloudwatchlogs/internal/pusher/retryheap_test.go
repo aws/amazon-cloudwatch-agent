@@ -90,7 +90,7 @@ func TestRetryHeapProcessor(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 	defer processor.Stop()
 
 	// Test start/stop
@@ -108,7 +108,7 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 1*time.Millisecond, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
@@ -138,7 +138,7 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
@@ -210,7 +210,7 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Process with empty heap - should not panic
 	processor.processReadyMessages()
@@ -232,7 +232,7 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	processor.Start()
 	defer processor.Stop()
@@ -284,7 +284,7 @@ func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Add a ready batch to the heap
 	target := Target{Group: "group", Stream: "stream"}

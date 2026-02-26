@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -17,10 +18,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
-// TestPoisonPillScenario validates that when 10 denied + 1 allowed log groups
+// TestRetryHeapProcessorDoesNotStarveAllowedTarget validates that when 10 denied + 1 allowed log groups
 // share a worker pool with concurrency=2, the allowed log group continues
 // publishing without being starved by failed retries.
-func TestPoisonPillScenario(t *testing.T) {
+// Note: This test pushes batches directly to the heap and bypasses the full
+// queue → sender → retryHeap → processor pipeline. It validates RetryHeapProcessor
+// behavior, not the end-to-end circuit breaker flow.
+func TestRetryHeapProcessorDoesNotStarveAllowedTarget(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
 	defer heap.Stop()
 
@@ -32,7 +36,7 @@ func TestPoisonPillScenario(t *testing.T) {
 	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
 
 	accessDeniedErr := &cloudwatchlogs.AccessDeniedException{
-		Message_: stringPtr("User is not authorized to perform: logs:PutLogEvents with an explicit deny"),
+		Message_: aws.String("User is not authorized to perform: logs:PutLogEvents with an explicit deny"),
 	}
 
 	// Track successful PutLogEvents calls for the allowed log group
@@ -54,7 +58,7 @@ func TestPoisonPillScenario(t *testing.T) {
 		deniedGroupAttemptCount.Add(1)
 	})
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, 100*time.Millisecond, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Targets
 	allowedTarget := Target{Group: "log-stream-ple-access-granted", Stream: "i-test"}
@@ -170,7 +174,7 @@ func TestSingleDeniedLogGroup(t *testing.T) {
 	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
 
 	accessDeniedErr := &cloudwatchlogs.AccessDeniedException{
-		Message_: stringPtr("Access denied"),
+		Message_: aws.String("Access denied"),
 	}
 
 	var allowedGroupSuccessCount atomic.Int32
@@ -185,7 +189,7 @@ func TestSingleDeniedLogGroup(t *testing.T) {
 		return *input.LogGroupName == "aws-restricted-log-group-name-log-stream-ple-access-denied"
 	})).Return((*cloudwatchlogs.PutLogEventsOutput)(nil), accessDeniedErr)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, time.Hour, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
 	// Create batches
 	allowedTarget := Target{Group: "log-stream-ple-access-granted", Stream: "i-test"}
@@ -217,8 +221,8 @@ func createBatch(target Target, eventCount int) *logEventBatch {
 	now := time.Now().Unix() * 1000
 	for i := 0; i < eventCount; i++ {
 		batch.events[i] = &cloudwatchlogs.InputLogEvent{
-			Message:   stringPtr("test message"),
-			Timestamp: int64Ptr(now + int64(i)),
+			Message:   aws.String("test message"),
+			Timestamp: aws.Int64(now + int64(i)),
 		}
 	}
 	return batch

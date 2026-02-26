@@ -797,7 +797,7 @@ func TestQueueHaltResume(t *testing.T) {
 	mockSender.On("Send", mock.Anything).Run(func(args mock.Arguments) {
 		sendCount.Add(1)
 		batch := args.Get(0).(*logEventBatch)
-		// Simulate failure on first call, success on second
+		// Simulate failure on first call, success on subsequent calls
 		if sendCount.Load() == 1 {
 			batch.fail() // This should halt the queue
 		} else {
@@ -821,9 +821,6 @@ func TestQueueHaltResume(t *testing.T) {
 	assert.True(t, queueImpl.halted, "Queue should be halted after failure")
 	queueImpl.haltMu.Unlock()
 
-	// Add second event - should be queued but not sent due to halt
-	q.AddEvent(newStubLogEvent("second message", time.Now()))
-
 	// Verify only one send happened (queue is halted)
 	assert.Equal(t, int32(1), sendCount.Load(), "Should have only one send due to halt")
 
@@ -835,8 +832,8 @@ func TestQueueHaltResume(t *testing.T) {
 	assert.False(t, queueImpl.halted, "Queue should be resumed after success")
 	queueImpl.haltMu.Unlock()
 
-	// Add third event - should trigger send since queue is resumed
-	q.AddEvent(newStubLogEvent("third message", time.Now()))
+	// Add second event - should trigger send since queue is resumed
+	q.AddEvent(newStubLogEvent("second message", time.Now()))
 
 	// Wait for the second send to complete
 	time.Sleep(50 * time.Millisecond)

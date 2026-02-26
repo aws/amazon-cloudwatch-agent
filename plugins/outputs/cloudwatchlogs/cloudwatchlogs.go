@@ -37,8 +37,6 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
-
-	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
 )
 
 var (
@@ -89,16 +87,12 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
-	// Stop components in specific order to prevent race conditions:
-	// 1. RetryHeap - stop accepting new batches first
-	// 2. Pushers - stop all active pushers (queues/senders)
-	// 3. Wait for pushers to complete
-	// 4. RetryHeapProcessor - stop retry processing and wait for WorkerPool usage to complete
-	// 5. WorkerPool - finally stop the worker threads
-
-	if c.retryHeap != nil {
-		c.retryHeap.Stop()
-	}
+	// Shutdown order:
+	// 1. Stop all pushers (queues stop accepting new events, final send)
+	// 2. Wait for pushers to complete (in-flight sends finish, failed batches pushed to heap)
+	// 3. Stop RetryHeap (no more pushes accepted after this point)
+	// 4. Stop RetryHeapProcessor (flush remaining ready batches, stop goroutine)
+	// 5. Stop WorkerPool (drain worker threads)
 
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
@@ -109,20 +103,16 @@ func (c *CloudWatchLogs) Close() error {
 
 	c.pusherWaitGroup.Wait()
 
+	if c.retryHeap != nil {
+		c.retryHeap.Stop()
+	}
+
 	if c.retryHeapProcessor != nil {
 		c.retryHeapProcessor.Stop()
 	}
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
-	}
-
-	if c.retryHeapProcessor != nil {
-		c.retryHeapProcessor.Stop()
-	}
-
-	if c.retryHeap != nil {
-		c.retryHeap.Stop()
 	}
 
 	return nil
@@ -178,7 +168,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 
 			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
 			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
-			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, maxRetryTimeout, retryHeapProcessorRetryer)
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, retryHeapProcessorRetryer)
 			c.retryHeapProcessor.Start()
 		}
 		c.targetManager = pusher.NewTargetManager(c.Log, client)

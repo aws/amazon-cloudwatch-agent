@@ -184,7 +184,10 @@ func (q *queue) send() {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
 		q.batch.addFailCallback(q.halt)
 
-		// Wait if halted (circuit breaker)
+		// In synchronous mode (no retryHeap), halt() is never called because
+		// sender only calls batch.fail() when retryHeap != nil. So waitIfHalted
+		// is a no-op. The lock acquisition is negligible overhead (~20ns) on
+		// the uncontended path.
 		q.waitIfHalted()
 
 		q.sender.Send(q.batch)
