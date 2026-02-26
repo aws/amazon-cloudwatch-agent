@@ -61,11 +61,7 @@ func NewTranslator(
 		opt(t)
 	}
 	if t.Destination() != "" {
-		suffix := t.Destination()
-		if suffix == common.OtlpKey {
-			suffix = common.OtlpExportKey
-		}
-		t.name += "/" + suffix
+		t.name += "/" + common.DestinationSuffix(t.Destination())
 	}
 	return t
 }

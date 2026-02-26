@@ -86,9 +86,13 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			return nil, err
 		}
 	}
-	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms
+	// ECS is not in scope for entity association, and entitystore is only needed when
+	// the metrics destination is not exclusively OTLP export.
 	if !ecsutil.GetECSUtilSingleton().IsECS() {
-		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
+		destinations := common.GetMetricsDestinations(conf)
+		if len(destinations) != 1 || destinations[0] != common.OtlpKey {
+			pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
+		}
 	}
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())

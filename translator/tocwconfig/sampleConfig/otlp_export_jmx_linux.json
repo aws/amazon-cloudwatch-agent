@@ -7,8 +7,7 @@
     "metrics_destinations": {
       "otlp": {
         "endpoint": "test-endpoint"
-      },
-      "cloudwatch": {}
+      }
     },
     "metrics_collected": {
       "jmx": {

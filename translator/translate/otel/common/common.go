@@ -42,7 +42,7 @@ const (
 	DisableMetricExtraction                        = "disable_metric_extraction"
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
-	OtlpExportKey                                  = "otlpexport"
+	OtlpExportSuffix                               = "otlpexport"
 	JmxKey                                         = "jmx"
 	TLSKey                                         = "tls" //nolint:revive
 	Endpoint                                       = "endpoint"
@@ -286,6 +286,15 @@ type PipelineTranslatorMap = TranslatorMap[*ComponentTranslators, pipeline.ID]
 // JSON config is loaded into.
 func ConfigKey(keys ...string) string {
 	return strings.Join(keys, confmap.KeyDelimiter)
+}
+
+// DestinationSuffix returns the pipeline name suffix for a given destination,
+// mapping OtlpKey to OtlpExportSuffix to distinguish the export pipeline from the OTLP receiver.
+func DestinationSuffix(dest string) string {
+	if dest == OtlpKey {
+		return OtlpExportSuffix
+	}
+	return dest
 }
 
 // ParseDuration attempts to parse the input into a duration.
