@@ -10,27 +10,22 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/testutil"
 )
 
 func TestRollupDimensions(t *testing.T) {
-	e := new(rollupDimensions)
-	var input interface{}
-	err := json.Unmarshal([]byte(`{
+	_, actual := testutil.UnmarshalAndApplyRule(t, `{
       "aggregation_dimensions": [["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]]
-    }`), &input)
-	if err == nil {
-		_, actual := e.ApplyRule(input)
-		expected := map[string]interface{}{
-			"rollup_dimensions": []interface{}{
-				[]interface{}{"ImageId"},
-				[]interface{}{"InstanceId", "InstanceType"},
-				[]interface{}{"d1"},
-				[]interface{}{}},
-		}
-		assert.Equal(t, expected, actual, "Expect to be equal")
-	} else {
-		panic(err)
+    }`, new(rollupDimensions))
+
+	expected := map[string]interface{}{
+		"rollup_dimensions": []interface{}{
+			[]interface{}{"ImageId"},
+			[]interface{}{"InstanceId", "InstanceType"},
+			[]interface{}{"d1"},
+			[]interface{}{}},
 	}
+	assert.Equal(t, expected, actual, "Expect to be equal")
 }
 
 func TestInvalidRollupList(t *testing.T) {
