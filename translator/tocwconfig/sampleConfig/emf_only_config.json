@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "omit_hostname": true
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {}
+    }
+  }
+}

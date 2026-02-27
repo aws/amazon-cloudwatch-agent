@@ -30,6 +30,9 @@ func GetMetricsDestinations(conf *confmap.Conf) []string {
 	return destinations
 }
 
-func GetLogsDestinations() []string {
-	return []string{CloudWatchLogsKey}
+func GetLogsDestinations(conf *confmap.Conf) []string {
+	if conf.IsSet(LogsKey) {
+		return []string{CloudWatchLogsKey}
+	}
+	return nil
 }

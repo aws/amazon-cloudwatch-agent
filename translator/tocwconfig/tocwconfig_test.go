@@ -323,6 +323,18 @@ func TestOtlpMetricsConfigKubernetes(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_eks_config", "windows", nil, "")
 }
 
+func TestEmfOnlyConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "emf_only_config", "linux", nil, "")
+}
+
+func TestOTLPExportHostWithLogsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_export_host_with_logs_linux", "linux", nil, "")
+}
+
 func TestOtlpMetricsEmfConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -907,7 +919,7 @@ func TestTomlToTomlComparison(t *testing.T) {
 }
 
 // OTLP Metric Publication Section
-func TestOtlpHostMetricsConfig(t *testing.T) {
+func TestOTLPExportHostConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
 			filename:        "otlp_export_host_linux",
@@ -926,7 +938,7 @@ func TestOtlpHostMetricsConfig(t *testing.T) {
 	}
 }
 
-func TestOtlpStatsDConfig(t *testing.T) {
+func TestOTLPExportStatsDConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
 			filename:        "otlp_export_statsd_linux",
@@ -945,7 +957,7 @@ func TestOtlpStatsDConfig(t *testing.T) {
 	}
 }
 
-func TestOtlpCollectedConfig(t *testing.T) {
+func TestOTLPExportCollectdConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
 			filename:        "otlp_export_collectd_linux",
@@ -964,7 +976,7 @@ func TestOtlpCollectedConfig(t *testing.T) {
 	}
 }
 
-func TestOtlpOTLPConfig(t *testing.T) {
+func TestOTLPExportOTLPConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {
 			filename:        "otlp_export_otlp_linux",
@@ -981,6 +993,13 @@ func TestOtlpOTLPConfig(t *testing.T) {
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
+}
+
+func TestOTLPExportOTLPWithLogsConfig(t *testing.T) {
+	resetContext(t)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_export_otlp_with_logs_linux", "linux", map[string]string{}, "")
 }
 
 func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string, tokenReplacements ...map[string]string) {
