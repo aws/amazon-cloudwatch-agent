@@ -109,11 +109,6 @@ func (s *senderPool) Send(batch *logEventBatch) {
 	})
 }
 
-func (s *senderPool) Stop() {
-	// workerpool is stopped by the plugin
-	s.sender.Stop()
-}
-
 // SetRetryDuration sets the retry duration on the wrapped Sender.
 func (s *senderPool) SetRetryDuration(duration time.Duration) {
 	s.sender.SetRetryDuration(duration)
