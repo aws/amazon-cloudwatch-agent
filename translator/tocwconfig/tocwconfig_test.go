@@ -331,6 +331,7 @@ func TestEmfOnlyConfig(t *testing.T) {
 
 func TestOTLPExportHostWithLogsConfig(t *testing.T) {
 	resetContext(t)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	checkTranslation(t, "otlp_export_host_with_logs_linux", "linux", nil, "")
 }
