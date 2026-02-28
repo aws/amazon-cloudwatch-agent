@@ -1,13 +1,40 @@
 exporters:
-    awscloudwatch:
-        force_flush_interval: 1m0s
-        max_datums_per_call: 1000
-        max_values_per_datum: 150
-        middleware: agenthealth/metrics
-        namespace: CWAgent
+    awscloudwatchlogs/emf_logs:
+        certificate_file_path: ""
+        emf_only: true
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: emf/logs/default
+        log_retention: 0
+        log_stream_name: i-UNKNOWN
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
         region: us-east-1
-        resource_to_telemetry_conversion:
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
             enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
     otlphttp:
         auth:
             authenticator: sigv4auth/monitoring
@@ -36,11 +63,11 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
-    agenthealth/metrics:
+    agenthealth/logs:
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
+                - PutLogEvents
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -60,42 +87,16 @@ extensions:
         region: us-east-1
         service: monitoring
 processors:
-    awsentity/service/otlp:
-        entity_type: Service
-        platform: ec2
+    batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
     batch/hostOtlpMetrics/otlpexport:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    cumulativetodelta/hostOtlpMetrics/cloudwatch:
-        exclude:
-            match_type: ""
-        include:
-            match_type: ""
-        initial_value: 2
-        max_staleness: 0s
-    ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
-        ec2_metadata_tags:
-            - ImageId
-            - InstanceId
-            - InstanceType
-        imds_retries: 1
-        middleware: agenthealth/statuscode
-        refresh_tags_interval: 0s
-        refresh_volumes_interval: 0s
-    ec2tagger/otlpexport:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
-        ec2_metadata_tags:
-            - ImageId
-            - InstanceId
-            - InstanceType
-        imds_retries: 1
-        refresh_tags_interval: 0s
-        refresh_volumes_interval: 0s
 receivers:
     otlp/grpc_0_0_0_0_1234:
         protocols:
@@ -105,9 +106,6 @@ receivers:
                     enforcement_policy: {}
                     server_parameters: {}
                 read_buffer_size: 524288
-                tls:
-                    cert_file: /path/to/cert.pem
-                    key_file: /path/to/key.pem
                 transport: tcp
     otlp/http_0_0_0_0_2345:
         protocols:
@@ -118,33 +116,53 @@ receivers:
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls:
-                    cert_file: /path/to/cert.pem
-                    key_file: /path/to/key.pem
                 traces_url_path: /v1/traces
                 write_timeout: 0s
+    tcplog/emf_logs:
+        encoding: utf-8
+        id: tcp_input
+        listen_address: 0.0.0.0:25888
+        operators: []
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
+        type: tcp_input
+    udplog/emf_logs:
+        encoding: utf-8
+        id: udp_input
+        listen_address: 0.0.0.0:25888
+        multiline:
+            line_end_pattern: .^
+            line_start_pattern: ""
+            omit_pattern: false
+        operators: []
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
+        type: udp_input
 service:
     extensions:
-        - agenthealth/metrics
-        - agenthealth/statuscode
         - sigv4auth/monitoring
+        - agenthealth/logs
+        - agenthealth/statuscode
         - entitystore
     pipelines:
-        metrics/hostOtlpMetrics/cloudwatch:
+        logs/emf_logs:
             exporters:
-                - awscloudwatch
+                - awscloudwatchlogs/emf_logs
             processors:
-                - cumulativetodelta/hostOtlpMetrics/cloudwatch
-                - ec2tagger
-                - awsentity/service/otlp
+                - batch/emf_logs
             receivers:
-                - otlp/grpc_0_0_0_0_1234
-                - otlp/http_0_0_0_0_2345
+                - tcplog/emf_logs
+                - udplog/emf_logs
         metrics/hostOtlpMetrics/otlpexport:
             exporters:
                 - otlphttp
             processors:
-                - ec2tagger/otlpexport
                 - batch/hostOtlpMetrics/otlpexport
             receivers:
                 - otlp/grpc_0_0_0_0_1234

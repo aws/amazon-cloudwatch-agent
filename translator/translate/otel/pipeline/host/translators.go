@@ -60,7 +60,7 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	var destinations []string
 	switch configSection {
 	case LogsKey:
-		destinations = common.GetLogsDestinations()
+		destinations = common.GetLogsDestinations(conf)
 	case MetricsKey:
 		destinations = common.GetMetricsDestinations(conf)
 	}

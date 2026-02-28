@@ -46,7 +46,6 @@ var supportedEntityProcessorDestinations = [...]string{
 	common.DefaultDestination,
 	common.CloudWatchKey,
 	common.CloudWatchLogsKey,
-	common.OtlpKey,
 }
 
 // NewTranslator creates a new host pipeline translator. The receiver types
@@ -62,7 +61,7 @@ func NewTranslator(
 		opt(t)
 	}
 	if t.Destination() != "" {
-		t.name += "/" + t.Destination()
+		t.name += "/" + common.DestinationSuffix(t.Destination())
 	}
 	return t
 }
@@ -87,7 +86,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 
-	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) {
+	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) || (strings.HasPrefix(t.name, common.PipelineNameHostOtlpMetrics) && t.Destination() != common.OtlpKey) {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(t.name), cumulativetodeltaprocessor.WithDefaultKeys()))
 	}
@@ -119,16 +118,14 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			case common.CloudWatchLogsKey:
 				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey+"/"+common.CloudWatchLogsKey, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
-			case common.OtlpKey:
-				entityProcessor = util.CreateEntityProcessorFromConfig(common.OtlpKey, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey), conf)
 			}
 		}
 	case common.PipelineNameHostCustomMetrics:
-		if !currentContext.RunInContainer() {
+		if !currentContext.RunInContainer() && t.Destination() != common.OtlpKey {
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
 		}
 	case common.PipelineNameHost, common.PipelineNameHostDeltaMetrics:
-		if !currentContext.RunInContainer() {
+		if !currentContext.RunInContainer() && t.Destination() != common.OtlpKey {
 			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", ec2TaggerEnabled)
 		}
 	}

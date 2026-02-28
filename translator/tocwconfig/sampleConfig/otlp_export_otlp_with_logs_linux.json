@@ -1,0 +1,23 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "otlp": {
+        "endpoint": "test-endpoint"
+      }
+    },
+    "metrics_collected": {
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:1234",
+        "http_endpoint": "0.0.0.0:2345"
+      }
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {}
+    }
+  }
+}

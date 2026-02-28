@@ -51,7 +51,7 @@ func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
 		opt(t)
 	}
 	if t.Destination() != "" {
-		t.name += "/" + t.Destination()
+		t.name += "/" + common.DestinationSuffix(t.Destination())
 	}
 	if t.Index() != -1 {
 		t.name += "/" + strconv.Itoa(t.Index())

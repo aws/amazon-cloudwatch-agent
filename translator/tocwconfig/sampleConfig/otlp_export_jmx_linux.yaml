@@ -1,13 +1,4 @@
 exporters:
-    awscloudwatch:
-        force_flush_interval: 1m0s
-        max_datums_per_call: 1000
-        max_values_per_datum: 150
-        middleware: agenthealth/metrics
-        namespace: CWAgent
-        region: us-east-1
-        resource_to_telemetry_conversion:
-            enabled: true
     otlphttp:
         auth:
             authenticator: sigv4auth/monitoring
@@ -36,36 +27,17 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
-    agenthealth/metrics:
-        is_status_code_enabled: true
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    entitystore:
-        mode: ec2
-        region: us-east-1
     sigv4auth/monitoring:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
         service: monitoring
 processors:
-    batch/jmx/otlp:
+    batch/jmx/otlpexport:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    cumulativetodelta/jmx:
-        exclude:
-            match_type: ""
-        include:
-            match_type: ""
-        initial_value: 2
-        max_staleness: 0s
     filter/jmx:
         error_mode: propagate
         logs: {}
@@ -104,26 +76,15 @@ receivers:
         target_system: jvm
 service:
     extensions:
-        - agenthealth/metrics
         - sigv4auth/monitoring
-        - entitystore
     pipelines:
-        metrics/jmx/cloudwatch:
-            exporters:
-                - awscloudwatch
-            processors:
-                - filter/jmx
-                - resource/jmx
-                - cumulativetodelta/jmx
-            receivers:
-                - jmx
-        metrics/jmx/otlp:
+        metrics/jmx/otlpexport:
             exporters:
                 - otlphttp
             processors:
                 - filter/jmx
                 - resource/jmx
-                - batch/jmx/otlp
+                - batch/jmx/otlpexport
             receivers:
                 - jmx
     telemetry:
