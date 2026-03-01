@@ -11,7 +11,7 @@ The Amazon CloudWatch Agent enables you to do the following:
 - Collect Open Telemetry and AWS X-Ray traces
 
 Amazon CloudWatch Agent uses open-source projects [telegraf](https://github.com/influxdata/telegraf) and [opentelemetry-collector](https://github.com/open-telemetry/opentelemetry-collector) as its dependencies. 
-It operates by starting an opentelemetry collector and is capable of operating pipelines consisting of both telegraf and opentemetry components in addition to customized components.
+It operates by starting an opentelemetry collector and is capable of operating pipelines consisting of both telegraf and opentelemetry components in addition to customized components.
 
 ### Setup
 * [Configuring IAM Roles](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html)
