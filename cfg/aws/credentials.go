@@ -32,11 +32,7 @@ func (c *CredentialsConfig) LoadConfig(ctx context.Context) (aws.Config, error) 
 	if c.RoleARN != "" && os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE") == "" {
 		return c.assumeRoleConfig(ctx, chainProvider)
 	}
-	return c.rootConfig(ctx, chainProvider)
-}
-
-func (c *CredentialsConfig) rootConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
-	return c.loadConfig(ctx, provider)
+	return c.loadConfig(ctx, chainProvider)
 }
 
 func (c *CredentialsConfig) assumeRoleConfig(ctx context.Context, baseProvider aws.CredentialsProvider) (aws.Config, error) {

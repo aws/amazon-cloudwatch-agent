@@ -41,10 +41,9 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 0 * time.Minute,
-				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
-				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"ImageId", "InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:  []string{"AutoScalingGroupName"},
 			},
 		},
 		"WithDiskAppendDimensions": {
@@ -66,12 +65,40 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &ec2tagger.Config{
-				RefreshTagsInterval:    0 * time.Second,
-				RefreshVolumesInterval: 5 * time.Minute,
-				EC2MetadataTags:        []string{"ImageId", "InstanceId", "InstanceType"},
-				EC2InstanceTagKeys:     []string{"AutoScalingGroupName"},
-				DiskDeviceTagKey:       "device",
-				EBSDeviceKeys:          []string{"*"},
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"ImageId", "InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:  []string{"AutoScalingGroupName"},
+			},
+		},
+		"OTelPlaceholders": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"append_dimensions": map[string]interface{}{
+						"InstanceId":   "${host.id}",
+						"InstanceType": "${host.type}",
+						"ImageId":      "${host.image.id}",
+					},
+				},
+			},
+			want: &ec2tagger.Config{
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"ImageId", "InstanceId", "InstanceType"},
+			},
+		},
+		"MixedLegacyAndOTelPlaceholders": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"append_dimensions": map[string]interface{}{
+						"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+						"InstanceId":           "${host.id}",
+						"InstanceType":         "${aws:InstanceType}",
+					},
+				},
+			},
+			want: &ec2tagger.Config{
+				RefreshTagsInterval: 0 * time.Second,
+				EC2MetadataTags:     []string{"InstanceId", "InstanceType"},
+				EC2InstanceTagKeys:  []string{"AutoScalingGroupName"},
 			},
 		},
 	}
@@ -85,12 +112,9 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*ec2tagger.Config)
 				require.True(t, ok)
 				require.Equal(t, tc.want.RefreshTagsInterval, gotCfg.RefreshTagsInterval)
-				require.Equal(t, tc.want.RefreshVolumesInterval, gotCfg.RefreshVolumesInterval)
 				sort.Strings(gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2MetadataTags, gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2InstanceTagKeys, gotCfg.EC2InstanceTagKeys)
-				require.Equal(t, tc.want.DiskDeviceTagKey, gotCfg.DiskDeviceTagKey)
-				require.Equal(t, tc.want.EBSDeviceKeys, gotCfg.EBSDeviceKeys)
 			}
 		})
 	}

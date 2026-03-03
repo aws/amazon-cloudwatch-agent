@@ -21,7 +21,6 @@ import (
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
@@ -41,7 +40,6 @@ type ec2MetadataRespondType struct {
 // EC2APIClient defines the interface for EC2 API operations needed by the tagger
 type EC2APIClient interface {
 	ec2.DescribeTagsAPIClient
-	ec2.DescribeVolumesAPIClient
 }
 
 type ec2ProviderType func(ctx context.Context, host component.Host, credentialConfig *configaws.CredentialsConfig) EC2APIClient
@@ -61,7 +59,6 @@ type Tagger struct {
 	ec2MetadataRespond ec2MetadataRespondType
 	tagFilters         []types.Filter
 	ec2API             EC2APIClient
-	volumeSerialCache  volume.Cache
 
 	Configurer   *awsmiddleware.Configurer
 	sync.RWMutex //to protect ec2TagCache
@@ -179,16 +176,6 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 				attr.PutStr(MdKeyInstanceType, t.ec2MetadataRespond.instanceType)
 			}
 		}
-		if t.volumeSerialCache != nil {
-			if _, exists := attr.Get(AttributeVolumeId); !exists {
-				if devName, found := attr.Get(t.DiskDeviceTagKey); found {
-					serial := t.volumeSerialCache.Serial(devName.Str())
-					if serial != "" {
-						attr.PutStr(AttributeVolumeId, serial)
-					}
-				}
-			}
-		}
 		attr.Remove("host")
 	}
 }
@@ -262,40 +249,6 @@ func (t *Tagger) refreshLoopTags(refreshInterval time.Duration, stopAfterFirstSu
 	}
 }
 
-// refreshLoopVolumes handles the refresh ticks for describe volumes and also responds to shutdown signal
-func (t *Tagger) refreshLoopVolumes(refreshInterval time.Duration, stopAfterFirstSuccess bool) {
-	refreshTicker := time.NewTicker(refreshInterval)
-	defer refreshTicker.Stop()
-	for {
-		select {
-		case <-refreshTicker.C:
-			t.logger.Debug("ec2tagger refreshing volumes")
-			allVolumesRetrieved := t.ebsVolumesRetrieved()
-			t.logger.Debug("Retrieve status",
-				zap.Bool("EbsAllVolumesRetrieved", allVolumesRetrieved))
-			refreshVolumes := len(t.EBSDeviceKeys) > 0
-
-			if stopAfterFirstSuccess {
-				// need refresh volumes when it is configured and not all volumes are retrieved
-				refreshVolumes = refreshVolumes && !allVolumesRetrieved
-				if !refreshVolumes {
-					t.logger.Info("ec2tagger: Refresh for volumes is no longer needed, stop refreshTicker.")
-					return
-				}
-			}
-
-			if refreshVolumes {
-				if err := t.updateVolumes(); err != nil {
-					t.logger.Warn("ec2tagger: Error refreshing EBS volumes, keeping old values", zap.Error(err))
-				}
-			}
-
-		case <-t.shutdownC:
-			return
-		}
-	}
-}
-
 func (t *Tagger) ec2TagsRetrieved() bool {
 	allTagsRetrieved := true
 	t.RLock()
@@ -317,23 +270,7 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	return allTagsRetrieved
 }
 
-// ebsVolumesRetrieved checks if all volumes are successfully retrieved
-func (t *Tagger) ebsVolumesRetrieved() bool {
-	allVolumesRetrieved := true
-
-	for _, key := range t.EBSDeviceKeys {
-		if key == "*" {
-			continue
-		}
-		if volId := t.volumeSerialCache.Serial(key); volId == "" {
-			allVolumesRetrieved = false
-			break
-		}
-	}
-	return allVolumesRetrieved
-}
-
-// Start acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
+// Start acts as input validation and serves the purpose of updating ec2 tags.
 // It will be called when OTel is enabling each processor
 func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	t.shutdownC = make(chan bool)
@@ -367,7 +304,7 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			Values: t.EC2InstanceTagKeys,
 		})
 	}
-	if len(t.EC2InstanceTagKeys) > 0 || len(t.EBSDeviceKeys) > 0 {
+	if len(t.EC2InstanceTagKeys) > 0 {
 		ec2CredentialConfig := &configaws.CredentialsConfig{
 			AccessKey: t.AccessKey,
 			SecretKey: t.SecretKey,
@@ -381,9 +318,8 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		t.ec2API = t.ec2Provider(ctx, host, ec2CredentialConfig)
 
 		go func() { //Async start of initial retrieval to prevent block of agent start
-			t.initialRetrievalOfTagsAndVolumes()
+			t.initialRetrievalOfTags()
 			t.refreshLoopToUpdateTags()
-			t.refreshLoopToUpdateVolumes()
 		}()
 		t.logger.Info("ec2tagger: EC2 tagger has started initialization.")
 
@@ -401,7 +337,7 @@ func (t *Tagger) refreshLoopToUpdateTags() {
 	if refreshInterval.Seconds() == 0 {
 		//when the refresh interval is 0, this means that customer don't want to
 		//update tags values once they are retrieved successfully. In this case,
-		//we still want to do refresh to make sure all the specified keys for tags/volumes
+		//we still want to do refresh to make sure all the specified keys for tags
 		//are fetched successfully because initial retrieval might not get all of them.
 		//When the specified key is "*", there is no way for us to check if all
 		//tags are fetched. So there is no need to do refresh in this case.
@@ -424,56 +360,17 @@ func (t *Tagger) refreshLoopToUpdateTags() {
 	}
 }
 
-func (t *Tagger) refreshLoopToUpdateVolumes() {
-	needRefresh := false
-	stopAfterFirstSuccess := false
-
-	refreshInterval := t.RefreshVolumesInterval
-	if refreshInterval.Seconds() == 0 {
-		needRefresh = len(t.EBSDeviceKeys) != 1 || t.EBSDeviceKeys[0] != "*"
-
-		stopAfterFirstSuccess = true
-		refreshInterval = defaultRefreshInterval
-	} else if refreshInterval.Seconds() > 0 {
-		//customer wants to update the volumes with the given refresh interval
-		needRefresh = true
-	}
-
-	if needRefresh {
-		go func() {
-			// randomly stagger the time of the first refresh to mitigate throttling if a whole fleet is
-			// restarted at the same time
-			sleepUntilHostJitter(refreshInterval)
-			t.refreshLoopVolumes(refreshInterval, stopAfterFirstSuccess)
-		}()
-	}
-}
-
-// updateVolumes calls EC2 describe volume
-func (t *Tagger) updateVolumes() error {
-	if t.volumeSerialCache == nil {
-		t.volumeSerialCache = volume.NewCache(volume.NewProvider(t.ec2API, t.ec2MetadataRespond.instanceId))
-	}
-
-	if err := t.volumeSerialCache.Refresh(); err != nil {
-		return err
-	}
-
-	t.logger.Debug("Volume Serial Cache", zap.Strings("devices", t.volumeSerialCache.Devices()))
-	return nil
-}
-
 func (t *Tagger) setStarted() {
 	t.Lock()
 	t.started = true
 	t.Unlock()
-	t.logger.Info("ec2tagger: EC2 tagger has started, finished initial retrieval of tags and Volumes")
+	t.logger.Info("ec2tagger: EC2 tagger has started, finished initial retrieval of tags")
 }
 
 /*
 Retrieve metadata from IMDS and use these metadata to:
 * Extract InstanceID, ImageID, InstanceType to create custom dimension for collected metrics
-* Extract InstanceID to retrieve Instance's Volume and Tags
+* Extract InstanceID to retrieve Instance's Tags
 * Extract Region to create aws session with custom configuration
 For more information on IMDS, please follow this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 */
@@ -513,10 +410,9 @@ func (t *Tagger) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 	return nil
 }
 
-// This function never return until calling updateTags() and updateVolumes() succeed or shutdown happen.
-func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
+// This function never return until calling updateTags() succeeds or shutdown happen.
+func (t *Tagger) initialRetrievalOfTags() {
 	tagsRetrieved := len(t.EC2InstanceTagKeys) == 0
-	volsRetrieved := len(t.EBSDeviceKeys) == 0
 
 	retry := 0
 	for {
@@ -536,7 +432,7 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 		}
 
 		if retry > 0 {
-			t.logger.Info("ec2tagger: initial retrieval of tags and volumes", zap.Int("retry", retry))
+			t.logger.Info("ec2tagger: initial retrieval of tags", zap.Int("retry", retry))
 		}
 
 		if !tagsRetrieved {
@@ -547,15 +443,7 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 			}
 		}
 
-		if !volsRetrieved {
-			if err := t.updateVolumes(); err != nil {
-				t.logger.Error("ec2tagger: Unable to describe ec2 volume for initial retrieval", zap.Error(err))
-			} else {
-				volsRetrieved = true
-			}
-		}
-
-		if tagsRetrieved { // volsRetrieved is not checked to keep behavior consistency
+		if tagsRetrieved {
 			t.logger.Info("ec2tagger: Initial retrieval of tags succeeded")
 			t.setStarted()
 			return

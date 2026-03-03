@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
@@ -55,15 +55,17 @@ var Ec2MetadataInfoProvider = func() *Metadata {
 }
 
 func ec2MetadataInfoProvider() *Metadata {
-	ec2 := ec2util.GetEC2UtilSingleton()
-	return &Metadata{
-		InstanceID:   ec2.InstanceID,
-		Hostname:     ec2.Hostname,
-		PrivateIP:    ec2.PrivateIP,
-		AccountID:    ec2.AccountID,
-		InstanceType: ec2.InstanceType,
-		ImageID:      ec2.ImageID,
+	if provider := cloudmetadata.GetProvider(); provider != nil {
+		return &Metadata{
+			InstanceID:   provider.InstanceID(),
+			Hostname:     provider.Hostname(),
+			PrivateIP:    provider.PrivateIP(),
+			AccountID:    provider.AccountID(),
+			InstanceType: provider.InstanceType(),
+			ImageID:      provider.ImageID(),
+		}
 	}
+	return &Metadata{}
 }
 
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
@@ -181,6 +183,13 @@ func getAWSMetadataWithTags(needsTags bool) map[string]string {
 	return metadata
 }
 
+// runtimePlaceholders are resolved by processors at runtime, not during translation.
+// They should be omitted from the translated config.
+var runtimePlaceholders = map[string]bool{
+	"${aws:VolumeId}": true,
+	"${disk.id}":      true,
+}
+
 func ResolveAWSMetadataPlaceholders(input any) any {
 	inputMap := input.(map[string]interface{})
 	result := make(map[string]any, len(inputMap))
@@ -203,9 +212,20 @@ func ResolveAWSMetadataPlaceholders(input any) any {
 	}
 
 	for k, v := range inputMap {
-		if vStr, ok := v.(string); ok && strings.Contains(vStr, awsPlaceholderPrefix) {
+		vStr, ok := v.(string)
+		if !ok {
+			result[k] = v
+			continue
+		}
+		// Skip runtime-resolved placeholders (handled by processors)
+		if runtimePlaceholders[vStr] {
+			continue
+		}
+		if strings.Contains(vStr, awsPlaceholderPrefix) {
 			if replacement, exists := metadata[vStr]; exists {
 				result[k] = replacement
+			} else {
+				log.Printf("W! Unresolved AWS placeholder %q for key %q, omitting", vStr, k)
 			}
 		} else {
 			result[k] = v

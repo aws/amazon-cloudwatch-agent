@@ -33,7 +33,7 @@ func NewProvider(ec2Client ec2.DescribeVolumesAPIClient, instanceID string) Prov
 }
 
 type Cache interface {
-	Refresh() error
+	Refresh(ctx context.Context) error
 	Serial(devName string) string
 	Devices() []string
 }
@@ -68,11 +68,11 @@ func (c *cache) reset() {
 	maps.Clear(c.cache)
 }
 
-func (c *cache) Refresh() error {
+func (c *cache) Refresh(ctx context.Context) error {
 	if c.provider == nil {
 		return errNoProviders
 	}
-	result, err := c.provider.DeviceToSerialMap(context.Background())
+	result, err := c.provider.DeviceToSerialMap(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to refresh volume cache: %w", err)
 	}

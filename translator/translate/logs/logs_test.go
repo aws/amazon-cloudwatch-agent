@@ -10,11 +10,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
+
+func TestMain(m *testing.M) {
+	cloudmetadata.SetForTest(nil)
+	defer cloudmetadata.ResetForTest()
+	os.Exit(m.Run())
+}
 
 func TestLogs(t *testing.T) {
 	l := new(Logs)

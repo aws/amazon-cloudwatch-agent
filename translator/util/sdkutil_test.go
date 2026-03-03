@@ -9,28 +9,47 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
+type mockProvider struct {
+	region        string
+	cloudProvider cloudprovider.CloudProvider
+}
+
+func (m *mockProvider) Region() string                             { return m.region }
+func (m *mockProvider) InstanceID() string                         { return "i-test" }
+func (m *mockProvider) Hostname() string                           { return "test" }
+func (m *mockProvider) InstanceType() string                       { return "t3.micro" }
+func (m *mockProvider) ImageID() string                            { return "" }
+func (m *mockProvider) AccountID() string                          { return "123456" }
+func (m *mockProvider) PrivateIP() string                          { return "10.0.0.1" }
+func (m *mockProvider) CloudProvider() cloudprovider.CloudProvider { return m.cloudProvider }
+
 func TestDetectAgentModeAuto(t *testing.T) {
 	testCases := map[string]struct {
 		runInAws  string
-		ec2Region string
+		provider  cloudmetadata.Provider
 		ecsRegion string
 		wantMode  string
 	}{
 		"WithRunInAWS":  {runInAws: config.RUN_IN_AWS_TRUE, wantMode: config.ModeEC2},
-		"WithEC2Region": {ec2Region: "us-east-1", wantMode: config.ModeEC2},
+		"WithEC2Region": {provider: &mockProvider{region: "us-east-1", cloudProvider: cloudprovider.AWS}, wantMode: config.ModeEC2},
+		"WithAzure":     {provider: &mockProvider{region: "westus2", cloudProvider: cloudprovider.Azure}, wantMode: config.ModeOnPrem},
 		"WithECSRegion": {ecsRegion: "us-east-1", wantMode: config.ModeEC2},
 		"WithNone":      {wantMode: config.ModeOnPrem},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			runInAws = testCase.runInAws
-			DefaultEC2Region = func() string { return testCase.ec2Region }
+			cloudmetadata.SetForTest(testCase.provider)
+			defer cloudmetadata.ResetForTest()
 			DefaultECSRegion = func() string { return testCase.ecsRegion }
 			require.Equal(t, testCase.wantMode, DetectAgentMode("auto"))
+			runInAws = ""
 		})
 	}
 }

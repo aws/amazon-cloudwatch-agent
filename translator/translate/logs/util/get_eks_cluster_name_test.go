@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
@@ -174,11 +175,10 @@ func TestTagutilGetEKSClusterName(t *testing.T) {
 	}
 }
 func TestGetClusterNameFromEc2Tagger(t *testing.T) {
-	// This test cannot properly mock ec2util.GetEC2UtilSingleton().InstanceID
-	// so it will return empty results in test environment
-	// The actual functionality is tested in TestTagutilGetEKSClusterName
-	t.Run("Returns empty in test environment", func(t *testing.T) {
+	cloudmetadata.SetForTest(nil)
+	defer cloudmetadata.ResetForTest()
+	t.Run("Returns empty when no provider", func(t *testing.T) {
 		result := GetClusterNameFromEc2Tagger()
-		assert.Equal(t, "", result, "Expected empty result since ec2util cannot be mocked in test environment")
+		assert.Equal(t, "", result)
 	})
 }

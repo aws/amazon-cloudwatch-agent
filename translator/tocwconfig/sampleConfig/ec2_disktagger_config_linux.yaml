@@ -1,0 +1,87 @@
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+processors:
+    awsentity/resource:
+        entity_type: Resource
+        platform: ec2
+        scrape_datapoint_attribute: true
+    disktagger:
+        disk_device_tag_key: device
+        refresh_interval: 5m0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+receivers:
+    telegraf_cpu:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_disk:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+                - disktagger
+                - awsentity/resource
+            receivers:
+                - telegraf_disk
+                - telegraf_cpu
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

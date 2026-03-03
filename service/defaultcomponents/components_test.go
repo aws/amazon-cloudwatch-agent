@@ -48,6 +48,7 @@ func TestComponents(t *testing.T) {
 		"cumulativetodelta",
 		"deltatocumulative",
 		"deltatorate",
+		"disktagger",
 		"ec2tagger",
 		"metricsgeneration",
 		"filter",

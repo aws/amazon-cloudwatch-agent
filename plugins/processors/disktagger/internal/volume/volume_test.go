@@ -36,11 +36,11 @@ func TestCache(t *testing.T) {
 	c.fetchBlockName = func(s string) string {
 		return ""
 	}
-	assert.ErrorIs(t, c.Refresh(), errNoProviders)
+	assert.ErrorIs(t, c.Refresh(t.Context()), errNoProviders)
 	c.provider = p
-	assert.ErrorIs(t, c.Refresh(), testErr)
+	assert.ErrorIs(t, c.Refresh(t.Context()), testErr)
 	p.err = nil
-	assert.NoError(t, c.Refresh())
+	assert.NoError(t, c.Refresh(t.Context()))
 	assert.Equal(t, "foo", c.Serial("xvdf"))
 	assert.Equal(t, "bar", c.Serial("xvdc"))
 	assert.Equal(t, "baz", c.Serial("xvdc1"))

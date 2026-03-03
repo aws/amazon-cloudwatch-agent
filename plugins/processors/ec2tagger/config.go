@@ -16,20 +16,19 @@ var SupportedAppendDimensions = map[string]string{
 	"InstanceType":         "${aws:InstanceType}",
 }
 
-const (
-	AttributeVolumeId            = "VolumeId"
-	ValueAppendDimensionVolumeId = "${aws:VolumeId}"
-)
+// OTelAppendDimensions maps OTel resource attribute placeholders to the same
+// ec2tagger dimension keys as SupportedAppendDimensions. This allows users to
+// use OTel-style placeholders (e.g. "${host.id}") in append_dimensions on EC2.
+var OTelAppendDimensions = map[string]string{
+	"ImageId":      "${host.image.id}",
+	"InstanceId":   "${host.id}",
+	"InstanceType": "${host.type}",
+}
 
 type Config struct {
-	RefreshTagsInterval    time.Duration `mapstructure:"refresh_tags_interval"`
-	RefreshVolumesInterval time.Duration `mapstructure:"refresh_volumes_interval"`
-	EC2MetadataTags        []string      `mapstructure:"ec2_metadata_tags"`
-	EC2InstanceTagKeys     []string      `mapstructure:"ec2_instance_tag_keys"`
-	EBSDeviceKeys          []string      `mapstructure:"ebs_device_keys,omitempty"`
-
-	//The tag key in the metrics for disk device
-	DiskDeviceTagKey string `mapstructure:"disk_device_tag_key,omitempty"`
+	RefreshTagsInterval time.Duration `mapstructure:"refresh_tags_interval"`
+	EC2MetadataTags     []string      `mapstructure:"ec2_metadata_tags"`
+	EC2InstanceTagKeys  []string      `mapstructure:"ec2_instance_tag_keys"`
 
 	// unlike other AWS plugins, this one determines the region from ec2 metadata not user configuration
 	AccessKey   string `mapstructure:"access_key,omitempty"`

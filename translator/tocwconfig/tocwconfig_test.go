@@ -27,6 +27,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -45,6 +46,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
+
+func TestMain(m *testing.M) {
+	cloudmetadata.SetForTest(nil)
+	defer cloudmetadata.ResetForTest()
+	os.Exit(m.Run())
+}
 
 const (
 	prometheusFileNameToken = "prometheusFileName"
@@ -581,12 +588,6 @@ func TestBasicConfig(t *testing.T) {
 	}
 }
 
-func TestOIDCAuthConfig(t *testing.T) {
-	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeOnPremise)
-	checkTranslation(t, "oidc_auth_config_linux", "linux", map[string]string{}, "")
-}
-
 func TestInvalidInputConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -897,6 +898,18 @@ func TestIgnoreInvalidAppendDimensions(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "ignore_append_dimensions", "linux", expectedEnvVars, "")
+}
+
+func TestEC2DiskTaggerConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "ec2_disktagger_config_linux", "linux", nil, "")
+}
+
+func TestAzureMetadataConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	checkTranslation(t, "azure_metadata_config_linux", "linux", nil, "")
 }
 
 func TestTomlToTomlComparison(t *testing.T) {
