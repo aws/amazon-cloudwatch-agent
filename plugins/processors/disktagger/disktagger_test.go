@@ -20,12 +20,12 @@ type mockCache struct {
 	refreshErr error
 }
 
-func (m *mockCache) Refresh(ctx context.Context) error { return m.refreshErr }
-func (m *mockCache) Serial(devName string) string      { return m.cache[devName] }
-func (m *mockCache) Devices() []string                 { return nil }
+func (m *mockCache) Refresh(_ context.Context) error { return m.refreshErr }
+func (m *mockCache) Serial(devName string) string    { return m.cache[devName] }
+func (m *mockCache) Devices() []string               { return nil }
 
 func mockCacheFactory(cache volume.Cache) cacheFactory {
-	return func(cfg *Config) volume.Cache { return cache }
+	return func(_ *Config) volume.Cache { return cache }
 }
 
 func TestProcessMetrics_NilProvider(t *testing.T) {

@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/internal/volume"
 )
 
 func TestNewFactory(t *testing.T) {
@@ -39,6 +38,4 @@ func TestCacheFactory_Azure(t *testing.T) {
 	cfg := &Config{CloudProvider: cloudprovider.Azure}
 	cache := factory(cfg)
 	require.NotNil(t, cache)
-	_, ok := cache.(volume.Cache)
-	assert.True(t, ok)
 }
