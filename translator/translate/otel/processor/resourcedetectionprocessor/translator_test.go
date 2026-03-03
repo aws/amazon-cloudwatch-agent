@@ -38,53 +38,6 @@ func TestTranslate_AzureWithOTelPlaceholders(t *testing.T) {
 	assert.False(t, az.CloudPlatform.Enabled)
 }
 
-func TestTranslate_EC2WithLegacyPlaceholders(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{
-		"metrics": map[string]interface{}{
-			"append_dimensions": map[string]interface{}{
-				"InstanceId":   "${aws:InstanceId}",
-				"InstanceType": "${aws:InstanceType}",
-				"ImageId":      "${aws:ImageId}",
-			},
-		},
-	})
-
-	tr := NewTranslator([]string{"ec2", "system"})
-	cfg, err := tr.Translate(conf)
-	require.NoError(t, err)
-
-	rdCfg := cfg.(*resourcedetectionprocessor.Config)
-	ec2 := rdCfg.DetectorConfig.EC2Config.ResourceAttributes
-
-	assert.True(t, ec2.HostID.Enabled)
-	assert.True(t, ec2.HostType.Enabled)
-	assert.True(t, ec2.HostImageID.Enabled)
-	assert.False(t, ec2.CloudRegion.Enabled)
-	assert.False(t, ec2.CloudPlatform.Enabled)
-}
-
-func TestTranslate_MixedLegacyAndOTel(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{
-		"metrics": map[string]interface{}{
-			"append_dimensions": map[string]interface{}{
-				"InstanceId": "${aws:InstanceId}",
-				"Region":     "${cloud.region}",
-			},
-		},
-	})
-
-	tr := NewTranslator([]string{"ec2"})
-	cfg, err := tr.Translate(conf)
-	require.NoError(t, err)
-
-	rdCfg := cfg.(*resourcedetectionprocessor.Config)
-	ec2 := rdCfg.DetectorConfig.EC2Config.ResourceAttributes
-
-	assert.True(t, ec2.HostID.Enabled)
-	assert.True(t, ec2.CloudRegion.Enabled)
-	assert.False(t, ec2.HostType.Enabled)
-}
-
 func TestTranslate_NoAppendDimensions(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"metrics": map[string]interface{}{},

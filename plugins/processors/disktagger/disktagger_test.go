@@ -11,20 +11,26 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/internal/volume"
 )
 
-type mockProvider struct {
+type mockCache struct {
 	cache      map[string]string
 	refreshErr error
 }
 
-func (m *mockProvider) Refresh(ctx context.Context) error { return m.refreshErr }
-func (m *mockProvider) Serial(devName string) string {
-	return m.cache[devName]
+func (m *mockCache) Refresh(ctx context.Context) error { return m.refreshErr }
+func (m *mockCache) Serial(devName string) string      { return m.cache[devName] }
+func (m *mockCache) Devices() []string                 { return nil }
+
+func mockCacheFactory(cache volume.Cache) cacheFactory {
+	return func(cfg *Config) volume.Cache { return cache }
 }
 
 func TestProcessMetrics_NilProvider(t *testing.T) {
-	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), nil)
+	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), mockCacheFactory(nil))
+	tagger.cache = nil // simulate no cloud detected
 	md := pmetric.NewMetrics()
 	result, err := tagger.processMetrics(context.Background(), md)
 	require.NoError(t, err)
@@ -32,8 +38,9 @@ func TestProcessMetrics_NilProvider(t *testing.T) {
 }
 
 func TestProcessMetrics_AddsDiskID(t *testing.T) {
-	provider := &mockProvider{cache: map[string]string{"sda": "os-disk-name"}}
-	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), provider)
+	cache := &mockCache{cache: map[string]string{"sda": "os-disk-name"}}
+	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), mockCacheFactory(cache))
+	tagger.cache = cache
 
 	md := pmetric.NewMetrics()
 	rm := md.ResourceMetrics().AppendEmpty()
@@ -53,8 +60,9 @@ func TestProcessMetrics_AddsDiskID(t *testing.T) {
 }
 
 func TestProcessMetrics_SkipsExistingDiskID(t *testing.T) {
-	provider := &mockProvider{cache: map[string]string{"sda": "os-disk"}}
-	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), provider)
+	cache := &mockCache{cache: map[string]string{"sda": "os-disk"}}
+	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), mockCacheFactory(cache))
+	tagger.cache = cache
 
 	md := pmetric.NewMetrics()
 	rm := md.ResourceMetrics().AppendEmpty()
@@ -74,8 +82,9 @@ func TestProcessMetrics_SkipsExistingDiskID(t *testing.T) {
 }
 
 func TestProcessMetrics_NoDeviceAttribute(t *testing.T) {
-	provider := &mockProvider{cache: map[string]string{"sda": "os-disk"}}
-	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), provider)
+	cache := &mockCache{cache: map[string]string{"sda": "os-disk"}}
+	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), mockCacheFactory(cache))
+	tagger.cache = cache
 
 	md := pmetric.NewMetrics()
 	rm := md.ResourceMetrics().AppendEmpty()
@@ -93,8 +102,9 @@ func TestProcessMetrics_NoDeviceAttribute(t *testing.T) {
 }
 
 func TestProcessMetrics_SumMetricType(t *testing.T) {
-	provider := &mockProvider{cache: map[string]string{"sda": "os-disk"}}
-	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), provider)
+	cache := &mockCache{cache: map[string]string{"sda": "os-disk"}}
+	tagger := newTagger(&Config{DiskDeviceTagKey: "device"}, zap.NewNop(), mockCacheFactory(cache))
+	tagger.cache = cache
 
 	md := pmetric.NewMetrics()
 	rm := md.ResourceMetrics().AppendEmpty()
@@ -113,7 +123,7 @@ func TestProcessMetrics_SumMetricType(t *testing.T) {
 }
 
 func TestShutdown_Safe(t *testing.T) {
-	tagger := newTagger(&Config{}, zap.NewNop(), nil)
+	tagger := newTagger(&Config{}, zap.NewNop(), mockCacheFactory(nil))
 	// Shutdown without Start — cancel is nil
 	require.NoError(t, tagger.Shutdown(context.Background()))
 	// Double shutdown after Start

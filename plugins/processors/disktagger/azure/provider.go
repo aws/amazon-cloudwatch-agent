@@ -130,7 +130,8 @@ func NewProvider() *Provider {
 	}
 }
 
-func (p *Provider) DeviceToDiskID(ctx context.Context) (map[string]string, error) {
+// DeviceToSerialMap implements volume.Provider interface.
+func (p *Provider) DeviceToSerialMap(ctx context.Context) (map[string]string, error) {
 	profile, err := p.fetchStorageProfile(ctx)
 	if err != nil {
 		return nil, err

@@ -67,7 +67,7 @@ func TestResolveSymlink(t *testing.T) {
 	assert.Equal(t, "", p.resolveSymlink("/dev/disk/azure/nonexistent"))
 }
 
-func TestDeviceToDiskID_ScsiPath(t *testing.T) {
+func TestDeviceToSerialMap_ScsiPath(t *testing.T) {
 	profile := storageProfile{
 		OsDisk:    osDisk{Name: "os-disk"},
 		DataDisks: []dataDisk{{LUN: "0", Name: "data-disk-0"}},
@@ -91,12 +91,12 @@ func TestDeviceToDiskID_ScsiPath(t *testing.T) {
 		useSymlinks:  false,
 	}
 
-	result, err := p.DeviceToDiskID(context.Background())
+	result, err := p.DeviceToSerialMap(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"sda": "os-disk", "sdc": "data-disk-0"}, result)
 }
 
-func TestDeviceToDiskID_SymlinkPath(t *testing.T) {
+func TestDeviceToSerialMap_SymlinkPath(t *testing.T) {
 	profile := storageProfile{
 		OsDisk: osDisk{Name: "os-disk"},
 	}
@@ -117,7 +117,7 @@ func TestDeviceToDiskID_SymlinkPath(t *testing.T) {
 		useSymlinks:  true,
 	}
 
-	result, err := p.DeviceToDiskID(context.Background())
+	result, err := p.DeviceToSerialMap(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"sda": "os-disk"}, result)
 }
@@ -129,7 +129,7 @@ func TestFetchStorageProfile_Error(t *testing.T) {
 	defer server.Close()
 
 	p := &Provider{client: server.Client(), endpoint: server.URL}
-	_, err := p.DeviceToDiskID(context.Background())
+	_, err := p.DeviceToSerialMap(context.Background())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "IMDS returned 500")
 }

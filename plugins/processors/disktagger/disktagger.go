@@ -11,31 +11,34 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/internal/volume"
 )
 
 type Tagger struct {
-	config   *Config
-	logger   *zap.Logger
-	provider DiskProvider
-
-	cancel context.CancelFunc
+	config       *Config
+	logger       *zap.Logger
+	cacheFactory cacheFactory
+	cache        volume.Cache
+	cancel       context.CancelFunc
 }
 
-func newTagger(config *Config, logger *zap.Logger, provider DiskProvider) *Tagger {
+func newTagger(config *Config, logger *zap.Logger, factory cacheFactory) *Tagger {
 	return &Tagger{
-		config:   config,
-		logger:   logger,
-		provider: provider,
+		config:       config,
+		logger:       logger,
+		cacheFactory: factory,
 	}
 }
 
 func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
-	if t.provider == nil {
-		t.logger.Warn("disktagger: no provider, disk tagging disabled")
+	t.cache = t.cacheFactory(t.config)
+	if t.cache == nil {
+		t.logger.Warn("disktagger: no provider configured, disk tagging disabled")
 		return nil
 	}
 
-	if err := t.provider.Refresh(ctx); err != nil {
+	if err := t.cache.Refresh(ctx); err != nil {
 		t.logger.Warn("Initial disk refresh failed, will retry", zap.Error(err))
 	}
 
@@ -55,7 +58,7 @@ func (t *Tagger) Shutdown(_ context.Context) error {
 }
 
 func (t *Tagger) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
-	if t.provider == nil {
+	if t.cache == nil {
 		return md, nil
 	}
 
@@ -72,8 +75,6 @@ func (t *Tagger) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.
 }
 
 func (t *Tagger) tagMetric(m pmetric.Metric) {
-	// Only Gauge and Sum are relevant for disk metrics; other types
-	// (Histogram, Summary, ExponentialHistogram) are silently skipped.
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
 		for i := 0; i < m.Gauge().DataPoints().Len(); i++ {
@@ -94,9 +95,7 @@ func (t *Tagger) tagDataPoint(attrs pcommon.Map) {
 	if !found {
 		return
 	}
-	// Uses provider.Serial() which supports prefix matching
-	// (e.g. metric device "nvme0n1p1" matches cached device "nvme0n1")
-	serial := t.provider.Serial(devVal.Str())
+	serial := t.cache.Serial(devVal.Str())
 	if serial != "" {
 		attrs.PutStr(AttributeDiskID, serial)
 	}
@@ -108,7 +107,7 @@ func (t *Tagger) refreshLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			if err := t.provider.Refresh(ctx); err != nil {
+			if err := t.cache.Refresh(ctx); err != nil {
 				t.logger.Warn("Disk refresh failed", zap.Error(err))
 			}
 		case <-ctx.Done():

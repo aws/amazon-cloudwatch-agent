@@ -9,26 +9,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/processor/processortest"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/internal/volume"
 )
-
-type stubProvider struct {
-	region        string
-	cloud         cloudprovider.CloudProvider
-}
-
-func (s *stubProvider) Region() string                             { return s.region }
-func (s *stubProvider) InstanceID() string                         { return "i-test" }
-func (s *stubProvider) Hostname() string                           { return "" }
-func (s *stubProvider) InstanceType() string                       { return "" }
-func (s *stubProvider) ImageID() string                            { return "" }
-func (s *stubProvider) AccountID() string                          { return "" }
-func (s *stubProvider) PrivateIP() string                          { return "" }
-func (s *stubProvider) CloudProvider() cloudprovider.CloudProvider { return s.cloud }
 
 func TestNewFactory(t *testing.T) {
 	f := NewFactory()
@@ -40,34 +24,21 @@ func TestCreateDefaultConfig(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 	assert.Equal(t, 5*time.Minute, cfg.RefreshInterval)
 	assert.Equal(t, "device", cfg.DiskDeviceTagKey)
+	assert.Equal(t, cloudprovider.Unknown, cfg.CloudProvider)
 }
 
-func TestCreateDiskProvider_NoCloud(t *testing.T) {
-	cloudmetadata.SetForTest(nil)
-	defer cloudmetadata.ResetForTest()
-
-	set := processortest.NewNopSettings(component.MustNewType(typeStr))
-	p := createDiskProvider(t.Context(), set)
-	assert.Nil(t, p)
+func TestCacheFactory_NoCloud(t *testing.T) {
+	factory := newCacheFactory(t.Context())
+	cfg := &Config{CloudProvider: cloudprovider.Unknown}
+	cache := factory(cfg)
+	assert.Nil(t, cache)
 }
 
-func TestCreateDiskProvider_UnsupportedCloud(t *testing.T) {
-	cloudmetadata.SetForTest(&stubProvider{region: "somewhere", cloud: cloudprovider.Unknown})
-	defer cloudmetadata.ResetForTest()
-
-	set := processortest.NewNopSettings(component.MustNewType(typeStr))
-	p := createDiskProvider(t.Context(), set)
-	assert.Nil(t, p)
-}
-
-func TestCreateDiskProvider_Azure(t *testing.T) {
-	cloudmetadata.SetForTest(&stubProvider{region: "eastus", cloud: cloudprovider.Azure})
-	defer cloudmetadata.ResetForTest()
-
-	set := processortest.NewNopSettings(component.MustNewType(typeStr))
-	p := createDiskProvider(t.Context(), set)
-	require.NotNil(t, p)
-	// Azure provider returns a mapProvider
-	_, ok := p.(*mapProvider)
+func TestCacheFactory_Azure(t *testing.T) {
+	factory := newCacheFactory(t.Context())
+	cfg := &Config{CloudProvider: cloudprovider.Azure}
+	cache := factory(cfg)
+	require.NotNil(t, cache)
+	_, ok := cache.(volume.Cache)
 	assert.True(t, ok)
 }

@@ -8,6 +8,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -49,5 +51,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*disktagger.Config)
+
+	// Set cloud provider info at translation time (not runtime)
+	if p := cloudmetadata.GetProvider(); p != nil {
+		cfg.CloudProvider = p.CloudProvider()
+		if p.CloudProvider() == cloudprovider.AWS {
+			cfg.InstanceID = p.InstanceID()
+			cfg.Region = p.Region()
+		}
+	}
+
 	return cfg, nil
 }

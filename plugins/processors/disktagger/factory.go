@@ -12,13 +12,11 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
-	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal/cloudmetadata"
 	"github.com/aws/amazon-cloudwatch-agent/internal/cloudprovider"
-	awsprovider "github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/aws"
-	azureprovider "github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/azure"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/azure"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/disktagger/internal/volume"
 )
 
 const typeStr = "disktagger"
@@ -45,39 +43,31 @@ func createMetricsProcessor(
 	next consumer.Metrics,
 ) (processor.Metrics, error) {
 	c := cfg.(*Config)
-	provider := createDiskProvider(ctx, set)
-	t := newTagger(c, set.Logger, provider)
+	t := newTagger(c, set.Logger, newCacheFactory(ctx))
 	return processorhelper.NewMetrics(ctx, set, cfg, next, t.processMetrics,
 		processorhelper.WithStart(t.Start),
 		processorhelper.WithShutdown(t.Shutdown),
 	)
 }
 
-func createDiskProvider(ctx context.Context, set processor.Settings) DiskProvider {
-	p := cloudmetadata.GetProvider()
-	if p == nil {
-		set.Logger.Warn("No cloud provider detected, disktagger will not tag disks")
-		return nil
-	}
+// cacheFactory creates volume.Cache based on cloud provider config.
+// This allows the Tagger to create the cache in its Start method.
+type cacheFactory func(cfg *Config) volume.Cache
 
-	switch p.CloudProvider() {
-	case cloudprovider.AWS:
-		credConfig := &configaws.CredentialsConfig{
-			Region: p.Region(),
-		}
-		awsCfg, err := credConfig.LoadConfig(ctx)
-		if err != nil {
-			set.Logger.Warn("Failed to load AWS config for disktagger", zap.Error(err))
+func newCacheFactory(ctx context.Context) cacheFactory {
+	return func(cfg *Config) volume.Cache {
+		switch cfg.CloudProvider {
+		case cloudprovider.AWS:
+			credConfig := &configaws.CredentialsConfig{Region: cfg.Region}
+			awsCfg, err := credConfig.LoadConfig(ctx)
+			if err != nil {
+				return nil
+			}
+			return volume.NewCache(volume.NewProvider(ec2.NewFromConfig(awsCfg), cfg.InstanceID))
+		case cloudprovider.Azure:
+			return volume.NewCache(azure.NewProvider())
+		default:
 			return nil
 		}
-		set.Logger.Info("disktagger: using AWS EBS provider", zap.String("instanceID", p.InstanceID()), zap.String("region", p.Region()))
-		return awsprovider.NewProvider(ec2.NewFromConfig(awsCfg), p.InstanceID())
-	case cloudprovider.Azure:
-		set.Logger.Info("disktagger: using Azure managed disk provider")
-		ap := azureprovider.NewProvider()
-		return newMapProvider(ap.DeviceToDiskID)
-	default:
-		set.Logger.Warn("Unsupported cloud provider for disktagger")
-		return nil
 	}
 }
