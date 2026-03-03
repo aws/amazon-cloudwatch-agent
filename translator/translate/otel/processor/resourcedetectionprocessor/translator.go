@@ -60,6 +60,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.Override = false
 
 	requested := collectRequestedAttributes(conf)
+	configureEC2Attributes(cfg, requested)
 	if slices.Contains(t.detectors, "azure") {
 		configureAzureAttributes(cfg, requested)
 	}
@@ -99,6 +100,19 @@ func collectRequestedAttributes(conf *confmap.Conf) map[string]bool {
 	}
 
 	return requested
+}
+
+func configureEC2Attributes(cfg *resourcedetectionprocessor.Config, requested map[string]bool) {
+	ra := &cfg.DetectorConfig.EC2Config.ResourceAttributes
+	ra.CloudAccountID.Enabled = requested["cloud.account.id"]
+	ra.CloudAvailabilityZone.Enabled = requested["cloud.availability_zone"]
+	ra.CloudPlatform.Enabled = requested["cloud.platform"]
+	ra.CloudProvider.Enabled = requested["cloud.provider"]
+	ra.CloudRegion.Enabled = requested["cloud.region"]
+	ra.HostID.Enabled = requested["host.id"]
+	ra.HostImageID.Enabled = requested["host.image.id"]
+	ra.HostName.Enabled = requested["host.name"]
+	ra.HostType.Enabled = requested["host.type"]
 }
 
 func configureAzureAttributes(cfg *resourcedetectionprocessor.Config, requested map[string]bool) {
