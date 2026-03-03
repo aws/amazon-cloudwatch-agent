@@ -8,6 +8,14 @@
         "tls": {
           "cert_file": "/path/to/cert.pem",
           "key_file": "/path/to/key.pem"
+        },
+        "log_group_name": "/aws/application/otlp",
+        "emf_processor": {
+          "metric_namespace": "MyApplication/OTLP",
+          "metric_unit": {
+            "request_duration": "Milliseconds",
+            "request_count": "Count"
+          }
         }
       }
     }

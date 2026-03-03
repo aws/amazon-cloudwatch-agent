@@ -348,6 +348,11 @@ func TestSharedOtlp(t *testing.T) {
 	checkTranslation(t, "shared_otlp_config", "linux", nil, "")
 }
 
+func TestOtlpPrometheusCombinedConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "otlp_prometheus_combined_config", "linux", nil, "")
+}
 func TestProcstatMemorySwapConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
