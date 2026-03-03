@@ -65,11 +65,12 @@ var (
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/main/plugins/inputs/prometheus_scraper/metrics_filter.go#L23
 	metricNameRelabelConfigs = []*relabel.Config{
 		{
-			Action:       relabel.Replace,
-			Regex:        relabel.MustNewRegexp("(.*)"),
-			Replacement:  "$1",
-			TargetLabel:  savedScrapeNameLabel,
-			SourceLabels: model.LabelNames{"__name__"},
+			Action:               relabel.Replace,
+			Regex:                relabel.MustNewRegexp("(.*)"),
+			Replacement:          "$1",
+			TargetLabel:          savedScrapeNameLabel,
+			SourceLabels:         model.LabelNames{"__name__"},
+			NameValidationScheme: model.UTF8Validation,
 		},
 	}
 )
@@ -79,7 +80,7 @@ func init() {
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	logLevel := &promslog.AllowedLevel{}
+	logLevel := promslog.NewLevel()
 	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
@@ -87,7 +88,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		runtime.SetMutexProfileFraction(20)
 		logLevel.Set("debug")
 	}
-	logFormat := &promslog.AllowedFormat{}
+	logFormat := &promslog.Format{}
 	_ = logFormat.Set("logfmt")
 
 	cfg := struct {
@@ -340,19 +341,21 @@ func relabelScrapeConfigs(prometheusConfig *config.Config, logger *slog.Logger) 
 		relabelConfigs := []*relabel.Config{
 			// job
 			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp(".*"), // __address__ is always there, so we will find a match for every job
-				Replacement:  sc.JobName,                  // value is hard coded job name
-				SourceLabels: model.LabelNames{"__address__"},
-				TargetLabel:  savedScrapeJobLabel, // creates a new magic label
+				Action:               relabel.Replace,
+				Regex:                relabel.MustNewRegexp(".*"), // __address__ is always there, so we will find a match for every job
+				Replacement:          sc.JobName,                  // value is hard coded job name
+				SourceLabels:         model.LabelNames{"__address__"},
+				TargetLabel:          savedScrapeJobLabel, // creates a new magic label
+				NameValidationScheme: model.UTF8Validation,
 			},
 			// instance
 			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp("(.*)"),
-				Replacement:  "$1", // value is actual __address__, i.e. instance if you don't relabel it.
-				SourceLabels: model.LabelNames{"__address__"},
-				TargetLabel:  savedScrapeInstanceLabel, // creates a new magic label
+				Action:               relabel.Replace,
+				Regex:                relabel.MustNewRegexp("(.*)"),
+				Replacement:          "$1", // value is actual __address__, i.e. instance if you don't relabel it.
+				SourceLabels:         model.LabelNames{"__address__"},
+				TargetLabel:          savedScrapeInstanceLabel, // creates a new magic label
+				NameValidationScheme: model.UTF8Validation,
 			},
 		}
 

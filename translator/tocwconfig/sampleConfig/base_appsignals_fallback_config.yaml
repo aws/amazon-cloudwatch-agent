@@ -127,6 +127,7 @@ exporters:
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: false
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         shared_credentials_file:
@@ -1048,6 +1049,26 @@ processors:
                   new_value: RuntimeMetric
               submatch_case: ""
     resourcedetection:
+        akamai:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         aks:
             resource_attributes:
                 cloud.platform:
@@ -1068,6 +1089,8 @@ processors:
                     enabled: true
                 cloud.account.id:
                     enabled: true
+                cloud.availability_zone:
+                    enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
@@ -1095,6 +1118,16 @@ processors:
             - eks
             - env
             - ec2
+        digitalocean:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
         docker:
             resource_attributes:
                 host.name:
@@ -1160,13 +1193,26 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
+            node_from_env_var: HOST_NAME
             resource_attributes:
                 cloud.account.id:
+                    enabled: false
+                cloud.availability_zone:
                     enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
                     enabled: true
+                cloud.region:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.image.id:
+                    enabled: false
+                host.name:
+                    enabled: false
+                host.type:
+                    enabled: false
                 k8s.cluster.name:
                     enabled: false
         elasticbeanstalk:
@@ -1181,6 +1227,7 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
+        force_attempt_http2: true
         gcp:
             resource_attributes:
                 cloud.account.id:
@@ -1241,6 +1288,18 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
+        hetzner:
+            resource_attributes:
+                cloud.availability_zone:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
         idle_conn_timeout: 1m30s
         k8snode:
             auth_type: serviceAccount
@@ -1283,6 +1342,24 @@ processors:
                     enabled: true
         max_idle_conns: 100
         middleware: agenthealth/statuscode
+        nova:
+            fail_on_missing_metadata: false
+            labels: []
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         openshift:
             address: ""
             resource_attributes:
@@ -1296,7 +1373,48 @@ processors:
                     enabled: true
             tls: {}
             token: ""
+        oraclecloud:
+            resource_attributes:
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
         override: true
+        refresh_interval: 0s
+        scaleway:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         system:
             resource_attributes:
                 host.arch:
@@ -1315,38 +1433,68 @@ processors:
                     enabled: false
                 host.id:
                     enabled: false
+                host.interface:
+                    enabled: false
                 host.ip:
                     enabled: false
                 host.mac:
                     enabled: false
                 host.name:
                     enabled: true
+                os.build.id:
+                    enabled: false
                 os.description:
+                    enabled: false
+                os.name:
                     enabled: false
                 os.type:
                     enabled: true
                 os.version:
                     enabled: false
         timeout: 2s
+        upcloud:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        vultr:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
 receivers:
     otlp/grpc_0_0_0_0_4315:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:4315
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 transport: tcp
     otlp/http_0_0_0_0_4316:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:4316
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
+                tls: null
                 traces_url_path: /v1/traces
                 write_timeout: 0s
 service:

@@ -49,6 +49,7 @@ exporters:
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"

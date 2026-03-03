@@ -8,6 +8,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -36,9 +37,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
@@ -81,11 +82,11 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_win_perf_counters/4283769065
+                - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
                 - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3762679655
-                - telegraf_win_perf_counters/4283769065
-                - telegraf_win_perf_counters/1492679118
     telemetry:
         logs:
             encoding: console

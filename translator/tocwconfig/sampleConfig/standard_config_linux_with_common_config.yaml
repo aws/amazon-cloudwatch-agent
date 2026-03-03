@@ -9,6 +9,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         shared_credential_file: fake-path
 extensions:
     agenthealth/metrics:
@@ -46,7 +47,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName

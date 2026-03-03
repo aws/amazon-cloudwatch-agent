@@ -107,6 +107,7 @@ exporters:
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
@@ -174,6 +175,7 @@ exporters:
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
@@ -211,7 +213,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     filter/containerinsights:
         error_mode: propagate
         logs: {}
@@ -224,6 +226,7 @@ processors:
                     - scrape_samples_scraped
                     - scrape_series_added
                     - scrape_samples_post_metric_relabeling
+        profiles: {}
         spans: {}
         traces: {}
     filter/containerinsightsjmx:
@@ -254,6 +257,7 @@ processors:
                     - tomcat.request_count
                     - tomcat.errors
                     - tomcat.processing_time
+        profiles: {}
         spans: {}
         traces: {}
     metricstransform/containerinsightsjmx:
@@ -505,11 +509,12 @@ processors:
                 - set(unit, "Count") where name == "tomcat.request_count"
                 - set(unit, "Count") where name == "tomcat.errors"
                 - set(unit, "Milliseconds") where name == "tomcat.processing_time"
+        profile_statements: []
         trace_statements: []
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: true
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: true
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -542,12 +547,14 @@ receivers:
     otlp/http_0_0_0_0_4314:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:4314
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
+                tls: null
                 traces_url_path: /v1/traces
                 write_timeout: 0s
 service:

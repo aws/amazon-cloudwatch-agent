@@ -42,7 +42,7 @@ func TestTracesTranslator(t *testing.T) {
 				endpoint: "127.0.0.1:4317",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
-				return cfg.GRPC != nil && cfg.GRPC.NetAddr.Endpoint == "127.0.0.1:4317" && cfg.HTTP == nil
+				return cfg.GRPC.HasValue() && cfg.GRPC.Get().NetAddr.Endpoint == "127.0.0.1:4317" && !cfg.HTTP.HasValue()
 			},
 		},
 		"WithHTTPDefault": {
@@ -51,7 +51,7 @@ func TestTracesTranslator(t *testing.T) {
 				endpoint: "127.0.0.1:4318",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
-				return cfg.HTTP != nil && cfg.HTTP.ServerConfig.Endpoint == "127.0.0.1:4318" && cfg.GRPC == nil
+				return cfg.HTTP.HasValue() && cfg.HTTP.Get().ServerConfig.Endpoint == "127.0.0.1:4318" && !cfg.GRPC.HasValue()
 			},
 		},
 		"WithTLS": {
@@ -62,10 +62,10 @@ func TestTracesTranslator(t *testing.T) {
 				keyFile:  "path/to/key.key",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
-				return cfg.GRPC != nil &&
-					cfg.GRPC.TLSSetting != nil &&
-					cfg.GRPC.TLSSetting.CertFile == "path/to/cert.crt" &&
-					cfg.GRPC.TLSSetting.KeyFile == "path/to/key.key"
+				return cfg.GRPC.HasValue() &&
+					cfg.GRPC.Get().TLS.HasValue() &&
+					cfg.GRPC.Get().TLS.Get().CertFile == "path/to/cert.crt" &&
+					cfg.GRPC.Get().TLS.Get().KeyFile == "path/to/key.key"
 			},
 		},
 	}
@@ -102,7 +102,7 @@ func TestMetricsTranslator(t *testing.T) {
 				endpoint: "127.0.0.1:1234",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
-				return cfg.GRPC != nil && cfg.GRPC.NetAddr.Endpoint == "127.0.0.1:1234"
+				return cfg.GRPC.HasValue() && cfg.GRPC.Get().NetAddr.Endpoint == "127.0.0.1:1234"
 			},
 		},
 		"WithHTTPEndpoint": {
@@ -111,7 +111,7 @@ func TestMetricsTranslator(t *testing.T) {
 				endpoint: "127.0.0.1:2345",
 			},
 			want: func(cfg *otlpreceiver.Config) bool {
-				return cfg.HTTP != nil && cfg.HTTP.ServerConfig.Endpoint == "127.0.0.1:2345"
+				return cfg.HTTP.HasValue() && cfg.HTTP.Get().ServerConfig.Endpoint == "127.0.0.1:2345"
 			},
 		},
 	}

@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configgrpc"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
@@ -112,20 +114,26 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
-	tlsSettings := &configtls.ServerConfig{}
+	var tlsCfg configoptional.Optional[configtls.ServerConfig]
 	if t.endpointConfig.certFile != "" || t.endpointConfig.keyFile != "" {
-		tlsSettings.CertFile = t.endpointConfig.certFile
-		tlsSettings.KeyFile = t.endpointConfig.keyFile
+		tlsCfg = configoptional.Some(configtls.ServerConfig{
+			Config: configtls.Config{
+				CertFile: t.endpointConfig.certFile,
+				KeyFile:  t.endpointConfig.keyFile,
+			},
+		})
 	}
 
 	if t.endpointConfig.protocol == http {
-		cfg.GRPC = nil
-		cfg.HTTP.ServerConfig.Endpoint = t.endpointConfig.endpoint
-		cfg.HTTP.ServerConfig.TLSSetting = tlsSettings
+		cfg.GRPC = configoptional.None[configgrpc.ServerConfig]()
+		httpCfg := cfg.HTTP.GetOrInsertDefault()
+		httpCfg.ServerConfig.Endpoint = t.endpointConfig.endpoint
+		httpCfg.ServerConfig.TLS = tlsCfg
 	} else {
-		cfg.HTTP = nil
-		cfg.GRPC.NetAddr.Endpoint = t.endpointConfig.endpoint
-		cfg.GRPC.TLSSetting = tlsSettings
+		cfg.HTTP = configoptional.None[otlpreceiver.HTTPConfig]()
+		grpcCfg := cfg.GRPC.GetOrInsertDefault()
+		grpcCfg.NetAddr.Endpoint = t.endpointConfig.endpoint
+		grpcCfg.TLS = tlsCfg
 	}
 
 	configCache[t.endpointConfig] = cfg

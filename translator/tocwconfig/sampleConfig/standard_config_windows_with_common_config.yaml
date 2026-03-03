@@ -9,6 +9,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         shared_credential_file: fake-path
 extensions:
     agenthealth/metrics:
@@ -88,11 +89,11 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
                 - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/4283769065
     telemetry:
         logs:
             encoding: console

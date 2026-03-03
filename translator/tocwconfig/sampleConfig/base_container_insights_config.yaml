@@ -28,12 +28,12 @@ exporters:
             randomization_factor: 0.5
         role_arn: ""
         sending_queue:
+            batch: null
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 1
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
     awsemf/containerinsights:
         add_entity: true
@@ -143,6 +143,7 @@ exporters:
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
@@ -191,12 +192,13 @@ processors:
                     - scrape_samples_scraped
                     - scrape_series_added
                     - scrape_samples_post_metric_relabeling
+        profiles: {}
         spans: {}
         traces: {}
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: false
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true

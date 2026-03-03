@@ -8,6 +8,7 @@ exporters:
         region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -42,7 +43,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_metadata_tags:
             - InstanceId

@@ -8,6 +8,7 @@ exporters:
         region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true

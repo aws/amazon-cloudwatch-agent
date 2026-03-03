@@ -8,6 +8,7 @@ exporters:
         region: us-east-1
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -65,8 +66,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             encoding: console

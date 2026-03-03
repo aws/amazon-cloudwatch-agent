@@ -22,10 +22,10 @@ func Test_metricAppender_Add_BadMetricName(t *testing.T) {
 	var ts int64 = 10
 	var v = 10.0
 
-	ls := []labels.Label{
-		{Name: "name_a", Value: "value_a"},
-		{Name: "name_b", Value: "value_b"},
-	}
+	ls := labels.FromStrings(
+		"name_a", "value_a",
+		"name_b", "value_b",
+	)
 
 	r, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, storage.SeriesRef(0), r)
@@ -37,10 +37,10 @@ func Test_metricAppender_Add(t *testing.T) {
 	ma := mr.Appender(nil)
 	var ts int64 = 10
 	var v = 10.0
-	ls := []labels.Label{
-		{Name: "__name__", Value: "metric_name"},
-		{Name: "tag_a", Value: "a"},
-	}
+	ls := labels.FromStrings(
+		"__name__", "metric_name",
+		"tag_a", "a",
+	)
 
 	ref, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, ref, storage.SeriesRef(0))
@@ -70,10 +70,10 @@ func Test_metricAppender_Rollback(t *testing.T) {
 	ma := mr.Appender(nil)
 	var ts int64 = 10
 	var v = 10.0
-	ls := []labels.Label{
-		{Name: "__name__", Value: "metric_name"},
-		{Name: "tag_a", Value: "a"},
-	}
+	ls := labels.FromStrings(
+		"__name__", "metric_name",
+		"tag_a", "a",
+	)
 
 	ref, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, ref, storage.SeriesRef(0))
@@ -91,10 +91,10 @@ func Test_metricAppender_Commit(t *testing.T) {
 	ma := mr.Appender(nil)
 	var ts int64 = 10
 	var v = 10.0
-	ls := []labels.Label{
-		{Name: "__name__", Value: "metric_name"},
-		{Name: "tag_a", Value: "a"},
-	}
+	ls := labels.FromStrings(
+		"__name__", "metric_name",
+		"tag_a", "a",
+	)
 
 	ref, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, ref, storage.SeriesRef(0))
@@ -123,7 +123,7 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 
 	configFile := filepath.Join("testdata", "target_allocator.yaml")
 
-	logLevel := &promslog.AllowedLevel{}
+	logLevel := promslog.NewLevel()
 	err := logLevel.Set("info")
 	require.NoError(t, err)
 
@@ -141,8 +141,10 @@ func Test_loadConfigFromFileWithTargetAllocator(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.True(t, taManager.enabled)
-	assert.Equal(t, taManager.config.TargetAllocator.CollectorID, "collector-1")
-	assert.Equal(t, taManager.config.TargetAllocator.TLSSetting.CAFile, DefaultTLSCaFilePath)
+	taCfg := taManager.config.TargetAllocator.Get()
+	require.NotNil(t, taCfg)
+	assert.Equal(t, taCfg.CollectorID, "collector-1")
+	assert.Equal(t, taCfg.TLS.CAFile, DefaultTLSCaFilePath)
 }
 
 func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
@@ -152,11 +154,11 @@ func Test_loadConfigFromFileWithoutTargetAllocator(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 
 	// Create logger configuration
-	logLevel := &promslog.AllowedLevel{}
+	logLevel := promslog.NewLevel()
 	err := logLevel.Set("debug")
 	require.NoError(t, err)
 
-	format := &promslog.AllowedFormat{}
+	format := &promslog.Format{}
 	err = format.Set("logfmt")
 	require.NoError(t, err)
 
@@ -184,11 +186,11 @@ func Test_loadConfigFromFileEC2(t *testing.T) {
 	configFile := filepath.Join("testdata", "base-k8.yaml")
 
 	// Create logger configuration
-	logLevel := &promslog.AllowedLevel{}
+	logLevel := promslog.NewLevel()
 	err := logLevel.Set("debug")
 	require.NoError(t, err)
 
-	format := &promslog.AllowedFormat{}
+	format := &promslog.Format{}
 	err = format.Set("logfmt")
 	require.NoError(t, err)
 

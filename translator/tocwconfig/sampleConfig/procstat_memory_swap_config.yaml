@@ -9,6 +9,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         shared_credential_file: fake-path
 extensions:
     agenthealth/metrics:
