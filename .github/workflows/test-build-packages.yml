@@ -61,8 +61,17 @@ on:
 
 jobs:
   MakeMacPkg:
-    name: 'MakeMacPkg'
+    name: 'MakeMacPkg-${{ matrix.arch }}'
     runs-on: macos-15
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            make_target: amazon-cloudwatch-agent-darwin-amd64 package-darwin-amd64
+            bin_dir: darwin/amd64
+          - arch: arm64
+            make_target: amazon-cloudwatch-agent-darwin-arm64 package-darwin-arm64
+            bin_dir: darwin/arm64
     permissions:
       id-token: write
       contents: read
@@ -96,7 +105,7 @@ jobs:
         id: cached_binaries
         uses: actions/cache@v3
         with:
-          key: "cached-binaries-${{ runner.os }}-${{ inputs.BucketKey }}"
+          key: "cached-binaries-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.BucketKey }}"
           path: go.mod
 
       - name: Cache pkg
@@ -106,20 +115,19 @@ jobs:
           path: |
             ~/Library/Caches/go-build
             ~/go/pkg/mod
-          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/go.sum') }}
 
       - name: Build Binaries
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         working-directory: cwa
-        run: make amazon-cloudwatch-agent-darwin package-darwin
+        run: make ${{ matrix.make_target }}
 
       - name: Copy binary
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         working-directory: cwa
         run: |
           echo cw agent version $(cat CWAGENT_VERSION)
-          cp -r build/bin/darwin/amd64/. /tmp/
-          cp -r build/bin/darwin/arm64/. /tmp/arm64/
+          cp -r build/bin/${{ matrix.bin_dir }}/. /tmp/
           cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
 
       - name: Create pkg dep folder and copy deps
@@ -127,17 +135,13 @@ jobs:
         working-directory: test
         run: |
           cp -r pkg/tools/. /tmp/
-          cp -r pkg/tools/. /tmp/arm64/
 
       - name: Build And Upload PKG
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        working-directory: /tmp/
+        working-directory: /tmp
         run: |
           chmod +x create_pkg.sh
-          chmod +x arm64/create_pkg.sh
-          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" amd64
-          cd arm64
-          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" arm64
+          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" ${{ matrix.arch }}
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacPackage:
