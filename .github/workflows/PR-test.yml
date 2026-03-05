@@ -21,6 +21,7 @@ on:
     branches:
       - main*
       - feature*
+      - feature/**
     types:
       - opened
       - synchronize
