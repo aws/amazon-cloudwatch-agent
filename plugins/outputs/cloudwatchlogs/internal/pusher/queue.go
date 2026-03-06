@@ -42,6 +42,11 @@ type queue struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+
+	// Circuit breaker halt/resume functionality
+	haltMu sync.Mutex
+	haltCh chan struct{}
+	halted bool
 }
 
 var _ (Queue) = (*queue)(nil)
@@ -67,6 +72,8 @@ func newQueue(
 		stopCh:          make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		haltCh:          make(chan struct{}),
+		halted:          false,
 	}
 	q.flushTimeout.Store(flushTimeout)
 	q.wg.Add(1)
@@ -175,6 +182,14 @@ func (q *queue) merge(mergeChan chan logs.LogEvent) {
 func (q *queue) send() {
 	if len(q.batch.events) > 0 {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
+		q.batch.addFailCallback(q.halt)
+
+		// In synchronous mode (no retryHeap), halt() is never called because
+		// sender only calls batch.fail() when retryHeap != nil. So waitIfHalted
+		// is a no-op. The lock acquisition is negligible overhead (~20ns) on
+		// the uncontended path.
+		q.waitIfHalted()
+
 		q.sender.Send(q.batch)
 		q.batch = newLogEventBatch(q.target, q.entityProvider)
 	}
@@ -183,6 +198,7 @@ func (q *queue) send() {
 // onSuccessCallback returns a callback function to be executed after a successful send.
 func (q *queue) onSuccessCallback(bufferedSize int) func() {
 	return func() {
+		q.resume() // Resume queue on success
 		q.lastSentTime.Store(time.Now())
 		go q.addStats("rawSize", float64(bufferedSize))
 		q.resetFlushTimer()
@@ -244,4 +260,37 @@ func hasValidTime(e logs.LogEvent) bool {
 		}
 	}
 	return true
+}
+
+// waitIfHalted blocks until the queue is unhalted or stopped.
+func (q *queue) waitIfHalted() {
+	q.haltMu.Lock()
+	if !q.halted {
+		q.haltMu.Unlock()
+		return
+	}
+	ch := q.haltCh
+	q.haltMu.Unlock()
+	select {
+	case <-ch:
+	case <-q.stopCh:
+	}
+}
+
+// halt stops the queue from sending batches (called on failure).
+func (q *queue) halt() {
+	q.haltMu.Lock()
+	defer q.haltMu.Unlock()
+	q.halted = true
+}
+
+// resume allows the queue to send batches again (called on success).
+func (q *queue) resume() {
+	q.haltMu.Lock()
+	defer q.haltMu.Unlock()
+	if q.halted {
+		q.halted = false
+		close(q.haltCh)
+		q.haltCh = make(chan struct{})
+	}
 }
