@@ -236,7 +236,9 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 }
 
 func (e *kubernetesResolver) Stop(_ context.Context) error {
-	e.safeStopCh.Close()
+	if e.safeStopCh != nil {
+		e.safeStopCh.Close()
+	}
 	return nil
 }
 
