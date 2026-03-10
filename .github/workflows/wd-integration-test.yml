@@ -42,13 +42,20 @@ jobs:
             exit 1
           fi
       - run: |-
-          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
-          if [[ $conclusion == "success" ]]; then
-            echo "Run succeeded"
-          else
-            echo "Run failed"
-            exit 1
-          fi
+          for i in {1..6}; do
+            conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+            if [[ "$conclusion" == "success" ]]; then
+              echo "Run succeeded"
+              exit 0
+            elif [[ "$conclusion" == "failure" || "$conclusion" == "cancelled" ]]; then
+              echo "Run failed with: $conclusion"
+              exit 1
+            fi
+            echo "Waiting for workflow to complete (attempt $i)..."
+            sleep 5
+          done
+          echo "Timed out waiting for workflow"
+          exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -83,7 +90,7 @@ jobs:
 
   EC2LinuxWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -117,6 +124,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -151,6 +160,20 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
         uses: nick-fields/retry@v2
@@ -169,7 +192,7 @@ jobs:
 
   EC2WindowsWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -203,6 +226,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -230,6 +255,20 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
         uses: nick-fields/retry@v2
@@ -248,7 +287,7 @@ jobs:
 
   EC2NvidiaLinuxWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -282,6 +321,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -316,6 +357,20 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
         uses: nick-fields/retry@v2
@@ -334,7 +389,7 @@ jobs:
 
   EC2NvidiaWindowsWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -368,6 +423,8 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -394,6 +451,20 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
+
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
 
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}

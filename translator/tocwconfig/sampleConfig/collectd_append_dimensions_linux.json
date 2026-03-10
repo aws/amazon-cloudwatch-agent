@@ -1,0 +1,18 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "collectd": {
+        "service_address": "udp://127.0.0.1:25826",
+        "name_prefix": "collectd_",
+        "collectd_auth_file": "/etc/collectd/auth_file",
+        "collectd_security_level": "encrypt",
+        "collectd_typesdb": ["/usr/share/collectd/types.db"],
+        "metrics_aggregation_interval": 60,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      }
+    }
+  }
+}
