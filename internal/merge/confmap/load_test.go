@@ -12,6 +12,7 @@ import (
 
 func TestFileLoader(t *testing.T) {
 	loader := NewFileLoader(filepath.Join("not", "a", "file"))
+	assert.Equal(t, filepath.Join("not", "a", "file"), loader.ID())
 	got, err := loader.Load()
 	assert.Error(t, err)
 	assert.Nil(t, got)
@@ -26,6 +27,7 @@ func TestByteLoader(t *testing.T) {
   nop/1:
 `
 	loader := NewByteLoader("invalid-yaml", []byte("string"))
+	assert.Equal(t, "invalid-yaml", loader.ID())
 	got, err := loader.Load()
 	assert.Error(t, err)
 	assert.Nil(t, got)

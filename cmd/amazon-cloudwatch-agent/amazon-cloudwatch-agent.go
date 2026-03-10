@@ -434,11 +434,18 @@ func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
 		for _, configPath := range configPaths {
 			loaders = append(loaders, confmap.NewFileLoader(configPath))
 		}
-		result := confmap.New()
+		var result *confmap.Conf
 		for _, loader := range loaders {
 			conf, err := loader.Load()
 			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					log.Printf("D! Skipping non-existent OTEL config: %s", loader.ID())
+					continue
+				}
 				return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
+			}
+			if result == nil {
+				result = confmap.New()
 			}
 			if err = result.Merge(conf); err != nil {
 				return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
