@@ -22,8 +22,16 @@ func TestTranslate(t *testing.T) {
 		require.True(t, ok)
 		wantCfg := awsproxy.NewFactory().CreateDefaultConfig().(*awsproxy.Config)
 		wantCfg.ProxyConfig.IMDSRetries = 1
+		wantCfg.ProxyConfig.Region = "us-east-1"
 		// Upstream defaults to localhost but we want to stick with 0.0.0.0 as the default for AppSignals
 		wantCfg.ProxyConfig.Endpoint = "0.0.0.0:2000"
+		wantCfg.ProxyConfig.AdditionalRoutingRules = []awsproxy.RoutingRule{
+			{
+				Paths:       []string{"list-instrumentation-configurations", "report-instrumentation-configuration-status"},
+				ServiceName: "application-signals",
+				AWSEndpoint: "https://application-signals.us-east-1.api.aws",
+			},
+		}
 		assert.Equal(t, wantCfg, gotCfg)
 	}
 }
