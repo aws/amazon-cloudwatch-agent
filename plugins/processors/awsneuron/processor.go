@@ -5,9 +5,9 @@ package awsneuron
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"time"
-	"slices"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -235,7 +235,7 @@ func populateCoreMetrics(metrics pmetric.MetricSlice, metricName string, hardwar
 	metricToAdd.SetEmptyGauge()
 	metricToAdd.SetName(metricName)
 	emptyDatapoints := metricToAdd.Gauge().DataPoints()
-	for coreIndex := range coresPerDevice*neuronDeviceCount {
+	for coreIndex := range coresPerDevice * neuronDeviceCount {
 		datapoint := emptyDatapoints.AppendEmpty()
 		datapoint.SetTimestamp(now)
 		datapoint.SetDoubleValue(0)
