@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	TypeStr, _            = component.NewType("awsneuron")
+	TypeStr               = component.MustNewType("awsneuron")
 	processorCapabilities = consumer.Capabilities{MutatesData: true}
 )
 

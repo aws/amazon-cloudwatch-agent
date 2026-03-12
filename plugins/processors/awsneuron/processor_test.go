@@ -477,7 +477,7 @@ func TestMissingTopologyAttributesGracefulFallback(t *testing.T) {
 		}
 	})
 
-	t.Run("missing neuroncore_per_device_count", func(t *testing.T) {
+	t.Run("missing neuroncore_per_device_count skips processing", func(t *testing.T) {
 		md := pmetric.NewMetrics()
 		metrics := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics()
 		m := metrics.AppendEmpty()
@@ -490,14 +490,10 @@ func TestMissingTopologyAttributesGracefulFallback(t *testing.T) {
 
 		result, err := p.processMetrics(context.Background(), md)
 		assert.NoError(t, err)
+		// When cores_per_device is missing, processing is skipped entirely.
 		rm := result.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-		for i := 0; i < rm.Len(); i++ {
-			name := rm.At(i).Name()
-			if coreMemoryMetrics[name] || name == NeuronCoreUtilization {
-				assert.Equal(t, 0, datapointCount(rm.At(i)),
-					"core metric %s should not be synthesized without cores_per_device", name)
-			}
-		}
+		assert.Equal(t, 1, rm.Len(), "only neuron_hardware_info should remain")
+		assert.Equal(t, NeuronHardwareInfoKey, rm.At(0).Name())
 	})
 }
 

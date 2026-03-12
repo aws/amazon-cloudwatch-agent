@@ -6,8 +6,8 @@ package awsneuron
 import (
 	"context"
 	"strconv"
-	"strings"
 	"time"
+	"slices"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -28,26 +28,23 @@ func newNeuronProcessor(config *Config, logger *zap.Logger) *neuronProcessor {
 
 func (p *neuronProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := md.ResourceMetrics()
-	for i := 0; i < rms.Len(); i++ {
+	for i := range rms.Len() {
 		rs := rms.At(i)
 		ilms := rs.ScopeMetrics()
-		for j := 0; j < ilms.Len(); j++ {
+		for j := range ilms.Len() {
 			ils := ilms.At(j)
 			metrics := ils.Metrics()
 
 			neuronHardwareInfo, found := findNeuronHardwareInfo(metrics)
 			if found {
-				coresPerDevice, foundCPD := getNeuronCoresPerDevice(neuronHardwareInfo)
+				coresPerDevice, foundCPD := getHardwareIntAttribute(neuronHardwareInfo, NeuronCorePerDeviceKey)
 				if !foundCPD {
-					coresPerDevice = DefaultNeuronCorePerDevice
+					continue
 				}
+				addEmptyMetrics(neuronHardwareInfo, metrics, coresPerDevice)
 				addNeuronDeviceToExistingMetrics(metrics, coresPerDevice)
-				addEmptyMetrics(neuronHardwareInfo, metrics)
+				scaleUtilizationToPercent(metrics)
 			}
-			// Scale neuroncore_utilization_ratio from 0.0–1.0 ratio to 0–100 percent
-			// to match the old Container Insights V1 behavior where the metric was
-			// reported as a percentage (e.g., 10.0 for 10% utilization).
-			scaleUtilizationToPercent(metrics)
 		}
 	}
 	return md, nil
@@ -57,7 +54,7 @@ func (p *neuronProcessor) processMetrics(_ context.Context, md pmetric.Metrics) 
 // datapoint attribute to any datapoint that has a neuroncore attribute but no NeuronDevice.
 // The device index is derived as floor(core_index / cores_per_device).
 func addNeuronDeviceToExistingMetrics(metrics pmetric.MetricSlice, coresPerDevice int) {
-	for i := 0; i < metrics.Len(); i++ {
+	for i := range metrics.Len() {
 		m := metrics.At(i)
 		var dps pmetric.NumberDataPointSlice
 		switch m.Type() {
@@ -68,7 +65,7 @@ func addNeuronDeviceToExistingMetrics(metrics pmetric.MetricSlice, coresPerDevic
 		default:
 			continue
 		}
-		for j := 0; j < dps.Len(); j++ {
+		for j := range dps.Len() {
 			dp := dps.At(j)
 			if _, already := dp.Attributes().Get(NeuronDeviceAttributeKey); already {
 				continue
@@ -87,9 +84,9 @@ func addNeuronDeviceToExistingMetrics(metrics pmetric.MetricSlice, coresPerDevic
 }
 
 // scaleUtilizationToPercent converts neuroncore_utilization_ratio values from
-// 0.0–1.0 ratio to 0–100 percent to match old Container Insights V1 behavior.
+// 0.0–1.0 ratio to 0–100 percent to match the Container Insights expected format.
 func scaleUtilizationToPercent(metrics pmetric.MetricSlice) {
-	for i := 0; i < metrics.Len(); i++ {
+	for i := range metrics.Len() {
 		m := metrics.At(i)
 		if m.Name() != NeuronCoreUtilization {
 			continue
@@ -103,7 +100,7 @@ func scaleUtilizationToPercent(metrics pmetric.MetricSlice) {
 		default:
 			continue
 		}
-		for j := 0; j < dps.Len(); j++ {
+		for j := range dps.Len() {
 			dp := dps.At(j)
 			dp.SetDoubleValue(dp.DoubleValue() * 100)
 		}
@@ -114,7 +111,7 @@ func scaleUtilizationToPercent(metrics pmetric.MetricSlice) {
 // "neuron_hardware_info" or "neuron_hardware" (the Prometheus receiver strips
 // the _info suffix from info-type metrics). Returns the metric and true if found.
 func findNeuronHardwareInfo(metrics pmetric.MetricSlice) (pmetric.Metric, bool) {
-	for k := 0; k < metrics.Len(); k++ {
+	for k := range metrics.Len() {
 		m := metrics.At(k)
 		if m.Name() == NeuronHardwareInfoKey || m.Name() == NeuronHardwareKey {
 			return m, true
@@ -123,11 +120,11 @@ func findNeuronHardwareInfo(metrics pmetric.MetricSlice) (pmetric.Metric, bool) 
 	return pmetric.NewMetric(), false
 }
 
-// getNeuronDeviceCount extracts the neuron_device_count attribute from the
-// first datapoint of the neuron_hardware_info/neuron_hardware metric.
+// getHardwareIntAttribute extracts an integer attribute from the first datapoint
+// of the neuron_hardware_info/neuron_hardware metric.
 // Handles both Gauge and Sum metric types since the Prometheus receiver may
 // convert info metrics to non-monotonic Sums.
-func getNeuronDeviceCount(hardwareInfo pmetric.Metric) (int, bool) {
+func getHardwareIntAttribute(hardwareInfo pmetric.Metric, attributeKey string) (int, bool) {
 	var datapoints pmetric.NumberDataPointSlice
 	switch hardwareInfo.Type() {
 	case pmetric.MetricTypeGauge:
@@ -138,62 +135,53 @@ func getNeuronDeviceCount(hardwareInfo pmetric.Metric) (int, bool) {
 		return -1, false
 	}
 	if datapoints.Len() > 0 {
-		val, found := datapoints.At(0).Attributes().Get(NeuronDeviceCountAttributeKey)
+		val, found := datapoints.At(0).Attributes().Get(attributeKey)
 		if found {
-			count, _ := strconv.Atoi(val.AsString())
+			count, err := strconv.Atoi(val.AsString())
+			if err != nil || count <= 0 {
+				return -1, false
+			}
 			return count, true
 		}
 	}
 	return -1, false
 }
 
-// getNeuronCoresPerDevice extracts the neuroncore_per_device_count attribute from the
-// first datapoint of the neuron_hardware_info/neuron_hardware metric.
-// Handles both Gauge and Sum metric types since the Prometheus receiver may
-// convert info metrics to non-monotonic Sums.
-func getNeuronCoresPerDevice(hardwareInfo pmetric.Metric) (int, bool) {
-	var datapoints pmetric.NumberDataPointSlice
-	switch hardwareInfo.Type() {
-	case pmetric.MetricTypeGauge:
-		datapoints = hardwareInfo.Gauge().DataPoints()
-	case pmetric.MetricTypeSum:
-		datapoints = hardwareInfo.Sum().DataPoints()
-	default:
-		return -1, false
+// isCoreMetric returns true if the metric's attribute configuration indicates
+// it is a per-core metric (i.e., uses the neuroncore attribute key).
+func isCoreMetric(metricName string) bool {
+	keys, ok := attributeConfig[metricName]
+	if !ok {
+		return false
 	}
-	if datapoints.Len() > 0 {
-		val, found := datapoints.At(0).Attributes().Get(NeuronCorePerDeviceKey)
-		if found {
-			count, _ := strconv.Atoi(val.AsString())
-			return count, true
-		}
-	}
-	return -1, false
+	return slices.Contains(keys, NeuronCoreAttributeKey)
 }
 
 // addEmptyMetrics checks which expected metrics are missing from the batch and
 // synthesizes zero-valued datapoints for them.
-func addEmptyMetrics(hardwareInfo pmetric.Metric, metrics pmetric.MetricSlice) {
+func addEmptyMetrics(hardwareInfo pmetric.Metric, metrics pmetric.MetricSlice, coresPerDevice int) {
 	metricFoundMap := make(map[string]bool)
 	for k := range attributeConfig {
 		metricFoundMap[k] = false
 	}
 
-	for i := 0; i < metrics.Len(); i++ {
+	for i := range metrics.Len() {
 		m := metrics.At(i)
 		if _, ok := metricFoundMap[m.Name()]; ok {
 			metricFoundMap[m.Name()] = true
 		}
 	}
 
+	now := pcommon.NewTimestampFromTime(time.Now())
+
 	for k, found := range metricFoundMap {
 		if found {
 			continue
 		}
-		if strings.Contains(k, "core") {
-			populateCoreMetrics(metrics, k, hardwareInfo)
+		if isCoreMetric(k) {
+			populateCoreMetrics(metrics, k, hardwareInfo, coresPerDevice, now)
 		} else {
-			populateNonCoreMetrics(metrics, k, attributeConfig[k], hardwareInfo)
+			populateNonCoreMetrics(metrics, k, attributeConfig[k], hardwareInfo, now)
 		}
 	}
 }
@@ -223,14 +211,15 @@ func copyInstanceLabels(source pmetric.NumberDataPoint, target pcommon.Map) {
 
 // populateCoreMetrics creates per-core zero-valued datapoints for a missing core metric.
 // It creates device_count * cores_per_device datapoints, each with:
-//   - neuroncore=<core_index> (lowercase only, no NeuronCore/NeuronDevice)
+//   - neuroncore=<core_index>
 //   - memory_location="None" for memory metrics only (not for neuroncore_utilization_ratio)
 //   - instance labels copied from neuron_hardware_info
 //   - NO runtime_tag (idle state has no runtime)
-func populateCoreMetrics(metrics pmetric.MetricSlice, metricName string, hardwareInfo pmetric.Metric) {
-	neuronCoresPerDevice, foundCoresPerDevice := getNeuronCoresPerDevice(hardwareInfo)
-	neuronDeviceCount, foundDeviceCount := getNeuronDeviceCount(hardwareInfo)
-	if !foundCoresPerDevice || !foundDeviceCount {
+//
+// NeuronDevice is NOT set here; addNeuronDeviceToExistingMetrics adds it afterward.
+func populateCoreMetrics(metrics pmetric.MetricSlice, metricName string, hardwareInfo pmetric.Metric, coresPerDevice int, now pcommon.Timestamp) {
+	neuronDeviceCount, foundDeviceCount := getHardwareIntAttribute(hardwareInfo, NeuronDeviceCountAttributeKey)
+	if !foundDeviceCount {
 		return
 	}
 
@@ -242,18 +231,15 @@ func populateCoreMetrics(metrics pmetric.MetricSlice, metricName string, hardwar
 	hwDatapoint := hwDatapoints.At(0)
 	isMemoryMetric := coreMemoryMetrics[metricName]
 
-	now := pcommon.NewTimestampFromTime(time.Now())
-
 	metricToAdd := pmetric.NewMetric()
 	metricToAdd.SetEmptyGauge()
 	metricToAdd.SetName(metricName)
 	emptyDatapoints := metricToAdd.Gauge().DataPoints()
-	for coreIndex := 0; coreIndex < neuronCoresPerDevice*neuronDeviceCount; coreIndex++ {
+	for coreIndex := range coresPerDevice*neuronDeviceCount {
 		datapoint := emptyDatapoints.AppendEmpty()
 		datapoint.SetTimestamp(now)
 		datapoint.SetDoubleValue(0)
 		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, strconv.Itoa(coreIndex))
-		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, strconv.Itoa(coreIndex/neuronCoresPerDevice))
 		if isMemoryMetric {
 			datapoint.Attributes().PutStr(MemoryLocation, MemoryLocationNone)
 		}
@@ -269,14 +255,12 @@ func populateCoreMetrics(metrics pmetric.MetricSlice, metricName string, hardwar
 // Sum with IsMonotonic=true. Gauge metrics are created as Gauge.
 // No runtime_tag is set (idle state has no runtime).
 // Instance labels are copied from neuron_hardware_info to each datapoint.
-func populateNonCoreMetrics(metrics pmetric.MetricSlice, metricName string, attributeKeys []string, hardwareInfo pmetric.Metric) {
+func populateNonCoreMetrics(metrics pmetric.MetricSlice, metricName string, attributeKeys []string, hardwareInfo pmetric.Metric, now pcommon.Timestamp) {
 	hwDatapoints := getHardwareDataPoints(hardwareInfo)
 	if hwDatapoints.Len() == 0 {
 		return
 	}
 	hwDatapoint := hwDatapoints.At(0)
-
-	now := pcommon.NewTimestampFromTime(time.Now())
 
 	metricToAdd := pmetric.NewMetric()
 	metricToAdd.SetName(metricName)
@@ -291,28 +275,30 @@ func populateNonCoreMetrics(metrics pmetric.MetricSlice, metricName string, attr
 		metricToAdd.SetEmptyGauge()
 	}
 
-	// For each attribute key, iterate over all variant values and create a datapoint per variant.
+	var dps pmetric.NumberDataPointSlice
+	if isCounter {
+		dps = metricToAdd.Sum().DataPoints()
+	} else {
+		dps = metricToAdd.Gauge().DataPoints()
+	}
+
 	for _, attrKey := range attributeKeys {
 		variants, ok := nonCoreVariants[attrKey]
 		if !ok {
 			continue
 		}
 		for _, variantValue := range variants {
-			if isCounter {
-				dp := metricToAdd.Sum().DataPoints().AppendEmpty()
-				dp.SetTimestamp(now)
-				dp.SetDoubleValue(0)
-				dp.Attributes().PutStr(attrKey, variantValue)
-				copyInstanceLabels(hwDatapoint, dp.Attributes())
-			} else {
-				dp := metricToAdd.Gauge().DataPoints().AppendEmpty()
-				dp.SetTimestamp(now)
-				dp.SetDoubleValue(0)
-				dp.Attributes().PutStr(attrKey, variantValue)
-				copyInstanceLabels(hwDatapoint, dp.Attributes())
-			}
+			dp := dps.AppendEmpty()
+			dp.SetTimestamp(now)
+			dp.SetDoubleValue(0)
+			dp.Attributes().PutStr(attrKey, variantValue)
+			copyInstanceLabels(hwDatapoint, dp.Attributes())
 		}
 	}
 
+	// Only copy if we actually created datapoints.
+	if dps.Len() == 0 {
+		return
+	}
 	metricToAdd.CopyTo(metrics.AppendEmpty())
 }
