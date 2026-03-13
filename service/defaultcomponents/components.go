@@ -4,6 +4,7 @@
 package defaultcomponents
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -88,6 +89,7 @@ func Factories() (otelcol.Factories, error) {
 		otlpreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
+		systemmetricsreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
 		zipkinreceiver.NewFactory(),

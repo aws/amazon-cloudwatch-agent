@@ -1,8 +1,11 @@
 exporters:
     awscloudwatch:
+        backoff_retry_base: 200ms
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
         force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
         max_datums_per_call: 1000
+        max_retry_count: 5
         max_values_per_datum: 5000
         middleware: agenthealth/metrics
         namespace: CWAgent
