@@ -28,8 +28,6 @@ const (
 	NeuronDeviceCountAttributeKey = "neuron_device_count"
 	NeuronCorePerDeviceKey        = "neuroncore_per_device_count"
 	RuntimeTag                    = "runtime_tag"
-	RuntimeTagOverride            = "1"
-	DefaultNeuronCorePerDevice    = 2
 	MemoryLocationNone            = "None"
 )
 

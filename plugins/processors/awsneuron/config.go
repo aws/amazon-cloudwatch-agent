@@ -11,9 +11,3 @@ type Config struct{}
 
 // Verify Config implements component.Config interface.
 var _ component.Config = (*Config)(nil)
-
-// Validate checks the processor configuration. The awsneuron processor has no
-// configurable options, so validation always succeeds.
-func (cfg *Config) Validate() error {
-	return nil
-}
