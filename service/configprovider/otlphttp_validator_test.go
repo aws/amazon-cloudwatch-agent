@@ -19,37 +19,7 @@ func TestOTLPHTTPValidator(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid metrics endpoint",
-			config: map[string]any{
-				"exporters": map[string]any{
-					"otlphttp": map[string]any{
-						"metrics_endpoint": "https://monitoring.us-east-1.amazonaws.com/v1/metrics",
-					},
-				},
-			},
-		},
-		{
-			name: "valid traces endpoint",
-			config: map[string]any{
-				"exporters": map[string]any{
-					"otlphttp": map[string]any{
-						"traces_endpoint": "https://xray.us-west-2.amazonaws.com/v1/traces",
-					},
-				},
-			},
-		},
-		{
-			name: "valid logs endpoint",
-			config: map[string]any{
-				"exporters": map[string]any{
-					"otlphttp": map[string]any{
-						"logs_endpoint": "https://logs.eu-west-1.amazonaws.com/v1/logs",
-					},
-				},
-			},
-		},
-		{
-			name: "valid generic endpoint",
+			name: "valid amazonaws.com endpoint",
 			config: map[string]any{
 				"exporters": map[string]any{
 					"otlphttp": map[string]any{
@@ -59,15 +29,64 @@ func TestOTLPHTTPValidator(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid cross-signal endpoint",
+			name: "valid api.aws endpoint",
 			config: map[string]any{
 				"exporters": map[string]any{
 					"otlphttp": map[string]any{
-						"metrics_endpoint": "https://xray.us-east-1.amazonaws.com/v1/traces",
+						"endpoint": "https://monitoring.us-east-1.api.aws",
 					},
 				},
 			},
-			wantErr: true,
+		},
+		{
+			name: "valid metrics_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"metrics_endpoint": "https://monitoring.us-east-1.amazonaws.com/v1/metrics",
+					},
+				},
+			},
+		},
+		{
+			name: "valid traces_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"traces_endpoint": "https://xray.us-west-2.amazonaws.com/v1/traces",
+					},
+				},
+			},
+		},
+		{
+			name: "valid logs_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"logs_endpoint": "https://logs.eu-west-1.amazonaws.com/v1/logs",
+					},
+				},
+			},
+		},
+		{
+			name: "valid endpoint without scheme",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"endpoint": "xray.us-west-2.amazonaws.com",
+					},
+				},
+			},
+		},
+		{
+			name: "valid china partition",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"endpoint": "https://monitoring.cn-north-1.amazonaws.com.cn",
+					},
+				},
+			},
 		},
 		{
 			name: "invalid third party endpoint",
@@ -81,11 +100,44 @@ func TestOTLPHTTPValidator(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid wrong path",
+			name: "invalid third party metrics_endpoint",
 			config: map[string]any{
 				"exporters": map[string]any{
 					"otlphttp": map[string]any{
-						"metrics_endpoint": "https://monitoring.us-east-1.amazonaws.com/v2/metrics",
+						"metrics_endpoint": "https://otel-collector.example.com/v1/metrics",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid third party traces_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"traces_endpoint": "https://jaeger.example.com/v1/traces",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid third party logs_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"logs_endpoint": "https://splunk.example.com/v1/logs",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid spoofed suffix",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"endpoint": "https://evil-amazonaws.com",
 					},
 				},
 			},
@@ -99,7 +151,7 @@ func TestOTLPHTTPValidator(t *testing.T) {
 			err := validator.Convert(context.Background(), confmap.NewFromStringMap(tt.config))
 			if tt.wantErr {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "does not support 3rd party")
+				assert.Contains(t, err.Error(), "invalid AWS endpoint")
 			} else {
 				require.NoError(t, err)
 			}

@@ -6,55 +6,27 @@ package configprovider
 import (
 	"context"
 	"fmt"
-	"regexp"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"go.opentelemetry.io/collector/confmap"
 )
 
-const (
-	endpointKey        = "endpoint"
-	metricsEndpointKey = "metrics_endpoint"
-	tracesEndpointKey  = "traces_endpoint"
-	logsEndpointKey    = "logs_endpoint"
-)
+// allowedDNSSuffixes contains AWS partition DNS suffixes (e.g., amazonaws.com, api.aws).
+var allowedDNSSuffixes = buildAllowedDNSSuffixes()
 
-// allowedEndpointPatterns maps endpoint config keys to their allowed URL patterns.
-// Patterns are built at init time from AWS SDK partition data.
-var allowedEndpointPatterns = buildAllowedEndpointPatterns()
-
-// buildAllowedEndpointPatterns creates regex patterns for valid AWS OTLP endpoints.
-// Uses DNS suffixes from SDK partitions (e.g., amazonaws.com, amazonaws.com.cn)
-// combined with a region pattern that matches all AWS region naming conventions.
-func buildAllowedEndpointPatterns() map[string][]*regexp.Regexp {
-	patterns := map[string][]*regexp.Regexp{
-		endpointKey:        {},
-		metricsEndpointKey: {},
-		tracesEndpointKey:  {},
-		logsEndpointKey:    {},
-	}
-	regionPattern := `[a-z]{2}(-[a-z]+)+-\d`
+func buildAllowedDNSSuffixes() []string {
+	var suffixes []string
 	for _, p := range endpoints.DefaultPartitions() {
-		suffix := regexp.QuoteMeta(p.DNSSuffix())
-		// Base URL patterns for generic endpoint (no path suffix)
-		for _, svc := range []string{"monitoring", "xray", "logs"} {
-			patterns[endpointKey] = append(patterns[endpointKey],
-				regexp.MustCompile(fmt.Sprintf(`^https://%s\.%s\.%s$`, svc, regionPattern, suffix)))
-		}
-		// Full path patterns for signal-specific endpoints
-		patterns[metricsEndpointKey] = append(patterns[metricsEndpointKey],
-			regexp.MustCompile(fmt.Sprintf(`^https://monitoring\.%s\.%s/v1/metrics$`, regionPattern, suffix)))
-		patterns[tracesEndpointKey] = append(patterns[tracesEndpointKey],
-			regexp.MustCompile(fmt.Sprintf(`^https://xray\.%s\.%s/v1/traces$`, regionPattern, suffix)))
-		patterns[logsEndpointKey] = append(patterns[logsEndpointKey],
-			regexp.MustCompile(fmt.Sprintf(`^https://logs\.%s\.%s/v1/logs$`, regionPattern, suffix)))
+		suffixes = append(suffixes, p.DNSSuffix())
 	}
-	return patterns
+	suffixes = append(suffixes, "api.aws")
+	return suffixes
 }
 
 // otlphttpValidator is a confmap.Converter that validates otlphttp exporter endpoints
-// are restricted to AWS OTLP endpoints only.
+// are restricted to AWS endpoints only.
 type otlphttpValidator struct{}
 
 // NewOTLPHTTPValidatorFactory returns a factory for creating otlphttp endpoint validators.
@@ -82,30 +54,33 @@ func (v *otlphttpValidator) Convert(_ context.Context, conf *confmap.Conf) error
 		if !ok {
 			continue
 		}
-		if err := validateEndpoints(exporterCfg); err != nil {
-			return err
+		for _, key := range []string{"endpoint", "metrics_endpoint", "traces_endpoint", "logs_endpoint"} {
+			if ep, ok := exporterCfg[key].(string); ok && ep != "" {
+				if !isAWSEndpoint(ep) {
+					return fmt.Errorf("invalid AWS endpoint: %q", ep)
+				}
+			}
 		}
 	}
 	return nil
 }
 
-// validateEndpoints checks that all endpoint URLs in the config are allowed.
-func validateEndpoints(cfg map[string]any) error {
-	for _, key := range []string{endpointKey, metricsEndpointKey, tracesEndpointKey, logsEndpointKey} {
-		ep, ok := cfg[key].(string)
-		if !ok || ep == "" {
-			continue
-		}
-		if !matchesAny(ep, allowedEndpointPatterns[key]) {
-			return fmt.Errorf("the cloudwatch agent does not support 3rd party exportation of its telemetry; endpoint %q is not allowed, use only the allowlisted endpoints", ep)
-		}
+// isAWSEndpoint checks if the endpoint host ends with an AWS DNS suffix.
+func isAWSEndpoint(endpoint string) bool {
+	// If endpoint doesn't contain a scheme, add https:// as default to allow for validation of domain name
+	if !strings.Contains(endpoint, "://") {
+		endpoint = "https://" + endpoint
 	}
-	return nil
-}
-
-func matchesAny(s string, patterns []*regexp.Regexp) bool {
-	for _, p := range patterns {
-		if p.MatchString(s) {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "" {
+		return false
+	}
+	for _, suffix := range allowedDNSSuffixes {
+		if strings.HasSuffix(host, "."+suffix) {
 			return true
 		}
 	}
