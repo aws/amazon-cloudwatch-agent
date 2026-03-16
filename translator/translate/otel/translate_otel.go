@@ -26,7 +26,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsightsjmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
@@ -34,6 +33,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )

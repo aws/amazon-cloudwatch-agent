@@ -59,8 +59,8 @@ type discoveredSocket struct {
 }
 
 type jvmScraper struct {
-	logger         *zap.Logger
-	seq            uint64
+	logger          *zap.Logger
+	seq             uint64
 	procNetUnixPath string
 }
 
