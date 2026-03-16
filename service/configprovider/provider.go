@@ -20,12 +20,12 @@ func GetSettings(uris []string, logger *zap.Logger) otelcol.ConfigProviderSettin
 				fileprovider.NewFactory(),
 				envprovider.NewFactory(),
 			},
-			ProviderSettings:   confmap.ProviderSettings{Logger: logger},
+			ProviderSettings: confmap.ProviderSettings{Logger: logger},
 			ConverterFactories: []confmap.ConverterFactory{
 				expandconverter.NewFactory(),
 				NewOTLPHTTPValidatorFactory(),
 			},
-			ConverterSettings:  confmap.ConverterSettings{Logger: logger},
+			ConverterSettings: confmap.ConverterSettings{Logger: logger},
 		},
 	}
 	return settings
