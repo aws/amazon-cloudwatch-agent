@@ -48,7 +48,7 @@ func createMetricsReceiver(
 ) (receiver.Metrics, error) {
 	cfg := baseCfg.(*Config)
 	// Jitter the initial delay to stagger scrape start across hosts
-	cfg.InitialDelay = cfg.InitialDelay + time.Duration(rand.Int63n(int64(maxInitialJitter)))
+	cfg.InitialDelay = cfg.InitialDelay + time.Duration(rand.Int63n(int64(maxInitialJitter))) //nolint:gosec
 	s := newScraper(settings.Logger)
 	scraper, err := otelscraper.NewMetrics(s.scrape, otelscraper.WithStart(s.start), otelscraper.WithShutdown(s.shutdown))
 	if err != nil {
