@@ -134,13 +134,13 @@ func TestParseKeyFromFile(t *testing.T) {
 	tmp := t.TempDir()
 
 	f1 := filepath.Join(tmp, "noquotes")
-	require.NoError(t, os.WriteFile(f1, []byte("image_name=amzn2-foo-naws-bar\nimage_version=2.0\n"), 0644))
+	require.NoError(t, os.WriteFile(f1, []byte("image_name=amzn2-foo-naws-bar\nimage_version=2.0\n"), 0600))
 	assert.Equal(t, "amzn2-foo-naws-bar", parseKeyFromFile(f1, "image_name"))
 	assert.Equal(t, "2.0", parseKeyFromFile(f1, "image_version"))
 	assert.Equal(t, "", parseKeyFromFile(f1, "missing_key"))
 
 	f2 := filepath.Join(tmp, "quoted")
-	require.NoError(t, os.WriteFile(f2, []byte("VARIANT=\"internal\"\nNAME=\"Amazon Linux\"\n"), 0644))
+	require.NoError(t, os.WriteFile(f2, []byte("VARIANT=\"internal\"\nNAME=\"Amazon Linux\"\n"), 0600))
 	assert.Equal(t, "internal", parseKeyFromFile(f2, "VARIANT"))
 	assert.Equal(t, "Amazon Linux", parseKeyFromFile(f2, "NAME"))
 
@@ -180,16 +180,16 @@ func TestCheckOSReleaseVariant(t *testing.T) {
 	tmp := t.TempDir()
 
 	f1 := filepath.Join(tmp, "internal")
-	require.NoError(t, os.WriteFile(f1, []byte("NAME=\"Amazon Linux\"\nVARIANT=\"internal\"\n"), 0644))
+	require.NoError(t, os.WriteFile(f1, []byte("NAME=\"Amazon Linux\"\nVARIANT=\"internal\"\n"), 0600))
 	assert.Equal(t, "Amazon Linux", parseKeyFromFile(f1, "NAME"))
 	assert.Equal(t, "internal", parseKeyFromFile(f1, "VARIANT"))
 
 	f2 := filepath.Join(tmp, "public")
-	require.NoError(t, os.WriteFile(f2, []byte("NAME=\"Amazon Linux\"\nVERSION=\"2023\"\n"), 0644))
+	require.NoError(t, os.WriteFile(f2, []byte("NAME=\"Amazon Linux\"\nVERSION=\"2023\"\n"), 0600))
 	assert.Equal(t, "", parseKeyFromFile(f2, "VARIANT"))
 
 	f3 := filepath.Join(tmp, "wrong-name")
-	require.NoError(t, os.WriteFile(f3, []byte("NAME=\"Ubuntu\"\nVARIANT=\"internal\"\n"), 0644))
+	require.NoError(t, os.WriteFile(f3, []byte("NAME=\"Ubuntu\"\nVARIANT=\"internal\"\n"), 0600))
 	assert.Equal(t, "Ubuntu", parseKeyFromFile(f3, "NAME"))
 	assert.Equal(t, "internal", parseKeyFromFile(f3, "VARIANT"))
 }
