@@ -94,12 +94,8 @@ func TestTranslator(t *testing.T) {
 			kubernetes: true,
 			wantErr:    &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
 		},
-		"WithUnrecognizedHost": {
-			// Env var explicitly disables — simulates unrecognized host
-			input:      map[string]interface{}{},
-			envEnabled: "false",
-			wantErr:    &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
-		},
+		// TODO: add WithUnrecognizedHost once host detection paths (/apollo, /etc/image-id,
+		// /etc/os-release) are injectable, so the test doesn't depend on the environment it runs in.
 	}
 
 	for name, tc := range testCases {
