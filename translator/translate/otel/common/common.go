@@ -86,18 +86,19 @@ const (
 )
 
 const (
-	CollectDMetricKey = "collectd"
-	CollectDPluginKey = "socket_listener"
-	CPUMetricKey      = "cpu"
-	DiskMetricKey     = "disk"
-	DiskIoMetricKey   = "diskio"
-	StatsDMetricKey   = "statsd"
-	SwapMetricKey     = "swap"
-	MemMetricKey      = "mem"
-	NetMetricKey      = "net"
-	NetStatMetricKey  = "netstat"
-	ProcessMetricKey  = "process"
-	ProcStatMetricKey = "procstat"
+	CollectDMetricKey       = "collectd"
+	CollectDPluginKey       = "socket_listener"
+	CPUMetricKey            = "cpu"
+	DiskMetricKey           = "disk"
+	DiskIoMetricKey         = "diskio"
+	StatsDMetricKey         = "statsd"
+	SwapMetricKey           = "swap"
+	MemMetricKey            = "mem"
+	NetMetricKey            = "net"
+	NetStatMetricKey        = "netstat"
+	ProcessMetricKey        = "process"
+	ProcStatMetricKey       = "procstat"
+	SystemMetricsEnabledKey = "system_metrics_enabled"
 
 	//Windows Plugins
 	MemMetricKeyWindows          = "Memory"
@@ -122,6 +123,7 @@ const (
 	PipelineNameEmfLogs              = "emf_logs"
 	PipelineNamePrometheus           = "prometheus"
 	PipelineNameKueue                = "kueueContainerInsights"
+	PipelineNameSystemMetrics        = "systemmetrics"
 	AppSignals                       = "application_signals"
 	AppSignalsFallback               = "app_signals"
 	AppSignalsRules                  = "rules"
@@ -141,8 +143,9 @@ var (
 		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
-	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
-	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
+	SystemMetricsEnabledConfigKey = ConfigKey(AgentKey, SystemMetricsEnabledKey)
+	JmxConfigKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	ContainerInsightsConfigKey    = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
 
 	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 

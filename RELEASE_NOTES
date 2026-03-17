@@ -1,4 +1,16 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300065.0 (2026-03-17)
+========================================================================
+Features:
+* [Agent] Add pipeline for system metrics on recognized hosts
+
+Enhancements:
+* [Collectd] Adds append_dimensions to collectd, supporting custom metric dimensions
+
+Bug Fixes:
+* [Agent] Handle regex escaping for '+' in timestamp format
+
+========================================================================
 Amazon CloudWatch Agent 1.300064.1 (2026-02-05)
 ========================================================================
 Enhancements:
