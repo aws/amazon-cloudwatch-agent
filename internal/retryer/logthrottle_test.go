@@ -6,53 +6,72 @@ package retryer
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/stretchr/testify/require"
 )
 
 type testLogger struct {
+	mu                           sync.Mutex
 	debugs, infos, warns, errors []string
 }
 
 func (l *testLogger) Errorf(format string, args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprintf(format, args...)
 	l.errors = append(l.errors, line)
 }
 
 func (l *testLogger) Error(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprint(args...)
 	l.errors = append(l.errors, line)
 }
 
 func (l *testLogger) Debugf(format string, args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprintf(format, args...)
 	l.debugs = append(l.debugs, line)
 }
 
 func (l *testLogger) Debug(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprint(args...)
 	l.debugs = append(l.debugs, line)
 }
 
 func (l *testLogger) Warnf(format string, args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprintf(format, args...)
 	l.warns = append(l.warns, line)
 }
 
 func (l *testLogger) Warn(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprint(args...)
 	l.warns = append(l.warns, line)
 }
 
 func (l *testLogger) Infof(format string, args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprintf(format, args...)
 	l.infos = append(l.infos, line)
 }
 
 func (l *testLogger) Info(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	line := fmt.Sprint(args...)
 	l.infos = append(l.infos, line)
 }
@@ -79,18 +98,30 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 	// Generate 200 throttles with a time gap between
 	for i := 0; i < throttleBatchSize; i++ {
 		r.ShouldRetry(req)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
-	time.Sleep(1500 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
 	for i := 0; i < throttleBatchSize; i++ {
 		r.ShouldRetry(req)
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 
 	r.Stop()
-	time.Sleep(200 * time.Millisecond) // Wait a bit to collect all logs
+	require.Eventually(t, func() bool {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		for _, d := range l.debugs {
+			if d == watchGoroutineExitLine {
+				return true
+			}
+		}
+		return false
+	}, 200*time.Millisecond, 20*time.Millisecond)
+
+	// After require.Eventually confirms the goroutine exited, no more
+	// concurrent writes — safe to read without the mutex.
 
 	// Check the debug level log messages
 	debugCnt := 0

@@ -4,13 +4,13 @@
 package entitystore
 
 import (
-	"bytes"
 	"log"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -37,6 +37,7 @@ var (
 )
 
 func TestSetInstanceIDAccountID(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
 	}
@@ -86,6 +87,7 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 }
 
 func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
 	}
@@ -107,7 +109,7 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a buffer to capture the logger output
-			var buf bytes.Buffer
+			var buf syncBuffer
 
 			logger := CreateTestLogger(&buf)
 			done := make(chan struct{})
@@ -118,7 +120,9 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 				done:             done,
 			}
 			go ei.initEc2Info()
-			time.Sleep(3 * time.Second)
+			require.Eventually(t, func() bool {
+				return ei.GetInstanceID() != ""
+			}, 3*time.Second, 100*time.Millisecond)
 
 			logOutput := buf.String()
 			log.Println(logOutput)
@@ -128,6 +132,7 @@ func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 }
 
 func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 	}{
@@ -138,7 +143,7 @@ func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a buffer to capture the logger output
-			var buf bytes.Buffer
+			var buf syncBuffer
 
 			logger := CreateTestLogger(&buf)
 			done := make(chan struct{})
@@ -147,8 +152,19 @@ func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
 				logger: logger,
 				done:   done,
 			}
-			go ei.initEc2Info()
-			time.Sleep(3 * time.Second)
+			finished := make(chan struct{})
+			go func() {
+				ei.initEc2Info()
+				close(finished)
+			}()
+			require.Eventually(t, func() bool {
+				select {
+				case <-finished:
+					return true
+				default:
+					return false
+				}
+			}, 3*time.Second, 100*time.Millisecond)
 
 			logOutput := buf.String()
 			log.Println(logOutput)

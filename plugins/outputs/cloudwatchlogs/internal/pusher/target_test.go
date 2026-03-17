@@ -12,17 +12,33 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
+// nopT satisfies mock.TestingT without calling FailNow, allowing
+// AssertExpectations to return false inside require.Eventually.
+type nopT struct{}
+
+func (nopT) Logf(string, ...interface{})   {}
+func (nopT) Errorf(string, ...interface{}) {}
+func (nopT) FailNow()                      {}
+
+func newFastTargetManager(logger telegraf.Logger, service cloudWatchLogsService) *targetManager {
+	return newTargetManagerWithTiming(logger, service, time.Millisecond, 5*time.Millisecond, numBackoffRetries, 10*time.Millisecond)
+}
+
 func TestTargetManager(t *testing.T) {
+	t.Parallel()
 	logger := testutil.NewNopLogger()
 
 	t.Run("CreateLogStream", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S"}
 
 		mockService := new(mockLogsService)
@@ -37,6 +53,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroupAndStream", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Class: "newClass"}
 
 		mockService := new(mockLogsService)
@@ -54,6 +71,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroupAndStream/GroupAlreadyExists", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G1", Stream: "S1"}
 
 		mockService := new(mockLogsService)
@@ -71,6 +89,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroupAndStream/RetryStreamFail", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G1", Stream: "S1"}
 
 		mockService := new(mockLogsService)
@@ -88,6 +107,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroupAndStream/RetryStreamAlreadyExists", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G1", Stream: "S1"}
 
 		mockService := new(mockLogsService)
@@ -105,6 +125,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroup/Error", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S"}
 
 		mockService := new(mockLogsService)
@@ -138,11 +159,13 @@ func TestTargetManager(t *testing.T) {
 		}, nil).Once()
 		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		manager := newFastTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 		// Wait for async operations to complete
-		time.Sleep(7 * time.Second)
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 7*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 		assertCacheLen(t, manager, 1)
 	})
@@ -163,10 +186,12 @@ func TestTargetManager(t *testing.T) {
 			},
 		}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
+		manager := newFastTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
-		time.Sleep(7 * time.Second)
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 7*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
 		assertCacheLen(t, manager, 1)
@@ -181,10 +206,12 @@ func TestTargetManager(t *testing.T) {
 		mockService.On("DescribeLogGroups", mock.Anything).
 			Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, &cloudwatchlogs.ResourceNotFoundException{}).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
+		manager := newFastTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
-		time.Sleep(30 * time.Second)
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 30*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
 		assertCacheLen(t, manager, 1)
@@ -208,15 +235,18 @@ func TestTargetManager(t *testing.T) {
 			Return(&cloudwatchlogs.PutRetentionPolicyOutput{},
 				awserr.New("SomeAWSError", "Failed to set retention policy", nil)).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
+		manager := newFastTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
-		time.Sleep(30 * time.Second)
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 30*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 		assertCacheLen(t, manager, 1)
 	})
 
 	t.Run("SetRetentionPolicy/Negative", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Retention: -1}
 
 		mockService := new(mockLogsService)
@@ -229,6 +259,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroup/Concurrent", func(t *testing.T) {
+		t.Parallel()
 		targets := []Target{
 			{Group: "G1", Stream: "S1"},
 			{Group: "G2", Stream: "S2"},
@@ -259,6 +290,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("CreateLogGroup/TTL", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S"}
 
 		var count atomic.Int32
@@ -288,6 +320,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("InitTarget/ZeroRetention", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Retention: 0}
 
 		mockService := new(mockLogsService)
@@ -304,6 +337,7 @@ func TestTargetManager(t *testing.T) {
 	})
 
 	t.Run("NewLogGroup/SetRetention", func(t *testing.T) {
+		t.Parallel()
 		target := Target{Group: "G", Stream: "S", Retention: 7}
 
 		mockService := new(mockLogsService)
@@ -337,11 +371,13 @@ func TestTargetManager(t *testing.T) {
 		// fails but should retry
 		mockService.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, awserr.New("InternalError", "Internal error", nil)).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
+		manager := newFastTargetManager(logger, mockService)
 		err := manager.InitTarget(target)
 		assert.NoError(t, err)
 
-		time.Sleep(30 * time.Second)
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 30*time.Second, 50*time.Millisecond)
 
 		mockService.AssertExpectations(t)
 		mockService.AssertNotCalled(t, "DescribeLogGroups")
@@ -350,9 +386,11 @@ func TestTargetManager(t *testing.T) {
 }
 
 func TestDescribeLogGroupsBatching(t *testing.T) {
+	t.Parallel()
 	logger := testutil.NewNopLogger()
 
 	t.Run("ProcessBatchOnLimit", func(t *testing.T) {
+		t.Parallel()
 		mockService := new(mockLogsService)
 
 		// Setup mock to expect a batch of 50 log groups
@@ -397,8 +435,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 			LogGroups: []*cloudwatchlogs.LogGroup{},
 		}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
-		tm := manager.(*targetManager)
+		tm := newFastTargetManager(logger, mockService)
 
 		for i := 0; i < 125; i++ {
 			target := Target{
@@ -409,8 +446,9 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 			tm.PutRetentionPolicy(target)
 		}
 
-		time.Sleep(7 * time.Second)
-
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 7*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 	})
 
@@ -426,8 +464,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 			LogGroups: []*cloudwatchlogs.LogGroup{},
 		}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
-		tm := manager.(*targetManager)
+		tm := newFastTargetManager(logger, mockService)
 
 		for i := 0; i < 5; i++ {
 			target := Target{
@@ -438,9 +475,9 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 			tm.PutRetentionPolicy(target)
 		}
 
-		// Wait for ticker to fire (slightly longer than 5 seconds)
-		time.Sleep(5100 * time.Millisecond)
-
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 5100*time.Millisecond, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 	})
 
@@ -454,21 +491,22 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 			LogGroups: []*cloudwatchlogs.LogGroup{},
 		}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
-		tm := manager.(*targetManager)
+		tm := newFastTargetManager(logger, mockService)
 
 		batch := make(map[string]Target)
 		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
 		batch["group-2"] = Target{Group: "group-2", Stream: "stream", Retention: 7}
 		tm.updateTargets(batch)
 
-		// Wait for ticker to fire (slightly longer than 5 seconds)
-		time.Sleep(5100 * time.Millisecond)
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 5100*time.Millisecond, 50*time.Millisecond)
 
 		mockService.AssertNotCalled(t, "PutRetentionPolicy")
 	})
 
 	t.Run("FallbackToPrefix", func(t *testing.T) {
+		t.Parallel()
 		mockService := new(mockLogsService)
 
 		// First call with identifiers fails with unsupported error
@@ -512,6 +550,7 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 	})
 
 	t.Run("RetentionPolicyUpdate", func(t *testing.T) {
+		t.Parallel()
 		mockService := new(mockLogsService)
 
 		mockService.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
@@ -559,21 +598,21 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 				LogGroups: []*cloudwatchlogs.LogGroup{},
 			}, nil).Once()
 
-		manager := NewTargetManager(logger, mockService)
-		tm := manager.(*targetManager)
+		tm := newFastTargetManager(logger, mockService)
 
 		// Create a batch with one target
 		batch := make(map[string]Target)
 		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
 
 		tm.updateTargets(batch)
-		// Sleep enough for retry
-		time.Sleep(2 * time.Second)
-
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 2*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 	})
 
 	t.Run("FallbackToPrefix/OtherError", func(t *testing.T) {
+		t.Parallel()
 		mockService := new(mockLogsService)
 
 		// First call with identifiers fails with different error (should not fallback)
@@ -582,15 +621,15 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 		})).Return(&cloudwatchlogs.DescribeLogGroupsOutput{},
 			awserr.New(cloudwatchlogs.ErrCodeInvalidParameterException, "Different error message", nil)).Times(numBackoffRetries)
 
-		manager := NewTargetManager(logger, mockService)
-		tm := manager.(*targetManager)
+		tm := newFastTargetManager(logger, mockService)
 
 		batch := make(map[string]Target)
 		batch["group-1"] = Target{Group: "group-1", Stream: "stream", Retention: 7}
 
 		tm.updateTargets(batch)
-		time.Sleep(2 * time.Second)
-
+		require.Eventually(t, func() bool {
+			return mockService.AssertExpectations(nopT{})
+		}, 2*time.Second, 50*time.Millisecond)
 		mockService.AssertExpectations(t)
 		// Should not call prefix-based DescribeLogGroups
 		mockService.AssertNotCalled(t, "DescribeLogGroups", mock.MatchedBy(func(input *cloudwatchlogs.DescribeLogGroupsInput) bool {
@@ -601,7 +640,12 @@ func TestDescribeLogGroupsBatching(t *testing.T) {
 }
 
 func TestCalculateBackoff(t *testing.T) {
-	manager := &targetManager{}
+	t.Parallel()
+	manager := &targetManager{
+		baseRetryDelay: baseRetryDelay,
+		maxRetryDelay:  maxRetryDelayTarget,
+		numRetries:     numBackoffRetries,
+	}
 	// should never exceed 30sec of total wait time
 	totalDelay := time.Duration(0)
 	for i := 0; i < numBackoffRetries; i++ {

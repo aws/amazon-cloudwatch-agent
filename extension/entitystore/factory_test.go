@@ -14,12 +14,14 @@ import (
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
+	t.Parallel()
 	cfg := NewFactory().CreateDefaultConfig()
 	assert.Equal(t, &Config{}, cfg)
 	assert.NoError(t, componenttest.CheckConfigStruct(cfg))
 }
 
 func TestCreate(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{}
 	got, err := NewFactory().Create(context.Background(), extensiontest.NewNopSettings(component.MustNewType("entitystore")), cfg)
 	assert.NoError(t, err)

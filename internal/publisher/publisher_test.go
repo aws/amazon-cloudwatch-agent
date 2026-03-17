@@ -28,14 +28,9 @@ func (c *testClient) publish(req interface{}) {
 	c.result = append(c.result, r)
 }
 
-func (c *testClient) publishWith1sLatency(req interface{}) {
+func (c *testClient) publishWith500msLatency(req interface{}) {
 	c.publish(req)
-	time.Sleep(1 * time.Second)
-}
-
-func (c *testClient) publishWith5sLatency(req interface{}) {
-	c.publish(req)
-	time.Sleep(5 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 }
 
 func (c *testClient) getResult() []string {
@@ -45,6 +40,7 @@ func (c *testClient) getResult() []string {
 }
 
 func TestPublisher_PublishWithNonBlockFifoQueue(t *testing.T) {
+	t.Parallel()
 	c := &testClient{}
 	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(2), 1, 2*time.Second, c.publish)
 	publisher.Publish("req1")
@@ -54,6 +50,7 @@ func TestPublisher_PublishWithNonBlockFifoQueue(t *testing.T) {
 }
 
 func TestPublisher_PublishWithNonBlockFifoQueueSleep(t *testing.T) {
+	t.Parallel()
 	c := &testClient{}
 	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(2), 1, 2*time.Second, c.publish)
 	publisher.Publish("req1")
@@ -64,14 +61,15 @@ func TestPublisher_PublishWithNonBlockFifoQueueSleep(t *testing.T) {
 }
 
 func TestPublisher_DrainTimeout(t *testing.T) {
+	t.Parallel()
 	start := time.Now()
 	c := &testClient{}
-	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(2), 1, 2*time.Second, c.publishWith5sLatency)
+	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(2), 1, 200*time.Millisecond, c.publishWith500msLatency)
 	publisher.Publish("req1")
 	publisher.Publish("req2")
 	publisher.Close()
-	// drain queue timeout 2s + on fly request timeout 1s = 3s (expected)
-	assert.True(t, time.Since(start) < 4*time.Second)
+	// drain queue timeout 200ms + on fly request timeout 1s = ~1.2s (expected)
+	assert.True(t, time.Since(start) < 2*time.Second)
 }
 
 // testClientNoMutex is to test whether need memory barrier when concurrency of publisher is 1
@@ -109,7 +107,7 @@ type testClientLongDelay struct {
 func (c *testClientLongDelay) publish(req interface{}) {
 	r := req.(int)
 	atomic.AddInt32(&c.counter, int32(r))
-	time.Sleep(time.Minute)
+	time.Sleep(5 * time.Second)
 }
 func TestPublisher_ClientLongDelay(t *testing.T) {
 	log.SetOutput(io.Discard)
@@ -117,7 +115,7 @@ func TestPublisher_ClientLongDelay(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	})
 	c := &testClientLongDelay{}
-	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(20), 10, 5*time.Second, c.publish)
+	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(20), 10, 500*time.Millisecond, c.publish)
 	start := time.Now()
 	for i := 0; i < 30; i++ {
 		publisher.Publish(1)

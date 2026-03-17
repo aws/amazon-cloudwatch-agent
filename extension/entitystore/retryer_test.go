@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -16,6 +17,7 @@ import (
 )
 
 func TestRetryer_refreshLoop(t *testing.T) {
+	t.Parallel()
 	type fields struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
 		iamRole          string
@@ -49,7 +51,9 @@ func TestRetryer_refreshLoop(t *testing.T) {
 			}
 			unlimitedRetryer := NewRetryer(tt.fields.oneTime, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, logger)
 			go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
-			time.Sleep(time.Second)
+			require.Eventually(t, func() bool {
+				return s.GetIAMRole() == tt.wantIamRole
+			}, time.Second, 50*time.Millisecond)
 			close(done)
 			assert.Equal(t, tt.wantIamRole, s.GetIAMRole())
 		})

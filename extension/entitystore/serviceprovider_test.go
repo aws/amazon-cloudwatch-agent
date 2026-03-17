@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -17,6 +18,7 @@ import (
 )
 
 func Test_serviceprovider_startServiceProvider(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name             string
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -49,7 +51,9 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 				logger:           logger,
 			}
 			go s.startServiceProvider()
-			time.Sleep(3 * time.Second)
+			require.Eventually(t, func() bool {
+				return s.GetIAMRole() == tt.wantIAM && s.GetIMDSServiceName() == tt.wantTag
+			}, 3*time.Second, 100*time.Millisecond)
 			close(done)
 			assert.Equal(t, tt.wantIAM, s.GetIAMRole())
 			assert.Equal(t, tt.wantTag, s.GetIMDSServiceName())
@@ -58,6 +62,7 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 }
 
 func Test_serviceprovider_addEntryForLogFile(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{
 		logFiles: make(map[LogFileGlob]ServiceAttribute),
 	}
@@ -71,6 +76,7 @@ func Test_serviceprovider_addEntryForLogFile(t *testing.T) {
 }
 
 func Test_serviceprovider_addEntryForLogFile_logFilesEmpty(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{}
 	glob := LogFileGlob("glob")
 	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
@@ -82,6 +88,7 @@ func Test_serviceprovider_addEntryForLogFile_logFilesEmpty(t *testing.T) {
 }
 
 func Test_serviceprovider_addEntryForLogGroup(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{
 		logGroups: make(map[LogGroupName]ServiceAttribute),
 	}
@@ -95,6 +102,7 @@ func Test_serviceprovider_addEntryForLogGroup(t *testing.T) {
 }
 
 func Test_serviceprovider_addEntryForLogGroup_logGroupsEmpty(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{}
 	group := LogGroupName("group")
 	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
@@ -106,6 +114,7 @@ func Test_serviceprovider_addEntryForLogGroup_logGroupsEmpty(t *testing.T) {
 }
 
 func Test_serviceprovider_mergeServiceAttributes(t *testing.T) {
+	t.Parallel()
 	onlySvc1 := func() ServiceAttribute {
 		return ServiceAttribute{ServiceName: "service1", ServiceNameSource: "source1"}
 	}
@@ -166,6 +175,7 @@ func Test_serviceprovider_mergeServiceAttributes(t *testing.T) {
 }
 
 func Test_serviceprovider_serviceAttributeForLogGroup(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{logGroups: map[LogGroupName]ServiceAttribute{"group": {ServiceName: "test-service"}}}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup(""))
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup("othergroup"))
@@ -175,6 +185,7 @@ func Test_serviceprovider_serviceAttributeForLogGroup(t *testing.T) {
 }
 
 func Test_serviceprovider_serviceAttributeForLogFile(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{logFiles: map[LogFileGlob]ServiceAttribute{"glob": {ServiceName: "test-service"}}}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile(""))
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile("otherglob"))
@@ -184,6 +195,7 @@ func Test_serviceprovider_serviceAttributeForLogFile(t *testing.T) {
 }
 
 func Test_serviceprovider_serviceAttributeFromEc2Tags(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromImdsTags())
 
@@ -192,6 +204,7 @@ func Test_serviceprovider_serviceAttributeFromEc2Tags(t *testing.T) {
 }
 
 func Test_serviceprovider_serviceAttributeFromIamRole(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromIamRole())
 
@@ -200,6 +213,7 @@ func Test_serviceprovider_serviceAttributeFromIamRole(t *testing.T) {
 }
 
 func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
@@ -211,6 +225,7 @@ func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
 }
 
 func Test_serviceprovider_serviceAttributeFallback(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown}, s.serviceAttributeFallback())
 
@@ -219,6 +234,7 @@ func Test_serviceprovider_serviceAttributeFallback(t *testing.T) {
 }
 
 func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{
 		mode:      config.ModeEC2,
 		logGroups: make(map[LogGroupName]ServiceAttribute),
@@ -248,6 +264,7 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 }
 
 func Test_serviceprovider_getServiceNameSource(t *testing.T) {
+	t.Parallel()
 	s := &serviceprovider{
 		mode:      config.ModeEC2,
 		logGroups: make(map[LogGroupName]ServiceAttribute),
@@ -267,10 +284,10 @@ func Test_serviceprovider_getServiceNameSource(t *testing.T) {
 	serviceName, serviceNameSource = s.getServiceNameAndSource()
 	assert.Equal(t, s.GetIMDSServiceName(), serviceName)
 	assert.Equal(t, ServiceNameSourceResourceTags, serviceNameSource)
-
 }
 
 func Test_serviceprovider_getIAMRole(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name             string
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -294,7 +311,7 @@ func Test_serviceprovider_getIAMRole(t *testing.T) {
 }
 
 func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
-
+	t.Parallel()
 	tests := []struct {
 		name               string
 		metadataProvider   ec2metadataprovider.MetadataProvider
@@ -416,6 +433,7 @@ func Test_serviceprovider_scrapeAndgetImdsServiceNameAndASG(t *testing.T) {
 }
 
 func Test_serviceprovider_setAutoScalingGroup(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		asgs []string

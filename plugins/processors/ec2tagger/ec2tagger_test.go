@@ -265,6 +265,7 @@ func checkAttributes(t *testing.T, expected, actual pmetric.Metrics) {
 	}
 }
 func TestStartFailWithNoMetadata(t *testing.T) {
+	t.Parallel()
 	cfg := createDefaultConfig().(*Config)
 	_, cancel := context.WithCancel(context.Background())
 	tagger := &Tagger{
@@ -282,6 +283,7 @@ func TestStartFailWithNoMetadata(t *testing.T) {
 
 // run Start() and check all tags/volumes are retrieved and saved
 func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
+	t.Parallel()
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
@@ -300,8 +302,6 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
 
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
-	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
 		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
@@ -310,10 +310,15 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: volumeCache,
 	}
+	tagger.backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	tagger.defaultRefreshInterval = 50 * time.Millisecond
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
-	//assume one second is long enough for the api to be called many times so that all tags/volumes are retrieved
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return len(tagger.ec2TagCache) >= 3 && len(tagger.volumeSerialCache.Devices()) >= 2
+	}, time.Second, 50*time.Millisecond)
 	assert.Equal(t, 3, ec2Client.tagsCallCount)
 	assert.Equal(t, 2, volumeCache.refreshCount)
 	//check tags and volumes
@@ -326,6 +331,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 
 // run Start() and check all tags/volumes are retrieved and saved and then updated
 func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
+	t.Parallel()
 	cfg := createDefaultConfig().(*Config)
 	//use millisecond rather than second to speed up test execution
 	cfg.RefreshTagsInterval = 20 * time.Millisecond
@@ -344,8 +350,6 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
-	defaultRefreshInterval = 10 * time.Millisecond
 
 	tagger := &Tagger{
 		Config:            cfg,
@@ -355,12 +359,16 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: volumeCache,
 	}
+	tagger.backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	tagger.defaultRefreshInterval = 10 * time.Millisecond
 
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
-	//assume one second is long enough for the api to be called many times
-	//so that all tags/volumes are retrieved
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return len(tagger.ec2TagCache) >= 3
+	}, time.Second, 50*time.Millisecond)
 	//check tags and volumes
 	expectedTags := map[string]string{tagKey1: tagVal1, tagKey2: tagVal2, "AutoScalingGroupName": tagVal3}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
@@ -371,9 +379,11 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	//update the tags and volumes
 	ec2Client.UseUpdatedTags = true
 	volumeCache.UseUpdatedVolumes = true
-	//assume one second is long enough for the api to be called many times
-	//so that all tags/volumes are updated
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return tagger.ec2TagCache[tagKey2] == updatedTagVal2
+	}, time.Second, 50*time.Millisecond)
 	expectedTags = map[string]string{tagKey1: tagVal1, tagKey2: updatedTagVal2, "AutoScalingGroupName": tagVal3}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	assert.Len(t, tagger.volumeSerialCache.Devices(), 2)
@@ -384,6 +394,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 // run Start() with ec2_instance_tag_keys = ["*"] and ebs_device_keys = ["*"]
 // check there is no attempt to fetch all tags/volumes
 func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
+	t.Parallel()
 	cfg := createDefaultConfig().(*Config)
 	cfg.RefreshTagsInterval = 0 * time.Second
 	cfg.RefreshVolumesInterval = 0 * time.Second
@@ -401,8 +412,6 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
-	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
 		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
@@ -411,11 +420,16 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: volumeCache,
 	}
+	tagger.backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	tagger.defaultRefreshInterval = 50 * time.Millisecond
 
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
-	//assume one second is long enough for the api to be called many times (potentially)
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return tagger.started
+	}, time.Second, 50*time.Millisecond)
 	//check only partial tags/volumes are returned
 	assert.Equal(t, 2, ec2Client.tagsCallCount)
 	assert.Equal(t, 1, volumeCache.refreshCount)
@@ -428,6 +442,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 
 // run Start() and then processMetrics and check the output metrics contain expected tags
 func TestApplyWithTagsVolumesUpdate(t *testing.T) {
+	t.Parallel()
 	cfg := createDefaultConfig().(*Config)
 	//use millisecond rather than second to speed up test execution
 	cfg.RefreshTagsInterval = 20 * time.Millisecond
@@ -447,8 +462,6 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
-	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
 		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
@@ -457,12 +470,16 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: volumeCache,
 	}
+	tagger.backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	tagger.defaultRefreshInterval = 50 * time.Millisecond
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
 
-	//assume one second is long enough for the api to be called many times
-	//so that all tags/volumes are retrieved
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return len(tagger.ec2TagCache) >= 3
+	}, time.Second, 50*time.Millisecond)
 	md := createTestMetrics([]map[string]string{
 		map[string]string{
 			"host": "example.org",
@@ -496,9 +513,11 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	//update tags and volumes and check metrics are updated as well
 	ec2Client.UseUpdatedTags = true
 	volumeCache.UseUpdatedVolumes = true
-	//assume one second is long enough for the api to be called many times
-	//so that all tags/volumes are updated
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return tagger.ec2TagCache[tagKey2] == updatedTagVal2
+	}, time.Second, 50*time.Millisecond)
 	// Create fresh metrics for the second processing to test updated cache values
 	freshMd := createTestMetrics([]map[string]string{
 		{
@@ -550,8 +569,6 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
-	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
 		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
@@ -560,6 +577,8 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: volumeCache,
 	}
+	tagger.backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	tagger.defaultRefreshInterval = 50 * time.Millisecond
 
 	md := createTestMetrics([]map[string]string{
 		map[string]string{
@@ -581,7 +600,11 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	assert.Equal(t, 0, output.ResourceMetrics().Len())
 
 	//assume one second is long enough for the api to be called many times (potentially)
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return tagger.started
+	}, time.Second, 50*time.Millisecond)
 	//check only partial tags/volumes are returned
 	assert.Equal(t, 2, ec2Client.tagsCallCount)
 
@@ -615,8 +638,6 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
-	BackoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
-	defaultRefreshInterval = 180 * time.Second
 	tagger := &Tagger{
 		Config:            cfg,
 		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
@@ -625,6 +646,8 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: &mockVolumeCache{cache: make(map[string]string)},
 	}
+	tagger.backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
+	tagger.defaultRefreshInterval = 180 * time.Second
 
 	deadline := time.NewTimer(1 * time.Second)
 	inited := make(chan struct{})
@@ -661,8 +684,6 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
-	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
 		logger:            processortest.NewNopSettings(component.MustNewType("ec2tagger")).Logger,
@@ -671,11 +692,17 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 		ec2Provider:       ec2Provider,
 		volumeSerialCache: volumeCache,
 	}
+	tagger.backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	tagger.defaultRefreshInterval = 50 * time.Millisecond
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
 
 	// Wait for tags and volumes to be retrieved
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		tagger.RLock()
+		defer tagger.RUnlock()
+		return len(tagger.ec2TagCache) >= 2
+	}, time.Second, 50*time.Millisecond)
 
 	// Create metrics with existing attributes that should not be overwritten
 	md := createTestMetrics([]map[string]string{
