@@ -5,6 +5,7 @@ package configprovider
 
 import (
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
 	"go.opentelemetry.io/collector/confmap/provider/envprovider"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
@@ -21,6 +22,7 @@ func GetSettings(uris []string, logger *zap.Logger) otelcol.ConfigProviderSettin
 			},
 			ProviderSettings: confmap.ProviderSettings{Logger: logger},
 			ConverterFactories: []confmap.ConverterFactory{
+				expandconverter.NewFactory(), //nolint:staticcheck // TODO: breaks logging if updated, migrate later
 				NewOTLPHTTPValidatorFactory(),
 			},
 			ConverterSettings: confmap.ConverterSettings{Logger: logger},
