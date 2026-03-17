@@ -133,6 +133,16 @@ func TestOTLPHTTPValidator(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "non-otlphttp exporter is ignored",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"prometheus": map[string]any{
+						"endpoint": "https://example.com/metrics",
+					},
+				},
+			},
+		},
+		{
 			name: "invalid spoofed suffix",
 			config: map[string]any{
 				"exporters": map[string]any{

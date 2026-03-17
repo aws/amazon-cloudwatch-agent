@@ -47,7 +47,7 @@ func (v *otlphttpValidator) Convert(_ context.Context, conf *confmap.Conf) error
 		return nil
 	}
 	for name, cfg := range exporters {
-		if !strings.HasPrefix(name, "otlphttp") {
+		if name != "otlphttp" && !strings.HasPrefix(name, "otlphttp/") {
 			continue
 		}
 		exporterCfg, ok := cfg.(map[string]any)
