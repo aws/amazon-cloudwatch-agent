@@ -242,6 +242,7 @@ require (
 require github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 
 require (
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstarttimeprocessor v0.124.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/collectdreceiver v0.124.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.124.0
 	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.124.0

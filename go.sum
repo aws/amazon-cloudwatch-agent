@@ -1291,6 +1291,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattribute
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor v0.124.1/go.mod h1:iWtC4dNuH2BxWctFmf4Vo/ZZsPvOjXqT8Lgh1TuR2JQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricsgenerationprocessor v0.124.1 h1:uF82CnHnY2JVVTYOQ3la0tsGVc9qGeRKcL1hq963OcI=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricsgenerationprocessor v0.124.1/go.mod h1:rT4Laop9cDWRmFFqm+bANV0l+CynIHZwNkWrOHAx1QE=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstarttimeprocessor v0.124.0 h1:ND0UWhvK5q9oNkiQBru8Kdk0/ldQMLFvK6QkiQ2Hj4k=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstarttimeprocessor v0.124.0/go.mod h1:5pzbOh0E9A6N1CNXpdgpsEd00rovOtc8hHWZTdCPHWQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.124.1 h1:I+2/d/Chom9IRygTORTP6WbRNL4IYce8h7t9po1MExY=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.124.1/go.mod h1:M0MPNNbQ3Rt4b6MqaPe1TfBEP623LcELUMraOP0wNr4=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor v0.124.1 h1:AhU6499A/KYpwBMZDQUppJMwYfa4X1HUo77zOLvZ9jg=

@@ -54,6 +54,7 @@ func TestComponents(t *testing.T) {
 		"deltatorate",
 		"ec2tagger",
 		"metricsgeneration",
+		"metricstarttime",
 		"filter",
 		"gpuattributes",
 		"kueueattributes",
