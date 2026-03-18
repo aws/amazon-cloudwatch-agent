@@ -415,6 +415,10 @@ jobs:
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -503,7 +507,8 @@ jobs:
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
@@ -749,6 +754,10 @@ jobs:
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
 
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
+
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -783,7 +792,8 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="use_ssm=${{ matrix.arrays.useSSM }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -1343,6 +1353,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -1372,7 +1386,8 @@ jobs:
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
               -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
@@ -1424,6 +1439,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -1453,7 +1472,8 @@ jobs:
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
               -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
@@ -1505,6 +1525,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -1535,7 +1559,8 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
@@ -1587,6 +1612,10 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -1618,7 +1647,8 @@ jobs:
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
               -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
