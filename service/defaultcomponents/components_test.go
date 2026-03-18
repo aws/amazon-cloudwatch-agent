@@ -28,6 +28,7 @@ func TestComponents(t *testing.T) {
 		"jaeger",
 		"jmx",
 		"kafka",
+		"kubeletstats",
 		"nop",
 		"otlp",
 		"prometheus",
