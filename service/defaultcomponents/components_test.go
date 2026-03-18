@@ -22,7 +22,9 @@ func TestComponents(t *testing.T) {
 		"awsecscontainermetrics",
 		"awsnvmereceiver",
 		"awsxray",
+		"collectd",
 		"filelog",
+		"hostmetrics",
 		"jaeger",
 		"jmx",
 		"kafka",
@@ -80,6 +82,7 @@ func TestComponents(t *testing.T) {
 		"awsxray",
 		"debug",
 		"nop",
+		"otlphttp",
 		"prometheusremotewrite",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)

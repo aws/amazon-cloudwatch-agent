@@ -34,7 +34,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsecscontainermetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/collectdreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver"
@@ -46,6 +48,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
+	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/otelcol"
@@ -81,7 +84,9 @@ func Factories() (otelcol.Factories, error) {
 		awsecscontainermetricsreceiver.NewFactory(),
 		awsnvmereceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
+		collectdreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
+		hostmetricsreceiver.NewFactory(),
 		jaegerreceiver.NewFactory(),
 		jmxreceiver.NewFactory(),
 		kafkareceiver.NewFactory(),
@@ -133,6 +138,7 @@ func Factories() (otelcol.Factories, error) {
 		cloudwatch.NewFactory(),
 		debugexporter.NewFactory(),
 		nopexporter.NewFactory(),
+		otlphttpexporter.NewFactory(),
 		prometheusremotewriteexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
