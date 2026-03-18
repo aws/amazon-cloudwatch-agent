@@ -42,6 +42,8 @@ replace (
 )
 
 replace (
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260318151459-d17ae1f01b20
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260318151459-d17ae1f01b20
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20251211175346-5faee86d9fde
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20251211175346-5faee86d9fde
 )
@@ -49,6 +51,7 @@ replace (
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20251211175346-5faee86d9fde
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20251211175346-5faee86d9fde
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsefareceiver v0.0.0-20260318151459-d17ae1f01b20
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20251211175346-5faee86d9fde
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20251211175346-5faee86d9fde
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20251211175346-5faee86d9fde
@@ -141,6 +144,8 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor v0.124.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatorateprocessor v0.124.1
@@ -159,6 +164,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsecscontainermetricsreceiver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.124.1
