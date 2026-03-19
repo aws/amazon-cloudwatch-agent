@@ -16,13 +16,13 @@ type roundTripper struct {
 	base             http.RoundTripper
 	requestHandlers  []awsmiddleware.RequestHandler
 	responseHandlers []awsmiddleware.ResponseHandler
-	operationName    string
 }
 
 func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := awsmiddleware.SetRequestID(req.Context(), uuid.NewString())
-	ctx = awsmiddleware.SetOperationName(ctx, rt.operationName)
+	ctx = awsmiddleware.SetOperationName(ctx, "*")
 	req = req.WithContext(ctx)
+	req.Header.Del("User-Agent")
 	for _, h := range rt.requestHandlers {
 		h.HandleRequest(ctx, req)
 	}

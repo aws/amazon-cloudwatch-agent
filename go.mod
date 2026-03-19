@@ -199,6 +199,7 @@ require (
 	go.opentelemetry.io/collector/exporter/nopexporter v0.124.0
 	go.opentelemetry.io/collector/extension v1.30.0
 	go.opentelemetry.io/collector/extension/extensionauth v1.30.0
+	go.opentelemetry.io/collector/extension/extensioncapabilities v0.124.0
 	go.opentelemetry.io/collector/extension/extensiontest v0.124.0
 	go.opentelemetry.io/collector/extension/zpagesextension v0.124.0
 	go.opentelemetry.io/collector/filter v0.124.0
@@ -238,8 +239,6 @@ require (
 	k8s.io/client-go v0.32.3
 	k8s.io/klog/v2 v2.130.1
 )
-
-require go.opentelemetry.io/collector/extension/extensioncapabilities v0.124.0
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect

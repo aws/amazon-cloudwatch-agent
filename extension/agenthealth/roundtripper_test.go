@@ -31,7 +31,7 @@ func TestRoundTripper_RequestHandlersCalled(t *testing.T) {
 	mockHandler.On("HandleRequest", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		ctx := args.Get(0).(context.Context)
 		assert.NotEmpty(t, awsmiddleware.GetRequestID(ctx))
-		assert.Equal(t, "OTLP/HTTP", awsmiddleware.GetOperationName(ctx))
+		assert.Equal(t, "*", awsmiddleware.GetOperationName(ctx))
 	}).Return()
 
 	base := RoundTripFunc(func(*http.Request) (*http.Response, error) {
@@ -41,7 +41,6 @@ func TestRoundTripper_RequestHandlersCalled(t *testing.T) {
 	rt := &roundTripper{
 		base:            base,
 		requestHandlers: []awsmiddleware.RequestHandler{mockHandler},
-		operationName:   "OTLP/HTTP",
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/v1/metrics", nil)
@@ -59,7 +58,7 @@ func TestRoundTripper_ResponseHandlersCalled(t *testing.T) {
 	mockHandler.On("HandleResponse", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		ctx := args.Get(0).(context.Context)
 		assert.NotEmpty(t, awsmiddleware.GetRequestID(ctx))
-		assert.Equal(t, "OTLP/HTTP", awsmiddleware.GetOperationName(ctx))
+		assert.Equal(t, "*", awsmiddleware.GetOperationName(ctx))
 	}).Return()
 
 	base := RoundTripFunc(func(*http.Request) (*http.Response, error) {
@@ -70,7 +69,6 @@ func TestRoundTripper_ResponseHandlersCalled(t *testing.T) {
 		base:             base,
 		requestHandlers:  []awsmiddleware.RequestHandler{mockHandler},
 		responseHandlers: []awsmiddleware.ResponseHandler{mockHandler},
-		operationName:    "OTLP/HTTP",
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/v1/metrics", nil)
@@ -95,7 +93,6 @@ func TestRoundTripper_ErrorSkipsResponseHandlers(t *testing.T) {
 		base:             base,
 		requestHandlers:  []awsmiddleware.RequestHandler{mockHandler},
 		responseHandlers: []awsmiddleware.ResponseHandler{mockHandler},
-		operationName:    "OTLP/HTTP",
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "http://localhost/v1/metrics", nil)

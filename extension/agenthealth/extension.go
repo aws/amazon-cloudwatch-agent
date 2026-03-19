@@ -91,11 +91,13 @@ func (ah *agentHealth) RoundTripper(base http.RoundTripper) (http.RoundTripper, 
 		return nil, err
 	}
 	if ext != nil {
-		if httpClient, ok := ext.(extensionauth.HTTPClient); ok {
-			base, err = httpClient.RoundTripper(base)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get RoundTripper from %v: %w", ah.cfg.AdditionalAuth, err)
-			}
+		httpClient, ok := ext.(extensionauth.HTTPClient)
+		if !ok {
+			return nil, fmt.Errorf("auth extension %v does not implement extensionauth.HTTPClient", ah.cfg.AdditionalAuth)
+		}
+		base, err = httpClient.RoundTripper(base)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get RoundTripper from %v: %w", ah.cfg.AdditionalAuth, err)
 		}
 	}
 	requestHandlers, responseHandlers := ah.Handlers()
@@ -103,7 +105,6 @@ func (ah *agentHealth) RoundTripper(base http.RoundTripper) (http.RoundTripper, 
 		base:             base,
 		requestHandlers:  requestHandlers,
 		responseHandlers: responseHandlers,
-		operationName:    "OTLP/HTTP",
 	}, nil
 }
 

@@ -107,7 +107,8 @@ func TestRoundTripper_NoInnerAuth(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, rt)
 
-	req, _ := http.NewRequest(http.MethodPost, "http://localhost/v1/metrics", nil)
+	req, err := http.NewRequest(http.MethodPost, "http://localhost/v1/metrics", nil)
+	require.NoError(t, err)
 	resp, err := rt.RoundTrip(req)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -161,4 +162,40 @@ func TestRoundTripper_InnerAuthError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, rt)
 	assert.True(t, mockAuth.called)
+}
+
+func TestRoundTripper_ExtensionNotFound(t *testing.T) {
+	authID := component.NewID(component.MustNewType("mockauth"))
+
+	mockHost := &awsmiddleware.MockExtensionsHost{}
+	mockHost.On("GetExtensions").Return(map[component.ID]component.Component{})
+
+	cfg := &Config{IsUsageDataEnabled: true, AdditionalAuth: &authID}
+	ext := NewAgentHealth(zap.NewNop(), cfg)
+	require.NoError(t, ext.Start(context.Background(), mockHost))
+
+	rt, err := ext.(extensionauth.HTTPClient).RoundTripper(http.DefaultTransport)
+	assert.ErrorContains(t, err, "not found")
+	assert.Nil(t, rt)
+}
+
+func TestRoundTripper_NotHTTPClient(t *testing.T) {
+	authID := component.NewID(component.MustNewType("mockauth"))
+
+	type nonHTTPExtension struct {
+		component.StartFunc
+		component.ShutdownFunc
+	}
+	mockHost := &awsmiddleware.MockExtensionsHost{}
+	mockHost.On("GetExtensions").Return(map[component.ID]component.Component{
+		authID: &nonHTTPExtension{},
+	})
+
+	cfg := &Config{IsUsageDataEnabled: true, AdditionalAuth: &authID}
+	ext := NewAgentHealth(zap.NewNop(), cfg)
+	require.NoError(t, ext.Start(context.Background(), mockHost))
+
+	rt, err := ext.(extensionauth.HTTPClient).RoundTripper(http.DefaultTransport)
+	assert.ErrorContains(t, err, "does not implement extensionauth.HTTPClient")
+	assert.Nil(t, rt)
 }
