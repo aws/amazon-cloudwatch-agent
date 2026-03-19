@@ -4,8 +4,14 @@
 package agenthealth
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/extension/extensionauth"
+	"go.opentelemetry.io/collector/extension/extensioncapabilities"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
@@ -16,11 +22,13 @@ import (
 type agentHealth struct {
 	logger *zap.Logger
 	cfg    *Config
-	component.StartFunc
+	host   component.Host
 	component.ShutdownFunc
 }
 
 var _ awsmiddleware.Extension = (*agentHealth)(nil)
+var _ extensionauth.HTTPClient = (*agentHealth)(nil)
+var _ extensioncapabilities.Dependent = (*agentHealth)(nil)
 
 func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	var responseHandlers []awsmiddleware.ResponseHandler
@@ -52,6 +60,51 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	responseHandlers = append(responseHandlers, statsResponseHandlers...)
 
 	return requestHandlers, responseHandlers
+}
+
+func (ah *agentHealth) Start(_ context.Context, host component.Host) error {
+	ah.host = host
+	return nil
+}
+
+func (ah *agentHealth) Dependencies() []component.ID {
+	if ah.cfg.AdditionalAuth == nil {
+		return nil
+	}
+	return []component.ID{*ah.cfg.AdditionalAuth}
+}
+
+func (ah *agentHealth) getAdditionalAuthExtension() (component.Component, error) {
+	if ah.cfg.AdditionalAuth == nil || ah.host == nil {
+		return nil, nil
+	}
+	ext := ah.host.GetExtensions()[*ah.cfg.AdditionalAuth]
+	if ext == nil {
+		return nil, fmt.Errorf("auth extension %v not found", ah.cfg.AdditionalAuth)
+	}
+	return ext, nil
+}
+
+func (ah *agentHealth) RoundTripper(base http.RoundTripper) (http.RoundTripper, error) {
+	ext, err := ah.getAdditionalAuthExtension()
+	if err != nil {
+		return nil, err
+	}
+	if ext != nil {
+		if httpClient, ok := ext.(extensionauth.HTTPClient); ok {
+			base, err = httpClient.RoundTripper(base)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get RoundTripper from %v: %w", ah.cfg.AdditionalAuth, err)
+			}
+		}
+	}
+	requestHandlers, responseHandlers := ah.Handlers()
+	return &roundTripper{
+		base:             base,
+		requestHandlers:  requestHandlers,
+		responseHandlers: responseHandlers,
+		operationName:    "OTLP/HTTP",
+	}, nil
 }
 
 func NewAgentHealth(logger *zap.Logger, cfg *Config) awsmiddleware.Extension {
