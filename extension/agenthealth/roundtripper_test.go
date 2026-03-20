@@ -31,7 +31,7 @@ func TestRoundTripper_RequestHandlersCalled(t *testing.T) {
 	mockHandler.On("HandleRequest", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		ctx := args.Get(0).(context.Context)
 		assert.NotEmpty(t, awsmiddleware.GetRequestID(ctx))
-		assert.Equal(t, "*", awsmiddleware.GetOperationName(ctx))
+		assert.Equal(t, "/v1/metrics", awsmiddleware.GetOperationName(ctx))
 	}).Return()
 
 	base := RoundTripFunc(func(*http.Request) (*http.Response, error) {
@@ -58,7 +58,7 @@ func TestRoundTripper_ResponseHandlersCalled(t *testing.T) {
 	mockHandler.On("HandleResponse", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		ctx := args.Get(0).(context.Context)
 		assert.NotEmpty(t, awsmiddleware.GetRequestID(ctx))
-		assert.Equal(t, "*", awsmiddleware.GetOperationName(ctx))
+		assert.Equal(t, "/v1/metrics", awsmiddleware.GetOperationName(ctx))
 	}).Return()
 
 	base := RoundTripFunc(func(*http.Request) (*http.Response, error) {

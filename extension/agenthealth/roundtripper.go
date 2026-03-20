@@ -20,7 +20,7 @@ type roundTripper struct {
 
 func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := awsmiddleware.SetRequestID(req.Context(), uuid.NewString())
-	ctx = awsmiddleware.SetOperationName(ctx, "*")
+	ctx = awsmiddleware.SetOperationName(ctx, req.URL.Path)
 	req = req.WithContext(ctx)
 	req.Header.Del("User-Agent")
 	for _, h := range rt.requestHandlers {
