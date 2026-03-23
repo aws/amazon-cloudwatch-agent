@@ -35,6 +35,13 @@ type Config struct {
 	ResourceToTelemetrySettings resourcetotelemetry.Settings `mapstructure:"resource_to_telemetry_conversion"`
 	// MiddlewareID is an ID for an extension that can be used to configure the AWS client.
 	MiddlewareID *component.ID `mapstructure:"middleware,omitempty"`
+
+	// MaxRetryCount is the number of retries on PutMetricData failure. Defaults to 5.
+	MaxRetryCount int `mapstructure:"max_retry_count,omitempty"`
+	// BackoffRetryBase is the base duration for exponential backoff on retries. Defaults to 200ms.
+	BackoffRetryBase time.Duration `mapstructure:"backoff_retry_base,omitempty"`
+	// MaxConcurrentPublishers is the number of concurrent workers making PMD calls. Defaults to 10.
+	MaxConcurrentPublishers int `mapstructure:"max_concurrent_publishers,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)
