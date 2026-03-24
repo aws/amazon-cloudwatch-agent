@@ -20,6 +20,8 @@ func TestComponents(t *testing.T) {
 		"awscontainerinsightreceiver",
 		"awscontainerinsightskueuereceiver",
 		"awsecscontainermetrics",
+		"awsefareceiver",
+		"awsekshyperpodreceiver",
 		"awsnvmereceiver",
 		"awsxray",
 		"collectd",
@@ -46,7 +48,9 @@ func TestComponents(t *testing.T) {
 
 	wantProcessors := []string{
 		"awsapplicationsignals",
+		"awsattributelimit",
 		"awsentity",
+		"awsdevicepodcorrelation",
 		"awsneuron",
 		"attributes",
 		"batch",
@@ -63,6 +67,7 @@ func TestComponents(t *testing.T) {
 		"groupbyattrs",
 		"k8sattributes",
 		"memory_limiter",
+		"metricstarttime",
 		"metricstransform",
 		"resourcedetection",
 		"resource",
