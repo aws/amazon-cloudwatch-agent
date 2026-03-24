@@ -81,6 +81,8 @@ var supportedExporters = map[string]exporterInfo{
 
 // mergeAgentHealth scans the exporters in the config for supported AWS exporters
 // and adds the appropriate agenthealth extension with a middleware reference to each.
+// It also detects otlphttp exporters and sets their auth.authenticator to an
+// agenthealth extension, chaining with any existing auth extension.
 func mergeAgentHealth(conf *confmap.Conf, isUsageDataEnabled bool) *confmap.Conf {
 	if conf == nil || !isUsageDataEnabled {
 		return conf
@@ -93,7 +95,7 @@ func mergeAgentHealth(conf *confmap.Conf, isUsageDataEnabled bool) *confmap.Conf
 		return conf
 	}
 
-	// Track which agenthealth extensions are needed
+	// Track which agenthealth extensions are needed for AWS exporters
 	neededExtensions := make(map[string]exporterInfo)
 	for key := range exporters {
 		typeName, _, _ := strings.Cut(key, "/")
@@ -112,7 +114,45 @@ func mergeAgentHealth(conf *confmap.Conf, isUsageDataEnabled bool) *confmap.Conf
 		}
 	}
 
-	if len(neededExtensions) == 0 {
+	// Detect otlphttp exporters for auth-based agenthealth integration
+	type otlphttpAuthEntry struct {
+		exporterKey    string
+		ahExtName      string
+		additionalAuth string
+	}
+	var otlphttpEntries []otlphttpAuthEntry
+	for key := range exporters {
+		typeName, suffix, hasSuffix := strings.Cut(key, "/")
+		if typeName != "otlphttp" {
+			continue
+		}
+		ahName := "agenthealth/otlphttp"
+		if hasSuffix {
+			ahName = "agenthealth/otlphttp_" + suffix
+		}
+		exporterCfg, ok := exporters[key].(map[string]any)
+		if !ok || exporterCfg == nil {
+			exporterCfg = make(map[string]any)
+			exporters[key] = exporterCfg
+		}
+		// Skip if already using an agenthealth auth extension
+		var additionalAuth string
+		if authMap, ok := exporterCfg["auth"].(map[string]any); ok {
+			if authn, ok := authMap["authenticator"].(string); ok {
+				if strings.HasPrefix(authn, "agenthealth/") {
+					continue
+				}
+				additionalAuth = authn
+			}
+		}
+		otlphttpEntries = append(otlphttpEntries, otlphttpAuthEntry{
+			exporterKey:    key,
+			ahExtName:      ahName,
+			additionalAuth: additionalAuth,
+		})
+	}
+
+	if len(neededExtensions) == 0 && len(otlphttpEntries) == 0 {
 		return conf
 	}
 
@@ -146,6 +186,27 @@ func mergeAgentHealth(conf *confmap.Conf, isUsageDataEnabled bool) *confmap.Conf
 		}
 		if !slices.Contains(svcExtensions, any(middlewareID)) {
 			svcExtensions = append(svcExtensions, middlewareID)
+		}
+	}
+
+	// Configure agenthealth auth for otlphttp exporters
+	for _, entry := range otlphttpEntries {
+		exporterCfg := exporters[entry.exporterKey].(map[string]any)
+		exporterCfg["auth"] = map[string]any{"authenticator": entry.ahExtName}
+		if _, exists := extensions[entry.ahExtName]; !exists {
+			extCfg := map[string]any{
+				"is_usage_data_enabled": true,
+				"stats": map[string]any{
+					"operations": []any{"*"},
+				},
+			}
+			if entry.additionalAuth != "" {
+				extCfg["additional_auth"] = entry.additionalAuth
+			}
+			extensions[entry.ahExtName] = extCfg
+		}
+		if !slices.Contains(svcExtensions, any(entry.ahExtName)) {
+			svcExtensions = append(svcExtensions, entry.ahExtName)
 		}
 	}
 
