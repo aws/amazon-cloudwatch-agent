@@ -1,7 +1,7 @@
 name: Build And Upload Distributor
 env:
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "ci/adaptive-validator-polling"
   CHECKOUT_ROOT_DIR: "test"
   SSM_DISTRIBUTOR_VERSION_LIMIT: 25
 on:
