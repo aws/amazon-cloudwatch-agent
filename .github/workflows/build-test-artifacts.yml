@@ -6,15 +6,43 @@ on:
   push:
     branches:
       - main*
-    paths-ignore:
-      - '**/*.md'
-      - 'NOTICE'
-      - 'THIRD-PARTY'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/build-test-artifacts.yml'
-      - '!.github/workflows/integration-test.yml'
-      - '!.github/workflows/application-signals-e2e-test.yml'
+    paths:
+      # Source code
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Makefile'
+      - 'CWAGENT_VERSION'
+      # Build and packaging
+      - 'Dockerfile*'
+      - 'packaging/**'
+      - 'msi/**'
+      - 'amazon-cloudwatch-container-insights/**'
+      # Source directories
+      - 'cmd/**'
+      - 'cfg/**'
+      - 'extension/**'
+      - 'internal/**'
+      - 'metric/**'
+      - 'plugins/**'
+      - 'receiver/**'
+      - 'processor/**'
+      - 'exporter/**'
+      - 'service/**'
+      - 'tool/**'
+      - 'translator/**'
+      # CI workflows that affect this pipeline
+      - '.github/workflows/build-test-artifacts.yml'
+      - '.github/workflows/integration-test.yml'
+      - '.github/workflows/test-artifacts.yml'
+      - '.github/workflows/application-signals-e2e-test.yml'
+      - '.github/workflows/e2e-test.yml'
+      - '.github/workflows/wd-integration-test.yml'
+      - '.github/workflows/ec2-integration-test.yml'
+      - '.github/workflows/test-build.yml'
+      - '.github/workflows/test-build-packages.yml'
+      - '.github/workflows/test-build-docker.yml'
+      - '.github/workflows/test-build-distributor.yml'
   schedule:
     - cron: '0 11 * * 1,2,3,4,5' # Every day at 11:00 UTC on Monday to Friday
   workflow_dispatch:
