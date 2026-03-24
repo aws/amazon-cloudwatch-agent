@@ -44,6 +44,7 @@ func TestComponents(t *testing.T) {
 	wantProcessors := []string{
 		"awsapplicationsignals",
 		"awsentity",
+		"awsneuron",
 		"attributes",
 		"batch",
 		"cumulativetodelta",
