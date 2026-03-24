@@ -63,7 +63,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  CheckRecentRun:
+    if: ${{ github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - name: Check for recent successful run
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RECENT=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow build-test-artifacts.yml \
+            --status success \
+            --limit 1 \
+            --json createdAt \
+            --jq '.[0].createdAt // empty')
+
+          if [ -n "$RECENT" ]; then
+            RECENT_TS=$(date -d "$RECENT" +%s)
+            NOW_TS=$(date +%s)
+            DIFF=$(( NOW_TS - RECENT_TS ))
+            if [ "$DIFF" -lt 14400 ]; then
+              echo "should_skip=true" >> "$GITHUB_OUTPUT"
+              echo "Skipping: successful run found ${DIFF}s ago (< 4 hours)"
+              exit 0
+            fi
+          fi
+          echo "should_skip=false" >> "$GITHUB_OUTPUT"
+
   BuildAndUpload:
+    needs: [CheckRecentRun]
+    if: ${{ always() && (github.event_name != 'schedule' || needs.CheckRecentRun.outputs.should_skip != 'true') }}
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -115,6 +148,8 @@ jobs:
       DistributorName: ${{ vars.SSM_TEST_DISTRIBUTOR_NAME }}
 
   BuildAndUploadITAR:
+    needs: [CheckRecentRun]
+    if: ${{ always() && (github.event_name != 'schedule' || needs.CheckRecentRun.outputs.should_skip != 'true') }}
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -128,6 +163,8 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   BuildAndUploadCN:
+    needs: [CheckRecentRun]
+    if: ${{ always() && (github.event_name != 'schedule' || needs.CheckRecentRun.outputs.should_skip != 'true') }}
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
