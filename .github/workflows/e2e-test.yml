@@ -110,7 +110,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.25.7
+          go-version: ~1.25.8
 
       - name: SetOutputs
         id: set-outputs
@@ -147,7 +147,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.25.7
+          go-version: ~1.25.8
 
       - name: Generate matrix
         id: set-matrix
