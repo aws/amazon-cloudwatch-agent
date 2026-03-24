@@ -23,6 +23,7 @@ import (
 const (
 	exitErrorMessage   = "configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version"
 	exitSuccessMessage = "Configuration validation first phase succeeded"
+	exitSkipMessage    = "Configuration validation first phase skipped. No JSON files found"
 	version            = "1.0"
 	envConfigFileName  = "env-config.json"
 	yamlConfigFileName = "amazon-cloudwatch-agent.yaml"
@@ -98,12 +99,23 @@ func (ct *ConfigTranslator) Translate() (err error) {
 		}
 	}()
 
+	tomlConfigPath := cmdutil.GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
+	tomlConfigDir := filepath.Dir(tomlConfigPath)
+	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
+
 	mergedJSONConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ct.ctx)
-	if err != nil {
+	onlyYAML := errors.Is(err, cmdutil.ErrOnlyYAML)
+	if err != nil && !onlyYAML {
 		return fmt.Errorf("failed to generate merged json config: %v", err)
 	}
+	if onlyYAML {
+		log.Println(exitSkipMessage)
+		// YAML-only configs still require a generated TOML for agent and logging configuration.
+		// TOML translation requires a non-nil map.
+		mergedJSONConfigMap = map[string]any{}
+	}
 
-	if !ct.ctx.RunInContainer() {
+	if !onlyYAML && !ct.ctx.RunInContainer() {
 		current, err := user.Current()
 		if err == nil && current.Name == "****" {
 			runAsUser, err := userutil.DetectRunAsUser(mergedJSONConfigMap)
@@ -114,24 +126,30 @@ func (ct *ConfigTranslator) Translate() (err error) {
 		}
 	}
 
-	tomlConfigPath := cmdutil.GetTomlConfigPath(ct.ctx.OutputTomlFilePath())
-	tomlConfigDir := filepath.Dir(tomlConfigPath)
-	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
 	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(mergedJSONConfigMap)
 	if err != nil {
 		return fmt.Errorf("failed to generate TOML configuration validation content: %v", err)
 	}
-	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
-	if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
-		return fmt.Errorf("failed to generate YAML configuration validation content: %v", err)
+	var yamlConfig any
+	if !onlyYAML {
+		yamlConfig, err = cmdutil.TranslateJsonMapToYamlConfig(mergedJSONConfigMap)
+		if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
+			return fmt.Errorf("failed to generate YAML configuration validation content: %v", err)
+		}
 	}
 	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
 		return fmt.Errorf("failed to create the configuration TOML validation file: %v", err)
 	}
-	if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
-		return fmt.Errorf("failed to create the configuration YAML validation file: %v", err)
+	if yamlConfig != nil {
+		if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
+			return fmt.Errorf("failed to create the configuration YAML validation file: %v", err)
+		}
+	} else {
+		_ = os.Remove(yamlConfigPath)
 	}
-	log.Println(exitSuccessMessage)
+	if !onlyYAML {
+		log.Println(exitSuccessMessage)
+	}
 
 	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)

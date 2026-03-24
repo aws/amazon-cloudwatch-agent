@@ -6,13 +6,15 @@ package cmdutil
 import (
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -24,7 +26,7 @@ func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
 			"aws_sdk_log_level": "loglevel",
 		},
 	}
-	envConfigPath := path.Join(t.TempDir(), "env-config.json")
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 	expectedFile := "testdata/env-config.json"
 
 	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
@@ -236,4 +238,81 @@ func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldS
 		assert.Equal(t, expectedErrorMap, actualErrorMap, "Unexpected error set!")
 		assert.False(t, shouldSuccess, "It should pass the schemaValidation!")
 	}
+}
+
+func TestGenerateMergedJsonConfigMap_OnlyYAML(t *testing.T) {
+	testCases := map[string]string{
+		"WithYAMLFile":    "config.yaml",
+		"WithYAMLTmpFile": "config.yaml.tmp",
+	}
+	for name, file := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, file), nil, 0600))
+
+			translatorcontext.ResetContext()
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetInputJsonDirPath(tmpDir)
+			ctx.SetMultiConfig("default")
+
+			got, err := GenerateMergedJsonConfigMap(ctx)
+
+			assert.ErrorIs(t, err, ErrOnlyYAML)
+			assert.Nil(t, got)
+		})
+	}
+}
+
+func TestGenerateMergedJsonConfigMap_MixedJSONAndYAML(t *testing.T) {
+	for _, mode := range []string{"append", "remove"} {
+		t.Run(mode, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte(`{"agent":{"debug":true}}`), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))
+
+			translatorcontext.ResetContext()
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetInputJsonDirPath(tmpDir)
+			ctx.SetMultiConfig(mode)
+
+			result, err := GenerateMergedJsonConfigMap(ctx)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
+	}
+}
+
+func TestGenerateMergedJsonConfigMap_DefaultModeWithTmpJSONAndYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.json.tmp"), []byte(`{"agent":{"debug":true}}`), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))
+
+	translatorcontext.ResetContext()
+	ctx := translatorcontext.CurrentContext()
+	ctx.SetInputJsonDirPath(tmpDir)
+	ctx.SetMultiConfig("default")
+
+	result, err := GenerateMergedJsonConfigMap(ctx)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+}
+
+func TestGenerateMergedJsonConfigMap_EnvVarJSONWithYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))
+
+	t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
+	t.Setenv(envconfig.CWConfigContent, `{"agent":{"debug":true}}`)
+
+	translatorcontext.ResetContext()
+	ctx := translatorcontext.CurrentContext()
+	ctx.SetInputJsonDirPath(tmpDir)
+	ctx.SetMultiConfig("default")
+
+	result, err := GenerateMergedJsonConfigMap(ctx)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
 }
