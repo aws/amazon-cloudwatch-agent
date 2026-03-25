@@ -117,12 +117,12 @@ jobs:
       caller-workflow-name: 'main-build'
 
   python-eks-e2e-test:
-    needs: [ CheckBuildTestArtifacts, java-metric-limiter-e2e-test ]
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
+      test-cluster-name: 'e2e-cw-agent-test-python'
       caller-workflow-name: 'main-build'
 
   python-ec2-default-e2e-test:
@@ -158,13 +158,12 @@ jobs:
       caller-workflow-name: 'main-build'
 
   node-eks-e2e-test:
-    # Because we share the same eks cluster for different languages, we want to run the tests sequentially to avoid interference
-    needs: [ CheckBuildTestArtifacts, python-eks-e2e-test ]
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/node-eks-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
+      test-cluster-name: 'e2e-cw-agent-test-node'
       caller-workflow-name: 'main-build'
 
   node-ec2-default-e2e-test:
@@ -225,16 +224,16 @@ jobs:
       caller-workflow-name: 'main-build'
 
   dotnet-eks-e2e-test:
-    needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-eks-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
-      test-cluster-name: 'e2e-cw-agent-test'
+      test-cluster-name: 'e2e-cw-agent-test-dotnet'
       caller-workflow-name: 'main-build'
 
   dotnet-eks-e2e-windows-test:
-    needs: [ CheckBuildTestArtifacts, node-eks-e2e-test ]
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/dotnet-eks-windows-test.yml@main
     secrets: inherit
     with:
