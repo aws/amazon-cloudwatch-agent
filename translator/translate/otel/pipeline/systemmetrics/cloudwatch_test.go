@@ -31,13 +31,12 @@ func TestCloudWatchTranslator(t *testing.T) {
 	assert.Equal(t, 1, cfg.MaxConcurrentPublishers)
 }
 
-func TestCloudWatchTranslatorNoIMDS(t *testing.T) {
+func TestCloudWatchTranslatorNotEC2(t *testing.T) {
 	tt := newCloudWatchTranslator(false)
 
 	got, err := tt.Translate(nil)
 	require.NoError(t, err)
 	cfg, ok := got.(*cloudwatch.Config)
 	require.True(t, ok)
-	// No InstanceId rollup when IMDS is unavailable — account-level only.
 	assert.Equal(t, [][]string{{}}, cfg.RollupDimensions)
 }

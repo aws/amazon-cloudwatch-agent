@@ -35,6 +35,7 @@ func TestTranslator(t *testing.T) {
 		kubernetes     bool
 		envEnabled     string // "true", "false", or "" (not set)
 		imdsAvailable  bool
+		onPrem         bool
 		want           *want
 		wantErr        error
 	}{
@@ -116,6 +117,21 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithOnPrem": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"system_metrics_enabled": true,
+				},
+			},
+			imdsAvailable: true,
+			onPrem:        true,
+			want: &want{
+				receivers:  []string{"systemmetrics"},
+				processors: []string{"batch/systemmetrics"},
+				exporters:  []string{"awscloudwatch/systemmetrics"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
 		// TODO: add WithUnrecognizedHost once host detection paths (/apollo, /etc/image-id,
 		// /etc/os-release) are injectable, so the test doesn't depend on the environment it runs in.
 	}
@@ -124,9 +140,15 @@ func TestTranslator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			context.ResetContext()
 			orig := IsIMDSAvailable
+			origOnPrem := isOnPrem
 			imds := tc.imdsAvailable
+			onPrem := tc.onPrem
 			IsIMDSAvailable = func() bool { return imds }
-			t.Cleanup(func() { IsIMDSAvailable = orig })
+			isOnPrem = func() bool { return onPrem }
+			t.Cleanup(func() {
+				IsIMDSAvailable = orig
+				isOnPrem = origOnPrem
+			})
 
 			if tc.envEnabled != "" {
 				t.Setenv(envconfig.SystemMetricsEnabled, tc.envEnabled)
