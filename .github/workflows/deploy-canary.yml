@@ -29,19 +29,19 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: 1.12.0
 
@@ -62,7 +62,7 @@ jobs:
 
       # @TODO we can add a matrix in the future but for alpha we will only deploy to al2
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -89,7 +89,7 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2
         with:
           max_attempts: 3
           timeout_minutes: 8

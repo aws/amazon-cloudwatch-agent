@@ -77,12 +77,12 @@ jobs:
       agent-version: ${{ steps.version.outputs.version }}
       should-build: ${{ steps.check.outputs.should-build }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -128,14 +128,14 @@ jobs:
       DESTINATION_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/linux/${{ matrix.arch }}/${{ needs.AgentVersion.outputs.agent-version }}
       WORKING_DIRECTORY: distributor/linux/${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -188,14 +188,14 @@ jobs:
       DESTINATION_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/darwin/${{ matrix.arch }}/${{ needs.AgentVersion.outputs.agent-version }}
       WORKING_DIRECTORY: distributor/darwin/${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -243,14 +243,14 @@ jobs:
       DESTINATION_S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/windows/amd64/${{ needs.AgentVersion.outputs.agent-version }}
       WORKING_DIRECTORY: distributor/windows/amd64
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -297,14 +297,14 @@ jobs:
       AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
       S3_PATH: s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -373,7 +373,7 @@ jobs:
             --region ${{ inputs.Region }}
 
       - name: Verify distributor
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2
         with:
           max_attempts: 6
           timeout_minutes: 5

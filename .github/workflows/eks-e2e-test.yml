@@ -89,13 +89,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{inputs.test_repo_name}}
           ref: ${{inputs.test_repo_branch}}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
@@ -103,10 +103,10 @@ jobs:
 
       - name: Login ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@c962da2960ed15f492addc26fffa274485265950 # v2
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: 1.12.0
 
@@ -114,7 +114,7 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -156,7 +156,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2
         with:
           max_attempts: 3
           timeout_minutes: 8

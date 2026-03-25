@@ -97,7 +97,7 @@ jobs:
       operator_repo_name: ${{env.OPERATOR_GITHUB_REPO_NAME}}
     steps:
       - name: Checkout the target repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{env.OPERATOR_GITHUB_REPO_NAME}}
           ref: ${{ inputs.operator-branch || 'main' }}
@@ -153,7 +153,7 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
           aws-region: ${{ env.AWS_REGION}}
@@ -161,15 +161,15 @@ jobs:
 
       - name: Login ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@c962da2960ed15f492addc26fffa274485265950 # v2
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@901a10e89ea615cf61f57ac05cecdf23e7de06d8 # v3
         with:
           version: 'latest'
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3
         with:
           version: 'latest'
 
@@ -185,7 +185,7 @@ jobs:
           git clone -b "$HELM_CHARTS_BRANCH" https://github.com/aws-observability/helm-charts.git ./helm-charts
 
       - name: Clone Test Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -261,19 +261,19 @@ jobs:
       contents: read
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE}}
           aws-region: ${{ env.AWS_REGION}}
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@901a10e89ea615cf61f57ac05cecdf23e7de06d8 # v3
         with:
           version: 'latest'
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78 # v3
         with:
           version: 'latest'
 
