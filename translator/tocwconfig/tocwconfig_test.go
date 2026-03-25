@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	systemmetricspipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -452,6 +453,9 @@ func TestSystemMetricsConfig(t *testing.T) {
 	resetContext(t)
 	t.Setenv(envconfig.SystemMetricsEnabled, "true")
 	context.CurrentContext().SetMode(config.ModeEC2)
+	orig := systemmetricspipeline.IsIMDSAvailable
+	systemmetricspipeline.IsIMDSAvailable = func() bool { return true }
+	t.Cleanup(func() { systemmetricspipeline.IsIMDSAvailable = orig })
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "system_metrics_config", "linux", expectedEnvVars, "")
 }

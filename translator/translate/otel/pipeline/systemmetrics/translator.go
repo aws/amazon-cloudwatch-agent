@@ -16,11 +16,13 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/systemmetrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
 const batchTimeout = 15 * time.Minute
@@ -53,22 +55,37 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.SystemMetricsEnabledConfigKey}
 	}
 
-	translators := common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config, component.ID](systemmetrics.NewTranslator()),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](
-			newEc2TaggerTranslator(),
-			batchprocessor.NewTranslator(
-				common.WithName(common.PipelineNameSystemMetrics),
-				batchprocessor.WithTimeout(batchTimeout),
-			),
+	isEC2 := !isOnPrem() && IsIMDSAvailable()
+
+	processors := []common.ComponentTranslator{
+		batchprocessor.NewTranslator(
+			common.WithName(common.PipelineNameSystemMetrics),
+			batchprocessor.WithTimeout(batchTimeout),
 		),
-		Exporters: common.NewTranslatorMap[component.Config, component.ID](newCloudWatchTranslator()),
+	}
+	if isEC2 {
+		processors = append([]common.ComponentTranslator{newEc2TaggerTranslator()}, processors...)
+	}
+
+	translators := common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](systemmetrics.NewTranslator()),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](processors...),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](newCloudWatchTranslator(isEC2)),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](
 			agenthealth.NewTranslator(agenthealth.MetricsName, []string{agenthealth.OperationPutMetricData}),
 		),
 	}
 
 	return &translators, nil
+}
+
+var IsIMDSAvailable = func() bool {
+	return ec2util.GetEC2UtilSingleton().InstanceID != ""
+}
+
+var isOnPrem = func() bool {
+	mode := context.CurrentContext().Mode()
+	return mode == config.ModeOnPrem || mode == config.ModeOnPremise
 }
 
 func isKubernetes() bool {
