@@ -41,6 +41,35 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs). Leave empty to run all tests.'
         type: string
         required: false
+      # Path-based test selection: skip flags passed from build-test-artifacts.yml DetectChanges
+      skip_windows:
+        description: 'Skip Windows tests (path-based selection)'
+        type: boolean
+        default: false
+      skip_mac:
+        description: 'Skip macOS tests (path-based selection)'
+        type: boolean
+        default: false
+      skip_eks:
+        description: 'Skip EKS tests (path-based selection)'
+        type: boolean
+        default: false
+      skip_ecs:
+        description: 'Skip ECS tests (path-based selection)'
+        type: boolean
+        default: false
+      skip_gpu:
+        description: 'Skip GPU tests (path-based selection)'
+        type: boolean
+        default: false
+      skip_performance:
+        description: 'Skip performance tests (path-based selection)'
+        type: boolean
+        default: false
+      skip_stress:
+        description: 'Skip stress tests (path-based selection)'
+        type: boolean
+        default: false
 
 jobs:
   CheckBuildTestArtifacts:
@@ -87,3 +116,10 @@ jobs:
       test_repo_branch: ${{ inputs.test_repo_branch }}
       test_os_filter: ${{ inputs.test_os_filter }}
       test_dir_filter: ${{ inputs.test_dir_filter }}
+      skip_windows: ${{ inputs.skip_windows }}
+      skip_mac: ${{ inputs.skip_mac }}
+      skip_eks: ${{ inputs.skip_eks }}
+      skip_ecs: ${{ inputs.skip_ecs }}
+      skip_gpu: ${{ inputs.skip_gpu }}
+      skip_performance: ${{ inputs.skip_performance }}
+      skip_stress: ${{ inputs.skip_stress }}

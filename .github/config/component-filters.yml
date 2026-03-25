@@ -1,0 +1,64 @@
+# Path-based component detection for selective test execution.
+# Used by build-test-artifacts.yml DetectChanges job.
+# If 'core' matches, all tests run (safe fallback).
+
+core:
+  - 'cmd/**'
+  - 'service/**'
+  - 'internal/**'
+  - 'cfg/**'
+  - 'translator/**'
+  - 'extension/**'
+  - 'sdk/**'
+  - 'handlers/**'
+  - 'logger/**'
+  - 'go.mod'
+  - 'go.sum'
+
+logs:
+  - 'plugins/inputs/logfile/**'
+  - 'plugins/outputs/cloudwatchlogs/**'
+  - 'logs/**'
+
+metrics:
+  - 'plugins/inputs/prometheus/**'
+  - 'plugins/inputs/statsd/**'
+  - 'plugins/inputs/nvidia_smi/**'
+  - 'plugins/outputs/cloudwatch/**'
+  - 'metric/**'
+  - 'profiler/**'
+
+windows:
+  - 'plugins/inputs/windows_event_log/**'
+  - 'plugins/inputs/win_perf_counters/**'
+  - 'packaging/windows/**'
+  - 'msi/**'
+
+container_insights:
+  - 'receiver/adapter/**'
+  - 'amazon-cloudwatch-container-insights/**'
+  - 'processor/k8sdecorator/**'
+  - 'processor/ecsdecorator/**'
+
+eks:
+  - 'processor/k8sdecorator/**'
+  - 'processor/kueueattributes/**'
+  - 'amazon-cloudwatch-container-insights/**'
+
+app_signals:
+  - 'processor/awsapplicationsignals/**'
+
+gpu:
+  - 'plugins/inputs/nvidia_smi/**'
+  - 'processor/awsneuron/**'
+  - 'processor/gpuattributes/**'
+  - 'receiver/awsnvmereceiver/**'
+
+build_infra:
+  - 'Makefile'
+  - 'Dockerfile*'
+  - 'packaging/**'
+  - 'CWAGENT_VERSION'
+
+ci_workflows:
+  - '.github/workflows/**'

@@ -98,6 +98,95 @@ jobs:
           fi
           echo "should_skip=false" >> "$GITHUB_OUTPUT"
 
+  DetectChanges:
+    # Classify changed files into component categories for selective test execution.
+    # On schedule/workflow_dispatch/workflow_call, all outputs default to 'true' (run everything).
+    # On push, uses dorny/paths-filter to detect which components changed.
+    # If 'core' changed, all tests run as a safe fallback.
+    runs-on: ubuntu-latest
+    outputs:
+      run_all: ${{ steps.set-flags.outputs.run_all }}
+      run_windows: ${{ steps.set-flags.outputs.run_windows }}
+      run_mac: ${{ steps.set-flags.outputs.run_mac }}
+      run_eks: ${{ steps.set-flags.outputs.run_eks }}
+      run_ecs: ${{ steps.set-flags.outputs.run_ecs }}
+      run_app_signals: ${{ steps.set-flags.outputs.run_app_signals }}
+      run_gpu: ${{ steps.set-flags.outputs.run_gpu }}
+      run_performance: ${{ steps.set-flags.outputs.run_performance }}
+      run_stress: ${{ steps.set-flags.outputs.run_stress }}
+    steps:
+      - uses: actions/checkout@v3
+        if: github.event_name == 'push'
+      - name: Detect changed components
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/config/component-filters.yml
+      - name: Set test scope flags
+        id: set-flags
+        run: |
+          # Default: run everything (schedule, workflow_dispatch, workflow_call, or filter failure)
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "Non-push trigger — running all tests"
+            for flag in run_all run_windows run_mac run_eks run_ecs run_app_signals run_gpu run_performance run_stress; do
+              echo "${flag}=true" >> "$GITHUB_OUTPUT"
+            done
+            exit 0
+          fi
+
+          # Core changes → run everything
+          CORE="${{ steps.filter.outputs.core }}"
+          BUILD_INFRA="${{ steps.filter.outputs.build_infra }}"
+          CI_WORKFLOWS="${{ steps.filter.outputs.ci_workflows }}"
+
+          if [ "$CORE" = "true" ] || [ "$BUILD_INFRA" = "true" ] || [ "$CI_WORKFLOWS" = "true" ]; then
+            echo "Core/build/CI change detected — running all tests"
+            for flag in run_all run_windows run_mac run_eks run_ecs run_app_signals run_gpu run_performance run_stress; do
+              echo "${flag}=true" >> "$GITHUB_OUTPUT"
+            done
+            exit 0
+          fi
+
+          # Selective: only run tests for changed components
+          echo "run_all=false" >> "$GITHUB_OUTPUT"
+
+          WINDOWS="${{ steps.filter.outputs.windows }}"
+          METRICS="${{ steps.filter.outputs.metrics }}"
+          LOGS="${{ steps.filter.outputs.logs }}"
+          CONTAINER_INSIGHTS="${{ steps.filter.outputs.container_insights }}"
+          EKS="${{ steps.filter.outputs.eks }}"
+          APP_SIGNALS="${{ steps.filter.outputs.app_signals }}"
+          GPU="${{ steps.filter.outputs.gpu }}"
+
+          # Windows tests: only if windows-specific or metrics code changed
+          echo "run_windows=${{ steps.filter.outputs.windows == 'true' || steps.filter.outputs.metrics == 'true' }}" >> "$GITHUB_OUTPUT"
+
+          # Mac tests: only if metrics code changed (mac tests are metric-focused)
+          echo "run_mac=${{ steps.filter.outputs.metrics == 'true' }}" >> "$GITHUB_OUTPUT"
+
+          # EKS tests: container insights, EKS-specific, or metrics changes
+          echo "run_eks=${{ steps.filter.outputs.eks == 'true' || steps.filter.outputs.container_insights == 'true' || steps.filter.outputs.metrics == 'true' }}" >> "$GITHUB_OUTPUT"
+
+          # ECS tests: container insights or metrics changes
+          echo "run_ecs=${{ steps.filter.outputs.container_insights == 'true' || steps.filter.outputs.metrics == 'true' }}" >> "$GITHUB_OUTPUT"
+
+          # App Signals E2E: only if app_signals code changed
+          echo "run_app_signals=${{ steps.filter.outputs.app_signals == 'true' }}" >> "$GITHUB_OUTPUT"
+
+          # GPU tests: only if GPU-related code changed
+          echo "run_gpu=${{ steps.filter.outputs.gpu == 'true' }}" >> "$GITHUB_OUTPUT"
+
+          # Performance/stress: run if any functional code changed (logs, metrics, container_insights)
+          HAS_FUNCTIONAL="${{ steps.filter.outputs.logs == 'true' || steps.filter.outputs.metrics == 'true' || steps.filter.outputs.container_insights == 'true' }}"
+          echo "run_performance=${HAS_FUNCTIONAL}" >> "$GITHUB_OUTPUT"
+          echo "run_stress=${HAS_FUNCTIONAL}" >> "$GITHUB_OUTPUT"
+
+          echo "=== Selective test execution summary ==="
+          echo "  windows=$WINDOWS metrics=$METRICS logs=$LOGS"
+          echo "  container_insights=$CONTAINER_INSIGHTS eks=$EKS"
+          echo "  app_signals=$APP_SIGNALS gpu=$GPU"
+
   BuildAndUpload:
     needs: [CheckRecentRun]
     if: needs.CheckRecentRun.outputs.should_skip != 'true'
@@ -182,20 +271,41 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   StartIntegrationTests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor, DetectChanges ]
     if: ${{ github.event_name == 'push' || inputs.run-tests }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
     steps:
-      - run: gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
+      - name: Trigger integration tests with change scope
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ALL: ${{ needs.DetectChanges.outputs.run_all }}
+          RUN_WINDOWS: ${{ needs.DetectChanges.outputs.run_windows }}
+          RUN_MAC: ${{ needs.DetectChanges.outputs.run_mac }}
+          RUN_EKS: ${{ needs.DetectChanges.outputs.run_eks }}
+          RUN_ECS: ${{ needs.DetectChanges.outputs.run_ecs }}
+          RUN_GPU: ${{ needs.DetectChanges.outputs.run_gpu }}
+          RUN_PERFORMANCE: ${{ needs.DetectChanges.outputs.run_performance }}
+          RUN_STRESS: ${{ needs.DetectChanges.outputs.run_stress }}
+        run: |
+          ARGS="-f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}"
+          # Only pass skip flags when not running all tests
+          if [ "$RUN_ALL" != "true" ]; then
+            [ "$RUN_WINDOWS" != "true" ] && ARGS="$ARGS -f skip_windows=true"
+            [ "$RUN_MAC" != "true" ] && ARGS="$ARGS -f skip_mac=true"
+            [ "$RUN_EKS" != "true" ] && ARGS="$ARGS -f skip_eks=true"
+            [ "$RUN_ECS" != "true" ] && ARGS="$ARGS -f skip_ecs=true"
+            [ "$RUN_GPU" != "true" ] && ARGS="$ARGS -f skip_gpu=true"
+            [ "$RUN_PERFORMANCE" != "true" ] && ARGS="$ARGS -f skip_performance=true"
+            [ "$RUN_STRESS" != "true" ] && ARGS="$ARGS -f skip_stress=true"
+          fi
+          gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY $ARGS
 
   StartApplicationSignalsE2ETests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    # Workflow only runs against main
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor, DetectChanges ]
+    # Only run if app_signals code changed or running all tests
+    if: ${{ (github.event_name == 'push' || inputs.run-tests) && (needs.DetectChanges.outputs.run_all == 'true' || needs.DetectChanges.outputs.run_app_signals == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -205,8 +315,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartEKSE2ETests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor, DetectChanges ]
+    # Only run if EKS-related code changed or running all tests
+    if: ${{ (github.event_name == 'push' || inputs.run-tests) && (needs.DetectChanges.outputs.run_all == 'true' || needs.DetectChanges.outputs.run_eks == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
