@@ -3,7 +3,7 @@
 
 name: Test Release Candidate
 env:
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "optimize/reduce-integration-test-sleeps"
 
 on:
   workflow_dispatch:
