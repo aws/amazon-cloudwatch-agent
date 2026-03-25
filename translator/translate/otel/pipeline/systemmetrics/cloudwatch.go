@@ -19,11 +19,12 @@ import (
 const systemMetricsNamespace = "CWAgent/System"
 
 type cloudWatchTranslator struct {
-	factory exporter.Factory
+	factory       exporter.Factory
+	imdsAvailable bool
 }
 
-func newCloudWatchTranslator() common.ComponentTranslator {
-	return &cloudWatchTranslator{factory: cloudwatch.NewFactory()}
+func newCloudWatchTranslator(imdsAvailable bool) common.ComponentTranslator {
+	return &cloudWatchTranslator{factory: cloudwatch.NewFactory(), imdsAvailable: imdsAvailable}
 }
 
 func (t *cloudWatchTranslator) ID() component.ID {
@@ -37,7 +38,11 @@ func (t *cloudWatchTranslator) Translate(_ *confmap.Conf) (component.Config, err
 
 	cfg.Region = agent.Global_Config.Region
 	cfg.Namespace = systemMetricsNamespace
-	cfg.RollupDimensions = [][]string{{"InstanceId"}, {}}
+	if t.imdsAvailable {
+		cfg.RollupDimensions = [][]string{{"InstanceId"}, {}}
+	} else {
+		cfg.RollupDimensions = [][]string{{}}
+	}
 	cfg.MiddlewareID = &agenthealth.MetricsID
 	cfg.MaxRetryCount = 2
 	cfg.BackoffRetryBase = time.Minute

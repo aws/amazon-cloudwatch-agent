@@ -34,17 +34,20 @@ func TestTranslator(t *testing.T) {
 		runInContainer bool
 		kubernetes     bool
 		envEnabled     string // "true", "false", or "" (not set)
+		imdsAvailable  bool
 		want           *want
 		wantErr        error
 	}{
 		"WithEnvDisabled": {
-			input:      map[string]interface{}{},
-			envEnabled: "false",
-			wantErr:    &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
+			input:         map[string]interface{}{},
+			envEnabled:    "false",
+			imdsAvailable: true,
+			wantErr:       &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
 		},
 		"WithEnvEnabled": {
-			input:      map[string]interface{}{},
-			envEnabled: "true",
+			input:         map[string]interface{}{},
+			envEnabled:    "true",
+			imdsAvailable: true,
 			want: &want{
 				receivers:  []string{"systemmetrics"},
 				processors: []string{"ec2tagger/systemmetrics", "batch/systemmetrics"},
@@ -56,6 +59,7 @@ func TestTranslator(t *testing.T) {
 			input:          map[string]interface{}{},
 			envEnabled:     "true",
 			runInContainer: true,
+			imdsAvailable:  true,
 			want: &want{
 				receivers:  []string{"systemmetrics"},
 				processors: []string{"ec2tagger/systemmetrics", "batch/systemmetrics"},
@@ -69,7 +73,8 @@ func TestTranslator(t *testing.T) {
 					"system_metrics_enabled": false,
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
+			imdsAvailable: true,
+			wantErr:       &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
 		},
 		"WithJsonEnabled": {
 			input: map[string]interface{}{
@@ -77,6 +82,7 @@ func TestTranslator(t *testing.T) {
 					"system_metrics_enabled": true,
 				},
 			},
+			imdsAvailable: true,
 			want: &want{
 				receivers:  []string{"systemmetrics"},
 				processors: []string{"ec2tagger/systemmetrics", "batch/systemmetrics"},
@@ -87,12 +93,28 @@ func TestTranslator(t *testing.T) {
 		"WithRunInContainer": {
 			input:          map[string]interface{}{},
 			runInContainer: true,
+			imdsAvailable:  true,
 			wantErr:        &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
 		},
 		"WithKubernetes": {
-			input:      map[string]interface{}{},
-			kubernetes: true,
-			wantErr:    &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
+			input:         map[string]interface{}{},
+			kubernetes:    true,
+			imdsAvailable: true,
+			wantErr:       &common.MissingKeyError{ID: tt.ID(), JsonKey: common.SystemMetricsEnabledConfigKey},
+		},
+		"WithIMDSUnavailable": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"system_metrics_enabled": true,
+				},
+			},
+			imdsAvailable: false,
+			want: &want{
+				receivers:  []string{"systemmetrics"},
+				processors: []string{"batch/systemmetrics"},
+				exporters:  []string{"awscloudwatch/systemmetrics"},
+				extensions: []string{"agenthealth/metrics"},
+			},
 		},
 		// TODO: add WithUnrecognizedHost once host detection paths (/apollo, /etc/image-id,
 		// /etc/os-release) are injectable, so the test doesn't depend on the environment it runs in.
@@ -101,6 +123,11 @@ func TestTranslator(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			context.ResetContext()
+			orig := IsIMDSAvailable
+			imds := tc.imdsAvailable
+			IsIMDSAvailable = func() bool { return imds }
+			t.Cleanup(func() { IsIMDSAvailable = orig })
+
 			if tc.envEnabled != "" {
 				t.Setenv(envconfig.SystemMetricsEnabled, tc.envEnabled)
 			}
