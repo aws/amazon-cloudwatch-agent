@@ -3,7 +3,7 @@
 
 name: Test Release Candidate
 env:
-  CWA_GITHUB_TEST_REPO_BRANCH: "ci/adaptive-validator-polling"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
   workflow_dispatch:
