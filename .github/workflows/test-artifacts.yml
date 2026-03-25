@@ -40,6 +40,35 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
         type: string
         required: false
+      # Path-based test selection: skip flags from DetectChanges in build-test-artifacts.yml
+      skip_windows:
+        description: 'Skip Windows tests'
+        type: boolean
+        default: false
+      skip_mac:
+        description: 'Skip macOS tests'
+        type: boolean
+        default: false
+      skip_eks:
+        description: 'Skip EKS tests'
+        type: boolean
+        default: false
+      skip_ecs:
+        description: 'Skip ECS tests'
+        type: boolean
+        default: false
+      skip_gpu:
+        description: 'Skip GPU tests'
+        type: boolean
+        default: false
+      skip_performance:
+        description: 'Skip performance tests'
+        type: boolean
+        default: false
+      skip_stress:
+        description: 'Skip stress tests'
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       build_id:
@@ -57,6 +86,27 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
         type: string
         required: false
+      skip_windows:
+        type: boolean
+        default: false
+      skip_mac:
+        type: boolean
+        default: false
+      skip_eks:
+        type: boolean
+        default: false
+      skip_ecs:
+        type: boolean
+        default: false
+      skip_gpu:
+        type: boolean
+        default: false
+      skip_performance:
+        type: boolean
+        default: false
+      skip_stress:
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.build_id }}
@@ -232,10 +282,25 @@ jobs:
         run: |
           # GitHub Actions matrix limit is 256 jobs per workflow run.
           # Use 200 per page for headroom. Up to 5 pages supported (1000 tests).
+          #
+          # Duration-aware bin-packing: distribute tests across pages so that
+          # each page has roughly equal total estimated duration, avoiding the
+          # 10x spread that occurs with naive sequential slicing.
+          #
+          # Estimated durations (minutes) are based on real GitHub Actions
+          # timing data from production runs. Tests are assigned to the page
+          # with the lowest accumulated duration (greedy bin-packing).
           PAGE_SIZE=200
           FULL_MATRIX='${{ steps.set-matrix.outputs.ec2_linux_matrix }}'
           TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
-          PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
+          # Use up to 5 pages. When there are enough tests (>=100), always
+          # use 5 pages so the bin-packer can spread long-running tests
+          # evenly and reduce the max wall-clock per page.
+          if [ "$TOTAL" -ge 100 ]; then
+            PAGE_COUNT=5
+          else
+            PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
+          fi
 
           if [ "$PAGE_COUNT" -gt 5 ]; then
             echo "::error::ec2_linux_matrix has $TOTAL entries requiring $PAGE_COUNT pages, but only 5 are supported. Add more static page slots."
@@ -245,12 +310,97 @@ jobs:
           echo "ec2_linux total=$TOTAL pages=$PAGE_COUNT"
           echo "ec2_linux_matrix_page_count=${PAGE_COUNT}" >> "$GITHUB_OUTPUT"
 
-          for (( i=0; i<PAGE_COUNT; i++ )); do
-            START=$(( i * PAGE_SIZE ))
-            PAGE=$(echo "$FULL_MATRIX" | jq -c ".[$START:$START+$PAGE_SIZE]")
-            echo "ec2_linux_matrix_${i}=${PAGE}" >> "$GITHUB_OUTPUT"
-            echo "  page $i: $(echo "$PAGE" | jq 'length') entries"
-          done
+          # Assign estimated duration (minutes) per test based on test_dir.
+          # Durations from real GitHub Actions API timing data (phase1).
+          # Greedy bin-packing: sort descending by duration, assign each test
+          # to the page with the lowest current total.
+          python3 -c "
+          import json, sys
+
+          matrix = json.loads(sys.argv[1])
+          page_count = int(sys.argv[2])
+          page_size = int(sys.argv[3])
+
+          # Estimated durations (min) by test_dir substring, from production data.
+          # Longer/more specific patterns checked first.
+          DURATION_MAP = [
+              ('entity_metrics_benchmark', 65),
+              ('metric_value_benchmark', 40),
+              ('cloudwatchlogs', 35),
+              ('feature', 30),
+              ('otlp', 28),
+              ('app_signals', 28),
+              ('emf', 25),
+              ('statsd', 22),
+              ('collectd', 22),
+              ('prometheus', 22),
+              ('fluent', 22),
+              ('xray', 20),
+              ('assume_role', 18),
+              ('credentials', 18),
+              ('proxy', 18),
+              ('ssl_cert', 18),
+              ('ca_bundle', 18),
+              ('fips', 18),
+              ('run_as_user', 15),
+              ('userdata', 15),
+              ('procstat', 15),
+              ('lvm', 12),
+              ('nvme', 12),
+              ('ethtool', 12),
+              ('disk', 12),
+              ('cpu', 10),
+              ('mem', 10),
+              ('net', 10),
+              ('swap', 10),
+              ('processes', 10),
+          ]
+          DEFAULT_DURATION = 18  # average EC2 Linux job
+
+          def estimate(test):
+              td = test.get('test_dir', '')
+              for pattern, dur in DURATION_MAP:
+                  if pattern in td:
+                      return dur
+              return DEFAULT_DURATION
+
+          # Annotate with estimated duration
+          for t in matrix:
+              t['_est_dur'] = estimate(t)
+
+          # Sort descending by duration for greedy bin-packing
+          matrix.sort(key=lambda t: -t['_est_dur'])
+
+          # Initialize pages
+          pages = [[] for _ in range(page_count)]
+          page_totals = [0.0] * page_count
+
+          for t in matrix:
+              # Find page with lowest total that still has room
+              best = None
+              for i in range(page_count):
+                  if len(pages[i]) < page_size:
+                      if best is None or page_totals[i] < page_totals[best]:
+                          best = i
+              if best is None:
+                  print('::error::All pages full, cannot place test', file=sys.stderr)
+                  sys.exit(1)
+              pages[best].append(t)
+              page_totals[best] += t['_est_dur']
+
+          # Remove internal annotation and output
+          for i, page in enumerate(pages):
+              for t in page:
+                  del t['_est_dur']
+              print(f'  page {i}: {len(page)} entries, est {page_totals[i]:.0f} min')
+
+          # Write outputs
+          import os
+          out = os.environ.get('GITHUB_OUTPUT', '/dev/null')
+          with open(out, 'a') as f:
+              for i in range(page_count):
+                  f.write(f'ec2_linux_matrix_{i}={json.dumps(pages[i], separators=(\",\",\":\"))}\n')
+          " "$FULL_MATRIX" "$PAGE_COUNT" "$PAGE_SIZE"
 
       - name: Echo test plan matrix
         run: |
@@ -389,6 +539,7 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
   EC2NvidiaGPUIntegrationTest:
+    if: ${{ inputs.skip_gpu != true }}
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -728,6 +879,7 @@ jobs:
       is_selinux_test: true
 
   EC2WinIntegrationTest:
+    if: ${{ inputs.skip_windows != true }}
     needs: [OutputEnvVariables, GenerateTestMatrix]
     name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -828,6 +980,7 @@ jobs:
             fi
             terraform destroy --auto-approve
   EC2DarwinIntegrationTest:
+    if: ${{ inputs.skip_mac != true }}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -979,6 +1132,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
+    if: ${{ inputs.skip_ecs != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1057,6 +1211,7 @@ jobs:
             terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
+    if: ${{ inputs.skip_ecs != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1147,6 +1302,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSIntegrationTest:
+    if: ${{ inputs.skip_eks != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1240,6 +1396,7 @@ jobs:
             terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
+    if: ${{ inputs.skip_eks != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1330,6 +1487,7 @@ jobs:
             terraform destroy --auto-approve
 
   PerformanceTrackingTest:
+    if: ${{ inputs.skip_performance != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1416,6 +1574,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   EC2WinPerformanceTest:
+    if: ${{ inputs.skip_windows != true && inputs.skip_performance != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1502,6 +1661,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   StressTrackingTest:
+    if: ${{ inputs.skip_stress != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1589,6 +1749,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   EC2WinStressTrackingTest:
+    if: ${{ inputs.skip_windows != true && inputs.skip_stress != true }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     runs-on: ubuntu-latest
@@ -1677,6 +1838,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   GPUEndToEndTest:
+    if: ${{ inputs.skip_gpu != true }}
     name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
