@@ -317,9 +317,9 @@ jobs:
           python3 -c "
           import json, sys
 
-          matrix = json.loads(sys.argv[1])
-          page_count = int(sys.argv[2])
-          page_size = int(sys.argv[3])
+          matrix = json.load(sys.stdin)
+          page_count = int(sys.argv[1])
+          page_size = int(sys.argv[2])
 
           # Estimated durations (min) by test_dir substring, from production data.
           # Longer/more specific patterns checked first.
@@ -400,7 +400,7 @@ jobs:
           with open(out, 'a') as f:
               for i in range(page_count):
                   f.write(f'ec2_linux_matrix_{i}={json.dumps(pages[i], separators=(\",\",\":\"))}\n')
-          " "$FULL_MATRIX" "$PAGE_COUNT" "$PAGE_SIZE"
+          " "$PAGE_COUNT" "$PAGE_SIZE" <<< "$FULL_MATRIX"
 
       - name: Echo test plan matrix
         run: |
