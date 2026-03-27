@@ -16,7 +16,7 @@ import (
 )
 
 func TestCloudWatchTranslator(t *testing.T) {
-	tt := newCloudWatchTranslator()
+	tt := newCloudWatchTranslator(true)
 	assert.Equal(t, "awscloudwatch/"+common.PipelineNameSystemMetrics, tt.ID().String())
 
 	got, err := tt.Translate(nil)
@@ -29,4 +29,14 @@ func TestCloudWatchTranslator(t *testing.T) {
 	assert.Equal(t, 2, cfg.MaxRetryCount)
 	assert.Equal(t, time.Minute, cfg.BackoffRetryBase)
 	assert.Equal(t, 1, cfg.MaxConcurrentPublishers)
+}
+
+func TestCloudWatchTranslatorNotEC2(t *testing.T) {
+	tt := newCloudWatchTranslator(false)
+
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+	cfg, ok := got.(*cloudwatch.Config)
+	require.True(t, ok)
+	assert.Equal(t, [][]string{{}}, cfg.RollupDimensions)
 }
