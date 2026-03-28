@@ -421,8 +421,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -760,8 +758,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -856,8 +852,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1008,8 +1002,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1086,8 +1078,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1176,8 +1166,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1269,8 +1257,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1359,8 +1345,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1445,8 +1429,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1531,8 +1513,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1618,8 +1598,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1706,8 +1684,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
