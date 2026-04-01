@@ -1,4 +1,15 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300066.0 (2026-03-25)
+========================================================================
+Features:
+* [OTLP] Support for configuring otlphttp exporter to publish to AWS OTLP endpoint using YAML
+* [ContainerInsights] Add support for publication to AWS OTLP endpoint using YAML
+
+Enhancements:
+* [Agent] Bump Go 1.25.8 and grpc v1.79.3 with dependency updates
+* [Agent] Remove ec2tagger from system-metrics pipeline if IMDS is not accessible
+
+========================================================================
 Amazon CloudWatch Agent 1.300065.0 (2026-03-17)
 ========================================================================
 Features:
