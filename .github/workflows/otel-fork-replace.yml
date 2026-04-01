@@ -29,11 +29,11 @@ jobs:
             echo "sha=${{ inputs.CommitSha }}" >> $GITHUB_OUTPUT
           fi
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.7
+          go-version: ~1.25.8
           cache: false
       - name: Update OTel fork components version
         id: set-matrix
@@ -78,7 +78,7 @@ jobs:
           git config --global --unset user.name
           git config --global --unset user.email
       - name: Create pull request
-        uses: repo-sync/pull-request@v2
+        uses: repo-sync/pull-request@7e79a9f5dc3ad0ce53138f01df2fad14a04831c5 # v2.12.1
         with:
           source_branch: otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
           destination_branch: main
