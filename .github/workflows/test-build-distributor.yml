@@ -82,7 +82,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -135,7 +135,7 @@ jobs:
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -195,7 +195,7 @@ jobs:
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -250,7 +250,7 @@ jobs:
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
@@ -304,7 +304,7 @@ jobs:
           path: ${{ env.CHECKOUT_ROOT_DIR }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
           aws-region: ${{ inputs.Region }}
