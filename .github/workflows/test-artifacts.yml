@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: Test Artifacts
+permissions:
+  id-token: write
+  contents: read
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
