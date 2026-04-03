@@ -134,7 +134,7 @@ func TestLeaseWriterRenewalUpdatesRenewTime(t *testing.T) {
 		context.Background(), lw.leaseName(), metav1.GetOptions{},
 	)
 	require.NoError(t, err)
-	assert.True(t, updated.Spec.RenewTime.Time.After(initialRenewTime),
+	assert.True(t, updated.Spec.RenewTime.After(initialRenewTime),
 		"renewTime should advance after renewal")
 }
 
@@ -249,4 +249,3 @@ func TestLeaseWriterDefaultValues(t *testing.T) {
 	assert.Equal(t, 30*time.Second, lw.jitterMax)
 	assert.NotNil(t, lw.done)
 }
-

@@ -17,7 +17,8 @@ Key patterns:
 Stores entity metadata (EC2 instance info, EKS pod-service mappings) for use by other components. Acts as a shared state store within the agent process.
 
 Key patterns:
-- `EC2Info` — Fetches and caches instance ID and account ID from EC2 metadata.
+- `EC2Info` — Fetches and caches EC2 metadata from IMDS: instance ID, account ID, instance type, image ID, availability zone, and hostname. All fields populated from a single `MetadataProvider.Get()` call plus `Hostname()`.
+- `LeaseWriter` — On EKS DaemonSet agents, creates and renews a Kubernetes Lease (`cwagent-node-metadata-<nodename>`) in the agent's namespace containing IMDS-resolved host metadata as annotations. The cluster-scraper's `nodemetadatacache` extension watches these Leases to enrich KSM metrics with correct per-node `host.*` attributes. Renewal every 1 hour, TTL 2 hours. Handles "already exists" on startup (adopts existing Lease) and "not found" during renewal (re-creates). Gated by `mode == EC2 && kubernetesMode != ""`.
 - `eksInfo` — Maintains a TTL cache mapping pod names to service/environment names for Application Signals.
 - Singleton pattern via `GetEntityStore()` — other components access the shared instance.
 
@@ -42,6 +43,16 @@ Key patterns:
 - Singleton pattern via `GetKubernetesMetadata()`.
 - Includes jitter on startup to avoid thundering herd when all DaemonSet pods start simultaneously.
 - Delayed deletion: 2 minutes — don't assume metadata disappears immediately when pods terminate.
+
+### nodemetadatacache/
+Watches Kubernetes Leases in the agent namespace and maintains an in-memory cache of per-node host metadata (host.id, host.name, host.type, host.image.id, cloud.availability_zone). Used by the `nodemetadataenricher` processor to enrich KSM metrics with correct per-node attributes.
+
+Key patterns:
+- Singleton pattern via `GetNodeMetadataCache()`.
+- Uses a Kubernetes informer (not polling) with 5-minute resync period.
+- Staleness check: `Get()` returns nil if `renewTime + leaseDuration < now`.
+- Graceful degradation: returns nil from `Start()` on K8s config failure — cache stays empty, enricher passes metrics through unchanged.
+- Only runs on the cluster-scraper (Deployment), not the DaemonSet agents.
 
 ### server/
 HTTP server extension for the agent (health endpoints, debug endpoints).

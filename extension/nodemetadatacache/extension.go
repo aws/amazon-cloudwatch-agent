@@ -22,7 +22,7 @@ import (
 const (
 	leasePrefix = "cwagent-node-metadata-"
 
-	annotationHostID = "cwagent.amazonaws.com/host.id"
+	annotationHostID   = "cwagent.amazonaws.com/host.id"
 	annotationHostName = "cwagent.amazonaws.com/host.name"
 	annotationHostType = "cwagent.amazonaws.com/host.type"
 	annotationImageID  = "cwagent.amazonaws.com/host.image.id"

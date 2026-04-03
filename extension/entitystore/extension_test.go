@@ -717,7 +717,7 @@ func assertIfNonEmpty(t *testing.T, message string, pattern string) {
 func TestStartLeaseWriter_MissingNodeName(t *testing.T) {
 	origGetEnv := getEnv
 	defer func() { getEnv = origGetEnv }()
-	getEnv = func(key string) string { return "" }
+	getEnv = func(_ string) string { return "" }
 
 	logger, _ := zap.NewDevelopment()
 	e := &EntityStore{logger: logger}

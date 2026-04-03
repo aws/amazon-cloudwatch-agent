@@ -161,7 +161,7 @@ func TestSkipsLeaseWithMissingAnnotations(t *testing.T) {
 	assert.Empty(t, c.cache, "Cache should be empty when Lease has missing annotations")
 }
 
-func TestConcurrentReadWrite(t *testing.T) {
+func TestConcurrentReadWrite(_ *testing.T) {
 	c := newTestCache()
 	var wg sync.WaitGroup
 	const goroutines = 50
@@ -170,13 +170,13 @@ func TestConcurrentReadWrite(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		wg.Add(1)
 		if i%2 == 0 {
-			go func(idx int) {
+			go func(_ int) {
 				defer wg.Done()
 				lease := testLease("node-1", time.Now(), 300)
 				c.handleLeaseEvent(lease)
 			}(i)
 		} else {
-			go func(idx int) {
+			go func(_ int) {
 				defer wg.Done()
 				_ = c.Get("node-1")
 			}(i)

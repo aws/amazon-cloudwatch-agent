@@ -304,7 +304,7 @@ func (e *EntityStore) startLeaseWriter() {
 
 var (
 	// Package-level vars for testability.
-	getEnv      = os.Getenv
+	getEnv       = os.Getenv
 	getK8sConfig = rest.InClusterConfig
 
 	getMetaDataProvider = func() ec2metadataprovider.MetadataProvider {

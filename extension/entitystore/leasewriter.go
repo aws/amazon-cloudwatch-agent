@@ -17,17 +17,17 @@ import (
 )
 
 const (
-	leasePrefix          = "cwagent-node-metadata-"
-	annotationHostID     = "cwagent.amazonaws.com/host.id"
-	annotationHostName   = "cwagent.amazonaws.com/host.name"
-	annotationHostType   = "cwagent.amazonaws.com/host.type"
-	annotationImageID    = "cwagent.amazonaws.com/host.image.id"
-	annotationAZ         = "cwagent.amazonaws.com/cloud.availability_zone"
-	defaultLeaseDuration    = int32(7200)  // 2 hours
-	defaultRenewInterval   = 1 * time.Hour
-	leaseJitterMax         = 30 * time.Second
-	leaseBackoffInitial    = 1 * time.Second
-	leaseBackoffMax        = 30 * time.Second
+	leasePrefix              = "cwagent-node-metadata-"
+	annotationHostID         = "cwagent.amazonaws.com/host.id"
+	annotationHostName       = "cwagent.amazonaws.com/host.name"
+	annotationHostType       = "cwagent.amazonaws.com/host.type"
+	annotationImageID        = "cwagent.amazonaws.com/host.image.id"
+	annotationAZ             = "cwagent.amazonaws.com/cloud.availability_zone"
+	defaultLeaseDuration     = int32(7200) // 2 hours
+	defaultRenewInterval     = 1 * time.Hour
+	leaseJitterMax           = 30 * time.Second
+	leaseBackoffInitial      = 1 * time.Second
+	leaseBackoffMax          = 30 * time.Second
 	leaseEC2InfoPollInterval = 5 * time.Second
 )
 

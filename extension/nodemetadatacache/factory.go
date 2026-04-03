@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	TypeStr, _         = component.NewType("nodemetadatacache")
-	nodeMetadataCache  *NodeMetadataCache
-	mutex              sync.RWMutex
+	TypeStr, _        = component.NewType("nodemetadatacache")
+	nodeMetadataCache *NodeMetadataCache
+	mutex             sync.RWMutex
 )
 
 // GetNodeMetadataCache returns the singleton NodeMetadataCache instance,

@@ -16,7 +16,7 @@ Two categories of blank imports:
 
 - `inputs/` — `logfile`, `nvidia_smi`, `prometheus`, `statsd`, `win_perf_counters` (Windows-only), `windows_event_log` (Windows-only)
 - `outputs/` — `cloudwatch` (metrics), `cloudwatchlogs` (logs)
-- `processors/` — `ec2tagger`, `k8sdecorator`, `ecsdecorator`, `gpuattributes`, `awsneuron`, `awsapplicationsignals`, `awsentity`, `kueueattributes`
+- `processors/` — `ec2tagger`, `k8sdecorator`, `ecsdecorator`, `gpuattributes`, `awsneuron`, `awsapplicationsignals`, `awsentity`, `kueueattributes`, `nodemetadataenricher`
 
 ## Key Patterns
 
