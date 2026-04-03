@@ -25,8 +25,12 @@ const (
 )
 
 type EC2Info struct {
-	InstanceID string
-	AccountID  string
+	InstanceID       string
+	AccountID        string
+	InstanceType     string
+	ImageID          string
+	AvailabilityZone string
+	Hostname         string
 
 	// region is used while making call to describeTags Ec2 API for AutoScalingGroup
 	Region string
@@ -42,7 +46,7 @@ func (ei *EC2Info) initEc2Info() {
 		return
 	}
 	ei.logger.Debug("Initializing EC2Info")
-	if err := ei.setInstanceIDAccountID(); err != nil {
+	if err := ei.setEC2Metadata(); err != nil {
 		return
 	}
 	ei.logger.Debug("Finished initializing EC2Info")
@@ -60,11 +64,35 @@ func (ei *EC2Info) GetAccountID() string {
 	return ei.AccountID
 }
 
-func (ei *EC2Info) setInstanceIDAccountID() error {
+func (ei *EC2Info) GetInstanceType() string {
+	ei.mutex.RLock()
+	defer ei.mutex.RUnlock()
+	return ei.InstanceType
+}
+
+func (ei *EC2Info) GetImageID() string {
+	ei.mutex.RLock()
+	defer ei.mutex.RUnlock()
+	return ei.ImageID
+}
+
+func (ei *EC2Info) GetAvailabilityZone() string {
+	ei.mutex.RLock()
+	defer ei.mutex.RUnlock()
+	return ei.AvailabilityZone
+}
+
+func (ei *EC2Info) GetHostname() string {
+	ei.mutex.RLock()
+	defer ei.mutex.RUnlock()
+	return ei.Hostname
+}
+
+func (ei *EC2Info) setEC2Metadata() error {
 	for {
 		metadataDoc, err := ei.metadataProvider.Get(context.Background())
 		if err != nil {
-			ei.logger.Debug("Failed to get Instance ID / Account ID through metadata provider", zap.Error(err))
+			ei.logger.Debug("Failed to get EC2 metadata through metadata provider", zap.Error(err))
 			wait := time.NewTimer(1 * time.Minute)
 			select {
 			case <-ei.done:
@@ -74,7 +102,13 @@ func (ei *EC2Info) setInstanceIDAccountID() error {
 				continue
 			}
 		}
-		ei.logger.Debug("Successfully retrieved Instance ID and Account ID")
+		ei.logger.Debug("Successfully retrieved EC2 metadata")
+
+		hostname, err := ei.metadataProvider.Hostname(context.Background())
+		if err != nil {
+			ei.logger.Warn("Failed to get hostname from metadata provider, proceeding without it", zap.Error(err))
+		}
+
 		ei.mutex.Lock()
 		ei.InstanceID = metadataDoc.InstanceID
 		if idLength := len(ei.InstanceID); idLength > instanceIdSizeMax {
@@ -82,6 +116,10 @@ func (ei *EC2Info) setInstanceIDAccountID() error {
 			ei.InstanceID = ""
 		}
 		ei.AccountID = metadataDoc.AccountID
+		ei.InstanceType = metadataDoc.InstanceType
+		ei.ImageID = metadataDoc.ImageID
+		ei.AvailabilityZone = metadataDoc.AvailabilityZone
+		ei.Hostname = hostname
 		ei.mutex.Unlock()
 		return nil
 	}
