@@ -370,6 +370,9 @@ func (c *CloudWatch) backoffSleep() {
 	if !c.config.DowngradeErrors {
 		log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
 			c.retries, d.Milliseconds())
+	} else {
+		log.Printf("I! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+			c.retries, d.Milliseconds())
 	}
 	c.retries++
 	time.Sleep(d)
