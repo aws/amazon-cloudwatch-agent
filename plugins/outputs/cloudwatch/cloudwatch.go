@@ -423,7 +423,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 				continue
 
 			default:
-				log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+				if !c.config.DowngradeErrors {
+					log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+				} else {
+					log.Printf("I! cloudwatch: PutMetricData unsuccessful")
+				}
 				c.backoffSleep()
 			}
 		} else {
@@ -432,7 +436,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		break
 	}
 	if err != nil {
-		log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
+		if !c.config.DowngradeErrors {
+			log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
+		} else {
+			log.Println("I! cloudwatch: WriteToCloudWatch unsuccessful, batch dropped")
+		}
 	}
 }
 

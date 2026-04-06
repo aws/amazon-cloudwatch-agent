@@ -47,6 +47,7 @@ func (t *cloudWatchTranslator) Translate(_ *confmap.Conf) (component.Config, err
 	cfg.MaxRetryCount = 2
 	cfg.BackoffRetryBase = time.Minute
 	cfg.MaxConcurrentPublishers = 1
+	cfg.DowngradeErrors = true
 
 	return cfg, nil
 }
