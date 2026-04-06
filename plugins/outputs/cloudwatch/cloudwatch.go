@@ -367,8 +367,10 @@ func (c *CloudWatch) backoffSleep() {
 		d = c.config.BackoffRetryBase * time.Duration(1<<c.retries)
 	}
 	d = (d / 2) + publishJitter(d/2)
-	log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
-		c.retries, d.Milliseconds())
+	if !c.config.DowngradeErrors {
+		log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+			c.retries, d.Milliseconds())
+	}
 	c.retries++
 	time.Sleep(d)
 }
