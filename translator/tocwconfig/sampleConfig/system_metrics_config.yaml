@@ -26,6 +26,7 @@ exporters:
     rollup_dimensions:
       - - InstanceId
       - [ ]
+    downgrade_errors: true
 extensions:
   agenthealth/metrics:
     is_usage_data_enabled: true
