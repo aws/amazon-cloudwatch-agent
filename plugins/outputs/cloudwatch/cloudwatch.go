@@ -367,8 +367,13 @@ func (c *CloudWatch) backoffSleep() {
 		d = c.config.BackoffRetryBase * time.Duration(1<<c.retries)
 	}
 	d = (d / 2) + publishJitter(d/2)
-	log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
-		c.retries, d.Milliseconds())
+	if !c.config.DowngradeErrors {
+		log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+			c.retries, d.Milliseconds())
+	} else {
+		log.Printf("I! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+			c.retries, d.Milliseconds())
+	}
 	c.retries++
 	time.Sleep(d)
 }
@@ -423,7 +428,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 				continue
 
 			default:
-				log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+				if !c.config.DowngradeErrors {
+					log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+				} else {
+					log.Printf("I! cloudwatch: PutMetricData unsuccessful")
+				}
 				c.backoffSleep()
 			}
 		} else {
@@ -432,7 +441,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		break
 	}
 	if err != nil {
-		log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
+		if !c.config.DowngradeErrors {
+			log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
+		} else {
+			log.Println("I! cloudwatch: WriteToCloudWatch unsuccessful, batch dropped")
+		}
 	}
 }
 
