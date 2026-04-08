@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -17,16 +18,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-)
 
-const (
-	leasePrefix = "cwagent-node-metadata-"
-
-	annotationHostID   = "cwagent.amazonaws.com/host.id"
-	annotationHostName = "cwagent.amazonaws.com/host.name"
-	annotationHostType = "cwagent.amazonaws.com/host.type"
-	annotationImageID  = "cwagent.amazonaws.com/host.image.id"
-	annotationAZ       = "cwagent.amazonaws.com/cloud.availability_zone"
+	k8slease "github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/lease"
 )
 
 // NodeMetadata holds the IMDS-resolved host attributes for a single node,
@@ -45,11 +38,12 @@ type NodeMetadata struct {
 // configured namespace and maintains an in-memory cache of per-node host metadata.
 // The nodemetadataenricher processor uses this cache to enrich KSM metrics.
 type NodeMetadataCache struct {
-	logger *zap.Logger
-	config *Config
-	cache  map[string]*NodeMetadata
-	mutex  sync.RWMutex
-	stopCh chan struct{}
+	logger   *zap.Logger
+	config   *Config
+	cache    map[string]*NodeMetadata
+	mutex    sync.RWMutex
+	stopCh   chan struct{}
+	shutdown atomic.Bool
 }
 
 var _ extension.Extension = (*NodeMetadataCache)(nil)
@@ -71,8 +65,12 @@ func NewForTest(logger *zap.Logger) *NodeMetadataCache {
 }
 
 // Get returns the cached NodeMetadata for the given node name, or nil if the
-// node is not in the cache or the Lease is stale (renewTime + leaseDuration < now).
+// node is not in the cache, the Lease is stale (renewTime + leaseDuration < now),
+// or the extension has been shut down.
 func (c *NodeMetadataCache) Get(nodeName string) *NodeMetadata {
+	if c.shutdown.Load() {
+		return nil
+	}
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	entry, ok := c.cache[nodeName]
@@ -122,14 +120,27 @@ func (c *NodeMetadataCache) Start(_ context.Context, _ component.Host) error {
 	})
 
 	factory.Start(c.stopCh)
-	factory.WaitForCacheSync(c.stopCh)
 
-	c.logger.Info("nodemetadatacache extension started, Lease informer synced")
+	// Wait for initial sync with a timeout to prevent blocking Start() indefinitely
+	// if the K8s API is unreachable (Shutdown cannot be called until Start returns).
+	syncCh := make(chan struct{})
+	go func() {
+		factory.WaitForCacheSync(c.stopCh)
+		close(syncCh)
+	}()
+
+	select {
+	case <-syncCh:
+		c.logger.Info("nodemetadatacache extension started, Lease informer synced")
+	case <-time.After(15 * time.Second):
+		c.logger.Warn("nodemetadatacache Lease informer sync timed out after 15s, proceeding with empty cache")
+	}
 	return nil
 }
 
 // Shutdown stops the informer and clears the cache.
 func (c *NodeMetadataCache) Shutdown(_ context.Context) error {
+	c.shutdown.Store(true)
 	if c.stopCh != nil {
 		close(c.stopCh)
 	}
@@ -157,6 +168,9 @@ func (c *NodeMetadataCache) onLeaseUpdate(_, newObj interface{}) {
 }
 
 func (c *NodeMetadataCache) onLeaseDelete(obj interface{}) {
+	if c.shutdown.Load() {
+		return
+	}
 	lease, ok := obj.(*coordinationv1.Lease)
 	if !ok {
 		// Handle deleted final state unknown (tombstone)
@@ -170,11 +184,11 @@ func (c *NodeMetadataCache) onLeaseDelete(obj interface{}) {
 		}
 	}
 
-	if !strings.HasPrefix(lease.Name, leasePrefix) {
+	if !strings.HasPrefix(lease.Name, k8slease.LeasePrefix) {
 		return
 	}
 
-	nodeName := strings.TrimPrefix(lease.Name, leasePrefix)
+	nodeName := strings.TrimPrefix(lease.Name, k8slease.LeasePrefix)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	delete(c.cache, nodeName)
@@ -184,22 +198,26 @@ func (c *NodeMetadataCache) onLeaseDelete(obj interface{}) {
 // handleLeaseEvent processes a Lease add or update event. It extracts the five
 // annotation values and stores them in the cache keyed by node name.
 func (c *NodeMetadataCache) handleLeaseEvent(lease *coordinationv1.Lease) {
-	if !strings.HasPrefix(lease.Name, leasePrefix) {
+	if c.shutdown.Load() {
+		return
+	}
+	if !strings.HasPrefix(lease.Name, k8slease.LeasePrefix) {
 		return
 	}
 
-	nodeName := strings.TrimPrefix(lease.Name, leasePrefix)
+	nodeName := strings.TrimPrefix(lease.Name, k8slease.LeasePrefix)
 	annotations := lease.Annotations
 
 	// All five annotations must be present
-	hostID, ok1 := annotations[annotationHostID]
-	hostName, ok2 := annotations[annotationHostName]
-	hostType, ok3 := annotations[annotationHostType]
-	imageID, ok4 := annotations[annotationImageID]
-	az, ok5 := annotations[annotationAZ]
+	hostID, ok1 := annotations[k8slease.AnnotationHostID]
+	hostName, ok2 := annotations[k8slease.AnnotationHostName]
+	hostType, ok3 := annotations[k8slease.AnnotationHostType]
+	imageID, ok4 := annotations[k8slease.AnnotationImageID]
+	az, ok5 := annotations[k8slease.AnnotationAZ]
 
-	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 {
-		c.logger.Warn("Skipping Lease with missing annotations",
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 ||
+		hostID == "" || hostName == "" || hostType == "" || imageID == "" || az == "" {
+		c.logger.Warn("Skipping Lease with missing or empty annotations",
 			zap.String("lease", lease.Name),
 		)
 		return

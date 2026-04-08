@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	k8slease "github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/lease"
 )
 
 const (
@@ -48,11 +50,11 @@ func TestLeaseWriterBuildLease(t *testing.T) {
 	assert.Equal(t, testNamespace, lease.Namespace)
 
 	// Verify all five annotations
-	assert.Equal(t, "i-0abc111def222ghi3", lease.Annotations[annotationHostID])
-	assert.Equal(t, "ip-10-0-1-42.ec2.internal", lease.Annotations[annotationHostName])
-	assert.Equal(t, "m5.xlarge", lease.Annotations[annotationHostType])
-	assert.Equal(t, "ami-0123456789abcdef0", lease.Annotations[annotationImageID])
-	assert.Equal(t, "us-east-1a", lease.Annotations[annotationAZ])
+	assert.Equal(t, "i-0abc111def222ghi3", lease.Annotations[k8slease.AnnotationHostID])
+	assert.Equal(t, "ip-10-0-1-42.ec2.internal", lease.Annotations[k8slease.AnnotationHostName])
+	assert.Equal(t, "m5.xlarge", lease.Annotations[k8slease.AnnotationHostType])
+	assert.Equal(t, "ami-0123456789abcdef0", lease.Annotations[k8slease.AnnotationImageID])
+	assert.Equal(t, "us-east-1a", lease.Annotations[k8slease.AnnotationAZ])
 	assert.Len(t, lease.Annotations, 5)
 
 	// Verify leaseDurationSeconds
@@ -87,11 +89,11 @@ func TestLeaseWriterCreateLease(t *testing.T) {
 	// Verify the Lease exists in the fake API with correct fields
 	assert.Equal(t, "cwagent-node-metadata-"+testNodeName, created.Name)
 	assert.Equal(t, testNamespace, created.Namespace)
-	assert.Equal(t, "i-0abc111def222ghi3", created.Annotations[annotationHostID])
-	assert.Equal(t, "ip-10-0-1-42.ec2.internal", created.Annotations[annotationHostName])
-	assert.Equal(t, "m5.xlarge", created.Annotations[annotationHostType])
-	assert.Equal(t, "ami-0123456789abcdef0", created.Annotations[annotationImageID])
-	assert.Equal(t, "us-east-1a", created.Annotations[annotationAZ])
+	assert.Equal(t, "i-0abc111def222ghi3", created.Annotations[k8slease.AnnotationHostID])
+	assert.Equal(t, "ip-10-0-1-42.ec2.internal", created.Annotations[k8slease.AnnotationHostName])
+	assert.Equal(t, "m5.xlarge", created.Annotations[k8slease.AnnotationHostType])
+	assert.Equal(t, "ami-0123456789abcdef0", created.Annotations[k8slease.AnnotationImageID])
+	assert.Equal(t, "us-east-1a", created.Annotations[k8slease.AnnotationAZ])
 
 	// Fetch it back from the fake API to confirm persistence
 	fetched, err := fakeClient.CoordinationV1().Leases(testNamespace).Get(

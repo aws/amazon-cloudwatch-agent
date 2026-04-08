@@ -14,15 +14,11 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	coordinationv1client "k8s.io/client-go/kubernetes/typed/coordination/v1"
+
+	k8slease "github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/lease"
 )
 
 const (
-	leasePrefix              = "cwagent-node-metadata-"
-	annotationHostID         = "cwagent.amazonaws.com/host.id"
-	annotationHostName       = "cwagent.amazonaws.com/host.name"
-	annotationHostType       = "cwagent.amazonaws.com/host.type"
-	annotationImageID        = "cwagent.amazonaws.com/host.image.id"
-	annotationAZ             = "cwagent.amazonaws.com/cloud.availability_zone"
 	defaultLeaseDuration     = int32(7200) // 2 hours
 	defaultRenewInterval     = 1 * time.Hour
 	leaseJitterMax           = 30 * time.Second
@@ -42,6 +38,7 @@ type LeaseWriter struct {
 	logger        *zap.Logger
 	done          chan struct{}
 	wg            sync.WaitGroup
+	stopOnce      sync.Once
 	leaseDuration int32
 	renewInterval time.Duration
 	jitterMax     time.Duration
@@ -70,11 +67,13 @@ func (lw *LeaseWriter) Start() {
 }
 
 // Stop stops the renewal goroutine, waits for it to exit, then performs a
-// best-effort delete of the Lease.
+// best-effort delete of the Lease. Safe to call multiple times.
 func (lw *LeaseWriter) Stop() {
-	close(lw.done)
-	lw.wg.Wait()
-	lw.deleteLease()
+	lw.stopOnce.Do(func() {
+		close(lw.done)
+		lw.wg.Wait()
+		lw.deleteLease()
+	})
 }
 
 func (lw *LeaseWriter) run() {
@@ -133,17 +132,17 @@ func (lw *LeaseWriter) waitForEC2Info() bool {
 
 // leaseName returns the Lease object name for this node.
 func (lw *LeaseWriter) leaseName() string {
-	return leasePrefix + lw.nodeName
+	return k8slease.LeasePrefix + lw.nodeName
 }
 
 // buildAnnotations returns the IMDS metadata annotations for the Lease.
 func (lw *LeaseWriter) buildAnnotations() map[string]string {
 	return map[string]string{
-		annotationHostID:   lw.ec2Info.GetInstanceID(),
-		annotationHostName: lw.ec2Info.GetHostname(),
-		annotationHostType: lw.ec2Info.GetInstanceType(),
-		annotationImageID:  lw.ec2Info.GetImageID(),
-		annotationAZ:       lw.ec2Info.GetAvailabilityZone(),
+		k8slease.AnnotationHostID:   lw.ec2Info.GetInstanceID(),
+		k8slease.AnnotationHostName: lw.ec2Info.GetHostname(),
+		k8slease.AnnotationHostType: lw.ec2Info.GetInstanceType(),
+		k8slease.AnnotationImageID:  lw.ec2Info.GetImageID(),
+		k8slease.AnnotationAZ:       lw.ec2Info.GetAvailabilityZone(),
 	}
 }
 
@@ -180,28 +179,32 @@ func (lw *LeaseWriter) createLeaseWithRetry() bool {
 			return true
 		}
 		if k8serrors.IsAlreadyExists(err) {
-			// Lease left over from a previous pod — adopt it via direct update.
+			// Lease left over from a previous pod — adopt it via Get+Update.
+			// On Get or Update failure, fall through to the shared backoff below.
+			// The next iteration will call Create again, which either succeeds
+			// (if the Lease was deleted) or returns AlreadyExists to retry adoption.
 			lw.logger.Info("Node metadata Lease already exists, adopting via update",
 				zap.String("name", lw.leaseName()),
 			)
 			existing, getErr := lw.client.Leases(lw.namespace).Get(context.Background(), lw.leaseName(), metav1.GetOptions{})
 			if getErr != nil {
 				lw.logger.Error("Failed to get existing Lease for adoption", zap.Error(getErr))
-				continue
+			} else {
+				now := metav1.NewMicroTime(time.Now())
+				existing.Spec.RenewTime = &now
+				duration := lw.leaseDuration
+				existing.Spec.LeaseDurationSeconds = &duration
+				existing.Annotations = lw.buildAnnotations()
+				if _, updateErr := lw.client.Leases(lw.namespace).Update(context.Background(), existing, metav1.UpdateOptions{}); updateErr != nil {
+					lw.logger.Error("Failed to adopt existing Lease", zap.Error(updateErr))
+				} else {
+					return true
+				}
 			}
-			now := metav1.NewMicroTime(time.Now())
-			existing.Spec.RenewTime = &now
-			duration := lw.leaseDuration
-			existing.Spec.LeaseDurationSeconds = &duration
-			existing.Annotations = lw.buildAnnotations()
-			if _, updateErr := lw.client.Leases(lw.namespace).Update(context.Background(), existing, metav1.UpdateOptions{}); updateErr != nil {
-				lw.logger.Error("Failed to adopt existing Lease", zap.Error(updateErr))
-				continue
-			}
-			return true
+		} else {
+			lw.logger.Error("Failed to create node metadata Lease", zap.Error(err))
 		}
-		lw.logger.Error("Failed to create node metadata Lease, retrying",
-			zap.Error(err),
+		lw.logger.Info("Retrying Lease create/adopt",
 			zap.Duration("backoff", backoff),
 		)
 		select {

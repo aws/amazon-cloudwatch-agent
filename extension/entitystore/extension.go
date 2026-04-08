@@ -276,6 +276,9 @@ func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 // IMDS metadata as a Kubernetes Lease. Must be called after ec2Info is
 // initialized (the LeaseWriter's waitForEC2Info handles the race).
 func (e *EntityStore) startLeaseWriter() {
+	if e.leaseWriter != nil {
+		return
+	}
 	nodeName := getEnv("K8S_NODE_NAME")
 	if nodeName == "" {
 		e.logger.Error("K8S_NODE_NAME env var not set, skipping LeaseWriter startup")

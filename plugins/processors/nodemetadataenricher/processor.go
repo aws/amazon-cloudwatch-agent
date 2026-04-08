@@ -43,6 +43,7 @@ func (p *nodeMetadataEnricherProcessor) processMetrics(_ context.Context, md pme
 		// Extension may not have been ready at creation time — retry.
 		cache = nodemetadatacache.GetNodeMetadataCache()
 		if cache != nil {
+			p.logger.Debug("Lazily initialized node metadata cache reference")
 			p.cache.Store(cache)
 		} else {
 			return md, nil

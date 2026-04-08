@@ -14,21 +14,23 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+
+	k8slease "github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/lease"
 )
 
 func testLease(nodeName string, renewTime time.Time, duration int32) *coordinationv1.Lease {
 	now := metav1.NewMicroTime(renewTime)
-	name := leasePrefix + nodeName
+	name := k8slease.LeasePrefix + nodeName
 	return &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "amazon-cloudwatch",
 			Annotations: map[string]string{
-				annotationHostID:   "i-0abc111",
-				annotationHostName: "ip-10-0-1-42.ec2.internal",
-				annotationHostType: "m5.xlarge",
-				annotationImageID:  "ami-0123",
-				annotationAZ:       "us-east-1a",
+				k8slease.AnnotationHostID:   "i-0abc111",
+				k8slease.AnnotationHostName: "ip-10-0-1-42.ec2.internal",
+				k8slease.AnnotationHostType: "m5.xlarge",
+				k8slease.AnnotationImageID:  "ami-0123",
+				k8slease.AnnotationAZ:       "us-east-1a",
 			},
 		},
 		Spec: coordinationv1.LeaseSpec{
@@ -112,11 +114,11 @@ func TestIgnoresLeasesWithoutPrefix(t *testing.T) {
 			Name:      "some-other-lease",
 			Namespace: "amazon-cloudwatch",
 			Annotations: map[string]string{
-				annotationHostID:   "i-0abc111",
-				annotationHostName: "ip-10-0-1-42.ec2.internal",
-				annotationHostType: "m5.xlarge",
-				annotationImageID:  "ami-0123",
-				annotationAZ:       "us-east-1a",
+				k8slease.AnnotationHostID:   "i-0abc111",
+				k8slease.AnnotationHostName: "ip-10-0-1-42.ec2.internal",
+				k8slease.AnnotationHostType: "m5.xlarge",
+				k8slease.AnnotationImageID:  "ami-0123",
+				k8slease.AnnotationAZ:       "us-east-1a",
 			},
 		},
 		Spec: coordinationv1.LeaseSpec{},
@@ -133,16 +135,16 @@ func TestSkipsLeaseWithMissingAnnotations(t *testing.T) {
 	c := newTestCache()
 	now := metav1.NewMicroTime(time.Now())
 	duration := int32(300)
-	name := leasePrefix + "node-1"
+	name := k8slease.LeasePrefix + "node-1"
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "amazon-cloudwatch",
 			Annotations: map[string]string{
 				// Only 3 of 5 annotations
-				annotationHostID:   "i-0abc111",
-				annotationHostName: "ip-10-0-1-42.ec2.internal",
-				annotationHostType: "m5.xlarge",
+				k8slease.AnnotationHostID:   "i-0abc111",
+				k8slease.AnnotationHostName: "ip-10-0-1-42.ec2.internal",
+				k8slease.AnnotationHostType: "m5.xlarge",
 			},
 		},
 		Spec: coordinationv1.LeaseSpec{
@@ -229,8 +231,8 @@ func TestUpdateOverwritesCacheEntry(t *testing.T) {
 
 	// Update with different annotations
 	updatedLease := testLease("node-1", time.Now(), 300)
-	updatedLease.Annotations[annotationHostType] = "c5.2xlarge"
-	updatedLease.Annotations[annotationAZ] = "us-east-1b"
+	updatedLease.Annotations[k8slease.AnnotationHostType] = "c5.2xlarge"
+	updatedLease.Annotations[k8slease.AnnotationAZ] = "us-east-1b"
 	c.handleLeaseEvent(updatedLease)
 
 	result := c.Get("node-1")
@@ -244,17 +246,17 @@ func TestUpdateOverwritesCacheEntry(t *testing.T) {
 func TestSkipsLeaseWithMissingRenewTime(t *testing.T) {
 	c := newTestCache()
 	duration := int32(300)
-	name := leasePrefix + "node-1"
+	name := k8slease.LeasePrefix + "node-1"
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "amazon-cloudwatch",
 			Annotations: map[string]string{
-				annotationHostID:   "i-0abc111",
-				annotationHostName: "ip-10-0-1-42.ec2.internal",
-				annotationHostType: "m5.xlarge",
-				annotationImageID:  "ami-0123",
-				annotationAZ:       "us-east-1a",
+				k8slease.AnnotationHostID:   "i-0abc111",
+				k8slease.AnnotationHostName: "ip-10-0-1-42.ec2.internal",
+				k8slease.AnnotationHostType: "m5.xlarge",
+				k8slease.AnnotationImageID:  "ami-0123",
+				k8slease.AnnotationAZ:       "us-east-1a",
 			},
 		},
 		Spec: coordinationv1.LeaseSpec{
@@ -271,17 +273,17 @@ func TestSkipsLeaseWithMissingRenewTime(t *testing.T) {
 func TestSkipsLeaseWithMissingLeaseDuration(t *testing.T) {
 	c := newTestCache()
 	now := metav1.NewMicroTime(time.Now())
-	name := leasePrefix + "node-1"
+	name := k8slease.LeasePrefix + "node-1"
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "amazon-cloudwatch",
 			Annotations: map[string]string{
-				annotationHostID:   "i-0abc111",
-				annotationHostName: "ip-10-0-1-42.ec2.internal",
-				annotationHostType: "m5.xlarge",
-				annotationImageID:  "ami-0123",
-				annotationAZ:       "us-east-1a",
+				k8slease.AnnotationHostID:   "i-0abc111",
+				k8slease.AnnotationHostName: "ip-10-0-1-42.ec2.internal",
+				k8slease.AnnotationHostType: "m5.xlarge",
+				k8slease.AnnotationImageID:  "ami-0123",
+				k8slease.AnnotationAZ:       "us-east-1a",
 			},
 		},
 		Spec: coordinationv1.LeaseSpec{
