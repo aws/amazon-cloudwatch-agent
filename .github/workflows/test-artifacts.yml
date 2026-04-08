@@ -152,29 +152,29 @@ jobs:
     needs: [OutputEnvVariables]
     runs-on: ubuntu-latest
     outputs:
-      ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
-      ec2_linux_matrix_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
-      ec2_linux_matrix_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
-      ec2_linux_matrix_2: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}
-      ec2_linux_matrix_3: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}
-      ec2_linux_matrix_4: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}
-      ec2_linux_matrix_page_count: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
-      ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
-      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
-      ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
-      ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
-      ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
-      ec2_windows_performance_matrix: ${{steps.set-matrix.outputs.ec2_windows_performance_matrix}}
-      ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
-      ec2_windows_stress_matrix: ${{steps.set-matrix.outputs.ec2_windows_stress_matrix}}
-      ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
-      ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
-      eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
-      eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
-      ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
-      ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
+#      ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
+#      ec2_linux_matrix_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
+#      ec2_linux_matrix_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
+#      ec2_linux_matrix_2: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}
+#      ec2_linux_matrix_3: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}
+#      ec2_linux_matrix_4: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}
+#      ec2_linux_matrix_page_count: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
+#      ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
+#      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+#      ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+#      ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
+#      ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
+#      ec2_windows_performance_matrix: ${{steps.set-matrix.outputs.ec2_windows_performance_matrix}}
+#      ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
+#      ec2_windows_stress_matrix: ${{steps.set-matrix.outputs.ec2_windows_stress_matrix}}
+#      ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
+#      ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+#      eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
+#      eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
+#      ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
+#      ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       ec2_linux_otlp_export_matrix: ${{ steps.set-matrix.outputs.ec2_linux_otlp_export_matrix }}
-      eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+#      eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -210,23 +210,23 @@ jobs:
             echo "$matrix_content" | jq -c '.'
           }
           
-          echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_matrix=$(apply_filters generator/resources/ec2_linux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_mac_matrix=$(apply_filters generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_performance_matrix=$(apply_filters generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_performance_matrix=$(apply_filters generator/resources/ec2_windows_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_stress_matrix=$(apply_filters generator/resources/ec2_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_stress_matrix=$(apply_filters generator/resources/ec2_windows_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ecs_ec2_launch_daemon_matrix=$(apply_filters generator/resources/ecs_ec2_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ecs_fargate_matrix=$(apply_filters generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_daemon_matrix=$(apply_filters generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_deployment_matrix=$(apply_filters generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_linux_matrix=$(apply_filters generator/resources/ec2_linux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_mac_matrix=$(apply_filters generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_performance_matrix=$(apply_filters generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_windows_performance_matrix=$(apply_filters generator/resources/ec2_windows_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_stress_matrix=$(apply_filters generator/resources/ec2_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_windows_stress_matrix=$(apply_filters generator/resources/ec2_windows_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ecs_ec2_launch_daemon_matrix=$(apply_filters generator/resources/ecs_ec2_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ecs_fargate_matrix=$(apply_filters generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "eks_daemon_matrix=$(apply_filters generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "eks_deployment_matrix=$(apply_filters generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+#          echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_otlp_export_matrix=$(apply_filters generator/resources/ec2_linux_otlp_export_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
 
       - name: Paginate ec2_linux_matrix
