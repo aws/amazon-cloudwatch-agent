@@ -42,6 +42,8 @@ type Config struct {
 	BackoffRetryBase time.Duration `mapstructure:"backoff_retry_base,omitempty"`
 	// MaxConcurrentPublishers is the number of concurrent workers making PMD calls. Defaults to 10.
 	MaxConcurrentPublishers int `mapstructure:"max_concurrent_publishers,omitempty"`
+	// DowngradeErrors suppresses PutMetricData failure logs: E! and W! are downgraded to I! level.
+	DowngradeErrors bool `mapstructure:"downgrade_errors,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)
