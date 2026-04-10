@@ -107,7 +107,7 @@ func (s *Server) reloadServer(config *tls.Config) error {
 	// close the current server
 	if s.httpsServer != nil {
 		// closing the server gracefully
-		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+		ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 		defer cancel()
 		// Use Shutdown instead of Close: Shutdown closes the listener before returning,
 		if err := s.httpsServer.Shutdown(ctx); err != nil {
