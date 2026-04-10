@@ -24,6 +24,7 @@ func GetSettings(uris []string, logger *zap.Logger) otelcol.ConfigProviderSettin
 			ConverterFactories: []confmap.ConverterFactory{
 				expandconverter.NewFactory(), //nolint:staticcheck // TODO: breaks logging if updated, migrate later
 				NewOTLPHTTPValidatorFactory(),
+				NewOTLPHTTPLogProvisionerFactory(),
 			},
 			ConverterSettings: confmap.ConverterSettings{Logger: logger},
 		},
