@@ -188,6 +188,14 @@ extensions:
                 mode: OP
                 region_type: ACJ
     awsproxy/application_signals:
+        additional_routing_rules:
+            - aws_endpoint: https://application-signals.us-east-1.api.aws
+              paths:
+                - list-instrumentation-configurations
+                - report-instrumentation-configuration-status
+              region: ""
+              role_arn: ""
+              service_name: application-signals
         aws_endpoint: https://fake_endpoint
         certificate_file_path: ""
         endpoint: 0.0.0.0:2000
