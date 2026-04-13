@@ -202,7 +202,7 @@ jobs:
             
             # Apply test directory filter if provided
             if [ -n "${{ inputs.test_dir_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir | startswith("${{ inputs.test_dir_filter }}"))]')
+              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
             fi
             
             # Output compact JSON (single line) for GITHUB_OUTPUT compatibility
