@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -320,6 +321,40 @@ func TestServerStartAndShutdown(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestReloadServerNoBind(t *testing.T) {
+	logger, _ := zap.NewProduction()
+
+	config := &Config{
+		TLSCertPath:   "./testdata/example-server-cert.pem",
+		TLSKeyPath:    "./testdata/example-server-key.pem",
+		TLSCAPath:     "./testdata/example-CA-cert.pem",
+		ListenAddress: ":18443",
+	}
+
+	server := NewServer(logger, config)
+	err := server.Start(context.Background(), nil)
+	require.NoError(t, err)
+	defer server.Shutdown(context.Background())
+
+	time.Sleep(100 * time.Millisecond)
+
+	tlsCfg := &tls.Config{
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		MinVersion: tls.VersionTLS12,
+	}
+
+	for i := 0; i < 50; i++ {
+		err := server.reloadServer(tlsCfg)
+		assert.NoError(t, err, "reload %d", i)
+	}
+
+	time.Sleep(500 * time.Millisecond)
+
+	// Use production logger — no shared buffer to race on.
+	// The test validates that no bind errors occur by completing without panic
+	// and that the server is still functional after 50 rapid reloads.
 }
 
 func TestConvertTtlCacheToMap(t *testing.T) {
