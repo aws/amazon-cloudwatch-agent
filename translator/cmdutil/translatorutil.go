@@ -251,7 +251,64 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	return mapstructure.Marshal(cfg)
+	result, err := mapstructure.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	// configopaque.String values are nil'd during marshal to prevent secret leakage.
+	// Restore non-secret headers for otlphttp/application_signals exporter (log group/stream).
+	injectAppSignalsLogsHeaders(result, jsonConfigValue)
+	return result, nil
+}
+
+// injectAppSignalsLogsHeaders restores x-aws-log-group and x-aws-log-stream headers
+// on the otlphttp/application_signals exporter. These are nil'd by NilHookFunc during
+// mapstructure marshal because configopaque.String is treated as a secret, but log
+// group/stream names are not sensitive and must survive the YAML round-trip.
+func injectAppSignalsLogsHeaders(yamlMap map[string]any, jsonConfig interface{}) {
+	jsonMap, ok := jsonConfig.(map[string]interface{})
+	if !ok {
+		return
+	}
+	exporters, ok := yamlMap["exporters"].(map[string]any)
+	if !ok {
+		return
+	}
+	exporterCfg, ok := exporters["otlphttp/application_signals"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	// Read log_group_name and log_stream_name from JSON config
+	logGroup := "/aws/application-signals/data"
+	logStream := "default"
+	if logs, ok := jsonMap["logs"].(map[string]interface{}); ok {
+		if lc, ok := logs["logs_collected"].(map[string]interface{}); ok {
+			if as, ok := lc["application_signals"].(map[string]interface{}); ok {
+				if v, ok := as["log_group_name"].(string); ok && v != "" {
+					logGroup = v
+				}
+				if v, ok := as["log_stream_name"].(string); ok && v != "" {
+					logStream = v
+				}
+			} else if as, ok := lc["app_signals"].(map[string]interface{}); ok {
+				if v, ok := as["log_group_name"].(string); ok && v != "" {
+					logGroup = v
+				}
+				if v, ok := as["log_stream_name"].(string); ok && v != "" {
+					logStream = v
+				}
+			}
+		}
+	}
+
+	headers, ok := exporterCfg["headers"].(map[string]any)
+	if !ok {
+		headers = make(map[string]any)
+		exporterCfg["headers"] = headers
+	}
+	headers["x-aws-log-group"] = logGroup
+	headers["x-aws-log-stream"] = logStream
 }
 
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {

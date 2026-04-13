@@ -15,9 +15,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awsproxy"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/k8smetadata"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
@@ -56,6 +58,20 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+	}
+
+	if t.signal == pipeline.SignalLogs {
+		// OTLP Logs pipeline: receive OTLP logs from instrumentation, forward to
+		// CloudWatch OTLP endpoint via otlphttp exporter with SigV4 auth.
+		// No processors needed — logs are forwarded as-is to preserve full OTLP structure.
+		if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
+			translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
+		}
+		translators.Exporters.Set(otlphttp.NewTranslatorWithName(common.AppSignals))
+		translators.Extensions.Set(sigv4auth.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
+		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
+		return translators, nil
 	}
 
 	if t.signal == pipeline.SignalMetrics {

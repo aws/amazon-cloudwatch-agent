@@ -633,6 +633,34 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "application_signals": {
+              "type": "object",
+              "properties": {
+                "log_group_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "log_stream_name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": true
+            },
+            "app_signals": {
+              "type": "object",
+              "properties": {
+                "log_group_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "log_stream_name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": true
             }
           },
           "minProperties": 1,

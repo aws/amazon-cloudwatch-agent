@@ -136,12 +136,15 @@ const (
 var (
 	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
 	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsLogs            = ConfigKey(LogsKey, LogsCollectedKey, AppSignals)
 	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
 	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
+	AppSignalsLogsFallback    = ConfigKey(LogsKey, LogsCollectedKey, AppSignalsFallback)
 
 	AppSignalsConfigKeys = map[pipeline.Signal][]string{
 		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
+		pipeline.SignalLogs:    {AppSignalsLogs, AppSignalsLogsFallback},
 	}
 	SystemMetricsEnabledConfigKey = ConfigKey(AgentKey, SystemMetricsEnabledKey)
 	JmxConfigKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
