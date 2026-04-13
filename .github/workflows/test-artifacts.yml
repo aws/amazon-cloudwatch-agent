@@ -63,12 +63,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  id:
-    name: Workflow ID Provider
-    runs-on: ubuntu-latest
-    steps:
-      - name: ${{ github.event.inputs.build_id }}
-        run: echo run identifier ${{ inputs.build_id }}
+#  id:
+#    name: Workflow ID Provider
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: ${{ github.event.inputs.build_id }}
+#        run: echo run identifier ${{ inputs.build_id }}
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
@@ -152,7 +152,28 @@ jobs:
     needs: [OutputEnvVariables]
     runs-on: ubuntu-latest
     outputs:
-      ec2_linux_otlp_export_matrix: ${{ steps.set-matrix.outputs.ec2_linux_otlp_export_matrix }}
+      ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
+      ec2_linux_matrix_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
+      ec2_linux_matrix_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
+      ec2_linux_matrix_2: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}
+      ec2_linux_matrix_3: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}
+      ec2_linux_matrix_4: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}
+      ec2_linux_matrix_page_count: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
+      ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
+      ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+      ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+      ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
+      ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
+      ec2_windows_performance_matrix: ${{steps.set-matrix.outputs.ec2_windows_performance_matrix}}
+      ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
+      ec2_windows_stress_matrix: ${{steps.set-matrix.outputs.ec2_windows_stress_matrix}}
+      ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
+      ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+      eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
+      eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
+      ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
+      ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
+      eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -181,14 +202,30 @@ jobs:
             
             # Apply test directory filter if provided
             if [ -n "${{ inputs.test_dir_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
+              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir | startswith("${{ inputs.test_dir_filter }}"))]')
             fi
             
             # Output compact JSON (single line) for GITHUB_OUTPUT compatibility
             echo "$matrix_content" | jq -c '.'
           }
           
-          echo "ec2_linux_otlp_export_matrix=$(apply_filters generator/resources/ec2_linux_otlp_export_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_matrix=$(apply_filters generator/resources/ec2_linux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_mac_matrix=$(apply_filters generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_performance_matrix=$(apply_filters generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_performance_matrix=$(apply_filters generator/resources/ec2_windows_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_stress_matrix=$(apply_filters generator/resources/ec2_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_stress_matrix=$(apply_filters generator/resources/ec2_windows_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ecs_ec2_launch_daemon_matrix=$(apply_filters generator/resources/ecs_ec2_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ecs_fargate_matrix=$(apply_filters generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "eks_daemon_matrix=$(apply_filters generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "eks_deployment_matrix=$(apply_filters generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
 
       - name: Paginate ec2_linux_matrix
         id: paginate-matrix
@@ -262,41 +299,41 @@ jobs:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 #          path: test
-#
+
 #      - name: Set up Go 1.x
 #        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
 #        with:
 #          go-version: ~1.25.8
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Test cf
 #        run: |
 #          cd test/test/cloudformation
 #          go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
-#
-#  StartLocalStack:
-#    name: 'StartLocalStack'
-#    needs: [OutputEnvVariables]
-#    uses: ./.github/workflows/start-localstack.yml
-#    secrets: inherit
-#    permissions:
-#      id-token: write
-#      contents: read
-#    with:
-#      region: us-west-2
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-#      github_sha: ${{ inputs.build_id }}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#
+
+  StartLocalStack:
+    name: 'StartLocalStack'
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{ inputs.build_id }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
 #  StartLocalStackITAR:
 #    name: 'StartLocalStackITAR'
 #    needs: [OutputEnvVariables]
@@ -315,7 +352,7 @@ jobs:
 #      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
 #      github_sha: ${{ inputs.build_id }}
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-#
+
 #  StartLocalStackCN:
 #    name: 'StartLocalStackCN'
 #    needs: [ OutputEnvVariables, UploadDependenciesCN ]
@@ -334,7 +371,7 @@ jobs:
 #      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
 #      github_sha: ${{ inputs.build_id }}
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
-#
+
 #  UploadDependenciesCN:
 #    name: 'UploadDependenciesCN'
 #    needs: [ OutputEnvVariables ]
@@ -350,7 +387,7 @@ jobs:
 #      github_sha: ${{github.sha}}
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 #      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-#
+
 #  EC2NvidiaGPUIntegrationTest:
 #    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -367,18 +404,18 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Echo Test Info
 #        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
-#
-#
+
+
 #      - name: Get Runner IP
 #        id: runner_ip
 #        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
@@ -386,10 +423,10 @@ jobs:
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      # nick-fields/retry@v2 starts at base dir
 #      - name: Terraform apply
 #        id: terraform_apply
@@ -406,7 +443,7 @@ jobs:
 #            else
 #              cd terraform/ec2/linux
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve \
 #              -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -428,21 +465,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply_windows
 #        continue-on-error: true
@@ -458,7 +495,7 @@ jobs:
 #            else
 #              cd terraform/ec2/win
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve \
 #              -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -475,17 +512,17 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply_windows.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply_windows.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply_windows.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
@@ -506,111 +543,111 @@ jobs:
 #              cd terraform/ec2/linux
 #            fi
 #            terraform destroy --auto-approve
-#
-#  EC2LinuxIntegrationTest-0:
-#    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-#    name: 'EC2Linux-0'
-#    uses:  ./.github/workflows/ec2-integration-test.yml
-#    with:
-#      build_id: ${{ inputs.build_id }}
-#      test_dir: terraform/ec2/linux
-#      job_id: ec2-linux-integration-test-0
-#      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_0 }}
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
-#      region: us-west-2
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#      is_selinux_test: false
-#      is_onprem_test: false
-#    secrets: inherit
-#
-#  EC2LinuxIntegrationTest-1:
-#    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-#    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 1 }}
-#    name: 'EC2Linux-1'
-#    uses:  ./.github/workflows/ec2-integration-test.yml
-#    with:
-#      build_id: ${{ inputs.build_id }}
-#      test_dir: terraform/ec2/linux
-#      job_id: ec2-linux-integration-test-1
-#      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_1 }}
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
-#      region: us-west-2
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#      is_selinux_test: false
-#      is_onprem_test: false
-#    secrets: inherit
-#
-#  EC2LinuxIntegrationTest-2:
-#    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-#    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 2 }}
-#    name: 'EC2Linux-2'
-#    uses:  ./.github/workflows/ec2-integration-test.yml
-#    with:
-#      build_id: ${{ inputs.build_id }}
-#      test_dir: terraform/ec2/linux
-#      job_id: ec2-linux-integration-test-2
-#      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_2 }}
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
-#      region: us-west-2
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#      is_selinux_test: false
-#      is_onprem_test: false
-#    secrets: inherit
-#
-#  EC2LinuxIntegrationTest-3:
-#    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-#    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 3 }}
-#    name: 'EC2Linux-3'
-#    uses:  ./.github/workflows/ec2-integration-test.yml
-#    with:
-#      build_id: ${{ inputs.build_id }}
-#      test_dir: terraform/ec2/linux
-#      job_id: ec2-linux-integration-test-3
-#      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_3 }}
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
-#      region: us-west-2
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#      is_selinux_test: false
-#      is_onprem_test: false
-#    secrets: inherit
-#
-#  EC2LinuxIntegrationTest-4:
-#    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-#    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 4 }}
-#    name: 'EC2Linux-4'
-#    uses:  ./.github/workflows/ec2-integration-test.yml
-#    with:
-#      build_id: ${{ inputs.build_id }}
-#      test_dir: terraform/ec2/linux
-#      job_id: ec2-linux-integration-test-4
-#      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_4 }}
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
-#      region: us-west-2
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#      is_selinux_test: false
-#      is_onprem_test: false
-#    secrets: inherit
-#
+
+  EC2LinuxIntegrationTest-0:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2Linux-0'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-0
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_0 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-1:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 1 }}
+    name: 'EC2Linux-1'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-1
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_1 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-2:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 2 }}
+    name: 'EC2Linux-2'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-2
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_2 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-3:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 3 }}
+    name: 'EC2Linux-3'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-3
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_3 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
+  EC2LinuxIntegrationTest-4:
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 4 }}
+    name: 'EC2Linux-4'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test-4
+      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_4 }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+    secrets: inherit
+
 #  LinuxOnPremIntegrationTest:
 #    needs: [GenerateTestMatrix, OutputEnvVariables]
 #    name: 'OnpremLinux'
@@ -630,8 +667,8 @@ jobs:
 #      is_selinux_test: false
 #      is_onprem_test: true
 #    secrets: inherit
-#
-#
+
+
 #  EC2LinuxIntegrationTestITAR:
 #    needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
 #    name: 'EC2LinuxITAR'
@@ -651,7 +688,7 @@ jobs:
 #    secrets:
 #      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
 #      KEY_NAME: ${{ secrets.KEY_NAME }}
-#
+
 #  EC2LinuxIntegrationTestCN:
 #    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
 #    name: 'EC2LinuxCN'
@@ -671,7 +708,7 @@ jobs:
 #    secrets:
 #      AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
 #      KEY_NAME: ${{ secrets.KEY_NAME }}
-#
+
 #  EC2SELinuxIntegrationTest:
 #    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
 #    name: 'EC2SELinux'
@@ -690,24 +727,6 @@ jobs:
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 #      is_selinux_test: true
 
-  EC2LinuxOTLPExportTest:
-    needs: [ GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2LinuxOTLPExport'
-    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_otlp_export_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_linux_otlp_export_matrix != '[]' }}
-    uses: ./.github/workflows/ec2-integration-test.yml
-    with:
-      build_id: ${{ inputs.build_id }}
-      test_dir: terraform/ec2/linux
-      job_id: ec2-linux-otlp-export-test
-      test_props: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_otlp_export_matrix }}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      region: us-west-2
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-    secrets: inherit
-
 #  EC2WinIntegrationTest:
 #    needs: [OutputEnvVariables, GenerateTestMatrix]
 #    name:  ${{matrix.arrays.testName}}
@@ -724,29 +743,29 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Echo Test Info
 #        run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
-#
+
 #      - name: Get Runner IP
 #        id: runner_ip
 #        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #        # nick-fields/retry@v2 starts at base dir
 #      - name: Terraform apply
 #        id: terraform_apply
@@ -762,7 +781,7 @@ jobs:
 #            else
 #              cd terraform/ec2/win
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve \
 #              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -779,17 +798,17 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
@@ -824,25 +843,25 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Echo OS
 #        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #        # nick-fields/retry@v2 starts at base dir
 #      - name: Terraform apply
 #        id: terraform_apply
@@ -858,7 +877,7 @@ jobs:
 #            else
 #              cd terraform/ec2/mac
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve \
 #            -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -874,17 +893,17 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
@@ -903,24 +922,24 @@ jobs:
 #              cd terraform/ec2/mac
 #            fi
 #            terraform destroy --auto-approve
-#
-#  StopLocalStack:
-#    name: 'StopLocalStack'
-#    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
-#    needs: [ StartLocalStack, EC2LinuxIntegrationTest-0, EC2LinuxIntegrationTest-1, EC2LinuxIntegrationTest-2, EC2LinuxIntegrationTest-3, EC2LinuxIntegrationTest-4, OutputEnvVariables ]
-#    uses: ./.github/workflows/stop-localstack.yml
-#    secrets: inherit
-#    permissions:
-#      id-token: write
-#      contents: read
-#    with:
-#      region: us-west-2
-#      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-#      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-#      github_sha: ${{inputs.build_id}}
-#      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-#
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest-0, EC2LinuxIntegrationTest-1, EC2LinuxIntegrationTest-2, EC2LinuxIntegrationTest-3, EC2LinuxIntegrationTest-4, OutputEnvVariables ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      github_sha: ${{inputs.build_id}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
 #  StopLocalStackITAR:
 #    name: 'StopLocalStackITAR'
 #    if: ${{ always() && needs.StartLocalStackITAR.result == 'success' }}
@@ -939,7 +958,7 @@ jobs:
 #      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
 #      github_sha: ${{inputs.build_id}}
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-#
+
 #  StopLocalStackCN:
 #    name: 'StopLocalStackCN'
 #    if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
@@ -958,7 +977,7 @@ jobs:
 #      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 #      github_sha: ${{inputs.build_id}}
 #      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
-#
+
 #  ECSEC2IntegrationTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    runs-on: ubuntu-latest
@@ -975,26 +994,26 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Login ECR
 #        id: login-ecr
 #        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
 #        with:
@@ -1007,7 +1026,7 @@ jobs:
 #            else
 #              cd terraform/ecs_ec2/daemon
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve\
 #              -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -1021,7 +1040,7 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1036,7 +1055,7 @@ jobs:
 #              cd terraform/ecs_ec2/daemon
 #            fi
 #            terraform destroy --auto-approve
-#
+
 #  ECSFargateIntegrationTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    runs-on: ubuntu-latest
@@ -1053,26 +1072,26 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Login ECR
 #        id: login-ecr
 #        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1087,7 +1106,7 @@ jobs:
 #            else
 #              cd terraform/ecs_fargate/linux
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve\
 #              -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -1097,21 +1116,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1126,7 +1145,7 @@ jobs:
 #              cd terraform/ecs_fargate/linux
 #            fi
 #            terraform destroy --auto-approve
-#
+
 #  EKSIntegrationTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    runs-on: ubuntu-latest
@@ -1143,26 +1162,26 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Login ECR
 #        id: login-ecr
 #        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1177,7 +1196,7 @@ jobs:
 #            else
 #              cd terraform/eks/daemon
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve \
 #              -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -1190,21 +1209,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1219,7 +1238,7 @@ jobs:
 #              cd terraform/eks/daemon
 #            fi
 #            terraform destroy --auto-approve
-#
+
 #  EKSPrometheusIntegrationTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    runs-on: ubuntu-latest
@@ -1236,26 +1255,26 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Login ECR
 #        id: login-ecr
 #        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1270,7 +1289,7 @@ jobs:
 #            else
 #              cd terraform/eks/deployment
 #            fi
-#
+
 #            terraform init
 #            if terraform apply --auto-approve \
 #              -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -1281,17 +1300,17 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
@@ -1309,7 +1328,7 @@ jobs:
 #              cd terraform/eks/deployment
 #            fi
 #            terraform destroy --auto-approve
-#
+
 #  PerformanceTrackingTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1326,15 +1345,15 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
-#
+
+
 #      - name: Get Runner IP
 #        id: runner_ip
 #        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
@@ -1342,10 +1361,10 @@ jobs:
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1372,21 +1391,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1395,7 +1414,7 @@ jobs:
 #          timeout_minutes: 8
 #          retry_wait_seconds: 5
 #          command: cd terraform/performance && terraform destroy --auto-approve
-#
+
 #  EC2WinPerformanceTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1412,15 +1431,15 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
-#
+
+
 #      - name: Get Runner IP
 #        id: runner_ip
 #        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
@@ -1428,10 +1447,10 @@ jobs:
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1458,21 +1477,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1481,7 +1500,7 @@ jobs:
 #          timeout_minutes: 8
 #          retry_wait_seconds: 5
 #          command: cd terraform/performance && terraform destroy --auto-approve
-#
+
 #  StressTrackingTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    needs: [GenerateTestMatrix, OutputEnvVariables ]
@@ -1498,15 +1517,15 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
-#
+
+
 #      - name: Get Runner IP
 #        id: runner_ip
 #        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
@@ -1514,13 +1533,13 @@ jobs:
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Echo Test Info
 #        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1545,21 +1564,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1568,7 +1587,7 @@ jobs:
 #          timeout_minutes: 8
 #          retry_wait_seconds: 5
 #          command: cd terraform/stress && terraform destroy --auto-approve
-#
+
 #  EC2WinStressTrackingTest:
 #    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
 #    needs: [GenerateTestMatrix, OutputEnvVariables]
@@ -1585,15 +1604,15 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
-#
+
+
 #      - name: Get Runner IP
 #        id: runner_ip
 #        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
@@ -1601,13 +1620,13 @@ jobs:
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Echo Test Info
 #        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
-#
+
 #      - name: Terraform apply
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1633,21 +1652,21 @@ jobs:
 #            else
 #              terraform destroy -auto-approve && exit 1
 #            fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: ${{ cancelled() || failure() }}
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
@@ -1656,7 +1675,7 @@ jobs:
 #          timeout_minutes: 8
 #          retry_wait_seconds: 5
 #          command: cd terraform/stress && terraform destroy --auto-approve
-#
+
 #  GPUEndToEndTest:
 #    name:  ${{matrix.arrays.testName}}
 #    needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1673,26 +1692,26 @@ jobs:
 #        with:
 #          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
 #          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-#
+
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
 #          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-#
+
 #      - name: Login ECR
 #        id: login-ecr
 #        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
-#
+
 #      - name: Install Terraform
 #        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
 #        with:
 #          terraform_version: 1.12.0
-#
+
 #      - name: Verify Terraform version
 #        run: terraform --version
-#
+
 #      - name: Terraform apply and setup
 #        id: terraform_apply
 #        continue-on-error: true
@@ -1702,7 +1721,7 @@ jobs:
 #          else
 #            cd terraform/eks/addon/gpu
 #          fi
-#
+
 #          terraform init
 #          if terraform apply --auto-approve \
 #            -var="test_dir=${{ matrix.arrays.test_dir }}" \
@@ -1715,21 +1734,21 @@ jobs:
 #          else
 #            terraform destroy -auto-approve && exit 1
 #          fi
-#
+
 #      - name: "[WIP] ✅ Passed"
 #        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
 #        run: echo "::notice::WIP test passed"
-#
+
 #      - name: "[WIP] ⚠️ Failed (Overruled)"
 #        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
 #        run: |
 #          echo "::warning::WIP test failed but allowed to continue"
 #          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-#
+
 #      - name: Fail if not WIP
 #        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
 #        run: exit 1
-#
+
 #      - name: Terraform destroy
 #        if: always()
 #        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
