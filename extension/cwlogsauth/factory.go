@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package cwlogsprovision
+package cwlogsauth
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/collector/extension"
 )
 
-const typeStr = "cwlogsprovision"
+const typeStr = "cwlogsauth"
 
 func NewFactory() extension.Factory {
 	return extension.NewFactory(
