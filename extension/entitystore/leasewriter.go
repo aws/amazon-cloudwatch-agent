@@ -294,7 +294,9 @@ func (lw *LeaseWriter) renewLeaseWithRetry() {
 }
 
 func (lw *LeaseWriter) deleteLease() {
-	err := lw.client.Leases(lw.namespace).Delete(context.Background(), lw.leaseName(), metav1.DeleteOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := lw.client.Leases(lw.namespace).Delete(ctx, lw.leaseName(), metav1.DeleteOptions{})
 	if err != nil {
 		lw.logger.Warn("Best-effort Lease delete failed (will expire via TTL)",
 			zap.String("name", lw.leaseName()),

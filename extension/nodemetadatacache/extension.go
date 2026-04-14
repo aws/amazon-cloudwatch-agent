@@ -30,8 +30,7 @@ type NodeMetadata struct {
 	HostType         string
 	HostImageID      string
 	AvailabilityZone string
-	RenewTime        time.Time
-	LeaseDuration    int32
+	Expiry           time.Time
 }
 
 // NodeMetadataCache is an OTel extension that watches Kubernetes Leases in a
@@ -77,9 +76,8 @@ func (c *NodeMetadataCache) Get(nodeName string) *NodeMetadata {
 	if !ok {
 		return nil
 	}
-	// Check staleness: renewTime + leaseDuration must be >= now
-	expiry := entry.RenewTime.Add(time.Duration(entry.LeaseDuration) * time.Second)
-	if time.Now().After(expiry) {
+	// Check staleness
+	if time.Now().After(entry.Expiry) {
 		return nil
 	}
 	return entry
@@ -249,8 +247,7 @@ func (c *NodeMetadataCache) handleLeaseEvent(lease *coordinationv1.Lease) {
 		HostType:         hostType,
 		HostImageID:      imageID,
 		AvailabilityZone: az,
-		RenewTime:        renewTime,
-		LeaseDuration:    leaseDuration,
+		Expiry:           renewTime.Add(time.Duration(leaseDuration) * time.Second),
 	}
 
 	c.mutex.Lock()

@@ -18,8 +18,10 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/exp/maps"
 	"k8s.io/client-go/rest"
 
@@ -745,10 +747,13 @@ func TestStartLeaseWriter_K8sConfigFailure(t *testing.T) {
 		return nil, errors.New("not in cluster")
 	}
 
-	logger, _ := zap.NewDevelopment()
+	core, logs := observer.New(zap.ErrorLevel)
+	logger := zap.New(core)
 	e := &EntityStore{logger: logger}
 	e.startLeaseWriter()
 	assert.Nil(t, e.leaseWriter, "leaseWriter should be nil when K8s config fails")
+	require.Equal(t, 1, logs.Len())
+	assert.Contains(t, logs.All()[0].Message, "Failed to create in-cluster K8s config for LeaseWriter")
 }
 
 func TestStartLeaseWriter_DefaultNamespace(t *testing.T) {
@@ -768,11 +773,13 @@ func TestStartLeaseWriter_DefaultNamespace(t *testing.T) {
 		return nil, errors.New("not in cluster")
 	}
 
-	logger, _ := zap.NewDevelopment()
+	core, logs := observer.New(zap.ErrorLevel)
+	logger := zap.New(core)
 	e := &EntityStore{logger: logger}
 	e.startLeaseWriter()
-	// K8s config fails before NewLeaseWriter is called, so we can't inspect the
-	// namespace directly. This test exercises the code path where K8S_NAMESPACE is
-	// empty and the default is applied — verified by code inspection + coverage.
+	// K8s config fails after the default namespace is applied. The error log
+	// confirms we reached the K8s config step (past the namespace default).
 	assert.Nil(t, e.leaseWriter)
+	require.Equal(t, 1, logs.Len())
+	assert.Contains(t, logs.All()[0].Message, "Failed to create in-cluster K8s config for LeaseWriter")
 }

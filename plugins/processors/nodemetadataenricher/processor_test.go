@@ -60,8 +60,7 @@ func freshMetadata() *nodemetadatacache.NodeMetadata {
 		HostType:         "m5.xlarge",
 		HostImageID:      "ami-0123456789abcdef0",
 		AvailabilityZone: "us-east-1a",
-		RenewTime:        time.Now(),
-		LeaseDuration:    300,
+		Expiry:           time.Now().Add(5 * time.Minute),
 	}
 }
 

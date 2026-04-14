@@ -36,6 +36,10 @@ const (
 	PlatformType                = "PlatformType"
 	EC2PlatForm                 = "AWS::EC2"
 	podTerminationCheckInterval = 5 * time.Minute
+
+	// OTEL_CI_VERSION env var values set by the Helm chart.
+	envKeyOtelCIVersion   = "OTEL_CI_VERSION"
+	otelCIVersionV2       = "v2" // OTel Container Insights enabled
 )
 
 type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
@@ -109,8 +113,12 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		// https://github.com/kubernetes/cloud-provider-aws/issues/762
 		if e.kubernetesMode == "" {
 			go e.serviceprovider.startServiceProvider()
-		} else {
+		} else if getEnv(envKeyOtelCIVersion) == otelCIVersionV2 {
 			e.startLeaseWriter()
+		} else {
+			e.logger.Debug("Skipping LeaseWriter — OTEL_CI_VERSION is not v2",
+				zap.String("OTEL_CI_VERSION", getEnv(envKeyOtelCIVersion)),
+			)
 		}
 	}
 	if e.kubernetesMode != "" {

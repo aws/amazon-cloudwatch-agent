@@ -104,7 +104,6 @@ func TestGetReturnsMetadataForFreshLease(t *testing.T) {
 	result := c.Get("node-1")
 	require.NotNil(t, result, "Get should return metadata for a fresh Lease")
 	assert.Equal(t, "i-0abc111", result.HostID)
-	assert.Equal(t, int32(300), result.LeaseDuration)
 }
 
 func TestIgnoresLeasesWithoutPrefix(t *testing.T) {
@@ -172,16 +171,16 @@ func TestConcurrentReadWrite(_ *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		wg.Add(1)
 		if i%2 == 0 {
-			go func(_ int) {
+			go func() {
 				defer wg.Done()
 				lease := testLease("node-1", time.Now(), 300)
 				c.handleLeaseEvent(lease)
-			}(i)
+			}()
 		} else {
-			go func(_ int) {
+			go func() {
 				defer wg.Done()
 				_ = c.Get("node-1")
-			}(i)
+			}()
 		}
 	}
 
