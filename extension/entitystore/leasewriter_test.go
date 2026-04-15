@@ -134,7 +134,7 @@ func TestCreateLeaseWithRetry_StopsOnDoneChannel(t *testing.T) {
 	fakeClient := fake.NewSimpleClientset()
 
 	// Make Create always fail with a transient error so the retry loop runs
-	fakeClient.PrependReactor("create", "leases", func(action k8stesting.Action) (bool, runtime.Object, error) {
+	fakeClient.PrependReactor("create", "leases", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("api server unavailable")
 	})
 
