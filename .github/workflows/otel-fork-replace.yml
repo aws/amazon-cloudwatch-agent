@@ -64,10 +64,9 @@ jobs:
         run: |
           set -euo pipefail
           REPO_URL="https://github.com/amazon-contributing/opentelemetry-collector-contrib"
-          git clone --bare ${{ env.UPSTREAM }} /tmp/otel-fork
-          # old_sha is a 12-char prefix, git log handles prefix matching
-          raw=$(git -C /tmp/otel-fork log --oneline "${OLD_SHA}..${NEW_SHA}" 2>/dev/null || true)
-          rm -rf /tmp/otel-fork
+          # Use GitHub API instead of cloning — faster, no disk usage (capped at 250 commits)
+          raw=$(gh api "repos/amazon-contributing/opentelemetry-collector-contrib/compare/${OLD_SHA}...${NEW_SHA}" \
+            --jq '.commits[] | "\(.sha[:10]) \(.commit.message | split("\n")[0])"' 2>/dev/null || true)
           {
             echo "log<<CHANGELOG_EOF"
             if [ -z "$raw" ]; then
@@ -78,6 +77,7 @@ jobs:
               echo "$raw" | while IFS= read -r line; do
                 sha=$(echo "$line" | awk '{print $1}')
                 msg=$(echo "$line" | cut -d' ' -f2-)
+                msg=$(echo "$msg" | sed 's/|/\\|/g')
                 # Extract (#NNN) from end of message if present
                 if echo "$msg" | grep -qE '\(#[0-9]+\)$'; then
                   pr_num=$(echo "$msg" | grep -oE '#[0-9]+\)$' | tr -d ')' )
@@ -100,9 +100,15 @@ jobs:
           git config user.email 'action@github.com'
           git checkout -b "otel-fork-replace-${SHA}"
 
+          # Resolve the commit SHA to a Go pseudo-version (e.g. v0.0.0-20260410000839-bf7ae656c809).
+          # go mod edit requires a valid version, not a bare SHA.
+          PSEUDO_VERSION=$(GONOSUMCHECK='github.com/amazon-contributing/*' \
+            go list -m "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${SHA}" \
+            | awk '{print $2}')
+          echo "Resolved pseudo-version: ${PSEUDO_VERSION}"
+
           # Parse go.mod for all replace directives pointing to the fork,
-          # then rewrite each one to the new SHA. This ensures the workflow
-          # automatically covers any components added or removed in go.mod.
+          # then rewrite each one to the new pseudo-version.
           grep 'amazon-contributing/opentelemetry-collector-contrib/' go.mod \
             | grep '=>' \
             | sed 's/^[[:space:]]*//' \
@@ -111,8 +117,8 @@ jobs:
                 # Extract: left => right (ignoring version suffix)
                 left=$(echo "$line" | awk -F' => ' '{print $1}')
                 right=$(echo "$line" | awk -F' => ' '{print $2}' | awk '{print $1}')
-                echo "Updating: ${left} => ${right}@${SHA}"
-                go mod edit -replace "${left}=${right}@${SHA}"
+                echo "Updating: ${left} => ${right}@${PSEUDO_VERSION}"
+                go mod edit -replace "${left}=${right}@${PSEUDO_VERSION}"
               done
 
           go mod tidy
