@@ -59,6 +59,7 @@ jobs:
       - name: Generate changelog
         id: changelog
         env:
+          GH_TOKEN: ${{ github.token }}
           NEW_SHA: ${{ steps.get-latest-commit.outputs.sha }}
           OLD_SHA: ${{ steps.get-old-commit.outputs.sha }}
         run: |
