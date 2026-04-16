@@ -17,26 +17,28 @@ import (
 )
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
-	InstanceID:   "i-01d2417c27a396e44",
-	AccountID:    "874389809020",
-	Region:       "us-east-1",
-	InstanceType: "m5ad.large",
-	ImageID:      "ami-09edd32d9b0990d49",
+	InstanceID:       "i-01d2417c27a396e44",
+	AccountID:        "874389809020",
+	Region:           "us-east-1",
+	InstanceType:     "m5ad.large",
+	ImageID:          "ami-09edd32d9b0990d49",
+	AvailabilityZone: "us-east-1a",
 }
 
 var mockedInstanceIdentityDocWithLargeInstanceId = &ec2metadata.EC2InstanceIdentityDocument{
-	InstanceID:   "i-01d2417c27a396e44394824728",
-	AccountID:    "874389809020",
-	Region:       "us-east-1",
-	InstanceType: "m5ad.large",
-	ImageID:      "ami-09edd32d9b0990d49",
+	InstanceID:       "i-01d2417c27a396e44394824728",
+	AccountID:        "874389809020",
+	Region:           "us-east-1",
+	InstanceType:     "m5ad.large",
+	ImageID:          "ami-09edd32d9b0990d49",
+	AvailabilityZone: "us-east-1a",
 }
 
 var (
 	tagVal3 = "ASG-1"
 )
 
-func TestSetInstanceIDAccountID(t *testing.T) {
+func TestSetEC2Metadata(t *testing.T) {
 	t.Parallel()
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -54,8 +56,12 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 			},
 			wantErr: false,
 			want: EC2Info{
-				InstanceID: mockedInstanceIdentityDoc.InstanceID,
-				AccountID:  mockedInstanceIdentityDoc.AccountID,
+				InstanceID:       mockedInstanceIdentityDoc.InstanceID,
+				AccountID:        mockedInstanceIdentityDoc.AccountID,
+				InstanceType:     mockedInstanceIdentityDoc.InstanceType,
+				ImageID:          mockedInstanceIdentityDoc.ImageID,
+				AvailabilityZone: mockedInstanceIdentityDoc.AvailabilityZone,
+				Hostname:         "MockHostName",
 			},
 		},
 		{
@@ -65,8 +71,12 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 			},
 			wantErr: false,
 			want: EC2Info{
-				InstanceID: "",
-				AccountID:  mockedInstanceIdentityDocWithLargeInstanceId.AccountID,
+				InstanceID:       "",
+				AccountID:        mockedInstanceIdentityDocWithLargeInstanceId.AccountID,
+				InstanceType:     mockedInstanceIdentityDocWithLargeInstanceId.InstanceType,
+				ImageID:          mockedInstanceIdentityDocWithLargeInstanceId.ImageID,
+				AvailabilityZone: mockedInstanceIdentityDocWithLargeInstanceId.AvailabilityZone,
+				Hostname:         "MockHostName",
 			},
 		},
 	}
@@ -77,11 +87,15 @@ func TestSetInstanceIDAccountID(t *testing.T) {
 				metadataProvider: tt.args.metadataProvider,
 				logger:           logger,
 			}
-			if err := ei.setInstanceIDAccountID(); (err != nil) != tt.wantErr {
-				t.Errorf("setInstanceIDAccountID() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ei.setEC2Metadata(); (err != nil) != tt.wantErr {
+				t.Errorf("setEC2Metadata() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want.InstanceID, ei.GetInstanceID())
 			assert.Equal(t, tt.want.AccountID, ei.GetAccountID())
+			assert.Equal(t, tt.want.InstanceType, ei.GetInstanceType())
+			assert.Equal(t, tt.want.ImageID, ei.GetImageID())
+			assert.Equal(t, tt.want.AvailabilityZone, ei.GetAvailabilityZone())
+			assert.Equal(t, tt.want.Hostname, ei.GetHostname())
 		})
 	}
 }
@@ -172,4 +186,33 @@ func TestNotInitIfMetadataProviderIsEmpty(t *testing.T) {
 			assert.NotContains(t, logOutput, "Finished initializing EC2Info")
 		})
 	}
+}
+
+func TestGettersReturnEmptyBeforeInit(t *testing.T) {
+	ei := &EC2Info{}
+	assert.Equal(t, "", ei.GetInstanceID())
+	assert.Equal(t, "", ei.GetAccountID())
+	assert.Equal(t, "", ei.GetInstanceType())
+	assert.Equal(t, "", ei.GetImageID())
+	assert.Equal(t, "", ei.GetAvailabilityZone())
+	assert.Equal(t, "", ei.GetHostname())
+}
+
+func TestHostnameFailureProceedsWithoutIt(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ei := &EC2Info{
+		metadataProvider: &mockMetadataProvider{
+			InstanceIdentityDocument: mockedInstanceIdentityDoc,
+			HostnameError:            true,
+		},
+		logger: logger,
+	}
+	err := ei.setEC2Metadata()
+	assert.NoError(t, err, "should succeed even when Hostname() fails")
+	// Hostname is empty but all other fields are populated
+	assert.Equal(t, "", ei.GetHostname())
+	assert.Equal(t, mockedInstanceIdentityDoc.InstanceID, ei.GetInstanceID())
+	assert.Equal(t, mockedInstanceIdentityDoc.InstanceType, ei.GetInstanceType())
+	assert.Equal(t, mockedInstanceIdentityDoc.ImageID, ei.GetImageID())
+	assert.Equal(t, mockedInstanceIdentityDoc.AvailabilityZone, ei.GetAvailabilityZone())
 }
