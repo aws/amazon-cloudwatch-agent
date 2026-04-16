@@ -355,6 +355,11 @@ jobs:
             exit 0
           fi
 
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'skip testing') }}" == "true" ]]; then
+            echo "'skip testing' label found - bypassing integration test requirement."
+            exit 0
+          fi
+
           if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" != "true" ]]; then
             echo "Missing 'ready for testing' label. Please add before merging."
             exit 1
