@@ -23,7 +23,7 @@ jobs:
       - name: Get latest commit sha
         id: get-latest-commit
         run: |
-          if ["${{ inputs.CommitSha }}" == ""]; then
+          if [ "${{ inputs.CommitSha }}" == "" ]; then
             echo "sha=$(git ls-remote ${{ env.UPSTREAM }} ${{ env.UPSTREAM_BRANCH }} | awk '{print $1;}')" >> $GITHUB_OUTPUT
           else
             echo "sha=${{ inputs.CommitSha }}" >> $GITHUB_OUTPUT
@@ -35,48 +35,79 @@ jobs:
         with:
           go-version: ~1.25.8
           cache: false
-      - name: Update OTel fork components version
-        id: set-matrix
+      - name: Get old commit sha from go.mod
+        id: get-old-commit
         run: |
-          git config --global user.name 'Github Action'
-          git config --global user.email 'action@github.com'
-          git checkout -b otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
-          go mod edit -replace go.opentelemetry.io/collector/config/confighttp=github.com/amazon-contributing/opentelemetry-collector-contrib/config/confighttp@${{ steps.get-latest-commit.outputs.sha }}
+          # Extract the 12-char hash suffix from the first fork pseudo-version in go.mod.
+          # Pseudo-versions look like: v0.0.0-20260407222105-72a988178008
+          old_sha=$(grep -m1 'amazon-contributing/opentelemetry-collector-contrib/.*v0\.0\.0-' go.mod \
+            | grep -oE 'v0\.0\.0-[0-9]+-[0-9a-f]{12}' \
+            | head -1 \
+            | awk -F'-' '{print $NF}')
+          echo "sha=${old_sha}" >> $GITHUB_OUTPUT
+      - name: Generate changelog
+        id: changelog
+        env:
+          NEW_SHA: ${{ steps.get-latest-commit.outputs.sha }}
+          OLD_SHA: ${{ steps.get-old-commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          REPO_URL="https://github.com/amazon-contributing/opentelemetry-collector-contrib"
+          git clone --bare ${{ env.UPSTREAM }} /tmp/otel-fork
+          # old_sha is a 12-char prefix, git log handles prefix matching
+          raw=$(git -C /tmp/otel-fork log --oneline "${OLD_SHA}..${NEW_SHA}" 2>/dev/null || true)
+          rm -rf /tmp/otel-fork
+          {
+            echo "log<<CHANGELOG_EOF"
+            if [ -z "$raw" ]; then
+              echo "Could not generate changelog (old SHA ${OLD_SHA} not found in history)"
+            else
+              echo "| Commit | Description | PR |"
+              echo "| ------ | ----------- | -- |"
+              echo "$raw" | while IFS= read -r line; do
+                sha=$(echo "$line" | awk '{print $1}')
+                msg=$(echo "$line" | cut -d' ' -f2-)
+                # Extract (#NNN) from end of message if present
+                if echo "$msg" | grep -qE '\(#[0-9]+\)$'; then
+                  pr_num=$(echo "$msg" | grep -oE '#[0-9]+\)$' | tr -d ')' )
+                  msg=$(echo "$msg" | sed 's/ *(#[0-9]*)$//')
+                  pr_link="[${pr_num}](${REPO_URL}/pull/${pr_num#\#})"
+                else
+                  pr_link=""
+                fi
+                echo "| [\`${sha}\`](${REPO_URL}/commit/${sha}) | ${msg} | ${pr_link} |"
+              done
+            fi
+            echo "CHANGELOG_EOF"
+          } >> $GITHUB_OUTPUT
+      - name: Update OTel fork components version
+        env:
+          SHA: ${{ steps.get-latest-commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          git config user.name 'Github Action'
+          git config user.email 'action@github.com'
+          git checkout -b "otel-fork-replace-${SHA}"
+
+          # Parse go.mod for all replace directives pointing to the fork,
+          # then rewrite each one to the new SHA. This ensures the workflow
+          # automatically covers any components added or removed in go.mod.
+          grep 'amazon-contributing/opentelemetry-collector-contrib/' go.mod \
+            | grep '=>' \
+            | sed 's/^[[:space:]]*//' \
+            | sed 's/^replace //' \
+            | while IFS= read -r line; do
+                # Extract: left => right (ignoring version suffix)
+                left=$(echo "$line" | awk -F' => ' '{print $1}')
+                right=$(echo "$line" | awk -F' => ' '{print $2}' | awk '{print $1}')
+                echo "Updating: ${left} => ${right}@${SHA}"
+                go mod edit -replace "${left}=${right}@${SHA}"
+              done
+
           go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor=github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus=github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws=github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza=github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
-          git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
+
+          git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${SHA}"
           git push -u origin HEAD
-          git config --global --unset user.name
-          git config --global --unset user.email
       - name: Create pull request
         uses: repo-sync/pull-request@7e79a9f5dc3ad0ce53138f01df2fad14a04831c5 # v2.12.1
         with:
@@ -87,13 +118,18 @@ jobs:
           pr_body: |
             # Description of the issue
             An automated PR to update the OTel fork components to point to [${{ steps.get-latest-commit.outputs.sha }}](https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}).
-            
+
+            ## Commits since last update
+            Previous SHA: `${{ steps.get-old-commit.outputs.sha }}`
+
+            ${{ steps.changelog.outputs.log }}
+
             # License
             By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of your choice.
-            
+
             # Tests
             n/a
-            
+
             # Requirements
             _Before commit the code, please do the following steps._
             1. Run `make fmt` and `make fmt-sh`
