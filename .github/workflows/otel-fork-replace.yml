@@ -108,7 +108,7 @@ jobs:
 
           # Resolve the commit SHA to a Go pseudo-version (e.g. v0.0.0-20260410000839-bf7ae656c809).
           # go mod edit requires a valid version, not a bare SHA.
-          PSEUDO_VERSION=$(GONOSUMCHECK='github.com/amazon-contributing/*' \
+          PSEUDO_VERSION=$(GONOSUMDB='github.com/amazon-contributing/*' \
             go list -m "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${SHA}" \
             | awk '{print $2}')
           [ -n "$PSEUDO_VERSION" ] || { echo "::error::go list -m returned empty version for ${SHA}"; exit 1; }
