@@ -66,6 +66,8 @@ jobs:
           set -euo pipefail
           REPO_URL="https://github.com/amazon-contributing/opentelemetry-collector-contrib"
           echo "Fetching changelog: ${OLD_SHA}...${NEW_SHA}"
+          # OLD_SHA is a 12-char prefix from the pseudo-version. GitHub's API resolves
+          # short SHAs in most cases; if ambiguous, the fallback produces a missing changelog.
           if ! raw=$(gh api "repos/amazon-contributing/opentelemetry-collector-contrib/compare/${OLD_SHA}...${NEW_SHA}" \
             --jq '.commits[] | "\(.sha[:10]) \(.commit.message | split("\n")[0])"'); then
             echo "gh api failed (see above for error)"
@@ -108,6 +110,7 @@ jobs:
 
           # Resolve the commit SHA to a Go pseudo-version (e.g. v0.0.0-20260410000839-bf7ae656c809).
           # go mod edit requires a valid version, not a bare SHA.
+          # Uses override/aws as the submodule since this is a multi-module repo with no root go.mod.
           PSEUDO_VERSION=$(GONOSUMDB='github.com/amazon-contributing/*' \
             go list -m "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${SHA}" \
             | awk '{print $2}')
