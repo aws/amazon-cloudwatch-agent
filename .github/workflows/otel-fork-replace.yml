@@ -38,13 +38,19 @@ jobs:
       - name: Get old commit sha from go.mod
         id: get-old-commit
         run: |
-          # Extract the 12-char hash suffix from the first fork pseudo-version in go.mod.
+          # Extract all distinct 12-char hash suffixes from fork pseudo-versions in go.mod.
           # Pseudo-versions look like: v0.0.0-20260407222105-72a988178008
-          old_sha=$(grep -m1 'amazon-contributing/opentelemetry-collector-contrib/.*v0\.0\.0-' go.mod \
+          shas=$(grep 'amazon-contributing/opentelemetry-collector-contrib/' go.mod \
             | grep -oE 'v0\.0\.0-[0-9]+-[0-9a-f]{12}' \
-            | head -1 \
-            | awk -F'-' '{print $NF}')
-          echo "sha=${old_sha}" >> $GITHUB_OUTPUT
+            | awk -F'-' '{print $NF}' \
+            | sort -u)
+          count=$(echo "$shas" | wc -l | tr -d ' ')
+          if [ "$count" -ne 1 ]; then
+            echo "::error::Found $count distinct fork SHAs in go.mod. A component may be intentionally pinned. Aborting."
+            echo "$shas"
+            exit 1
+          fi
+          echo "sha=${shas}" >> $GITHUB_OUTPUT
       - name: Generate changelog
         id: changelog
         env:
