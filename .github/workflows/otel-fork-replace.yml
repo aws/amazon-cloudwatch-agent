@@ -67,8 +67,8 @@ jobs:
           REPO_URL="https://github.com/amazon-contributing/opentelemetry-collector-contrib"
           echo "Fetching changelog: ${OLD_SHA}...${NEW_SHA}"
           if ! raw=$(gh api "repos/amazon-contributing/opentelemetry-collector-contrib/compare/${OLD_SHA}...${NEW_SHA}" \
-            --jq '.commits[] | "\(.sha[:10]) \(.commit.message | split("\n")[0])"' 2>&1); then
-            echo "gh api failed: ${raw}"
+            --jq '.commits[] | "\(.sha[:10]) \(.commit.message | split("\n")[0])"'); then
+            echo "gh api failed (see above for error)"
             raw=""
           else
             echo "Found $(echo "$raw" | grep -c . || true) commits"
@@ -111,6 +111,7 @@ jobs:
           PSEUDO_VERSION=$(GONOSUMCHECK='github.com/amazon-contributing/*' \
             go list -m "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${SHA}" \
             | awk '{print $2}')
+          [ -n "$PSEUDO_VERSION" ] || { echo "::error::go list -m returned empty version for ${SHA}"; exit 1; }
           echo "Resolved pseudo-version: ${PSEUDO_VERSION}"
 
           # Parse go.mod for all replace directives pointing to the fork,
