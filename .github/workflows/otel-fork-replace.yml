@@ -65,7 +65,6 @@ jobs:
         run: |
           set -euo pipefail
           REPO_URL="https://github.com/amazon-contributing/opentelemetry-collector-contrib"
-          # Use GitHub API instead of cloning — faster, no disk usage (capped at 250 commits)
           echo "Fetching changelog: ${OLD_SHA}...${NEW_SHA}"
           if ! raw=$(gh api "repos/amazon-contributing/opentelemetry-collector-contrib/compare/${OLD_SHA}...${NEW_SHA}" \
             --jq '.commits[] | "\(.sha[:10]) \(.commit.message | split("\n")[0])"' 2>&1); then
@@ -130,24 +129,31 @@ jobs:
 
           go mod tidy
 
-          echo "=== DRY RUN: would commit and push here ==="
-          echo "=== go.mod diff ==="
-          git diff go.mod | head -100
-      # - name: Create pull request (disabled for testing)
-      - name: Log PR description (dry run)
-        run: |
-          cat <<'EOF'
-          # Description of the issue
-          An automated PR to update the OTel fork components to point to [${{ steps.get-latest-commit.outputs.sha }}](https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}).
+          git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${SHA}"
+          git push -u origin HEAD
+      - name: Create pull request
+        uses: repo-sync/pull-request@7e79a9f5dc3ad0ce53138f01df2fad14a04831c5 # v2.12.1
+        with:
+          source_branch: otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
+          destination_branch: main
+          pr_title: "Update OTel fork components to ${{ steps.get-latest-commit.outputs.sha }}"
+          pr_allow_empty: false
+          pr_body: |
+            # Description of the issue
+            An automated PR to update the OTel fork components to point to [${{ steps.get-latest-commit.outputs.sha }}](https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}).
 
-          ## Commits since last update
-          Previous SHA: `${{ steps.get-old-commit.outputs.sha }}`
+            ## Commits since last update
+            Previous SHA: `${{ steps.get-old-commit.outputs.sha }}`
 
-          ${{ steps.changelog.outputs.log }}
+            ${{ steps.changelog.outputs.log }}
 
-          # License
-          By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of your choice.
+            # License
+            By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of your choice.
 
-          # Tests
-          n/a
-          EOF
+            # Tests
+            n/a
+
+            # Requirements
+            _Before commit the code, please do the following steps._
+            1. Run `make fmt` and `make fmt-sh`
+            2. Run `make lint`
