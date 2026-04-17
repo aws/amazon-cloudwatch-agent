@@ -1626,3 +1626,67 @@ func TestTranslateAppSignals(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslatorOTLPWithCustomConfig(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.Role_arn = ""
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	inputConfig := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint":  "0.0.0.0:4317",
+					"log_group_name": "/aws/application/otlp",
+					"emf_processor": map[string]interface{}{
+						"metric_namespace": "MyApplication/OTLP",
+						"metric_unit": map[string]interface{}{
+							"request_duration": "Milliseconds",
+							"request_count":    "Count",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	conf := confmap.NewFromStringMap(inputConfig)
+	translator := NewTranslator()
+	cfg, err := translator.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	emfCfg := cfg.(*awsemfexporter.Config)
+	assert.Equal(t, "/aws/application/otlp", emfCfg.LogGroupName)
+	assert.Equal(t, "MyApplication/OTLP", emfCfg.Namespace)
+	assert.Len(t, emfCfg.MetricDescriptors, 2)
+	assert.True(t, emfCfg.AddEntity)
+}
+
+func TestTranslatorOTLPWithDefaults(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.Role_arn = ""
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	inputConfig := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"otlp": map[string]interface{}{
+					"grpc_endpoint": "0.0.0.0:4317",
+				},
+			},
+		},
+	}
+
+	conf := confmap.NewFromStringMap(inputConfig)
+	translator := NewTranslator()
+	cfg, err := translator.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+
+	emfCfg := cfg.(*awsemfexporter.Config)
+	// Should use defaults from awsemf_default_generic.yaml
+	assert.Equal(t, "/aws/cwagent", emfCfg.LogGroupName)
+	assert.Equal(t, "CWAgent", emfCfg.Namespace)
+	assert.True(t, emfCfg.AddEntity)
+}
