@@ -1,4 +1,13 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300067.0 (2026-04-17)
+========================================================================
+Enhancements:
+* OTLP/ContainerInsights - KSM Node-metadata Enrichment
+* Add application-signals routing rules to awsproxy translator
+Bug Fixes:
+* fix reload server method - addresses 4311 bind issue
+
+========================================================================
 Amazon CloudWatch Agent 1.300066.1 (2026-04-06)
 ========================================================================
 Enhancements:
