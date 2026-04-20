@@ -10,7 +10,7 @@ replace collectd.org v0.4.0 => github.com/collectd/go-collectd v0.4.0
 // to be all replaced since there are some changes that will always be from upstream
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260410000839-bf7ae656c809
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260410000839-bf7ae656c809
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/vastin/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260416225910-f8f1ece6fdb6
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20260410000839-bf7ae656c809
 )
 
