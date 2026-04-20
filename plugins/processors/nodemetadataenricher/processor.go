@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
@@ -71,4 +72,39 @@ func (p *nodeMetadataEnricherProcessor) processMetrics(_ context.Context, md pme
 	}
 
 	return md, nil
+}
+
+func (p *nodeMetadataEnricherProcessor) processLogs(_ context.Context, ld plog.Logs) (plog.Logs, error) {
+	cache := p.cache.Load()
+	if cache == nil {
+		cache = nodemetadatacache.GetNodeMetadataCache()
+		if cache != nil {
+			p.logger.Debug("Lazily initialized node metadata cache reference")
+			p.cache.Store(cache)
+		} else {
+			return ld, nil
+		}
+	}
+
+	rls := ld.ResourceLogs()
+	for i := 0; i < rls.Len(); i++ {
+		resource := rls.At(i).Resource()
+		nodeNameVal, exists := resource.Attributes().Get(attrNodeName)
+		if !exists || nodeNameVal.Str() == "" {
+			continue
+		}
+
+		metadata := cache.Get(nodeNameVal.Str())
+		if metadata == nil {
+			continue
+		}
+
+		resource.Attributes().PutStr(attrHostID, metadata.HostID)
+		resource.Attributes().PutStr(attrHostName, metadata.HostName)
+		resource.Attributes().PutStr(attrHostType, metadata.HostType)
+		resource.Attributes().PutStr(attrHostImageID, metadata.HostImageID)
+		resource.Attributes().PutStr(attrAvailabilityZone, metadata.AvailabilityZone)
+	}
+
+	return ld, nil
 }
