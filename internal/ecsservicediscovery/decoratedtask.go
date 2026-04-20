@@ -26,6 +26,7 @@ const (
 	taskMetricsPathLabel = "__metrics_path__"
 	taskClusterNameLabel = "TaskClusterName"
 	taskIdLabel          = "TaskId"
+	ec2InstanceIDLabel   = "EC2InstanceId"
 	ec2InstanceTypeLabel = "InstanceType"
 	ec2VpcIdLabel        = "VpcId"
 	ec2SubnetIdLabel     = "SubnetId"
@@ -161,6 +162,7 @@ func (t *DecoratedTask) generatePrometheusTarget(
 	}
 
 	if t.EC2Info != nil {
+		addExporterLabels(labels, ec2InstanceIDLabel, &t.EC2Info.ECInstanceId)
 		addExporterLabels(labels, ec2InstanceTypeLabel, &t.EC2Info.InstanceType)
 		addExporterLabels(labels, ec2VpcIdLabel, &t.EC2Info.VpcId)
 		addExporterLabels(labels, ec2SubnetIdLabel, &t.EC2Info.SubnetId)
