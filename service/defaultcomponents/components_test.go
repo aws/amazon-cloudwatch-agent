@@ -29,6 +29,7 @@ func TestComponents(t *testing.T) {
 		"hostmetrics",
 		"jaeger",
 		"jmx",
+		"k8s_events",
 		"kafka",
 		"kubeletstats",
 		"nop",
