@@ -65,6 +65,9 @@ import (
 	"go.opentelemetry.io/collector/receiver/nopreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
+
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
@@ -116,6 +119,7 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory](
 		attributesprocessor.NewFactory(),
+		attributestocontextprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
 		awsattributelimitprocessor.NewFactory(),
 		awsentity.NewFactory(),
@@ -163,6 +167,7 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Extensions, err = otelcol.MakeFactoryMap[extension.Factory](
 		agenthealth.NewFactory(),
+		awscloudwatchlogsprovisionerextension.NewFactory(),
 		awsproxy.NewFactory(),
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),

@@ -253,7 +253,14 @@ require (
 	k8s.io/klog/v2 v2.130.1
 )
 
-require github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+require (
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-00010101000000-000000000000
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+)
+
+require github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.46.0
+
+require github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect
@@ -289,8 +296,8 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-msk-iam-sasl-signer-go v1.0.1 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.29.14 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.36.3
+	github.com/aws/aws-sdk-go-v2/config v1.29.14
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
@@ -463,6 +470,7 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260423080906-2ed9c3bd3fd2
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs v0.124.1 // indirect
@@ -555,7 +563,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector v0.124.0 // indirect
 	go.opentelemetry.io/collector/component/componentstatus v0.124.0 // indirect
-	go.opentelemetry.io/collector/config/configcompression v1.30.0 // indirect
+	go.opentelemetry.io/collector/config/configcompression v1.30.0
 	go.opentelemetry.io/collector/config/configgrpc v0.124.0 // indirect
 	go.opentelemetry.io/collector/config/confignet v1.30.0 // indirect
 	go.opentelemetry.io/collector/config/configretry v1.30.0 // indirect
@@ -636,3 +644,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260423100640-97a1c1d43559
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor => github.com/jj22ee/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260422040928-83e37a35e80e
