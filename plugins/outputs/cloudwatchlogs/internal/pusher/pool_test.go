@@ -107,13 +107,9 @@ func TestSenderPool(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
-	s := newSender(logger, mockService, nil, time.Second)
+	s := newSender(logger, mockService, nil, nil)
 	p := NewWorkerPool(12)
 	sp := newSenderPool(p, s)
-
-	assert.Equal(t, time.Second, sp.RetryDuration())
-	sp.SetRetryDuration(time.Minute)
-	assert.Equal(t, time.Minute, sp.RetryDuration())
 
 	var completed atomic.Int32
 	var evts []*logEvent
