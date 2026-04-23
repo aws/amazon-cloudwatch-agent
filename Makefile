@@ -66,9 +66,9 @@ copy-version-file: create-version-file
 	mkdir -p build/bin/
 	cp CWAGENT_VERSION $(BUILD_SPACE)/bin/CWAGENT_VERSION
 
-amazon-cloudwatch-agent-linux: linux-amd64 linux-arm64
+amazon-cloudwatch-agent-linux: amazon-cloudwatch-agent-linux-amd64 amazon-cloudwatch-agent-linux-arm64
 
-linux-amd64: copy-version-file workload-discovery-linux
+amazon-cloudwatch-agent-linux-amd64: copy-version-file workload-discovery-linux
 	@echo Building CloudWatchAgent for Linux AMD64
 	$(LINUX_AMD64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
@@ -76,7 +76,7 @@ linux-amd64: copy-version-file workload-discovery-linux
 	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 
-linux-arm64: copy-version-file workload-discovery-linux
+amazon-cloudwatch-agent-linux-arm64: copy-version-file workload-discovery-linux
 	@echo Building CloudWatchAgent for Linux ARM64
 	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
@@ -85,9 +85,9 @@ linux-arm64: copy-version-file workload-discovery-linux
 	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 
 
-amazon-cloudwatch-agent-darwin: darwin-amd64 darwin-arm64
+amazon-cloudwatch-agent-darwin: amazon-cloudwatch-agent-darwin-amd64 amazon-cloudwatch-agent-darwin-arm64
 
-darwin-amd64: copy-version-file workload-discovery-darwin
+amazon-cloudwatch-agent-darwin-amd64: copy-version-file workload-discovery-darwin
 ifneq ($(OS),Windows_NT)
 ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS AMD64
@@ -99,7 +99,7 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
-darwin-arm64: copy-version-file workload-discovery-darwin
+amazon-cloudwatch-agent-darwin-arm64: copy-version-file workload-discovery-darwin
 ifneq ($(OS),Windows_NT)
 ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS ARM64
