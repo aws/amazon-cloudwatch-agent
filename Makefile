@@ -17,7 +17,7 @@ endif
 
 BUILD := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -s -w
-NPROCS := $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+NPROCS := 4
 MAKEFLAGS += -j$(NPROCS)
 $(info Using $(NPROCS) parallel jobs)
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${VERSION}
@@ -47,7 +47,9 @@ LINTER = $(TOOLS_BIN_DIR)/golangci-lint
 IMPI = $(TOOLS_BIN_DIR)/impi
 ADDLICENSE = $(TOOLS_BIN_DIR)/addlicense
 
-prepackage: clean test build
+.NOTPARALLEL: prepackage
+test_and_build: test build
+prepackage: clean test_and_build
 release: prepackage package-rpm package-deb package-win package-darwin
 nightly-release: prepackage package-rpm package-deb package-win
 nightly-release-mac: prepackage package-darwin
