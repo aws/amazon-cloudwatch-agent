@@ -46,7 +46,7 @@ LINTER = $(TOOLS_BIN_DIR)/golangci-lint
 IMPI = $(TOOLS_BIN_DIR)/impi
 ADDLICENSE = $(TOOLS_BIN_DIR)/addlicense
 
-.NOTPARALLEL: prepackage
+# NOTE: With -j, clean/test/build may race. On Make 4.4+, uncomment to serialize: .NOTPARALLEL: prepackage
 test_and_build: test build
 prepackage: clean test_and_build
 release: prepackage package-rpm package-deb package-win package-darwin
