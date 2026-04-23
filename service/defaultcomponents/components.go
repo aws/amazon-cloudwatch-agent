@@ -66,6 +66,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
@@ -169,6 +170,7 @@ func Factories() (otelcol.Factories, error) {
 		agenthealth.NewFactory(),
 		awscloudwatchlogsprovisionerextension.NewFactory(),
 		awsproxy.NewFactory(),
+		headerssetterextension.NewFactory(),
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
 		nodemetadatacache.NewFactory(),

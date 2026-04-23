@@ -26,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignalslogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsightsjmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
@@ -52,6 +53,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if !ok {
 		return nil, errors.New("invalid json config")
 	}
+	// Auto-enable logs.logs_collected.application_signals when metrics is configured
+	// Must happen before creating confmap since confmap may copy the map
+	applicationsignalslogs.AutoEnableIfNeeded(m)
+
 	conf := confmap.NewFromStringMap(m)
 
 	if conf.IsSet("csm") {
@@ -73,6 +78,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Merge(containerInsightsTranslators)
 	translators.Set(applicationsignals.NewTranslator(pipeline.SignalTraces))
 	translators.Set(applicationsignals.NewTranslator(pipeline.SignalMetrics))
+	translators.Set(applicationsignalslogs.NewTranslator())
 	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())

@@ -174,6 +174,22 @@ func TestAppSignalsAndECSConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_and_ecs_config", "windows", expectedEnvVars, "")
 }
 
+func TestAppSignalsLogsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_logs_config", "linux", expectedEnvVars, "")
+}
+
+func TestAppSignalsLogsStaticConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_logs_static_config", "linux", expectedEnvVars, "")
+}
+
 func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

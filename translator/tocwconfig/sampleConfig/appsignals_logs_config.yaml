@@ -1,0 +1,140 @@
+exporters:
+    otlphttp/appsignals_logs:
+        auth:
+            authenticator: headers_setter/appsignals_logs
+        compression: gzip
+        encoding: proto
+        endpoint: https://logs.us-east-1.amazonaws.com
+        idle_conn_timeout: 1m30s
+        logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    awscloudwatchlogsprovisioner:
+        additional_auth: sigv4auth/appsignals_logs
+        logs_provision_failure_backoff: 30s
+        logs_provision_timeout: 10s
+        region: us-east-1
+    entitystore:
+        mode: ec2
+        region: us-east-1
+    headers_setter/appsignals_logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              from_context: cwlogs.log_group
+              key: x-aws-log-group
+            - action: upsert
+              from_context: cwlogs.log_stream
+              key: x-aws-log-stream
+    sigv4auth/appsignals_logs:
+        assume_role:
+            sts_region: us-east-1
+        region: us-east-1
+        service: logs
+processors:
+    attributestocontext:
+        actions:
+            - from_resource_attribute: cwlogs.log_group
+              key: cwlogs.log_group
+            - from_resource_attribute: cwlogs.log_stream
+              key: cwlogs.log_stream
+    batch/application_signals_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - cwlogs.log_group
+            - cwlogs.log_stream
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    transform/application_signals_logs:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(resource.attributes["cwlogs.log_group"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], "")) where resource.attributes["cwlogs.log_group"] == nil
+                - set(resource.attributes["cwlogs.log_stream"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], "")) where resource.attributes["cwlogs.log_stream"] == nil
+        metric_statements: []
+        trace_statements: []
+receivers:
+    otlp/grpc_0_0_0_0_4315:
+        protocols:
+            grpc:
+                endpoint: 0.0.0.0:4315
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
+                read_buffer_size: 524288
+                transport: tcp
+    otlp/http_0_0_0_0_4316:
+        protocols:
+            http:
+                cors: {}
+                endpoint: 0.0.0.0:4316
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+service:
+    extensions:
+        - headers_setter/appsignals_logs
+        - sigv4auth/appsignals_logs
+        - awscloudwatchlogsprovisioner
+        - agenthealth/logs
+        - entitystore
+    pipelines:
+        logs/application_signals_logs:
+            exporters:
+                - otlphttp/appsignals_logs
+            processors:
+                - transform/application_signals_logs
+                - attributestocontext
+                - batch/application_signals_logs
+            receivers:
+                - otlp/grpc_0_0_0_0_4315
+                - otlp/http_0_0_0_0_4316
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
