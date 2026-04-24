@@ -11,6 +11,7 @@ import (
 )
 
 func TestUnmarshalDefaultConfig(t *testing.T) {
+	t.Parallel()
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig()
 	assert.NoError(t, confmap.New().Unmarshal(cfg))

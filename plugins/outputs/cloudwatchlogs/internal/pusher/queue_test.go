@@ -131,8 +131,9 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	q.resetFlushTimer()
 
-	time.Sleep(time.Second)
-	require.True(t, called.Load(), "PutLogEvents has not been called after FlushTimeout has been reached.")
+	require.Eventually(t, func() bool {
+		return called.Load()
+	}, time.Second, 50*time.Millisecond, "PutLogEvents has not been called after FlushTimeout has been reached.")
 
 	q.Stop()
 	sender.Stop()
@@ -168,8 +169,9 @@ func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	q.resetFlushTimer()
 
-	time.Sleep(2 * time.Second)
-	require.True(t, called.Load(), "PutLogEvents has not been called after FlushTimeout has been reached.")
+	require.Eventually(t, func() bool {
+		return called.Load()
+	}, 2*time.Second, 50*time.Millisecond, "PutLogEvents has not been called after FlushTimeout has been reached.")
 
 	q.Stop()
 	sender.Stop()
@@ -498,7 +500,9 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	logSink := testutil.NewLogSink()
 	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, 2*time.Hour, nil, &wg)
 	q.AddEvent(newStubLogEvent("msg", time.Now()))
-	time.Sleep(2 * time.Second)
+	require.Eventually(t, func() bool {
+		return cnt.Load() >= 1
+	}, 2*time.Second, 50*time.Millisecond)
 
 	logLine := logSink.String()
 	require.True(t, strings.Contains(logLine, "E!"), fmt.Sprintf("Expecting error log with unhandled error, but received '%s' in the log", logLine))
@@ -566,6 +570,7 @@ func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 }
 
 func TestLogRejectedLogEntryInfo(t *testing.T) {
+	t.Parallel()
 	var wg sync.WaitGroup
 	var s stubLogsService
 
@@ -660,7 +665,9 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 	logSink := testutil.NewLogSink()
 	q, sender := testPreparationWithLogger(t, logSink, -1, &s, 10*time.Millisecond, time.Second, nil, &wg)
 	q.AddEvent(newStubLogEvent("msg", time.Now()))
-	time.Sleep(2 * time.Second)
+	require.Eventually(t, func() bool {
+		return strings.Contains(logSink.String(), "request dropped")
+	}, 2*time.Second, 50*time.Millisecond)
 
 	logLines := logSink.Lines()
 	lastLine := logLines[len(logLines)-1]
@@ -725,6 +732,7 @@ func testPreparationWithLogger(
 }
 
 func TestQueueCallbackRegistration(t *testing.T) {
+	t.Parallel()
 	t.Run("RegistersCallbacks", func(t *testing.T) {
 		var wg sync.WaitGroup
 		var s stubLogsService

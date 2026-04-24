@@ -15,6 +15,7 @@ import (
 // TestConfig will verify various config files can be loaded.
 // Verifies Config.Validate() implicitly.
 func TestConfig(t *testing.T) {
+	t.Parallel()
 	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()
@@ -69,6 +70,7 @@ func TestConfig(t *testing.T) {
 }
 
 func TestConfigRollupDimensions(t *testing.T) {
+	t.Parallel()
 	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()
@@ -91,6 +93,7 @@ func TestConfigRollupDimensions(t *testing.T) {
 }
 
 func TestConfigDropOriginConfigs(t *testing.T) {
+	t.Parallel()
 	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()

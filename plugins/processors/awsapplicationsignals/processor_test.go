@@ -62,6 +62,7 @@ var testRules = []rules.Rule{
 }
 
 func TestProcessMetrics(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewDevelopment()
 	ap := &awsapplicationsignalsprocessor{
 		logger: logger,
@@ -110,6 +111,7 @@ func TestProcessMetrics(t *testing.T) {
 }
 
 func TestProcessMetricsLowercase(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewDevelopment()
 	ap := &awsapplicationsignalsprocessor{
 		logger: logger,
@@ -137,6 +139,7 @@ func TestProcessMetricsLowercase(t *testing.T) {
 }
 
 func TestProcessMetricsWithConcurrency(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	ap := &awsapplicationsignalsprocessor{
@@ -163,7 +166,7 @@ func TestProcessMetricsWithConcurrency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			time.Sleep(time.Duration(rand.Intn(50)*100) * time.Millisecond)
+			time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
 
 			lowercaseMetrics := pmetric.NewMetrics()
 			errorMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
@@ -199,6 +202,7 @@ func TestProcessMetricsWithConcurrency(t *testing.T) {
 }
 
 func TestProcessTraces(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewDevelopment()
 	ap := &awsapplicationsignalsprocessor{
 		logger: logger,

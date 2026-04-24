@@ -73,13 +73,14 @@ func NewMetricsLimiter(config *config.LimiterConfig, logger *zap.Logger) Limiter
 	}
 
 	go func() {
+		ticker := time.NewTicker(config.GarbageCollectionInterval)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			default:
+			case <-ticker.C:
 				limiter.removeStaleServices()
-				time.Sleep(config.GarbageCollectionInterval)
 			}
 		}
 	}()
@@ -400,10 +401,10 @@ func newService(name string, limit int, rotationInterval time.Duration, parentCt
 
 	// Create a ticker to create a new countMinSketch every 1 hour
 	rotationTicker := time.NewTicker(rotationInterval)
-	//defer rotationTicker.Stop()
 
 	// Create a goroutine to handle rotationTicker.C
 	go func() {
+		defer rotationTicker.Stop()
 		for {
 			select {
 			case <-rotationTicker.C:
@@ -413,9 +414,6 @@ func newService(name string, limit int, rotationInterval time.Duration, parentCt
 				}
 			case <-ctx.Done():
 				return
-			default:
-				// Continue running the main program
-				time.Sleep(1 * time.Second)
 			}
 		}
 	}()

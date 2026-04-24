@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,6 +32,26 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
+// syncBuffer is a thread-safe bytes.Buffer for use in test loggers.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) Sync() error { return nil }
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
 type mockServiceProvider struct {
 	mock.Mock
 }
@@ -38,12 +59,10 @@ type mockServiceProvider struct {
 // This helper function creates a test logger
 // so that it can send the log messages into a
 // temporary buffer for pattern matching
-func CreateTestLogger(buf *bytes.Buffer) *zap.Logger {
-	writer := zapcore.AddSync(buf)
-
+func CreateTestLogger(buf *syncBuffer) *zap.Logger {
 	// Create a custom zapcore.Core that writes to the buffer
 	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
-	core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
+	core := zapcore.NewCore(encoder, zapcore.AddSync(buf), zapcore.DebugLevel)
 	logger := zap.New(core)
 	return logger
 }
@@ -140,6 +159,7 @@ func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey stri
 }
 
 func TestEntityStore_EC2Info(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		ec2InfoInput EC2Info
@@ -168,6 +188,7 @@ func TestEntityStore_EC2Info(t *testing.T) {
 }
 
 func TestEntityStore_Mode(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		modeInput string
@@ -188,6 +209,7 @@ func TestEntityStore_Mode(t *testing.T) {
 }
 
 func TestEntityStore_KubernetesMode(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		k8sModeInput string
@@ -210,6 +232,7 @@ func TestEntityStore_KubernetesMode(t *testing.T) {
 }
 
 func TestEntityStore_createAttributeMaps(t *testing.T) {
+	t.Parallel()
 	type fields struct {
 		ec2Info  EC2Info
 		mode     string
@@ -288,6 +311,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 }
 
 func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		serviceAttr ServiceAttribute
@@ -328,6 +352,7 @@ func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 }
 
 func TestEntityStore_createLogFileRID(t *testing.T) {
+	t.Parallel()
 	instanceId := "i-abcd1234"
 	accountId := "123456789012"
 	glob := LogFileGlob("glob")
@@ -368,6 +393,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 }
 
 func TestEntityStore_createLogFileRID_ServiceProviderIsEmpty(t *testing.T) {
+	t.Parallel()
 	instanceId := "i-abcd1234"
 	glob := LogFileGlob("glob")
 	group := LogGroupName("group")
@@ -395,6 +421,7 @@ func dereferenceMap(input map[string]*string) map[string]string {
 }
 
 func TestEntityStore_addServiceAttrEntryForLogFile(t *testing.T) {
+	t.Parallel()
 	sp := new(mockServiceProvider)
 	e := EntityStore{serviceprovider: sp}
 
@@ -411,6 +438,7 @@ func TestEntityStore_addServiceAttrEntryForLogFile(t *testing.T) {
 }
 
 func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
+	t.Parallel()
 	sp := new(mockServiceProvider)
 	e := EntityStore{serviceprovider: sp}
 
@@ -427,6 +455,7 @@ func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
 }
 
 func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewProduction()
 	tests := []struct {
 		name string
@@ -463,6 +492,7 @@ func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
 }
 
 func TestEntityStore_ClearTerminatedPodsFromServiceMap(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewProduction()
 	tests := []struct {
 		name            string
@@ -510,8 +540,9 @@ func TestEntityStore_ClearTerminatedPodsFromServiceMap(t *testing.T) {
 				e.eksInfo.podToServiceEnvMap = tt.podToServiceMap
 				go e.eksInfo.podToServiceEnvMap.Start()
 			}
-			//sleep for 1 second to allow the cache to update
-			time.Sleep(1 * time.Second)
+			require.Eventually(t, func() bool {
+				return e.GetPodServiceEnvironmentMapping().Len() == tt.want.Len()
+			}, time.Second, 50*time.Millisecond)
 			for pod, se := range tt.want.Items() {
 				assert.Equal(t, se.Value(), e.GetPodServiceEnvironmentMapping().Get(pod).Value())
 			}
@@ -524,6 +555,7 @@ func TestEntityStore_ClearTerminatedPodsFromServiceMap(t *testing.T) {
 }
 
 func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
+	t.Parallel()
 	e := EntityStore{eksInfo: newEKSInfo(zap.NewExample())}
 	e.done = make(chan struct{})
 	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, 500*time.Millisecond)
@@ -533,15 +565,17 @@ func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	e.AddPodServiceEnvironmentMapping("pod", "service", "env", "Instrumentation")
 	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
 
-	// sleep for 1 second to allow the cache to update
-	time.Sleep(time.Second)
+	// wait for the cache to expire and clear
+	require.Eventually(t, func() bool {
+		return e.GetPodServiceEnvironmentMapping().Len() == 0
+	}, time.Second, 50*time.Millisecond)
 
 	//cache should be cleared
 	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
-
 }
 
 func TestEntityStore_StopPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
+	t.Parallel()
 	e := EntityStore{eksInfo: newEKSInfo(zap.NewExample())}
 	e.done = make(chan struct{})
 	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Second)
@@ -554,12 +588,14 @@ func TestEntityStore_StopPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 
 	time.Sleep(time.Millisecond)
 	assert.NoError(t, e.Shutdown(context.TODO()))
-	//cache should be cleared
-	time.Sleep(500 * time.Millisecond)
-	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
+	//cache should not be cleared after shutdown
+	assert.Never(t, func() bool {
+		return e.GetPodServiceEnvironmentMapping().Len() != 1
+	}, 500*time.Millisecond, 50*time.Millisecond)
 }
 
 func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
+	t.Parallel()
 	instanceId := "i-abcd1234"
 	accountId := "123456789012"
 	sp := new(mockServiceProvider)
@@ -578,6 +614,7 @@ func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
 }
 
 func TestEntityStore_GetMetricServiceNameSource_ServiceProviderEmpty(t *testing.T) {
+	t.Parallel()
 	instanceId := "i-abcd1234"
 	accountId := "123456789012"
 	e := EntityStore{
@@ -619,7 +656,7 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a buffer to capture the logger output
-			var buf bytes.Buffer
+			var buf syncBuffer
 
 			logger := CreateTestLogger(&buf)
 			done := make(chan struct{})
@@ -635,7 +672,10 @@ func TestEntityStore_LogMessageDoesNotIncludeResourceInfo(t *testing.T) {
 				config:           config,
 			}
 			go es.Start(context.TODO(), nil)
-			time.Sleep(2 * time.Second)
+			defer es.Shutdown(context.TODO())
+			require.Eventually(t, func() bool {
+				return es.ready.Load()
+			}, 2*time.Second, 50*time.Millisecond)
 
 			logOutput := buf.String()
 			log.Println(logOutput)
@@ -683,7 +723,18 @@ func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
 				config: esConfig,
 			}
 			e.Start(context.TODO(), nil)
-			time.Sleep(3 * time.Second)
+			defer e.Shutdown(context.TODO())
+
+			var expectedName string
+			if tt.args.kubernetesMode != "" {
+				expectedName = ServiceNameUnknown
+			} else {
+				expectedName = "TestRole"
+			}
+			require.Eventually(t, func() bool {
+				name, _ := e.serviceprovider.getServiceNameAndSource()
+				return name == expectedName
+			}, 3*time.Second, 50*time.Millisecond)
 
 			name, source := e.serviceprovider.getServiceNameAndSource()
 			if tt.args.mode == config.ModeEC2 && tt.args.kubernetesMode != "" {
@@ -696,10 +747,10 @@ func TestEntityStore_ServiceProviderInDifferentEnv(t *testing.T) {
 
 		})
 	}
-
 }
 
 func TestEntityStore_SetAutoScalingGroup(t *testing.T) {
+	t.Parallel()
 	e := &EntityStore{}
 	sp := new(mockServiceProvider)
 	sp.On("setAutoScalingGroup", "asg-name").Return()

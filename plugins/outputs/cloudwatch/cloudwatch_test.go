@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -34,6 +35,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch/cloudwatchiface"
 )
 
+// nopT satisfies mock.TestingT without calling FailNow, allowing
+// AssertNumberOfCalls to return false inside require.Eventually.
+type nopT struct{}
+
+func (nopT) Logf(string, ...interface{})   {}
+func (nopT) Errorf(string, ...interface{}) {}
+func (nopT) FailNow()                      {}
+
 // Return true if found.
 func contains(dimensions []*cloudwatch.Dimension, key string, val string) bool {
 	for _, d := range dimensions {
@@ -48,6 +57,7 @@ func contains(dimensions []*cloudwatch.Dimension, key string, val string) bool {
 // Test that no more than 30 dimensions will get returned.
 // Test that if "host" dimension exists, it is always included.
 func TestBuildDimensions(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
 	// nil
 	dims := BuildDimensions(nil)
@@ -101,6 +111,7 @@ func TestBuildDimensions(t *testing.T) {
 }
 
 func TestProcessRollup(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
@@ -196,6 +207,7 @@ func TestProcessRollup(t *testing.T) {
 }
 
 func TestBuildMetricDatumDropUnsupported(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
 
@@ -226,6 +238,7 @@ func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 }
 
 func TestGetUniqueRollupList(t *testing.T) {
+	t.Parallel()
 	testCases := map[string]struct {
 		input [][]string
 		want  [][]string
@@ -264,6 +277,7 @@ func TestGetUniqueRollupList(t *testing.T) {
 }
 
 func TestIsDropping(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
 
@@ -324,6 +338,7 @@ func TestIsDropping(t *testing.T) {
 }
 
 func TestIsFlushable(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
 	svc.On("PutMetricData", mock.Anything).Return(
@@ -349,12 +364,14 @@ func TestIsFlushable(t *testing.T) {
 		"TestEntity": append([]*cloudwatch.MetricDatum{}, &datum),
 	}
 	assert.False(cw.timeToPublish(batch))
-	time.Sleep(time.Second + cw.config.ForceFlushInterval)
-	assert.True(cw.timeToPublish(batch))
+	require.Eventually(t, func() bool {
+		return cw.timeToPublish(batch)
+	}, 2*time.Second, 50*time.Millisecond)
 	cw.Shutdown(context.Background())
 }
 
 func TestIsFull(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
 	perRequestConstSize := overallConstPerRequestSize + len("CWAgent") + namespaceOverheads
 	batch := newMetricDatumBatch(defaultMaxDatumsPerCall, perRequestConstSize)
@@ -386,12 +403,14 @@ func TestIsFull(t *testing.T) {
 type mockCloudWatchClient struct {
 	cloudwatchiface.CloudWatchAPI
 	mock.Mock
+	callCount atomic.Int32
 }
 
 func (svc *mockCloudWatchClient) PutMetricData(
 	input *cloudwatch.PutMetricDataInput,
 ) (*cloudwatch.PutMetricDataOutput, error) {
 	args := svc.Called(input)
+	svc.callCount.Add(1)
 	return args.Get(0).(*cloudwatch.PutMetricDataOutput), args.Error(1)
 }
 
@@ -426,6 +445,7 @@ func makeMetrics(count int) []telegraf.Metric {
 }
 
 func TestConsumeMetrics(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
 	svc.On("PutMetricData", mock.Anything).Return(
@@ -437,7 +457,6 @@ func TestConsumeMetrics(t *testing.T) {
 		cloudWatchOutput.WriteToCloudWatch)
 	metrics := makeMetrics(1500)
 	cloudWatchOutput.Write(metrics)
-	time.Sleep(2*time.Second + 2*cloudWatchOutput.config.ForceFlushInterval)
 	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
 	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
@@ -449,12 +468,15 @@ func TestConsumeMetrics(t *testing.T) {
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	ctx := context.Background()
 	cw.ConsumeMetrics(ctx, pmetrics)
-	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+	require.Eventually(t, func() bool {
+		return svc.callCount.Load() >= 2
+	}, 2*time.Second+2*cw.config.ForceFlushInterval, 50*time.Millisecond)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
 	cw.Shutdown(ctx)
 }
 
 func TestWriteError(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
 	serverInternalErr := awserr.New(cloudwatch.ErrCodeLimitExceededFault, "", nil)
@@ -462,6 +484,7 @@ func TestWriteError(t *testing.T) {
 		&res,
 		serverInternalErr)
 	cw := newCloudWatchClient(svc, time.Second)
+	cw.config.BackoffRetryBase = 10 * time.Millisecond
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
 		10,
@@ -476,7 +499,9 @@ func TestWriteError(t *testing.T) {
 	for i := 0; i < defaultRetryCount; i++ {
 		sum += 1 << i
 	}
-	time.Sleep(backoffRetryBase * time.Duration(sum))
+	require.Eventually(t, func() bool {
+		return svc.callCount.Load() >= 5
+	}, 10*time.Millisecond*time.Duration(sum)+5*time.Second, 50*time.Millisecond)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
 	cw.Shutdown(ctx)
 }
@@ -484,14 +509,15 @@ func TestWriteError(t *testing.T) {
 // TestPublish verifies metric batches do not get pushed immediately when
 // batch-buffer is full.
 func TestPublish(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		nil)
-	interval := 60 * time.Second
-	// The buffer holds 50 batches of 1,000 metrics. So choose 5x.
-	numMetrics := 5 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
+	interval := 2 * time.Second
+	// The buffer holds 50 batches of 1,000 metrics. 2x is sufficient to fill it.
+	numMetrics := 2 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
 	expectedCalls := numMetrics / defaultMaxDatumsPerCall
 	log.Printf("I! interval %v, numMetrics %v, expectedCalls %v",
 		interval, numMetrics, expectedCalls)
@@ -506,13 +532,14 @@ func TestPublish(t *testing.T) {
 	// Use goroutine since it could block if len(metrics) >metricChanBufferSize.
 	go cw.ConsumeMetrics(ctx, metrics)
 	// Expect some, but not all API calls after half the original interval.
-	time.Sleep(interval/2 + 2*time.Second)
-	assert.Less(t, 0, len(svc.Calls))
-	assert.Less(t, len(svc.Calls), expectedCalls)
-	// Expect all API calls after 1.5x the interval.
-	// 10K metrics in batches of 20...
-	time.Sleep(interval)
-	assert.Equal(t, expectedCalls, len(svc.Calls))
+	require.Eventually(t, func() bool {
+		return svc.callCount.Load() > 0
+	}, 10*time.Second, 50*time.Millisecond)
+	// Expect all API calls once pipeline finishes processing.
+	require.Eventually(t, func() bool {
+		return int(svc.callCount.Load()) >= expectedCalls
+	}, 60*time.Second, 100*time.Millisecond)
+	assert.Equal(t, expectedCalls, int(svc.callCount.Load()))
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	cw.Shutdown(ctx)
 }
@@ -551,13 +578,16 @@ func TestMiddleware(t *testing.T) {
 	// Expect 1500 metrics batched in 2 API calls.
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
-	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+	require.Eventually(t, func() bool {
+		return handler.AssertNumberOfCalls(nopT{}, "HandleRequest", 2)
+	}, 5*time.Second, 50*time.Millisecond)
 	handler.AssertCalled(t, "HandleRequest", mock.Anything, mock.Anything)
 	handler.AssertCalled(t, "HandleResponse", mock.Anything, mock.Anything)
 	require.NoError(t, cw.Shutdown(ctx))
 }
 
 func TestBackoffRetries(t *testing.T) {
+	t.Parallel()
 	c := &CloudWatch{config: createDefaultConfig().(*Config)}
 	sleeps := []time.Duration{
 		time.Millisecond * 200,
@@ -566,30 +596,24 @@ func TestBackoffRetries(t *testing.T) {
 		time.Millisecond * 1600,
 		time.Millisecond * 3200,
 		time.Millisecond * 6400}
-	assert := assert.New(t)
-	leniency := 200 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
-		start := time.Now()
-		c.backoffSleep()
-		// Expect time since start is between sleeps[i]/2 and sleeps[i].
-		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(sleeps[i]/2, time.Since(start))
-		assert.Greater(sleeps[i]+leniency, time.Since(start))
+		d := c.backoffDuration()
+		assert.GreaterOrEqual(t, d, sleeps[i]/2)
+		assert.LessOrEqual(t, d, sleeps[i])
 	}
-	start := time.Now()
-	c.backoffSleep()
-	assert.Less(30*time.Second, time.Since(start))
-	assert.Greater(60*time.Second, time.Since(start))
+	d := c.backoffDuration()
+	assert.GreaterOrEqual(t, d, 30*time.Second)
+	assert.LessOrEqual(t, d, time.Minute)
 	// reset
 	c.retries = 0
-	start = time.Now()
-	c.backoffSleep()
-	assert.Greater(200*time.Millisecond+leniency, time.Since(start))
+	d = c.backoffDuration()
+	assert.LessOrEqual(t, d, 200*time.Millisecond)
 }
 
 // Fill up the channel and verify it is full.
 // Take 1 item out of the channel and verify it is no longer full.
 func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
+	t.Parallel()
 	c := &CloudWatch{
 		datumBatchChan: make(chan map[string][]*cloudwatch.MetricDatum, datumBatchChanBufferSize),
 	}
@@ -603,6 +627,7 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 }
 
 func TestCreateEntityMetricData(t *testing.T) {
+	t.Parallel()
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
 	entity := cloudwatch.Entity{
@@ -636,6 +661,7 @@ func TestCreateEntityMetricData(t *testing.T) {
 }
 
 func TestWriteToCloudWatchEntity(t *testing.T) {
+	t.Parallel()
 	timestampNow := aws.Time(time.Now())
 	expectedPMDInput := &cloudwatch.PutMetricDataInput{
 		Namespace:              aws.String("CWAgent"),
@@ -712,6 +738,7 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 }
 
 func TestUserAgentFeatureFlags(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name               string
 		metricNames        []string

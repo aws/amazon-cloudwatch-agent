@@ -47,16 +47,29 @@ type targetManager struct {
 	mu       sync.Mutex
 	dlg      chan Target
 	prp      chan Target
+
+	baseRetryDelay    time.Duration
+	maxRetryDelay     time.Duration
+	numRetries        int
+	batchTickInterval time.Duration
 }
 
 func NewTargetManager(logger telegraf.Logger, service cloudWatchLogsService) TargetManager {
+	return newTargetManagerWithTiming(logger, service, baseRetryDelay, maxRetryDelayTarget, numBackoffRetries, 5*time.Second)
+}
+
+func newTargetManagerWithTiming(logger telegraf.Logger, service cloudWatchLogsService, baseRetry, maxRetry time.Duration, retries int, batchTick time.Duration) *targetManager {
 	tm := &targetManager{
-		logger:   logger,
-		service:  service,
-		cache:    make(map[Target]time.Time),
-		cacheTTL: cacheTTL,
-		dlg:      make(chan Target, retentionChannelSize),
-		prp:      make(chan Target, retentionChannelSize),
+		logger:            logger,
+		service:           service,
+		cache:             make(map[Target]time.Time),
+		cacheTTL:          cacheTTL,
+		dlg:               make(chan Target, retentionChannelSize),
+		prp:               make(chan Target, retentionChannelSize),
+		baseRetryDelay:    baseRetry,
+		maxRetryDelay:     maxRetry,
+		numRetries:        retries,
+		batchTickInterval: batchTick,
 	}
 
 	go tm.processDescribeLogGroup()
@@ -177,7 +190,7 @@ func (m *targetManager) createLogStream(t Target) error {
 }
 
 func (m *targetManager) processDescribeLogGroup() {
-	t := time.NewTicker(5 * time.Second)
+	t := time.NewTicker(m.batchTickInterval)
 	defer t.Stop()
 
 	batch := make(map[string]Target, logGroupIdentifierLimit)
@@ -220,7 +233,7 @@ func (m *targetManager) updateTargetsBatch(targets map[string]Target) error {
 		LogGroupIdentifiers: identifiers,
 		Limit:               aws.Int64(50),
 	}
-	for attempt := 0; attempt < numBackoffRetries; attempt++ {
+	for attempt := 0; attempt < m.numRetries; attempt++ {
 		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == cloudwatchlogs.ErrCodeInvalidParameterException && aerr.Message() == errMessageLogGroupIdentifierNotSupported {
@@ -247,7 +260,7 @@ func (m *targetManager) updateTargetsBatch(targets map[string]Target) error {
 // updateTargetsIteratively will iterate through the targets and call DLG for each target.
 func (m *targetManager) updateTargetsIteratively(targets map[string]Target) {
 	for _, target := range targets {
-		for attempt := 0; attempt < numBackoffRetries; attempt++ {
+		for attempt := 0; attempt < m.numRetries; attempt++ {
 			currentRetention, err := m.getRetention(target)
 			if err != nil {
 				m.logger.Errorf("failed to describe log group retention for target %v: %v", target, err)
@@ -289,7 +302,7 @@ func (m *targetManager) getRetention(target Target) (int, error) {
 func (m *targetManager) processPutRetentionPolicy() {
 	for target := range m.prp {
 		var updated bool
-		for attempt := 0; attempt < numBackoffRetries; attempt++ {
+		for attempt := 0; attempt < m.numRetries; attempt++ {
 			err := m.updateRetentionPolicy(target)
 			if err == nil {
 				updated = true
@@ -301,7 +314,7 @@ func (m *targetManager) processPutRetentionPolicy() {
 		}
 
 		if !updated {
-			m.logger.Errorf("failed to update retention policy for target %v after %d attempts", target, numBackoffRetries)
+			m.logger.Errorf("failed to update retention policy for target %v after %d attempts", target, m.numRetries)
 		}
 	}
 }
@@ -321,12 +334,12 @@ func (m *targetManager) updateRetentionPolicy(target Target) error {
 }
 
 func (m *targetManager) calculateBackoff(retryCount int) time.Duration {
-	delay := baseRetryDelay
-	if retryCount < numBackoffRetries {
-		delay = baseRetryDelay * time.Duration(1<<int64(retryCount))
+	delay := m.baseRetryDelay
+	if retryCount < m.numRetries {
+		delay = m.baseRetryDelay * time.Duration(1<<int64(retryCount))
 	}
-	if delay > maxRetryDelayTarget {
-		delay = maxRetryDelayTarget
+	if delay > m.maxRetryDelay {
+		delay = m.maxRetryDelay
 	}
 	return withJitter(delay)
 }
