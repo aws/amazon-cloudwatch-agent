@@ -70,6 +70,7 @@ const (
 	Console                                        = "console"
 	DiskKey                                        = "disk"
 	DiskIOKey                                      = "diskio"
+	EfaKey                                         = "efa"
 	NetKey                                         = "net"
 	Emf                                            = "emf"
 	StructuredLog                                  = "structuredlog"

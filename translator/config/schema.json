@@ -132,6 +132,9 @@
             "diskio": {
               "$ref": "#/definitions/metricsDefinition/definitions/diskioDefinitions"
             },
+            "efa": {
+              "$ref": "#/definitions/metricsDefinition/definitions/efaDefinitions"
+            },
             "statsd": {
               "$ref": "#/definitions/metricsDefinition/definitions/statsdDefinitions"
             },
@@ -357,6 +360,20 @@
               "$ref": "#/definitions/metricsDefinition/definitions/basicResourcesDefinition"
             }
           ]
+        },
+        "efaDefinitions": {
+          "type": "object",
+          "properties": {
+            "metrics_collection_interval": {
+              "$ref": "#/definitions/timeIntervalDefinition"
+            },
+            "append_dimensions": {
+              "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            },
+            "measurement": {
+              "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementDefinition"
+            }
+          }
         },
         "jmxDefinitions": {
           "oneOf": [

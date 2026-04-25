@@ -1,0 +1,46 @@
+collection_interval: 60s
+metrics:
+  efa_impaired_remote_conn_events:
+    enabled: false
+  efa_rdma_read_bytes:
+    enabled: false
+  efa_rdma_read_resp_bytes:
+    enabled: false
+  efa_rdma_read_wr_err:
+    enabled: false
+  efa_rdma_read_wrs:
+    enabled: false
+  efa_rdma_write_bytes:
+    enabled: false
+  efa_rdma_write_recv_bytes:
+    enabled: false
+  efa_rdma_write_wr_err:
+    enabled: false
+  efa_rdma_write_wrs:
+    enabled: false
+  efa_recv_bytes:
+    enabled: false
+  efa_recv_wrs:
+    enabled: false
+  efa_retrans_bytes:
+    enabled: false
+  efa_retrans_pkts:
+    enabled: false
+  efa_retrans_timeout_events:
+    enabled: false
+  efa_rx_bytes:
+    enabled: false
+  efa_rx_dropped:
+    enabled: false
+  efa_rx_pkts:
+    enabled: false
+  efa_send_bytes:
+    enabled: false
+  efa_send_wrs:
+    enabled: false
+  efa_tx_bytes:
+    enabled: false
+  efa_tx_pkts:
+    enabled: false
+  efa_unresponsive_remote_events:
+    enabled: false
