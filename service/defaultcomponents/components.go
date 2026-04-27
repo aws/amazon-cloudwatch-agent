@@ -4,6 +4,7 @@
 package defaultcomponents
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -51,6 +52,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
+	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
@@ -80,6 +82,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/postgresqlreceiver"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 )
 
@@ -104,6 +107,7 @@ func Factories() (otelcol.Factories, error) {
 		kubeletstatsreceiver.NewFactory(),
 		nopreceiver.NewFactory(),
 		otlpreceiver.NewFactory(),
+		postgresqlreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
 		systemmetricsreceiver.NewFactory(),
@@ -174,6 +178,12 @@ func Factories() (otelcol.Factories, error) {
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
+	); err != nil {
+		return otelcol.Factories{}, err
+	}
+
+	if factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory](
+		signaltometricsconnector.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
