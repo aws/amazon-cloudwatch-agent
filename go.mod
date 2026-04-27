@@ -47,6 +47,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260410000839-bf7ae656c809
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260410000839-bf7ae656c809
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20260410000839-bf7ae656c809
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8snodemetadataprocessor => ../opentelemetry-collector-contrib/processor/k8snodemetadataprocessor
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20260410000839-bf7ae656c809
 )
 
@@ -154,6 +155,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyattrsprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbytraceprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8snodemetadataprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricsgenerationprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstarttimeprocessor v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.124.1
@@ -492,6 +494,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/zipkin v0.124.1 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8seventsreceiver v0.124.1
 	github.com/opencontainers/cgroups v0.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
@@ -636,3 +639,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8seventsreceiver => ../opentelemetry-collector-contrib/receiver/k8seventsreceiver
