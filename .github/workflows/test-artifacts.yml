@@ -1213,7 +1213,8 @@ jobs:
               HELM_BRANCH="${HELM_CHART_BRANCH_INPUT}"
               if [ -z "$HELM_BRANCH" ]; then
                 HELM_BRANCH=$(curl -sL "https://api.github.com/repos/aws-observability/helm-charts/git/matching-refs/heads/release-" \
-                  | jq -r '[.[].ref | ltrimstr("refs/heads/")] | sort | last // empty')
+                  | jq -r '.[].ref | ltrimstr("refs/heads/")' \
+                  | sort -V | tail -n 1)
               fi
               if [ -z "$HELM_BRANCH" ]; then
                 HELM_BRANCH="main"
