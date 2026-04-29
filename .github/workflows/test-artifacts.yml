@@ -44,10 +44,6 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
-      helm_chart_branch:
-        description: 'Override helm chart branch (default: latest release-* branch)'
-        type: string
-        required: false
   workflow_call:
     inputs:
       build_id:
@@ -63,10 +59,6 @@ on:
         required: false
       test_dir_filter:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
-        type: string
-        required: false
-      helm_chart_branch:
-        description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
       helm_chart_branch:
@@ -1202,8 +1194,6 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
-        env:
-          HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
         env:
           HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
         with:
