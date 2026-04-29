@@ -28,6 +28,7 @@ func TestComponents(t *testing.T) {
 		"filelog",
 		"hostmetrics",
 		"jaeger",
+		"journald",
 		"jmx",
 		"kafka",
 		"kubeletstats",

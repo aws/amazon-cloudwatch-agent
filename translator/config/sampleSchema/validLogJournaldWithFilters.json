@@ -1,0 +1,51 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "system-logs",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 7,
+            "units": ["systemd", "sshd"],
+            "filters": [
+              {
+                "type": "exclude",
+                "expression": ".*debug.*"
+              }
+            ]
+          },
+          {
+            "log_group_name": "application-logs",
+            "log_stream_name": "{instance_id}-app",
+            "retention_in_days": 30,
+            "units": ["nginx", "apache2"],
+            "filters": [
+              {
+                "type": "include",
+                "expression": ".*ERROR.*|.*WARN.*"
+              }
+            ]
+          },
+          {
+            "log_group_name": "security-logs",
+            "log_stream_name": "{instance_id}-security",
+            "retention_in_days": 90,
+            "units": ["auditd", "fail2ban"],
+            "filters": [
+              {
+                "type": "include",
+                "expression": "Authentication*failed"
+              },
+              {
+                "type": "exclude",
+                "expression": "Connection*closed"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

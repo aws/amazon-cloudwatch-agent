@@ -1,0 +1,26 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "filtered-logs",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 30,
+            "units": ["apache2", "nginx"],
+            "filters": [
+              {
+                "type": "exclude",
+                "expression": ".*debug.*"
+              },
+              {
+                "type": "include",
+                "expression": ".*ERROR.*|.*WARN.*"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

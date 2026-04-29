@@ -253,7 +253,10 @@ require (
 	k8s.io/klog/v2 v2.130.1
 )
 
-require github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+require (
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.124.1
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+)
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect

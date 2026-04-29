@@ -43,7 +43,7 @@ const (
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
 	JmxKey                                         = "jmx"
-	TLSKey                                         = "tls" //nolint:revive
+	TLSKey                                         = "tls"
 	Endpoint                                       = "endpoint"
 	EndpointOverrideKey                            = "endpoint_override"
 	RegionOverrideKey                              = "region_override"
@@ -64,7 +64,6 @@ const (
 	PreferFullPodName                              = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric                 = "accelerated_compute_metrics"
 	AcceleratedComputeGPUMetricsCollectionInterval = "accelerated_compute_gpu_metrics_collection_interval"
-	HighFrequencyGpuMetrics                        = "high_frequency_gpu_metrics"
 	EnableKueueContainerInsights                   = "kueue_container_insights"
 	AppendDimensionsKey                            = "append_dimensions"
 	Console                                        = "console"
@@ -74,8 +73,9 @@ const (
 	Emf                                            = "emf"
 	StructuredLog                                  = "structuredlog"
 	ServiceAddress                                 = "service_address"
-	UDP                                            = "udp"
-	TCP                                            = "tcp"
+	Udp                                            = "udp"
+	Tcp                                            = "tcp"
+	TlsKey                                         = "tls"
 	Tags                                           = "tags"
 	Region                                         = "region"
 	LogGroupName                                   = "log_group_name"
@@ -83,6 +83,7 @@ const (
 	NameKey                                        = "name"
 	RenameKey                                      = "rename"
 	UnitKey                                        = "unit"
+	JournaldKey                                    = "journald"
 )
 
 const (

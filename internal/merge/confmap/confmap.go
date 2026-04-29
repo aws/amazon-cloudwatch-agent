@@ -10,7 +10,7 @@ import (
 	otelconfmap "go.opentelemetry.io/collector/confmap"
 )
 
-const (
+var (
 	KeyDelimiter = otelconfmap.KeyDelimiter
 )
 
