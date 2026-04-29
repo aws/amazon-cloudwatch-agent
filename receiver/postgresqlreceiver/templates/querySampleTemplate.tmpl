@@ -33,4 +33,5 @@ WHERE
       query_start < TO_TIMESTAMP({{ .newestQueryTimestamp }})
       AND state = 'idle'
     )
+    AND pid <> pg_backend_pid()
 LIMIT {{ .limit }};
