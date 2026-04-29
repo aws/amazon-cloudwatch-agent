@@ -40,6 +40,10 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
         type: string
         required: false
+      helm_chart_branch:
+        description: 'Override helm chart branch (default: latest release-* branch)'
+        type: string
+        required: false
   workflow_call:
     inputs:
       build_id:
@@ -55,6 +59,10 @@ on:
         required: false
       test_dir_filter:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs)'
+        type: string
+        required: false
+      helm_chart_branch:
+        description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
 
@@ -1186,6 +1194,8 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
         with:
           max_attempts: 2
           timeout_minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
@@ -1198,13 +1208,32 @@ jobs:
             fi
 
             terraform init
+            HELM_BRANCH=""
+            if grep -q 'helm_chart_branch' *.tf 2>/dev/null; then
+              HELM_BRANCH="${HELM_CHART_BRANCH_INPUT}"
+              if [ -z "$HELM_BRANCH" ]; then
+                HELM_BRANCH=$(curl -sL "https://api.github.com/repos/aws-observability/helm-charts/git/matching-refs/heads/release-" \
+                  | jq -r '.[].ref | ltrimstr("refs/heads/")' \
+                  | sort -V | tail -n 1)
+              fi
+              if [ -z "$HELM_BRANCH" ]; then
+                HELM_BRANCH="main"
+              fi
+              echo "Using helm chart branch: $HELM_BRANCH"
+            fi
+            HELM_VAR=""
+            if [ -n "$HELM_BRANCH" ]; then
+              HELM_VAR="-var=helm_chart_branch=$HELM_BRANCH"
+            fi
+
             if terraform apply --auto-approve \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ inputs.build_id }}" \
               -var="ami_type=${{ matrix.arrays.ami }}" \
               -var="instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
+              -var="k8s_version=${{ matrix.arrays.k8sVersion }}" \
+              $HELM_VAR; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
