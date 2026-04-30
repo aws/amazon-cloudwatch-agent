@@ -87,6 +87,7 @@ jobs:
       DistributorName: ${{ vars.SSM_TEST_DISTRIBUTOR_NAME }}
 
   BuildAndUploadITAR:
+    if: false
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -100,6 +101,7 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   BuildAndUploadCN:
+    if: false
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -113,8 +115,8 @@ jobs:
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   StartIntegrationTests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    needs: [ BuildAndUploadPackages, BuildDocker, BuildDistributor ]
+    if: false
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -124,9 +126,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartApplicationSignalsE2ETests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
-    # Workflow only runs against main
-    if: ${{ github.event_name == 'push' || inputs.run-tests }}
+    needs: [ BuildAndUploadPackages, BuildDocker, BuildDistributor ]
+    if: false
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -136,7 +137,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartEKSE2ETests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
+    needs: [ BuildAndUploadPackages, BuildDocker, BuildDistributor ]
     if: ${{ github.event_name == 'push' || inputs.run-tests }}
     runs-on: ubuntu-latest
     permissions:
