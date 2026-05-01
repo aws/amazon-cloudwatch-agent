@@ -51,9 +51,9 @@ func (config *Collection) AddLogFile(filePath, logGroupName, logStreamName strin
 	config.Files.AddLogFile(filePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, retention, logGroupClass)
 }
 
-func (config *Collection) AddJournald(units []string, logGroupName, logStreamName string, filters []*JournaldFilter, retention int) {
+func (config *Collection) AddJournald(units []string, priority string, matches []map[string]string, logGroupName, logStreamName string, filters []*JournaldFilter, retention int) {
 	if config.Journald == nil {
 		config.Journald = &Journald{}
 	}
-	config.Journald.AddJournald(units, logGroupName, logStreamName, filters, retention)
+	config.Journald.AddJournald(units, priority, matches, logGroupName, logStreamName, filters, retention)
 }

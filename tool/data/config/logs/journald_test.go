@@ -17,6 +17,8 @@ func TestJournald_ToMap(t *testing.T) {
 	// Add first journald config
 	conf.AddJournald(
 		[]string{"systemd", "kernel"},
+		"",
+		nil,
 		"system-logs",
 		"{instance_id}",
 		[]*JournaldFilter{
@@ -28,6 +30,8 @@ func TestJournald_ToMap(t *testing.T) {
 	// Add second journald config
 	conf.AddJournald(
 		[]string{"nginx", "apache2"},
+		"err",
+		[]map[string]string{{"_SYSTEMD_UNIT": "nginx.service"}},
 		"application-logs",
 		"{instance_id}-apps",
 		[]*JournaldFilter{
@@ -56,6 +60,8 @@ func TestJournald_ToMap(t *testing.T) {
 				"log_group_name":    "application-logs",
 				"log_stream_name":   "{instance_id}-apps",
 				"units":             []string{"nginx", "apache2"},
+				"priority":          "err",
+				"matches":           []map[string]string{{"_SYSTEMD_UNIT": "nginx.service"}},
 				"filters": []map[string]interface{}{
 					{
 						"type":       "include",
@@ -83,6 +89,8 @@ func TestJournald_ToMap_SingleEntry(t *testing.T) {
 
 	conf.AddJournald(
 		[]string{"ssh"},
+		"",
+		nil,
 		"security-logs",
 		"{hostname}-security",
 		nil,

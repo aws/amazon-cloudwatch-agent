@@ -16,6 +16,8 @@ func TestJournaldConfig_ToMap(t *testing.T) {
 		LogGroup:        "system-logs",
 		LogStream:       "{instance_id}",
 		Units:           []string{"systemd", "kernel"},
+		Priority:        "err",
+		Matches:         []map[string]string{{"_PID": "1"}},
 		Filters: []*JournaldFilter{
 			{
 				Type:       "exclude",
@@ -33,6 +35,8 @@ func TestJournaldConfig_ToMap(t *testing.T) {
 		"log_group_name":    "system-logs",
 		"log_stream_name":   "{instance_id}",
 		"units":             []string{"systemd", "kernel"},
+		"priority":          "err",
+		"matches":           []map[string]string{{"_PID": "1"}},
 		"filters": []map[string]interface{}{
 			{
 				"type":       "exclude",

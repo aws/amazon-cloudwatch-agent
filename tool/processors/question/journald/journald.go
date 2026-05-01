@@ -51,15 +51,11 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 		if !collectAllUnits {
 			// Ask about common units individually
 			commonUnits := []string{
-				"systemd",
-				"kernel",
 				"sshd",
 				"docker",
 				"nginx",
 				"apache2",
-				"NetworkManager",
-				"firewalld",
-				"audit",
+				"systemd-networkd",
 			}
 
 			for _, unit := range commonUnits {
@@ -132,7 +128,30 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 			retention = i
 		}
 
-		logsConf.AddJournald(units, logGroupName, logStreamName, filters, retention)
+		// Priority (optional)
+		var priority string
+		if util.Yes("Do you want to filter by minimum priority level?") {
+			priority = util.Choice("Minimum priority level:", 1, []string{
+				"emerg", "alert", "crit", "err", "warning", "notice", "info", "debug",
+			})
+		}
+
+		// Matches (optional)
+		var matches []map[string]string
+		if util.Yes("Do you want to add journald field matches (e.g., _UID=0, _PID=1)?") {
+			for {
+				field := util.Ask("Enter field name (e.g., _UID, _PID, _TRANSPORT):")
+				value := util.Ask(fmt.Sprintf("Enter value for %s:", field))
+				if field != "" && value != "" {
+					matches = append(matches, map[string]string{field: value})
+				}
+				if !util.Yes("Do you want to add another field match?") {
+					break
+				}
+			}
+		}
+
+		logsConf.AddJournald(units, priority, matches, logGroupName, logStreamName, filters, retention)
 
 		yes = util.Yes("Do you want to specify any additional journald configurations to monitor?")
 		if !yes {
