@@ -10,12 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		wantErr bool
+		input      map[string]interface{}
+		translator common.PipelineTranslator
+		wantErr    bool
 	}{
 		"WithValidConfig": {
 			input: map[string]interface{}{
@@ -28,6 +31,8 @@ func TestTranslator(t *testing.T) {
 									"log_stream_name":   "{instance_id}",
 									"retention_in_days": 7,
 									"units":             []interface{}{"systemd", "kernel", "sshd"},
+									"priority":          "err",
+									"matches":           []interface{}{map[string]interface{}{"_PID": "1"}},
 									"filters": []interface{}{
 										map[string]interface{}{
 											"type":       "exclude",
@@ -40,11 +45,13 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    false,
 		},
 		"WithMissingConfig": {
-			input:   map[string]interface{}{},
-			wantErr: true,
+			input:      map[string]interface{}{},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
 		},
 		"WithEmptyCollectList": {
 			input: map[string]interface{}{
@@ -56,20 +63,40 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
+		},
+		"WithMultipleEntries": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "first-logs",
+									"units":          []interface{}{"systemd"},
+								},
+								map[string]interface{}{
+									"log_group_name": "second-logs",
+									"units":          []interface{}{"kernel", "sshd"},
+									"priority":       "warning",
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(1)),
+			wantErr:    false,
 		},
 	}
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			translator := NewTranslator()
+			tt := testCase.translator
 
-			// Verify ID
-			expectedID := pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName)
-			assert.Equal(t, expectedID, translator.ID())
-
-			got, err := translator.Translate(conf)
+			got, err := tt.Translate(conf)
 
 			if testCase.wantErr {
 				assert.Error(t, err)
@@ -87,6 +114,19 @@ func TestTranslator(t *testing.T) {
 			assert.True(t, got.Extensions.Len() > 0, "Should have at least one extension")
 		})
 	}
+}
+
+func TestTranslatorID(t *testing.T) {
+	// Without index
+	tt := NewTranslator()
+	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName), tt.ID())
+
+	// With index
+	tt = NewTranslator(common.WithIndex(0))
+	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName+"/0"), tt.ID())
+
+	tt = NewTranslator(common.WithIndex(2))
+	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName+"/2"), tt.ID())
 }
 
 func TestNewTranslators(t *testing.T) {
@@ -109,6 +149,22 @@ func TestNewTranslators(t *testing.T) {
 				},
 			},
 			expectCount: 1,
+		},
+		"WithMultipleCollectListEntries": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{"log_group_name": "logs-1"},
+								map[string]interface{}{"log_group_name": "logs-2"},
+								map[string]interface{}{"log_group_name": "logs-3"},
+							},
+						},
+					},
+				},
+			},
+			expectCount: 3,
 		},
 		"WithoutJournaldConfig": {
 			input:       map[string]interface{}{},

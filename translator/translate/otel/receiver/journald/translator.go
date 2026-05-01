@@ -6,6 +6,7 @@ package journald
 import (
 	"fmt"
 
+	journaldinput "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/journald"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -20,13 +21,15 @@ type translator struct {
 	factory receiver.Factory
 }
 
-type translatorWithUnits struct {
+type translatorWithConfig struct {
 	*translator
-	units []string
+	units    []string
+	priority string
+	matches  []journaldinput.MatchConfig
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
-var _ common.ComponentTranslator = (*translatorWithUnits)(nil)
+var _ common.ComponentTranslator = (*translatorWithConfig)(nil)
 
 func NewTranslator() common.ComponentTranslator {
 	return NewTranslatorWithName("")
@@ -39,14 +42,20 @@ func NewTranslatorWithName(name string) common.ComponentTranslator {
 	}
 }
 
-func NewTranslatorWithUnits(name string, units []string) common.ComponentTranslator {
-	return &translatorWithUnits{
+func NewTranslatorWithConfig(name string, units []string, priority string, matches []journaldinput.MatchConfig) common.ComponentTranslator {
+	return &translatorWithConfig{
 		translator: &translator{
 			name:    name,
 			factory: journaldreceiver.NewFactory(),
 		},
-		units: units,
+		units:    units,
+		priority: priority,
+		matches:  matches,
 	}
+}
+
+func NewTranslatorWithUnits(name string, units []string) common.ComponentTranslator {
+	return NewTranslatorWithConfig(name, units, "", nil)
 }
 
 func (t *translator) ID() component.ID {
@@ -97,8 +106,28 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	// Set default priority to info
+	// Configure priority if specified, default to info
 	cfg.InputConfig.Priority = "info"
+	if priority, ok := firstConfig["priority"].(string); ok && priority != "" {
+		cfg.InputConfig.Priority = priority
+	}
+
+	// Configure matches if specified
+	if matches, ok := firstConfig["matches"].([]interface{}); ok {
+		for _, match := range matches {
+			if matchMap, ok := match.(map[string]interface{}); ok {
+				mc := make(journaldinput.MatchConfig)
+				for k, v := range matchMap {
+					if vs, ok := v.(string); ok {
+						mc[k] = vs
+					}
+				}
+				if len(mc) > 0 {
+					cfg.InputConfig.Matches = append(cfg.InputConfig.Matches, mc)
+				}
+			}
+		}
+	}
 
 	// Set storage for cursor persistence
 	storageID := filestorage.StorageID
@@ -107,7 +136,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func (t *translatorWithUnits) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translatorWithConfig) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*journaldreceiver.JournaldConfig)
 
 	// Configure units from the provided units slice
@@ -116,8 +145,20 @@ func (t *translatorWithUnits) Translate(conf *confmap.Conf) (component.Config, e
 		copy(cfg.InputConfig.Units, t.units)
 	}
 
-	// Set default priority to info
-	cfg.InputConfig.Priority = "info"
+	// Configure priority, default to info
+	if t.priority != "" {
+		cfg.InputConfig.Priority = t.priority
+	} else {
+		cfg.InputConfig.Priority = "info"
+	}
+
+	// Configure matches
+	if len(t.matches) > 0 {
+		cfg.InputConfig.Matches = make([]journaldinput.MatchConfig, len(t.matches))
+		for i, m := range t.matches {
+			cfg.InputConfig.Matches[i] = m
+		}
+	}
 
 	// Set storage for cursor persistence
 	storageID := filestorage.StorageID

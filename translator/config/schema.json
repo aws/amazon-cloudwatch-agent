@@ -1128,7 +1128,7 @@
         },
         "logsJournaldDefinition": {
           "type": "object",
-          "descriptions": "Specifies the journald logs to be collected",
+          "descriptions": "Specifies the journald logs to be collected on linux systems",
           "properties": {
             "collect_list": {
               "type": "array",
@@ -1159,6 +1159,27 @@
                     "items": {
                       "type": "string",
                       "maxLength": 256
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "Minimum priority level to collect. Valid values: emerg, alert, crit, err, warning, notice, info, debug, or a numeric value 0-7",
+                    "maxLength": 16,
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "matches": {
+                    "type": "array",
+                    "description": "Array of journald field match objects for filtering log entries",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
                     }
                   }
                 },
