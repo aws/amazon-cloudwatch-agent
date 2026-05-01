@@ -367,13 +367,13 @@
             "metrics_collection_interval": {
               "$ref": "#/definitions/timeIntervalDefinition"
             },
-            "append_dimensions": {
-              "$ref": "#/definitions/generalAppendDimensionsDefinition"
-            },
             "measurement": {
               "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementDefinition"
             }
-          }
+          },
+          "required": [
+            "measurement"
+          ]
         },
         "jmxDefinitions": {
           "oneOf": [
