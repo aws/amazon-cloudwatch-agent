@@ -5,6 +5,7 @@ package awsefa
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -22,7 +23,8 @@ const (
 )
 
 var (
-	baseKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.EfaKey)
+	baseKey       = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.EfaKey)
+	allEfaMetrics = getAllEfaMetrics()
 )
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -58,13 +60,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultCollectionInterval)
 
 	efaMap, ok := conf.Get(baseKey).(map[string]any)
-	if !ok {
-		return cfg, nil
+	if !ok || efaMap == nil {
+		return nil, fmt.Errorf("measurement is required for efa receiver (%s)", t.ID())
 	}
 
-	if _, hasMeasurement := efaMap[common.MeasurementKey]; hasMeasurement {
-		measurements := common.GetMeasurements(efaMap)
-		metrics := getEnabledMeasurements(measurements)
+	if _, hasMeasurement := efaMap[common.MeasurementKey]; !hasMeasurement {
+		return nil, fmt.Errorf("measurement is required for efa receiver (%s)", t.ID())
+	}
+
+	measurements := common.GetMeasurements(efaMap)
+	metrics := getEnabledMeasurements(measurements)
+	if len(metrics) > 0 {
 		c := confmap.NewFromStringMap(map[string]any{
 			"metrics": metrics,
 		})
@@ -76,34 +82,29 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-// allEfaMetrics is the complete list of EFA metrics for disabling unselected ones.
-// Keep in sync with awsefareceiver/internal/metadata.MetricsConfig.
-var allEfaMetrics = map[string]bool{
-	"efa_impaired_remote_conn_events": true,
-	"efa_rdma_read_bytes":             true,
-	"efa_rdma_read_resp_bytes":        true,
-	"efa_rdma_read_wr_err":            true,
-	"efa_rdma_read_wrs":               true,
-	"efa_rdma_write_bytes":            true,
-	"efa_rdma_write_recv_bytes":       true,
-	"efa_rdma_write_wr_err":           true,
-	"efa_rdma_write_wrs":              true,
-	"efa_recv_bytes":                  true,
-	"efa_recv_wrs":                    true,
-	"efa_retrans_bytes":               true,
-	"efa_retrans_pkts":                true,
-	"efa_retrans_timeout_events":      true,
-	"efa_rx_bytes":                    true,
-	"efa_rx_dropped":                  true,
-	"efa_rx_pkts":                     true,
-	"efa_send_bytes":                  true,
-	"efa_send_wrs":                    true,
-	"efa_tx_bytes":                    true,
-	"efa_tx_pkts":                     true,
-	"efa_unresponsive_remote_events":  true,
+// getAllEfaMetrics derives the complete list of EFA metrics from the receiver's
+// MetricsConfig struct via reflection, avoiding a hardcoded list that can go stale.
+func getAllEfaMetrics() map[string]bool {
+	cfg := awsefareceiver.NewFactory().CreateDefaultConfig().(*awsefareceiver.Config)
+	metricsType := reflect.TypeOf(cfg.Metrics)
+	result := make(map[string]bool, metricsType.NumField())
+	for i := 0; i < metricsType.NumField(); i++ {
+		tag := metricsType.Field(i).Tag.Get("mapstructure")
+		if tag != "" {
+			result[tag] = true
+		}
+	}
+	return result
 }
 
 func getEnabledMeasurements(measurements []string) map[string]any {
+	// Wildcard enables all metrics (return empty map = use defaults).
+	for _, m := range measurements {
+		if m == "*" {
+			return map[string]any{}
+		}
+	}
+
 	// Disable all metrics first.
 	metrics := map[string]any{}
 	for m := range allEfaMetrics {

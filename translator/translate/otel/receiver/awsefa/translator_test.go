@@ -4,6 +4,7 @@
 package awsefa
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -32,8 +33,8 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"WithEmptyConfig": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "emptyConfig.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "emptyConfig.yaml")),
+			input:   testutil.GetJson(t, filepath.Join("testdata", "emptyConfig.json")),
+			wantErr: fmt.Errorf("measurement is required for efa receiver (%s)", tt.ID()),
 		},
 		"WithMeasurements": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
@@ -48,12 +49,16 @@ func TestTranslator(t *testing.T) {
 			want:  testutil.GetConf(t, filepath.Join("testdata", "emptyMeasurements.yaml")),
 		},
 		"WithAgentInterval": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "agentInterval.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "agentInterval.yaml")),
+			input:   testutil.GetJson(t, filepath.Join("testdata", "agentInterval.json")),
+			wantErr: fmt.Errorf("measurement is required for efa receiver (%s)", tt.ID()),
 		},
 		"WithOverrideAgentInterval": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "overrideInterval.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "overrideInterval.yaml")),
+			input:   testutil.GetJson(t, filepath.Join("testdata", "overrideInterval.json")),
+			wantErr: fmt.Errorf("measurement is required for efa receiver (%s)", tt.ID()),
+		},
+		"WithWildcardMeasurement": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "wildcardConfig.json")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "wildcardConfig.yaml")),
 		},
 	}
 	factory := awsefareceiver.NewFactory()
