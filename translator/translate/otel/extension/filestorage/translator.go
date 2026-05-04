@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	directory = "/opt/aws/amazon-cloudwatch-agent/var/file_storage"
+	directory = "/opt/aws/amazon-cloudwatch-agent/logs/state"
 )
 
 type translator struct {

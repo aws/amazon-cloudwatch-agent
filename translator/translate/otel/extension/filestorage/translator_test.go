@@ -1,6 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build linux
+
 package filestorage
 
 import (
@@ -23,6 +25,6 @@ func TestTranslator(t *testing.T) {
 
 	gotCfg, ok := got.(*filestorage.Config)
 	require.True(t, ok)
-	assert.Equal(t, "/opt/aws/amazon-cloudwatch-agent/var/file_storage", gotCfg.Directory)
+	assert.Equal(t, "/opt/aws/amazon-cloudwatch-agent/logs/state", gotCfg.Directory)
 	assert.True(t, gotCfg.CreateDirectory)
 }

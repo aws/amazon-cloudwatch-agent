@@ -208,7 +208,7 @@ func TestTranslator(t *testing.T) {
 							"collect_list": []interface{}{
 								map[string]interface{}{
 									"log_group_name":   "system-logs",
-									"log_stream_name":  "{instance_id}",
+									"log_stream_name":  "journald-stream",
 									"retention_in_days": 7,
 									"units":            []interface{}{"systemd", "sshd"},
 								},
@@ -234,7 +234,7 @@ func TestTranslator(t *testing.T) {
 							"collect_list": []interface{}{
 								map[string]interface{}{
 									"log_group_name":   "system-logs",
-									"log_stream_name":  "{instance_id}",
+									"log_stream_name":  "journald-stream",
 									"retention_in_days": 7,
 									"units":            []interface{}{"systemd"},
 									"filters": []interface{}{
