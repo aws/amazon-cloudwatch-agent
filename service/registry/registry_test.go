@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/connector/connectortest"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/extension/extensiontest"
 	"go.opentelemetry.io/collector/otelcol"
@@ -18,7 +19,8 @@ import (
 func TestRegistry(t *testing.T) {
 	Register(WithReceiver(receivertest.NewNopFactory()), WithProcessor(processortest.NewNopFactory()))
 	Register(WithExporter(exportertest.NewNopFactory()), WithExtension(extensiontest.NewNopFactory()))
-	assert.Len(t, Options(), 4)
+	Register(WithConnector(connectortest.NewNopFactory()))
+	assert.Len(t, Options(), 5)
 	got := otelcol.Factories{}
 	for _, apply := range Options() {
 		apply(&got)
@@ -28,6 +30,7 @@ func TestRegistry(t *testing.T) {
 	assert.NotNil(t, got.Processors[nop])
 	assert.NotNil(t, got.Exporters[nop])
 	assert.NotNil(t, got.Extensions[nop])
+	assert.NotNil(t, got.Connectors[nop])
 	assert.Len(t, got.Receivers, 1)
 	origReceiver := got.Receivers[nop]
 	Register(WithReceiver(receivertest.NewNopFactory()))

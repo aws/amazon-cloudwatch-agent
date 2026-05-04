@@ -5,6 +5,7 @@ package registry
 
 import (
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
@@ -68,5 +69,15 @@ func WithExtension(factory extension.Factory) Option {
 			factories.Extensions = make(map[component.Type]extension.Factory)
 		}
 		factories.Extensions[factory.Type()] = factory
+	}
+}
+
+// WithConnector sets the connector factory in the factories. Will overwrite duplicate types.
+func WithConnector(factory connector.Factory) Option {
+	return func(factories *otelcol.Factories) {
+		if factories.Connectors == nil {
+			factories.Connectors = make(map[component.Type]connector.Factory)
+		}
+		factories.Connectors[factory.Type()] = factory
 	}
 }
