@@ -369,6 +369,14 @@
             },
             "measurement": {
               "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "required": [

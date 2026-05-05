@@ -56,10 +56,6 @@ func TestTranslator(t *testing.T) {
 			input:   testutil.GetJson(t, filepath.Join("testdata", "overrideInterval.json")),
 			wantErr: fmt.Errorf("measurement is required for efa receiver (%s)", tt.ID()),
 		},
-		"WithWildcardMeasurement": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "wildcardConfig.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "wildcardConfig.yaml")),
-		},
 	}
 	factory := awsefareceiver.NewFactory()
 	for name, testCase := range testCases {

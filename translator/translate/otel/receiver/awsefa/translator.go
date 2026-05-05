@@ -70,13 +70,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	measurements := common.GetMeasurements(efaMap)
 	metrics := getEnabledMeasurements(measurements)
-	if len(metrics) > 0 {
-		c := confmap.NewFromStringMap(map[string]any{
-			"metrics": metrics,
-		})
-		if err := c.Unmarshal(&cfg); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal efa receiver (%s): %w", t.ID(), err)
-		}
+	c := confmap.NewFromStringMap(map[string]any{
+		"metrics": metrics,
+	})
+	if err := c.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal efa receiver (%s): %w", t.ID(), err)
 	}
 
 	return cfg, nil
@@ -98,13 +96,6 @@ func getAllEfaMetrics() map[string]bool {
 }
 
 func getEnabledMeasurements(measurements []string) map[string]any {
-	// Wildcard enables all metrics (return empty map = use defaults).
-	for _, m := range measurements {
-		if m == "*" {
-			return map[string]any{}
-		}
-	}
-
 	// Disable all metrics first.
 	metrics := map[string]any{}
 	for m := range allEfaMetrics {
