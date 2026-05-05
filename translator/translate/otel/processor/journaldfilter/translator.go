@@ -39,7 +39,6 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	// Set error mode to ignore to prevent pipeline failures
 	cfg.ErrorMode = "ignore"
 
 	return cfg, nil
@@ -55,8 +54,8 @@ func NewTranslatorWithFilters(name string, filters []FilterConfig) common.Compon
 }
 
 type FilterConfig struct {
-	Type       string `json:"type"`       // "include" or "exclude"
-	Expression string `json:"expression"` // regex pattern
+	Type       string `json:"type"`       
+	Expression string `json:"expression"` 
 }
 
 type filterTranslator struct {
@@ -74,22 +73,16 @@ func (t *filterTranslator) ID() component.ID {
 func (t *filterTranslator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	// Set error mode to ignore to prevent pipeline failures
 	cfg.ErrorMode = "ignore"
 
-	// Convert filters to OTTL expressions
 	var logRecordFilters []string
 	for _, filter := range t.filters {
 		var ottlExpr string
 		switch filter.Type {
 		case "exclude":
-			// For exclude filters, we want to drop logs that match the pattern
-			// Filter processor drops when condition is TRUE, so use IsMatch directly
-			ottlExpr = fmt.Sprintf(`IsMatch(body, "%s")`, filter.Expression)
+			ottlExpr = fmt.Sprintf(`IsMatch(body["MESSAGE"], "%s")`, filter.Expression)
 		case "include":
-			// For include filters, we want to keep only logs that match the pattern
-			// Filter processor drops when condition is TRUE, so use NOT IsMatch to drop non-matching logs
-			ottlExpr = fmt.Sprintf(`not IsMatch(body, "%s")`, filter.Expression)
+			ottlExpr = fmt.Sprintf(`not IsMatch(body["MESSAGE"], "%s")`, filter.Expression)
 		default:
 			return nil, fmt.Errorf("unsupported filter type: %s", filter.Type)
 		}
