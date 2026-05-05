@@ -18,7 +18,7 @@ const (
 )
 
 // Map to support dropping metrics without measurement.
-var toDropMap = collections.NewSet("collectd", "statsd", "ethtool")
+var toDropMap = collections.NewSet("collectd", "statsd", "ethtool", "efa")
 
 func GetRollupDimensions(conf *confmap.Conf) [][]string {
 	key := ConfigKey(MetricsKey, AggregationDimensionsKey)

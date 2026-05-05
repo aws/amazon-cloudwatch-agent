@@ -1,0 +1,13 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "efa": {
+        "measurement": [
+          "efa_tx_bytes",
+          "efa_rx_bytes"
+        ],
+        "metrics_collection_interval": 30
+      }
+    }
+  }
+}
