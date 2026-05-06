@@ -389,6 +389,12 @@ func TestJournaldLogsPriority(t *testing.T) {
 	checkTranslation(t, "journaldlogs_priority", "linux", expectedEnvVars, "")
 }
 
+func TestJournaldLogsFilters(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "journaldlogs_filters", "linux", expectedEnvVars, "")
+}
+
 func TestJournaldLogsMatches(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

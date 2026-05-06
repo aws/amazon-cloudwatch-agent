@@ -80,9 +80,9 @@ func (t *filterTranslator) Translate(conf *confmap.Conf) (component.Config, erro
 		var ottlExpr string
 		switch filter.Type {
 		case "exclude":
-			ottlExpr = fmt.Sprintf(`IsMatch(body["MESSAGE"], "%s")`, filter.Expression)
+			ottlExpr = fmt.Sprintf(`IsMatch(body, "%s")`, filter.Expression)
 		case "include":
-			ottlExpr = fmt.Sprintf(`not IsMatch(body["MESSAGE"], "%s")`, filter.Expression)
+			ottlExpr = fmt.Sprintf(`not IsMatch(body, "%s")`, filter.Expression)
 		default:
 			return nil, fmt.Errorf("unsupported filter type: %s", filter.Type)
 		}
