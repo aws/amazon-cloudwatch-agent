@@ -39,7 +39,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	cfg.ErrorMode = "ignore"
+	cfg.ErrorMode = "propagate"
 
 	return cfg, nil
 }
@@ -54,8 +54,8 @@ func NewTranslatorWithFilters(name string, filters []FilterConfig) common.Compon
 }
 
 type FilterConfig struct {
-	Type       string `json:"type"`       
-	Expression string `json:"expression"` 
+	Type       string `json:"type"`
+	Expression string `json:"expression"`
 }
 
 type filterTranslator struct {
@@ -73,7 +73,7 @@ func (t *filterTranslator) ID() component.ID {
 func (t *filterTranslator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	cfg.ErrorMode = "ignore"
+	cfg.ErrorMode = "propagate"
 
 	var logRecordFilters []string
 	for _, filter := range t.filters {
