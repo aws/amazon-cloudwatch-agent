@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "metrics_collection_interval": 120
+  },
+  "metrics": {
+    "metrics_collected": {
+      "efa": {
+        "metrics_collection_interval": 15
+      }
+    }
+  }
+}
