@@ -6,8 +6,10 @@ package applicationsignalslogs
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -17,11 +19,16 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/processor/processortest"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
-
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	transformproc "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
+
+func TestMain(m *testing.M) {
+	agent.Global_Config.Region = "us-east-1"
+	os.Exit(m.Run())
+}
 
 func TestTranslatorID(t *testing.T) {
 	tt := NewTranslator()
@@ -257,10 +264,10 @@ func TestBuildOTTLSetStatement(t *testing.T) {
 
 func TestResolveLogConfig(t *testing.T) {
 	tests := []struct {
-		name                string
-		logGroupName        string
-		logStreamName       string
-		expectGroupTemplate []templateSegment
+		name                 string
+		logGroupName         string
+		logStreamName        string
+		expectGroupTemplate  []templateSegment
 		expectStreamTemplate []templateSegment
 	}{
 		{
@@ -281,9 +288,9 @@ func TestResolveLogConfig(t *testing.T) {
 			expectStreamTemplate: []templateSegment{{literal: defaultLogStreamName}},
 		},
 		{
-			name:          "static group and stream (no placeholders)",
-			logGroupName:  "/static/group",
-			logStreamName: "my-stream",
+			name:                 "static group and stream (no placeholders)",
+			logGroupName:         "/static/group",
+			logStreamName:        "my-stream",
 			expectGroupTemplate:  []templateSegment{{literal: "/static/group"}},
 			expectStreamTemplate: []templateSegment{{literal: "my-stream"}},
 		},
@@ -465,8 +472,11 @@ func TestTransformProcessorRuntime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			translator := newTransformTranslator(tt.logGroupTemplate, tt.logStreamTemplate)
-			cfg, err := translator.Translate(nil)
+			tr := transformproc.NewTranslatorWithLogStatements(pipelineName, []string{
+				buildOTTLSetStatement(metadataKeyLogGroup, tt.logGroupTemplate),
+				buildOTTLSetStatement(metadataKeyLogStream, tt.logStreamTemplate),
+			})
+			cfg, err := tr.Translate(nil)
 			require.NoError(t, err)
 
 			sink := new(consumertest.LogsSink)

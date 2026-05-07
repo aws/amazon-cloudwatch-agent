@@ -13,19 +13,33 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+type Option func(*translator)
+
+// WithService sets the AWS service for sigv4 signing (e.g. "logs").
+func WithService(service string) Option {
+	return func(t *translator) {
+		t.service = service
+	}
+}
+
 type translator struct {
 	name    string
+	service string
 	factory extension.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.ComponentTranslator {
-	return NewTranslatorWithName("")
+func NewTranslator(opts ...Option) common.ComponentTranslator {
+	return NewTranslatorWithName("", opts...)
 }
 
-func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, sigv4authextension.NewFactory()}
+func NewTranslatorWithName(name string, opts ...Option) common.ComponentTranslator {
+	t := &translator{name: name, factory: sigv4authextension.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
@@ -35,6 +49,9 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*sigv4authextension.Config)
 	cfg.Region = agent.Global_Config.Region
+	if t.service != "" {
+		cfg.Service = t.service
+	}
 	if agent.Global_Config.Role_arn != "" {
 		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
 	}

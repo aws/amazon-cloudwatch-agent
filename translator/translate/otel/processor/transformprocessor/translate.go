@@ -5,6 +5,7 @@ package transformprocessor
 
 import (
 	_ "embed"
+	"fmt"
 	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
@@ -22,14 +23,21 @@ var transformJmxConfig string
 var transformJmxDropConfig string
 
 type translator struct {
-	name    string
-	factory processor.Factory
+	name          string
+	factory       processor.Factory
+	logStatements []string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, transformprocessor.NewFactory()}
+	return &translator{name: name, factory: transformprocessor.NewFactory()}
+}
+
+// NewTranslatorWithLogStatements creates a transform processor translator that
+// executes the given OTTL statements in the "resource" context for logs.
+func NewTranslatorWithLogStatements(name string, statements []string) common.ComponentTranslator {
+	return &translator{name: name, factory: transformprocessor.NewFactory(), logStatements: statements}
 }
 
 func (t *translator) ID() component.ID {
@@ -38,6 +46,26 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
+
+	if len(t.logStatements) > 0 {
+		stmts := make([]interface{}, len(t.logStatements))
+		for i, s := range t.logStatements {
+			stmts[i] = s
+		}
+		cfgMap := map[string]interface{}{
+			"log_statements": []interface{}{
+				map[string]interface{}{
+					"context":    "resource",
+					"statements": stmts,
+				},
+			},
+		}
+		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
+			return nil, fmt.Errorf("failed to configure transform processor: %w", err)
+		}
+		return cfg, nil
+	}
+
 	if t.name == common.PipelineNameContainerInsightsJmx {
 		return common.GetYamlFileToYamlConfig(cfg, transformJmxConfig)
 	}

@@ -13,7 +13,8 @@
 //	receivers: [otlp]
 //	processors: [transform, attributestocontext, batch(metadata_keys)]
 //	exporters: [otlphttp]
-//	extensions: [sigv4auth, awscloudwatchlogsprovisioner]
+//	extensions: [headers_setter, sigv4auth, awscloudwatchlogsprovisioner]
+//	auth chain: otlphttp → headers_setter → provisioner → sigv4auth
 //
 // Static (no placeholders):
 //
@@ -21,6 +22,7 @@
 //	processors: [batch]
 //	exporters: [otlphttp(static headers)]
 //	extensions: [sigv4auth, awscloudwatchlogsprovisioner]
+//	auth chain: otlphttp → provisioner → sigv4auth
 package applicationsignalslogs
 
 import (
@@ -31,9 +33,17 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awscloudwatchlogsprovisioner"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributestocontext"
+	batchproc "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	transformproc "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -43,6 +53,9 @@ const (
 	// TODO: Update default log group prefix before PR is merged.
 	defaultLogGroupPrefix = "/aws/telemetry/"
 	defaultLogStreamName  = "default"
+
+	metadataKeyLogGroup  = "cwlogs.log_group"
+	metadataKeyLogStream = "cwlogs.log_stream"
 )
 
 type translator struct{}
@@ -63,8 +76,21 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKeys[0]}
 	}
 
+	region := agent.Global_Config.Region
+	if region == "" {
+		return nil, fmt.Errorf("region is required for %s pipeline", pipelineName)
+	}
+
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
 	dynamic := hasPlaceholders(logGroupTemplate) || hasPlaceholders(logStreamTemplate)
+
+	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), "appsignals_logs")
+	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
+	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), "appsignals_logs")
+	logsEndpoint := otlphttp.EndpointConfig{
+		BaseEndpoint: fmt.Sprintf("https://logs.%s.amazonaws.com", region),
+		LogsEndpoint: fmt.Sprintf("https://logs.%s.amazonaws.com/v1/logs", region),
+	}
 
 	translators := &common.ComponentTranslators{
 		Receivers:  otlp.NewTranslators(conf, common.AppSignals, pipeline.SignalLogs.String()),
@@ -74,17 +100,34 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	if dynamic {
-		translators.Processors.Set(newTransformTranslator(logGroupTemplate, logStreamTemplate))
-		translators.Processors.Set(newAttributesToContextTranslator())
-		translators.Processors.Set(newBatchWithMetadataKeysTranslator())
-		translators.Exporters.Set(newDynamicOTLPHTTPExporterTranslator())
-		translators.Extensions.Set(newHeadersSetterTranslator())
-	} else {
-		translators.Processors.Set(newBatchTranslator())
-		translators.Exporters.Set(newStaticOTLPHTTPExporterTranslator(map[string]string{
-			"x-aws-log-group":  templateToLiteral(logGroupTemplate),
-			"x-aws-log-stream": templateToLiteral(logStreamTemplate),
+		translators.Processors.Set(transformproc.NewTranslatorWithLogStatements(pipelineName, []string{
+			buildOTTLSetStatement(metadataKeyLogGroup, logGroupTemplate),
+			buildOTTLSetStatement(metadataKeyLogStream, logStreamTemplate),
 		}))
+		translators.Processors.Set(attributestocontext.NewTranslator([]attributestocontext.ActionMapping{
+			{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup},
+			{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream},
+		}))
+		translators.Processors.Set(batchproc.NewTranslator(
+			common.WithName(pipelineName),
+			batchproc.WithMetadataKeys([]string{metadataKeyLogGroup, metadataKeyLogStream}),
+		))
+		translators.Exporters.Set(otlphttp.NewTranslatorWithName("appsignals_logs", logsEndpoint,
+			otlphttp.WithAuthenticator(headersSetterID),
+		))
+		translators.Extensions.Set(headerssetter.NewTranslatorWithName("appsignals_logs", provisionerID, []headerssetter.HeaderMapping{
+			{HeaderName: "x-aws-log-group", ContextKey: metadataKeyLogGroup},
+			{HeaderName: "x-aws-log-stream", ContextKey: metadataKeyLogStream},
+		}))
+	} else {
+		translators.Processors.Set(batchproc.NewTranslator(common.WithName(pipelineName)))
+		translators.Exporters.Set(otlphttp.NewTranslatorWithName("appsignals_logs", logsEndpoint,
+			otlphttp.WithAuthenticator(provisionerID),
+			otlphttp.WithHeaders(map[string]string{
+				"x-aws-log-group":  templateToLiteral(logGroupTemplate),
+				"x-aws-log-stream": templateToLiteral(logStreamTemplate),
+			}),
+		))
 	}
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
@@ -92,8 +135,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	// Extensions: sigv4auth + awscloudwatchlogsprovisioner (both paths need these)
-	translators.Extensions.Set(newSigV4AuthTranslator())
-	translators.Extensions.Set(newProvisionerTranslator())
+	translators.Extensions.Set(sigv4auth.NewTranslatorWithName("appsignals_logs", sigv4auth.WithService("logs")))
+	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4AuthID))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 
 	return translators, nil
@@ -125,7 +168,7 @@ type templateSegment struct {
 
 // resolveLogConfig reads log_group_name and log_stream_name from the config
 // and parses them into template segments for OTTL Concat generation.
-func resolveLogConfig(conf *confmap.Conf, configKeys []string) (logGroupTemplate, logStreamTemplate []templateSegment) {
+func resolveLogConfig(conf *confmap.Conf, configKeys []string) ([]templateSegment, []templateSegment) {
 	logGroupName := ""
 	logStreamName := defaultLogStreamName
 
@@ -168,6 +211,39 @@ func parseTemplate(tmpl string) []templateSegment {
 		tmpl = tmpl[openIdx+closeIdx+1:]
 	}
 	return segments
+}
+
+// buildOTTLSetStatement generates an OTTL statement from template segments.
+// A `where` guard ensures the attribute is only set when not already present,
+// so SDK-set values take precedence over the template.
+func buildOTTLSetStatement(metadataKey string, segments []templateSegment) string {
+	whereGuard := fmt.Sprintf(` where resource.attributes["%s"] == nil`, metadataKey)
+
+	hasAttributes := false
+	for _, seg := range segments {
+		if seg.attribute != "" {
+			hasAttributes = true
+			break
+		}
+	}
+
+	if !hasAttributes {
+		var literal string
+		for _, seg := range segments {
+			literal += seg.literal
+		}
+		return fmt.Sprintf(`set(resource.attributes["%s"], "%s")`, metadataKey, literal) + whereGuard
+	}
+
+	var parts []string
+	for _, seg := range segments {
+		if seg.attribute != "" {
+			parts = append(parts, fmt.Sprintf(`resource.attributes["%s"]`, seg.attribute))
+		} else {
+			parts = append(parts, fmt.Sprintf(`"%s"`, seg.literal))
+		}
+	}
+	return fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")) + whereGuard
 }
 
 // AutoEnableIfNeeded injects logs.logs_collected.application_signals with defaults
