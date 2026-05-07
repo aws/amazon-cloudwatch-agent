@@ -4,6 +4,7 @@
 package defaultcomponents
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
@@ -183,6 +184,7 @@ func Factories() (otelcol.Factories, error) {
 	}
 
 	if factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory](
+		countconnector.NewFactory(),
 		signaltometricsconnector.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err

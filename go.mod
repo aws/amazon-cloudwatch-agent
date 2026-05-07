@@ -16,6 +16,8 @@ replace (
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector => /home/polajaso/workplace/github/opentelemetry-collector-contrib/connector/signaltometricsconnector
 
+replace github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector => /home/polajaso/workplace/github/opentelemetry-collector-contrib/connector/countconnector
+
 replace (
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260410000839-bf7ae656c809
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260410000839-bf7ae656c809
@@ -139,6 +141,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/oklog/run v1.1.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector v0.0.0-00010101000000-000000000000
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.124.1
