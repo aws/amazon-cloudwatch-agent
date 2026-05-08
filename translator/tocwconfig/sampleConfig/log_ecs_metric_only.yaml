@@ -56,7 +56,6 @@ exporters:
                 - - ClusterName
                   - ContainerInstanceId
                   - InstanceId
-              log_group_name: ""
               metric_name_selectors:
                 - instance_cpu_reserved_capacity
                 - instance_cpu_utilization
@@ -65,10 +64,8 @@ exporters:
                 - instance_memory_utilization
                 - instance_network_total_bytes
                 - instance_number_of_running_tasks
-              namespace: ""
             - dimensions:
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - instance_cpu_limit
                 - instance_cpu_reserved_capacity
@@ -81,7 +78,6 @@ exporters:
                 - instance_memory_working_set
                 - instance_network_total_bytes
                 - instance_number_of_running_tasks
-              namespace: ""
         middleware: agenthealth/logs
         namespace: ECS/ContainerInsights
         no_verify_ssl: false
@@ -142,8 +138,8 @@ processors:
         traces: {}
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         accelerated_compute_metrics: true
+        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true

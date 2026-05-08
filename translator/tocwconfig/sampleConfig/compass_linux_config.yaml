@@ -182,8 +182,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostOtlpMetrics:
             exporters:
                 - awscloudwatch

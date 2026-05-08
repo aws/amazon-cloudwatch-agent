@@ -27,7 +27,6 @@ exporters:
                   - ContainerName
                   - Namespace
                   - PodName
-              log_group_name: ""
               metric_name_selectors:
                 - container_cpu_utilization
                 - container_cpu_utilization_over_container_limit
@@ -41,7 +40,6 @@ exporters:
                 - container_filesystem_usage
                 - container_filesystem_available
                 - container_filesystem_utilization
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
@@ -56,7 +54,6 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
-              log_group_name: ""
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -64,7 +61,6 @@ exporters:
                 - pod_network_tx_bytes
                 - pod_cpu_utilization_over_pod_limit
                 - pod_memory_utilization_over_pod_limit
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - FullPodName
@@ -76,11 +72,9 @@ exporters:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - pod_interface_network_rx_dropped
                 - pod_interface_network_tx_dropped
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
@@ -93,7 +87,6 @@ exporters:
                 - - ClusterName
                   - Namespace
                   - Service
-              log_group_name: ""
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
@@ -122,13 +115,11 @@ exporters:
                 - pod_container_status_waiting_reason_create_container_error
                 - pod_container_status_waiting_reason_create_container_config_error
                 - pod_container_status_terminated_reason_oom_killed
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -149,13 +140,11 @@ exporters:
                 - node_status_condition_unknown
                 - node_status_capacity_pods
                 - node_status_allocatable_pods
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - node_interface_network_rx_dropped
                 - node_interface_network_tx_dropped
@@ -165,165 +154,130 @@ exporters:
                 - hyperpod_node_health_status_unschedulable_pending_replacement
                 - hyperpod_node_health_status_unschedulable_pending_reboot
                 - hyperpod_node_health_status_unschedulable
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - node_filesystem_utilization
                 - node_filesystem_inodes
                 - node_filesystem_inodes_free
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - Service
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - service_number_of_running_pods
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - PodName
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - replicas_desired
                 - replicas_ready
                 - status_replicas_available
                 - status_replicas_unavailable
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - PodName
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - daemonset_status_number_available
                 - daemonset_status_number_unavailable
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - namespace_number_of_running_pods
                 - namespace_ingress_count
-              namespace: ""
             - dimensions:
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
                 - cluster_number_of_running_pods
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - endpoint
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_storage_size_bytes
                 - apiserver_storage_db_total_size_in_bytes
                 - etcd_db_total_size_in_bytes
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - resource
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_storage_list_duration_seconds
                 - apiserver_longrunning_requests
                 - apiserver_storage_objects
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - verb
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_request_duration_seconds
                 - rest_client_request_duration_seconds
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - code
                   - verb
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_request_total
                 - apiserver_request_total_5xx
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - operation
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_admission_controller_admission_duration_seconds
                 - apiserver_admission_step_admission_duration_seconds
                 - etcd_request_duration_seconds
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - code
                   - method
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - rest_client_requests_total
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - request_kind
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_current_inflight_requests
                 - apiserver_current_inqueue_requests
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - name
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_admission_webhook_admission_duration_seconds
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - group
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_requested_deprecated_apis
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - reason
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_flowcontrol_rejected_requests_total
-              namespace: ""
             - dimensions:
                 - - ClusterName
                   - priority_level
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - apiserver_flowcontrol_request_concurrency_limit
-              namespace: ""
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -333,7 +287,6 @@ exporters:
                   - InstanceId
                   - NodeName
                   - VolumeId
-              log_group_name: ""
               metric_name_selectors:
                 - node_diskio_ebs_total_read_ops
                 - node_diskio_ebs_total_write_ops
@@ -346,7 +299,6 @@ exporters:
                 - node_diskio_ebs_ec2_instance_performance_exceeded_iops
                 - node_diskio_ebs_ec2_instance_performance_exceeded_tp
                 - node_diskio_ebs_volume_queue_length
-              namespace: ""
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -356,7 +308,6 @@ exporters:
                   - InstanceId
                   - NodeName
                   - VolumeId
-              log_group_name: ""
               metric_name_selectors:
                 - node_diskio_instance_store_total_read_ops
                 - node_diskio_instance_store_total_write_ops
@@ -367,7 +318,6 @@ exporters:
                 - node_diskio_instance_store_ec2_instance_performance_exceeded_iops
                 - node_diskio_instance_store_ec2_instance_performance_exceeded_tp
                 - node_diskio_instance_store_volume_queue_length
-              namespace: ""
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -375,19 +325,15 @@ exporters:
                 - - ClusterName
                   - Namespace
                   - PersistentVolumeClaimName
-              log_group_name: ""
               metric_name_selectors:
                 - persistent_volume_claim_status_bound
                 - persistent_volume_claim_status_lost
                 - persistent_volume_claim_status_pending
                 - persistent_volume_claim_count
-              namespace: ""
             - dimensions:
                 - - ClusterName
-              log_group_name: ""
               metric_name_selectors:
                 - persistent_volume_count
-              namespace: ""
         metric_descriptors:
             - metric_name: apiserver_admission_controller_admission_duration_seconds
               overwrite: true
@@ -525,9 +471,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_read_ops_total
+              include: aws_ebs_csi_exceeded_iops_seconds_total
               match_type: ""
-              new_name: node_diskio_ebs_total_read_ops
+              new_name: node_diskio_ebs_volume_performance_exceeded_iops
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -539,9 +485,37 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_write_bytes_total
+              include: aws_ebs_csi_exceeded_tp_seconds_total
               match_type: ""
-              new_name: node_diskio_ebs_total_write_bytes
+              new_name: node_diskio_ebs_volume_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
+              match_type: ""
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ebs_csi_read_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_read_ops
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -567,23 +541,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_write_seconds_total
+              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
               match_type: ""
-              new_name: node_diskio_ebs_total_write_time
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_exceeded_tp_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_volume_performance_exceeded_tp
+              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -637,9 +597,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_exceeded_iops_seconds_total
+              include: aws_ebs_csi_write_bytes_total
               match_type: ""
-              new_name: node_diskio_ebs_volume_performance_exceeded_iops
+              new_name: node_diskio_ebs_total_write_bytes
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -651,9 +611,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_ec2_exceeded_iops_seconds_total
+              include: aws_ebs_csi_write_seconds_total
               match_type: ""
-              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_iops
+              new_name: node_diskio_ebs_total_write_time
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -662,76 +622,6 @@ processors:
                   label_value: ""
                   new_label: Type
                   new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ebs_csi_ec2_exceeded_tp_seconds_total
-              match_type: ""
-              new_name: node_diskio_ebs_ec2_instance_performance_exceeded_tp
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ec2_instance_store_csi_volume_queue_length
-              match_type: ""
-              new_name: node_diskio_instance_store_volume_queue_length
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeInstanceStore
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ec2_instance_store_csi_read_bytes_total
-              match_type: ""
-              new_name: node_diskio_instance_store_total_read_bytes
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeInstanceStore
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ec2_instance_store_csi_write_seconds_total
-              match_type: ""
-              new_name: node_diskio_instance_store_total_write_time
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeInstanceStore
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total
-              match_type: ""
-              new_name: node_diskio_instance_store_ec2_instance_performance_exceeded_tp
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeInstanceStore
               submatch_case: ""
             - action: update
               aggregation_type: ""
@@ -752,6 +642,20 @@ processors:
               include: aws_ec2_instance_store_csi_write_ops_total
               match_type: ""
               new_name: node_diskio_instance_store_total_write_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeInstanceStore
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ec2_instance_store_csi_read_bytes_total
+              match_type: ""
+              new_name: node_diskio_instance_store_total_read_bytes
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -791,6 +695,20 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
+              include: aws_ec2_instance_store_csi_write_seconds_total
+              match_type: ""
+              new_name: node_diskio_instance_store_total_write_time
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeInstanceStore
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
               include: aws_ec2_instance_store_csi_ec2_exceeded_iops_seconds_total
               match_type: ""
               new_name: node_diskio_instance_store_ec2_instance_performance_exceeded_iops
@@ -803,10 +721,38 @@ processors:
                   new_label: Type
                   new_value: NodeInstanceStore
               submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ec2_instance_store_csi_ec2_exceeded_tp_seconds_total
+              match_type: ""
+              new_name: node_diskio_instance_store_ec2_instance_performance_exceeded_tp
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeInstanceStore
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ec2_instance_store_csi_volume_queue_length
+              match_type: ""
+              new_name: node_diskio_instance_store_volume_queue_length
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeInstanceStore
+              submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         accelerated_compute_metrics: false
+        accelerated_compute_gpu_metrics_collection_interval: 1m0s
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
