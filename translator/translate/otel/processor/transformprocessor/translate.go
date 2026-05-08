@@ -21,6 +21,9 @@ var transformJmxConfig string
 //go:embed transform_jmx_drop_config.yaml
 var transformJmxDropConfig string
 
+//go:embed transform_efa_config.yaml
+var transformEfaConfig string
+
 type translator struct {
 	name    string
 	factory processor.Factory
@@ -43,6 +46,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	if strings.HasPrefix(t.name, common.PipelineNameJmx) { // For JMX on EKS
 		return common.GetYamlFileToYamlConfig(cfg, transformJmxDropConfig)
+	}
+	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
+		return common.GetYamlFileToYamlConfig(cfg, transformEfaConfig)
 	}
 
 	return cfg, nil
