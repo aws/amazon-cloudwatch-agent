@@ -16,6 +16,7 @@ const (
 	ValueApplicationSignals   = "application_signals"
 	ValueCollectd             = "collectd"
 	ValueEC2Health            = "ec2_health"
+	ValueEC2HealthWindows     = "ec2_health_windows"
 	ValueEMF                  = "emf"
 	ValueJVM                  = "jvm"
 	ValueJVMEC2               = "jvm_ec2"
@@ -48,6 +49,7 @@ var (
 		Build(KeyObservabilitySolutions, ValueApplicationSignals),
 		Build(KeyObservabilitySolutions, ValueCollectd),
 		Build(KeyObservabilitySolutions, ValueEC2Health),
+		Build(KeyObservabilitySolutions, ValueEC2HealthWindows),
 		Build(KeyObservabilitySolutions, ValueEMF),
 		Build(KeyObservabilitySolutions, ValueJVM),
 		Build(KeyObservabilitySolutions, ValueKafkaBroker),

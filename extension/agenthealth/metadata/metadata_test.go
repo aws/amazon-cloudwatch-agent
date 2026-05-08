@@ -78,3 +78,20 @@ func TestIsSupportedAliasResolution(t *testing.T) {
 	assert.True(t, IsSupported("obs_tomcat"))
 	assert.True(t, IsSupported("obs_nvidia_gpu"))
 }
+
+func TestResolve(t *testing.T) {
+	testCases := []struct {
+		input string
+		want  string
+	}{
+		{input: "obs_jvm_ec2", want: "obs_jvm"},
+		{input: "obs_tomcat_ec2", want: "obs_tomcat"},
+		{input: "obs_nvidia_gpu_ec2", want: "obs_nvidia_gpu"},
+		{input: "obs_jvm", want: "obs_jvm"},
+		{input: "obs_ec2_health", want: "obs_ec2_health"},
+		{input: "obs_unknown", want: "obs_unknown"},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.want, Resolve(testCase.input))
+	}
+}
