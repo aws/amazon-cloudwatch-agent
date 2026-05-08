@@ -981,6 +981,10 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 func resetContext(t *testing.T) {
 	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
 	t.Setenv(envconfig.SystemMetricsEnabled, "false")
+	// sigv4auth.Validate() eagerly resolves a credential provider. Set fake
+	// credentials so validation doesn't fail in environments without them.
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-west-2", "ACJ"
 	}
