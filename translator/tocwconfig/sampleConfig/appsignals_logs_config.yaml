@@ -48,10 +48,10 @@ extensions:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
             - action: upsert
-              from_context: cwlogs.log_group
+              from_context: aws.cloudwatch.log_group.destination
               key: x-aws-log-group
             - action: upsert
-              from_context: cwlogs.log_stream
+              from_context: aws.cloudwatch.log_stream.destination
               key: x-aws-log-stream
     sigv4auth/appsignals_logs:
         assume_role:
@@ -61,15 +61,15 @@ extensions:
 processors:
     attributestocontext:
         actions:
-            - from_resource_attribute: cwlogs.log_group
-              key: cwlogs.log_group
-            - from_resource_attribute: cwlogs.log_stream
-              key: cwlogs.log_stream
+            - from_resource_attribute: aws.cloudwatch.log_group.destination
+              key: aws.cloudwatch.log_group.destination
+            - from_resource_attribute: aws.cloudwatch.log_stream.destination
+              key: aws.cloudwatch.log_stream.destination
     batch/application_signals_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
-            - cwlogs.log_group
-            - cwlogs.log_stream
+            - aws.cloudwatch.log_group.destination
+            - aws.cloudwatch.log_stream.destination
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -80,8 +80,8 @@ processors:
             - context: resource
               error_mode: ""
               statements:
-                - set(resource.attributes["cwlogs.log_group"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], "")) where resource.attributes["cwlogs.log_group"] == nil
-                - set(resource.attributes["cwlogs.log_stream"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], "")) where resource.attributes["cwlogs.log_stream"] == nil
+                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
+                - set(resource.attributes["aws.cloudwatch.log_stream.destination"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], "")) where resource.attributes["aws.cloudwatch.log_stream.destination"] == nil
         metric_statements: []
         trace_statements: []
 receivers:

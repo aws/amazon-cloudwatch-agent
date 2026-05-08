@@ -48,6 +48,7 @@ func TestComponents(t *testing.T) {
 
 	wantProcessors := []string{
 		"attributes",
+		"attributestocontext",
 		"awsapplicationsignals",
 		"awsattributelimit",
 		"awsdevicepodcorrelation",
@@ -101,10 +102,12 @@ func TestComponents(t *testing.T) {
 
 	wantExtensions := []string{
 		"agenthealth",
+		"awscloudwatchlogsprovisioner",
 		"awsproxy",
 		"ecs_observer",
 		"entitystore",
 		"file_storage",
+		"headers_setter",
 		"health_check",
 		"k8smetadata",
 		"nodemetadatacache",

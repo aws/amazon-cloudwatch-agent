@@ -116,14 +116,20 @@ func TestTranslatorWithCustomLogGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
-	// Dynamic path: transform + attributestocontext + batch(metadata_keys)
+	// Hybrid path: only log_group is dynamic, log_stream is static
 	processors := collections.MapSlice(got.Processors.Keys(), component.ID.String)
 	assert.Contains(t, processors, "transform/application_signals_logs")
 	assert.Contains(t, processors, "attributestocontext")
+	assert.Contains(t, processors, "batch/application_signals_logs")
 
 	extensions := collections.MapSlice(got.Extensions.Keys(), component.ID.String)
 	assert.Contains(t, extensions, "awscloudwatchlogsprovisioner")
 	assert.Contains(t, extensions, "headers_setter/appsignals_logs")
+
+	// Verify batch is present (only log_group metadata key since stream is static)
+	batchCfg, ok := got.Processors.Get(component.NewIDWithName(component.MustNewType("batch"), pipelineName))
+	require.True(t, ok)
+	require.NotNil(t, batchCfg)
 }
 
 func TestTranslatorStaticLogGroup(t *testing.T) {
@@ -232,7 +238,7 @@ func TestBuildOTTLSetStatement(t *testing.T) {
 		{
 			name:     "pure literal",
 			segments: []templateSegment{{literal: "my-stream"}},
-			expected: `set(resource.attributes["cwlogs.log_stream"], "my-stream") where resource.attributes["cwlogs.log_stream"] == nil`,
+			expected: `set(resource.attributes["aws.cloudwatch.log_stream.destination"], "my-stream") where resource.attributes["aws.cloudwatch.log_stream.destination"] == nil`,
 		},
 		{
 			name: "single placeholder with prefix",
@@ -240,7 +246,7 @@ func TestBuildOTTLSetStatement(t *testing.T) {
 				{literal: "/prefix/"},
 				{attribute: "service.name"},
 			},
-			expected: `set(resource.attributes["cwlogs.log_stream"], Concat(["/prefix/", resource.attributes["service.name"]], "")) where resource.attributes["cwlogs.log_stream"] == nil`,
+			expected: `set(resource.attributes["aws.cloudwatch.log_stream.destination"], Concat(["/prefix/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_stream.destination"] == nil`,
 		},
 		{
 			name: "multiple placeholders",
@@ -250,7 +256,7 @@ func TestBuildOTTLSetStatement(t *testing.T) {
 				{literal: "/b/"},
 				{attribute: "attr.two"},
 			},
-			expected: `set(resource.attributes["cwlogs.log_stream"], Concat(["/a/", resource.attributes["attr.one"], "/b/", resource.attributes["attr.two"]], "")) where resource.attributes["cwlogs.log_stream"] == nil`,
+			expected: `set(resource.attributes["aws.cloudwatch.log_stream.destination"], Concat(["/a/", resource.attributes["attr.one"], "/b/", resource.attributes["attr.two"]], "")) where resource.attributes["aws.cloudwatch.log_stream.destination"] == nil`,
 		},
 	}
 
@@ -503,11 +509,11 @@ func TestTransformProcessorRuntime(t *testing.T) {
 
 			outRL := sink.AllLogs()[0].ResourceLogs().At(0)
 			logGroupVal, exists := outRL.Resource().Attributes().Get(metadataKeyLogGroup)
-			require.True(t, exists, "expected cwlogs.log_group resource attribute")
+			require.True(t, exists, "expected aws.cloudwatch.log_group.destination resource attribute")
 			assert.Equal(t, tt.expectLogGroup, logGroupVal.Str())
 
 			logStreamVal, exists := outRL.Resource().Attributes().Get(metadataKeyLogStream)
-			require.True(t, exists, "expected cwlogs.log_stream resource attribute")
+			require.True(t, exists, "expected aws.cloudwatch.log_stream.destination resource attribute")
 			assert.Equal(t, tt.expectLogStream, logStreamVal.Str())
 		})
 	}

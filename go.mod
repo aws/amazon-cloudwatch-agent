@@ -646,7 +646,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260507223448-43515aabfc2b
+replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260508010324-989f471f7911
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor => github.com/jj22ee/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260507223339-b0a326ca578b
 

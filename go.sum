@@ -976,8 +976,8 @@ github.com/jellydator/ttlcache/v3 v3.3.0 h1:BdoC9cE81qXfrxeb9eoJi9dWrdhSuwXMAnHT
 github.com/jellydator/ttlcache/v3 v3.3.0/go.mod h1:bj2/e0l4jRnQdrnSTaGTsh4GSXvMjQcy41i7th0GVGw=
 github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca h1:a0GZUdb+qnutF8shJxr2qs2qT3fnF+ptxTxPB8+oIvk=
 github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca/go.mod h1:7GcYQDdMU/O/BBrl/cX6PNHpXh6cenjd8pneu5yW7Tg=
-github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260507223448-43515aabfc2b h1:1DimKCAFuLe1s68Xhjhg1N0pu69tWcZsoqIDEwuiLnM=
-github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260507223448-43515aabfc2b/go.mod h1:Ggckc2aNo/3fgbgB4uj4vlGxG+NVyyShSjF8fcSt77o=
+github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260508010324-989f471f7911 h1:fvrIuX1cEaD0nRbjT7bbk3+2D3GhNPhJUuvz96yFtDA=
+github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260508010324-989f471f7911/go.mod h1:Ggckc2aNo/3fgbgB4uj4vlGxG+NVyyShSjF8fcSt77o=
 github.com/jj22ee/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260507213535-be79c80657e3 h1:fzooUSnGcZkhsPY5yD7zNjCbAL6KNpCFy7HKGZQqHgg=
 github.com/jj22ee/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260507213535-be79c80657e3/go.mod h1:2JFFL30N2NI5N8LbjcLWXYTsoDMDYbwItyZ9ntp8++E=
 github.com/jj22ee/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260507223339-b0a326ca578b h1:e8O7qNh2cVMTjuklCwDhZSpuVPp3Y9DnFaEcUTWcg8k=

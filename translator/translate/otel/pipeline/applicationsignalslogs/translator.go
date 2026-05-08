@@ -54,8 +54,8 @@ const (
 	defaultLogGroupPrefix = "/aws/telemetry/"
 	defaultLogStreamName  = "default"
 
-	metadataKeyLogGroup  = "cwlogs.log_group"
-	metadataKeyLogStream = "cwlogs.log_stream"
+	metadataKeyLogGroup  = "aws.cloudwatch.log_group.destination"
+	metadataKeyLogStream = "aws.cloudwatch.log_stream.destination"
 )
 
 type translator struct{}
@@ -82,7 +82,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
-	dynamic := hasPlaceholders(logGroupTemplate) || hasPlaceholders(logStreamTemplate)
 
 	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), "appsignals_logs")
 	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
@@ -92,6 +91,34 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		LogsEndpoint: fmt.Sprintf("https://logs.%s.amazonaws.com/v1/logs", region),
 	}
 
+	// Build dynamic components per-field: only fields with placeholders get
+	// dynamic handling; static fields use otlphttp static headers.
+	var statements []string
+	var attrActions []attributestocontext.ActionMapping
+	var metadataKeys []string
+	var headerMappings []headerssetter.HeaderMapping
+	staticHeaders := map[string]string{}
+
+	if hasPlaceholders(logGroupTemplate) {
+		statements = append(statements, buildOTTLSetStatement(metadataKeyLogGroup, logGroupTemplate))
+		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
+		metadataKeys = append(metadataKeys, metadataKeyLogGroup)
+		headerMappings = append(headerMappings, headerssetter.HeaderMapping{HeaderName: "x-aws-log-group", ContextKey: metadataKeyLogGroup})
+	} else {
+		staticHeaders["x-aws-log-group"] = templateToLiteral(logGroupTemplate)
+	}
+
+	if hasPlaceholders(logStreamTemplate) {
+		statements = append(statements, buildOTTLSetStatement(metadataKeyLogStream, logStreamTemplate))
+		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
+		metadataKeys = append(metadataKeys, metadataKeyLogStream)
+		headerMappings = append(headerMappings, headerssetter.HeaderMapping{HeaderName: "x-aws-log-stream", ContextKey: metadataKeyLogStream})
+	} else {
+		staticHeaders["x-aws-log-stream"] = templateToLiteral(logStreamTemplate)
+	}
+
+	dynamic := len(statements) > 0
+
 	translators := &common.ComponentTranslators{
 		Receivers:  otlp.NewTranslators(conf, common.AppSignals, pipeline.SignalLogs.String()),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
@@ -100,33 +127,22 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	if dynamic {
-		translators.Processors.Set(transformproc.NewTranslatorWithLogStatements(pipelineName, []string{
-			buildOTTLSetStatement(metadataKeyLogGroup, logGroupTemplate),
-			buildOTTLSetStatement(metadataKeyLogStream, logStreamTemplate),
-		}))
-		translators.Processors.Set(attributestocontext.NewTranslator([]attributestocontext.ActionMapping{
-			{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup},
-			{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream},
-		}))
+		translators.Processors.Set(transformproc.NewTranslatorWithLogStatements(pipelineName, statements))
+		translators.Processors.Set(attributestocontext.NewTranslator(attrActions))
 		translators.Processors.Set(batchproc.NewTranslator(
 			common.WithName(pipelineName),
-			batchproc.WithMetadataKeys([]string{metadataKeyLogGroup, metadataKeyLogStream}),
+			batchproc.WithMetadataKeys(metadataKeys),
 		))
 		translators.Exporters.Set(otlphttp.NewTranslatorWithName("appsignals_logs", logsEndpoint,
 			otlphttp.WithAuthenticator(headersSetterID),
+			otlphttp.WithHeaders(staticHeaders),
 		))
-		translators.Extensions.Set(headerssetter.NewTranslatorWithName("appsignals_logs", provisionerID, []headerssetter.HeaderMapping{
-			{HeaderName: "x-aws-log-group", ContextKey: metadataKeyLogGroup},
-			{HeaderName: "x-aws-log-stream", ContextKey: metadataKeyLogStream},
-		}))
+		translators.Extensions.Set(headerssetter.NewTranslatorWithName("appsignals_logs", provisionerID, headerMappings))
 	} else {
 		translators.Processors.Set(batchproc.NewTranslator(common.WithName(pipelineName)))
 		translators.Exporters.Set(otlphttp.NewTranslatorWithName("appsignals_logs", logsEndpoint,
 			otlphttp.WithAuthenticator(provisionerID),
-			otlphttp.WithHeaders(map[string]string{
-				"x-aws-log-group":  templateToLiteral(logGroupTemplate),
-				"x-aws-log-stream": templateToLiteral(logStreamTemplate),
-			}),
+			otlphttp.WithHeaders(staticHeaders),
 		))
 	}
 
@@ -134,7 +150,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Exporters.Set(debug.NewTranslator(common.WithName(pipelineName)))
 	}
 
-	// Extensions: sigv4auth + awscloudwatchlogsprovisioner (both paths need these)
+	// Extensions: sigv4auth signs requests, provisioner creates log groups/streams
 	translators.Extensions.Set(sigv4auth.NewTranslatorWithName("appsignals_logs", sigv4auth.WithService("logs")))
 	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4AuthID))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
