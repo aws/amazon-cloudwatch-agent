@@ -27,10 +27,12 @@ exporters:
                     - Telemetry.Source
                   regex: ^(ServerSpan|LocalRootSpan)$
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
+              namespace: ""
             - dimensions:
                 - - Environment
                   - Operation
@@ -101,10 +103,12 @@ exporters:
                     - Telemetry.Source
                   regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
+              namespace: ""
             - dimensions:
                 - - Environment
                   - Service
@@ -113,8 +117,24 @@ exporters:
                     - Telemetry.Source
                   regex: ^RuntimeMetric$
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - ^.*$
+              namespace: ""
+            - dimensions:
+                - - environment
+                  - exception
+                  - operation
+                  - service_name
+              label_matchers:
+                - label_names:
+                    - Telemetry.Source
+                  regex: ^Telemend$
+                  separator: ;
+              log_group_name: /aws/telemend/metrics
+              metric_name_selectors:
+                - Count
+              namespace: Telemend
         middleware: agenthealth/logs
         namespace: ApplicationSignals
         no_verify_ssl: false
@@ -157,6 +177,7 @@ exporters:
                   - Service
                 - - ClusterName
                   - Namespace
+              log_group_name: ""
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -164,25 +185,31 @@ exporters:
                 - pod_network_tx_bytes
                 - pod_cpu_utilization_over_pod_limit
                 - pod_memory_utilization_over_pod_limit
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - PodName
+              log_group_name: ""
               metric_name_selectors:
                 - pod_number_of_container_restarts
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - PodName
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -191,38 +218,49 @@ exporters:
                 - node_memory_reserved_capacity
                 - node_number_of_running_pods
                 - node_number_of_running_containers
+              namespace: ""
             - dimensions:
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - node_cpu_usage_total
                 - node_cpu_limit
                 - node_memory_working_set
                 - node_memory_limit
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - node_filesystem_utilization
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - Service
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - service_number_of_running_pods
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - namespace_number_of_running_pods
+              namespace: ""
             - dimensions:
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
+              namespace: ""
         middleware: agenthealth/logs
         namespace: ContainerInsights
         no_verify_ssl: false
@@ -271,6 +309,36 @@ exporters:
             enabled: true
             include_metadata: true
         transit_spans_in_otlp_format: true
+    otlphttp/appsignals_logs:
+        auth:
+            authenticator: headers_setter/appsignals_logs
+        compression: gzip
+        encoding: proto
+        endpoint: https://logs.us-east-1.amazonaws.com
+        headers:
+            x-aws-log-stream: null
+        idle_conn_timeout: 1m30s
+        logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -295,6 +363,11 @@ extensions:
             usage_flags:
                 mode: K8E
                 region_type: ACJ
+    awscloudwatchlogsprovisioner:
+        additional_auth: sigv4auth/appsignals_logs
+        logs_provision_failure_backoff: 30s
+        logs_provision_timeout: 10s
+        region: us-east-1
     awsproxy/application_signals:
         additional_routing_rules:
             - aws_endpoint: https://application-signals.us-east-1.api.aws
@@ -318,6 +391,12 @@ extensions:
         kubernetes_mode: K8sEC2
         mode: ec2
         region: us-east-1
+    headers_setter/appsignals_logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              from_context: aws.cloudwatch.log_group.destination
+              key: x-aws-log-group
     k8smetadata:
         objects:
             - endpointslices
@@ -327,7 +406,16 @@ extensions:
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
+    sigv4auth/appsignals_logs:
+        assume_role:
+            sts_region: us-east-1
+        region: us-east-1
+        service: logs
 processors:
+    attributestocontext:
+        actions:
+            - from_resource_attribute: aws.cloudwatch.log_group.destination
+              key: aws.cloudwatch.log_group.destination
     awsapplicationsignals:
         limiter:
             disabled: false
@@ -348,6 +436,13 @@ processors:
         entity_type: Service
         kubernetes_mode: K8sEC2
         platform: ec2
+    batch/application_signals_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.cloudwatch.log_group.destination
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -1482,10 +1577,20 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/application_signals_logs:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/telemetry/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
+        metric_statements: []
+        trace_statements: []
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: false
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -1542,9 +1647,22 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - k8smetadata
+        - headers_setter/appsignals_logs
+        - sigv4auth/appsignals_logs
+        - awscloudwatchlogsprovisioner
         - entitystore
         - server
     pipelines:
+        logs/application_signals_logs:
+            exporters:
+                - otlphttp/appsignals_logs
+            processors:
+                - transform/application_signals_logs
+                - attributestocontext
+                - batch/application_signals_logs
+            receivers:
+                - otlp/grpc_0_0_0_0_4315
+                - otlp/http_0_0_0_0_4316
         metrics/application_signals:
             exporters:
                 - awsemf/application_signals

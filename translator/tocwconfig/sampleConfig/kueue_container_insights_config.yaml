@@ -62,6 +62,7 @@ exporters:
                   - Service
                 - - ClusterName
                   - Namespace
+              log_group_name: ""
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -69,25 +70,31 @@ exporters:
                 - pod_network_tx_bytes
                 - pod_cpu_utilization_over_pod_limit
                 - pod_memory_utilization_over_pod_limit
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - PodName
+              log_group_name: ""
               metric_name_selectors:
                 - pod_number_of_container_restarts
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - PodName
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -96,38 +103,49 @@ exporters:
                 - node_memory_reserved_capacity
                 - node_number_of_running_pods
                 - node_number_of_running_containers
+              namespace: ""
             - dimensions:
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - node_cpu_usage_total
                 - node_cpu_limit
                 - node_memory_working_set
                 - node_memory_limit
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - node_filesystem_utilization
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                   - Service
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - service_number_of_running_pods
+              namespace: ""
             - dimensions:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - namespace_number_of_running_pods
+              namespace: ""
             - dimensions:
                 - - ClusterName
+              log_group_name: ""
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
+              namespace: ""
         middleware: agenthealth/logs
         namespace: ContainerInsights
         no_verify_ssl: false
@@ -172,8 +190,10 @@ exporters:
                   - Status
                 - - ClusterName
                   - Status
+              log_group_name: ""
               metric_name_selectors:
                 - kueue_pending_workloads
+              namespace: ""
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -183,14 +203,18 @@ exporters:
                   - Reason
                 - - ClusterName
                   - Reason
+              log_group_name: ""
               metric_name_selectors:
                 - kueue_evicted_workloads_total
+              namespace: ""
             - dimensions:
                 - - ClusterName
                 - - ClusterName
                   - ClusterQueue
+              log_group_name: ""
               metric_name_selectors:
                 - kueue_admitted_active_workloads
+              namespace: ""
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -205,9 +229,11 @@ exporters:
                 - - ClusterName
                   - ClusterQueue
                   - Flavor
+              log_group_name: ""
               metric_name_selectors:
                 - kueue_cluster_queue_resource_usage
                 - kueue_cluster_queue_nominal_quota
+              namespace: ""
         middleware: agenthealth/logs
         namespace: ContainerInsights/Prometheus
         no_verify_ssl: false
@@ -295,8 +321,8 @@ processors:
     kueueattributes/kueueContainerInsights: {}
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: false
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true

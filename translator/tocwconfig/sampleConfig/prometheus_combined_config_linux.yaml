@@ -23,16 +23,20 @@ exporters:
                     - Service
                   regex: nginx.*
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - ^nginx_request_count$
+              namespace: ""
             - dimensions: []
               label_matchers:
                 - label_names:
                     - Namespace
                   regex: default
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - .*
+              namespace: ""
             - dimensions:
                 - - name
               label_matchers:
@@ -40,8 +44,10 @@ exporters:
                     - name
                   regex: .*
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - ^.*$
+              namespace: ""
             - dimensions:
                 - - name
               label_matchers:
@@ -49,8 +55,10 @@ exporters:
                     - name
                   regex: .*
                   separator: ;
+              log_group_name: ""
               metric_name_selectors:
                 - ^node_cpu_guest_seconds_total$
+              namespace: ""
         metric_descriptors:
             - metric_name: nginx_request_count
               overwrite: false
