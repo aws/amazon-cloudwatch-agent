@@ -132,6 +132,72 @@ func TestTranslate(t *testing.T) {
 				UsageMetadata: []metadata.Metadata{"obs_jvm"},
 			},
 		},
+		"WithUsageMetadata/AliasResolution": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{
+						map[string]any{"ObservabilitySolution": "jvm_ec2"},
+						map[string]any{"ObservabilitySolution": "tomcat_ec2"},
+						map[string]any{"ObservabilitySolution": "nvidia_gpu_ec2"},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{"obs_jvm", "obs_nvidia_gpu", "obs_tomcat"},
+			},
+		},
+		"WithUsageMetadata/AllWorkloads": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{
+						map[string]any{"ObservabilitySolution": "ec2_health"},
+						map[string]any{"ObservabilitySolution": "jvm_ec2"},
+						map[string]any{"ObservabilitySolution": "tomcat_ec2"},
+						map[string]any{"ObservabilitySolution": "kafka_broker"},
+						map[string]any{"ObservabilitySolution": "kafka_producer"},
+						map[string]any{"ObservabilitySolution": "kafka_consumer"},
+						map[string]any{"ObservabilitySolution": "nvidia_gpu_ec2"},
+						map[string]any{"ObservabilitySolution": "application_signals"},
+						map[string]any{"ObservabilitySolution": "statsd"},
+						map[string]any{"ObservabilitySolution": "collectd"},
+						map[string]any{"ObservabilitySolution": "prometheus"},
+						map[string]any{"ObservabilitySolution": "otel_metrics"},
+						map[string]any{"ObservabilitySolution": "process_monitoring"},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{
+					"obs_application_signals",
+					"obs_collectd",
+					"obs_ec2_health",
+					"obs_jvm",
+					"obs_kafka_broker",
+					"obs_kafka_consumer",
+					"obs_kafka_producer",
+					"obs_nvidia_gpu",
+					"obs_otel_metrics",
+					"obs_process_monitoring",
+					"obs_prometheus",
+					"obs_statsd",
+					"obs_tomcat",
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
