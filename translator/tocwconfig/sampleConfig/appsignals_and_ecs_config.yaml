@@ -27,12 +27,10 @@ exporters:
                     - Telemetry.Source
                   regex: ^(ServerSpan|LocalRootSpan)$
                   separator: ;
-              log_group_name: ""
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
-              namespace: ""
             - dimensions:
                 - - Environment
                   - Operation
@@ -103,12 +101,10 @@ exporters:
                     - Telemetry.Source
                   regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
                   separator: ;
-              log_group_name: ""
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
-              namespace: ""
             - dimensions:
                 - - Environment
                   - Service
@@ -117,10 +113,8 @@ exporters:
                     - Telemetry.Source
                   regex: ^RuntimeMetric$
                   separator: ;
-              log_group_name: ""
               metric_name_selectors:
                 - ^.*$
-              namespace: ""
             - dimensions:
                 - - environment
                   - exception
@@ -1423,6 +1417,9 @@ receivers:
                     enforcement_policy: {}
                     server_parameters: {}
                 read_buffer_size: 524288
+                tls:
+                    cert_file: path/to/cert.crt
+                    key_file: path/to/key.key
                 transport: tcp
     otlp/http_0_0_0_0_4316:
         protocols:
@@ -1433,6 +1430,9 @@ receivers:
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
+                tls:
+                    cert_file: path/to/cert.crt
+                    key_file: path/to/key.key
                 traces_url_path: /v1/traces
                 write_timeout: 0s
 service:
